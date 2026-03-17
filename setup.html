@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear — Configuração Inicial</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C8102E;--red-dark:#a00d24;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#1c1712;min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+.card{background:#fff;border-radius:16px;padding:48px 44px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:pop .4s cubic-bezier(.22,.8,.44,1);}
+@keyframes pop{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.logo{text-align:center;margin-bottom:28px;}.logo .leaf{font-size:36px;}
+.logo h1{font-family:'Lora',serif;font-size:18px;margin-top:8px;color:var(--text);}
+.logo span{font-size:12px;color:var(--muted);}
+.badge{display:inline-flex;align-items:center;gap:6px;background:rgba(200,16,46,.08);color:var(--red);font-size:12px;font-weight:600;padding:5px 12px;border-radius:100px;border:1px solid rgba(200,16,46,.15);margin-bottom:14px;}
+h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:6px;}
+.sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px;}
+.f{margin-bottom:14px;}.f label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;}
+.f input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
+.f input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.btn{width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .2s;box-shadow:0 4px 16px rgba(200,16,46,.3);}
+.btn:hover{background:var(--red-dark);}.btn:disabled{opacity:.5;cursor:not-allowed;}
+.alert{padding:10px 14px;border-radius:7px;font-size:13px;margin-top:14px;display:none;text-align:center;}
+.alert.error{background:#fdf0f2;color:#a00d24;border:1px solid rgba(200,16,46,.2);}
+.alert.success{background:#edf7f0;color:#1a5c2a;border:1px solid rgba(45,122,58,.2);}
+.alert.show{display:block;}
+.checking{text-align:center;padding:32px 0;color:var(--muted);}
+.spinner{width:28px;height:28px;border:3px solid #eee;border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.already{text-align:center;padding:16px 0;}.already .ai{font-size:48px;margin-bottom:14px;}
+.already h3{font-family:'Lora',serif;font-size:18px;margin-bottom:8px;}
+.already p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.link-btn{display:inline-block;padding:11px 24px;background:var(--red);color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="stateChecking">
+    <div class="checking"><div class="spinner"></div>Verificando configuração…</div>
+  </div>
+  <div id="stateAlready" style="display:none;">
+    <div class="logo"><div class="leaf">🍁</div><h1>Maple Bear</h1></div>
+    <div class="already">
+      <div class="ai">🔒</div>
+      <h3>Sistema já configurado</h3>
+      <p>Já existe um gerente cadastrado. Acesse o painel para fazer login.</p>
+      <a href="gerente.html" class="link-btn">Ir para o Painel →</a>
+    </div>
+  </div>
+  <div id="stateSetup" style="display:none;">
+    <div class="logo"><div class="leaf">🍁</div><h1>Maple Bear</h1><span>Bento Gonçalves, RS</span></div>
+    <div class="badge">⚙️ Configuração Inicial</div>
+    <h2>Criar primeiro gerente</h2>
+    <p class="sub">Nenhum gerente foi cadastrado ainda. Crie a conta para liberar o acesso ao painel.</p>
+    <div class="f"><label>Nome completo</label><input type="text" id="nome" placeholder="Ex: Ivyson Gasparin" autocomplete="name"></div>
+    <div class="f"><label>E-mail</label><input type="email" id="email" placeholder="seuemail@exemplo.com" autocomplete="email"></div>
+    <div class="f"><label>Senha</label><input type="password" id="senha" placeholder="Mínimo 6 caracteres"></div>
+    <div class="f"><label>Confirmar senha</label><input type="password" id="senhaConf" placeholder="Repita a senha"></div>
+    <button class="btn" id="btn" onclick="criar()">Criar conta e acessar o painel</button>
+    <div class="alert error"   id="alertErr"></div>
+    <div class="alert success" id="alertOk"></div>
+  </div>
+</div>
+<script>
+  const API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
+  async function call(body) {
+    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON}, body: JSON.stringify(body) });
+    return r.json();
+  }
+
+  async function init() {
+    try {
+      const d = await call({ action: 'setup_check' });
+      document.getElementById('stateChecking').style.display = 'none';
+      if (d.needs_setup) document.getElementById('stateSetup').style.display = 'block';
+      else               document.getElementById('stateAlready').style.display = 'block';
+    } catch(e) {
+      document.getElementById('stateChecking').innerHTML = '<p style="color:#a00d24;text-align:center;font-size:13px;">Erro ao conectar.<br>Verifique a URL e a chave do Supabase.</p>';
+    }
+  }
+
+  async function criar() {
+    const nome     = document.getElementById('nome').value.trim();
+    const email    = document.getElementById('email').value.trim();
+    const senha    = document.getElementById('senha').value;
+    const senhaConf = document.getElementById('senhaConf').value;
+    hide();
+    if (!nome||!email||!senha||!senhaConf) return show('error','Preencha todos os campos.');
+    if (senha !== senhaConf) return show('error','As senhas não coincidem.');
+    if (senha.length < 6)   return show('error','Senha mínima de 6 caracteres.');
+    const btn = document.getElementById('btn');
+    btn.disabled = true; btn.textContent = 'Criando…';
+    const d = await call({ action:'setup', nome, email, senha });
+    if (d.error) { show('error', d.error); btn.disabled=false; btn.textContent='Criar conta e acessar o painel'; return; }
+    localStorage.setItem('mb_token', d.token);
+    localStorage.setItem('mb_nome',  d.nome);
+    localStorage.setItem('mb_email', d.email);
+    show('success','✅ Conta criada! Redirecionando…');
+    setTimeout(() => window.location.href = 'gerente.html', 1500);
+  }
+
+  function show(t, m){ const e=document.getElementById(t==='error'?'alertErr':'alertOk'); e.textContent=m; e.classList.add('show'); }
+  function hide(){ document.getElementById('alertErr').classList.remove('show'); document.getElementById('alertOk').classList.remove('show'); }
+  document.addEventListener('keydown', e => { if(e.key==='Enter') criar(); });
+  init();
+</script>
+</body>
+</html>
