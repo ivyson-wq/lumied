@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear — Redefinir Senha</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --red:#C8102E; --red-dark:#a00d24; --border:#e2dbd1; --text:#1a1a1a; --muted:#7a7169; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:#1c1712;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+  .card{background:#fff;border-radius:16px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:pop .4s cubic-bezier(.22,.8,.44,1);}
+  @keyframes pop{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  .logo{text-align:center;margin-bottom:28px;}
+  .logo .leaf{font-size:36px;}
+  .logo h1{font-family:'Lora',serif;font-size:18px;margin-top:8px;color:var(--text);}
+  .logo span{font-size:12px;color:var(--muted);}
+  h2{font-family:'Lora',serif;font-size:19px;color:var(--text);margin-bottom:6px;text-align:center;}
+  .sub{font-size:13px;color:var(--muted);text-align:center;line-height:1.6;margin-bottom:24px;}
+  .f{margin-bottom:14px;}
+  .f label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;}
+  .f input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
+  .f input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+  .btn{width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .2s;box-shadow:0 4px 16px rgba(200,16,46,.3);}
+  .btn:hover{background:var(--red-dark);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .alert{padding:10px 14px;border-radius:7px;font-size:13px;margin-top:14px;display:none;text-align:center;}
+  .alert.error{background:#fdf0f2;color:#a00d24;border:1px solid rgba(200,16,46,.2);}
+  .alert.success{background:#edf7f0;color:#1a5c2a;border:1px solid rgba(45,122,58,.2);}
+  .alert.show{display:block;}
+  .back{display:block;text-align:center;margin-top:18px;font-size:13px;color:var(--muted);text-decoration:none;}
+  .back:hover{color:var(--red);}
+  .warning-box{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px 14px;font-size:12px;color:#7a5e00;margin-bottom:20px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="leaf">🍁</div>
+    <h1>Maple Bear</h1>
+    <span>Bento Gonçalves, RS</span>
+  </div>
+  <h2>Redefinir Senha</h2>
+  <p class="sub">Use esta página para definir a senha do gerente já cadastrado.</p>
+
+  <div class="warning-box">
+    ⚠️ Esta página é para <strong>primeiro acesso</strong> apenas. Após entrar no painel, delete o arquivo <code>resetar-senha.html</code> do GitHub/Vercel.
+  </div>
+
+  <div class="f">
+    <label>E-mail do gerente</label>
+    <input type="email" id="email" value="gerente@maplebear.com.br">
+  </div>
+  <div class="f">
+    <label>Nova senha</label>
+    <input type="password" id="senha" placeholder="Mínimo 6 caracteres">
+  </div>
+  <div class="f">
+    <label>Confirmar nova senha</label>
+    <input type="password" id="senhaConf" placeholder="Repita a senha">
+  </div>
+
+  <button class="btn" id="btn" onclick="redefinir()">Redefinir Senha</button>
+
+  <div class="alert error"   id="alertErr"></div>
+  <div class="alert success" id="alertOk"></div>
+
+  <a href="gerente.html" class="back">← Voltar para o login</a>
+</div>
+
+<script>
+  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  async function redefinir() {
+    const email    = document.getElementById('email').value.trim();
+    const senha    = document.getElementById('senha').value;
+    const senhaConf = document.getElementById('senhaConf').value;
+    const btn = document.getElementById('btn');
+
+    hide();
+    if (!email || !senha) return show('error', 'Preencha todos os campos.');
+    if (senha !== senhaConf) return show('error', 'As senhas não coincidem.');
+    if (senha.length < 6)   return show('error', 'Senha mínima de 6 caracteres.');
+
+    btn.disabled = true; btn.textContent = 'Redefinindo…';
+
+    const { data, error } = await sb.functions.invoke('manage-users', {
+      body: { action: 'reset_password', email, novaSenha: senha }
+    });
+
+    btn.disabled = false; btn.textContent = 'Redefinir Senha';
+
+    if (error || data?.error) return show('error', data?.error || 'Erro ao redefinir. Verifique se a Edge Function está deployada.');
+
+    show('success', '✅ Senha redefinida! Redirecionando para o login…');
+    setTimeout(() => window.location.href = 'gerente.html', 2000);
+  }
+
+  function show(type, msg) {
+    const el = document.getElementById(type === 'error' ? 'alertErr' : 'alertOk');
+    el.textContent = msg; el.classList.add('show');
+  }
+  function hide() {
+    document.getElementById('alertErr').classList.remove('show');
+    document.getElementById('alertOk').classList.remove('show');
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') redefinir(); });
+</script>
+</body>
+</html>
