@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear BG — Painel do Gerente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --red: #C8102E;
+    --red-dark: #a00d24;
+    --red-light: rgba(200,16,46,.08);
+    --bg: #f0ece6;
+    --sidebar-bg: #1c1712;
+    --sidebar-text: rgba(255,255,255,.7);
+    --sidebar-active: rgba(200,16,46,.9);
+    --white: #fff;
+    --border: #e2dbd1;
+    --text: #1a1a1a;
+    --muted: #7a7169;
+    --green: #2d7a3a;
+    --green-light: rgba(45,122,58,.1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ── LOGIN ─────────────────────────────────────────── */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sidebar-bg);
+    position: relative;
+    overflow: hidden;
+  }
+  #loginScreen::before {
+    content: '🍁';
+    position: absolute;
+    font-size: 320px;
+    opacity: .03;
+    top: -60px; right: -60px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .login-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 48px 44px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    position: relative;
+    z-index: 1;
+    animation: popIn .4s cubic-bezier(.22,.8,.44,1);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(.92) translateY(12px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo .leaf { font-size: 40px; }
+  .login-logo h1 { font-family: 'Lora', serif; font-size: 18px; margin-top: 8px; color: var(--text); }
+  .login-logo span { font-size: 12px; color: var(--muted); }
+
+  .login-card h2 {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    color: var(--text);
+    margin-bottom: 22px;
+    text-align: center;
+  }
+  .login-field { margin-bottom: 16px; }
+  .login-field label { display: block; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 7px; }
+  .login-field input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    background: #fdfbf8;
+  }
+  .login-field input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,16,46,.1); }
+  .login-btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background .2s;
+    letter-spacing: .2px;
+  }
+  .login-btn:hover { background: var(--red-dark); }
+  .login-btn:disabled { opacity: .55; cursor: not-allowed; }
+  #loginError { display: none; font-size: 13px; color: var(--red); text-align: center; margin-top: 10px; }
+
+  /* ── APP SHELL ─────────────────────────────────────── */
+  #appShell {
+    display: none;
+    min-height: 100vh;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 230px; height: 100vh;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .sidebar-brand {
+    padding: 28px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .sidebar-brand .leaf { font-size: 20px; }
+  .sidebar-brand h1 {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    color: #fff;
+    margin-top: 6px;
+    line-height: 1.2;
+  }
+  .sidebar-brand span { font-size: 11px; color: rgba(255,255,255,.4); }
+
+  .sidebar-nav { flex: 1; padding: 16px 12px; }
+  .nav-section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: rgba(255,255,255,.25);
+    padding: 16px 10px 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--sidebar-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    margin-bottom: 2px;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .nav-item.active { background: var(--sidebar-active); color: #fff; }
+  .nav-item .icon { width: 18px; text-align: center; font-size: 15px; }
+
+  .sidebar-footer {
+    padding: 16px 12px;
+    border-top: 1px solid rgba(255,255,255,.07);
+  }
+  .user-info { font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 10px; padding: 0 10px; }
+  .user-info strong { color: rgba(255,255,255,.8); display: block; font-size: 13px; }
+  .logout-btn {
+    width: 100%;
+    padding: 9px 12px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 7px;
+    color: rgba(255,255,255,.55);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s;
+  }
+  .logout-btn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
+
+  /* MAIN */
+  .main {
+    margin-left: 230px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar h2 { font-family: 'Lora', serif; font-size: 17px; font-weight: 600; }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--green);
+    font-weight: 500;
+  }
+  .live-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: .4; transform: scale(.7); }
+  }
+
+  /* CONTENT */
+  .content { padding: 28px 32px 48px; flex: 1; }
+
+  /* STATS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    transition: transform .2s, box-shadow .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    right: 0; height: 3px;
+    background: var(--accent, var(--red));
+    border-radius: 12px 12px 0 0;
+  }
+  .stat-card[data-turno="integral"]    { --accent: #C8102E; }
+  .stat-card[data-turno="semi_integral"]{ --accent: #d4830a; }
+  .stat-card[data-turno="tarde"]       { --accent: #1a6bb5; }
+  .stat-card[data-turno="total"]       { --accent: #2d7a3a; }
+  .stat-card .stat-label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  .stat-card .stat-value { font-family: 'Lora', serif; font-size: 38px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-card .stat-sub { font-size: 11px; color: var(--muted); }
+
+  /* TABLE SECTION */
+  .section-title {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .count-badge {
+    background: var(--red-light);
+    color: var(--red);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 100px;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .filter-btn.active { border-color: var(--red); background: var(--red-light); color: var(--red); }
+  .search-input {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+    background: var(--white);
+    margin-left: auto;
+    width: 200px;
+  }
+  .search-input:focus { border-color: var(--red); }
+
+  .table-wrap {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    background: #faf8f5;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr {
+    border-bottom: 1px solid #f0ece6;
+    transition: background .15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #faf8f5; }
+  tbody td { padding: 13px 16px; font-size: 13px; vertical-align: middle; }
+
+  .turno-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity .2s;
+  }
+  .turno-pill:hover { opacity: .8; }
+  .turno-pill.integral    { background: rgba(200,16,46,.1);  color: #C8102E; }
+  .turno-pill.semi_integral { background: rgba(212,131,10,.1); color: #c27800; }
+  .turno-pill.tarde       { background: rgba(26,107,181,.1); color: #1a6bb5; }
+
+  .action-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--muted);
+    transition: all .15s;
+    margin-left: 4px;
+  }
+  .action-btn:hover { background: #f5f0ea; color: var(--text); }
+  .action-btn.del:hover { background: #fdf0f2; color: var(--red); border-color: rgba(200,16,46,.3); }
+
+  .date-cell { color: var(--muted); font-size: 12px; }
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* TURNO CHANGE MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.25);
+    animation: popIn .25s ease;
+  }
+  .modal h3 { font-family: 'Lora', serif; font-size: 17px; margin-bottom: 6px; }
+  .modal p { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-turnos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .modal-turno { position: relative; }
+  .modal-turno input { position: absolute; opacity: 0; }
+  .modal-turno label {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px 8px 12px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+    gap: 4px;
+    transition: all .15s;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .modal-turno label .m-name { font-weight: 600; color: var(--text); font-size: 12px; }
+  .modal-turno label .m-time { font-size: 10px; color: var(--muted); line-height: 1.4; }
+  .modal-turno input:checked + label { border-color: var(--red); background: var(--red-light); }
+  .modal-turno input:checked + label .m-name { color: var(--red); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-cancel { padding: 9px 18px; border-radius: 7px; border: 1px solid var(--border); background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; color: var(--muted); }
+  .btn-save { padding: 9px 20px; border-radius: 7px; border: none; background: var(--red); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-save:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── USERS PANEL ───────────────────────────────────── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .users-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .user-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .user-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0ece6;
+    transition: background .15s;
+  }
+  .user-row:last-child { border-bottom: none; }
+  .user-row:hover { background: #faf8f5; }
+  .user-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--red-light);
+    border: 1px solid rgba(200,16,46,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    color: var(--red);
+  }
+  .user-info-cell { flex: 1; min-width: 0; }
+  .user-info-cell strong { display: block; font-size: 14px; font-weight: 600; }
+  .user-info-cell span { font-size: 12px; color: var(--muted); }
+  .user-badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 3px 9px;
+    border-radius: 100px;
+    background: var(--red-light);
+    color: var(--red);
+    border: 1px solid rgba(200,16,46,.15);
+  }
+  .you-badge {
+    font-size: 10px;
+    color: var(--muted);
+    padding: 3px 9px;
+    background: #f5f0ea;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+  }
+
+  .form-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  }
+  .form-card h3 {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    color: var(--text);
+  }
+  .form-field { margin-bottom: 14px; }
+  .form-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .form-field input {
+    width: 100%;
+    padding: 10px 13px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: #fdfbf8;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .form-field input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(200,16,46,.1);
+    background: #fff;
+  }
+  .form-field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .btn-create {
+    width: 100%;
+    padding: 11px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background .2s;
+  }
+  .btn-create:hover { background: var(--red-dark); }
+  .btn-create:disabled { opacity: .5; cursor: not-allowed; }
+
+  .form-alert {
+    padding: 10px 13px;
+    border-radius: 7px;
+    font-size: 12px;
+    margin-top: 12px;
+    display: none;
+  }
+  .form-alert.error   { background: #fdf0f2; color: #a00d24; border: 1px solid rgba(200,16,46,.2); }
+  .form-alert.success { background: #edf7f0; color: #1a5c2a; border: 1px solid rgba(45,122,58,.2); }
+  .form-alert.show    { display: block; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; }
+    .main { margin-left: 200px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .users-layout { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .content { padding: 18px; }
+    .topbar { padding: 14px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="leaf">🍁</div>
+      <h1>Maple Bear</h1>
+      <span>Bento Gonçalves, RS — Painel do Gerente</span>
+    </div>
+    <h2>Entrar</h2>
+    <div class="login-field">
+      <label>E-mail</label>
+      <input type="email" id="loginEmail" placeholder="gerente@maplebear.com.br" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar no Painel</button>
+    <div id="loginError">E-mail ou senha incorretos. Tente novamente.</div>
+  </div>
+</div>
+
+<!-- ── APP SHELL ── -->
+<div id="appShell">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="leaf">🍁</div>
+      <h1>Maple Bear BG</h1>
+      <span>Painel do Gerente</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Turnos 2026</div>
+      <a class="nav-item active" id="navDashboard" href="#" onclick="showPanel('dashboard', this)">
+        <span class="icon">📊</span> Dashboard
+      </a>
+      <a class="nav-item" id="navUsuarios" href="#" onclick="showPanel('usuarios', this)">
+        <span class="icon">👥</span> Gerenciar Usuários
+      </a>
+      <a class="nav-item" href="index.html" target="_blank">
+        <span class="icon">📝</span> Ver Formulário
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <strong id="userNome">Gerente</strong>
+        <span id="userEmail"></span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="topbarTitle">Dashboard de Turnos</h2>
+      <div class="live-badge" id="liveBadge">
+        <div class="live-dot"></div>
+        Atualização em tempo real
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── PANEL: DASHBOARD ── -->
+      <div id="panelDashboard" class="panel active">
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card" data-turno="total">
+            <div class="stat-label">Total de Solicitações</div>
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-sub">todas as turmas</div>
+          </div>
+          <div class="stat-card" data-turno="integral">
+            <div class="stat-label">Integral</div>
+            <div class="stat-value" id="statIntegral">—</div>
+            <div class="stat-sub">07:30 – 17:30h</div>
+          </div>
+          <div class="stat-card" data-turno="semi_integral">
+            <div class="stat-label">Semi-Integral</div>
+            <div class="stat-value" id="statSemi">—</div>
+            <div class="stat-sub">09:45 – 17:30h</div>
+          </div>
+          <div class="stat-card" data-turno="tarde">
+            <div class="stat-label">Tarde</div>
+            <div class="stat-value" id="statTarde">—</div>
+            <div class="stat-sub">13:30 – 17:30h</div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="section-title">
+          Solicitações Recebidas
+          <span class="count-badge" id="tableCount">0</span>
+        </div>
+
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">Todos</button>
+          <button class="filter-btn" data-filter="integral" onclick="setFilter('integral', this)">🔴 Integral</button>
+          <button class="filter-btn" data-filter="semi_integral" onclick="setFilter('semi_integral', this)">🟠 Semi-Integral</button>
+          <button class="filter-btn" data-filter="tarde" onclick="setFilter('tarde', this)">🔵 Tarde</button>
+          <input class="search-input" type="text" id="searchInput" placeholder="🔍  Buscar..." oninput="renderTable()">
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Criança</th>
+                <th>Responsável</th>
+                <th>E-mail</th>
+                <th>Turno Solicitado</th>
+                <th>Data</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr><td colspan="6" class="empty-state"><div class="empty-icon">⏳</div>Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── PANEL: USUÁRIOS ── -->
+      <div id="panelUsuarios" class="panel">
+        <div class="users-layout">
+
+          <!-- Lista de gerentes -->
+          <div>
+            <div class="section-title">Gerentes Cadastrados <span class="count-badge" id="usersCount">0</span></div>
+            <div class="user-card" id="usersList">
+              <div class="user-row"><span style="color:var(--muted);font-size:13px;">Carregando…</span></div>
+            </div>
+          </div>
+
+          <!-- Formulário novo gerente -->
+          <div class="form-card">
+            <h3>➕ Adicionar Gerente</h3>
+            <div class="form-field">
+              <label>Nome completo</label>
+              <input type="text" id="newNome" placeholder="Ex: Simone Ribeiro" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label>E-mail</label>
+              <input type="email" id="newEmail" placeholder="gerente@escola.com.br" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label>Senha</label>
+              <input type="password" id="newSenha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+              <div class="hint">O gerente poderá alterar a senha depois.</div>
+            </div>
+            <button class="btn-create" id="btnCreateUser" onclick="createUser()">Criar Gerente</button>
+            <div class="form-alert error"   id="userAlertError"></div>
+            <div class="form-alert success" id="userAlertSuccess"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /appShell -->
+
+<!-- TURNO CHANGE MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>Alterar Turno</h3>
+    <p id="modalDesc">Selecione o novo turno para a criança.</p>
+    <div class="modal-turnos">
+      <div class="modal-turno">
+        <input type="radio" name="modalTurno" id="mt_integral" value="integral">
+        <label for="mt_integral">
+          <span style="font-size:22px;">🌞</span>
+          <span class="m-name">Integral</span>
+          <span class="m-time">07:30h–17:30h</span>
+        </label>
+      </div>
+      <div class="modal-turno">
+        <input type="radio" name="modalTurno" id="mt_semi" value="semi_integral">
+        <label for="mt_semi">
+          <span style="font-size:22px;">☀️</span>
+          <span class="m-name">Semi-Integral</span>
+          <span class="m-time">09:45h–17:30h</span>
+        </label>
+      </div>
+      <div class="modal-turno">
+        <input type="radio" name="modalTurno" id="mt_tarde" value="tarde">
+        <label for="mt_tarde">
+          <span style="font-size:22px;">🌅</span>
+          <span class="m-name">Tarde</span>
+          <span class="m-time">13:30h–17:30h</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" id="btnSave" onclick="saveTurno()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── CONFIG: substitua pelos seus valores do Supabase ──────────────
+  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  // ─────────────────────────────────────────────────────────────────
+
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  let allData = [];
+  let currentFilter = 'all';
+  let editingId = null;
+  let currentUserId = null;
+
+  const TURNO_CONFIG = {
+    integral:     { label: 'Integral',     cls: 'integral',     emoji: '🌞' },
+    semi_integral:{ label: 'Semi-Integral',cls: 'semi_integral',emoji: '☀️' },
+    tarde:        { label: 'Tarde',        cls: 'tarde',        emoji: '🌅' },
+  };
+
+  // ── PANEL NAVIGATION ──────────────────────────────────
+  function showPanel(panel, navEl) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel' + panel.charAt(0).toUpperCase() + panel.slice(1)).classList.add('active');
+    navEl.classList.add('active');
+
+    const titles = { dashboard: 'Dashboard de Turnos', usuarios: 'Gerenciar Usuários' };
+    document.getElementById('topbarTitle').textContent = titles[panel] || panel;
+    document.getElementById('liveBadge').style.display = panel === 'dashboard' ? 'flex' : 'none';
+
+    if (panel === 'usuarios') loadUsers();
+  }
+
+  // ── AUTH ──────────────────────────────────────────────
+  async function checkSession() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && session.user.user_metadata?.role === 'gerente') {
+      showApp(session.user);
+    }
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPass').value;
+    const btn   = document.getElementById('loginBtn');
+    const err   = document.getElementById('loginError');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+    if (error || data.user?.user_metadata?.role !== 'gerente') {
+      err.style.display = 'block';
+      err.textContent = data?.user && data.user.user_metadata?.role !== 'gerente'
+        ? 'Seu usuário não tem permissão de gerente.'
+        : 'E-mail ou senha incorretos.';
+      btn.disabled = false;
+      btn.textContent = 'Entrar no Painel';
+      return;
+    }
+    showApp(data.user);
+  }
+
+  async function doLogout() {
+    await sb.auth.signOut();
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  function showApp(user) {
+    currentUserId = user.id;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+    document.getElementById('userNome').textContent = user.user_metadata?.nome || 'Gerente';
+    document.getElementById('userEmail').textContent = user.email;
+    loadData();
+    subscribeRealtime();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
+  });
+
+  // ── DATA ──────────────────────────────────────────────
+  async function loadData() {
+    const { data, error } = await sb.from('solicitacoes').select('*').order('criado_em', { ascending: false });
+    if (error) { console.error(error); return; }
+    allData = data || [];
+    updateStats();
+    renderTable();
+  }
+
+  function updateStats() {
+    const c = { integral: 0, semi_integral: 0, tarde: 0 };
+    allData.forEach(r => { if (c[r.turno] !== undefined) c[r.turno]++; });
+    document.getElementById('statTotal').textContent    = allData.length;
+    document.getElementById('statIntegral').textContent = c.integral;
+    document.getElementById('statSemi').textContent     = c.semi_integral;
+    document.getElementById('statTarde').textContent    = c.tarde;
+  }
+
+  function renderTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allData.filter(r => {
+      const matchFilter = currentFilter === 'all' || r.turno === currentFilter;
+      const matchSearch = !search ||
+        r.nome_crianca?.toLowerCase().includes(search) ||
+        r.nome_resp?.toLowerCase().includes(search) ||
+        r.email?.toLowerCase().includes(search);
+      return matchFilter && matchSearch;
+    });
+
+    document.getElementById('tableCount').textContent = filtered.length;
+    const tbody = document.getElementById('tableBody');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-icon">📭</div>Nenhuma solicitação encontrada.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(r => {
+      const t = TURNO_CONFIG[r.turno] || { label: r.turno, cls: '', emoji: '❓' };
+      const date = new Date(r.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return `
+        <tr>
+          <td><strong>${esc(r.nome_crianca)}</strong></td>
+          <td>${esc(r.nome_resp)}</td>
+          <td>${esc(r.email)}</td>
+          <td>
+            <button class="turno-pill ${t.cls}" onclick="openModal('${r.id}', '${r.turno}', '${esc(r.nome_crianca)}')">
+              ${t.emoji} ${t.label} ✎
+            </button>
+          </td>
+          <td class="date-cell">${date}</td>
+          <td>
+            <button class="action-btn del" onclick="deleteRow('${r.id}', '${esc(r.nome_crianca)}')">🗑</button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  // ── REALTIME ──────────────────────────────────────────
+  function subscribeRealtime() {
+    sb.channel('solicitacoes-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitacoes' }, () => {
+        loadData();
+      })
+      .subscribe();
+  }
+
+  // ── TURNO MODAL ───────────────────────────────────────
+  function openModal(id, turnoAtual, nomeCrianca) {
+    editingId = id;
+    document.getElementById('modalDesc').textContent = `Alterando turno de: ${nomeCrianca}`;
+    const radio = document.querySelector(`input[name="modalTurno"][value="${turnoAtual}"]`);
+    if (radio) radio.checked = true;
+    document.getElementById('modalOverlay').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('show');
+    editingId = null;
+  }
+
+  async function saveTurno() {
+    const novoTurno = document.querySelector('input[name="modalTurno"]:checked')?.value;
+    if (!novoTurno || !editingId) return;
+    document.getElementById('btnSave').disabled = true;
+    const { error } = await sb.from('solicitacoes').update({ turno: novoTurno }).eq('id', editingId);
+    if (error) { alert('Erro ao atualizar: ' + error.message); }
+    closeModal();
+    document.getElementById('btnSave').disabled = false;
+  }
+
+  async function deleteRow(id, nome) {
+    if (!confirm(`Remover a solicitação de "${nome}"?`)) return;
+    await sb.from('solicitacoes').delete().eq('id', id);
+  }
+
+  // ── USERS MANAGEMENT ─────────────────────────────────
+  async function loadUsers() {
+    const listEl = document.getElementById('usersList');
+    listEl.innerHTML = '<div class="user-row"><span style="color:var(--muted);font-size:13px;">Carregando…</span></div>';
+
+    const { data, error } = await sb.functions.invoke('manage-users', {
+      body: { action: 'list' },
+    });
+
+    if (error || data?.error) {
+      listEl.innerHTML = `<div class="user-row"><span style="color:#a00d24;font-size:13px;">${data?.error || 'Erro ao carregar usuários.'}</span></div>`;
+      return;
+    }
+
+    const users = data || [];
+    document.getElementById('usersCount').textContent = users.length;
+
+    if (users.length === 0) {
+      listEl.innerHTML = '<div class="user-row"><span style="color:var(--muted);font-size:13px;">Nenhum gerente cadastrado.</span></div>';
+      return;
+    }
+
+    listEl.innerHTML = users.map(u => {
+      const isMe = u.id === currentUserId;
+      const initial = (u.nome || u.email || '?')[0].toUpperCase();
+      const date = new Date(u.criado_em).toLocaleDateString('pt-BR');
+      return `
+        <div class="user-row">
+          <div class="user-avatar">${initial}</div>
+          <div class="user-info-cell">
+            <strong>${esc(u.nome || '—')}</strong>
+            <span>${esc(u.email)} · desde ${date}</span>
+          </div>
+          <span class="user-badge">Gerente</span>
+          ${isMe
+            ? '<span class="you-badge">Você</span>'
+            : `<button class="action-btn del" onclick="deleteUser('${u.id}', '${esc(u.nome || u.email)}')" title="Remover gerente">🗑</button>`
+          }
+        </div>`;
+    }).join('');
+  }
+
+  async function createUser() {
+    const nome  = document.getElementById('newNome').value.trim();
+    const email = document.getElementById('newEmail').value.trim();
+    const senha = document.getElementById('newSenha').value;
+    const errEl = document.getElementById('userAlertError');
+    const okEl  = document.getElementById('userAlertSuccess');
+    const btn   = document.getElementById('btnCreateUser');
+
+    errEl.classList.remove('show');
+    okEl.classList.remove('show');
+
+    if (!nome || !email || !senha) return showUserAlert('error', 'Preencha todos os campos.');
+    if (senha.length < 6)         return showUserAlert('error', 'A senha deve ter no mínimo 6 caracteres.');
+
+    btn.disabled = true;
+    btn.textContent = 'Criando…';
+
+    const { data, error } = await sb.functions.invoke('manage-users', {
+      body: { action: 'create', nome, email, senha },
+    });
+
+    btn.disabled = false;
+    btn.textContent = 'Criar Gerente';
+
+    if (error || data?.error) {
+      return showUserAlert('error', data?.error || 'Erro ao criar gerente.');
+    }
+
+    showUserAlert('success', `✅ Gerente "${nome}" criado com sucesso!`);
+    document.getElementById('newNome').value  = '';
+    document.getElementById('newEmail').value = '';
+    document.getElementById('newSenha').value = '';
+    loadUsers();
+  }
+
+  async function deleteUser(userId, nome) {
+    if (!confirm(`Remover o gerente "${nome}"? Esta ação não pode ser desfeita.`)) return;
+
+    const { data, error } = await sb.functions.invoke('manage-users', {
+      body: { action: 'delete', userId },
+    });
+
+    if (error || data?.error) {
+      alert(data?.error || 'Erro ao remover usuário.');
+      return;
+    }
+    loadUsers();
+  }
+
+  function showUserAlert(type, msg) {
+    const errEl = document.getElementById('userAlertError');
+    const okEl  = document.getElementById('userAlertSuccess');
+    errEl.classList.remove('show');
+    okEl.classList.remove('show');
+    if (type === 'error')   { errEl.textContent = msg; errEl.classList.add('show'); }
+    if (type === 'success') { okEl.textContent  = msg; okEl.classList.add('show'); }
+  }
+
+  // Init
+  checkSession();
+</script>
+</body>
+</html>

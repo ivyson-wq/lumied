@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear BG — Configuração Inicial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --red: #C8102E;
+    --red-dark: #a00d24;
+    --red-light: rgba(200,16,46,.08);
+    --border: #e2dbd1;
+    --text: #1a1a1a;
+    --muted: #7a7169;
+    --white: #fff;
+    --bg: #1c1712;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  body::before {
+    content: '🍁';
+    position: absolute;
+    font-size: 380px;
+    opacity: .03;
+    top: -80px; right: -80px;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 18px;
+    padding: 52px 48px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 32px 80px rgba(0,0,0,.4);
+    position: relative;
+    z-index: 1;
+    animation: popIn .45s cubic-bezier(.22,.8,.44,1);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(.9) translateY(16px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .logo .leaf {
+    display: inline-flex;
+    width: 64px; height: 64px;
+    background: var(--red-light);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    border: 1px solid rgba(200,16,46,.15);
+    margin-bottom: 14px;
+  }
+  .logo h1 { font-family: 'Lora', serif; font-size: 20px; color: var(--text); }
+  .logo span { font-size: 12px; color: var(--muted); }
+
+  .step-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--red-light);
+    color: var(--red);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(200,16,46,.15);
+  }
+
+  h2 {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+  .field input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: #fdfbf8;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .field input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(200,16,46,.1);
+    background: #fff;
+  }
+  .field input.error { border-color: var(--red); }
+  .field-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background .2s, box-shadow .2s;
+    letter-spacing: .2px;
+    box-shadow: 0 4px 16px rgba(200,16,46,.3);
+  }
+  .btn:hover { background: var(--red-dark); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+
+  .alert {
+    padding: 11px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 14px;
+    display: none;
+  }
+  .alert.error   { background: #fdf0f2; color: #a00d24; border: 1px solid rgba(200,16,46,.2); }
+  .alert.success { background: #edf7f0; color: #1a5c2a; border: 1px solid rgba(45,122,58,.2); }
+  .alert.show    { display: block; }
+
+  /* Checking state */
+  .checking {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .checking .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid #eee;
+    border-top-color: var(--red);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Already setup state */
+  .already-setup { text-align: center; padding: 20px 0; }
+  .already-setup .icon { font-size: 48px; margin-bottom: 14px; }
+  .already-setup h3 { font-family: 'Lora', serif; font-size: 18px; margin-bottom: 8px; }
+  .already-setup p { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .link-btn {
+    display: inline-block;
+    padding: 11px 24px;
+    background: var(--red);
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background .2s;
+  }
+  .link-btn:hover { background: var(--red-dark); }
+
+  @media (max-width: 480px) {
+    .card { padding: 36px 24px; margin: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- Checking -->
+  <div id="checkingState">
+    <div class="checking">
+      <div class="spinner"></div>
+      Verificando configuração…
+    </div>
+  </div>
+
+  <!-- Already set up -->
+  <div id="alreadyState" style="display:none;">
+    <div class="logo">
+      <div class="leaf">🍁</div>
+      <h1>Maple Bear BG</h1>
+    </div>
+    <div class="already-setup">
+      <div class="icon">🔒</div>
+      <h3>Sistema já configurado</h3>
+      <p>O sistema já possui gerentes cadastrados. Acesse o painel para fazer login.</p>
+      <a href="gerente.html" class="link-btn">Ir para o Painel →</a>
+    </div>
+  </div>
+
+  <!-- Setup form -->
+  <div id="setupState" style="display:none;">
+    <div class="logo">
+      <div class="leaf">🍁</div>
+      <h1>Maple Bear</h1>
+      <span>Bento Gonçalves, RS</span>
+    </div>
+
+    <div class="step-badge">⚙️ Configuração Inicial</div>
+    <h2>Criar primeiro gerente</h2>
+    <p class="subtitle">Nenhum gerente foi cadastrado ainda. Crie a conta de administrador para liberar o acesso ao painel.</p>
+
+    <div class="field">
+      <label>Nome completo</label>
+      <input type="text" id="nome" placeholder="Ex: Ivyson Gasparin" autocomplete="name">
+    </div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="email" placeholder="gerente@maplebear.com.br" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="senha" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      <div class="field-hint">Use uma senha forte. Você poderá alterá-la depois.</div>
+    </div>
+    <div class="field">
+      <label>Confirmar senha</label>
+      <input type="password" id="senhaConf" placeholder="Repita a senha" autocomplete="new-password">
+    </div>
+
+    <button class="btn" id="createBtn" onclick="createManager()">Criar conta e acessar painel</button>
+
+    <div class="alert error"  id="alertError"></div>
+    <div class="alert success" id="alertSuccess"></div>
+  </div>
+
+</div>
+
+<script>
+  // ── CONFIG ────────────────────────────────────────────
+  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  // ─────────────────────────────────────────────────────
+
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  async function init() {
+    try {
+      const res = await sb.functions.invoke('manage-users', { body: { action: 'bootstrap_check' } });
+      const { needs_setup } = res.data || {};
+
+      document.getElementById('checkingState').style.display = 'none';
+      if (needs_setup) {
+        document.getElementById('setupState').style.display = 'block';
+      } else {
+        document.getElementById('alreadyState').style.display = 'block';
+      }
+    } catch (e) {
+      document.getElementById('checkingState').innerHTML =
+        '<p style="color:#a00d24;text-align:center;font-size:13px;">Erro ao conectar ao servidor.<br>Verifique a URL e a chave do Supabase.</p>';
+    }
+  }
+
+  async function createManager() {
+    const nome     = document.getElementById('nome').value.trim();
+    const email    = document.getElementById('email').value.trim();
+    const senha    = document.getElementById('senha').value;
+    const senhaConf = document.getElementById('senhaConf').value;
+    const errEl    = document.getElementById('alertError');
+    const okEl     = document.getElementById('alertSuccess');
+    const btn      = document.getElementById('createBtn');
+
+    errEl.classList.remove('show');
+    okEl.classList.remove('show');
+
+    if (!nome || !email || !senha || !senhaConf) {
+      return showError('Preencha todos os campos.');
+    }
+    if (senha !== senhaConf) return showError('As senhas não coincidem.');
+    if (senha.length < 6) return showError('A senha deve ter no mínimo 6 caracteres.');
+
+    btn.disabled = true;
+    btn.textContent = 'Criando conta…';
+
+    const { data, error } = await sb.functions.invoke('manage-users', {
+      body: { action: 'create', nome, email, senha },
+    });
+
+    if (error || data?.error) {
+      showError(data?.error || 'Erro ao criar conta. Tente novamente.');
+      btn.disabled = false;
+      btn.textContent = 'Criar conta e acessar painel';
+      return;
+    }
+
+    // Auto-login
+    okEl.textContent = '✅ Conta criada! Fazendo login…';
+    okEl.classList.add('show');
+
+    const { error: loginError } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (loginError) {
+      okEl.textContent = '✅ Conta criada! Acesse o painel para fazer login.';
+      setTimeout(() => window.location.href = 'gerente.html', 2000);
+    } else {
+      setTimeout(() => window.location.href = 'gerente.html', 1200);
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('alertError');
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') createManager();
+  });
+
+  init();
+</script>
+</body>
+</html>
