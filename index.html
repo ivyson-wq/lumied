@@ -3,305 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maple Bear BG — Escolha de Turno 2026</title>
+<title>Maple Bear — Escolha de Turno 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --red: #C8102E;
-    --red-dark: #a00d24;
-    --red-light: rgba(200,16,46,.07);
-    --cream: #f8f5f0;
-    --warm: #f2ede6;
-    --border: #e6ddd3;
-    --text: #1a1a1a;
-    --muted: #7a7169;
-    --white: #fff;
+    --red:#C8102E; --red-dark:#a00d24; --red-light:rgba(200,16,46,.07);
+    --cream:#f8f5f0; --warm:#f2ede6; --border:#e6ddd3;
+    --text:#1a1a1a; --muted:#7a7169; --white:#fff;
   }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .site-header{background:var(--red);position:relative;overflow:hidden;}
+  .site-header::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5C20 15,10 20,15 30C20 40,28 35,30 45C32 35,40 40,45 30C50 20,40 15,30 5Z' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E") repeat;}
+  .header-inner{max-width:700px;margin:auto;padding:36px 24px 32px;position:relative;z-index:1;}
+  .brand{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;gap:8px;}
+  #logoImg{max-height:72px;max-width:260px;object-fit:contain;display:none;}
+  #logoFallback{display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .brand-leaf{width:52px;height:52px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;border:1.5px solid rgba(255,255,255,.25);}
+  .brand-name h1{font-family:'Lora',serif;font-size:20px;font-weight:700;color:#fff;text-align:center;}
+  .brand-name span{font-size:12px;color:rgba(255,255,255,.65);letter-spacing:.4px;display:block;text-align:center;}
+  .header-title{font-family:'Lora',serif;font-size:28px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:8px;text-align:center;}
+  .header-sub{color:rgba(255,255,255,.75);font-size:13px;line-height:1.75;text-align:center;}
+  .top-link{position:absolute;top:16px;right:20px;z-index:10;color:rgba(255,255,255,.65);font-size:12px;text-decoration:none;padding:5px 12px;border:1px solid rgba(255,255,255,.2);border-radius:100px;transition:all .2s;}
+  .top-link:hover{color:#fff;border-color:rgba(255,255,255,.5);}
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--cream);
-    color: var(--text);
-    min-height: 100vh;
-  }
+  .aviso-strip{background:#fff3cd;border-bottom:1px solid #ead980;padding:11px 24px;text-align:center;font-size:13px;color:#7a5e00;font-weight:500;}
 
-  /* HEADER */
-  .site-header {
-    background: var(--red);
-    position: relative;
-    overflow: hidden;
-  }
-  .site-header::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 C 20 15, 10 20, 15 30 C 20 40, 28 35, 30 45 C 32 35, 40 40, 45 30 C 50 20, 40 15, 30 5Z' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E") repeat;
-    opacity: .6;
-  }
-  .header-inner {
-    max-width: 700px;
-    margin: auto;
-    padding: 44px 24px 40px;
-    position: relative;
-    z-index: 1;
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 28px;
-  }
-  .brand-leaf {
-    width: 48px; height: 48px;
-    background: rgba(255,255,255,.18);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    flex-shrink: 0;
-    border: 1.5px solid rgba(255,255,255,.25);
-  }
-  .brand-name h1 {
-    font-family: 'Lora', serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1.1;
-  }
-  .brand-name span {
-    font-size: 12px;
-    color: rgba(255,255,255,.65);
-    letter-spacing: .4px;
-  }
-  .header-title {
-    font-family: 'Lora', serif;
-    font-size: 32px;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1.2;
-    margin-bottom: 10px;
-  }
-  .header-sub {
-    color: rgba(255,255,255,.75);
-    font-size: 14px;
-    line-height: 1.75;
-  }
+  .form-wrap{max-width:700px;margin:0 auto;padding:32px 24px 64px;}
+  .card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:26px 28px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.05);animation:rise .35s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  .card:nth-child(2){animation-delay:.06s;} .card:nth-child(3){animation-delay:.10s;} .card:nth-child(4){animation-delay:.14s;}
+  .card-title{font-family:'Lora',serif;font-size:15px;font-weight:600;color:var(--red);margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+  .card-title::after{content:'';flex:1;height:1px;background:var(--border);margin-left:4px;}
 
-  /* AVISO */
-  .aviso-strip {
-    background: #fff3cd;
-    border-bottom: 1px solid #ead980;
-    padding: 12px 24px;
-    text-align: center;
-    font-size: 13px;
-    color: #7a5e00;
-    font-weight: 500;
-  }
+  .field{margin-bottom:16px;} .field:last-child{margin-bottom:0;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  label{display:block;font-size:13px;font-weight:500;color:var(--text);margin-bottom:7px;}
+  label .req{color:var(--red);margin-left:2px;}
 
-  /* NAV */
-  .top-link {
-    position: absolute;
-    top: 18px; right: 24px;
-    z-index: 10;
-    color: rgba(255,255,255,.65);
-    font-size: 12px;
-    text-decoration: none;
-    letter-spacing: .3px;
-    padding: 5px 12px;
-    border: 1px solid rgba(255,255,255,.2);
-    border-radius: 100px;
-    transition: all .2s;
+  input[type="text"],input[type="email"],select{
+    width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;
+    font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);
+    background:#fdfbf8;outline:none;transition:border-color .2s,box-shadow .2s;appearance:none;
   }
-  .top-link:hover { color: #fff; border-color: rgba(255,255,255,.5); }
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7169' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+  input:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);background:#fff;}
+  input.is-error,select.is-error{border-color:var(--red);}
+  .err-msg{font-size:12px;color:var(--red);margin-top:5px;display:none;}
+  .err-msg.show{display:block;}
 
-  /* FORM WRAPPER */
-  .form-wrap {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 36px 24px 64px;
-  }
+  .turno-preview{margin-top:10px;padding:12px 16px;background:var(--red-light);border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;color:var(--red);display:none;}
+  .turno-preview.show{display:block;}
+  .turno-preview strong{display:block;font-size:14px;margin-bottom:3px;}
+  .turno-preview span{color:var(--muted);font-size:12px;}
+  .turno-note{margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;}
 
-  /* CARDS */
-  .card {
-    background: var(--white);
-    border-radius: 14px;
-    border: 1px solid var(--border);
-    padding: 32px;
-    margin-bottom: 18px;
-    box-shadow: 0 2px 16px rgba(0,0,0,.05);
-    animation: rise .35s ease both;
-  }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .card:nth-child(2) { animation-delay: .07s; }
-  .card:nth-child(3) { animation-delay: .12s; }
+  .btn-submit{width:100%;padding:15px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:.2px;transition:background .2s,box-shadow .2s;box-shadow:0 4px 18px rgba(200,16,46,.3);margin-top:8px;}
+  .btn-submit:hover{background:var(--red-dark);}
+  .btn-submit:disabled{opacity:.55;cursor:not-allowed;}
+  .submit-note{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;}
 
-  .card-title {
-    font-family: 'Lora', serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--red);
-    margin-bottom: 22px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .card-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-    margin-left: 4px;
-  }
+  .success-panel{display:none;text-align:center;padding:56px 24px 64px;animation:rise .5s ease;}
+  .success-panel .si{font-size:64px;margin-bottom:18px;}
+  .success-panel h2{font-family:'Lora',serif;font-size:24px;color:var(--text);margin-bottom:12px;}
+  .success-panel p{color:var(--muted);line-height:1.75;font-size:14px;max-width:400px;margin:auto;}
+  .success-tag{display:inline-block;margin-top:20px;background:var(--red-light);color:var(--red);border:1px solid rgba(200,16,46,.2);padding:8px 18px;border-radius:100px;font-size:13px;font-weight:500;}
 
-  .field { margin-bottom: 18px; }
-  .field:last-child { margin-bottom: 0; }
-  label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    margin-bottom: 7px;
-    letter-spacing: .1px;
-  }
-  label .req { color: var(--red); margin-left: 2px; }
-
-  input[type="text"],
-  input[type="email"] {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1.5px solid var(--border);
-    border-radius: 9px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    color: var(--text);
-    background: #fdfbf8;
-    outline: none;
-    transition: border-color .2s, box-shadow .2s, background .2s;
-  }
-  input:focus {
-    border-color: var(--red);
-    box-shadow: 0 0 0 3px rgba(200,16,46,.1);
-    background: #fff;
-  }
-  input.is-error { border-color: var(--red); }
-  .err-msg { font-size: 12px; color: var(--red); margin-top: 5px; display: none; }
-  .err-msg.show { display: block; }
-
-  /* TURNO CARDS */
-  .turnos-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-  }
-  .turno-opt { position: relative; }
-  .turno-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
-  .turno-opt label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 20px 10px 16px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-    background: var(--warm);
-    transition: all .2s;
-    gap: 4px;
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--muted);
-    margin-bottom: 0;
-  }
-  .turno-opt label .t-emoji { font-size: 30px; margin-bottom: 6px; }
-  .turno-opt label .t-name {
-    font-family: 'Lora', serif;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 2px;
-  }
-  .turno-opt label .t-time { font-size: 11px; color: var(--muted); line-height: 1.4; }
-  .turno-opt input:checked + label {
-    border-color: var(--red);
-    background: var(--red-light);
-  }
-  .turno-opt input:checked + label .t-name { color: var(--red); }
-  .turno-opt label:hover:not(.checked) { border-color: #c8a89a; }
-
-  .turno-note {
-    margin-top: 12px;
-    font-size: 12px;
-    color: var(--muted);
-    font-style: italic;
-  }
-
-  /* SUBMIT */
-  .btn-submit {
-    width: 100%;
-    padding: 15px;
-    background: var(--red);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    letter-spacing: .2px;
-    transition: background .2s, box-shadow .2s, transform .1s;
-    box-shadow: 0 4px 18px rgba(200,16,46,.3);
-    margin-top: 8px;
-  }
-  .btn-submit:hover { background: var(--red-dark); box-shadow: 0 6px 24px rgba(200,16,46,.4); }
-  .btn-submit:active { transform: scale(.99); }
-  .btn-submit:disabled { opacity: .55; cursor: not-allowed; transform: none; }
-
-  .submit-note {
-    text-align: center;
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 12px;
-  }
-
-  /* SUCCESS */
-  .success-panel {
-    display: none;
-    text-align: center;
-    padding: 56px 24px 64px;
-    animation: rise .5s ease;
-  }
-  .success-panel .success-icon { font-size: 64px; margin-bottom: 18px; }
-  .success-panel h2 {
-    font-family: 'Lora', serif;
-    font-size: 24px;
-    color: var(--text);
-    margin-bottom: 12px;
-  }
-  .success-panel p { color: var(--muted); line-height: 1.75; font-size: 14px; max-width: 400px; margin: auto; }
-  .success-tag {
-    display: inline-block;
-    margin-top: 20px;
-    background: var(--red-light);
-    color: var(--red);
-    border: 1px solid rgba(200,16,46,.2);
-    padding: 8px 18px;
-    border-radius: 100px;
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  @media (max-width: 520px) {
-    .turnos-grid { grid-template-columns: 1fr; }
-    .header-title { font-size: 25px; }
-    .card { padding: 22px 18px; }
-  }
+  @media(max-width:520px){.grid-2{grid-template-columns:1fr;}.header-title{font-size:22px;}.card{padding:20px 16px;}}
 </style>
 </head>
 <body>
@@ -310,17 +82,14 @@
   <a href="gerente.html" class="top-link">Área do Gerente →</a>
   <div class="header-inner">
     <div class="brand">
-      <div class="brand-leaf">🍁</div>
-      <div class="brand-name">
-        <h1>Maple Bear</h1>
-        <span>Bento Gonçalves, RS</span>
+      <img id="logoImg" alt="Maple Bear">
+      <div id="logoFallback">
+        <div class="brand-leaf">🍁</div>
+        <div class="brand-name"><h1>Maple Bear</h1><span>Bento Gonçalves, RS</span></div>
       </div>
     </div>
-    <div class="header-title">Escolha de Turno<br>Integral / Semi-Integral / Tarde</div>
-    <div class="header-sub">
-      Preencha o formulário abaixo para solicitar a alteração de turno da sua criança.<br>
-      Você receberá um e-mail de confirmação com os detalhes.
-    </div>
+    <div class="header-title">Escolha de Turno 2026</div>
+    <div class="header-sub">Preencha o formulário para solicitar a alteração de turno da sua criança.<br>Você receberá um e-mail de confirmação.</div>
   </div>
 </div>
 
@@ -329,151 +98,187 @@
 </div>
 
 <div class="form-wrap" id="formWrap">
-
   <form id="mainForm" novalidate>
 
-    <!-- Dados do responsável -->
     <div class="card">
       <div class="card-title">👤 Seus Dados</div>
-
       <div class="field">
         <label for="email">E-mail <span class="req">*</span></label>
-        <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" autocomplete="email">
+        <input type="email" id="email" placeholder="seuemail@exemplo.com" autocomplete="email">
         <div class="err-msg" id="emailErr">Informe um e-mail válido.</div>
       </div>
-
-      <div class="field">
-        <label for="nomeResp">Qual seu nome completo? <span class="req">*</span></label>
-        <input type="text" id="nomeResp" name="nomeResp" placeholder="Ex: Ana Paula Corrêa" autocomplete="name">
-        <div class="err-msg" id="nomeRespErr">Informe seu nome completo.</div>
-      </div>
-
-      <div class="field">
-        <label for="nomeCrianca">Qual o nome da sua criança? <span class="req">*</span></label>
-        <input type="text" id="nomeCrianca" name="nomeCrianca" placeholder="Ex: Pedro Corrêa">
-        <div class="err-msg" id="nomeCriancaErr">Informe o nome da criança.</div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="nomeResp">Seu nome completo <span class="req">*</span></label>
+          <input type="text" id="nomeResp" placeholder="Ex: Ana Paula Corrêa" autocomplete="name">
+          <div class="err-msg" id="nomeRespErr">Informe seu nome.</div>
+        </div>
+        <div class="field">
+          <label for="nomeCrianca">Nome da criança <span class="req">*</span></label>
+          <input type="text" id="nomeCrianca" placeholder="Ex: Pedro Corrêa">
+          <div class="err-msg" id="nomeCriancaErr">Informe o nome da criança.</div>
+        </div>
       </div>
     </div>
 
-    <!-- Turno -->
+    <div class="card">
+      <div class="card-title">🎒 Série</div>
+      <div class="field">
+        <label for="serieSelect">Série da criança <span class="req">*</span></label>
+        <select id="serieSelect">
+          <option value="">Carregando séries…</option>
+        </select>
+        <div class="err-msg" id="serieErr">Selecione a série.</div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">🕐 Turno Desejado</div>
-      <div class="turnos-grid">
-        <div class="turno-opt">
-          <input type="radio" name="turno" id="t_integral" value="integral">
-          <label for="t_integral">
-            <span class="t-emoji">🌞</span>
-            <span class="t-name">Integral</span>
-            <span class="t-time">07:30h<br>às 17:30h</span>
-          </label>
-        </div>
-        <div class="turno-opt">
-          <input type="radio" name="turno" id="t_semi" value="semi_integral">
-          <label for="t_semi">
-            <span class="t-emoji">☀️</span>
-            <span class="t-name">Semi-Integral</span>
-            <span class="t-time">09:45h<br>às 17:30h</span>
-          </label>
-        </div>
-        <div class="turno-opt">
-          <input type="radio" name="turno" id="t_tarde" value="tarde">
-          <label for="t_tarde">
-            <span class="t-emoji">🌅</span>
-            <span class="t-name">Tarde</span>
-            <span class="t-time">13:30h às 17:30h<br><em style="font-size:10px;">(Fundamental: 13:15h–18:30h)</em></span>
-          </label>
-        </div>
+      <div class="field">
+        <label for="turnoSelect">Selecione o turno <span class="req">*</span></label>
+        <select id="turnoSelect" onchange="onTurnoChange()">
+          <option value="">Selecione…</option>
+          <optgroup label="── Integral — início às 07:30h">
+            <option value="integral_5x">Integral · 5× na semana — R$ 4.395,00</option>
+            <option value="integral_4x">Integral · 4× na semana — R$ 4.303,57</option>
+            <option value="integral_3x">Integral · 3× na semana — R$ 4.072,13</option>
+            <option value="integral_2x">Integral · 2× na semana — R$ 3.760,70</option>
+            <option value="integral_1x">Integral · 1× na semana — R$ 3.300,00</option>
+          </optgroup>
+          <optgroup label="── Semi-Integral — início às 09:45h">
+            <option value="semi_5x">Semi-Integral · 5× na semana — R$ 4.030,00</option>
+            <option value="semi_4x">Semi-Integral · 4× na semana — R$ 3.991,57</option>
+            <option value="semi_3x">Semi-Integral · 3× na semana — R$ 3.773,13</option>
+            <option value="semi_2x">Semi-Integral · 2× na semana — R$ 3.534,70</option>
+            <option value="semi_1x">Semi-Integral · 1× na semana — R$ 3.196,27</option>
+          </optgroup>
+          <optgroup label="── Outros">
+            <option value="tarde">Apenas a Tarde — início às 13:30h</option>
+            <option value="diaria">Diária — R$ 150,00</option>
+          </optgroup>
+        </select>
+        <div class="err-msg" id="turnoErr">Selecione um turno.</div>
+        <div class="turno-preview" id="turnoPreview"></div>
+        <p class="turno-note">* Para Ensino Fundamental o turno Tarde inicia às 13:10h.</p>
       </div>
-      <div class="err-msg" id="turnoErr" style="margin-top:10px;">Selecione um turno.</div>
-      <p class="turno-note">* Turno Tarde para Ensino Fundamental: 13:15h às 18:30h.</p>
     </div>
 
-    <!-- Submit -->
     <button type="submit" class="btn-submit" id="submitBtn">Enviar Solicitação</button>
     <p class="submit-note">Você receberá um e-mail de confirmação após o envio.</p>
-
   </form>
 </div>
 
-<!-- Sucesso -->
 <div class="success-panel" id="successPanel">
-  <div class="success-icon">🎉</div>
+  <div class="si">🎉</div>
   <h2>Solicitação Recebida!</h2>
   <p>Sua solicitação de alteração de turno foi registrada com sucesso. Verifique seu e-mail — enviamos uma confirmação com todos os detalhes.</p>
   <div class="success-tag">✉️ Confirmação enviada</div>
 </div>
 
 <script>
-  // ── CONFIG: substitua pelos seus valores do Supabase ──────────────
-  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-  // ─────────────────────────────────────────────────────────────────
+  const SUPABASE_URL  = 'https://SEU_PROJECT_ID.supabase.co';
+  const SUPABASE_ANON = 'SUA_ANON_KEY';
 
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  // Validate
+  const TURNO_INFO = {
+    integral_5x: { label:'Integral · 5× na semana',      price:'R$ 4.395,00', inicio:'07:30h' },
+    integral_4x: { label:'Integral · 4× na semana',      price:'R$ 4.303,57', inicio:'07:30h' },
+    integral_3x: { label:'Integral · 3× na semana',      price:'R$ 4.072,13', inicio:'07:30h' },
+    integral_2x: { label:'Integral · 2× na semana',      price:'R$ 3.760,70', inicio:'07:30h' },
+    integral_1x: { label:'Integral · 1× na semana',      price:'R$ 3.300,00', inicio:'07:30h' },
+    semi_5x:     { label:'Semi-Integral · 5× na semana', price:'R$ 4.030,00', inicio:'09:45h' },
+    semi_4x:     { label:'Semi-Integral · 4× na semana', price:'R$ 3.991,57', inicio:'09:45h' },
+    semi_3x:     { label:'Semi-Integral · 3× na semana', price:'R$ 3.773,13', inicio:'09:45h' },
+    semi_2x:     { label:'Semi-Integral · 2× na semana', price:'R$ 3.534,70', inicio:'09:45h' },
+    semi_1x:     { label:'Semi-Integral · 1× na semana', price:'R$ 3.196,27', inicio:'09:45h' },
+    tarde:       { label:'Apenas a Tarde',                price:null,          inicio:'13:30h (13:10h Ens. Fund.)' },
+    diaria:      { label:'Diária',                        price:'R$ 150,00',   inicio:null },
+  };
+
+  function onTurnoChange() {
+    const val = document.getElementById('turnoSelect').value;
+    const prev = document.getElementById('turnoPreview');
+    if (!val) { prev.classList.remove('show'); return; }
+    const t = TURNO_INFO[val];
+    const parts = [];
+    if (t.price)  parts.push('💰 ' + t.price);
+    if (t.inicio) parts.push('⏰ Início: ' + t.inicio);
+    prev.innerHTML = '<strong>' + t.label + '</strong><span>' + parts.join('  ·  ') + '</span>';
+    prev.classList.add('show');
+    document.getElementById('turnoSelect').classList.remove('is-error');
+  }
+
+  async function loadSeries() {
+    const { data } = await sb.from('series').select('*').eq('ativo', true).order('ordem');
+    const sel = document.getElementById('serieSelect');
+    if (!data || data.length === 0) {
+      sel.innerHTML = '<option value="">Nenhuma série cadastrada</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Selecione a série…</option>' +
+      data.map(s => '<option value="' + s.nome + '">' + s.nome + '</option>').join('');
+  }
+
+  async function loadLogo() {
+    try {
+      const { data } = await sb.from('configuracoes').select('valor').eq('chave', 'logo_url').single();
+      if (data?.valor) {
+        document.getElementById('logoImg').src = data.valor;
+        document.getElementById('logoImg').style.display = 'block';
+        document.getElementById('logoFallback').style.display = 'none';
+      }
+    } catch(_) {}
+  }
+
   function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-  function setError(inputId, errId, show) {
-    const inp = document.getElementById(inputId);
-    const err = document.getElementById(errId);
-    if (show) { inp?.classList.add('is-error'); err?.classList.add('show'); }
-    else       { inp?.classList.remove('is-error'); err?.classList.remove('show'); }
+  function setErr(id, errId, show) {
+    document.getElementById(id)?.classList.toggle('is-error', show);
+    document.getElementById(errId)?.classList.toggle('show', show);
     return !show;
   }
 
   document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const email      = document.getElementById('email').value.trim();
-    const nomeResp   = document.getElementById('nomeResp').value.trim();
+    const email       = document.getElementById('email').value.trim();
+    const nomeResp    = document.getElementById('nomeResp').value.trim();
     const nomeCrianca = document.getElementById('nomeCrianca').value.trim();
-    const turnoEl    = document.querySelector('input[name="turno"]:checked');
-    const turno      = turnoEl?.value;
+    const serie       = document.getElementById('serieSelect').value;
+    const turno       = document.getElementById('turnoSelect').value;
 
     let ok = true;
-    ok = setError('email',      'emailErr',      !validateEmail(email))       && ok;
-    ok = setError('nomeResp',   'nomeRespErr',   !nomeResp)                   && ok;
-    ok = setError('nomeCrianca','nomeCriancaErr', !nomeCrianca)               && ok;
-
-    // turno error
-    const turnoErr = document.getElementById('turnoErr');
-    if (!turno) { turnoErr.classList.add('show'); ok = false; }
-    else        { turnoErr.classList.remove('show'); }
-
+    ok = setErr('email',       'emailErr',      !validateEmail(email)) && ok;
+    ok = setErr('nomeResp',    'nomeRespErr',   !nomeResp)             && ok;
+    ok = setErr('nomeCrianca', 'nomeCriancaErr',!nomeCrianca)          && ok;
+    ok = setErr('serieSelect', 'serieErr',      !serie)                && ok;
+    ok = setErr('turnoSelect', 'turnoErr',      !turno)                && ok;
     if (!ok) return;
 
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = 'Enviando…';
+    btn.disabled = true; btn.textContent = 'Enviando…';
 
     try {
-      // 1. Salva no banco
-      const { error: dbErr } = await sb.from('solicitacoes').insert([{ email, nome_resp: nomeResp, nome_crianca: nomeCrianca, turno }]);
-      if (dbErr) throw dbErr;
-
-      // 2. Dispara e-mails via Edge Function
-      await sb.functions.invoke('send-email', {
-        body: { email, nomeResp, nomeCrianca, turno },
-      });
-
-      // 3. Mostra sucesso
+      const { error } = await sb.from('solicitacoes').insert([{
+        email, nome_resp: nomeResp, nome_crianca: nomeCrianca, serie, turno
+      }]);
+      if (error) throw error;
+      await sb.functions.invoke('send-email', { body: { email, nomeResp, nomeCrianca, serie, turno } });
       document.getElementById('formWrap').style.display = 'none';
       document.getElementById('successPanel').style.display = 'block';
-
     } catch (err) {
       console.error(err);
       alert('Ocorreu um erro ao enviar. Tente novamente ou entre em contato com a escola.');
-      btn.disabled = false;
-      btn.textContent = 'Enviar Solicitação';
+      btn.disabled = false; btn.textContent = 'Enviar Solicitação';
     }
   });
 
-  // Clear errors on input
-  ['email','nomeResp','nomeCrianca'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', () => {
-      document.getElementById(id).classList.remove('is-error');
-    });
-  });
+  ['email','nomeResp','nomeCrianca'].forEach(id =>
+    document.getElementById(id)?.addEventListener('input', () =>
+      document.getElementById(id).classList.remove('is-error')));
+
+  loadLogo();
+  loadSeries();
 </script>
 </body>
 </html>
