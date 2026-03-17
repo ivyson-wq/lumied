@@ -42,6 +42,35 @@ input.is-error,select.is-error{border-color:var(--red);}
 .turno-preview strong{display:block;font-size:14px;margin-bottom:3px;}
 .turno-preview span{color:var(--muted);font-size:12px;}
 .turno-note{margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;}
+
+/* MODAL DIAS DA SEMANA */
+.dias-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.dias-overlay.show{display:flex;}
+.dias-modal{background:#fff;border-radius:18px;padding:36px 32px;width:100%;max-width:460px;box-shadow:0 28px 70px rgba(0,0,0,.25);animation:rise .3s cubic-bezier(.22,.8,.44,1);}
+.dias-modal h3{font-family:'Lora',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.dias-modal .dm-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px;}
+.dias-counter{display:inline-flex;align-items:center;gap:8px;background:var(--red-light);border:1px solid rgba(200,16,46,.2);border-radius:100px;padding:6px 16px;font-size:13px;color:var(--red);font-weight:600;margin-bottom:20px;}
+.dias-counter .dc-num{font-family:'Lora',serif;font-size:22px;font-weight:700;line-height:1;}
+.dias-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;}
+.dia-btn{position:relative;}
+.dia-btn input{position:absolute;opacity:0;width:0;height:0;}
+.dia-btn label{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 6px 12px;border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:all .18s;background:#faf9f7;gap:4px;user-select:none;}
+.dia-btn label .dia-nome{font-family:'Lora',serif;font-size:13px;font-weight:700;color:var(--text);}
+.dia-btn label .dia-abrev{font-size:10px;color:var(--muted);}
+.dia-btn input:checked+label{border-color:var(--red);background:var(--red-light);}
+.dia-btn input:checked+label .dia-nome{color:var(--red);}
+.dia-btn input:disabled+label{opacity:.35;cursor:not-allowed;}
+.dm-alert{font-size:12px;color:var(--red);margin-bottom:12px;display:none;padding:8px 12px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
+.dm-alert.show{display:block;}
+.dm-actions{display:flex;gap:10px;justify-content:flex-end;}
+.dm-cancel{padding:10px 20px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;color:var(--muted);}
+.dm-confirm{padding:10px 22px;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
+.dm-confirm:hover{background:var(--red-dark);}
+.dm-confirm:disabled{opacity:.45;cursor:not-allowed;}
+/* Tag de dias selecionados no preview */
+.dias-tag{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.dia-tag-item{background:var(--red-light);color:var(--red);border:1px solid rgba(200,16,46,.2);border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600;}
+
 .btn-submit{width:100%;padding:15px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,box-shadow .2s;box-shadow:0 4px 18px rgba(200,16,46,.3);margin-top:8px;}
 .btn-submit:hover{background:var(--red-dark);}.btn-submit:disabled{opacity:.55;cursor:not-allowed;}
 .submit-note{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;}
@@ -141,6 +170,32 @@ input.is-error,select.is-error{border-color:var(--red);}
   <div class="success-tag">✉️ Confirmação enviada</div>
 </div>
 
+<!-- MODAL DIAS DA SEMANA -->
+<div class="dias-overlay" id="diasOverlay">
+  <div class="dias-modal">
+    <h3 id="diasModalTitle">Escolha os dias</h3>
+    <p class="dm-sub" id="diasModalSub">Selecione exatamente os dias em que a criança frequentará a escola.</p>
+    <div class="dias-counter">
+      <span id="dcSelecionados">0</span>
+      <span class="dc-sep" style="color:rgba(200,16,46,.4);">/</span>
+      <span id="dcTotal">0</span>
+      <span style="font-size:12px;font-weight:400;color:var(--muted);">dias selecionados</span>
+    </div>
+    <div class="dias-grid">
+      <div class="dia-btn"><input type="checkbox" id="dSeg" value="Segunda"><label for="dSeg"><span class="dia-nome">Seg</span><span class="dia-abrev">Segunda</span></label></div>
+      <div class="dia-btn"><input type="checkbox" id="dTer" value="Terça"><label for="dTer"><span class="dia-nome">Ter</span><span class="dia-abrev">Terça</span></label></div>
+      <div class="dia-btn"><input type="checkbox" id="dQua" value="Quarta"><label for="dQua"><span class="dia-nome">Qua</span><span class="dia-abrev">Quarta</span></label></div>
+      <div class="dia-btn"><input type="checkbox" id="dQui" value="Quinta"><label for="dQui"><span class="dia-nome">Qui</span><span class="dia-abrev">Quinta</span></label></div>
+      <div class="dia-btn"><input type="checkbox" id="dSex" value="Sexta"><label for="dSex"><span class="dia-nome">Sex</span><span class="dia-abrev">Sexta</span></label></div>
+    </div>
+    <div class="dm-alert" id="diasAlert"></div>
+    <div class="dm-actions">
+      <button class="dm-cancel" onclick="cancelDias()">Voltar</button>
+      <button class="dm-confirm" id="btnConfirmDias" onclick="confirmDias()" disabled>Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
   const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
@@ -154,31 +209,124 @@ input.is-error,select.is-error{border-color:var(--red);}
   }
 
   const TURNO_INFO = {
-    integral_5x:{label:'Integral · 5× na semana',price:'R$ 4.395,00',inicio:'07:30h'},
-    integral_4x:{label:'Integral · 4× na semana',price:'R$ 4.303,57',inicio:'07:30h'},
-    integral_3x:{label:'Integral · 3× na semana',price:'R$ 4.072,13',inicio:'07:30h'},
-    integral_2x:{label:'Integral · 2× na semana',price:'R$ 3.760,70',inicio:'07:30h'},
-    integral_1x:{label:'Integral · 1× na semana',price:'R$ 3.300,00',inicio:'07:30h'},
-    semi_5x:{label:'Semi-Integral · 5× na semana',price:'R$ 4.030,00',inicio:'09:45h'},
-    semi_4x:{label:'Semi-Integral · 4× na semana',price:'R$ 3.991,57',inicio:'09:45h'},
-    semi_3x:{label:'Semi-Integral · 3× na semana',price:'R$ 3.773,13',inicio:'09:45h'},
-    semi_2x:{label:'Semi-Integral · 2× na semana',price:'R$ 3.534,70',inicio:'09:45h'},
-    semi_1x:{label:'Semi-Integral · 1× na semana',price:'R$ 3.196,27',inicio:'09:45h'},
-    tarde:{label:'Apenas a Tarde',price:null,inicio:'13:30h (13:10h Ens. Fund.)'},
-    diaria:{label:'Diária',price:'R$ 150,00',inicio:null},
+    integral_5x:{label:'Integral · 5× na semana',price:'R$ 4.395,00',inicio:'07:30h',freq:5},
+    integral_4x:{label:'Integral · 4× na semana',price:'R$ 4.303,57',inicio:'07:30h',freq:4},
+    integral_3x:{label:'Integral · 3× na semana',price:'R$ 4.072,13',inicio:'07:30h',freq:3},
+    integral_2x:{label:'Integral · 2× na semana',price:'R$ 3.760,70',inicio:'07:30h',freq:2},
+    integral_1x:{label:'Integral · 1× na semana',price:'R$ 3.300,00',inicio:'07:30h',freq:1},
+    semi_5x:{label:'Semi-Integral · 5× na semana',price:'R$ 4.030,00',inicio:'09:45h',freq:5},
+    semi_4x:{label:'Semi-Integral · 4× na semana',price:'R$ 3.991,57',inicio:'09:45h',freq:4},
+    semi_3x:{label:'Semi-Integral · 3× na semana',price:'R$ 3.773,13',inicio:'09:45h',freq:3},
+    semi_2x:{label:'Semi-Integral · 2× na semana',price:'R$ 3.534,70',inicio:'09:45h',freq:2},
+    semi_1x:{label:'Semi-Integral · 1× na semana',price:'R$ 3.196,27',inicio:'09:45h',freq:1},
+    tarde:{label:'Apenas a Tarde',price:null,inicio:'13:30h (13:10h Ens. Fund.)',freq:null},
+    diaria:{label:'Diária',price:'R$ 150,00',inicio:null,freq:null},
   };
 
+  // Turnos que precisam escolha de dias (freq < 5 e não nulos)
+  const PRECISA_DIAS = val => TURNO_INFO[val]?.freq != null && TURNO_INFO[val].freq < 5;
+
+  let diasSelecionados = []; // confirmados pelo modal
+  let diasFreqNecessaria = 0;
+
+  // ── TURNO CHANGE ──────────────────────────────────────
   function onTurnoChange() {
     const val = document.getElementById('turnoSelect').value;
     const prev = document.getElementById('turnoPreview');
+    diasSelecionados = []; // reset dias ao mudar turno
+    updateDiasPreview();
+
     if (!val) { prev.classList.remove('show'); return; }
     const t = TURNO_INFO[val], parts = [];
     if (t.price)  parts.push('💰 ' + t.price);
     if (t.inicio) parts.push('⏰ Início: ' + t.inicio);
     prev.innerHTML = '<strong>' + t.label + '</strong><span>' + parts.join(' · ') + '</span>';
     prev.classList.add('show');
+
+    if (PRECISA_DIAS(val)) openDiasModal(val);
   }
 
+  // ── MODAL DIAS ────────────────────────────────────────
+  function openDiasModal(val) {
+    const t = TURNO_INFO[val];
+    diasFreqNecessaria = t.freq;
+    document.getElementById('diasModalTitle').textContent = 'Escolha os ' + t.freq + ' dia' + (t.freq>1?'s':'') + ' da semana';
+    document.getElementById('diasModalSub').textContent = 'Selecione exatamente ' + t.freq + ' dia' + (t.freq>1?'s':'') + ' em que a criança frequentará a escola.';
+    document.getElementById('dcTotal').textContent = t.freq;
+    // Reset checkboxes
+    ['dSeg','dTer','dQua','dQui','dSex'].forEach(id => {
+      const el = document.getElementById(id);
+      el.checked = diasSelecionados.includes(el.value);
+      el.disabled = false;
+    });
+    updateDiasCounter();
+    document.getElementById('diasAlert').classList.remove('show');
+    document.getElementById('diasOverlay').classList.add('show');
+  }
+
+  function updateDiasCounter() {
+    const checked = getCheckedDias();
+    document.getElementById('dcSelecionados').textContent = checked.length;
+    document.getElementById('btnConfirmDias').disabled = checked.length !== diasFreqNecessaria;
+    // Desabilita checkboxes não marcados se já atingiu o limite
+    if (checked.length >= diasFreqNecessaria) {
+      ['dSeg','dTer','dQua','dQui','dSex'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el.checked) el.disabled = true;
+      });
+    } else {
+      ['dSeg','dTer','dQua','dQui','dSex'].forEach(id => {
+        document.getElementById(id).disabled = false;
+      });
+    }
+  }
+
+  function getCheckedDias() {
+    return ['dSeg','dTer','dQua','dQui','dSex']
+      .map(id => document.getElementById(id))
+      .filter(el => el.checked)
+      .map(el => el.value);
+  }
+
+  function confirmDias() {
+    const checked = getCheckedDias();
+    if (checked.length !== diasFreqNecessaria) {
+      const al = document.getElementById('diasAlert');
+      al.textContent = 'Selecione exatamente ' + diasFreqNecessaria + ' dia(s).';
+      al.classList.add('show'); return;
+    }
+    diasSelecionados = checked;
+    document.getElementById('diasOverlay').classList.remove('show');
+    updateDiasPreview();
+  }
+
+  function cancelDias() {
+    document.getElementById('diasOverlay').classList.remove('show');
+    // Se cancelou sem confirmar, limpa o turno selecionado
+    if (diasSelecionados.length === 0) {
+      document.getElementById('turnoSelect').value = '';
+      document.getElementById('turnoPreview').classList.remove('show');
+    }
+  }
+
+  function updateDiasPreview() {
+    const prev = document.getElementById('turnoPreview');
+    const existing = prev.querySelector('.dias-tag');
+    if (existing) existing.remove();
+    if (diasSelecionados.length > 0) {
+      const tag = document.createElement('div');
+      tag.className = 'dias-tag';
+      tag.innerHTML = '<span style="font-size:11px;color:var(--muted);width:100%;margin-bottom:2px;">📅 Dias escolhidos:</span>' +
+        diasSelecionados.map(d => '<span class="dia-tag-item">' + d + '</span>').join('');
+      prev.appendChild(tag);
+    }
+  }
+
+  // Listener nos checkboxes
+  ['dSeg','dTer','dQua','dQui','dSex'].forEach(id =>
+    document.getElementById(id).addEventListener('change', updateDiasCounter));
+
+  // ── SÉRIES ────────────────────────────────────────────
   async function loadSeries() {
     const data = await call({ action: 'series_list' });
     const sel = document.getElementById('serieSelect');
@@ -197,6 +345,7 @@ input.is-error,select.is-error{border-color:var(--red);}
     } catch(_) {}
   }
 
+  // ── SUBMIT ────────────────────────────────────────────
   function validateEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
   function setErr(id, errId, show){ document.getElementById(id)?.classList.toggle('is-error',show); document.getElementById(errId)?.classList.toggle('show',show); return !show; }
 
@@ -214,13 +363,23 @@ input.is-error,select.is-error{border-color:var(--red);}
     ok = setErr('serieSelect','serieErr',!serie) && ok;
     ok = setErr('turnoSelect','turnoErr',!turno) && ok;
     if (!ok) return;
+
+    // Validar dias obrigatórios
+    if (PRECISA_DIAS(turno) && diasSelecionados.length !== TURNO_INFO[turno].freq) {
+      const al = document.getElementById('turnoErr');
+      al.textContent = 'Você precisa escolher os dias da semana. Selecione o turno novamente.';
+      al.classList.add('show');
+      openDiasModal(turno);
+      return;
+    }
+
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.textContent = 'Enviando…';
     try {
-      const d = await call({ action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno });
+      const payload = { action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno, dias_semana: diasSelecionados.length ? diasSelecionados : null };
+      const d = await call(payload);
       if (d.error) throw new Error(d.error);
-      // E-mail de confirmação
-      await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON}, body: JSON.stringify({ nomeResp, nomeCrianca, turno, email, serie }) });
+      await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON}, body: JSON.stringify({ nomeResp, nomeCrianca, turno, email, serie, diasSemana: diasSelecionados }) });
       document.getElementById('formWrap').style.display = 'none';
       document.getElementById('successPanel').style.display = 'block';
     } catch(err) {

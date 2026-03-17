@@ -192,7 +192,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Criança</th><th>Responsável</th><th>Série</th><th>Turno</th><th>Data</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Criança</th><th>Responsável</th><th>Série</th><th>Turno</th><th>Dias</th><th>Data</th><th>Ações</th></tr></thead>
             <tbody id="tableBody"><tr><td colspan="6" class="empty-state">⏳ Carregando…</td></tr></tbody>
           </table>
         </div>
@@ -423,15 +423,19 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     });
     document.getElementById('tableCount').textContent = rows.length;
     const tb = document.getElementById('tableBody');
-    if (!rows.length) { tb.innerHTML='<tr><td colspan="6" class="empty-state">📭 Nenhum resultado.</td></tr>'; return; }
+    if (!rows.length) { tb.innerHTML='<tr><td colspan="7" class="empty-state">📭 Nenhum resultado.</td></tr>'; return; }
     tb.innerHTML = rows.map(r => {
       const t = TURNO_INFO[r.turno]||{label:r.turno,g:''};
       const date = new Date(r.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const dias = Array.isArray(r.dias_semana) && r.dias_semana.length
+        ? r.dias_semana.map(d => '<span style="display:inline-block;background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:2px 7px;font-size:10px;font-weight:600;margin:1px;">'+d+'</span>').join(' ')
+        : '<span style="color:var(--muted);font-size:12px;">—</span>';
       return `<tr>
         <td><strong>${esc(r.nome_crianca)}</strong></td>
         <td>${esc(r.nome_resp)}<br><small style="color:var(--muted)">${esc(r.email)}</small></td>
         <td>${esc(r.serie||'—')}</td>
         <td><button class="turno-pill ${t.g}" onclick="openModal('${r.id}','${r.turno}','${esc(r.nome_crianca)}')">${t.label}${t.price?' · '+t.price:''} ✎</button></td>
+        <td>${dias}</td>
         <td class="date-cell">${date}</td>
         <td><button class="action-btn del" onclick="deleteRow('${r.id}','${esc(r.nome_crianca)}')">🗑</button></td>
       </tr>`;
