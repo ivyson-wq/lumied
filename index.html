@@ -721,6 +721,9 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     document.getElementById('submitBtn').textContent = modo==='turno'
       ? 'Enviar Solicitação de Turno'
       : 'Confirmar Inscrição nas Atividades';
+
+    // Carrega atividades ao selecionar o modo (garante dados frescos)
+    if (modo === 'atividade') loadAtividades();
   }
 
   // ── SUBMIT ────────────────────────────────────────────
@@ -786,7 +789,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   });
 
   // ── INIT ──────────────────────────────────────────────
-  loadLogo(); loadSeries(); loadAtividades(); initAuth();
+  loadLogo(); loadSeries(); initAuth();
 </script>
 </body>
 </html>
