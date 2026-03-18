@@ -192,7 +192,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <div class="sb-brand">
       <img class="sb-logo-img" id="sidebarLogo" alt="">
       <div class="sb-leaf" id="sidebarLeaf">🍁</div>
-      <h1>Maple Bear BG</h1><span>Painel do Gerente</span>
+      <h1>Maple Bear</h1><span>Painel do Gerente</span>
     </div>
     <nav class="sb-nav">
       <div class="sb-label">Turnos 2026</div>
@@ -1179,34 +1179,67 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('atLotadas').textContent = turmasLotadas;
     document.getElementById('atVagas').textContent   = vagasTotal;
 
-    // ── Crianças por dia ──
+    // ── Crianças por dia — subagrupadas por atividade e turma ──
     const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta'];
-    const diasMap = {}; DIAS.forEach(d => diasMap[d] = []);
+    // diasMap[dia][atividade_nome][turma_nome] = [criança, ...]
+    const diasMap = {};
+    DIAS.forEach(d => diasMap[d] = {});
 
     allInscricoesAtiv.forEach(ins => {
       (ins.turmas_selecionadas||[]).forEach(ts => {
+        // Descobre o nome da atividade a partir do ID
+        const ativ = todasAtiv.find(a => a.id === ts.atividade_id);
+        const ativNome = ativ?.nome || 'Atividade';
+        const turmaNome = ts.turma || 'Turma';
         (ts.slots||[]).forEach(slot => {
-          if (diasMap[slot.dia]) {
-            diasMap[slot.dia].push({ nome: ins.nome_crianca, atividade: ts.turma, serie: ins.serie });
-          }
+          if (!diasMap[slot.dia]) return;
+          if (!diasMap[slot.dia][ativNome]) diasMap[slot.dia][ativNome] = {};
+          if (!diasMap[slot.dia][ativNome][turmaNome]) diasMap[slot.dia][ativNome][turmaNome] = [];
+          diasMap[slot.dia][ativNome][turmaNome].push({ nome: ins.nome_crianca, serie: ins.serie });
         });
       });
     });
 
     DIAS.forEach(dia => {
-      const count = diasMap[dia].length;
+      // Conta total único de crianças no dia (evita duplicatas por slot)
+      const criancasNoDia = new Set();
+      Object.values(diasMap[dia]).forEach(turmas =>
+        Object.values(turmas).forEach(lista => lista.forEach(c => criancasNoDia.add(c.nome)))
+      );
+      const count = criancasNoDia.size;
       document.getElementById('adCount_'+dia).textContent = count;
       const listEl = document.getElementById('adList_'+dia);
       if (!count) { listEl.innerHTML = '<div class="dia-vazio">Nenhuma criança</div>'; return; }
-      listEl.innerHTML = diasMap[dia].map(c =>
-        `<div class="dia-crianca-item">
-          <div class="dia-crianca-dot"></div>
-          <div class="dia-crianca-info">
-            <strong>${esc(c.nome)}</strong>
-            <span>${esc(c.atividade||'')}${c.serie?' · '+c.serie:''}</span>
+
+      const atividadesNoDia = Object.entries(diasMap[dia]);
+
+      listEl.innerHTML = atividadesNoDia.length ? atividadesNoDia.map(([ativNome, turmas]) => {
+        const turmasHTML = Object.entries(turmas).map(([turmaNome, criancas]) => {
+          const criancasHTML = criancas.map(c =>
+            `<div class="dia-crianca-item" style="padding:4px 0 4px 8px;">
+              <div class="dia-crianca-dot" style="width:5px;height:5px;margin-top:6px;background:var(--muted);opacity:.5;"></div>
+              <div class="dia-crianca-info">
+                <strong>${esc(c.nome)}</strong>
+                ${c.serie?`<span>${esc(c.serie)}</span>`:''}
+              </div>
+            </div>`
+          ).join('');
+          return `<div style="margin-bottom:6px;">
+            <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0 2px;border-bottom:1px dashed #e8e3dc;margin-bottom:2px;">
+              🕐 ${esc(turmaNome)} <span style="font-weight:400;color:#bbb;">(${criancas.length})</span>
+            </div>
+            ${criancasHTML}
+          </div>`;
+        }).join('');
+        const tot = Object.values(turmas).reduce((s,l)=>s+l.length,0);
+        return `<div style="margin-bottom:10px;border-bottom:1px solid #f0ece6;padding-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>
+            ${esc(ativNome)} <span style="font-weight:500;color:var(--muted);font-size:10px;">(${tot})</span>
           </div>
-        </div>`
-      ).join('');
+          ${turmasHTML}
+        </div>`;
+      }).join('') : '<div class="dia-vazio">Nenhuma criança</div>';
     });
 
     // ── Ocupação por atividade ──
@@ -1319,7 +1352,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </tr>`;
     }).join('');
 
-    ultimoRelatorioTexto = `🍁 *Maple Bear BG — Dashboard de Turnos*\n📅 ${data}\n\n*Resumo:*\nTotal: ${total} | Integral: ${integral} | Semi-Int.: ${semi} | Tarde: ${tarde} | Diária: ${diaria}\n\nRelatório completo disponível em PDF.`;
+    ultimoRelatorioTexto = `🍁 *Maple Bear — Dashboard de Turnos*\n📅 ${data}\n\n*Resumo:*\nTotal: ${total} | Integral: ${integral} | Semi-Int.: ${semi} | Tarde: ${tarde} | Diária: ${diaria}\n\nRelatório completo disponível em PDF.`;
 
     return `
     <div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:0;">
@@ -1415,7 +1448,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </tr>`;
     }).join('');
 
-    ultimoRelatorioTexto = `🍁 *Maple Bear BG — Dashboard de Atividades*\n📅 ${data}\n\n*Resumo:*\nInscrições: ${total} | Atividades ativas: ${ativas} | Turmas lotadas: ${lotadas} | Vagas disponíveis: ${vagas}\n\nRelatório completo disponível em PDF.`;
+    ultimoRelatorioTexto = `🍁 *Maple Bear — Dashboard de Atividades*\n📅 ${data}\n\n*Resumo:*\nInscrições: ${total} | Atividades ativas: ${ativas} | Turmas lotadas: ${lotadas} | Vagas disponíveis: ${vagas}\n\nRelatório completo disponível em PDF.`;
 
     return `
     <div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:0;">
