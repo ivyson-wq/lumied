@@ -349,20 +349,22 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
+    const redirectTo = window.location.origin + window.location.pathname;
+
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.href, shouldCreateUser: true }
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: true }
     });
 
     if (error) {
+      console.error('Magic link error:', error);
       btn.disabled = false;
       btn.innerHTML = '✉️ Enviar link de acesso';
-      errEl.textContent = 'Erro ao enviar. Tente novamente.';
+      errEl.textContent = 'Erro: ' + error.message;
       errEl.classList.add('show');
       return;
     }
 
-    // Mostra estado de "enviado"
     document.getElementById('sentEmailBadge').textContent = email;
     document.getElementById('emailState').style.display = 'none';
     document.getElementById('sentState').style.display = 'block';
