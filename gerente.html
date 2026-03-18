@@ -183,9 +183,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     </div>
     <nav class="sb-nav">
       <div class="sb-label">Turnos 2026</div>
-      <a class="nav-item active" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard</a>
+      <a class="nav-item active" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
       <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries</a>
-      <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Atividades</a>
+      <div class="sb-label">Atividades Extraclasse</div>
+      <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard Atividades</a>
+      <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
+      <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('usuarios',this)"><span class="ic">👥</span> Usuários</a>
       <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
@@ -235,6 +238,59 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <table>
             <thead><tr><th>Criança</th><th>Responsável</th><th>Série</th><th>Turno</th><th>Dias</th><th>Data</th><th>Ações</th></tr></thead>
             <tbody id="tableBody"><tr><td colspan="6" class="empty-state">⏳ Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DASHBOARD ATIVIDADES -->
+      <div id="panelDashAtiv" class="panel">
+
+        <!-- Stats gerais -->
+        <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+          <div class="stat-card" data-g="total">
+            <div class="stat-label">Total de Inscrições</div>
+            <div class="stat-value" id="atTotal">—</div>
+            <div class="stat-sub">em atividades</div>
+          </div>
+          <div class="stat-card" data-g="integral">
+            <div class="stat-label">Atividades Ativas</div>
+            <div class="stat-value" id="atAtivas">—</div>
+            <div class="stat-sub">com inscrições abertas</div>
+          </div>
+          <div class="stat-card" data-g="semi">
+            <div class="stat-label">Turmas Lotadas</div>
+            <div class="stat-value" id="atLotadas">—</div>
+            <div class="stat-sub">sem vagas disponíveis</div>
+          </div>
+          <div class="stat-card" data-g="tarde">
+            <div class="stat-label">Vagas Disponíveis</div>
+            <div class="stat-value" id="atVagas">—</div>
+            <div class="stat-sub">total em aberto</div>
+          </div>
+        </div>
+
+        <!-- Crianças por dia da semana -->
+        <div class="sec-title" style="margin-bottom:16px;">📅 Crianças por Dia da Semana</div>
+        <div class="dias-semana-grid">
+          <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="adCount_Segunda">0</span></div><div class="dia-card-body" id="adList_Segunda"><div class="dia-vazio">Nenhuma criança</div></div></div>
+          <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terça</span><span class="dia-count" id="adCount_Terça">0</span></div><div class="dia-card-body" id="adList_Terça"><div class="dia-vazio">Nenhuma criança</div></div></div>
+          <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="adCount_Quarta">0</span></div><div class="dia-card-body" id="adList_Quarta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+          <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="adCount_Quinta">0</span></div><div class="dia-card-body" id="adList_Quinta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+          <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="adCount_Sexta">0</span></div><div class="dia-card-body" id="adList_Sexta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        </div>
+
+        <!-- Ocupação por atividade -->
+        <div class="sec-title" style="margin-bottom:16px;">🎯 Ocupação por Atividade</div>
+        <div id="atOcupacaoGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:28px;"></div>
+
+        <!-- Tabela de inscrições -->
+        <div class="sec-title">Inscrições Recebidas <span class="count-badge" id="adInscricoesCount">0</span>
+          <input class="search-input" id="adSearchInput" type="text" placeholder="🔍  Buscar..." oninput="renderAtivDashTable()" style="margin-left:auto;">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Criança</th><th>Responsável</th><th>Série</th><th>Atividades e Turmas</th><th>Data</th><th></th></tr></thead>
+            <tbody id="adInscricoesBody"><tr><td colspan="6" class="empty-state"><div class="ei">⏳</div>Carregando…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -515,7 +571,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     loadData();
     loadSidebarLogo();
     // Poll a cada 15 segundos
-    pollInterval = setInterval(()=>{ if(document.getElementById('panelDashboard').classList.contains('active')) loadData(); }, 15000);
+    pollInterval = setInterval(()=>{
+      if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
+      if(document.getElementById('panelDashAtiv').classList.contains('active')) loadAtivDashboard();
+    }, 15000);
   }
 
   document.addEventListener('keydown', e => { if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') doLogin(); });
@@ -526,11 +585,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',series:'Séries',atividades:'Atividades Extracurriculares',logo:'Logotipo',usuarios:'Usuários'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',logo:'Logotipo',usuarios:'Usuários'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
-    document.getElementById('liveBadge').style.display = id==='dashboard'?'flex':'none';
+    document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     if(id==='series')    loadSeries();
     if(id==='atividades') loadAtividadesPanel();
+    if(id==='dashAtiv')  loadAtivDashboard();
     if(id==='logo')      loadLogoPanel();
     if(id==='usuarios')  loadUsers();
     return false;
@@ -1070,6 +1130,128 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
     closeAtivModal();
     loadAtividadesCRUD();
+  }
+
+  // ── DASHBOARD ATIVIDADES ──────────────────────────────
+  let allInscricoesAtiv = [];
+
+  async function loadAtivDashboard() {
+    const [inscricoes, atividades] = await Promise.all([
+      api({ action:'inscricoes_atividades_list' }),
+      api({ action:'atividades_list_all' })
+    ]);
+
+    allInscricoesAtiv = Array.isArray(inscricoes) ? inscricoes : [];
+    const todasAtiv   = Array.isArray(atividades)  ? atividades  : [];
+
+    // ── Stats gerais ──
+    const totalInscritos = allInscricoesAtiv.length;
+    const ativasComVaga  = todasAtiv.filter(a => a.ativo && (a.horarios||[]).some(t => (t.vagas_disponiveis??999) > 0)).length;
+    const turmasLotadas  = todasAtiv.reduce((acc, a) => acc + (a.horarios||[]).filter(t => t.vagas!=null && (t.vagas_disponiveis??999) === 0).length, 0);
+    const vagasTotal     = todasAtiv.reduce((acc, a) => acc + (a.horarios||[]).reduce((s, t) => s + (t.vagas_disponiveis??0), 0), 0);
+
+    document.getElementById('atTotal').textContent   = totalInscritos;
+    document.getElementById('atAtivas').textContent  = ativasComVaga;
+    document.getElementById('atLotadas').textContent = turmasLotadas;
+    document.getElementById('atVagas').textContent   = vagasTotal;
+
+    // ── Crianças por dia ──
+    const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta'];
+    const diasMap = {}; DIAS.forEach(d => diasMap[d] = []);
+
+    allInscricoesAtiv.forEach(ins => {
+      (ins.turmas_selecionadas||[]).forEach(ts => {
+        (ts.slots||[]).forEach(slot => {
+          if (diasMap[slot.dia]) {
+            diasMap[slot.dia].push({ nome: ins.nome_crianca, atividade: ts.turma, serie: ins.serie });
+          }
+        });
+      });
+    });
+
+    DIAS.forEach(dia => {
+      const count = diasMap[dia].length;
+      document.getElementById('adCount_'+dia).textContent = count;
+      const listEl = document.getElementById('adList_'+dia);
+      if (!count) { listEl.innerHTML = '<div class="dia-vazio">Nenhuma criança</div>'; return; }
+      listEl.innerHTML = diasMap[dia].map(c =>
+        `<div class="dia-crianca-item">
+          <div class="dia-crianca-dot"></div>
+          <div class="dia-crianca-info">
+            <strong>${esc(c.nome)}</strong>
+            <span>${esc(c.atividade||'')}${c.serie?' · '+c.serie:''}</span>
+          </div>
+        </div>`
+      ).join('');
+    });
+
+    // ── Ocupação por atividade ──
+    const grid = document.getElementById('atOcupacaoGrid');
+    if (!todasAtiv.length) { grid.innerHTML = '<p style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</p>'; }
+    else {
+      grid.innerHTML = todasAtiv.map(a => {
+        const turmas = (a.horarios||[]).map(t => {
+          const inscritos = t.inscritos||0;
+          const vagas = t.vagas ?? null;
+          const pct = vagas ? Math.round((inscritos/vagas)*100) : 0;
+          const cor = pct >= 100 ? '#C8102E' : pct >= 75 ? '#d4830a' : '#2d7a3a';
+          return `<div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:12px;font-weight:500;color:var(--text);">${esc(t.turma)}</span>
+              <span style="font-size:11px;color:${cor};font-weight:600;">${inscritos}${vagas!=null?'/'+vagas:''} inscrito(s)</span>
+            </div>
+            ${vagas!=null?`<div style="height:6px;background:#f0ece6;border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${Math.min(100,pct)}%;background:${cor};border-radius:3px;transition:width .4s;"></div>
+            </div>`:''}
+          </div>`;
+        }).join('');
+
+        return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <span style="width:12px;height:12px;border-radius:50%;background:${a.cor||'#C8102E'};flex-shrink:0;display:inline-block;"></span>
+            <span style="font-family:'Lora',serif;font-size:14px;font-weight:700;color:var(--text);">${esc(a.nome)}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:auto;">R$ ${Number(a.preco).toFixed(2).replace('.',',')}/mês</span>
+          </div>
+          ${turmas||'<span style="font-size:12px;color:var(--muted);">Sem turmas.</span>'}
+        </div>`;
+      }).join('');
+    }
+
+    // ── Tabela ──
+    renderAtivDashTable();
+  }
+
+  function renderAtivDashTable() {
+    const q = (document.getElementById('adSearchInput')?.value||'').toLowerCase();
+    const rows = allInscricoesAtiv.filter(ins =>
+      !q || [ins.nome_crianca, ins.nome_resp, ins.email, ins.serie].some(v => v?.toLowerCase().includes(q))
+    );
+    document.getElementById('adInscricoesCount').textContent = rows.length;
+    const tb = document.getElementById('adInscricoesBody');
+    if (!rows.length) { tb.innerHTML='<tr><td colspan="6" class="empty-state">📭 Nenhuma inscrição.</td></tr>'; return; }
+    tb.innerHTML = rows.map(ins => {
+      const atividades = (ins.turmas_selecionadas||[]).map(ts =>
+        `<div style="margin-bottom:4px;">
+          <span style="font-size:11px;font-weight:600;color:var(--text);">${esc(ts.turma||'')}</span>
+          ${(ts.slots||[]).length?`<span style="font-size:10px;color:var(--muted);margin-left:4px;">${ts.slots.map(s=>s.dia+' '+s.inicio+'–'+s.fim).join(', ')}</span>`:''}
+        </div>`
+      ).join('') || '—';
+      const date = new Date(ins.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      return `<tr>
+        <td><strong>${esc(ins.nome_crianca)}</strong></td>
+        <td>${esc(ins.nome_resp)}<br><small style="color:var(--muted)">${esc(ins.email)}</small></td>
+        <td>${esc(ins.serie||'—')}</td>
+        <td>${atividades}</td>
+        <td class="date-cell">${date}</td>
+        <td><button class="action-btn del" onclick="deleteInscricaoAtivDash('${ins.id}','${esc(ins.nome_crianca)}')">🗑</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function deleteInscricaoAtivDash(id, nome) {
+    if (!confirm('Remover inscrição de "'+nome+'"?')) return;
+    await api({ action:'inscricoes_atividades_delete', id });
+    loadAtivDashboard();
   }
 
   checkSession();
