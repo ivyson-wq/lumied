@@ -89,6 +89,34 @@ input:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,1
 input.is-error,select.is-error{border-color:var(--red);}
 input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-color:#e0e0e0;}
 .locked-badge{font-size:10px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:3px;}
+
+/* MODO SELECTOR */
+.modo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modo-opt{border:2px solid var(--border);border-radius:12px;padding:22px 18px;cursor:pointer;transition:all .2s;background:#fdfbf8;text-align:center;}
+.modo-opt:hover{border-color:#bbb;background:#f7f5f2;}
+.modo-opt.selected{border-color:var(--red);background:var(--red-light);}
+.modo-icon{font-size:36px;margin-bottom:10px;}
+.modo-nome{font-family:'Lora',serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.modo-opt.selected .modo-nome{color:var(--red);}
+.modo-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+.modo-back{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;padding:0;margin-bottom:16px;display:none;}
+@media(max-width:480px){.modo-grid{grid-template-columns:1fr;}}
+
+/* ATIVIDADES */
+.ativ-item{border:2px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .18s;background:#fdfbf8;position:relative;}
+.ativ-item:hover{border-color:#ccc;background:#faf9f7;}
+.ativ-item.selected{border-color:var(--red);background:var(--red-light);}
+.ativ-item.conflict{border-color:#d4830a;background:rgba(212,131,10,.06);}
+.ativ-header{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.ativ-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ativ-nome{font-family:'Lora',serif;font-size:15px;font-weight:700;color:var(--text);flex:1;}
+.ativ-preco{font-size:13px;font-weight:600;color:var(--red);}
+.ativ-desc{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+.ativ-horarios{display:flex;flex-wrap:wrap;gap:6px;}
+.ativ-horario-tag{background:#f0ece6;color:var(--muted);border-radius:100px;padding:3px 10px;font-size:11px;font-weight:500;}
+.ativ-item.selected .ativ-horario-tag{background:rgba(200,16,46,.1);color:var(--red);}
+.ativ-check{position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .18s;}
+.ativ-item.selected .ativ-check{background:var(--red);border-color:var(--red);color:#fff;}
 .err-msg{font-size:12px;color:var(--red);margin-top:5px;display:none;}.err-msg.show{display:block;}
 .turno-preview{margin-top:10px;padding:12px 16px;background:var(--red-light);border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;color:var(--red);display:none;}
 .turno-preview.show{display:block;}
@@ -215,7 +243,27 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 <!-- FORMULÁRIO -->
 <div class="form-wrap" id="formWrap">
   <form id="mainForm" novalidate>
-    <div class="card">
+
+    <!-- SELEÇÃO DE MODO -->
+    <div class="card" id="cardModo">
+      <div class="card-title">📋 O que deseja solicitar?</div>
+      <div class="modo-grid">
+        <div class="modo-opt" id="modoTurnoOpt" onclick="setModo('turno')">
+          <div class="modo-icon">🕐</div>
+          <div class="modo-nome">Alteração de Turno</div>
+          <div class="modo-desc">Solicite a alteração do turno da sua criança para o mês seguinte.</div>
+        </div>
+        <div class="modo-opt" id="modoAtivOpt" onclick="setModo('atividade')">
+          <div class="modo-icon">🎯</div>
+          <div class="modo-nome">Atividades Extracurriculares</div>
+          <div class="modo-desc">Inscreva sua criança em atividades como Futebol, Balé, Karatê e mais.</div>
+        </div>
+      </div>
+      <div class="err-msg" id="modoErr" style="margin-top:10px;">Selecione o tipo de solicitação.</div>
+    </div>
+
+    <!-- DADOS COMUNS -->
+    <div class="card" id="cardDados" style="display:none;">
       <div class="card-title">👤 Seus Dados</div>
       <div class="field">
         <label for="email">E-mail</label>
@@ -236,7 +284,8 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       </div>
     </div>
 
-    <div class="card">
+    <!-- SÉRIE (comum) -->
+    <div class="card" id="cardSerie" style="display:none;">
       <div class="card-title">🎒 Série</div>
       <div class="field">
         <label for="serieSelect">Série da criança <span class="req">*</span></label>
@@ -245,39 +294,56 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">🕐 Turno Desejado</div>
-      <div class="field">
-        <label for="turnoSelect">Selecione o turno <span class="req">*</span></label>
-        <select id="turnoSelect" onchange="onTurnoChange()">
-          <option value="">Selecione…</option>
-          <optgroup label="── Integral — início às 07:30h">
-            <option value="integral_5x">Integral · 5× na semana — R$ 4.395,00</option>
-            <option value="integral_4x">Integral · 4× na semana — R$ 4.303,57</option>
-            <option value="integral_3x">Integral · 3× na semana — R$ 4.072,13</option>
-            <option value="integral_2x">Integral · 2× na semana — R$ 3.760,70</option>
-            <option value="integral_1x">Integral · 1× na semana — R$ 3.300,00</option>
-          </optgroup>
-          <optgroup label="── Semi-Integral — início às 09:45h">
-            <option value="semi_5x">Semi-Integral · 5× na semana — R$ 4.030,00</option>
-            <option value="semi_4x">Semi-Integral · 4× na semana — R$ 3.991,57</option>
-            <option value="semi_3x">Semi-Integral · 3× na semana — R$ 3.773,13</option>
-            <option value="semi_2x">Semi-Integral · 2× na semana — R$ 3.534,70</option>
-            <option value="semi_1x">Semi-Integral · 1× na semana — R$ 3.196,27</option>
-          </optgroup>
-          <optgroup label="── Outros">
-            <option value="tarde">Apenas a Tarde — início às 13:30h</option>
-            <option value="diaria">Diária — R$ 150,00</option>
-          </optgroup>
-        </select>
-        <div class="err-msg" id="turnoErr">Selecione um turno.</div>
-        <div class="turno-preview" id="turnoPreview"></div>
-        <p class="turno-note">* Para Ensino Fundamental o turno Tarde inicia às 13:10h.</p>
+    <!-- SEÇÃO: TURNO -->
+    <div id="secaoTurno" style="display:none;">
+      <div class="card">
+        <div class="card-title">🕐 Turno Desejado</div>
+        <div class="field">
+          <label for="turnoSelect">Selecione o turno <span class="req">*</span></label>
+          <select id="turnoSelect" onchange="onTurnoChange()">
+            <option value="">Selecione…</option>
+            <optgroup label="── Integral — início às 07:30h">
+              <option value="integral_5x">Integral · 5× na semana — R$ 4.395,00</option>
+              <option value="integral_4x">Integral · 4× na semana — R$ 4.303,57</option>
+              <option value="integral_3x">Integral · 3× na semana — R$ 4.072,13</option>
+              <option value="integral_2x">Integral · 2× na semana — R$ 3.760,70</option>
+              <option value="integral_1x">Integral · 1× na semana — R$ 3.300,00</option>
+            </optgroup>
+            <optgroup label="── Semi-Integral — início às 09:45h">
+              <option value="semi_5x">Semi-Integral · 5× na semana — R$ 4.030,00</option>
+              <option value="semi_4x">Semi-Integral · 4× na semana — R$ 3.991,57</option>
+              <option value="semi_3x">Semi-Integral · 3× na semana — R$ 3.773,13</option>
+              <option value="semi_2x">Semi-Integral · 2× na semana — R$ 3.534,70</option>
+              <option value="semi_1x">Semi-Integral · 1× na semana — R$ 3.196,27</option>
+            </optgroup>
+            <optgroup label="── Outros">
+              <option value="tarde">Apenas a Tarde — início às 13:30h</option>
+              <option value="diaria">Diária — R$ 150,00</option>
+            </optgroup>
+          </select>
+          <div class="err-msg" id="turnoErr">Selecione um turno.</div>
+          <div class="turno-preview" id="turnoPreview"></div>
+          <p class="turno-note">* Para Ensino Fundamental o turno Tarde inicia às 13:10h.</p>
+        </div>
       </div>
     </div>
 
-    <button type="submit" class="btn-submit" id="submitBtn">Enviar Solicitação</button>
-    <p class="submit-note">Você receberá um e-mail de confirmação após o envio.</p>
+    <!-- SEÇÃO: ATIVIDADES -->
+    <div id="secaoAtividades" style="display:none;">
+      <div class="card">
+        <div class="card-title">🎯 Atividades Extracurriculares</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Selecione uma ou mais atividades. Os horários não podem ser conflitantes.</p>
+        <div id="atividadesLista">
+          <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando atividades…</div>
+        </div>
+        <div id="conflictAlert" style="display:none;margin-top:14px;padding:12px 16px;background:#fdf0f2;border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;color:#a00d24;line-height:1.6;"></div>
+        <div id="totalAtividades" style="display:none;margin-top:14px;padding:12px 16px;background:rgba(45,122,58,.08);border:1px solid rgba(45,122,58,.2);border-radius:8px;font-size:13px;color:#1a5c2a;font-weight:600;"></div>
+        <div class="err-msg" id="ativErr2" style="margin-top:10px;">Selecione pelo menos uma atividade.</div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-submit" id="submitBtn" style="display:none;">Enviar Solicitação</button>
+    <p class="submit-note" id="submitNote" style="display:none;">Você receberá um e-mail de confirmação após o envio.</p>
   </form>
 </div>
 
@@ -530,6 +596,96 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   }
   ['dSeg','dTer','dQua','dQui','dSex'].forEach(id=>document.getElementById(id).addEventListener('change',updateDiasCounter));
 
+  // ── ATIVIDADES ────────────────────────────────────────
+  let todasAtividades = [];
+  let atividadesSelecionadas = new Set(); // IDs selecionados
+
+  async function loadAtividades() {
+    const data = await call({ action: 'atividades_list' });
+    todasAtividades = Array.isArray(data) ? data : [];
+    renderAtividades();
+  }
+
+  function renderAtividades() {
+    const el = document.getElementById('atividadesLista');
+    if (!todasAtividades.length) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada no momento.</div>';
+      return;
+    }
+    el.innerHTML = todasAtividades.map(a => {
+      const sel = atividadesSelecionadas.has(a.id);
+      const horStr = (a.horarios||[]).map(h => `${h.dia} ${h.inicio}–${h.fim}`).join(' · ');
+      return `<div class="ativ-item${sel?' selected':''}" onclick="toggleAtividade('${a.id}')" id="ativ_${a.id}">
+        <div class="ativ-check">${sel?'✓':''}</div>
+        <div class="ativ-header">
+          <div class="ativ-dot" style="background:${a.cor||'#C8102E'}"></div>
+          <div class="ativ-nome">${esc2(a.nome)}</div>
+          <div class="ativ-preco">R$ ${Number(a.preco).toFixed(2).replace('.',',')}/mês</div>
+        </div>
+        ${a.descricao?`<div class="ativ-desc">${esc2(a.descricao)}</div>`:''}
+        <div class="ativ-horarios">
+          ${(a.horarios||[]).map(h=>`<span class="ativ-horario-tag">📅 ${h.dia} ${h.inicio}–${h.fim}</span>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleAtividade(id) {
+    if (atividadesSelecionadas.has(id)) {
+      atividadesSelecionadas.delete(id);
+    } else {
+      atividadesSelecionadas.add(id);
+    }
+    checkConflicts();
+    renderAtividades();
+    updateTotalAtividades();
+  }
+
+  function checkConflicts() {
+    const selecionadas = todasAtividades.filter(a => atividadesSelecionadas.has(a.id));
+    const conflitos = [];
+
+    for (let i = 0; i < selecionadas.length; i++) {
+      for (let j = i + 1; j < selecionadas.length; j++) {
+        const a1 = selecionadas[i], a2 = selecionadas[j];
+        const hs1 = a1.horarios || [], hs2 = a2.horarios || [];
+        for (const h1 of hs1) {
+          for (const h2 of hs2) {
+            if (h1.dia === h2.dia && horariosConflitam(h1, h2)) {
+              conflitos.push(`<strong>${a1.nome}</strong> (${h1.dia} ${h1.inicio}–${h1.fim}) conflita com <strong>${a2.nome}</strong> (${h2.dia} ${h2.inicio}–${h2.fim})`);
+            }
+          }
+        }
+      }
+    }
+
+    const alertEl = document.getElementById('conflictAlert');
+    if (conflitos.length) {
+      alertEl.style.display = 'block';
+      alertEl.innerHTML = '⚠️ <strong>Conflito de horários detectado:</strong><br>' + conflitos.join('<br>');
+    } else {
+      alertEl.style.display = 'none';
+    }
+    return conflitos.length === 0;
+  }
+
+  function horariosConflitam(h1, h2) {
+    const toMin = t => { const [hh,mm] = t.split(':').map(Number); return hh*60+mm; };
+    const s1=toMin(h1.inicio), e1=toMin(h1.fim), s2=toMin(h2.inicio), e2=toMin(h2.fim);
+    return s1 < e2 && s2 < e1;
+  }
+
+  function updateTotalAtividades() {
+    const selecionadas = todasAtividades.filter(a => atividadesSelecionadas.has(a.id));
+    const el = document.getElementById('totalAtividades');
+    if (!selecionadas.length) { el.style.display='none'; return; }
+    const total = selecionadas.reduce((s,a)=>s+Number(a.preco),0);
+    el.style.display = 'block';
+    el.textContent = `✅ ${selecionadas.length} atividade(s) selecionada(s) — Total: R$ ${total.toFixed(2).replace('.',',')} /mês`;
+  }
+
+  function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
   // ── DADOS ─────────────────────────────────────────────
   async function call(body) {
     const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON}, body: JSON.stringify(body) });
@@ -548,44 +704,89 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     } catch(_) {}
   }
 
+  // ── MODO ──────────────────────────────────────────────
+  let modoAtual = null;
+
+  function setModo(modo) {
+    modoAtual = modo;
+    document.getElementById('modoErr').classList.remove('show');
+    document.getElementById('modoTurnoOpt').classList.toggle('selected', modo==='turno');
+    document.getElementById('modoAtivOpt').classList.toggle('selected', modo==='atividade');
+    document.getElementById('cardDados').style.display    = 'block';
+    document.getElementById('cardSerie').style.display    = 'block';
+    document.getElementById('secaoTurno').style.display      = modo==='turno'     ? 'block' : 'none';
+    document.getElementById('secaoAtividades').style.display  = modo==='atividade' ? 'block' : 'none';
+    document.getElementById('submitBtn').style.display   = 'block';
+    document.getElementById('submitNote').style.display  = 'block';
+    document.getElementById('submitBtn').textContent = modo==='turno'
+      ? 'Enviar Solicitação de Turno'
+      : 'Confirmar Inscrição nas Atividades';
+  }
+
   // ── SUBMIT ────────────────────────────────────────────
   function setErr(id,errId,show){ document.getElementById(id)?.classList.toggle('is-error',show); document.getElementById(errId)?.classList.toggle('show',show); return !show; }
 
   document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     if (!currentUser) { alert('Faça login para enviar.'); return; }
+
+    if (!modoAtual) {
+      document.getElementById('modoErr').classList.add('show');
+      document.getElementById('cardModo').scrollIntoView({behavior:'smooth'}); return;
+    }
+
     const email       = document.getElementById('email').value.trim();
     const nomeResp    = document.getElementById('nomeResp').value.trim();
     const nomeCrianca = document.getElementById('nomeCrianca').value.trim();
     const serie       = document.getElementById('serieSelect').value;
-    const turno       = document.getElementById('turnoSelect').value;
     let ok = true;
     ok = setErr('nomeResp',   'nomeRespErr',   !nomeResp)    && ok;
     ok = setErr('nomeCrianca','nomeCriancaErr', !nomeCrianca) && ok;
     ok = setErr('serieSelect','serieErr',       !serie)       && ok;
-    ok = setErr('turnoSelect','turnoErr',       !turno)       && ok;
     if (!ok) return;
-    if (PRECISA_DIAS(turno) && diasSelecionados.length !== TURNO_INFO[turno].freq) {
-      document.getElementById('turnoErr').textContent='Escolha os dias da semana. Selecione o turno novamente.';
-      document.getElementById('turnoErr').classList.add('show');
-      openDiasModal(turno); return;
-    }
+
     const btn = document.getElementById('submitBtn');
     btn.disabled=true; btn.textContent='Enviando…';
+
     try {
-      const d = await call({ action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno, dias_semana:diasSelecionados.length?diasSelecionados:null });
-      if (d.error) throw new Error(d.error);
-      await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON}, body: JSON.stringify({ nomeResp, nomeCrianca, turno, email, serie, diasSemana:diasSelecionados }) });
+      if (modoAtual === 'turno') {
+        const turno = document.getElementById('turnoSelect').value;
+        if (!turno) { setErr('turnoSelect','turnoErr',true); btn.disabled=false; btn.textContent='Enviar Solicitação de Turno'; return; }
+        if (PRECISA_DIAS(turno) && diasSelecionados.length !== TURNO_INFO[turno].freq) {
+          document.getElementById('turnoErr').textContent='Escolha os dias da semana.';
+          document.getElementById('turnoErr').classList.add('show');
+          openDiasModal(turno); btn.disabled=false; btn.textContent='Enviar Solicitação de Turno'; return;
+        }
+        const d = await call({ action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno, dias_semana:diasSelecionados.length?diasSelecionados:null });
+        if (d.error) throw new Error(d.error);
+        await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
+          body: JSON.stringify({ tipo:'turno', nomeResp, nomeCrianca, turno, email, serie, diasSemana:diasSelecionados }) });
+
+      } else {
+        if (atividadesSelecionadas.size === 0) {
+          document.getElementById('ativErr2').classList.add('show');
+          btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return;
+        }
+        if (!checkConflicts()) { btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return; }
+        const atividadesIds     = [...atividadesSelecionadas];
+        const atividadesDetalhe = todasAtividades.filter(a => atividadesSelecionadas.has(a.id));
+        const d2 = await call({ action:'inscricao_atividade_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, atividades_ids:atividadesIds, atividades_detalhe:atividadesDetalhe });
+        if (d2.error) throw new Error(d2.error);
+        await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
+          body: JSON.stringify({ tipo:'atividade', nomeResp, nomeCrianca, email, serie, atividades:atividadesDetalhe }) });
+      }
+
       document.getElementById('formWrap').style.display='none';
       document.getElementById('successPanel').style.display='block';
     } catch(err) {
       alert('Erro ao enviar. Tente novamente.\n'+err.message);
-      btn.disabled=false; btn.textContent='Enviar Solicitação';
+      btn.disabled=false;
+      btn.textContent = modoAtual==='turno' ? 'Enviar Solicitação de Turno' : 'Confirmar Inscrição nas Atividades';
     }
   });
 
   // ── INIT ──────────────────────────────────────────────
-  loadLogo(); loadSeries(); initAuth();
+  loadLogo(); loadSeries(); loadAtividades(); initAuth();
 </script>
 </body>
 </html>
