@@ -4,10 +4,13 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Maple Bear — Escolha de Turno 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.07);--cream:#f8f5f0;--border:#e6ddd3;--text:#1a1a1a;--muted:#7a7169;--white:#fff;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+
+/* HEADER */
 .site-header{background:var(--red);position:relative;overflow:hidden;}
 .site-header::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5C20 15,10 20,15 30C20 40,28 35,30 45C32 35,40 40,45 30C50 20,40 15,30 5Z' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E") repeat;}
 .header-inner{max-width:700px;margin:auto;padding:36px 24px 32px;position:relative;z-index:1;}
@@ -22,9 +25,57 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .top-link{position:absolute;top:16px;right:20px;z-index:10;color:rgba(255,255,255,.65);font-size:12px;text-decoration:none;padding:5px 12px;border:1px solid rgba(255,255,255,.2);border-radius:100px;transition:all .2s;}
 .top-link:hover{color:#fff;border-color:rgba(255,255,255,.5);}
 .aviso-strip{background:#fff3cd;border-bottom:1px solid #ead980;padding:11px 24px;text-align:center;font-size:13px;color:#7a5e00;font-weight:500;}
-.form-wrap{max-width:700px;margin:0 auto;padding:32px 24px 64px;}
-.card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:26px 28px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.05);animation:rise .35s ease both;}
+
+/* LOGIN WALL */
+#loginWall{max-width:460px;margin:48px auto 64px;padding:0 24px;}
+.login-card{background:var(--white);border-radius:16px;border:1px solid var(--border);padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,.07);animation:rise .4s ease;}
 @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.lw-icon{font-size:44px;margin-bottom:14px;text-align:center;}
+.lw-title{font-family:'Lora',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px;text-align:center;}
+.lw-sub{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:28px;text-align:center;}
+
+/* MAGIC LINK */
+.ml-field{margin-bottom:12px;}
+.ml-field label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:7px;}
+.ml-field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:#fdfbf8;outline:none;transition:border-color .2s,box-shadow .2s;}
+.ml-field input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.btn-magic{width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;box-shadow:0 4px 14px rgba(200,16,46,.3);margin-bottom:4px;}
+.btn-magic:hover{background:var(--red-dark);}
+.btn-magic:disabled{opacity:.5;cursor:not-allowed;}
+
+/* SENT STATE */
+#sentState{display:none;text-align:center;padding:8px 0;}
+.sent-icon{font-size:48px;margin-bottom:14px;}
+.sent-title{font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.sent-sub{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px;}
+.sent-email-badge{display:inline-block;background:var(--red-light);color:var(--red);border:1px solid rgba(200,16,46,.2);border-radius:100px;padding:6px 16px;font-size:13px;font-weight:600;margin-bottom:16px;}
+.btn-resend{background:none;border:none;color:var(--red);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;text-decoration:underline;padding:0;}
+.btn-resend:disabled{color:var(--muted);cursor:not-allowed;text-decoration:none;}
+
+/* DIVIDER */
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-size:12px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* OAUTH */
+.oauth-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:12px 20px;border-radius:9px;border:1.5px solid var(--border);background:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .2s;}
+.oauth-btn:hover{border-color:#aaa;background:#fafafa;box-shadow:0 2px 8px rgba(0,0,0,.07);}
+.oauth-btn:disabled{opacity:.5;cursor:not-allowed;}
+.lw-note{font-size:11px;color:var(--muted);margin-top:20px;line-height:1.6;text-align:center;}
+
+/* USER BAR */
+#userBar{display:none;background:var(--white);border-bottom:1px solid var(--border);padding:10px 24px;}
+.ub-inner{max-width:700px;margin:auto;display:flex;align-items:center;justify-content:space-between;}
+.ub-info{display:flex;align-items:center;gap:10px;}
+.ub-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border);display:none;}
+.ub-avatar-fb{width:32px;height:32px;border-radius:50%;background:var(--red-light);border:1px solid rgba(200,16,46,.2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--red);font-family:'Lora',serif;}
+.ub-name{font-size:13px;font-weight:500;color:var(--text);}
+.ub-email{font-size:11px;color:var(--muted);}
+.ub-signout{font-size:12px;color:var(--muted);padding:5px 12px;border:1px solid var(--border);border-radius:100px;cursor:pointer;background:none;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.ub-signout:hover{color:var(--red);border-color:rgba(200,16,46,.3);}
+
+/* FORM */
+.form-wrap{max-width:700px;margin:0 auto;padding:32px 24px 64px;display:none;}
+.card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:26px 28px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.05);animation:rise .35s ease both;}
 .card:nth-child(2){animation-delay:.06s;}.card:nth-child(3){animation-delay:.10s;}.card:nth-child(4){animation-delay:.14s;}
 .card-title{font-family:'Lora',serif;font-size:15px;font-weight:600;color:var(--red);margin-bottom:20px;display:flex;align-items:center;gap:10px;}
 .card-title::after{content:'';flex:1;height:1px;background:var(--border);margin-left:4px;}
@@ -36,6 +87,8 @@ input[type="text"],input[type="email"],select{width:100%;padding:11px 14px;borde
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7169' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
 input:focus,select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);background:#fff;}
 input.is-error,select.is-error{border-color:var(--red);}
+input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-color:#e0e0e0;}
+.locked-badge{font-size:10px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:3px;}
 .err-msg{font-size:12px;color:var(--red);margin-top:5px;display:none;}.err-msg.show{display:block;}
 .turno-preview{margin-top:10px;padding:12px 16px;background:var(--red-light);border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;color:var(--red);display:none;}
 .turno-preview.show{display:block;}
@@ -43,14 +96,13 @@ input.is-error,select.is-error{border-color:var(--red);}
 .turno-preview span{color:var(--muted);font-size:12px;}
 .turno-note{margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;}
 
-/* MODAL DIAS DA SEMANA */
+/* MODAL DIAS */
 .dias-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
 .dias-overlay.show{display:flex;}
 .dias-modal{background:#fff;border-radius:18px;padding:36px 32px;width:100%;max-width:460px;box-shadow:0 28px 70px rgba(0,0,0,.25);animation:rise .3s cubic-bezier(.22,.8,.44,1);}
 .dias-modal h3{font-family:'Lora',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:6px;}
 .dias-modal .dm-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px;}
 .dias-counter{display:inline-flex;align-items:center;gap:8px;background:var(--red-light);border:1px solid rgba(200,16,46,.2);border-radius:100px;padding:6px 16px;font-size:13px;color:var(--red);font-weight:600;margin-bottom:20px;}
-.dias-counter .dc-num{font-family:'Lora',serif;font-size:22px;font-weight:700;line-height:1;}
 .dias-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px;}
 .dia-btn{position:relative;}
 .dia-btn input{position:absolute;opacity:0;width:0;height:0;}
@@ -65,9 +117,7 @@ input.is-error,select.is-error{border-color:var(--red);}
 .dm-actions{display:flex;gap:10px;justify-content:flex-end;}
 .dm-cancel{padding:10px 20px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;color:var(--muted);}
 .dm-confirm{padding:10px 22px;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
-.dm-confirm:hover{background:var(--red-dark);}
-.dm-confirm:disabled{opacity:.45;cursor:not-allowed;}
-/* Tag de dias selecionados no preview */
+.dm-confirm:hover{background:var(--red-dark);}.dm-confirm:disabled{opacity:.45;cursor:not-allowed;}
 .dias-tag{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
 .dia-tag-item{background:var(--red-light);color:var(--red);border:1px solid rgba(200,16,46,.2);border-radius:100px;padding:3px 10px;font-size:11px;font-weight:600;}
 
@@ -79,40 +129,104 @@ input.is-error,select.is-error{border-color:var(--red);}
 .success-panel h2{font-family:'Lora',serif;font-size:24px;color:var(--text);margin-bottom:12px;}
 .success-panel p{color:var(--muted);line-height:1.75;font-size:14px;max-width:400px;margin:auto;}
 .success-tag{display:inline-block;margin-top:20px;background:var(--red-light);color:var(--red);border:1px solid rgba(200,16,46,.2);padding:8px 18px;border-radius:100px;font-size:13px;font-weight:500;}
-@media(max-width:520px){.grid-2{grid-template-columns:1fr;}.header-title{font-size:22px;}.card{padding:20px 16px;}}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+.spinner.dark{border-color:rgba(200,16,46,.2);border-top-color:var(--red);}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:520px){.grid-2{grid-template-columns:1fr;}.header-title{font-size:22px;}.card{padding:20px 16px;}.login-card{padding:28px 20px;}}
 </style>
 </head>
 <body>
+
 <div class="site-header">
   <a href="gerente.html" class="top-link">Área do Gerente →</a>
   <div class="header-inner">
     <div class="brand">
       <img id="logoImg" alt="Maple Bear">
-      <div id="logoFallback">
-        <div class="brand-leaf">🍁</div>
-        <div class="brand-name"><h1>Maple Bear</h1><span>Bento Gonçalves, RS</span></div>
-      </div>
+      <div id="logoFallback"><div class="brand-leaf">🍁</div><div class="brand-name"><h1>Maple Bear</h1><span>Bento Gonçalves, RS</span></div></div>
     </div>
     <div class="header-title">Escolha de Turno 2026</div>
     <div class="header-sub">Preencha o formulário para solicitar a alteração de turno da sua criança.<br>Você receberá um e-mail de confirmação.</div>
   </div>
 </div>
+
 <div class="aviso-strip">⚠️ <strong>Importante:</strong> as alterações de turno são válidas apenas para o mês seguinte ao da solicitação.</div>
 
+<!-- BARRA DO USUÁRIO -->
+<div id="userBar">
+  <div class="ub-inner">
+    <div class="ub-info">
+      <img id="ubAvatar" class="ub-avatar" alt="">
+      <div id="ubAvatarFb" class="ub-avatar-fb">?</div>
+      <div>
+        <div class="ub-name" id="ubName">—</div>
+        <div class="ub-email" id="ubEmail">—</div>
+      </div>
+    </div>
+    <button class="ub-signout" onclick="doSignOut()">Sair ↩</button>
+  </div>
+</div>
+
+<!-- TELA DE LOGIN -->
+<div id="loginWall">
+  <div class="login-card">
+    <div class="lw-icon">🔐</div>
+    <div class="lw-title">Identifique-se para continuar</div>
+    <p class="lw-sub">Para garantir a autenticidade das solicitações, confirme sua identidade antes de preencher o formulário.</p>
+
+    <!-- Estado inicial: formulário de e-mail -->
+    <div id="emailState">
+      <div class="ml-field">
+        <label>Seu e-mail</label>
+        <input type="email" id="mlEmail" placeholder="seuemail@exemplo.com" autocomplete="email">
+        <div class="err-msg" id="mlEmailErr">Informe um e-mail válido.</div>
+      </div>
+      <button class="btn-magic" id="btnMagic" onclick="sendMagicLink()">
+        ✉️ Enviar link de acesso
+      </button>
+      <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">Enviaremos um link de acesso para o seu e-mail. Sem senha necessária.</p>
+
+      <div class="divider">ou</div>
+
+      <button class="oauth-btn" id="btnGoogle" onclick="loginGoogle()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.32-8.16 2.32-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continuar com Google
+      </button>
+
+      <p class="lw-note">🔒 Seus dados são usados apenas para identificação.<br>Não compartilhamos informações com terceiros.</p>
+    </div>
+
+    <!-- Estado após envio do magic link -->
+    <div id="sentState">
+      <div class="sent-icon">📬</div>
+      <div class="sent-title">Verifique seu e-mail!</div>
+      <p class="sent-sub">Enviamos um link de acesso para:</p>
+      <div class="sent-email-badge" id="sentEmailBadge">—</div>
+      <p class="sent-sub">Clique no link do e-mail para acessar o formulário.<br>O link expira em 1 hora.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Não recebeu? Verifique a pasta de spam.</p>
+      <button class="btn-resend" id="btnResend" onclick="resendLink()">Reenviar link</button>
+      <div style="margin-top:16px;">
+        <button onclick="backToEmail()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;">← Usar outro e-mail</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FORMULÁRIO -->
 <div class="form-wrap" id="formWrap">
   <form id="mainForm" novalidate>
     <div class="card">
       <div class="card-title">👤 Seus Dados</div>
       <div class="field">
-        <label for="email">E-mail <span class="req">*</span></label>
-        <input type="email" id="email" placeholder="seuemail@exemplo.com" autocomplete="email">
-        <div class="err-msg" id="emailErr">Informe um e-mail válido.</div>
+        <label for="email">E-mail</label>
+        <input type="email" id="email" readonly>
+        <div class="locked-badge">🔒 Confirmado pelo seu login</div>
       </div>
       <div class="grid-2">
         <div class="field">
           <label for="nomeResp">Seu nome completo <span class="req">*</span></label>
           <input type="text" id="nomeResp" placeholder="Ex: Ana Paula Corrêa" autocomplete="name">
-          <div class="err-msg" id="nomeRespErr">Informe seu nome.</div>
+          <div class="err-msg" id="nomeRespErr">Informe seu nome completo.</div>
         </div>
         <div class="field">
           <label for="nomeCrianca">Nome da criança <span class="req">*</span></label>
@@ -121,6 +235,7 @@ input.is-error,select.is-error{border-color:var(--red);}
         </div>
       </div>
     </div>
+
     <div class="card">
       <div class="card-title">🎒 Série</div>
       <div class="field">
@@ -129,6 +244,7 @@ input.is-error,select.is-error{border-color:var(--red);}
         <div class="err-msg" id="serieErr">Selecione a série.</div>
       </div>
     </div>
+
     <div class="card">
       <div class="card-title">🕐 Turno Desejado</div>
       <div class="field">
@@ -159,10 +275,13 @@ input.is-error,select.is-error{border-color:var(--red);}
         <p class="turno-note">* Para Ensino Fundamental o turno Tarde inicia às 13:10h.</p>
       </div>
     </div>
+
     <button type="submit" class="btn-submit" id="submitBtn">Enviar Solicitação</button>
     <p class="submit-note">Você receberá um e-mail de confirmação após o envio.</p>
   </form>
 </div>
+
+<!-- SUCESSO -->
 <div class="success-panel" id="successPanel">
   <div class="si">🎉</div>
   <h2>Solicitação Recebida!</h2>
@@ -170,14 +289,14 @@ input.is-error,select.is-error{border-color:var(--red);}
   <div class="success-tag">✉️ Confirmação enviada</div>
 </div>
 
-<!-- MODAL DIAS DA SEMANA -->
+<!-- MODAL DIAS -->
 <div class="dias-overlay" id="diasOverlay">
   <div class="dias-modal">
     <h3 id="diasModalTitle">Escolha os dias</h3>
-    <p class="dm-sub" id="diasModalSub">Selecione exatamente os dias em que a criança frequentará a escola.</p>
+    <p class="dm-sub" id="diasModalSub"></p>
     <div class="dias-counter">
       <span id="dcSelecionados">0</span>
-      <span class="dc-sep" style="color:rgba(200,16,46,.4);">/</span>
+      <span style="color:rgba(200,16,46,.4);">/</span>
       <span id="dcTotal">0</span>
       <span style="font-size:12px;font-weight:400;color:var(--muted);">dias selecionados</span>
     </div>
@@ -197,17 +316,152 @@ input.is-error,select.is-error{border-color:var(--red);}
 </div>
 
 <script>
-  const API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
-  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-  const SEND = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/send-email';
+  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  const API  = SUPABASE_URL + '/functions/v1/api';
+  const SEND = SUPABASE_URL + '/functions/v1/send-email';
 
-  async function call(body, token) {
-    const headers = { 'Content-Type':'application/json', 'apikey': ANON };
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-    const r = await fetch(API, { method:'POST', headers, body: JSON.stringify(body) });
-    return r.json();
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
+  let resendCooldown = null;
+
+  // ── AUTH ──────────────────────────────────────────────
+  async function initAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) { currentUser = session.user; showForm(session.user); }
+    else showLoginWall();
+
+    sb.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) { currentUser = session.user; showForm(session.user); }
+      else showLoginWall();
+    });
   }
 
+  async function sendMagicLink() {
+    const email = document.getElementById('mlEmail').value.trim();
+    const errEl = document.getElementById('mlEmailErr');
+    errEl.classList.remove('show');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.classList.add('show'); return; }
+
+    const btn = document.getElementById('btnMagic');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Enviando…';
+
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href, shouldCreateUser: true }
+    });
+
+    if (error) {
+      btn.disabled = false;
+      btn.innerHTML = '✉️ Enviar link de acesso';
+      errEl.textContent = 'Erro ao enviar. Tente novamente.';
+      errEl.classList.add('show');
+      return;
+    }
+
+    // Mostra estado de "enviado"
+    document.getElementById('sentEmailBadge').textContent = email;
+    document.getElementById('emailState').style.display = 'none';
+    document.getElementById('sentState').style.display = 'block';
+    startResendCooldown();
+  }
+
+  function startResendCooldown() {
+    const btn = document.getElementById('btnResend');
+    let secs = 60;
+    btn.disabled = true;
+    btn.textContent = 'Reenviar em ' + secs + 's';
+    resendCooldown = setInterval(() => {
+      secs--;
+      if (secs <= 0) {
+        clearInterval(resendCooldown);
+        btn.disabled = false;
+        btn.textContent = 'Reenviar link';
+      } else {
+        btn.textContent = 'Reenviar em ' + secs + 's';
+      }
+    }, 1000);
+  }
+
+  async function resendLink() {
+    const email = document.getElementById('sentEmailBadge').textContent;
+    document.getElementById('btnResend').disabled = true;
+    await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+    startResendCooldown();
+  }
+
+  function backToEmail() {
+    clearInterval(resendCooldown);
+    document.getElementById('sentState').style.display = 'none';
+    document.getElementById('emailState').style.display = 'block';
+    const btn = document.getElementById('btnMagic');
+    btn.disabled = false; btn.innerHTML = '✉️ Enviar link de acesso';
+  }
+
+  async function loginGoogle() {
+    document.getElementById('btnGoogle').disabled = true;
+    document.getElementById('btnGoogle').innerHTML = '<span class="spinner dark"></span> Redirecionando…';
+    await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href }
+    });
+  }
+
+  async function doSignOut() {
+    await sb.auth.signOut();
+    currentUser = null;
+    showLoginWall();
+  }
+
+  function showLoginWall() {
+    document.getElementById('loginWall').style.display = 'block';
+    document.getElementById('userBar').style.display = 'none';
+    document.getElementById('formWrap').style.display = 'none';
+    document.getElementById('successPanel').style.display = 'none';
+    document.getElementById('emailState').style.display = 'block';
+    document.getElementById('sentState').style.display = 'none';
+    const btn = document.getElementById('btnMagic');
+    btn.disabled = false; btn.innerHTML = '✉️ Enviar link de acesso';
+    document.getElementById('btnGoogle').disabled = false;
+    document.getElementById('btnGoogle').innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.32-8.16 2.32-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continuar com Google`;
+  }
+
+  function showForm(user) {
+    const meta  = user.user_metadata || {};
+    const name  = meta.full_name || meta.name || '';
+    const email = user.email || '';
+    const avatar= meta.avatar_url || meta.picture || '';
+
+    document.getElementById('userBar').style.display = 'block';
+    document.getElementById('ubName').textContent  = name || email;
+    document.getElementById('ubEmail').textContent = email;
+    if (avatar) {
+      document.getElementById('ubAvatar').src = avatar;
+      document.getElementById('ubAvatar').style.display = 'block';
+      document.getElementById('ubAvatarFb').style.display = 'none';
+    } else {
+      document.getElementById('ubAvatarFb').textContent = (name||email)[0]?.toUpperCase()||'?';
+    }
+
+    document.getElementById('email').value    = email;
+    // Nome: pré-preenche se vier do Google; deixa editável para magic link
+    if (name) {
+      document.getElementById('nomeResp').value    = name;
+      document.getElementById('nomeResp').readOnly = true;
+      document.getElementById('nomeResp').nextElementSibling.style.display = 'flex';
+    } else {
+      document.getElementById('nomeResp').readOnly = false;
+      document.getElementById('nomeResp').nextElementSibling.style.display = 'none';
+    }
+
+    document.getElementById('loginWall').style.display  = 'none';
+    document.getElementById('formWrap').style.display   = 'block';
+  }
+
+  // ── TURNO ─────────────────────────────────────────────
   const TURNO_INFO = {
     integral_5x:{label:'Integral · 5× na semana',price:'R$ 4.395,00',inicio:'07:30h',freq:5},
     integral_4x:{label:'Integral · 4× na semana',price:'R$ 4.303,57',inicio:'07:30h',freq:4},
@@ -222,176 +476,114 @@ input.is-error,select.is-error{border-color:var(--red);}
     tarde:{label:'Apenas a Tarde',price:null,inicio:'13:30h (13:10h Ens. Fund.)',freq:null},
     diaria:{label:'Diária',price:'R$ 150,00',inicio:null,freq:null},
   };
+  const PRECISA_DIAS = v => TURNO_INFO[v]?.freq != null && TURNO_INFO[v].freq < 5;
 
-  // Turnos que precisam escolha de dias (freq < 5 e não nulos)
-  const PRECISA_DIAS = val => TURNO_INFO[val]?.freq != null && TURNO_INFO[val].freq < 5;
-
-  let diasSelecionados = []; // confirmados pelo modal
-  let diasFreqNecessaria = 0;
-
-  // ── TURNO CHANGE ──────────────────────────────────────
   function onTurnoChange() {
     const val = document.getElementById('turnoSelect').value;
     const prev = document.getElementById('turnoPreview');
-    diasSelecionados = []; // reset dias ao mudar turno
-    updateDiasPreview();
-
+    diasSelecionados = []; updateDiasPreview();
     if (!val) { prev.classList.remove('show'); return; }
     const t = TURNO_INFO[val], parts = [];
     if (t.price)  parts.push('💰 ' + t.price);
     if (t.inicio) parts.push('⏰ Início: ' + t.inicio);
     prev.innerHTML = '<strong>' + t.label + '</strong><span>' + parts.join(' · ') + '</span>';
     prev.classList.add('show');
-
     if (PRECISA_DIAS(val)) openDiasModal(val);
   }
 
-  // ── MODAL DIAS ────────────────────────────────────────
   function openDiasModal(val) {
-    const t = TURNO_INFO[val];
-    diasFreqNecessaria = t.freq;
+    const t = TURNO_INFO[val]; diasFreqNecessaria = t.freq;
     document.getElementById('diasModalTitle').textContent = 'Escolha os ' + t.freq + ' dia' + (t.freq>1?'s':'') + ' da semana';
-    document.getElementById('diasModalSub').textContent = 'Selecione exatamente ' + t.freq + ' dia' + (t.freq>1?'s':'') + ' em que a criança frequentará a escola.';
+    document.getElementById('diasModalSub').textContent   = 'Selecione exatamente ' + t.freq + ' dia' + (t.freq>1?'s':'') + ' em que a criança frequentará a escola.';
     document.getElementById('dcTotal').textContent = t.freq;
-    // Reset checkboxes
-    ['dSeg','dTer','dQua','dQui','dSex'].forEach(id => {
-      const el = document.getElementById(id);
-      el.checked = diasSelecionados.includes(el.value);
-      el.disabled = false;
-    });
+    ['dSeg','dTer','dQua','dQui','dSex'].forEach(id => { const el=document.getElementById(id); el.checked=diasSelecionados.includes(el.value); el.disabled=false; });
     updateDiasCounter();
     document.getElementById('diasAlert').classList.remove('show');
     document.getElementById('diasOverlay').classList.add('show');
   }
-
   function updateDiasCounter() {
-    const checked = getCheckedDias();
-    document.getElementById('dcSelecionados').textContent = checked.length;
-    document.getElementById('btnConfirmDias').disabled = checked.length !== diasFreqNecessaria;
-    // Desabilita checkboxes não marcados se já atingiu o limite
-    if (checked.length >= diasFreqNecessaria) {
-      ['dSeg','dTer','dQua','dQui','dSex'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el.checked) el.disabled = true;
-      });
-    } else {
-      ['dSeg','dTer','dQua','dQui','dSex'].forEach(id => {
-        document.getElementById(id).disabled = false;
-      });
-    }
+    const ch = getCheckedDias();
+    document.getElementById('dcSelecionados').textContent = ch.length;
+    document.getElementById('btnConfirmDias').disabled = ch.length !== diasFreqNecessaria;
+    if (ch.length >= diasFreqNecessaria) { ['dSeg','dTer','dQua','dQui','dSex'].forEach(id=>{const el=document.getElementById(id);if(!el.checked)el.disabled=true;}); }
+    else { ['dSeg','dTer','dQua','dQui','dSex'].forEach(id=>document.getElementById(id).disabled=false); }
   }
-
-  function getCheckedDias() {
-    return ['dSeg','dTer','dQua','dQui','dSex']
-      .map(id => document.getElementById(id))
-      .filter(el => el.checked)
-      .map(el => el.value);
-  }
-
+  function getCheckedDias(){ return ['dSeg','dTer','dQua','dQui','dSex'].map(id=>document.getElementById(id)).filter(el=>el.checked).map(el=>el.value); }
   function confirmDias() {
-    const checked = getCheckedDias();
-    if (checked.length !== diasFreqNecessaria) {
-      const al = document.getElementById('diasAlert');
-      al.textContent = 'Selecione exatamente ' + diasFreqNecessaria + ' dia(s).';
-      al.classList.add('show'); return;
-    }
-    diasSelecionados = checked;
-    document.getElementById('diasOverlay').classList.remove('show');
-    updateDiasPreview();
+    const ch = getCheckedDias();
+    if (ch.length !== diasFreqNecessaria) { const al=document.getElementById('diasAlert'); al.textContent='Selecione exatamente '+diasFreqNecessaria+' dia(s).'; al.classList.add('show'); return; }
+    diasSelecionados=ch; document.getElementById('diasOverlay').classList.remove('show'); updateDiasPreview();
   }
-
   function cancelDias() {
     document.getElementById('diasOverlay').classList.remove('show');
-    // Se cancelou sem confirmar, limpa o turno selecionado
-    if (diasSelecionados.length === 0) {
-      document.getElementById('turnoSelect').value = '';
-      document.getElementById('turnoPreview').classList.remove('show');
-    }
+    if (!diasSelecionados.length) { document.getElementById('turnoSelect').value=''; document.getElementById('turnoPreview').classList.remove('show'); }
   }
-
   function updateDiasPreview() {
-    const prev = document.getElementById('turnoPreview');
-    const existing = prev.querySelector('.dias-tag');
-    if (existing) existing.remove();
-    if (diasSelecionados.length > 0) {
-      const tag = document.createElement('div');
-      tag.className = 'dias-tag';
-      tag.innerHTML = '<span style="font-size:11px;color:var(--muted);width:100%;margin-bottom:2px;">📅 Dias escolhidos:</span>' +
-        diasSelecionados.map(d => '<span class="dia-tag-item">' + d + '</span>').join('');
-      prev.appendChild(tag);
+    const prev=document.getElementById('turnoPreview'), ex=prev.querySelector('.dias-tag'); if(ex)ex.remove();
+    if (diasSelecionados.length) {
+      const t=document.createElement('div'); t.className='dias-tag';
+      t.innerHTML='<span style="font-size:11px;color:var(--muted);width:100%;margin-bottom:2px;">📅 Dias escolhidos:</span>'+diasSelecionados.map(d=>'<span class="dia-tag-item">'+d+'</span>').join('');
+      prev.appendChild(t);
     }
   }
+  ['dSeg','dTer','dQua','dQui','dSex'].forEach(id=>document.getElementById(id).addEventListener('change',updateDiasCounter));
 
-  // Listener nos checkboxes
-  ['dSeg','dTer','dQua','dQui','dSex'].forEach(id =>
-    document.getElementById(id).addEventListener('change', updateDiasCounter));
-
-  // ── SÉRIES ────────────────────────────────────────────
-  async function loadSeries() {
-    const data = await call({ action: 'series_list' });
-    const sel = document.getElementById('serieSelect');
-    if (!Array.isArray(data) || !data.length) { sel.innerHTML = '<option value="">Nenhuma série cadastrada</option>'; return; }
-    sel.innerHTML = '<option value="">Selecione a série…</option>' + data.map(s => '<option value="'+s.nome+'">'+s.nome+'</option>').join('');
+  // ── DADOS ─────────────────────────────────────────────
+  async function call(body) {
+    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON}, body: JSON.stringify(body) });
+    return r.json();
   }
-
+  async function loadSeries() {
+    const data = await call({ action:'series_list' });
+    const sel = document.getElementById('serieSelect');
+    if (!Array.isArray(data)||!data.length) { sel.innerHTML='<option value="">Nenhuma série cadastrada</option>'; return; }
+    sel.innerHTML='<option value="">Selecione a série…</option>'+data.map(s=>'<option value="'+s.nome+'">'+s.nome+'</option>').join('');
+  }
   async function loadLogo() {
     try {
-      const d = await call({ action: 'config_get', chave: 'logo_url' });
-      if (d.valor) {
-        document.getElementById('logoImg').src = d.valor;
-        document.getElementById('logoImg').style.display = 'block';
-        document.getElementById('logoFallback').style.display = 'none';
-      }
+      const d = await call({ action:'config_get', chave:'logo_url' });
+      if (d.valor) { document.getElementById('logoImg').src=d.valor; document.getElementById('logoImg').style.display='block'; document.getElementById('logoFallback').style.display='none'; }
     } catch(_) {}
   }
 
   // ── SUBMIT ────────────────────────────────────────────
-  function validateEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-  function setErr(id, errId, show){ document.getElementById(id)?.classList.toggle('is-error',show); document.getElementById(errId)?.classList.toggle('show',show); return !show; }
+  function setErr(id,errId,show){ document.getElementById(id)?.classList.toggle('is-error',show); document.getElementById(errId)?.classList.toggle('show',show); return !show; }
 
   document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    if (!currentUser) { alert('Faça login para enviar.'); return; }
     const email       = document.getElementById('email').value.trim();
     const nomeResp    = document.getElementById('nomeResp').value.trim();
     const nomeCrianca = document.getElementById('nomeCrianca').value.trim();
     const serie       = document.getElementById('serieSelect').value;
     const turno       = document.getElementById('turnoSelect').value;
     let ok = true;
-    ok = setErr('email','emailErr',!validateEmail(email)) && ok;
-    ok = setErr('nomeResp','nomeRespErr',!nomeResp) && ok;
-    ok = setErr('nomeCrianca','nomeCriancaErr',!nomeCrianca) && ok;
-    ok = setErr('serieSelect','serieErr',!serie) && ok;
-    ok = setErr('turnoSelect','turnoErr',!turno) && ok;
+    ok = setErr('nomeResp',   'nomeRespErr',   !nomeResp)    && ok;
+    ok = setErr('nomeCrianca','nomeCriancaErr', !nomeCrianca) && ok;
+    ok = setErr('serieSelect','serieErr',       !serie)       && ok;
+    ok = setErr('turnoSelect','turnoErr',       !turno)       && ok;
     if (!ok) return;
-
-    // Validar dias obrigatórios
     if (PRECISA_DIAS(turno) && diasSelecionados.length !== TURNO_INFO[turno].freq) {
-      const al = document.getElementById('turnoErr');
-      al.textContent = 'Você precisa escolher os dias da semana. Selecione o turno novamente.';
-      al.classList.add('show');
-      openDiasModal(turno);
-      return;
+      document.getElementById('turnoErr').textContent='Escolha os dias da semana. Selecione o turno novamente.';
+      document.getElementById('turnoErr').classList.add('show');
+      openDiasModal(turno); return;
     }
-
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.textContent = 'Enviando…';
+    btn.disabled=true; btn.textContent='Enviando…';
     try {
-      const payload = { action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno, dias_semana: diasSelecionados.length ? diasSelecionados : null };
-      const d = await call(payload);
+      const d = await call({ action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno, dias_semana:diasSelecionados.length?diasSelecionados:null });
       if (d.error) throw new Error(d.error);
-      await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON}, body: JSON.stringify({ nomeResp, nomeCrianca, turno, email, serie, diasSemana: diasSelecionados }) });
-      document.getElementById('formWrap').style.display = 'none';
-      document.getElementById('successPanel').style.display = 'block';
+      await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON}, body: JSON.stringify({ nomeResp, nomeCrianca, turno, email, serie, diasSemana:diasSelecionados }) });
+      document.getElementById('formWrap').style.display='none';
+      document.getElementById('successPanel').style.display='block';
     } catch(err) {
-      alert('Erro ao enviar. Tente novamente.\n' + err.message);
-      btn.disabled = false; btn.textContent = 'Enviar Solicitação';
+      alert('Erro ao enviar. Tente novamente.\n'+err.message);
+      btn.disabled=false; btn.textContent='Enviar Solicitação';
     }
   });
 
-  ['email','nomeResp','nomeCrianca'].forEach(id =>
-    document.getElementById(id)?.addEventListener('input', () => document.getElementById(id).classList.remove('is-error')));
-
-  loadLogo(); loadSeries();
+  // ── INIT ──────────────────────────────────────────────
+  loadLogo(); loadSeries(); initAuth();
 </script>
 </body>
 </html>
