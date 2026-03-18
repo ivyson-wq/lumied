@@ -294,20 +294,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div class="ff">
                 <label>Cor</label>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;" id="corPicker">
-                  <span class="cor-opt" data-cor="#C8102E" style="background:#C8102E" onclick="selectCor(this)" title="Vermelho"></span>
-                  <span class="cor-opt" data-cor="#2d7a3a" style="background:#2d7a3a" onclick="selectCor(this)" title="Verde"></span>
-                  <span class="cor-opt" data-cor="#1a6bb5" style="background:#1a6bb5" onclick="selectCor(this)" title="Azul"></span>
-                  <span class="cor-opt" data-cor="#d4830a" style="background:#d4830a" onclick="selectCor(this)" title="Laranja"></span>
-                  <span class="cor-opt" data-cor="#6b3fa0" style="background:#6b3fa0" onclick="selectCor(this)" title="Roxo"></span>
-                  <span class="cor-opt" data-cor="#e91e8c" style="background:#e91e8c" onclick="selectCor(this)" title="Rosa"></span>
-                  <span class="cor-opt" data-cor="#00897b" style="background:#00897b" onclick="selectCor(this)" title="Teal"></span>
+                  <span class="cor-opt active" data-cor="#C8102E" style="background:#C8102E" onclick="selectCor(this)"></span>
+                  <span class="cor-opt" data-cor="#2d7a3a" style="background:#2d7a3a" onclick="selectCor(this)"></span>
+                  <span class="cor-opt" data-cor="#1a6bb5" style="background:#1a6bb5" onclick="selectCor(this)"></span>
+                  <span class="cor-opt" data-cor="#d4830a" style="background:#d4830a" onclick="selectCor(this)"></span>
+                  <span class="cor-opt" data-cor="#6b3fa0" style="background:#6b3fa0" onclick="selectCor(this)"></span>
+                  <span class="cor-opt" data-cor="#e91e8c" style="background:#e91e8c" onclick="selectCor(this)"></span>
+                  <span class="cor-opt" data-cor="#00897b" style="background:#00897b" onclick="selectCor(this)"></span>
                 </div>
                 <input type="hidden" id="newAtivCor" value="#C8102E">
               </div>
               <div class="ff">
-                <label>Horários</label>
-                <div id="newAtivHorarios"></div>
-                <button class="btn-add-horario" type="button" onclick="addHorarioRow('newAtivHorarios')">+ Adicionar horário</button>
+                <label>Turmas e Horários</label>
+                <div id="turmasContainer"></div>
+                <button class="btn-add-horario" type="button" onclick="addTurmaRow()">+ Adicionar turma</button>
+                <div class="hint">Cada turma tem um nome (ex: "Turma A — 14h") e seus próprios horários.</div>
               </div>
               <button class="btn-create" onclick="createAtividade()">Criar Atividade</button>
               <div class="f-alert error"   id="ativErr"></div>
@@ -803,34 +804,53 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     }).join('');
   }
 
-  function addHorarioRow(containerId) {
-    const container = document.getElementById(containerId);
+  function addTurmaRow() {
+    const container = document.getElementById('turmasContainer');
+    const idx = container.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'turma-row';
+    div.style.cssText = 'border:1.5px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;background:#fdfbf8;';
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:12px;font-weight:600;color:var(--red);">Turma ${idx}</span>
+        <button class="btn-rm-horario" onclick="this.closest('.turma-row').remove()">✕ Remover</button>
+      </div>
+      <div class="ff" style="margin-bottom:8px;">
+        <label style="font-size:10px;">Nome da turma</label>
+        <input type="text" class="turma-nome-input" placeholder="Ex: Turma A — 14h" style="padding:8px 10px;font-size:13px;">
+      </div>
+      <div class="turma-slots-container"></div>
+      <button class="btn-add-horario" type="button" style="font-size:11px;padding:5px 10px;" onclick="addSlotRow(this)">+ Adicionar dia/horário</button>`;
+    container.appendChild(div);
+    addSlotRow(div.querySelector('.btn-add-horario'));
+  }
+
+  function addSlotRow(btn) {
+    const container = btn.previousElementSibling;
     const div = document.createElement('div');
     div.className = 'ativ-horario-row';
+    div.style.marginBottom = '6px';
     div.innerHTML = `
-      <select>
+      <select style="padding:6px 8px;font-size:12px;">
         <option>Segunda</option><option>Terça</option><option>Quarta</option>
         <option>Quinta</option><option>Sexta</option>
       </select>
-      <input type="time" value="14:00" style="width:90px;">
-      <span style="font-size:12px;color:var(--muted);">até</span>
-      <input type="time" value="15:00" style="width:90px;">
+      <input type="time" value="14:00" style="width:85px;padding:6px 8px;font-size:12px;">
+      <span style="font-size:11px;color:var(--muted);">até</span>
+      <input type="time" value="15:00" style="width:85px;padding:6px 8px;font-size:12px;">
       <button class="btn-rm-horario" onclick="this.parentElement.remove()">✕</button>`;
     container.appendChild(div);
   }
 
-  function getHorarios(containerId) {
-    const rows = document.getElementById(containerId).querySelectorAll('.ativ-horario-row');
-    return Array.from(rows).map(row => {
-      const inputs = row.querySelectorAll('select, input[type="time"]');
-      return { dia: inputs[0].value, inicio: inputs[1].value, fim: inputs[2].value };
+  function getTurmas() {
+    return Array.from(document.querySelectorAll('.turma-row')).map(row => {
+      const nome = row.querySelector('.turma-nome-input').value.trim();
+      const slots = Array.from(row.querySelectorAll('.ativ-horario-row')).map(slotRow => {
+        const inputs = slotRow.querySelectorAll('select, input[type="time"]');
+        return { dia: inputs[0].value, inicio: inputs[1].value, fim: inputs[2].value };
+      });
+      return { turma: nome, slots };
     });
-  }
-
-  function selectCor(el) {
-    document.querySelectorAll('.cor-opt').forEach(e=>e.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('newAtivCor').value = el.dataset.cor;
   }
 
   async function createAtividade() {
@@ -838,15 +858,20 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const preco   = parseFloat(document.getElementById('newAtivPreco').value)||0;
     const desc    = document.getElementById('newAtivDesc').value.trim();
     const cor     = document.getElementById('newAtivCor').value||'#C8102E';
-    const horarios = getHorarios('newAtivHorarios');
+    const horarios = getTurmas();
     if (!nome) return showAlert('ativ','error','Informe o nome da atividade.');
+    if (!horarios.length) return showAlert('ativ','error','Adicione pelo menos uma turma com horários.');
+    for (const t of horarios) {
+      if (!t.turma) return showAlert('ativ','error','Informe o nome de todas as turmas.');
+      if (!t.slots.length) return showAlert('ativ','error','Adicione horários para todas as turmas.');
+    }
     const d = await api({ action:'atividades_create', nome, preco, descricao:desc, cor, horarios, ordem:99 });
     if (d.error) return showAlert('ativ','error',d.error);
     showAlert('ativ','success','✅ Atividade "'+nome+'" criada!');
     document.getElementById('newAtivNome').value='';
     document.getElementById('newAtivPreco').value='';
     document.getElementById('newAtivDesc').value='';
-    document.getElementById('newAtivHorarios').innerHTML='';
+    document.getElementById('turmasContainer').innerHTML='';
     loadAtividadesCRUD();
   }
 

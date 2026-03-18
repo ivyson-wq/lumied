@@ -103,20 +103,31 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 @media(max-width:480px){.modo-grid{grid-template-columns:1fr;}}
 
 /* ATIVIDADES */
-.ativ-item{border:2px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .18s;background:#fdfbf8;position:relative;}
+.ativ-item{border:2px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;transition:all .18s;background:#fdfbf8;position:relative;}
 .ativ-item:hover{border-color:#ccc;background:#faf9f7;}
 .ativ-item.selected{border-color:var(--red);background:var(--red-light);}
 .ativ-item.conflict{border-color:#d4830a;background:rgba(212,131,10,.06);}
-.ativ-header{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.ativ-header{display:flex;align-items:center;gap:12px;margin-bottom:6px;cursor:pointer;}
 .ativ-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 .ativ-nome{font-family:'Lora',serif;font-size:15px;font-weight:700;color:var(--text);flex:1;}
 .ativ-preco{font-size:13px;font-weight:600;color:var(--red);}
-.ativ-desc{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
-.ativ-horarios{display:flex;flex-wrap:wrap;gap:6px;}
+.ativ-desc{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;cursor:pointer;}
+.ativ-horarios,.ativ-turmas-preview{display:flex;flex-wrap:wrap;gap:6px;}
 .ativ-horario-tag{background:#f0ece6;color:var(--muted);border-radius:100px;padding:3px 10px;font-size:11px;font-weight:500;}
-.ativ-item.selected .ativ-horario-tag{background:rgba(200,16,46,.1);color:var(--red);}
-.ativ-check{position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .18s;}
+.ativ-check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .18s;cursor:pointer;background:#fff;}
 .ativ-item.selected .ativ-check{background:var(--red);border-color:var(--red);color:#fff;}
+
+/* TURMA PICKER */
+.turma-picker{margin-top:14px;padding-top:14px;border-top:1px solid rgba(200,16,46,.15);}
+.turma-picker-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--red);margin-bottom:10px;}
+.turma-opt{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;cursor:pointer;margin-bottom:8px;background:#fff;transition:all .15s;}
+.turma-opt:last-of-type{margin-bottom:0;}
+.turma-opt:hover{border-color:#bbb;background:#faf9f7;}
+.turma-opt.turma-sel,.turma-opt input:checked~*{border-color:var(--red)!important;background:var(--red-light)!important;}
+.turma-opt input[type="radio"]{margin-top:2px;accent-color:var(--red);flex-shrink:0;}
+.turma-label{font-size:13px;font-weight:600;color:var(--text);display:block;line-height:1.3;}
+.turma-slots{font-size:11px;color:var(--muted);display:block;margin-top:2px;}
+.turma-err{font-size:12px;color:var(--red);margin-top:8px;}
 .err-msg{font-size:12px;color:var(--red);margin-top:5px;display:none;}.err-msg.show{display:block;}
 .turno-preview{margin-top:10px;padding:12px 16px;background:var(--red-light);border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;color:var(--red);display:none;}
 .turno-preview.show{display:block;}
@@ -598,7 +609,8 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
   // ── ATIVIDADES ────────────────────────────────────────
   let todasAtividades = [];
-  let atividadesSelecionadas = new Set(); // IDs selecionados
+  // Map: atividade_id → { atividade, turma_nome, turma_slots }
+  let atividadesSelecionadas = new Map();
 
   async function loadAtividades() {
     const data = await call({ action: 'atividades_list' });
@@ -614,18 +626,37 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     }
     el.innerHTML = todasAtividades.map(a => {
       const sel = atividadesSelecionadas.has(a.id);
-      const horStr = (a.horarios||[]).map(h => `${h.dia} ${h.inicio}–${h.fim}`).join(' · ');
-      return `<div class="ativ-item${sel?' selected':''}" onclick="toggleAtividade('${a.id}')" id="ativ_${a.id}">
-        <div class="ativ-check">${sel?'✓':''}</div>
-        <div class="ativ-header">
+      const turmas = a.horarios || [];
+      const turmaSel = atividadesSelecionadas.get(a.id);
+
+      // Opções de turma como radio buttons
+      const turmaOpts = turmas.map((t, i) => {
+        const slotStr = (t.slots||[]).map(s => `${s.dia} ${s.inicio}–${s.fim}`).join(' · ');
+        const checked = turmaSel?.turma === t.turma ? 'checked' : '';
+        return `<label class="turma-opt${checked?' turma-sel':''}" onclick="event.stopPropagation()">
+          <input type="radio" name="turma_${a.id}" value="${i}" ${checked}
+            onchange="selectTurma('${a.id}', ${i})" onclick="event.stopPropagation()">
+          <span class="turma-label">${esc2(t.turma)}</span>
+          <span class="turma-slots">${slotStr}</span>
+        </label>`;
+      }).join('');
+
+      return `<div class="ativ-item${sel?' selected':''}" id="ativ_${a.id}">
+        <div class="ativ-check" onclick="toggleAtividade('${a.id}')">${sel?'✓':''}</div>
+        <div class="ativ-header" onclick="toggleAtividade('${a.id}')">
           <div class="ativ-dot" style="background:${a.cor||'#C8102E'}"></div>
           <div class="ativ-nome">${esc2(a.nome)}</div>
           <div class="ativ-preco">R$ ${Number(a.preco).toFixed(2).replace('.',',')}/mês</div>
         </div>
-        ${a.descricao?`<div class="ativ-desc">${esc2(a.descricao)}</div>`:''}
-        <div class="ativ-horarios">
-          ${(a.horarios||[]).map(h=>`<span class="ativ-horario-tag">📅 ${h.dia} ${h.inicio}–${h.fim}</span>`).join('')}
+        ${a.descricao?`<div class="ativ-desc" onclick="toggleAtividade('${a.id}')">${esc2(a.descricao)}</div>`:''}
+        <div class="turma-picker" id="turmas_${a.id}" style="display:${sel?'block':'none'}">
+          <div class="turma-picker-label">Escolha o horário:</div>
+          ${turmaOpts}
+          ${!turmaSel&&sel?'<div class="turma-err">Selecione um horário para continuar.</div>':''}
         </div>
+        ${!sel?`<div class="ativ-turmas-preview">
+          ${turmas.map(t=>`<span class="ativ-horario-tag">🕐 ${esc2(t.turma)}</span>`).join('')}
+        </div>`:''}
       </div>`;
     }).join('');
   }
@@ -634,25 +665,50 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     if (atividadesSelecionadas.has(id)) {
       atividadesSelecionadas.delete(id);
     } else {
-      atividadesSelecionadas.add(id);
+      // Adiciona sem turma — usuário ainda precisa escolher
+      atividadesSelecionadas.set(id, null);
     }
+    document.getElementById('ativErr2').classList.remove('show');
     checkConflicts();
     renderAtividades();
     updateTotalAtividades();
   }
 
+  function selectTurma(atividadeId, turmaIndex) {
+    const atividade = todasAtividades.find(a => a.id === atividadeId);
+    if (!atividade) return;
+    const turma = atividade.horarios[turmaIndex];
+    atividadesSelecionadas.set(atividadeId, {
+      turma: turma.turma,
+      slots: turma.slots
+    });
+    checkConflicts();
+    renderAtividades();
+    updateTotalAtividades();
+  }
+
+  function getSlotsAtividade(id) {
+    const sel = atividadesSelecionadas.get(id);
+    return sel?.slots || [];
+  }
+
   function checkConflicts() {
-    const selecionadas = todasAtividades.filter(a => atividadesSelecionadas.has(a.id));
+    const ids = [...atividadesSelecionadas.keys()];
     const conflitos = [];
 
-    for (let i = 0; i < selecionadas.length; i++) {
-      for (let j = i + 1; j < selecionadas.length; j++) {
-        const a1 = selecionadas[i], a2 = selecionadas[j];
-        const hs1 = a1.horarios || [], hs2 = a2.horarios || [];
-        for (const h1 of hs1) {
-          for (const h2 of hs2) {
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a1 = todasAtividades.find(a => a.id === ids[i]);
+        const a2 = todasAtividades.find(a => a.id === ids[j]);
+        if (!a1 || !a2) continue;
+        const slots1 = getSlotsAtividade(ids[i]);
+        const slots2 = getSlotsAtividade(ids[j]);
+        for (const h1 of slots1) {
+          for (const h2 of slots2) {
             if (h1.dia === h2.dia && horariosConflitam(h1, h2)) {
-              conflitos.push(`<strong>${a1.nome}</strong> (${h1.dia} ${h1.inicio}–${h1.fim}) conflita com <strong>${a2.nome}</strong> (${h2.dia} ${h2.inicio}–${h2.fim})`);
+              const t1 = atividadesSelecionadas.get(ids[i])?.turma || '';
+              const t2 = atividadesSelecionadas.get(ids[j])?.turma || '';
+              conflitos.push(`<strong>${a1.nome}</strong> (${t1} · ${h1.dia} ${h1.inicio}–${h1.fim}) conflita com <strong>${a2.nome}</strong> (${t2} · ${h2.dia} ${h2.inicio}–${h2.fim})`);
             }
           }
         }
@@ -662,7 +718,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const alertEl = document.getElementById('conflictAlert');
     if (conflitos.length) {
       alertEl.style.display = 'block';
-      alertEl.innerHTML = '⚠️ <strong>Conflito de horários detectado:</strong><br>' + conflitos.join('<br>');
+      alertEl.innerHTML = '⚠️ <strong>Conflito de horários:</strong><br>' + conflitos.join('<br>');
     } else {
       alertEl.style.display = 'none';
     }
@@ -770,10 +826,23 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
           document.getElementById('ativErr2').classList.add('show');
           btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return;
         }
+        // Valida que todas as atividades têm turma escolhida
+        for (const [id, sel] of atividadesSelecionadas) {
+          if (!sel) {
+            const a = todasAtividades.find(x=>x.id===id);
+            alert(`Escolha o horário para a atividade "${a?.nome||''}".`);
+            btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return;
+          }
+        }
         if (!checkConflicts()) { btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return; }
-        const atividadesIds     = [...atividadesSelecionadas];
-        const atividadesDetalhe = todasAtividades.filter(a => atividadesSelecionadas.has(a.id));
-        const d2 = await call({ action:'inscricao_atividade_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, atividades_ids:atividadesIds, atividades_detalhe:atividadesDetalhe });
+        const atividadesIds     = [...atividadesSelecionadas.keys()];
+        const turmasSelecionadas = [...atividadesSelecionadas.entries()].map(([id,sel])=>({ atividade_id:id, turma:sel.turma, slots:sel.slots }));
+        const atividadesDetalhe = todasAtividades.filter(a => atividadesSelecionadas.has(a.id)).map(a => ({
+          ...a,
+          turma_selecionada: atividadesSelecionadas.get(a.id)?.turma,
+          slots_selecionados: atividadesSelecionadas.get(a.id)?.slots,
+        }));
+        const d2 = await call({ action:'inscricao_atividade_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, atividades_ids:atividadesIds, atividades_detalhe:atividadesDetalhe, turmas_selecionadas:turmasSelecionadas });
         if (d2.error) throw new Error(d2.error);
         await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
           body: JSON.stringify({ tipo:'atividade', nomeResp, nomeCrianca, email, serie, atividades:atividadesDetalhe }) });
