@@ -401,6 +401,42 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- ATIVIDADE EDIT MODAL -->
+<div class="modal-overlay" id="ativModal" onclick="if(event.target===this)closeAtivModal()" style="align-items:flex-start;padding:20px 16px;overflow-y:auto;">
+  <div class="modal" style="max-width:580px;margin:auto;">
+    <h3>Editar Atividade</h3>
+    <div class="ff" style="margin-top:16px;"><label>Nome</label><input type="text" id="editAtivNome"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="ff"><label>Preço mensal (R$)</label><input type="number" id="editAtivPreco" step="0.01" min="0"></div>
+      <div class="ff"><label>Ordem</label><input type="number" id="editAtivOrdem" min="1"></div>
+    </div>
+    <div class="ff"><label>Descrição</label><input type="text" id="editAtivDesc"></div>
+    <div class="ff">
+      <label>Cor</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="editCorPicker">
+        <span class="cor-opt" data-cor="#C8102E" style="background:#C8102E" onclick="selectEditCor(this)"></span>
+        <span class="cor-opt" data-cor="#2d7a3a" style="background:#2d7a3a" onclick="selectEditCor(this)"></span>
+        <span class="cor-opt" data-cor="#1a6bb5" style="background:#1a6bb5" onclick="selectEditCor(this)"></span>
+        <span class="cor-opt" data-cor="#d4830a" style="background:#d4830a" onclick="selectEditCor(this)"></span>
+        <span class="cor-opt" data-cor="#6b3fa0" style="background:#6b3fa0" onclick="selectEditCor(this)"></span>
+        <span class="cor-opt" data-cor="#e91e8c" style="background:#e91e8c" onclick="selectEditCor(this)"></span>
+        <span class="cor-opt" data-cor="#00897b" style="background:#00897b" onclick="selectEditCor(this)"></span>
+      </div>
+      <input type="hidden" id="editAtivCor">
+    </div>
+    <div class="ff">
+      <label>Turmas e Horários</label>
+      <div id="editTurmasContainer"></div>
+      <button class="btn-add-horario" type="button" onclick="addEditTurmaRow()">+ Adicionar turma</button>
+    </div>
+    <div class="f-alert error"   id="editAtivErr"  style="margin-top:10px;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-cancel" onclick="closeAtivModal()">Cancelar</button>
+      <button class="btn-save" id="btnSaveAtiv" onclick="saveAtivEdit()">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
   const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
@@ -757,16 +793,27 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('atividadesCount').textContent = list.length;
     const el = document.getElementById('atividadesList');
     if (!list.length) { el.innerHTML='<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</span></div>'; return; }
-    el.innerHTML = list.map(a=>`
+    el.innerHTML = list.map(a=>{
+      const turmaInfo = (a.horarios||[]).map(t => {
+        const inscritos = t.inscritos||0;
+        const vagas = t.vagas ?? '∞';
+        const disponiveis = t.vagas_disponiveis ?? '∞';
+        const cor = disponiveis===0?'#a00d24':disponiveis<=3?'#d4830a':'#2d7a3a';
+        return `<span style="font-size:10px;background:#f5f0ea;border-radius:100px;padding:2px 8px;color:${cor};font-weight:500;">${esc(t.turma)}: ${inscritos}/${vagas}</span>`;
+      }).join(' ');
+      return `
       <div class="list-row">
         <span class="ativ-color-dot" style="background:${a.cor||'#C8102E'}"></span>
         <div class="lr-main">
           <strong>${esc(a.nome)}</strong>
-          <span>R$ ${Number(a.preco).toFixed(2).replace('.',',')} · ${(a.horarios||[]).length} horário(s) · ${a.ativo?'Ativa':'Inativa'}</span>
+          <span>R$ ${Number(a.preco).toFixed(2).replace('.',',')} · ${a.ativo?'Ativa':'Inativa'}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${turmaInfo}</div>
         </div>
+        <button class="action-btn" onclick="openAtivEdit('${a.id}')">✎ Editar</button>
         <button class="action-btn" onclick="toggleAtivStatus('${a.id}',${!a.ativo})">${a.ativo?'Desativar':'Ativar'}</button>
         <button class="action-btn del" onclick="deleteAtividade('${a.id}','${esc(a.nome)}')">🗑</button>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   async function loadInscricoesAtividades() {
@@ -886,6 +933,143 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function deleteInscricaoAtiv(id, nome) {
     if (!confirm('Remover inscrição de "'+nome+'"?')) return;
     await api({ action:'inscricoes_atividades_delete', id }); loadInscricoesAtividades();
+  }
+
+  // ── EDIÇÃO DE ATIVIDADE ───────────────────────────────
+  let editingAtivId = null;
+
+  async function openAtivEdit(id) {
+    // Busca dados atuais
+    const list = await api({ action:'atividades_list_all' });
+    const a = Array.isArray(list) ? list.find(x => x.id === id) : null;
+    if (!a) return;
+    editingAtivId = id;
+
+    document.getElementById('editAtivNome').value  = a.nome || '';
+    document.getElementById('editAtivPreco').value = a.preco || 0;
+    document.getElementById('editAtivOrdem').value = a.ordem || 99;
+    document.getElementById('editAtivDesc').value  = a.descricao || '';
+    document.getElementById('editAtivCor').value   = a.cor || '#C8102E';
+    document.getElementById('editAtivErr').classList.remove('show');
+
+    // Cor picker
+    document.querySelectorAll('#editCorPicker .cor-opt').forEach(el => {
+      el.classList.toggle('active', el.dataset.cor === a.cor);
+    });
+
+    // Turmas
+    const container = document.getElementById('editTurmasContainer');
+    container.innerHTML = '';
+    (a.horarios||[]).forEach((t, idx) => {
+      addEditTurmaRow(t);
+    });
+
+    document.getElementById('ativModal').classList.add('show');
+  }
+
+  function closeAtivModal() {
+    document.getElementById('ativModal').classList.remove('show');
+    editingAtivId = null;
+  }
+
+  function addEditTurmaRow(turmaData) {
+    const container = document.getElementById('editTurmasContainer');
+    const idx = container.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'turma-row';
+    div.style.cssText = 'border:1.5px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;background:#fdfbf8;';
+
+    const nomeVal   = turmaData?.turma || '';
+    const vagasVal  = turmaData?.vagas ?? 15;
+    const inscritos = turmaData?.inscritos ?? 0;
+
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:12px;font-weight:600;color:var(--red);">Turma ${idx}</span>
+        <button class="btn-rm-horario" onclick="this.closest('.turma-row').remove()">✕ Remover</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 120px;gap:10px;margin-bottom:10px;">
+        <div class="ff" style="margin:0;"><label style="font-size:10px;">Nome da turma</label>
+          <input type="text" class="turma-nome-input" value="${esc(nomeVal)}" placeholder="Ex: Turma A — 14h" style="padding:8px 10px;font-size:13px;"></div>
+        <div class="ff" style="margin:0;"><label style="font-size:10px;">Vagas máx.</label>
+          <input type="number" class="turma-vagas-input" value="${vagasVal}" min="${inscritos}" style="padding:8px 10px;font-size:13px;">
+          ${inscritos>0?`<div style="font-size:10px;color:var(--muted);margin-top:3px;">${inscritos} inscrito(s)</div>`:''}
+        </div>
+      </div>
+      <div class="turma-slots-container"></div>
+      <button class="btn-add-horario" type="button" style="font-size:11px;padding:5px 10px;" onclick="addSlotRow(this)">+ Adicionar dia/horário</button>`;
+
+    container.appendChild(div);
+
+    // Adiciona slots existentes
+    const slotsContainer = div.querySelector('.turma-slots-container');
+    const slots = turmaData?.slots || [];
+    if (slots.length) {
+      slots.forEach(s => {
+        const btn = div.querySelector('.btn-add-horario');
+        addSlotRowWithData(btn, s.dia, s.inicio, s.fim);
+      });
+    } else {
+      addSlotRow(div.querySelector('.btn-add-horario'));
+    }
+  }
+
+  function addSlotRowWithData(btn, dia, inicio, fim) {
+    const container = btn.previousElementSibling;
+    const div = document.createElement('div');
+    div.className = 'ativ-horario-row';
+    div.style.marginBottom = '6px';
+    const dias = ['Segunda','Terça','Quarta','Quinta','Sexta'];
+    const opts = dias.map(d => `<option${d===dia?' selected':''}>${d}</option>`).join('');
+    div.innerHTML = `
+      <select style="padding:6px 8px;font-size:12px;">${opts}</select>
+      <input type="time" value="${inicio}" style="width:85px;padding:6px 8px;font-size:12px;">
+      <span style="font-size:11px;color:var(--muted);">até</span>
+      <input type="time" value="${fim}" style="width:85px;padding:6px 8px;font-size:12px;">
+      <button class="btn-rm-horario" onclick="this.parentElement.remove()">✕</button>`;
+    container.appendChild(div);
+  }
+
+  function selectEditCor(el) {
+    document.querySelectorAll('#editCorPicker .cor-opt').forEach(e=>e.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('editAtivCor').value = el.dataset.cor;
+  }
+
+  function getEditTurmas() {
+    return Array.from(document.querySelectorAll('#editTurmasContainer .turma-row')).map(row => {
+      const nome  = row.querySelector('.turma-nome-input').value.trim();
+      const vagas = parseInt(row.querySelector('.turma-vagas-input').value) || 15;
+      const slots = Array.from(row.querySelectorAll('.ativ-horario-row')).map(slotRow => {
+        const inputs = slotRow.querySelectorAll('select, input[type="time"]');
+        return { dia: inputs[0].value, inicio: inputs[1].value, fim: inputs[2].value };
+      });
+      return { turma: nome, vagas, slots };
+    });
+  }
+
+  async function saveAtivEdit() {
+    const nome    = document.getElementById('editAtivNome').value.trim();
+    const preco   = parseFloat(document.getElementById('editAtivPreco').value)||0;
+    const ordem   = parseInt(document.getElementById('editAtivOrdem').value)||99;
+    const desc    = document.getElementById('editAtivDesc').value.trim();
+    const cor     = document.getElementById('editAtivCor').value||'#C8102E';
+    const horarios = getEditTurmas();
+    const errEl   = document.getElementById('editAtivErr');
+
+    if (!nome) { errEl.textContent='Informe o nome.'; errEl.classList.add('show'); return; }
+    if (!horarios.length) { errEl.textContent='Adicione pelo menos uma turma.'; errEl.classList.add('show'); return; }
+    for (const t of horarios) {
+      if (!t.turma) { errEl.textContent='Informe o nome de todas as turmas.'; errEl.classList.add('show'); return; }
+    }
+
+    document.getElementById('btnSaveAtiv').disabled = true;
+    const d = await api({ action:'atividades_update_full', id:editingAtivId, nome, preco, descricao:desc, cor, horarios, ordem });
+    document.getElementById('btnSaveAtiv').disabled = false;
+
+    if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
+    closeAtivModal();
+    loadAtividadesCRUD();
   }
 
   checkSession();
