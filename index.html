@@ -1195,7 +1195,11 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   async function callCalendar(body) {
     const r = await fetch(CALENDAR, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + SUPABASE_ANON
+      },
       body: JSON.stringify(body)
     });
     return r.json();
