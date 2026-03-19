@@ -1078,6 +1078,11 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
   async function confirmarAusencia() {
     if (!ausenciaPendente || !currentUser) return;
+    if (!ausenciaPendente.nomeCrianca) {
+      alert('Não foi possível identificar o nome da criança. Certifique-se de ter feito ao menos uma solicitação.');
+      fecharAusenciaModal();
+      return;
+    }
     const obs = document.getElementById('ausenciaObs').value.trim();
     const btn = document.querySelector('#ausenciaModal .dm-confirm');
     btn.disabled = true; btn.textContent = 'Enviando…';
@@ -1092,19 +1097,26 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     });
 
     if (!d.error) {
-      // Notifica professoras por e-mail
       const meta = currentUser.user_metadata || {};
-      fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
-        body: JSON.stringify({
-          tipo: 'ausencia',
-          emailResp: currentUser.email,
-          nomeResp: meta.full_name || meta.name || currentUser.email,
-          nomeCrianca: ausenciaPendente.nomeCrianca,
-          dataAusencia: ausenciaPendente.dateStr,
-          tipoAusencia: 'turno',
-          observacao: obs || null
-        })
-      });
+      try {
+        const resp = await fetch(SEND, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
+          body: JSON.stringify({
+            tipo: 'ausencia',
+            emailResp: currentUser.email,
+            nomeResp: meta.full_name || meta.name || currentUser.email,
+            nomeCrianca: ausenciaPendente.nomeCrianca,
+            dataAusencia: ausenciaPendente.dateStr,
+            tipoAusencia: 'turno',
+            observacao: obs || null
+          })
+        });
+        const result = await resp.json();
+        if (result.error) console.error('Erro ao enviar e-mail:', result.error);
+      } catch(emailErr) {
+        console.error('Falha no envio de e-mail:', emailErr);
+      }
     }
 
     btn.disabled = false; btn.textContent = 'Confirmar ausência';
