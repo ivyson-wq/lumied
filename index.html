@@ -196,7 +196,23 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .btn-cancelar-ausencia{padding:6px 12px;border-radius:6px;border:1px solid #e0a0aa;background:transparent;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;color:#a00d24;transition:all .2s;}
 .btn-cancelar-ausencia:hover{background:#fdf0f2;}
 
-/* ALMOCO */
+/* AGENDA CARDS */
+.dias-semana-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;}
+.dia-card{background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:transform .2s;}
+.dia-card:hover{transform:translateY(-2px);}
+.dia-card.ausente .dia-card-header{background:#a00d24!important;}
+.dia-card-header{background:var(--red);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
+.dia-card-header .dia-nome{font-family:'Lora',serif;font-size:13px;font-weight:700;color:#fff;}
+.dia-card-header .dia-count{background:rgba(255,255,255,.25);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;}
+.dia-card-body{padding:12px 14px;min-height:60px;}
+.dia-crianca-item{display:flex;align-items:flex-start;gap:7px;padding:6px 0;border-bottom:1px solid #f5f0ea;}
+.dia-crianca-item:last-of-type{border-bottom:none;}
+.dia-crianca-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.dia-crianca-info{flex:1;min-width:0;}
+.dia-crianca-info strong{display:block;font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dia-crianca-info span{font-size:10px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dia-vazio{font-size:11px;color:var(--muted);font-style:italic;text-align:center;padding:8px 0;}
+@media(max-width:600px){.dias-semana-grid{grid-template-columns:repeat(2,1fr)!important;}}
 .almoco-opt{margin-top:12px;padding:12px 14px;background:rgba(45,122,58,.06);border:1.5px solid rgba(45,122,58,.2);border-radius:9px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;}
 .almoco-opt:hover{background:rgba(45,122,58,.1);}
 .almoco-opt.selected{background:rgba(45,122,58,.12);border-color:rgba(45,122,58,.5);}
@@ -979,42 +995,55 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       return;
     }
 
-    const primeiros = eventosPorDia.slice(0, 5);
-    const restantes = eventosPorDia.slice(5);
-
     function renderDiaCard(d) {
       const ausente = ausenciaIds[d.dateStr];
-      const dataLabel = d.date.toLocaleDateString('pt-BR', {day:'2-digit', month:'long'});
+      const dataLabel = d.date.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'}).replace('.','');
       const eventosHTML = d.eventos.map(e =>
-        `<div class="agenda-evento">
-          <div class="agenda-evento-dot" style="background:${e.cor};"></div>
-          <span><strong>${esc2(e.crianca)}</strong> — ${esc2(e.label)}</span>
+        `<div class="dia-crianca-item">
+          <div class="dia-crianca-dot" style="background:${e.cor};"></div>
+          <div class="dia-crianca-info">
+            <strong>${esc2(e.crianca)}</strong>
+            <span>${esc2(e.label)}</span>
+          </div>
         </div>`
       ).join('');
-      return `<div class="agenda-dia${ausente?' ausente':''}">
-        <div class="agenda-dia-header">
-          <div>
-            <div class="agenda-dia-data">${d.weekday}, ${dataLabel}</div>
-            ${ausente?'<span class="agenda-ausente-badge">⚠️ Ausência registrada</span>':''}
+
+      const headerBg = ausente ? '#a00d24' : 'var(--red)';
+      const ausenciaBtn = ausente
+        ? `<button class="btn-cancelar-ausencia" style="width:100%;margin-top:8px;padding:5px 8px;border-radius:6px;border:1px solid #e0a0aa;background:transparent;font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;color:#a00d24;" onclick="cancelarAusencia('${ausenciaIds[d.dateStr]}','${d.dateStr}')">↩ Cancelar ausência</button>`
+        : `<button class="btn-ausencia" style="width:100%;margin-top:8px;padding:5px 8px;border-radius:6px;border:1.5px solid rgba(200,16,46,.25);background:transparent;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--red);" onclick="abrirAusenciaModal('${d.dateStr}','${d.weekday}','${d.eventos.map(e=>e.crianca)[0]||''}')">Registrar ausência</button>`;
+
+      return `<div class="dia-card${ausente?' agenda-dia ausente':''}">
+        <div class="dia-card-header" style="background:${headerBg};flex-direction:column;align-items:flex-start;gap:2px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+            <span class="dia-nome">${d.weekday}</span>
+            <span class="dia-count">${d.eventos.length}</span>
           </div>
-          ${ausente
-            ? `<button class="btn-cancelar-ausencia" onclick="cancelarAusencia('${ausenciaIds[d.dateStr]}','${d.dateStr}')">Cancelar ausência</button>`
-            : `<button class="btn-ausencia" onclick="abrirAusenciaModal('${d.dateStr}','${d.weekday}','${d.eventos.map(e=>e.crianca)[0]||''}')">Registrar ausência</button>`
-          }
+          <span style="font-size:10px;color:rgba(255,255,255,.7);">${dataLabel}</span>
+          ${ausente ? '<span style="font-size:9px;background:rgba(255,255,255,.2);color:#fff;padding:1px 6px;border-radius:100px;margin-top:2px;">⚠️ Ausente</span>' : ''}
         </div>
-        <div class="agenda-dia-body">${eventosHTML}</div>
+        <div class="dia-card-body">
+          ${eventosHTML || '<div class="dia-vazio">Sem eventos</div>'}
+          ${ausenciaBtn}
+        </div>
       </div>`;
     }
 
-    const primeirosHTML = primeiros.map(renderDiaCard).join('');
+    const primeiros = eventosPorDia.slice(0, 5);
+    const restantes = eventosPorDia.slice(5);
+
+    const primeirosHTML = `<div class="dias-semana-grid" style="grid-template-columns:repeat(${Math.min(primeiros.length,5)},1fr);">${primeiros.map(renderDiaCard).join('')}</div>`;
+
     const restantesHTML = restantes.length
-      ? `<div id="agendaExtra" style="display:none;" class="agenda-semana">${restantes.map(renderDiaCard).join('')}</div>
-         <button id="btnVerMais" onclick="toggleAgendaExtra()" style="width:100%;margin-top:10px;padding:10px;background:none;border:1.5px dashed var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#C8102E';this.style.color='#C8102E'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      ? `<div id="agendaExtra" style="display:none;">
+           <div class="dias-semana-grid" style="grid-template-columns:repeat(${Math.min(restantes.length,5)},1fr);">${restantes.map(renderDiaCard).join('')}</div>
+         </div>
+         <button id="btnVerMais" onclick="toggleAgendaExtra()" style="width:100%;padding:10px;background:none;border:1.5px dashed var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#C8102E';this.style.color='#C8102E'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
            ▾ Ver mais ${restantes.length} dia(s)
          </button>`
       : '';
 
-    el.innerHTML = `<div class="agenda-semana">${primeirosHTML}</div>${restantesHTML}`;
+    el.innerHTML = primeirosHTML + restantesHTML;
   }
 
   function toggleAgendaExtra() {
