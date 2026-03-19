@@ -284,6 +284,17 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
 <!-- FORMULÁRIO -->
 <div class="form-wrap" id="formWrap">
+
+  <!-- AGENDA PERMANENTE -->
+  <div class="card" id="agendaCard" style="display:none;">
+    <div class="card-title" style="margin-bottom:12px;">
+      📅 Agenda da Criança
+      <button onclick="carregarAgenda()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Próximos dias com presença prevista. Clique em <strong>Registrar ausência</strong> se a criança não comparecer.</p>
+    <div id="agendaConteudo"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div></div>
+  </div>
+
   <form id="mainForm" novalidate>
 
     <!-- SELEÇÃO DE MODO -->
@@ -395,22 +406,8 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   <h2>Solicitação Recebida!</h2>
   <p>Sua solicitação foi registrada com sucesso. Verifique seu e-mail — enviamos uma confirmação com todos os detalhes.</p>
   <div class="success-tag">✉️ Confirmação enviada</div>
-  <button onclick="irParaAgenda()" style="margin-top:20px;padding:11px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
-    📅 Ver minha agenda
-  </button>
-</div>
-
-<!-- MINHA AGENDA -->
-<div id="agendaWrap" style="display:none;max-width:700px;margin:0 auto;padding:32px 24px 64px;">
-  <div class="card">
-    <div class="card-title">📅 Agenda da Criança</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;">
-      Abaixo estão os próximos dias agendados. Se sua criança não for comparecer em algum dia, clique em <strong>Registrar ausência</strong>.
-    </p>
-    <div id="agendaConteudo"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando…</div></div>
-  </div>
-  <button onclick="voltarFormulario()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;margin-top:8px;">
-    ← Fazer nova solicitação
+  <button onclick="novoEnvio()" style="margin-top:20px;padding:11px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+    📝 Fazer nova solicitação
   </button>
 </div>
 
@@ -565,7 +562,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     document.getElementById('userBar').style.display = 'none';
     document.getElementById('formWrap').style.display = 'none';
     document.getElementById('successPanel').style.display = 'none';
-    document.getElementById('agendaWrap').style.display = 'none';
+    document.getElementById('agendaCard').style.display = 'none';
     document.getElementById('emailState').style.display = 'block';
     document.getElementById('sentState').style.display = 'none';
     const btn = document.getElementById('btnMagic');
@@ -604,6 +601,8 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
     document.getElementById('loginWall').style.display  = 'none';
     document.getElementById('formWrap').style.display   = 'block';
+    document.getElementById('agendaCard').style.display = 'block';
+    carregarAgenda();
   }
 
   // ── TURNO ─────────────────────────────────────────────
@@ -898,21 +897,27 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   let agendaData = null;
   let ausenciaPendente = null;
 
-  async function irParaAgenda() {
+  function novoEnvio() {
     document.getElementById('successPanel').style.display = 'none';
-    document.getElementById('agendaWrap').style.display = 'block';
-    await carregarAgenda();
-  }
-
-  function voltarFormulario() {
-    document.getElementById('agendaWrap').style.display = 'none';
     document.getElementById('formWrap').style.display = 'block';
+    // Reseta o formulário
+    modoAtual = null;
+    document.getElementById('modoTurnoOpt')?.classList.remove('selected');
+    document.getElementById('modoAtivOpt')?.classList.remove('selected');
+    document.getElementById('cardDados').style.display = 'none';
+    document.getElementById('cardSerie').style.display = 'none';
+    document.getElementById('secaoTurno').style.display = 'none';
+    document.getElementById('secaoAtividades').style.display = 'none';
+    document.getElementById('submitBtn').style.display = 'none';
+    document.getElementById('submitNote').style.display = 'none';
+    carregarAgenda();
   }
 
   async function carregarAgenda() {
     if (!currentUser) return;
+    document.getElementById('agendaCard').style.display = 'block';
     const el = document.getElementById('agendaConteudo');
-    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando…</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
     agendaData = await call({ action:'minha_agenda', email: currentUser.email });
     renderAgenda();
   }
@@ -923,7 +928,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const { solicitacoes, inscricoes, ausencias } = agendaData;
 
     if (!solicitacoes.length && !inscricoes.length) {
-      el.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);font-size:13px;">Nenhuma solicitação encontrada.</div>';
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Nenhuma solicitação encontrada. Após fazer sua primeira solicitação, a agenda aparecerá aqui.</div>';
       return;
     }
 
@@ -1164,6 +1169,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
       document.getElementById('formWrap').style.display='none';
       document.getElementById('successPanel').style.display='block';
+      carregarAgenda();
     } catch(err) {
       alert('Erro ao enviar. Tente novamente.\n'+err.message);
       btn.disabled=false;
