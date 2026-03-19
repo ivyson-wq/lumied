@@ -202,6 +202,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard Atividades</a>
       <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
       <div class="sb-label">Configurações</div>
+      <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Professoras</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('usuarios',this)"><span class="ic">👥</span> Usuários</a>
       <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
@@ -391,6 +392,40 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <button class="btn-create" onclick="createAtividade()">Criar Atividade</button>
               <div class="f-alert error"   id="ativErr"></div>
               <div class="f-alert success" id="ativOk"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFESSORAS -->
+      <div id="panelProfessoras" class="panel">
+        <div class="two-col">
+          <div>
+            <div class="sec-title">Professoras Cadastradas <span class="count-badge" id="profsCount">0</span></div>
+            <div class="hint" style="margin-bottom:12px;">As professoras recebem e-mail de notificação sempre que um responsável registra ausência.</div>
+            <div class="list-card" id="profsList"></div>
+          </div>
+          <div>
+            <div class="form-card" style="margin-bottom:16px;">
+              <h3>➕ Nova Professora</h3>
+              <div class="ff"><label>Nome</label><input type="text" id="newProfNome" placeholder="Ex: Professora Ana"></div>
+              <div class="ff"><label>E-mail</label><input type="email" id="newProfEmail" placeholder="ana@escola.com"></div>
+              <button class="btn-create" onclick="createProfessora()">Adicionar Professora</button>
+              <div class="f-alert error"   id="profErr"></div>
+              <div class="f-alert success" id="profOk"></div>
+            </div>
+            <div class="form-card">
+              <h3>🍽️ Configuração do Almoço</h3>
+              <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+                Defina o preço padrão do almoço. Cada turma pode ter seu próprio preço ao editar a atividade.
+              </p>
+              <div class="ff">
+                <label>Preço padrão do almoço (R$/dia)</label>
+                <input type="number" id="almocoPreco" placeholder="50.00" step="0.01" min="0">
+              </div>
+              <button class="btn-create" onclick="saveAlmocoPreco()">Salvar Preço</button>
+              <div class="f-alert error"   id="almocoErr"></div>
+              <div class="f-alert success" id="almocoOk"></div>
             </div>
           </div>
         </div>
@@ -608,15 +643,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',logo:'Logotipo',usuarios:'Usuários'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',logo:'Logotipo',usuarios:'Usuários'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
-    if(id==='series')    loadSeries();
-    if(id==='atividades') loadAtividadesPanel();
-    if(id==='dashAtiv')  loadAtivDashboard();
-    if(id==='logo')      loadLogoPanel();
-    if(id==='usuarios')  loadUsers();
+    if(id==='series')      loadSeries();
+    if(id==='atividades')  loadAtividadesPanel();
+    if(id==='dashAtiv')    loadAtivDashboard();
+    if(id==='professoras') loadProfessoras();
+    if(id==='logo')        loadLogoPanel();
+    if(id==='usuarios')    loadUsers();
     return false;
   }
 
@@ -859,7 +895,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── HELPERS ───────────────────────────────────────────
   function showAlert(ctx,type,msg) {
-    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk']};
+    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk'],prof:['profErr','profOk'],almoco:['almocoErr','almocoOk']};
     const [eId,oId]=map[ctx];
     document.getElementById(eId).classList.remove('show'); document.getElementById(oId).classList.remove('show');
     const id=type==='error'?eId:oId;
@@ -951,7 +987,18 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <input type="text" class="turma-nome-input" placeholder="Ex: Turma A — 14h" style="padding:8px 10px;font-size:13px;">
       </div>
       <div class="turma-slots-container"></div>
-      <button class="btn-add-horario" type="button" style="font-size:11px;padding:5px 10px;" onclick="addSlotRow(this)">+ Adicionar dia/horário</button>`;
+      <button class="btn-add-horario" type="button" style="font-size:11px;padding:5px 10px;" onclick="addSlotRow(this)">+ Adicionar dia/horário</button>
+      <div style="margin-top:12px;padding:10px 12px;background:#f5fcf5;border:1.5px solid rgba(45,122,58,.2);border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:#1a5c2a;flex:1;">
+          <input type="checkbox" class="turma-almoco-check" style="accent-color:#2d7a3a;width:15px;height:15px;">
+          🍽️ Oferecer opção de almoço para esta turma
+        </label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--muted);">R$</span>
+          <input type="number" class="turma-almoco-preco" value="50" min="0" step="0.01" style="width:70px;padding:5px 8px;font-size:12px;border:1.5px solid rgba(45,122,58,.3);border-radius:6px;font-family:'DM Sans',sans-serif;">
+          <span style="font-size:11px;color:var(--muted);">/dia</span>
+        </div>
+      </div>`;
     container.appendChild(div);
     addSlotRow(div.querySelector('.btn-add-horario'));
   }
@@ -974,13 +1021,19 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   function getTurmas() {
-    return Array.from(document.querySelectorAll('.turma-row')).map(row => {
+    return Array.from(document.querySelectorAll('#turmasContainer .turma-row')).map(row => {
       const nome = row.querySelector('.turma-nome-input').value.trim();
+      const almocoCheck = row.querySelector('.turma-almoco-check');
+      const almocoPreco = row.querySelector('.turma-almoco-preco');
       const slots = Array.from(row.querySelectorAll('.ativ-horario-row')).map(slotRow => {
         const inputs = slotRow.querySelectorAll('select, input[type="time"]');
         return { dia: inputs[0].value, inicio: inputs[1].value, fim: inputs[2].value };
       });
-      return { turma: nome, slots };
+      return {
+        turma: nome, vagas: 15, slots,
+        almoco_disponivel: almocoCheck ? almocoCheck.checked : false,
+        almoco_preco: almocoPreco ? parseFloat(almocoPreco.value)||50 : 50
+      };
     });
   }
 
@@ -1081,7 +1134,18 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
       <div class="turma-slots-container"></div>
-      <button class="btn-add-horario" type="button" style="font-size:11px;padding:5px 10px;" onclick="addSlotRow(this)">+ Adicionar dia/horário</button>`;
+      <button class="btn-add-horario" type="button" style="font-size:11px;padding:5px 10px;" onclick="addSlotRow(this)">+ Adicionar dia/horário</button>
+      <div style="margin-top:12px;padding:10px 12px;background:#f5fcf5;border:1.5px solid rgba(45,122,58,.2);border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:#1a5c2a;flex:1;">
+          <input type="checkbox" class="turma-almoco-check" ${turmaData?.almoco_disponivel?'checked':''} style="accent-color:#2d7a3a;width:15px;height:15px;">
+          🍽️ Oferecer opção de almoço para esta turma
+        </label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--muted);">R$</span>
+          <input type="number" class="turma-almoco-preco" value="${turmaData?.almoco_preco||50}" min="0" step="0.01" style="width:70px;padding:5px 8px;font-size:12px;border:1.5px solid rgba(45,122,58,.3);border-radius:6px;font-family:'DM Sans',sans-serif;">
+          <span style="font-size:11px;color:var(--muted);">/dia</span>
+        </div>
+      </div>`;
 
     container.appendChild(div);
 
@@ -1124,11 +1188,17 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     return Array.from(document.querySelectorAll('#editTurmasContainer .turma-row')).map(row => {
       const nome  = row.querySelector('.turma-nome-input').value.trim();
       const vagas = parseInt(row.querySelector('.turma-vagas-input').value) || 15;
+      const almocoCheck = row.querySelector('.turma-almoco-check');
+      const almocoPreco = row.querySelector('.turma-almoco-preco');
       const slots = Array.from(row.querySelectorAll('.ativ-horario-row')).map(slotRow => {
         const inputs = slotRow.querySelectorAll('select, input[type="time"]');
         return { dia: inputs[0].value, inicio: inputs[1].value, fim: inputs[2].value };
       });
-      return { turma: nome, vagas, slots };
+      return {
+        turma: nome, vagas, slots,
+        almoco_disponivel: almocoCheck ? almocoCheck.checked : false,
+        almoco_preco: almocoPreco ? parseFloat(almocoPreco.value) || 50 : 50
+      };
     });
   }
 
@@ -1612,6 +1682,57 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg> Compartilhar PDF`;
     btn.disabled = false;
+  }
+
+  // ── PROFESSORAS ───────────────────────────────────────
+  async function loadProfessoras() {
+    const [profs, almocoConf] = await Promise.all([
+      api({ action:'professoras_list' }),
+      api({ action:'config_get', chave:'almoco_preco' })
+    ]);
+    const list = Array.isArray(profs) ? profs : [];
+    document.getElementById('profsCount').textContent = list.length;
+    const el = document.getElementById('profsList');
+    if (!list.length) {
+      el.innerHTML = '<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhuma professora cadastrada.</span></div>';
+    } else {
+      el.innerHTML = list.map(p => `
+        <div class="list-row">
+          <div class="lr-main">
+            <strong>${esc(p.nome)}</strong>
+            <span>${esc(p.email)}</span>
+          </div>
+          <button class="action-btn del" onclick="deleteProfessora('${p.id}','${esc(p.nome)}')">🗑</button>
+        </div>`).join('');
+    }
+    // Preenche preço do almoço
+    document.getElementById('almocoPreco').value = almocoConf?.valor || '50.00';
+  }
+
+  async function createProfessora() {
+    const nome  = document.getElementById('newProfNome').value.trim();
+    const email = document.getElementById('newProfEmail').value.trim();
+    if (!nome || !email) return showAlert('prof','error','Nome e e-mail são obrigatórios.');
+    const d = await api({ action:'professoras_create', nome, email });
+    if (d.error) return showAlert('prof','error', d.error);
+    showAlert('prof','success','✅ Professora adicionada!');
+    document.getElementById('newProfNome').value = '';
+    document.getElementById('newProfEmail').value = '';
+    loadProfessoras();
+  }
+
+  async function deleteProfessora(id, nome) {
+    if (!confirm('Remover professora "'+nome+'"?')) return;
+    await api({ action:'professoras_delete', id });
+    loadProfessoras();
+  }
+
+  async function saveAlmocoPreco() {
+    const preco = parseFloat(document.getElementById('almocoPreco').value);
+    if (isNaN(preco) || preco < 0) return showAlert('almoco','error','Informe um valor válido.');
+    const d = await api({ action:'config_set', chave:'almoco_preco', valor: preco.toFixed(2) });
+    if (d.error) return showAlert('almoco','error', d.error);
+    showAlert('almoco','success','✅ Preço salvo!');
   }
 
   checkSession();

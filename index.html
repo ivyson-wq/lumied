@@ -176,7 +176,33 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
 .spinner.dark{border-color:rgba(200,16,46,.2);border-top-color:var(--red);}
 @keyframes spin{to{transform:rotate(360deg);}}
-@media(max-width:520px){.grid-2{grid-template-columns:1fr;}.header-title{font-size:22px;}.card{padding:20px 16px;}.login-card{padding:28px 20px;}}
+/* AGENDA */
+.agenda-semana{display:flex;flex-direction:column;gap:10px;}
+.agenda-dia{border:1.5px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s;}
+.agenda-dia.ausente{border-color:#e0a0aa;background:#fdf0f2;}
+.agenda-dia-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fdfbf8;}
+.agenda-dia.ausente .agenda-dia-header{background:#fdf0f2;}
+.agenda-dia-data{font-family:'Lora',serif;font-size:14px;font-weight:700;color:var(--text);}
+.agenda-dia-weekday{font-size:11px;color:var(--muted);margin-top:1px;}
+.agenda-dia.ausente .agenda-dia-data{color:#a00d24;}
+.agenda-dia-body{padding:10px 16px;border-top:1px solid var(--border);background:#fff;}
+.agenda-dia.ausente .agenda-dia-body{background:#fdf8f8;}
+.agenda-evento{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-bottom:5px;}
+.agenda-evento:last-child{margin-bottom:0;}
+.agenda-evento-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.agenda-ausente-badge{font-size:11px;font-weight:600;color:#a00d24;background:rgba(200,16,46,.1);padding:2px 8px;border-radius:100px;}
+.btn-ausencia{padding:6px 12px;border-radius:6px;border:1.5px solid rgba(200,16,46,.3);background:transparent;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;color:var(--red);transition:all .2s;}
+.btn-ausencia:hover{background:var(--red-light);}
+.btn-cancelar-ausencia{padding:6px 12px;border-radius:6px;border:1px solid #e0a0aa;background:transparent;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;color:#a00d24;transition:all .2s;}
+.btn-cancelar-ausencia:hover{background:#fdf0f2;}
+
+/* ALMOCO */
+.almoco-opt{margin-top:12px;padding:12px 14px;background:rgba(45,122,58,.06);border:1.5px solid rgba(45,122,58,.2);border-radius:9px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;}
+.almoco-opt:hover{background:rgba(45,122,58,.1);}
+.almoco-opt.selected{background:rgba(45,122,58,.12);border-color:rgba(45,122,58,.5);}
+.almoco-opt input[type="checkbox"]{accent-color:#2d7a3a;width:16px;height:16px;cursor:pointer;flex-shrink:0;}
+.almoco-opt-label{font-size:13px;color:#1a5c2a;font-weight:500;flex:1;}
+.almoco-opt-preco{font-size:12px;font-weight:700;color:#2d7a3a;}
 </style>
 </head>
 <body>
@@ -369,6 +395,40 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   <h2>Solicitação Recebida!</h2>
   <p>Sua solicitação foi registrada com sucesso. Verifique seu e-mail — enviamos uma confirmação com todos os detalhes.</p>
   <div class="success-tag">✉️ Confirmação enviada</div>
+  <button onclick="irParaAgenda()" style="margin-top:20px;padding:11px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">
+    📅 Ver minha agenda
+  </button>
+</div>
+
+<!-- MINHA AGENDA -->
+<div id="agendaWrap" style="display:none;max-width:700px;margin:0 auto;padding:32px 24px 64px;">
+  <div class="card">
+    <div class="card-title">📅 Agenda da Criança</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;">
+      Abaixo estão os próximos dias agendados. Se sua criança não for comparecer em algum dia, clique em <strong>Registrar ausência</strong>.
+    </p>
+    <div id="agendaConteudo"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando…</div></div>
+  </div>
+  <button onclick="voltarFormulario()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;margin-top:8px;">
+    ← Fazer nova solicitação
+  </button>
+</div>
+
+<!-- MODAL AUSÊNCIA -->
+<div class="dias-overlay" id="ausenciaModal" style="display:none;">
+  <div class="dias-modal" style="max-width:420px;">
+    <h3>Registrar ausência</h3>
+    <p class="dm-sub" id="ausenciaModalSub">Confirme que sua criança não comparecerá neste dia.</p>
+    <div style="background:var(--red-light);border:1px solid rgba(200,16,46,.2);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--red);font-weight:600;" id="ausenciaDataLabel"></div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:13px;font-weight:500;color:var(--text);display:block;margin-bottom:7px;">Observação (opcional)</label>
+      <input type="text" id="ausenciaObs" placeholder="Ex: consulta médica" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+    </div>
+    <div class="dm-actions">
+      <button class="dm-cancel" onclick="fecharAusenciaModal()">Cancelar</button>
+      <button class="dm-confirm" onclick="confirmarAusencia()">Confirmar ausência</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL DIAS -->
@@ -505,6 +565,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     document.getElementById('userBar').style.display = 'none';
     document.getElementById('formWrap').style.display = 'none';
     document.getElementById('successPanel').style.display = 'none';
+    document.getElementById('agendaWrap').style.display = 'none';
     document.getElementById('emailState').style.display = 'block';
     document.getElementById('sentState').style.display = 'none';
     const btn = document.getElementById('btnMagic');
@@ -671,6 +732,12 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
             </div>
             <span class="turma-slots">${slotStr}</span>
           </label>
+          ${!lotada && t.almoco_disponivel ? `
+          <div class="almoco-opt" id="almoco_${a.id}_${i}" onclick="toggleAlmoco('${a.id}',${i})" style="display:none;">
+            <input type="checkbox" id="almocoCheck_${a.id}_${i}" onclick="event.stopPropagation();" onchange="toggleAlmoco('${a.id}',${i})">
+            <span class="almoco-opt-label">🍽️ Incluir almoço neste dia</span>
+            <span class="almoco-opt-preco">+R$ ${Number(t.almoco_preco||50).toFixed(2).replace('.',',')}/dia</span>
+          </div>` : ''}
         </div>`;
       }).join('');
 
@@ -734,19 +801,39 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const atividade = todasAtividades.find(a => a.id === atividadeId);
     if (!atividade) return;
     const turma = atividade.horarios[turmaIndex];
-    atividadesSelecionadas.set(atividadeId, { turma: turma.turma, slots: turma.slots });
+    atividadesSelecionadas.set(atividadeId, { turma: turma.turma, slots: turma.slots, almoco: false, almoco_preco: turma.almoco_preco || 50 });
 
-    // Esconde erro de turma não selecionada
+    // Esconde todos os botões de almoço desta atividade, mostra o correto
+    atividade.horarios.forEach((_, i) => {
+      const el = document.getElementById(`almoco_${atividadeId}_${i}`);
+      if (el) el.style.display = 'none';
+    });
+    if (turma.almoco_disponivel) {
+      const almocoEl = document.getElementById(`almoco_${atividadeId}_${turmaIndex}`);
+      if (almocoEl) almocoEl.style.display = 'flex';
+    }
+
     const errEl = document.getElementById('turmaErr_' + atividadeId);
     if (errEl) errEl.style.display = 'none';
 
-    // Destaca label selecionado
     document.querySelectorAll(`input[name="turma_${atividadeId}"]`).forEach((r, i) => {
       const label = r.nextElementSibling;
       if (label) label.classList.toggle('turma-sel', i === turmaIndex);
     });
 
     checkConflicts();
+    updateTotalAtividades();
+  }
+
+  function toggleAlmoco(atividadeId, turmaIndex) {
+    const sel = atividadesSelecionadas.get(atividadeId);
+    if (!sel) return;
+    const checkEl = document.getElementById(`almocoCheck_${atividadeId}_${turmaIndex}`);
+    const almoco = checkEl ? checkEl.checked : !sel.almoco;
+    if (checkEl) checkEl.checked = almoco;
+    atividadesSelecionadas.set(atividadeId, { ...sel, almoco });
+    const wrapEl = document.getElementById(`almoco_${atividadeId}_${turmaIndex}`);
+    if (wrapEl) wrapEl.classList.toggle('selected', almoco);
     updateTotalAtividades();
   }
 
@@ -797,12 +884,177 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const selecionadas = todasAtividades.filter(a => atividadesSelecionadas.has(a.id));
     const el = document.getElementById('totalAtividades');
     if (!selecionadas.length) { el.style.display='none'; return; }
-    const total = selecionadas.reduce((s,a) => s + Number(a.preco), 0);
+    let total = selecionadas.reduce((s,a) => s + Number(a.preco), 0);
+    let almocoTotal = 0;
+    atividadesSelecionadas.forEach(sel => { if (sel?.almoco) almocoTotal += Number(sel.almoco_preco || 50); });
+    total += almocoTotal;
     el.style.display = 'block';
-    el.textContent = `✅ ${selecionadas.length} atividade(s) selecionada(s) — Total: R$ ${total.toFixed(2).replace('.',',')} /mês`;
+    el.textContent = `✅ ${selecionadas.length} atividade(s)${almocoTotal > 0 ? ' + almoço' : ''} — Total: R$ ${total.toFixed(2).replace('.',',')} /mês`;
   }
 
   function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── AGENDA / CHECK-OUT ────────────────────────────────
+  let agendaData = null;
+  let ausenciaPendente = null;
+
+  async function irParaAgenda() {
+    document.getElementById('successPanel').style.display = 'none';
+    document.getElementById('agendaWrap').style.display = 'block';
+    await carregarAgenda();
+  }
+
+  function voltarFormulario() {
+    document.getElementById('agendaWrap').style.display = 'none';
+    document.getElementById('formWrap').style.display = 'block';
+  }
+
+  async function carregarAgenda() {
+    if (!currentUser) return;
+    const el = document.getElementById('agendaConteudo');
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando…</div>';
+    agendaData = await call({ action:'minha_agenda', email: currentUser.email });
+    renderAgenda();
+  }
+
+  function renderAgenda() {
+    if (!agendaData) return;
+    const el = document.getElementById('agendaConteudo');
+    const { solicitacoes, inscricoes, ausencias } = agendaData;
+
+    if (!solicitacoes.length && !inscricoes.length) {
+      el.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);font-size:13px;">Nenhuma solicitação encontrada.</div>';
+      return;
+    }
+
+    // Gera os próximos 30 dias com eventos
+    const hoje = new Date();
+    const dias = [];
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(hoje);
+      d.setDate(hoje.getDate() + i);
+      const weekday = d.getDay();
+      if (weekday === 0 || weekday === 6) continue; // pula fins de semana
+      dias.push(d);
+    }
+
+    const DIAS_PT = ['','Segunda','Terça','Quarta','Quinta','Sexta'];
+    const ausenciaIds = {};
+    ausencias.forEach(a => { ausenciaIds[a.data_ausencia] = a.id; });
+
+    const eventosPorDia = dias.map(d => {
+      const dateStr = d.toISOString().split('T')[0];
+      const weekday = DIAS_PT[d.getDay()];
+      const eventos = [];
+
+      // Eventos de turno
+      solicitacoes.forEach(s => {
+        const diasTurno = s.dias_semana || [];
+        const freq = s.turno ? (s.turno.includes('5x') ? 5 : s.turno.includes('4x') ? 4 : s.turno.includes('3x') ? 3 : s.turno.includes('2x') ? 2 : s.turno.includes('1x') ? 1 : null) : null;
+        const isTodosOsDias = freq === 5 || freq === null;
+        if (isTodosOsDias || diasTurno.includes(weekday)) {
+          eventos.push({ tipo: 'turno', label: s.turno?.replace(/_/g,' ').replace(/(\d)x/,'$1× na semana') || 'Turno', cor: '#C8102E', crianca: s.nome_crianca });
+        }
+      });
+
+      // Eventos de atividade
+      inscricoes.forEach(ins => {
+        (ins.turmas_selecionadas||[]).forEach(ts => {
+          if ((ts.slots||[]).some(sl => sl.dia === weekday)) {
+            eventos.push({ tipo: 'atividade', label: ts.turma || 'Atividade', cor: '#2d7a3a', crianca: ins.nome_crianca });
+          }
+        });
+      });
+
+      return { date: d, dateStr, weekday, eventos };
+    }).filter(d => d.eventos.length > 0);
+
+    if (!eventosPorDia.length) {
+      el.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);font-size:13px;">Nenhum evento nos próximos 30 dias.</div>';
+      return;
+    }
+
+    el.innerHTML = '<div class="agenda-semana">' + eventosPorDia.map(d => {
+      const ausente = ausenciaIds[d.dateStr];
+      const dataLabel = d.date.toLocaleDateString('pt-BR', {day:'2-digit', month:'long'});
+      const eventosHTML = d.eventos.map(e =>
+        `<div class="agenda-evento">
+          <div class="agenda-evento-dot" style="background:${e.cor};"></div>
+          <span><strong>${esc2(e.crianca)}</strong> — ${esc2(e.label)}</span>
+        </div>`
+      ).join('');
+
+      return `<div class="agenda-dia${ausente?' ausente':''}">
+        <div class="agenda-dia-header">
+          <div>
+            <div class="agenda-dia-data">${d.weekday}, ${dataLabel}</div>
+            ${ausente?'<span class="agenda-ausente-badge">⚠️ Ausência registrada</span>':''}
+          </div>
+          ${ausente
+            ? `<button class="btn-cancelar-ausencia" onclick="cancelarAusencia('${ausenciaIds[d.dateStr]}','${d.dateStr}')">Cancelar ausência</button>`
+            : `<button class="btn-ausencia" onclick="abrirAusenciaModal('${d.dateStr}','${d.weekday}','${d.eventos.map(e=>e.crianca)[0]||''}')">Registrar ausência</button>`
+          }
+        </div>
+        <div class="agenda-dia-body">${eventosHTML}</div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  function abrirAusenciaModal(dateStr, weekday, nomeCrianca) {
+    ausenciaPendente = { dateStr, nomeCrianca };
+    const d = new Date(dateStr + 'T12:00:00');
+    const label = d.toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
+    document.getElementById('ausenciaDataLabel').textContent = '📅 ' + label;
+    document.getElementById('ausenciaObs').value = '';
+    document.getElementById('ausenciaModal').classList.add('show');
+  }
+
+  function fecharAusenciaModal() {
+    document.getElementById('ausenciaModal').classList.remove('show');
+    ausenciaPendente = null;
+  }
+
+  async function confirmarAusencia() {
+    if (!ausenciaPendente || !currentUser) return;
+    const obs = document.getElementById('ausenciaObs').value.trim();
+    const btn = document.querySelector('#ausenciaModal .dm-confirm');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+
+    const d = await call({
+      action: 'ausencia_submit',
+      email_resp: currentUser.email,
+      nome_crianca: ausenciaPendente.nomeCrianca,
+      data_ausencia: ausenciaPendente.dateStr,
+      tipo: 'turno',
+      observacao: obs || null
+    });
+
+    if (!d.error) {
+      // Notifica professoras por e-mail
+      const meta = currentUser.user_metadata || {};
+      fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON},
+        body: JSON.stringify({
+          tipo: 'ausencia',
+          emailResp: currentUser.email,
+          nomeResp: meta.full_name || meta.name || currentUser.email,
+          nomeCrianca: ausenciaPendente.nomeCrianca,
+          dataAusencia: ausenciaPendente.dateStr,
+          tipoAusencia: 'turno',
+          observacao: obs || null
+        })
+      });
+    }
+
+    btn.disabled = false; btn.textContent = 'Confirmar ausência';
+    fecharAusenciaModal();
+    await carregarAgenda();
+  }
+
+  async function cancelarAusencia(id, dateStr) {
+    if (!confirm('Cancelar ausência? A escola não será mais notificada.')) return;
+    await call({ action: 'ausencia_delete', id });
+    await carregarAgenda();
+  }
 
   // ── DADOS ─────────────────────────────────────────────
   async function call(body) {
@@ -898,7 +1150,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
         }
         if (!checkConflicts()) { btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return; }
         const atividadesIds     = [...atividadesSelecionadas.keys()];
-        const turmasSelecionadas = [...atividadesSelecionadas.entries()].map(([id,sel])=>({ atividade_id:id, turma:sel.turma, slots:sel.slots }));
+        const turmasSelecionadas = [...atividadesSelecionadas.entries()].map(([id,sel])=>({ atividade_id:id, turma:sel.turma, slots:sel.slots, almoco:sel.almoco||false, almoco_preco:sel.almoco_preco||50 }));
         const atividadesDetalhe = todasAtividades.filter(a => atividadesSelecionadas.has(a.id)).map(a => ({
           ...a,
           turma_selecionada: atividadesSelecionadas.get(a.id)?.turma,
