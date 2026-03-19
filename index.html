@@ -979,7 +979,10 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       return;
     }
 
-    el.innerHTML = '<div class="agenda-semana">' + eventosPorDia.map(d => {
+    const primeiros = eventosPorDia.slice(0, 5);
+    const restantes = eventosPorDia.slice(5);
+
+    function renderDiaCard(d) {
       const ausente = ausenciaIds[d.dateStr];
       const dataLabel = d.date.toLocaleDateString('pt-BR', {day:'2-digit', month:'long'});
       const eventosHTML = d.eventos.map(e =>
@@ -988,7 +991,6 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
           <span><strong>${esc2(e.crianca)}</strong> — ${esc2(e.label)}</span>
         </div>`
       ).join('');
-
       return `<div class="agenda-dia${ausente?' ausente':''}">
         <div class="agenda-dia-header">
           <div>
@@ -1002,7 +1004,28 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
         </div>
         <div class="agenda-dia-body">${eventosHTML}</div>
       </div>`;
-    }).join('') + '</div>';
+    }
+
+    const primeirosHTML = primeiros.map(renderDiaCard).join('');
+    const restantesHTML = restantes.length
+      ? `<div id="agendaExtra" style="display:none;" class="agenda-semana">${restantes.map(renderDiaCard).join('')}</div>
+         <button id="btnVerMais" onclick="toggleAgendaExtra()" style="width:100%;margin-top:10px;padding:10px;background:none;border:1.5px dashed var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#C8102E';this.style.color='#C8102E'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+           ▾ Ver mais ${restantes.length} dia(s)
+         </button>`
+      : '';
+
+    el.innerHTML = `<div class="agenda-semana">${primeirosHTML}</div>${restantesHTML}`;
+  }
+
+  function toggleAgendaExtra() {
+    const extra = document.getElementById('agendaExtra');
+    const btn   = document.getElementById('btnVerMais');
+    if (!extra) return;
+    const aberto = extra.style.display !== 'none';
+    extra.style.display = aberto ? 'none' : 'block';
+    btn.textContent = aberto
+      ? `▾ Ver mais ${extra.querySelectorAll('.agenda-dia').length} dia(s)`
+      : '▴ Ocultar dias';
   }
 
   function abrirAusenciaModal(dateStr, weekday, nomeCrianca) {
