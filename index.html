@@ -1205,22 +1205,33 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     if (!currentUser) return;
     document.getElementById('reuniaoCard').style.display = 'block';
 
-    // Carrega gestoras
-    gestoras = await callCalendar({ action: 'gestoras_list' });
-    if (!Array.isArray(gestoras)) gestoras = [];
+    try {
+      // Carrega gestoras
+      gestoras = await callCalendar({ action: 'gestoras_list' });
+      if (!Array.isArray(gestoras)) gestoras = [];
 
-    const icons = { diretora: '👩‍💼', coordenadora: '👩‍🏫' };
-    const cargos = { diretora: 'Diretora Pedagógica', coordenadora: 'Coordenadora Pedagógica' };
-    document.getElementById('gestoraCards').innerHTML = gestoras.map(g =>
-      `<div class="gestora-card" id="gcard_${g.id}" onclick="selecionarGestora('${g.id}')">
-        <div class="gestora-icon">${icons[g.cargo] || '👩'}</div>
-        <div class="gestora-cargo">${cargos[g.cargo] || g.cargo}</div>
-        <div class="gestora-nome">${esc2(g.nome)}</div>
-      </div>`
-    ).join('');
+      const icons = { diretora: '👩‍💼', coordenadora: '👩‍🏫' };
+      const cargos = { diretora: 'Diretora Pedagógica', coordenadora: 'Coordenadora Pedagógica' };
 
-    // Carrega reuniões já agendadas
-    await carregarMinhasReunioes();
+      if (!gestoras.length) {
+        document.getElementById('gestoraCards').innerHTML =
+          '<p style="font-size:13px;color:var(--muted);">Nenhuma gestora cadastrada ainda.</p>';
+      } else {
+        document.getElementById('gestoraCards').innerHTML = gestoras.map(g =>
+          `<div class="gestora-card" id="gcard_${g.id}" onclick="selecionarGestora('${g.id}')">
+            <div class="gestora-icon">${icons[g.cargo] || '👩'}</div>
+            <div class="gestora-cargo">${cargos[g.cargo] || g.cargo}</div>
+            <div class="gestora-nome">${esc2(g.nome)}</div>
+          </div>`
+        ).join('');
+      }
+
+      await carregarMinhasReunioes();
+    } catch(e) {
+      console.error('Erro ao carregar reuniões:', e);
+      document.getElementById('gestoraCards').innerHTML =
+        '<p style="font-size:13px;color:var(--muted);">Serviço de agendamento temporariamente indisponível.</p>';
+    }
   }
 
   async function carregarMinhasReunioes() {
