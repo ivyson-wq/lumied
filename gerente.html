@@ -203,6 +203,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Professoras</a>
+      <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('usuarios',this)"><span class="ic">👥</span> Usuários</a>
       <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
@@ -431,6 +432,56 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- REUNIÕES -->
+      <div id="panelReunioes" class="panel">
+        <div class="two-col">
+          <!-- Lista de reuniões agendadas -->
+          <div>
+            <div class="sec-title">Reuniões Agendadas <span class="count-badge" id="reunioesCount">0</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Data</th><th>Horário</th><th>Responsável</th><th>Com</th><th>Assunto</th><th></th></tr></thead>
+                <tbody id="reunioesListBody"><tr><td colspan="6" class="empty-state">⏳ Carregando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Gestoras e horários -->
+          <div>
+            <div class="sec-title" style="margin-bottom:14px;">👩‍💼 Gestoras</div>
+            <div id="gestorasGerente" style="margin-bottom:20px;"></div>
+
+            <div class="sec-title" style="margin-bottom:14px;">🕐 Horários Disponíveis</div>
+            <div style="margin-bottom:10px;">
+              <select id="gestoraSlotSelect" onchange="loadHorariosList()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;width:100%;margin-bottom:12px;">
+                <option value="">Selecione a gestora…</option>
+              </select>
+              <div class="list-card" id="horariosList" style="margin-bottom:12px;"></div>
+              <div class="form-card">
+                <h3>+ Novo Horário</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+                  <div class="ff" style="margin:0;">
+                    <label style="font-size:10px;">Dia da semana</label>
+                    <select id="newSlotDia" style="padding:7px 8px;font-size:12px;width:100%;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;">
+                      <option value="1">Segunda</option>
+                      <option value="2">Terça</option>
+                      <option value="3">Quarta</option>
+                      <option value="4">Quinta</option>
+                      <option value="5">Sexta</option>
+                    </select>
+                  </div>
+                  <div class="ff" style="margin:0;"><label style="font-size:10px;">Início</label><input type="time" id="newSlotInicio" value="14:00" style="padding:7px 8px;font-size:12px;width:100%;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;"></div>
+                  <div class="ff" style="margin:0;"><label style="font-size:10px;">Fim</label><input type="time" id="newSlotFim" value="15:00" style="padding:7px 8px;font-size:12px;width:100%;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;"></div>
+                </div>
+                <button class="btn-create" onclick="createHorario()">Adicionar Horário</button>
+                <div class="f-alert error"   id="horarioErr"></div>
+                <div class="f-alert success" id="horarioOk"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- LOGOTIPO -->
       <div id="panelLogo" class="panel">
         <div style="max-width:520px;">
@@ -551,6 +602,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 </div>
 
 <script>
+  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
   const API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
   const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
 
@@ -643,7 +696,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',logo:'Logotipo',usuarios:'Usuários'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -651,6 +704,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='atividades')  loadAtividadesPanel();
     if(id==='dashAtiv')    loadAtivDashboard();
     if(id==='professoras') loadProfessoras();
+    if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
     if(id==='usuarios')    loadUsers();
     return false;
@@ -895,7 +949,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── HELPERS ───────────────────────────────────────────
   function showAlert(ctx,type,msg) {
-    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk'],prof:['profErr','profOk'],almoco:['almocoErr','almocoOk']};
+    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk'],prof:['profErr','profOk'],almoco:['almocoErr','almocoOk'],horario:['horarioErr','horarioOk']};
     const [eId,oId]=map[ctx];
     document.getElementById(eId).classList.remove('show'); document.getElementById(oId).classList.remove('show');
     const id=type==='error'?eId:oId;
@@ -1733,6 +1787,115 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const d = await api({ action:'config_set', chave:'almoco_preco', valor: preco.toFixed(2) });
     if (d.error) return showAlert('almoco','error', d.error);
     showAlert('almoco','success','✅ Preço salvo!');
+  }
+
+  // ── REUNIÕES ──────────────────────────────────────────
+  const CALENDAR_URL = SUPABASE_URL + '/functions/v1/calendar';
+
+  async function callCalendar(body) {
+    const r = await fetch(CALENDAR_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  const DIAS_SEMANA = ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+
+  async function loadReunioesPanel() {
+    await Promise.all([loadReunioesList(), loadGestorasGerente()]);
+  }
+
+  async function loadReunioesList() {
+    const data = await callCalendar({ action: 'reunioes_list' });
+    const list = Array.isArray(data) ? data : [];
+    document.getElementById('reunioesCount').textContent = list.length;
+    const tb = document.getElementById('reunioesListBody');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">📭 Nenhuma reunião agendada.</td></tr>'; return; }
+    tb.innerHTML = list.map(r => {
+      const dataFmt = new Date(r.data_reuniao + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' });
+      return `<tr>
+        <td>${dataFmt}</td>
+        <td>${r.hora_inicio.substring(0,5)} – ${r.hora_fim.substring(0,5)}</td>
+        <td>${esc(r.nome_resp)}<br><small style="color:var(--muted)">${esc(r.email_resp)}</small></td>
+        <td>${esc(r.gestoras?.nome||'')}</td>
+        <td>${esc(r.assunto||'—')}</td>
+        <td><button class="action-btn del" onclick="cancelarReuniaoGerente('${r.id}')">🗑</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function loadGestorasGerente() {
+    const data = await callCalendar({ action: 'gestoras_list' });
+    const list = Array.isArray(data) ? data : [];
+    const cargos = { diretora: 'Diretora Pedagógica', coordenadora: 'Coordenadora Pedagógica' };
+
+    document.getElementById('gestorasGerente').innerHTML = list.map(g => `
+      <div class="form-card" style="margin-bottom:12px;">
+        <h3>${cargos[g.cargo]||g.cargo}</h3>
+        <div class="ff"><label>Nome</label><input type="text" id="gnome_${g.id}" value="${esc(g.nome)}"></div>
+        <div class="ff"><label>E-mail</label><input type="email" id="gemail_${g.id}" value="${esc(g.email)}"></div>
+        <div class="ff"><label>Google Calendar ID</label><input type="text" id="gcal_${g.id}" value="${esc(g.calendar_id||'')}"><div class="hint">Geralmente o próprio e-mail da gestora.</div></div>
+        <button class="btn-create" onclick="saveGestora('${g.id}')">Salvar</button>
+      </div>`).join('');
+
+    // Popula select de gestoras para horários
+    const sel = document.getElementById('gestoraSlotSelect');
+    sel.innerHTML = '<option value="">Selecione a gestora…</option>' +
+      list.map(g => `<option value="${g.id}">${g.nome} (${cargos[g.cargo]||g.cargo})</option>`).join('');
+  }
+
+  async function saveGestora(id) {
+    const nome       = document.getElementById('gnome_' + id).value.trim();
+    const email      = document.getElementById('gemail_' + id).value.trim();
+    const calendar_id = document.getElementById('gcal_' + id).value.trim();
+    const d = await callCalendar({ action: 'gestoras_update', id, nome, email, calendar_id });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    alert('✅ Salvo!');
+  }
+
+  async function loadHorariosList() {
+    const gestora_id = document.getElementById('gestoraSlotSelect').value;
+    const el = document.getElementById('horariosList');
+    if (!gestora_id) { el.innerHTML = ''; return; }
+    const data = await callCalendar({ action: 'horarios_list', gestora_id });
+    const list = Array.isArray(data) ? data : [];
+    if (!list.length) { el.innerHTML = '<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhum horário cadastrado.</span></div>'; return; }
+    el.innerHTML = list.map(h => `
+      <div class="list-row">
+        <div class="lr-main">
+          <strong>${DIAS_SEMANA[h.dia_semana]}</strong>
+          <span>${h.hora_inicio.substring(0,5)} – ${h.hora_fim.substring(0,5)}</span>
+        </div>
+        <button class="action-btn del" onclick="deleteHorario('${h.id}')">🗑</button>
+      </div>`).join('');
+  }
+
+  async function createHorario() {
+    const gestora_id  = document.getElementById('gestoraSlotSelect').value;
+    const dia_semana  = parseInt(document.getElementById('newSlotDia').value);
+    const hora_inicio = document.getElementById('newSlotInicio').value;
+    const hora_fim    = document.getElementById('newSlotFim').value;
+    if (!gestora_id) return showAlert('horario', 'error', 'Selecione a gestora.');
+    if (!hora_inicio || !hora_fim) return showAlert('horario', 'error', 'Informe início e fim.');
+    if (hora_inicio >= hora_fim) return showAlert('horario', 'error', 'O horário de início deve ser antes do fim.');
+    const d = await callCalendar({ action: 'horarios_create', gestora_id, dia_semana, hora_inicio, hora_fim });
+    if (d.error) return showAlert('horario', 'error', d.error);
+    showAlert('horario', 'success', '✅ Horário adicionado!');
+    loadHorariosList();
+  }
+
+  async function deleteHorario(id) {
+    if (!confirm('Remover este horário?')) return;
+    await callCalendar({ action: 'horarios_delete', id });
+    loadHorariosList();
+  }
+
+  async function cancelarReuniaoGerente(id) {
+    if (!confirm('Cancelar esta reunião?')) return;
+    await callCalendar({ action: 'cancelar_reuniao', id });
+    loadReunioesList();
   }
 
   checkSession();
