@@ -321,36 +321,6 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 <!-- FORMULÁRIO -->
 <div class="form-wrap" id="formWrap">
 
-  <!-- AGENDAR REUNIÃO -->
-  <div class="card" id="reuniaoCard" style="display:none;">
-    <div class="card-title">📅 Agendar Reunião</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Agende uma reunião com a Direção ou Coordenação Pedagógica.</p>
-
-    <!-- Reuniões já agendadas -->
-    <div id="reunioesAgendadas" style="margin-bottom:16px;"></div>
-
-    <!-- Seleção de gestora -->
-    <div style="margin-bottom:16px;">
-      <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:10px;">Com quem deseja reunir?</label>
-      <div class="gestora-cards" id="gestoraCards"></div>
-    </div>
-
-    <!-- Slots disponíveis -->
-    <div id="slotsSection" style="display:none;">
-      <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:6px;">Escolha o horário</label>
-      <div id="slotsLista"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando horários…</div></div>
-
-      <!-- Assunto -->
-      <div id="assuntoSection" style="display:none;margin-top:14px;">
-        <label style="font-size:13px;font-weight:500;color:var(--text);display:block;margin-bottom:7px;">Assunto da reunião (opcional)</label>
-        <input type="text" id="reuniaoAssunto" placeholder="Ex: Desenvolvimento da criança, dúvidas sobre o programa…"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
-        <button onclick="confirmarReuniao()" class="btn-submit" style="margin-top:12px;">Confirmar Agendamento</button>
-        <div class="err-msg" id="reuniaoErr" style="margin-top:8px;"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- AGENDA PERMANENTE -->
   <div class="card" id="agendaCard" style="display:none;">
     <div class="card-title" style="margin-bottom:12px;">
@@ -464,6 +434,37 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     <button type="submit" class="btn-submit" id="submitBtn" style="display:none;">Enviar Solicitação</button>
     <p class="submit-note" id="submitNote" style="display:none;">Você receberá um e-mail de confirmação após o envio.</p>
   </form>
+
+  <!-- AGENDAR REUNIÃO -->
+  <div class="card" id="reuniaoCard" style="display:none;margin-top:8px;">
+    <div class="card-title">🤝 Agendar Reunião</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Agende uma reunião com a Direção ou Coordenação Pedagógica.</p>
+
+    <!-- Reuniões já agendadas -->
+    <div id="reunioesAgendadas" style="margin-bottom:16px;"></div>
+
+    <!-- Seleção de gestora -->
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:10px;">Com quem deseja reunir?</label>
+      <div class="gestora-cards" id="gestoraCards"></div>
+    </div>
+
+    <!-- Slots disponíveis -->
+    <div id="slotsSection" style="display:none;">
+      <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:6px;">Escolha o horário</label>
+      <div id="slotsLista"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando horários…</div></div>
+
+      <!-- Assunto -->
+      <div id="assuntoSection" style="display:none;margin-top:14px;">
+        <label style="font-size:13px;font-weight:500;color:var(--text);display:block;margin-bottom:7px;">Assunto da reunião (opcional)</label>
+        <input type="text" id="reuniaoAssunto" placeholder="Ex: Desenvolvimento da criança, dúvidas sobre o programa…"
+          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
+        <button onclick="confirmarReuniao()" class="btn-submit" style="margin-top:12px;">Confirmar Agendamento</button>
+        <div class="err-msg" id="reuniaoErr" style="margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- SUCESSO -->
