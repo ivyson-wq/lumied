@@ -998,6 +998,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     function renderDiaCard(d) {
       const ausente = ausenciaIds[d.dateStr];
       const dataLabel = d.date.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'}).replace('.','');
+      const nomeCrianca = (d.eventos[0]?.crianca || '').replace(/"/g, '');
       const eventosHTML = d.eventos.map(e =>
         `<div class="dia-crianca-item">
           <div class="dia-crianca-dot" style="background:${e.cor};"></div>
@@ -1010,8 +1011,12 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
       const headerBg = ausente ? '#a00d24' : 'var(--red)';
       const ausenciaBtn = ausente
-        ? `<button class="btn-cancelar-ausencia" style="width:100%;margin-top:8px;padding:5px 8px;border-radius:6px;border:1px solid #e0a0aa;background:transparent;font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;color:#a00d24;" onclick="cancelarAusencia('${ausenciaIds[d.dateStr]}','${d.dateStr}')">↩ Cancelar ausência</button>`
-        : `<button class="btn-ausencia" style="width:100%;margin-top:8px;padding:5px 8px;border-radius:6px;border:1.5px solid rgba(200,16,46,.25);background:transparent;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--red);" onclick="abrirAusenciaModal('${d.dateStr}','${d.weekday}','${d.eventos.map(e=>e.crianca)[0]||''}')">Registrar ausência</button>`;
+        ? `<button class="btn-cancelar-ausencia" style="width:100%;margin-top:8px;padding:5px 8px;border-radius:6px;border:1px solid #e0a0aa;background:transparent;font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;color:#a00d24;"
+            data-id="${ausenciaIds[d.dateStr]}" data-date="${d.dateStr}"
+            onclick="cancelarAusencia(this.dataset.id, this.dataset.date)">↩ Cancelar ausência</button>`
+        : `<button class="btn-ausencia" style="width:100%;margin-top:8px;padding:5px 8px;border-radius:6px;border:1.5px solid rgba(200,16,46,.25);background:transparent;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;cursor:pointer;color:var(--red);"
+            data-date="${d.dateStr}" data-weekday="${d.weekday}" data-crianca="${nomeCrianca}"
+            onclick="abrirAusenciaModal(this.dataset.date, this.dataset.weekday, this.dataset.crianca)">Registrar ausência</button>`;
 
       return `<div class="dia-card${ausente?' agenda-dia ausente':''}">
         <div class="dia-card-header" style="background:${headerBg};flex-direction:column;align-items:flex-start;gap:2px;">
