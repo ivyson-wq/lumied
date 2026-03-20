@@ -2,7 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maple Bear — Sistema RS</title>
+<title>Sistema Maple Bear RS</title>
+<meta name="description" content="Sistema de solicitações, atividades e agenda da Maple Bear Rio Grande do Sul">
+<meta name="theme-color" content="#C8102E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Maple Bear">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/ivyson-wq/Escolha-de-turno/main/Design%20sem%20nome.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -256,6 +263,17 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 </div>
 
 <div class="aviso-strip">⚠️ <strong>Importante:</strong> as alterações de turno são válidas apenas para o mês seguinte ao da solicitação.</div>
+
+<!-- BANNER INSTALAR APP -->
+<div id="installBanner" style="display:none;background:#1c1712;padding:12px 20px;text-align:center;">
+  <div style="max-width:700px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:13px;color:rgba(255,255,255,.85);">📲 Instale o app Maple Bear no seu celular para acesso rápido</span>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+      <button id="btnInstall" onclick="instalarApp()" style="padding:7px 16px;background:#C8102E;color:#fff;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Instalar</button>
+      <button onclick="document.getElementById('installBanner').style.display='none'" style="padding:7px 12px;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Agora não</button>
+    </div>
+  </div>
+</div>
 
 <!-- BARRA DO USUÁRIO -->
 <div id="userBar">
@@ -1451,6 +1469,32 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
   // ── INIT ──────────────────────────────────────────────
   loadLogo(); loadSeries(); initAuth();
+
+  // Registra Service Worker (PWA)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(console.error);
+  }
+
+  // Banner de instalação do app
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBanner').style.display = 'block';
+  });
+
+  function instalarApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('installBanner').style.display = 'none';
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('installBanner').style.display = 'none';
+  });
 </script>
 </body>
 </html>
