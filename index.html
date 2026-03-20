@@ -311,9 +311,55 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     <div class="lw-title">Identifique-se para continuar</div>
     <p class="lw-sub">Para garantir a autenticidade das solicitações, confirme sua identidade antes de preencher o formulário.</p>
 
-    <div id="accessDeniedMsg" style="display:none;margin-bottom:16px;padding:12px 16px;background:#fdf0f2;border:1px solid rgba(200,16,46,.25);border-radius:9px;font-size:13px;color:#a00d24;line-height:1.5;text-align:center;">
-      ⛔ Seu e-mail não está autorizado a acessar este formulário.<br>
-      <span style="font-size:12px;color:var(--muted);">Entre em contato com a escola para solicitar acesso.</span>
+    <!-- Estado: acesso negado -->
+    <div id="accessDeniedMsg" style="display:none;">
+      <div style="padding:14px 16px;background:#fdf0f2;border:1px solid rgba(200,16,46,.25);border-radius:9px;font-size:13px;color:#a00d24;line-height:1.6;text-align:center;margin-bottom:12px;">
+        ⛔ Seu e-mail não está autorizado a acessar este formulário.
+      </div>
+      <button onclick="showSolicitarForm()" style="width:100%;padding:12px;background:#1c1712;color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">📋 Solicitar Acesso</button>
+      <button onclick="backToEmailFromDenied()" style="width:100%;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">← Tentar outro e-mail</button>
+    </div>
+
+    <!-- Estado: formulário de solicitação -->
+    <div id="solicitarState" style="display:none;">
+      <div style="font-family:'Lora',serif;font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;">Solicitar Acesso</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Preencha os dados abaixo. A escola validará e você receberá um e-mail de confirmação.</p>
+      <div class="ml-field">
+        <label>Nome completo <span style="color:var(--red);">*</span></label>
+        <input type="text" id="solNome" placeholder="Ana Paula Corrêa" autocomplete="name">
+        <div class="err-msg" id="solNomeErr">Informe seu nome completo.</div>
+      </div>
+      <div class="ml-field">
+        <label>CPF <span style="color:var(--red);">*</span></label>
+        <input type="text" id="solCpf" placeholder="000.000.000-00" maxlength="14" oninput="maskCpf(this)">
+        <div class="err-msg" id="solCpfErr">Informe um CPF válido.</div>
+      </div>
+      <div class="ml-field">
+        <label>E-mail <span style="color:var(--red);">*</span></label>
+        <input type="email" id="solEmail" placeholder="seuemail@exemplo.com" autocomplete="email">
+        <div class="err-msg" id="solEmailErr">Informe um e-mail válido.</div>
+      </div>
+      <div class="ml-field">
+        <label>Telefone <span style="color:var(--red);">*</span></label>
+        <input type="tel" id="solTelefone" placeholder="(00) 90000-0000" maxlength="15" oninput="maskTel(this)">
+        <div class="err-msg" id="solTelErr">Informe um telefone válido.</div>
+      </div>
+      <div class="ml-field">
+        <label>Nome da criança <span style="color:var(--red);">*</span></label>
+        <input type="text" id="solCrianca" placeholder="Pedro Corrêa">
+        <div class="err-msg" id="solCriancaErr">Informe o nome da criança.</div>
+      </div>
+      <div id="solErr" style="display:none;font-size:13px;color:var(--red);padding:10px 12px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);margin-bottom:12px;"></div>
+      <button class="btn-magic" id="btnSolicitar" onclick="submitSolicitar()">Enviar Solicitação</button>
+      <button onclick="backToEmailFromDenied()" style="width:100%;margin-top:8px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">← Voltar</button>
+    </div>
+
+    <!-- Estado: solicitação enviada -->
+    <div id="solicitadoState" style="display:none;text-align:center;">
+      <div style="font-size:48px;margin-bottom:12px;">📬</div>
+      <div style="font-family:'Lora',serif;font-size:17px;font-weight:600;margin-bottom:8px;">Solicitação enviada!</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;">A escola foi notificada e analisará seus dados em breve.<br>Você receberá um e-mail assim que o acesso for liberado.</p>
+      <button onclick="backToEmailFromDenied()" style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Voltar ao início</button>
     </div>
 
     <!-- Estado inicial: formulário de e-mail -->
@@ -618,7 +664,92 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   }
 
   function showAccessDenied() {
+    document.getElementById('emailState').style.display = 'none';
+    document.getElementById('sentState').style.display = 'none';
+    document.getElementById('solicitarState').style.display = 'none';
+    document.getElementById('solicitadoState').style.display = 'none';
     document.getElementById('accessDeniedMsg').style.display = 'block';
+  }
+
+  function showSolicitarForm() {
+    // pré-preenche e-mail se o usuário já tinha digitado
+    const emailDigitado = document.getElementById('mlEmail').value.trim()
+      || document.getElementById('sentEmailBadge').textContent.trim();
+    if (emailDigitado && emailDigitado !== '—') {
+      document.getElementById('solEmail').value = emailDigitado;
+    }
+    document.getElementById('accessDeniedMsg').style.display = 'none';
+    document.getElementById('solicitarState').style.display = 'block';
+  }
+
+  function backToEmailFromDenied() {
+    document.getElementById('accessDeniedMsg').style.display = 'none';
+    document.getElementById('solicitarState').style.display = 'none';
+    document.getElementById('solicitadoState').style.display = 'none';
+    document.getElementById('sentState').style.display = 'none';
+    document.getElementById('emailState').style.display = 'block';
+  }
+
+  function maskCpf(el) {
+    let v = el.value.replace(/\D/g, '').slice(0, 11);
+    v = v.replace(/^(\d{3})(\d)/, '$1.$2');
+    v = v.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+    v = v.replace(/\.(\d{3})(\d)/, '.$1-$2');
+    el.value = v;
+  }
+
+  function maskTel(el) {
+    let v = el.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+    else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/, '($1) $2-$3');
+    else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, '($1) $2');
+    el.value = v;
+  }
+
+  async function submitSolicitar() {
+    const nome       = document.getElementById('solNome').value.trim();
+    const cpf        = document.getElementById('solCpf').value.replace(/\D/g, '');
+    const email      = document.getElementById('solEmail').value.trim();
+    const telefone   = document.getElementById('solTelefone').value.trim();
+    const nomeCrianca = document.getElementById('solCrianca').value.trim();
+    const errEl      = document.getElementById('solErr');
+
+    // limpa erros
+    ['solNomeErr','solCpfErr','solEmailErr','solTelErr','solCriancaErr'].forEach(id => {
+      document.getElementById(id).classList.remove('show');
+    });
+    errEl.style.display = 'none';
+
+    let ok = true;
+    if (!nome)                                              { document.getElementById('solNomeErr').classList.add('show'); ok=false; }
+    if (cpf.length !== 11)                                  { document.getElementById('solCpfErr').classList.add('show'); ok=false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))         { document.getElementById('solEmailErr').classList.add('show'); ok=false; }
+    if (telefone.replace(/\D/g,'').length < 10)             { document.getElementById('solTelErr').classList.add('show'); ok=false; }
+    if (!nomeCrianca)                                       { document.getElementById('solCriancaErr').classList.add('show'); ok=false; }
+    if (!ok) return;
+
+    const btn = document.getElementById('btnSolicitar');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Enviando…';
+
+    const r = await fetch(ACESSO, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+      body: JSON.stringify({ action: 'solicitar', nome, cpf, email, telefone, nome_crianca: nomeCrianca }),
+    });
+    const d = await r.json();
+
+    btn.disabled = false;
+    btn.innerHTML = 'Enviar Solicitação';
+
+    if (d.error) {
+      errEl.textContent = d.error;
+      errEl.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('solicitarState').style.display = 'none';
+    document.getElementById('solicitadoState').style.display = 'block';
   }
 
   async function sendMagicLink() {

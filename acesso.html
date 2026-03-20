@@ -100,6 +100,17 @@ td.criado{font-size:12px;color:var(--muted);}
 
   <div class="content">
 
+    <!-- Solicitações pendentes -->
+    <div class="card" id="cardSolicitacoes">
+      <div class="card-title">
+        🕐 Solicitações Pendentes
+        <span id="badgePendentes" style="display:none;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;font-family:'DM Sans',sans-serif;margin-left:4px;"></span>
+      </div>
+      <div id="solicitacoesWrap">
+        <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner"></span></div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">🔒 E-mails Autorizados</div>
 
@@ -193,7 +204,73 @@ td.criado{font-size:12px;color:var(--muted);}
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display = 'block';
     document.getElementById('gerName').textContent = nome;
+    carregarSolicitacoes();
     carregarLista();
+  }
+
+  // ── SOLICITAÇÕES PENDENTES ─────────────────────────────
+  async function carregarSolicitacoes() {
+    const d = await callAcesso({ action: 'solicitacoes_list' });
+    const lista = d.data || [];
+    const badge = document.getElementById('badgePendentes');
+
+    if (lista.length === 0) {
+      badge.style.display = 'none';
+      document.getElementById('solicitacoesWrap').innerHTML =
+        '<p style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhuma solicitação pendente.</p>';
+      return;
+    }
+
+    badge.textContent = lista.length;
+    badge.style.display = 'inline-block';
+
+    const rows = lista.map(s => `
+      <tr>
+        <td style="padding:12px;font-weight:500;">${esc(s.nome)}</td>
+        <td style="padding:12px;color:var(--muted);font-size:13px;">${esc(s.cpf)}</td>
+        <td style="padding:12px;">${esc(s.email)}</td>
+        <td style="padding:12px;color:var(--muted);font-size:13px;">${esc(s.telefone)}</td>
+        <td style="padding:12px;color:var(--muted);font-size:13px;">${esc(s.nome_crianca)}</td>
+        <td style="padding:12px;font-size:12px;color:var(--muted);">${formatDate(s.criado_em)}</td>
+        <td style="padding:12px;white-space:nowrap;">
+          <button onclick="aprovar(${s.id})" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px;">✓ Aprovar</button>
+          <button onclick="rejeitar(${s.id}, '${esc(s.nome)}')" style="padding:5px 12px;background:transparent;border:1px solid rgba(200,16,46,.35);color:var(--red);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">✕ Rejeitar</button>
+        </td>
+      </tr>
+    `).join('');
+
+    document.getElementById('solicitacoesWrap').innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);">
+              <th style="text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;">Nome</th>
+              <th style="text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;">CPF</th>
+              <th style="text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;">E-mail</th>
+              <th style="text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;">Telefone</th>
+              <th style="text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;">Criança</th>
+              <th style="text-align:left;padding:8px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;">Data</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  async function aprovar(id) {
+    const d = await callAcesso({ action: 'aprovar', id });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    carregarSolicitacoes();
+    carregarLista();
+  }
+
+  async function rejeitar(id, nome) {
+    if (!confirm(`Rejeitar solicitação de ${nome}? Um e-mail será enviado informando-o.`)) return;
+    const d = await callAcesso({ action: 'rejeitar', id });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    carregarSolicitacoes();
   }
 
   // ── LISTA ──────────────────────────────────────────────
