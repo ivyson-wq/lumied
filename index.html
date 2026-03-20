@@ -363,6 +363,15 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     <div id="agendaConteudo"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div></div>
   </div>
 
+  <!-- BOLETOS -->
+  <div class="card" id="boletosCard" style="display:none;">
+    <div class="card-title" style="margin-bottom:12px;">
+      💰 Meus Boletos
+      <button onclick="carregarBoletos()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+    </div>
+    <div id="boletosConteudo"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div></div>
+  </div>
+
   <form id="mainForm" novalidate>
 
     <!-- SELEÇÃO DE MODO -->
@@ -663,6 +672,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     document.getElementById('formWrap').style.display = 'none';
     document.getElementById('successPanel').style.display = 'none';
     document.getElementById('agendaCard').style.display = 'none';
+    document.getElementById('boletosCard').style.display = 'none';
     document.getElementById('reuniaoCard').style.display = 'none';
     document.getElementById('emailState').style.display = 'block';
     document.getElementById('sentState').style.display = 'none';
@@ -703,7 +713,9 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     document.getElementById('loginWall').style.display  = 'none';
     document.getElementById('formWrap').style.display   = 'block';
     document.getElementById('agendaCard').style.display = 'block';
+    document.getElementById('boletosCard').style.display = 'block';
     carregarAgenda();
+    carregarBoletos();
     carregarReunioesUI();
   }
 
@@ -1236,6 +1248,60 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       body: JSON.stringify(body)
     });
     return r.json();
+  }
+
+  async function carregarBoletos() {
+    if (!currentUser) return;
+    const el = document.getElementById('boletosConteudo');
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
+
+    // Busca CPF da família pelo e-mail na tabela familias
+    const { data: familia } = await supabase
+      .from('familias')
+      .select('cpf')
+      .eq('email', currentUser.email)
+      .single();
+
+    if (!familia) {
+      el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Nenhum boleto encontrado.</p>';
+      return;
+    }
+
+    const { data: boletos, error } = await supabase
+      .from('boletos')
+      .select('*')
+      .eq('cpf', familia.cpf)
+      .order('vencimento', { ascending: false });
+
+    if (error || !boletos || boletos.length === 0) {
+      el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Nenhum boleto disponível.</p>';
+      return;
+    }
+
+    el.innerHTML = boletos.map(b => {
+      const venc = b.vencimento.split('-').reverse().join('/');
+      const valor = Number(b.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const hoje = new Date(); hoje.setHours(0,0,0,0);
+      const dvenc = new Date(b.vencimento + 'T12:00:00');
+      const vencido = dvenc < hoje && b.situacao !== 'PAGO';
+      const badge = b.situacao === 'PAGO'
+        ? '<span style="background:#d1fae5;color:#065f46;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;">Pago</span>'
+        : vencido
+          ? '<span style="background:#fee2e2;color:#991b1b;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;">Vencido</span>'
+          : '<span style="background:#fef9c3;color:#854d0e;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;">Em aberto</span>';
+
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);">${valor}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Vencimento: ${venc}</div>
+          ${b.linha_digitavel ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;font-family:monospace;">${b.linha_digitavel}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          ${badge}
+          ${b.pdf_url ? `<a href="${b.pdf_url}" target="_blank" style="padding:6px 14px;background:#C8102E;color:#fff;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;">📄 Baixar</a>` : ''}
+        </div>
+      </div>`;
+    }).join('');
   }
 
   async function carregarReunioesUI() {
