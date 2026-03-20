@@ -264,6 +264,20 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
 <div class="aviso-strip">⚠️ <strong>Importante:</strong> as alterações de turno são válidas apenas para o mês seguinte ao da solicitação.</div>
 
+<!-- BANNER iOS -->
+<div id="iosBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1c1712;padding:16px 20px 24px;box-shadow:0 -4px 20px rgba(0,0,0,.3);">
+  <button onclick="document.getElementById('iosBanner').style.display='none';localStorage.setItem('iosBannerDismissed','1')" style="position:absolute;top:10px;right:14px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;">×</button>
+  <div style="max-width:500px;margin:auto;text-align:center;">
+    <p style="color:#fff;font-size:14px;font-weight:600;margin:0 0 8px;font-family:'DM Sans',sans-serif;">Instale o app Maple Bear</p>
+    <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0;font-family:'DM Sans',sans-serif;line-height:1.5;">
+      Toque em <span style="display:inline-block;background:rgba(255,255,255,.15);border-radius:4px;padding:1px 6px;">
+        <svg style="vertical-align:middle;margin-bottom:2px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Compartilhar
+      </span> e depois em <strong style="color:#fff;">"Adicionar à Tela de Início"</strong>
+    </p>
+  </div>
+</div>
+
 <!-- BANNER INSTALAR APP -->
 <div id="installBanner" style="display:none;background:#1c1712;padding:12px 20px;text-align:center;">
   <div style="max-width:700px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -1475,7 +1489,15 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     navigator.serviceWorker.register('/sw.js').catch(console.error);
   }
 
-  // Banner de instalação do app
+  // Banner iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone === true;
+  const iosDismissed = localStorage.getItem('iosBannerDismissed');
+  if (isIOS && !isStandalone && !iosDismissed) {
+    document.getElementById('iosBanner').style.display = 'block';
+  }
+
+  // Banner de instalação do app (Android)
   let deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
