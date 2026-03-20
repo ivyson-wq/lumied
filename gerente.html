@@ -54,6 +54,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .live-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:500;}
 .live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(200,16,46,.25);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
 .content{padding:26px 32px 48px;flex:1;}
 .panel{display:none;}.panel.active{display:block;}
 /* STATS */
@@ -211,7 +213,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('usuarios',this)"><span class="ic">👥</span> Usuários</a>
-      <a class="nav-item" href="acesso.html" target="_blank"><span class="ic">🔒</span> Controle de Acesso</a>
+      <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Controle de Acesso</a>
       <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
     </nav>
     <div class="sb-footer">
@@ -541,6 +543,31 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- CONTROLE DE ACESSO -->
+      <div id="panelAcesso" class="panel">
+
+        <!-- Solicitações pendentes -->
+        <div class="sec-title" style="margin-bottom:16px;">Solicitações Pendentes <span class="count-badge" id="acessoBadge">0</span></div>
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px 24px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <div id="solicitacoesWrap"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div></div>
+        </div>
+
+        <!-- E-mails autorizados -->
+        <div class="sec-title" style="margin-bottom:16px;">E-mails Autorizados</div>
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Apenas e-mails cadastrados aqui (ou na tabela <strong>familias</strong>) conseguem fazer login no formulário público.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+            <input type="text" id="acNome" placeholder="Nome (opcional)" style="flex:1;min-width:150px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+            <input type="email" id="acEmail" placeholder="email@exemplo.com" style="flex:1;min-width:200px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+            <button onclick="acAddUser()" style="padding:10px 18px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">+ Adicionar</button>
+          </div>
+          <div class="f-alert error" id="acErr" style="display:none;margin-bottom:12px;"></div>
+          <div class="f-alert success" id="acOk" style="display:none;margin-bottom:12px;"></div>
+          <div id="autorizadosWrap"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div></div>
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
@@ -702,7 +729,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -713,6 +740,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
     if(id==='usuarios')    loadUsers();
+    if(id==='acesso')      loadAcesso();
     return false;
   }
 
@@ -1902,6 +1930,150 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if (!confirm('Cancelar esta reunião?')) return;
     await callCalendar({ action: 'cancelar_reuniao', id });
     loadReunioesList();
+  }
+
+  // ── CONTROLE DE ACESSO ────────────────────────────────
+  const ACESSO = SUPABASE_URL + '/functions/v1/acesso';
+
+  async function callAcesso(body) {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(ACESSO, { method: 'POST', headers, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.') { doLogout(); }
+    return d;
+  }
+
+  async function loadAcesso() {
+    carregarSolicitacoes();
+    carregarAutorizados();
+  }
+
+  async function carregarSolicitacoes() {
+    document.getElementById('solicitacoesWrap').innerHTML =
+      '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div>';
+    const d = await callAcesso({ action: 'solicitacoes_list' });
+    const lista = d.data || [];
+    document.getElementById('acessoBadge').textContent = lista.length;
+
+    if (lista.length === 0) {
+      document.getElementById('solicitacoesWrap').innerHTML =
+        '<p style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhuma solicitação pendente.</p>';
+      return;
+    }
+
+    const rows = lista.map(s => `
+      <tr style="border-top:1px solid var(--border);">
+        <td style="padding:11px 10px;font-weight:500;font-size:13px;">${escHtml(s.nome)}</td>
+        <td style="padding:11px 10px;color:var(--muted);font-size:12px;">${escHtml(s.cpf)}</td>
+        <td style="padding:11px 10px;font-size:13px;">${escHtml(s.email)}</td>
+        <td style="padding:11px 10px;color:var(--muted);font-size:12px;">${escHtml(s.telefone)}</td>
+        <td style="padding:11px 10px;color:var(--muted);font-size:12px;">${escHtml(s.nome_crianca)}</td>
+        <td style="padding:11px 10px;font-size:12px;color:var(--muted);">${fmtDate(s.criado_em)}</td>
+        <td style="padding:11px 10px;white-space:nowrap;">
+          <button onclick="acAprovar(${s.id})" style="padding:5px 11px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-right:5px;">✓ Aprovar</button>
+          <button onclick="acRejeitar(${s.id},'${escHtml(s.nome)}')" style="padding:5px 11px;background:transparent;border:1px solid rgba(200,16,46,.35);color:var(--red);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">✕ Rejeitar</button>
+        </td>
+      </tr>`).join('');
+
+    document.getElementById('solicitacoesWrap').innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Nome</th>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">CPF</th>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">E-mail</th>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Telefone</th>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Criança</th>
+            <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Data</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  async function acAprovar(id) {
+    const d = await callAcesso({ action: 'aprovar', id });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    carregarSolicitacoes();
+    carregarAutorizados();
+  }
+
+  async function acRejeitar(id, nome) {
+    if (!confirm('Rejeitar solicitação de ' + nome + '?')) return;
+    const d = await callAcesso({ action: 'rejeitar', id });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    carregarSolicitacoes();
+  }
+
+  async function carregarAutorizados() {
+    document.getElementById('autorizadosWrap').innerHTML =
+      '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div>';
+    const d = await callAcesso({ action: 'list' });
+    const lista = d.data || [];
+
+    if (lista.length === 0) {
+      document.getElementById('autorizadosWrap').innerHTML =
+        '<p style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhum e-mail autorizado cadastrado.</p>';
+      return;
+    }
+
+    const rows = lista.map(u => `
+      <tr style="border-top:1px solid var(--border);">
+        <td style="padding:10px;font-weight:500;font-size:13px;">${escHtml(u.email)}</td>
+        <td style="padding:10px;color:var(--muted);font-size:13px;">${escHtml(u.nome || '—')}</td>
+        <td style="padding:10px;color:var(--muted);font-size:12px;">${escHtml(u.criado_por || '—')}</td>
+        <td style="padding:10px;color:var(--muted);font-size:12px;">${fmtDate(u.criado_em)}</td>
+        <td style="padding:10px;"><button onclick="acRemover(${u.id},'${escHtml(u.email)}')" style="padding:4px 10px;background:transparent;border:1px solid rgba(200,16,46,.3);border-radius:6px;color:var(--red);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Remover</button></td>
+      </tr>`).join('');
+
+    document.getElementById('autorizadosWrap').innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">E-mail</th>
+          <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Nome</th>
+          <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Adicionado por</th>
+          <th style="text-align:left;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Data</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  async function acAddUser() {
+    const email = document.getElementById('acEmail').value.trim();
+    const nome  = document.getElementById('acNome').value.trim();
+    const errEl = document.getElementById('acErr');
+    const okEl  = document.getElementById('acOk');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errEl.textContent = 'Informe um e-mail válido.'; errEl.style.display = 'block'; return;
+    }
+    const d = await callAcesso({ action: 'add', email, nome });
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+    document.getElementById('acEmail').value = '';
+    document.getElementById('acNome').value = '';
+    okEl.textContent = email + ' adicionado.'; okEl.style.display = 'block';
+    setTimeout(() => { okEl.style.display = 'none'; }, 3000);
+    carregarAutorizados();
+  }
+
+  async function acRemover(id, email) {
+    if (!confirm('Remover acesso de ' + email + '?')) return;
+    const d = await callAcesso({ action: 'remove', id });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    carregarAutorizados();
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('pt-BR');
   }
 
   checkSession();
