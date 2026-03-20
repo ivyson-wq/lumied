@@ -311,6 +311,11 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     <div class="lw-title">Identifique-se para continuar</div>
     <p class="lw-sub">Para garantir a autenticidade das solicitações, confirme sua identidade antes de preencher o formulário.</p>
 
+    <div id="accessDeniedMsg" style="display:none;margin-bottom:16px;padding:12px 16px;background:#fdf0f2;border:1px solid rgba(200,16,46,.25);border-radius:9px;font-size:13px;color:#a00d24;line-height:1.5;text-align:center;">
+      ⛔ Seu e-mail não está autorizado a acessar este formulário.<br>
+      <span style="font-size:12px;color:var(--muted);">Entre em contato com a escola para solicitar acesso.</span>
+    </div>
+
     <!-- Estado inicial: formulário de e-mail -->
     <div id="emailState">
       <div class="ml-field">
@@ -568,6 +573,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   const API      = SUPABASE_URL + '/functions/v1/api';
   const SEND     = SUPABASE_URL + '/functions/v1/send-email';
   const CALENDAR = SUPABASE_URL + '/functions/v1/calendar';
+  const ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
 
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -576,18 +582,47 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   let resendCooldown = null;
 
   // ── AUTH ──────────────────────────────────────────────
+  async function checkAccess(user) {
+    try {
+      const r = await fetch(ACESSO, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({ action: 'check', email: user.email })
+      });
+      const d = await r.json();
+      return d.allowed === true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function initAuth() {
     const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) { currentUser = session.user; showForm(session.user); }
-    else showLoginWall();
+    if (session?.user) {
+      const allowed = await checkAccess(session.user);
+      if (allowed) { currentUser = session.user; showForm(session.user); }
+      else { await sb.auth.signOut(); showLoginWall(); showAccessDenied(); }
+    } else {
+      showLoginWall();
+    }
 
-    sb.auth.onAuthStateChange((_e, session) => {
-      if (session?.user) { currentUser = session.user; showForm(session.user); }
-      else showLoginWall();
+    sb.auth.onAuthStateChange(async (_e, session) => {
+      if (session?.user) {
+        const allowed = await checkAccess(session.user);
+        if (allowed) { currentUser = session.user; showForm(session.user); }
+        else { await sb.auth.signOut(); showLoginWall(); showAccessDenied(); }
+      } else {
+        showLoginWall();
+      }
     });
   }
 
+  function showAccessDenied() {
+    document.getElementById('accessDeniedMsg').style.display = 'block';
+  }
+
   async function sendMagicLink() {
+    document.getElementById('accessDeniedMsg').style.display = 'none';
     const email = document.getElementById('mlEmail').value.trim();
     const errEl = document.getElementById('mlEmailErr');
     errEl.classList.remove('show');
