@@ -114,6 +114,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .diploma-link{font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:4px;}
 .diploma-link:hover{text-decoration:underline;}
 
+/* SECTION DIVIDER */
+.section-divider{border:none;border-top:2px solid var(--border);margin:36px 0;}
+
 @media(max-width:640px){
   .stats-row{grid-template-columns:1fr 1fr;}
   .stat-card:first-child{grid-column:1 / -1;}
@@ -215,6 +218,47 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <div class="diplomas-list" id="diplomasList">
       <div class="empty-state">⏳ Carregando…</div>
     </div>
+
+    <hr class="section-divider">
+
+    <!-- Upload Atestado -->
+    <div class="upload-card">
+      <h3>🏥 Enviar Atestado Médico</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+        Envie atestados de afastamento para análise da secretaria. Informe o período de ausência e anexe o documento digitalizado.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="ff" style="margin:0;">
+          <label>Data de Início</label>
+          <input type="date" id="atestDataInicio">
+        </div>
+        <div class="ff" style="margin:0;">
+          <label>Data de Fim</label>
+          <input type="date" id="atestDataFim">
+        </div>
+      </div>
+      <div class="ff" style="margin-top:12px;">
+        <label>Motivo (opcional)</label>
+        <input type="text" id="atestMotivo" placeholder="Ex: Consulta médica, cirurgia…">
+      </div>
+      <div class="upload-zone" id="atestUploadZone" onclick="document.getElementById('atestFile').click()">
+        <div class="uz-icon">📋</div>
+        <p>Clique para selecionar ou arraste o arquivo aqui</p>
+        <small>PDF, JPG ou PNG · máximo 10MB</small>
+        <input type="file" id="atestFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onAtestFileSelected(event)">
+      </div>
+      <div class="file-name" id="atestFileName"></div>
+      <div class="upload-bar-wrap" id="atestBarWrap"><div class="upload-bar" id="atestBar"></div></div>
+      <button class="btn-submit" id="btnAtestSubmit" onclick="submitAtestado()" disabled>Enviar para a Secretaria</button>
+      <div class="f-alert error" id="atestErr"></div>
+      <div class="f-alert success" id="atestOk"></div>
+    </div>
+
+    <!-- My Atestados -->
+    <div class="sec-title">📁 Meus Atestados <span class="count-badge" id="atestadosCount">0</span></div>
+    <div class="diplomas-list" id="atestadosList">
+      <div class="empty-state">⏳ Carregando…</div>
+    </div>
   </div>
 </div>
 
@@ -224,6 +268,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   let currentProf = null;
   let selectedFile = null;
+  let selectedAtestFile = null;
   let rankingData = [];
 
   function getToken() { return localStorage.getItem('prof_token'); }
@@ -285,7 +330,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   // ── DATA ──────────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([ loadRanking(), loadMeusDiplomas() ]);
+    await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados() ]);
   }
 
   async function loadRanking() {
@@ -421,6 +466,99 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     };
     reader.readAsDataURL(selectedFile);
   }
+
+  // ── ATESTADOS ─────────────────────────────────────────────
+  function onAtestFileSelected(e) {
+    const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('Arquivo deve ter no máximo 10MB.'); return; }
+    selectedAtestFile = file;
+    const el = document.getElementById('atestFileName');
+    el.textContent = '📎 ' + file.name; el.style.display = 'block';
+    document.getElementById('btnAtestSubmit').disabled = false;
+  }
+
+  const atestUz = document.getElementById('atestUploadZone');
+  atestUz.addEventListener('dragover', e => { e.preventDefault(); atestUz.classList.add('drag'); });
+  atestUz.addEventListener('dragleave', () => atestUz.classList.remove('drag'));
+  atestUz.addEventListener('drop', e => {
+    e.preventDefault(); atestUz.classList.remove('drag');
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    const dt = new DataTransfer(); dt.items.add(f);
+    document.getElementById('atestFile').files = dt.files;
+    onAtestFileSelected({ target: { files: [f] } });
+  });
+
+  async function submitAtestado() {
+    const dataInicio = document.getElementById('atestDataInicio').value;
+    const dataFim    = document.getElementById('atestDataFim').value;
+    const motivo     = document.getElementById('atestMotivo').value.trim();
+    const errEl = document.getElementById('atestErr');
+    const okEl  = document.getElementById('atestOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    if (!dataInicio || !dataFim) { errEl.textContent = 'Informe as datas do atestado.'; errEl.classList.add('show'); return; }
+    if (dataFim < dataInicio) { errEl.textContent = 'Data de fim não pode ser anterior à data de início.'; errEl.classList.add('show'); return; }
+    if (!selectedAtestFile) { errEl.textContent = 'Selecione o arquivo do atestado.'; errEl.classList.add('show'); return; }
+    const btn = document.getElementById('btnAtestSubmit');
+    const bar = document.getElementById('atestBar');
+    const barWrap = document.getElementById('atestBarWrap');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    barWrap.style.display = 'block'; bar.style.width = '30%';
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const base64 = ev.target.result.split(',')[1];
+      bar.style.width = '60%';
+      const d = await callApi({ action: 'atestado_submit', data_inicio: dataInicio, data_fim: dataFim, motivo: motivo || undefined, base64, mime: selectedAtestFile.type });
+      bar.style.width = '100%';
+      if (d.error) {
+        errEl.textContent = 'Erro: ' + d.error; errEl.classList.add('show');
+      } else {
+        okEl.textContent = '✅ Atestado enviado! Aguarde validação da secretaria.'; okEl.classList.add('show');
+        document.getElementById('atestDataInicio').value = '';
+        document.getElementById('atestDataFim').value = '';
+        document.getElementById('atestMotivo').value = '';
+        document.getElementById('atestFile').value = '';
+        document.getElementById('atestFileName').style.display = 'none';
+        selectedAtestFile = null;
+        loadMeusAtestados();
+      }
+      btn.disabled = false; btn.textContent = 'Enviar para a Secretaria';
+      barWrap.style.display = 'none'; bar.style.width = '0%';
+    };
+    reader.readAsDataURL(selectedAtestFile);
+  }
+
+  async function loadMeusAtestados() {
+    const d = await callApi({ action: 'meus_atestados' });
+    const lista = d.data || [];
+    document.getElementById('atestadosCount').textContent = lista.length;
+    const el = document.getElementById('atestadosList');
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state">📭 Nenhum atestado enviado ainda.</div>';
+      return;
+    }
+    const STATUS = { pendente:'⏳ Aguardando secretaria', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado' };
+    el.innerHTML = lista.map(a => {
+      const dtInicio = fmtDate(a.data_inicio);
+      const dtFim    = fmtDate(a.data_fim);
+      const periodo  = a.data_inicio === a.data_fim ? dtInicio : `${dtInicio} → ${dtFim}`;
+      const link = a.arquivo_url ? `<a class="diploma-link" href="${a.arquivo_url}" target="_blank">📎 Ver arquivo</a>` : '';
+      const obs  = a.observacao ? `<div class="diploma-obs">Obs: ${esc(a.observacao)}</div>` : '';
+      return `<div class="diploma-row">
+        <div class="diploma-icon">🏥</div>
+        <div class="diploma-info">
+          <strong>${periodo}</strong>
+          <div class="meta">${a.motivo ? esc(a.motivo) + ' · ' : ''}Enviado em ${new Date(a.criado_em).toLocaleDateString('pt-BR')}${a.validado_por ? ` · Validado por ${esc(a.validado_por)}` : ''}</div>
+          ${link}
+        </div>
+        <div class="diploma-side">
+          <span class="status-badge ${a.status}">${STATUS[a.status]||a.status}</span>
+          ${obs}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function fmtDate(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
 
   function esc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
