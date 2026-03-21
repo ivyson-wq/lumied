@@ -170,6 +170,33 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .btn-export:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
 .btn-whatsapp{padding:7px 14px;border-radius:7px;border:none;background:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:#fff;transition:background .2s;display:flex;align-items:center;gap:6px;}
 .btn-whatsapp:hover{background:#1da851;}
+/* DIPLOMAS */
+.dip-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;}
+.dip-filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;}
+.status-pill.pendente{background:rgba(212,131,10,.12);color:#c27800;}
+.status-pill.aprovado{background:rgba(45,122,58,.12);color:#1a5c2a;}
+.status-pill.rejeitado{background:rgba(200,16,46,.12);color:var(--red);}
+.ranking-list{background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:26px;}
+.rank-row{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid #f0ece6;}
+.rank-row:last-child{border-bottom:none;}
+.rank-row:hover{background:#faf8f5;}
+.rank-pos-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-weight:700;font-size:13px;flex-shrink:0;}
+.rank-pos-badge.g1{background:#FFD700;color:#7a5c00;}.rank-pos-badge.g2{background:#C0C0C0;color:#444;}.rank-pos-badge.g3{background:#CD7F32;color:#fff;}.rank-pos-badge.gN{background:#f0ece6;color:var(--muted);font-size:11px;}
+.rank-nome{flex:1;font-size:13px;font-weight:600;}
+.rank-pts-val{font-family:'Lora',serif;font-size:22px;font-weight:700;color:#d4830a;min-width:60px;text-align:right;}
+.rank-pts-lbl{font-size:10px;color:var(--muted);text-align:right;}
+.obs-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.obs-modal-overlay.show{display:flex;}
+.obs-modal{background:var(--white);border-radius:16px;padding:28px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;}
+.obs-modal h3{font-family:'Lora',serif;font-size:16px;margin-bottom:14px;}
+.obs-modal textarea{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;min-height:80px;outline:none;}
+.obs-modal textarea:focus{border-color:var(--red);}
+.btn-aprovar{padding:7px 14px;background:var(--green);color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-rejeitar{padding:7px 14px;background:transparent;border:1px solid rgba(200,16,46,.35);color:var(--red);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;}
+.senha-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.senha-modal-overlay.show{display:flex;}
+.senha-modal{background:var(--white);border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;}
 /* PRINT STYLES */
 @media print{
   body *{visibility:hidden;}
@@ -209,13 +236,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">Atividades Extraclasse</div>
       <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard Atividades</a>
       <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
-      <div class="sb-label">Configurações</div>
+      <div class="sb-label">Professoras</div>
       <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Professoras</a>
+      <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
+      <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('usuarios',this)"><span class="ic">👥</span> Usuários</a>
       <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Controle de Acesso</a>
       <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
+      <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Professoras</a>
     </nav>
     <div class="sb-footer">
       <div class="user-info"><strong id="userNome">Gerente</strong><span id="userEmail"></span></div>
@@ -441,6 +471,39 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- DIPLOMAS & RANKING -->
+      <div id="panelDiplomas" class="panel">
+        <!-- Stats -->
+        <div class="dip-stats">
+          <div class="stat-card" data-g="total"><div class="stat-label">Pendentes</div><div class="stat-value" id="dipPendentes">—</div><div class="stat-sub">aguardando validação</div></div>
+          <div class="stat-card" data-g="integral"><div class="stat-label">Aprovados</div><div class="stat-value" id="dipAprovados">—</div><div class="stat-sub">diplomas validados</div></div>
+          <div class="stat-card" data-g="semi"><div class="stat-label">Rejeitados</div><div class="stat-value" id="dipRejeitados">—</div><div class="stat-sub">diplomas negados</div></div>
+          <div class="stat-card" data-g="tarde"><div class="stat-label">Total de Pontos</div><div class="stat-value" id="dipTotalPts">—</div><div class="stat-sub">horas distribuídas</div></div>
+        </div>
+
+        <!-- Ranking -->
+        <div class="sec-title" style="margin-bottom:14px;">🏆 Ranking de Professoras</div>
+        <div class="ranking-list" id="dipRankingList">
+          <div class="empty-state">⏳ Carregando…</div>
+        </div>
+
+        <!-- Diplomas table -->
+        <div class="sec-title">Diplomas Enviados <span class="count-badge" id="dipCount">0</span>
+          <div class="dip-filter-bar" style="margin:0 0 0 auto;display:flex;">
+            <button class="fb active" onclick="dipSetFilter('todos',this)">Todos</button>
+            <button class="fb" onclick="dipSetFilter('pendente',this)">⏳ Pendentes</button>
+            <button class="fb" onclick="dipSetFilter('aprovado',this)">✅ Aprovados</button>
+            <button class="fb" onclick="dipSetFilter('rejeitado',this)">❌ Rejeitados</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Professora</th><th>Curso</th><th>Horas</th><th>Status</th><th>Enviado em</th><th>Validado por</th><th>Ações</th></tr></thead>
+            <tbody id="dipTableBody"><tr><td colspan="7" class="empty-state">⏳ Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- REUNIÕES -->
       <div id="panelReunioes" class="panel">
         <div class="two-col">
@@ -635,14 +698,45 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- MODAL: observação diploma (aprovar/rejeitar) -->
+<div class="obs-modal-overlay" id="obsModalOverlay">
+  <div class="obs-modal">
+    <h3 id="obsModalTitle">Validar Diploma</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;" id="obsModalDesc"></p>
+    <div class="ff"><label>Observação (opcional)</label><textarea id="obsModalText" placeholder="Comentário para a professora…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeObsModal()">Cancelar</button>
+      <button class="btn-save" id="obsModalBtn" onclick="confirmDipAction()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: definir senha da professora -->
+<div class="senha-modal-overlay" id="senhaModalOverlay">
+  <div class="senha-modal">
+    <h3>🔑 Definir Senha</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="senhaModalDesc"></p>
+    <div class="ff"><label>Nova Senha</label><input type="password" id="senhaModalInput" placeholder="mínimo 6 caracteres" autocomplete="new-password"></div>
+    <div class="f-alert error" id="senhaModalErr"></div>
+    <div class="f-alert success" id="senhaModalOk"></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn-cancel" onclick="closeSenhaModal()">Cancelar</button>
+      <button class="btn-save" id="senhaModalBtn" onclick="saveProfSenha()">Salvar Senha</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
   const API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
   const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
 
+  const DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
+
   let allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
   let currentGerente=null, pollInterval=null;
+  let dipFilter='todos', dipPendingAction=null, editingSenhaId=null;
 
   const TURNO_INFO = {
     integral_5x:{label:'Integral · 5×/sem',  price:'R$ 4.395,00',g:'integral'},
@@ -730,7 +824,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',diplomas:'Diplomas & Ranking de Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -738,6 +832,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='atividades')  loadAtividadesPanel();
     if(id==='dashAtiv')    loadAtivDashboard();
     if(id==='professoras') loadProfessoras();
+    if(id==='diplomas')    loadDiplomasPanel();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
     if(id==='usuarios')    loadUsers();
@@ -1791,6 +1886,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <strong>${esc(p.nome)}</strong>
             <span>${esc(p.email)}</span>
           </div>
+          <button class="action-btn" onclick="openSenhaModal('${p.id}','${esc(p.nome)}')" title="Definir senha do portal">🔑 Senha</button>
           <button class="action-btn del" onclick="deleteProfessora('${p.id}','${esc(p.nome)}')">🗑</button>
         </div>`).join('');
     }
@@ -2075,6 +2171,150 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   function fmtDate(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('pt-BR');
+  }
+
+  // ── DIPLOMAS ──────────────────────────────────────────
+  async function callDiplomas(body) {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(DIPLOMAS_API, { method: 'POST', headers, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.') { doLogout(); }
+    return d;
+  }
+
+  async function loadDiplomasPanel() {
+    await Promise.all([ loadDipRanking(), loadDipTable() ]);
+  }
+
+  async function loadDipRanking() {
+    const d = await callDiplomas({ action: 'ranking' });
+    const lista = d.data || [];
+    const el = document.getElementById('dipRankingList');
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Nenhuma professora com pontos ainda.</div>';
+      return;
+    }
+    el.innerHTML = lista.map((p, i) => {
+      const pos = i + 1;
+      const cls = pos === 1 ? 'g1' : pos === 2 ? 'g2' : pos === 3 ? 'g3' : 'gN';
+      const lbl = pos <= 3 ? ['🥇','🥈','🥉'][pos-1] : pos + 'º';
+      return `<div class="rank-row">
+        <div class="rank-pos-badge ${cls}">${lbl}</div>
+        <div class="rank-nome">${esc(p.nome)}</div>
+        <div>
+          <div class="rank-pts-val">${p.pontuacao}</div>
+          <div class="rank-pts-lbl">pontos</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadDipTable() {
+    const d = await callDiplomas({ action: 'diplomas_all', status: dipFilter });
+    const lista = d.data || [];
+    document.getElementById('dipCount').textContent = lista.length;
+
+    // Stats from all diplomas (fetch fresh)
+    const all = await callDiplomas({ action: 'diplomas_all', status: 'todos' });
+    const allList = all.data || [];
+    document.getElementById('dipPendentes').textContent  = allList.filter(x => x.status === 'pendente').length;
+    document.getElementById('dipAprovados').textContent  = allList.filter(x => x.status === 'aprovado').length;
+    document.getElementById('dipRejeitados').textContent = allList.filter(x => x.status === 'rejeitado').length;
+    document.getElementById('dipTotalPts').textContent   = allList.filter(x => x.status === 'aprovado').reduce((s, x) => s + (x.pontuacao || 0), 0);
+
+    const tb = document.getElementById('dipTableBody');
+    if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state">📭 Nenhum diploma encontrado.</td></tr>'; return; }
+    tb.innerHTML = lista.map(d => {
+      const STATUS_HTML = {
+        pendente: '<span class="status-pill pendente">⏳ Pendente</span>',
+        aprovado: '<span class="status-pill aprovado">✅ Aprovado</span>',
+        rejeitado: '<span class="status-pill rejeitado">❌ Rejeitado</span>',
+      };
+      const date = new Date(d.criado_em).toLocaleDateString('pt-BR');
+      const prof = d.professoras || {};
+      const fileLink = d.arquivo_url
+        ? `<a href="${d.arquivo_url}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none;">📎 Ver</a>`
+        : '—';
+      const acoes = d.status === 'pendente'
+        ? `<button class="btn-aprovar" onclick="openDipModal('aprovar','${d.id}','${esc(prof.nome||'')}','${esc(d.nome_curso)}')">✓ Aprovar</button>
+           <button class="btn-rejeitar" style="margin-left:4px;" onclick="openDipModal('rejeitar','${d.id}','${esc(prof.nome||'')}','${esc(d.nome_curso)}')">✕ Rejeitar</button>`
+        : `<span style="font-size:12px;color:var(--muted);">${d.status === 'aprovado' ? '+'+d.pontuacao+' pts' : '—'}</span>`;
+      return `<tr>
+        <td><strong>${esc(prof.nome||'—')}</strong><br><small style="color:var(--muted)">${esc(prof.email||'')}</small></td>
+        <td>${esc(d.nome_curso)}${d.arquivo_url?'<br>'+fileLink:''}</td>
+        <td style="font-family:'Lora',serif;font-size:16px;font-weight:700;">${d.carga_horaria}h</td>
+        <td>${STATUS_HTML[d.status] || d.status}</td>
+        <td class="date-cell">${date}</td>
+        <td style="font-size:12px;color:var(--muted);">${esc(d.validado_por||'—')}</td>
+        <td>${acoes}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function dipSetFilter(f, btn) {
+    dipFilter = f;
+    document.querySelectorAll('.dip-filter-bar .fb').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadDipTable();
+  }
+
+  // Observação modal
+  function openDipModal(tipo, id, nomeProfessora, nomeCurso) {
+    dipPendingAction = { tipo, id };
+    const title = tipo === 'aprovar' ? '✅ Aprovar Diploma' : '❌ Rejeitar Diploma';
+    const desc = tipo === 'aprovar'
+      ? `Aprovar o diploma de "<strong>${esc(nomeCurso)}</strong>" de ${esc(nomeProfessora)}? Os pontos serão creditados automaticamente.`
+      : `Rejeitar o diploma de "<strong>${esc(nomeCurso)}</strong>" de ${esc(nomeProfessora)}?`;
+    document.getElementById('obsModalTitle').textContent = title;
+    document.getElementById('obsModalDesc').innerHTML = desc;
+    const btn = document.getElementById('obsModalBtn');
+    btn.textContent = tipo === 'aprovar' ? 'Aprovar' : 'Rejeitar';
+    btn.style.background = tipo === 'aprovar' ? 'var(--green)' : 'var(--red)';
+    document.getElementById('obsModalText').value = '';
+    document.getElementById('obsModalOverlay').classList.add('show');
+  }
+  function closeObsModal() { document.getElementById('obsModalOverlay').classList.remove('show'); dipPendingAction = null; }
+
+  async function confirmDipAction() {
+    if (!dipPendingAction) return;
+    const { tipo, id } = dipPendingAction;
+    const observacao = document.getElementById('obsModalText').value.trim();
+    const btn = document.getElementById('obsModalBtn');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const action = tipo === 'aprovar' ? 'diploma_aprovar' : 'diploma_rejeitar';
+    const d = await callDiplomas({ action, id, observacao: observacao || undefined });
+    btn.disabled = false;
+    if (d.error) { alert('Erro: ' + d.error); btn.textContent = tipo === 'aprovar' ? 'Aprovar' : 'Rejeitar'; return; }
+    closeObsModal();
+    loadDiplomasPanel();
+  }
+
+  // Senha modal
+  function openSenhaModal(id, nome) {
+    editingSenhaId = id;
+    document.getElementById('senhaModalDesc').textContent = 'Definindo senha de acesso ao portal para: ' + nome;
+    document.getElementById('senhaModalInput').value = '';
+    document.getElementById('senhaModalErr').classList.remove('show');
+    document.getElementById('senhaModalOk').classList.remove('show');
+    document.getElementById('senhaModalOverlay').classList.add('show');
+  }
+  function closeSenhaModal() { document.getElementById('senhaModalOverlay').classList.remove('show'); editingSenhaId = null; }
+
+  async function saveProfSenha() {
+    const senha = document.getElementById('senhaModalInput').value;
+    const errEl = document.getElementById('senhaModalErr');
+    const okEl  = document.getElementById('senhaModalOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    if (!senha || senha.length < 6) { errEl.textContent = 'Senha mínima de 6 caracteres.'; errEl.classList.add('show'); return; }
+    const btn = document.getElementById('senhaModalBtn');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const d = await callDiplomas({ action: 'professora_set_senha', professora_id: editingSenhaId, senha });
+    btn.disabled = false; btn.textContent = 'Salvar Senha';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    okEl.textContent = '✅ Senha definida com sucesso!'; okEl.classList.add('show');
+    setTimeout(() => closeSenhaModal(), 1500);
   }
 
   checkSession();

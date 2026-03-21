@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear — Portal das Professoras</title>
+<meta name="theme-color" content="#1c1712">
+<link rel="icon" href="/icon-apple.png">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
+
+/* LOGIN */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sb);position:relative;overflow:hidden;}
+#loginScreen::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+.login-card{background:var(--white);border-radius:16px;padding:48px 44px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:popIn .4s cubic-bezier(.22,.8,.44,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.login-logo{text-align:center;margin-bottom:28px;}.login-logo .leaf{font-size:40px;}
+.login-logo h1{font-family:'Lora',serif;font-size:18px;margin-top:8px;color:var(--text);}
+.login-logo span{font-size:12px;color:var(--muted);}
+.login-card h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:22px;text-align:center;}
+.lf{margin-bottom:16px;}.lf label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px;}
+.lf input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
+.lf input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.login-btn{width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s;box-shadow:0 4px 16px rgba(200,16,46,.3);}
+.login-btn:hover{background:var(--red-dark);}.login-btn:disabled{opacity:.55;cursor:not-allowed;}
+#loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
+.login-hint{margin-top:16px;text-align:center;font-size:12px;color:var(--muted);}
+
+/* APP */
+#appShell{display:none;min-height:100vh;}
+.topbar{background:var(--sb);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-brand{display:flex;align-items:center;gap:12px;}
+.topbar-brand .leaf{font-size:20px;}
+.topbar-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;line-height:1.2;}
+.topbar-brand span{font-size:11px;color:rgba(255,255,255,.4);}
+.topbar-user{display:flex;align-items:center;gap:12px;}
+.user-name{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
+.logout-btn{padding:7px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:7px;color:rgba(255,255,255,.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;}
+.logout-btn:hover{background:rgba(255,255,255,.14);color:#fff;}
+
+.content{max-width:960px;margin:0 auto;padding:32px 24px 64px;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
+.stat-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:22px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac,var(--red));border-radius:14px 14px 0 0;}
+.stat-card[data-c="pts"]{--ac:var(--gold);}
+.stat-card[data-c="rank"]{--ac:var(--blue);}
+.stat-card[data-c="diplomas"]{--ac:var(--green);}
+.stat-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
+.stat-value{font-family:'Lora',serif;font-size:36px;font-weight:700;color:var(--text);line-height:1;}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* SECTION */
+.sec-title{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.count-badge{background:var(--red-light);color:var(--red);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:2px 10px;border-radius:100px;}
+
+/* RANKING TABLE */
+.ranking-wrap{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:32px;}
+.ranking-row{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid #f0ece6;transition:background .15s;}
+.ranking-row:last-child{border-bottom:none;}
+.ranking-row:hover{background:#faf8f5;}
+.ranking-row.me{background:rgba(200,16,46,.04);border-left:3px solid var(--red);}
+.rank-pos{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-weight:700;font-size:14px;flex-shrink:0;}
+.rank-pos.p1{background:#FFD700;color:#7a5c00;}
+.rank-pos.p2{background:#C0C0C0;color:#444;}
+.rank-pos.p3{background:#CD7F32;color:#fff;}
+.rank-pos.other{background:#f0ece6;color:var(--muted);}
+.rank-nome{flex:1;font-size:14px;font-weight:600;}
+.rank-pts{font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--gold);}
+.rank-pts-label{font-size:11px;color:var(--muted);margin-top:1px;text-align:right;}
+.me-badge{font-size:10px;font-weight:600;background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:100px;border:1px solid rgba(200,16,46,.2);}
+
+/* UPLOAD ZONE */
+.upload-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:32px;}
+.upload-card h3{font-family:'Lora',serif;font-size:15px;font-weight:600;margin-bottom:18px;}
+.ff{margin-bottom:14px;}
+.ff label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
+.ff input,.ff select{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fdfbf8;outline:none;transition:border-color .2s;}
+.ff input:focus,.ff select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.ff .hint{font-size:11px;color:var(--muted);margin-top:4px;}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:#fdfbf8;margin-bottom:14px;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--red);background:var(--red-light);}
+.upload-zone .uz-icon{font-size:28px;margin-bottom:6px;}
+.upload-zone p{font-size:13px;color:var(--muted);margin-bottom:2px;}
+.upload-zone small{font-size:11px;color:var(--muted);}
+.file-name{font-size:12px;color:var(--text);font-weight:500;margin-bottom:12px;display:none;padding:8px 12px;background:#f0ece6;border-radius:6px;}
+.upload-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-bottom:12px;overflow:hidden;display:none;}
+.upload-bar{height:100%;background:var(--red);border-radius:2px;width:0%;transition:width .3s;}
+.btn-submit{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-submit:hover{background:var(--red-dark);}.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+.f-alert{padding:10px 13px;border-radius:7px;font-size:12px;margin-top:12px;display:none;}
+.f-alert.error{background:#fdf0f2;color:#a00d24;border:1px solid rgba(200,16,46,.2);}
+.f-alert.success{background:#edf7f0;color:#1a5c2a;border:1px solid rgba(45,122,58,.2);}.f-alert.show{display:block;}
+
+/* DIPLOMAS LIST */
+.diplomas-list{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.diploma-row{display:flex;align-items:flex-start;gap:16px;padding:16px 20px;border-bottom:1px solid #f0ece6;}
+.diploma-row:last-child{border-bottom:none;}
+.diploma-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
+.diploma-info{flex:1;min-width:0;}
+.diploma-info strong{display:block;font-size:14px;font-weight:600;margin-bottom:3px;}
+.diploma-info .meta{font-size:12px;color:var(--muted);}
+.diploma-side{text-align:right;flex-shrink:0;}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;}
+.status-badge.pendente{background:rgba(212,131,10,.1);color:#c27800;}
+.status-badge.aprovado{background:rgba(45,122,58,.1);color:#1a5c2a;}
+.status-badge.rejeitado{background:rgba(200,16,46,.1);color:var(--red);}
+.diploma-pts{font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--gold);margin-top:4px;}
+.diploma-obs{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic;}
+.empty-state{text-align:center;padding:40px 24px;color:var(--muted);}
+.diploma-link{font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:4px;}
+.diploma-link:hover{text-decoration:underline;}
+
+@media(max-width:640px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .stat-card:first-child{grid-column:1 / -1;}
+  .topbar{padding:0 16px;}
+  .content{padding:20px 16px 48px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="leaf">🍁</div>
+      <h1>Maple Bear</h1>
+      <span>Portal das Professoras</span>
+    </div>
+    <h2>Entrar</h2>
+    <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="professora@escola.com" autocomplete="email"></div>
+    <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <div id="loginError">E-mail ou senha incorretos.</div>
+    <p class="login-hint">Problemas para acessar? Fale com a coordenação.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="leaf">🍁</div>
+      <div><h1>Maple Bear</h1><span>Portal das Professoras</span></div>
+    </div>
+    <div class="topbar-user">
+      <span class="user-name" id="userNome"></span>
+      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card" data-c="pts">
+        <div class="stat-label">Minha Pontuação</div>
+        <div class="stat-value" id="statPontos">—</div>
+        <div class="stat-sub">pontos acumulados</div>
+      </div>
+      <div class="stat-card" data-c="rank">
+        <div class="stat-label">Minha Posição</div>
+        <div class="stat-value" id="statPosicao">—</div>
+        <div class="stat-sub">no ranking geral</div>
+      </div>
+      <div class="stat-card" data-c="diplomas">
+        <div class="stat-label">Diplomas Enviados</div>
+        <div class="stat-value" id="statDiplomas">—</div>
+        <div class="stat-sub">cursos registrados</div>
+      </div>
+    </div>
+
+    <!-- Ranking -->
+    <div class="sec-title">🏆 Ranking de Professoras</div>
+    <div class="ranking-wrap" id="rankingList">
+      <div class="empty-state">⏳ Carregando…</div>
+    </div>
+
+    <!-- Upload Diploma -->
+    <div class="upload-card">
+      <h3>📄 Enviar Diploma de Curso</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+        Envie o diploma ou certificado de conclusão. Após a validação pela coordenação, os pontos serão creditados automaticamente conforme a carga horária do curso.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 180px;gap:12px;">
+        <div class="ff" style="margin:0;">
+          <label>Nome do Curso</label>
+          <input type="text" id="nomeCurso" placeholder="Ex: Psicopedagogia Clínica">
+        </div>
+        <div class="ff" style="margin:0;">
+          <label>Carga Horária (horas)</label>
+          <input type="number" id="cargaHoraria" placeholder="180" min="1">
+        </div>
+      </div>
+      <div class="hint" style="font-size:11px;color:var(--muted);margin:4px 0 14px;">A pontuação corresponde à quantidade de horas do curso.</div>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('diplomaFile').click()">
+        <div class="uz-icon">📎</div>
+        <p>Clique para selecionar ou arraste o arquivo aqui</p>
+        <small>PDF, JPG ou PNG · máximo 10MB</small>
+        <input type="file" id="diplomaFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onFileSelected(event)">
+      </div>
+      <div class="file-name" id="fileName"></div>
+      <div class="upload-bar-wrap" id="uploadBarWrap"><div class="upload-bar" id="uploadBar"></div></div>
+      <button class="btn-submit" id="btnSubmit" onclick="submitDiploma()" disabled>Enviar para Validação</button>
+      <div class="f-alert error" id="uploadErr"></div>
+      <div class="f-alert success" id="uploadOk"></div>
+    </div>
+
+    <!-- My Diplomas -->
+    <div class="sec-title">📋 Meus Diplomas <span class="count-badge" id="diplomasCount">0</span></div>
+    <div class="diplomas-list" id="diplomasList">
+      <div class="empty-state">⏳ Carregando…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
+  let currentProf = null;
+  let selectedFile = null;
+  let rankingData = [];
+
+  function getToken() { return localStorage.getItem('prof_token'); }
+
+  async function callApi(body) {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(DIPLOMAS_API, { method: 'POST', headers, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.') { doLogout(); }
+    return d;
+  }
+
+  // ── AUTH ──────────────────────────────────────────────────
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn');
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    const d = await callApi({ action: 'professora_login', email, senha }).catch(() => ({ error: 'Erro de conexão.' }));
+    if (d.error) {
+      errEl.textContent = d.error; errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Entrar'; return;
+    }
+    localStorage.setItem('prof_token', d.token);
+    localStorage.setItem('prof_nome', d.nome);
+    localStorage.setItem('prof_email', d.email);
+    showApp(d);
+  }
+
+  async function doLogout() {
+    await callApi({ action: 'professora_logout' }).catch(() => {});
+    localStorage.removeItem('prof_token');
+    localStorage.removeItem('prof_nome');
+    localStorage.removeItem('prof_email');
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    currentProf = null;
+  }
+
+  function checkSession() {
+    const token = getToken();
+    if (!token) return;
+    const nome = localStorage.getItem('prof_nome');
+    const email = localStorage.getItem('prof_email');
+    showApp({ nome, email });
+  }
+
+  function showApp(user) {
+    currentProf = user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
+    document.getElementById('userNome').textContent = user.nome || user.email || '';
+    loadAll();
+  }
+
+  // ── DATA ──────────────────────────────────────────────────
+  async function loadAll() {
+    await Promise.all([ loadRanking(), loadMeusDiplomas() ]);
+  }
+
+  async function loadRanking() {
+    const d = await callApi({ action: 'ranking' });
+    rankingData = d.data || [];
+    renderRanking();
+  }
+
+  function renderRanking() {
+    const el = document.getElementById('rankingList');
+    if (!rankingData.length) {
+      el.innerHTML = '<div class="empty-state">Nenhuma professora com pontuação ainda.</div>';
+      return;
+    }
+    const myEmail = localStorage.getItem('prof_email') || '';
+    el.innerHTML = rankingData.map((p, i) => {
+      const pos = i + 1;
+      const posClass = pos === 1 ? 'p1' : pos === 2 ? 'p2' : pos === 3 ? 'p3' : 'other';
+      const posLabel = pos <= 3 ? ['🥇','🥈','🥉'][pos-1] : pos + 'º';
+      // Match by email when possible (ranking includes id, nome only)
+      const isMe = p.nome === (localStorage.getItem('prof_nome') || '');
+      return `<div class="ranking-row${isMe?' me':''}">
+        <div class="rank-pos ${posClass}">${posLabel}</div>
+        <div class="rank-nome">${esc(p.nome)}${isMe?' <span class="me-badge">Você</span>':''}</div>
+        <div>
+          <div class="rank-pts">${p.pontuacao}</div>
+          <div class="rank-pts-label">pontos</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Update stats
+    const myNome = localStorage.getItem('prof_nome') || '';
+    const myIdx = rankingData.findIndex(p => p.nome === myNome);
+    if (myIdx !== -1) {
+      document.getElementById('statPontos').textContent = rankingData[myIdx].pontuacao;
+      document.getElementById('statPosicao').textContent = (myIdx + 1) + 'º';
+    } else {
+      document.getElementById('statPontos').textContent = '0';
+      document.getElementById('statPosicao').textContent = '—';
+    }
+  }
+
+  async function loadMeusDiplomas() {
+    const d = await callApi({ action: 'meus_diplomas' });
+    const lista = d.data || [];
+    document.getElementById('diplomasCount').textContent = lista.length;
+    document.getElementById('statDiplomas').textContent = lista.length;
+    const el = document.getElementById('diplomasList');
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state">📭 Nenhum diploma enviado ainda.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(d => {
+      const STATUS = { pendente:'⏳ Aguardando validação', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado' };
+      const date = new Date(d.criado_em).toLocaleDateString('pt-BR');
+      const pts = d.status === 'aprovado' ? `<div class="diploma-pts">+${d.pontuacao} pts</div>` : '';
+      const obs = d.observacao ? `<div class="diploma-obs">Obs: ${esc(d.observacao)}</div>` : '';
+      const link = d.arquivo_url ? `<a class="diploma-link" href="${d.arquivo_url}" target="_blank">📎 Ver arquivo</a>` : '';
+      return `<div class="diploma-row">
+        <div class="diploma-icon">📄</div>
+        <div class="diploma-info">
+          <strong>${esc(d.nome_curso)}</strong>
+          <div class="meta">${d.carga_horaria}h · Enviado em ${date}${d.validado_por?` · Validado por ${esc(d.validado_por)}`:''}</div>
+          ${link}
+        </div>
+        <div class="diploma-side">
+          <span class="status-badge ${d.status}">${STATUS[d.status]||d.status}</span>
+          ${pts}
+          ${obs}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── UPLOAD ────────────────────────────────────────────────
+  function onFileSelected(e) {
+    const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('Arquivo deve ter no máximo 10MB.'); return; }
+    selectedFile = file;
+    const el = document.getElementById('fileName');
+    el.textContent = '📎 ' + file.name; el.style.display = 'block';
+    document.getElementById('btnSubmit').disabled = false;
+  }
+
+  const uz = document.getElementById('uploadZone');
+  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag'); });
+  uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
+  uz.addEventListener('drop', e => {
+    e.preventDefault(); uz.classList.remove('drag');
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    const dt = new DataTransfer(); dt.items.add(f);
+    document.getElementById('diplomaFile').files = dt.files;
+    onFileSelected({ target: { files: [f] } });
+  });
+
+  async function submitDiploma() {
+    const nomeCurso = document.getElementById('nomeCurso').value.trim();
+    const cargaHoraria = parseInt(document.getElementById('cargaHoraria').value) || 0;
+    const errEl = document.getElementById('uploadErr');
+    const okEl = document.getElementById('uploadOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+
+    if (!nomeCurso) { errEl.textContent = 'Informe o nome do curso.'; errEl.classList.add('show'); return; }
+    if (cargaHoraria <= 0) { errEl.textContent = 'Informe a carga horária.'; errEl.classList.add('show'); return; }
+    if (!selectedFile) { errEl.textContent = 'Selecione o arquivo do diploma.'; errEl.classList.add('show'); return; }
+
+    const btn = document.getElementById('btnSubmit');
+    const bar = document.getElementById('uploadBar');
+    const barWrap = document.getElementById('uploadBarWrap');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    barWrap.style.display = 'block'; bar.style.width = '30%';
+
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const base64 = ev.target.result.split(',')[1];
+      bar.style.width = '60%';
+      const d = await callApi({ action: 'diploma_submit', nome_curso: nomeCurso, carga_horaria: cargaHoraria, base64, mime: selectedFile.type });
+      bar.style.width = '100%';
+      if (d.error) {
+        errEl.textContent = 'Erro: ' + d.error; errEl.classList.add('show');
+      } else {
+        okEl.textContent = '✅ Diploma enviado! Aguarde validação da coordenação.'; okEl.classList.add('show');
+        document.getElementById('nomeCurso').value = '';
+        document.getElementById('cargaHoraria').value = '';
+        document.getElementById('diplomaFile').value = '';
+        document.getElementById('fileName').style.display = 'none';
+        selectedFile = null;
+        loadMeusDiplomas();
+      }
+      btn.disabled = false; btn.textContent = 'Enviar para Validação';
+      barWrap.style.display = 'none'; bar.style.width = '0%';
+    };
+    reader.readAsDataURL(selectedFile);
+  }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
+  });
+
+  checkSession();
+</script>
+</body>
+</html>
