@@ -167,12 +167,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .pdi-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
 .pdi-legend span{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;}
 .pdi-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+/* ── PICKUP QUEUE ── */
+.pickup-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+.pickup-card.urgente{border-color:#f6a623;background:#fffbf2;}
+.pickup-card.chegou{border-color:#48bb78;background:#f0fff4;}
+.pickup-eta{font-size:22px;font-weight:700;min-width:52px;text-align:center;line-height:1;}
+.pickup-eta.soon{color:#e53e3e;}
+.pickup-eta.medium{color:#f6a623;}
+.pickup-eta.ok{color:#48bb78;}
+.pickup-info{flex:1;}
+.pickup-nome{font-weight:600;font-size:14px;color:var(--text);}
+.pickup-serie{font-size:12px;color:var(--muted);margin-top:2px;}
+.pickup-resp{font-size:12px;color:var(--muted);}
+.pickup-btn{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.pickup-btn:disabled{opacity:.6;cursor:not-allowed;}
+.series-chip{display:inline-block;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:all .15s;}
+.series-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 @media(max-width:640px){
   .stats-row{grid-template-columns:1fr 1fr;}
   .stat-card:first-child{grid-column:1 / -1;}
   .topbar{padding:0 16px;}
   .content{padding:20px 16px 48px;}
   .comp-item{grid-template-columns:1fr 22px 22px;}.comp-item .comp-label{grid-column:1/-1;}
+  .pickup-card{flex-wrap:wrap;}
 }
 </style>
 </head>
@@ -402,6 +419,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
     </div>
   </div>
+
+  <hr class="section-divider">
+
+  <!-- Pickup Queue Section -->
+  <div class="sec-title">🚗 Fila de Retirada
+    <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+  </div>
+
+  <!-- Series configurator -->
+  <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
+    <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+    <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
+    <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
+  </div>
+
+  <!-- Queue -->
+  <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
+  <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
+  <div id="pickupFilaList"></div>
+
 </div>
 
 <script>
@@ -473,6 +512,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   // ── DATA ──────────────────────────────────────────────────
   async function loadAll() {
     await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados(), loadMeuPdi() ]);
+    initPickupPanel();
   }
 
   async function loadRanking() {
@@ -998,6 +1038,114 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
   });
+
+  // ── PICKUP QUEUE ────────────────────────────────────────
+  const SERIES_DISPONIVEIS = ['Berçário','Maternal I','Maternal II','Jardim I','Jardim II','Pré-Escola','1º Ano','2º Ano','3º Ano','4º Ano','5º Ano'];
+  let pickupSeriesSelecionadas = [];
+  let pickupPollInt = null;
+  let pickupUltimaFila = [];
+  let pickupSoundCtx = null;
+
+  function initPickupSeries() {
+    const el = document.getElementById('pickupSeriesBtns');
+    el.innerHTML = SERIES_DISPONIVEIS.map(s =>
+      `<span class="series-chip${pickupSeriesSelecionadas.includes(s) ? ' active' : ''}" onclick="toggleSerie('${s}')">${s}</span>`
+    ).join('');
+  }
+
+  function toggleSerie(s) {
+    if (pickupSeriesSelecionadas.includes(s)) {
+      pickupSeriesSelecionadas = pickupSeriesSelecionadas.filter(x => x !== s);
+    } else {
+      pickupSeriesSelecionadas.push(s);
+    }
+    initPickupSeries();
+  }
+
+  async function savePickupSeries() {
+    const okEl = document.getElementById('pickupSeriesOk');
+    okEl.classList.remove('show');
+    const d = await callApi({ action: 'professora_update_series', series_monitoras: pickupSeriesSelecionadas });
+    if (!d.error) { okEl.textContent = '✅ Turmas salvas!'; okEl.classList.add('show'); setTimeout(() => okEl.classList.remove('show'), 3000); }
+  }
+
+  function renderPickupFila(fila) {
+    // Sound alert for new arrivals
+    const novos = fila.filter(n => !pickupUltimaFila.find(p => p.id === n.id));
+    if (novos.length > 0 && pickupUltimaFila.length > 0) playPickupAlert();
+    pickupUltimaFila = fila;
+
+    if (fila.length === 0) {
+      document.getElementById('pickupFilaEmpty').style.display = 'block';
+      document.getElementById('pickupFilaList').innerHTML = '';
+      return;
+    }
+    document.getElementById('pickupFilaEmpty').style.display = 'none';
+    document.getElementById('pickupFilaList').innerHTML = fila.map(n => {
+      const eta = n.eta_minutos ?? null;
+      const etaClass = eta !== null ? (eta <= 5 ? 'soon' : eta <= 15 ? 'medium' : 'ok') : '';
+      const chegou = n.status === 'chegou';
+      const hora = new Date(n.saiu_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+      return `<div class="pickup-card${eta !== null && eta <= 5 ? ' urgente' : ''}${chegou ? ' chegou' : ''}">
+        <div class="pickup-eta ${etaClass}">${chegou ? '🏫' : (eta !== null ? eta+'m' : '?')}</div>
+        <div class="pickup-info">
+          <div class="pickup-nome">${n.nome_crianca}</div>
+          <div class="pickup-serie">${n.serie || 'Turma não informada'} · saiu às ${hora}</div>
+          <div class="pickup-resp">Resp: ${n.nome_resp}</div>
+        </div>
+        <button class="pickup-btn" onclick="entregarCrianca('${n.id}')" ${chegou ? '' : 'disabled'}>
+          ${chegou ? '✅ Entreguei' : '⏳ A caminho'}
+        </button>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadPickupFila(silent = false) {
+    if (!silent) {
+      document.getElementById('pickupFilaLoading').style.display = 'block';
+      document.getElementById('pickupFilaEmpty').style.display = 'none';
+    }
+    const d = await callApi({ action: 'pickup_fila_hoje' });
+    document.getElementById('pickupFilaLoading').style.display = 'none';
+    renderPickupFila(d.fila || d.data || []);
+  }
+
+  async function entregarCrianca(id) {
+    const d = await callApi({ action: 'pickup_entregar', id });
+    if (!d.error) await loadPickupFila();
+  }
+
+  function playPickupAlert() {
+    try {
+      if (!pickupSoundCtx) pickupSoundCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = pickupSoundCtx.createOscillator();
+      const gain = pickupSoundCtx.createGain();
+      osc.connect(gain); gain.connect(pickupSoundCtx.destination);
+      osc.frequency.setValueAtTime(880, pickupSoundCtx.currentTime);
+      osc.frequency.setValueAtTime(660, pickupSoundCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, pickupSoundCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, pickupSoundCtx.currentTime + 0.4);
+      osc.start(); osc.stop(pickupSoundCtx.currentTime + 0.4);
+    } catch(_) {}
+  }
+
+  function startPickupPoll() {
+    if (pickupPollInt) clearInterval(pickupPollInt);
+    pickupPollInt = setInterval(() => loadPickupFila(true), 15000);
+  }
+
+  async function initPickupPanel() {
+    initPickupSeries();
+    // loadPickupFila returns series_monitoras from server
+    const d = await callApi({ action: 'pickup_fila_hoje' });
+    if (d.series_monitoras) {
+      pickupSeriesSelecionadas = d.series_monitoras;
+      initPickupSeries();
+    }
+    const fila = d.fila || d.data || [];
+    renderPickupFila(fila);
+    startPickupPoll();
+  }
 
   checkSession();
 </script>

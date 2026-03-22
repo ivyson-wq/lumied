@@ -82,6 +82,48 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   return data ?? null
 }
 
+// ── Parent (Supabase Auth JWT) validator ────────────────────
+async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string): Promise<string | null> {
+  if (!token) return null
+  const { data: { user } } = await sb.auth.getUser(token)
+  return user?.email ?? null
+}
+
+// ── Pickup ETA helpers ──────────────────────────────────────
+async function calcEtaGoogleMaps(
+  latPai: number, lonPai: number
+): Promise<{ etaMinutos: number; modo: string } | null> {
+  const key = Deno.env.get('GOOGLE_MAPS_KEY')
+  if (!key) return null
+  const schoolLat = Deno.env.get('SCHOOL_LAT') || '-28.8628'
+  const schoolLon = Deno.env.get('SCHOOL_LON') || '-51.5201'
+  try {
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json` +
+      `?origins=${latPai},${lonPai}` +
+      `&destinations=${schoolLat},${schoolLon}` +
+      `&mode=driving&language=pt-BR&key=${key}`
+    const r = await fetch(url)
+    const d = await r.json()
+    const secs: number | undefined = d?.rows?.[0]?.elements?.[0]?.duration?.value
+    if (!secs) return null
+    return { etaMinutos: Math.ceil(secs / 60), modo: 'google_maps' }
+  } catch {
+    return null
+  }
+}
+
+function calcEtaLocal(latPai: number, lonPai: number): number {
+  const schoolLat = parseFloat(Deno.env.get('SCHOOL_LAT') || '-28.8628')
+  const schoolLon = parseFloat(Deno.env.get('SCHOOL_LON') || '-51.5201')
+  const R = 6371
+  const dLat = (schoolLat - latPai) * Math.PI / 180
+  const dLon = (schoolLon - lonPai) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(latPai * Math.PI / 180) * Math.cos(schoolLat * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return Math.max(1, Math.ceil(dist / 40 * 60)) // 40 km/h average urban speed
+}
+
 // ── Upload helper ───────────────────────────────────────────
 async function uploadArquivo(
   sb: ReturnType<typeof createClient>,
@@ -683,6 +725,148 @@ Deno.serve(async (req) => {
       const { error } = await sb.from('pdi_acompanhamentos')
         .update({ feedback_gestora })
         .eq('id', acompanhamento_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+  }
+
+  // ━━ PICKUP: PARENT ACTIONS (Supabase Auth JWT) ━━━━━━━━━━━━
+
+  const isPickupPaiAction = [
+    'pickup_meus_filhos', 'pickup_avisar', 'pickup_cancelar', 'pickup_meus_hoje',
+  ].includes(action)
+
+  if (isPickupPaiAction) {
+    const emailPai = await getPaiEmail(sb, token)
+    if (!emailPai) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
+    if (action === 'pickup_meus_filhos') {
+      // Returns distinct children registered for this parent
+      const { data: sols } = await sb
+        .from('solicitacoes').select('nome_crianca, serie')
+        .ilike('email', emailPai).order('criado_em', { ascending: false })
+      const seen = new Set<string>()
+      const filhos = (sols ?? []).filter(s => {
+        if (seen.has(s.nome_crianca)) return false
+        seen.add(s.nome_crianca); return true
+      })
+      return json({ data: filhos })
+    }
+
+    if (action === 'pickup_avisar') {
+      const nome_crianca: string = (body.nome_crianca || '').trim()
+      const serie: string        = (body.serie || '').trim()
+      const nome_resp: string    = (body.nome_resp || emailPai).trim()
+      const lat_pai: number | null = body.lat_pai != null ? parseFloat(body.lat_pai) : null
+      const lon_pai: number | null = body.lon_pai != null ? parseFloat(body.lon_pai) : null
+      const eta_manual: number | null = body.eta_minutos ? parseInt(body.eta_minutos) : null
+
+      if (!nome_crianca) return json({ error: 'Informe o nome da criança.' }, 400)
+
+      // Check no active notification for this child today
+      const today = new Date().toISOString().split('T')[0]
+      const { data: existing } = await sb
+        .from('pickup_notificacoes').select('id, status')
+        .eq('email_pai', emailPai).eq('nome_crianca', nome_crianca)
+        .gte('saiu_em', today + 'T00:00:00Z').in('status', ['a_caminho', 'chegou'])
+        .maybeSingle()
+      if (existing) return json({ error: 'Já existe um aviso ativo para essa criança hoje.' }, 400)
+
+      // Calculate ETA
+      let eta_minutos: number | null = eta_manual
+      let eta_modo = 'manual'
+
+      if (lat_pai != null && lon_pai != null) {
+        const gmaps = await calcEtaGoogleMaps(lat_pai, lon_pai)
+        if (gmaps) {
+          eta_minutos = gmaps.etaMinutos
+          eta_modo    = gmaps.modo
+        } else {
+          // Fallback: local calculation
+          eta_minutos = calcEtaLocal(lat_pai, lon_pai)
+          eta_modo    = 'calculo_local'
+        }
+      }
+
+      const { data: novo, error: err } = await sb.from('pickup_notificacoes').insert({
+        email_pai: emailPai, nome_resp, nome_crianca,
+        serie: serie || null, lat_pai, lon_pai,
+        eta_minutos, eta_modo, status: 'a_caminho',
+      }).select('id, eta_minutos, eta_modo').single()
+      if (err) return json({ error: err.message }, 400)
+      return json({ ok: true, id: novo.id, eta_minutos: novo.eta_minutos, eta_modo: novo.eta_modo })
+    }
+
+    if (action === 'pickup_cancelar') {
+      const { id } = body
+      if (!id) return json({ error: 'ID do aviso não informado.' }, 400)
+      const { error } = await sb.from('pickup_notificacoes').update({ status: 'cancelado' })
+        .eq('id', id).eq('email_pai', emailPai).in('status', ['a_caminho', 'chegou'])
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pickup_meus_hoje') {
+      const today = new Date().toISOString().split('T')[0]
+      const { data } = await sb
+        .from('pickup_notificacoes').select('*')
+        .eq('email_pai', emailPai)
+        .gte('saiu_em', today + 'T00:00:00Z')
+        .order('saiu_em', { ascending: false })
+      return json({ data: data ?? [] })
+    }
+  }
+
+  // ━━ PICKUP: TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const isPickupProfAction = [
+    'pickup_fila_hoje', 'pickup_entregar', 'professora_update_series', 'series_list_pub',
+  ].includes(action)
+
+  if (isPickupProfAction) {
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
+    if (action === 'series_list_pub') {
+      const { data } = await sb.from('series').select('nome').order('nome')
+      return json({ data: (data ?? []).map((s: { nome: string }) => s.nome) })
+    }
+
+    if (action === 'professora_update_series') {
+      const series_monitoras: string[] = body.series_monitoras || []
+      const { error } = await sb.from('professoras').update({ series_monitoras }).eq('id', prof.id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pickup_fila_hoje') {
+      const today = new Date().toISOString().split('T')[0]
+      // Get professora's monitored series
+      const { data: profData } = await sb
+        .from('professoras').select('series_monitoras').eq('id', prof.id).maybeSingle()
+      const series: string[] = profData?.series_monitoras || []
+
+      let query = sb
+        .from('pickup_notificacoes').select('*')
+        .gte('saiu_em', today + 'T00:00:00Z')
+        .in('status', ['a_caminho', 'chegou'])
+        .order('saiu_em', { ascending: true })
+
+      // Filter by series only if the teacher has configured them
+      if (series.length > 0) query = query.in('serie', series)
+
+      const { data } = await query
+      return json({ data: data ?? [], series_monitoras: series })
+    }
+
+    if (action === 'pickup_entregar') {
+      const { id } = body
+      if (!id) return json({ error: 'ID do aviso não informado.' }, 400)
+      const { error } = await sb.from('pickup_notificacoes').update({
+        status: 'entregue',
+        entregue_em: new Date().toISOString(),
+        entregue_por: prof.nome,
+      }).eq('id', id).in('status', ['a_caminho', 'chegou'])
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
