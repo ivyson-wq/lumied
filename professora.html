@@ -117,11 +117,62 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 /* SECTION DIVIDER */
 .section-divider{border:none;border-top:2px solid var(--border);margin:36px 0;}
 
+/* PDI */
+.pdi-ciclo-info{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.pdi-ciclo-name{font-family:'Lora',serif;font-size:16px;font-weight:600;}
+.pdi-ciclo-dates{font-size:12px;color:var(--muted);}
+.pdi-status-chip{padding:5px 14px;border-radius:100px;font-size:12px;font-weight:600;}
+.pdi-status-chip.rascunho{background:#f0ece6;color:var(--muted);}
+.pdi-status-chip.aguardando_aprovacao{background:rgba(212,131,10,.12);color:#c27800;}
+.pdi-status-chip.em_andamento{background:rgba(45,122,58,.12);color:#1a5c2a;}
+.pdi-status-chip.encerrado{background:rgba(26,107,181,.12);color:#1a6bb5;}
+.comp-list{display:flex;flex-direction:column;gap:10px;margin-bottom:4px;}
+.comp-item{display:grid;grid-template-columns:190px 1fr 22px 22px;align-items:center;gap:10px;}
+.comp-label{font-size:12px;font-weight:500;}
+.comp-bar-wrap{background:#f0ece6;border-radius:4px;height:7px;overflow:hidden;}
+.comp-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+.comp-bar-fill.auto{background:var(--blue);}
+.comp-bar-fill.ger{background:var(--green);}
+.comp-score{font-size:12px;font-weight:600;text-align:center;color:var(--muted);}
+.comp-score.ger{color:var(--green);}
+.rating-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.rating-btn{width:38px;height:38px;border-radius:8px;border:1.5px solid var(--border);background:#fdfbf8;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--muted);}
+.rating-btn:hover{border-color:var(--blue);color:var(--blue);}
+.rating-btn.sel{background:var(--blue);color:#fff;border-color:var(--blue);}
+.pdi-comp-form{display:flex;flex-direction:column;gap:14px;}
+.pdi-comp-row{border-bottom:1px solid var(--border);padding-bottom:14px;}
+.pdi-comp-row:last-child{border-bottom:none;padding-bottom:0;}
+.pdi-comp-row .comp-label{font-size:14px;font-weight:600;margin-bottom:8px;display:block;}
+.meta-card{background:#fdfbf8;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;}
+.meta-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.meta-desc{font-size:14px;font-weight:600;line-height:1.4;}
+.meta-meta{font-size:11px;color:var(--muted);margin-top:3px;}
+.meta-progress-bar{height:6px;background:#e2dbd1;border-radius:3px;overflow:hidden;margin-bottom:4px;margin-top:8px;}
+.meta-progress-fill{height:100%;background:var(--blue);border-radius:3px;transition:width .4s;}
+.meta-pct{font-size:11px;color:var(--muted);}
+.meta-prog-controls{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.meta-prog-controls input[type=range]{flex:1;min-width:80px;accent-color:var(--blue);}
+.meta-prog-controls select{padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:#fdfbf8;font-family:'DM Sans',sans-serif;}
+.meta-prog-controls button{padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.meta-form-block{border:1.5px dashed var(--border);border-radius:10px;padding:16px;margin-bottom:10px;background:#fdfbf8;}
+.meta-form-block .ff{margin-bottom:10px;}
+.meta-form-block .ff:last-child{margin-bottom:0;}
+.add-meta-btn{width:100%;padding:10px;border:1.5px dashed var(--border);background:transparent;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-bottom:12px;}
+.add-meta-btn:hover{border-color:var(--blue);color:var(--blue);}
+.remove-meta-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;border-radius:4px;transition:color .15s;}
+.remove-meta-btn:hover{color:var(--red);}
+.nota-final-display{text-align:center;padding:24px;background:#f0ece6;border-radius:12px;margin-bottom:16px;}
+.nota-final-num{font-family:'Lora',serif;font-size:48px;font-weight:700;color:var(--text);line-height:1;}
+.nota-final-lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+.pdi-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
+.pdi-legend span{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.pdi-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
 @media(max-width:640px){
   .stats-row{grid-template-columns:1fr 1fr;}
   .stat-card:first-child{grid-column:1 / -1;}
   .topbar{padding:0 16px;}
   .content{padding:20px 16px 48px;}
+  .comp-item{grid-template-columns:1fr 22px 22px;}.comp-item .comp-label{grid-column:1/-1;}
 }
 </style>
 </head>
@@ -259,6 +310,97 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <div class="diplomas-list" id="atestadosList">
       <div class="empty-state">⏳ Carregando…</div>
     </div>
+
+    <hr class="section-divider">
+
+    <!-- PDI Section -->
+    <div class="sec-title">📈 Meu Plano de Desenvolvimento Individual</div>
+    <div id="pdiLoading"><div class="empty-state">⏳ Carregando…</div></div>
+    <div id="pdiNoCiclo" style="display:none">
+      <div class="upload-card" style="text-align:center;padding:40px 24px;">
+        <div style="font-size:36px;margin-bottom:12px;">📅</div>
+        <p style="font-size:13px;color:var(--muted);">Nenhum ciclo de PDI ativo. Aguarde a coordenação abrir o ciclo.</p>
+      </div>
+    </div>
+    <div id="pdiContent" style="display:none">
+
+      <!-- Ciclo info card -->
+      <div class="upload-card" id="pdiInfoCard" style="margin-bottom:16px;"></div>
+
+      <!-- Autoavaliação form (rascunho) -->
+      <div class="upload-card" id="pdiAutoavCard" style="display:none">
+        <h3>✏️ Autoavaliação de Competências</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Avalie suas competências de <strong>1</strong> a <strong>4</strong>: &nbsp;<strong>1</strong> Em desenvolvimento · <strong>2</strong> Atende · <strong>3</strong> Supera · <strong>4</strong> Referência</p>
+        <div class="pdi-comp-form" id="pdiCompForm"></div>
+        <button class="btn-submit" style="margin-top:18px;" onclick="submitAutoavaliacao()">Salvar Autoavaliação</button>
+        <div class="f-alert error" id="pdiAutoErr"></div>
+        <div class="f-alert success" id="pdiAutoOk"></div>
+      </div>
+
+      <!-- Metas form (rascunho) -->
+      <div class="upload-card" id="pdiMetasFormCard" style="display:none">
+        <h3>🎯 Minhas Metas SMART</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Defina entre 1 e 5 metas para este ciclo. Cada meta deve ser específica, mensurável e com prazo definido.</p>
+        <div id="pdiMetasFormList"></div>
+        <button class="add-meta-btn" onclick="addMetaForm()" id="btnAddMeta">+ Adicionar meta</button>
+        <button class="btn-submit" onclick="submitMetas()" id="btnSubmitMetas" disabled>Enviar para Aprovação</button>
+        <div class="f-alert error" id="pdiMetasErr"></div>
+        <div class="f-alert success" id="pdiMetasOk"></div>
+      </div>
+
+      <!-- Competências view (read-only) -->
+      <div class="upload-card" id="pdiCompViewCard" style="display:none">
+        <h3>📊 Competências</h3>
+        <div class="pdi-legend">
+          <span><span class="dot" style="background:var(--blue)"></span> Minha autoavaliação</span>
+          <span><span class="dot" style="background:var(--green)"></span> Avaliação da gestora</span>
+        </div>
+        <div class="comp-list" id="pdiCompView"></div>
+      </div>
+
+      <!-- Metas view -->
+      <div class="upload-card" id="pdiMetasViewCard" style="display:none">
+        <h3>🎯 Minhas Metas <span class="count-badge" id="pdiMetasCount">0</span></h3>
+        <div id="pdiMetasView"></div>
+      </div>
+
+      <!-- Check-in form (em_andamento) -->
+      <div class="upload-card" id="pdiCheckinCard" style="display:none">
+        <h3>📝 Registrar Check-in</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Registre seu acompanhamento do PDI para a gestora.</p>
+        <div class="ff">
+          <label>Tipo</label>
+          <select id="checkinTipo">
+            <option value="semestral">Semestral (revisão do meio do ano)</option>
+            <option value="final">Final (encerramento do ciclo)</option>
+          </select>
+        </div>
+        <div class="ff">
+          <label>Seu relato</label>
+          <textarea id="checkinRelato" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;min-height:100px;resize:vertical;background:#fdfbf8;outline:none;transition:border-color .2s;" placeholder="Descreva seu progresso, conquistas e próximos passos…" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        </div>
+        <button class="btn-submit" onclick="submitCheckin()">Enviar Check-in</button>
+        <div class="f-alert error" id="pdiCheckinErr"></div>
+        <div class="f-alert success" id="pdiCheckinOk"></div>
+      </div>
+
+      <!-- Histórico de check-ins -->
+      <div id="pdiHistoricoCard" style="display:none">
+        <div class="sec-title" style="margin-top:24px;margin-bottom:12px;">💬 Histórico de Check-ins</div>
+        <div class="diplomas-list" id="pdiHistorico"></div>
+      </div>
+
+      <!-- Nota final (encerrado) -->
+      <div class="upload-card" id="pdiNotaFinalCard" style="display:none">
+        <h3>🏁 PDI Encerrado</h3>
+        <div class="nota-final-display">
+          <div class="nota-final-num" id="pdiNotaNum">—</div>
+          <div class="nota-final-lbl" id="pdiNotaLbl"></div>
+        </div>
+        <div id="pdiFeedbackFinal" style="font-size:13px;line-height:1.6;color:var(--text);"></div>
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -330,7 +472,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   // ── DATA ──────────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados() ]);
+    await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados(), loadMeuPdi() ]);
   }
 
   async function loadRanking() {
@@ -562,6 +704,295 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   function esc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── PDI ────────────────────────────────────────────────────
+  const COMP_LABELS = {
+    linguagem:      '🗣️ Proficiência no Idioma',
+    metodologia:    '📚 Metodologia e Didática',
+    avaliacao:      '📊 Avaliação da Aprendizagem',
+    intercultural:  '🌍 Competência Intercultural',
+    colaboracao:    '🤝 Colaboração e Comunidade',
+    inovacao:       '💡 Inovação e Tecnologia',
+    desenvolvimento:'📈 Desenvolvimento Profissional',
+  };
+  const AREAS = Object.keys(COMP_LABELS);
+  const NOTA_LABEL = ['','Em Desenvolvimento','Atende','Supera','Referência'];
+  const STATUS_PDI = {
+    rascunho:'✏️ Rascunho', aguardando_aprovacao:'⏳ Aguardando Aprovação',
+    em_andamento:'✅ Em Andamento', encerrado:'🏁 Encerrado',
+  };
+  const META_STATUS_LABEL = {
+    pendente:'Pendente', em_andamento:'Em andamento', concluido:'Concluído', revisado:'Revisado',
+  };
+
+  let pdiState = { ciclo: null, pdi: null };
+  let pdiMetaCount = 0;
+
+  async function loadMeuPdi() {
+    const d = await callApi({ action: 'pdi_meu_status' });
+    document.getElementById('pdiLoading').style.display = 'none';
+    if (!d.ciclo) { document.getElementById('pdiNoCiclo').style.display = 'block'; return; }
+    pdiState = { ciclo: d.ciclo, pdi: d.pdi };
+    document.getElementById('pdiContent').style.display = 'block';
+    renderPdi();
+  }
+
+  function showEl(id, v) { const el = document.getElementById(id); if (el) el.style.display = v ? '' : 'none'; }
+
+  function renderPdi() {
+    const { ciclo, pdi } = pdiState;
+    const status = pdi?.status ?? 'rascunho';
+    // Info card
+    document.getElementById('pdiInfoCard').innerHTML = `
+      <div class="pdi-ciclo-info">
+        <div>
+          <div class="pdi-ciclo-name">${esc(ciclo.nome)}</div>
+          <div class="pdi-ciclo-dates">${fmtDate(ciclo.data_inicio)} → ${fmtDate(ciclo.data_fim)}</div>
+        </div>
+        <span class="pdi-status-chip ${pdi ? status : 'rascunho'}">${STATUS_PDI[pdi ? status : 'rascunho']}</span>
+      </div>
+      ${pdi?.feedback_gestora ? `<div style="margin-top:14px;padding:12px;background:#f0ece6;border-radius:8px;font-size:13px;line-height:1.6;"><strong>Feedback da gestora:</strong><br>${esc(pdi.feedback_gestora)}</div>` : ''}
+    `;
+    // Self-assessment form: show when no PDI yet or rascunho
+    showEl('pdiAutoavCard', !pdi || status === 'rascunho');
+    if (!pdi || status === 'rascunho') renderAutoavForm(pdi?.pdi_competencias ?? []);
+    // Goals form: show when PDI exists and in rascunho
+    showEl('pdiMetasFormCard', pdi && status === 'rascunho');
+    if (pdi && status === 'rascunho') renderMetasForm(pdi.pdi_metas ?? []);
+    // Competencies view
+    const hasComps = !!(pdi?.pdi_competencias?.length);
+    showEl('pdiCompViewCard', hasComps);
+    if (hasComps) renderCompView(pdi.pdi_competencias);
+    // Metas view
+    const hasMetas = !!(pdi?.pdi_metas?.length);
+    showEl('pdiMetasViewCard', hasMetas);
+    if (hasMetas) renderMetasView(pdi.pdi_metas, status);
+    // Check-in
+    showEl('pdiCheckinCard', status === 'em_andamento');
+    // Histórico
+    const hasCheckins = !!(pdi?.pdi_acompanhamentos?.length);
+    showEl('pdiHistoricoCard', hasCheckins);
+    if (hasCheckins) renderHistorico(pdi.pdi_acompanhamentos);
+    // Nota final
+    showEl('pdiNotaFinalCard', status === 'encerrado');
+    if (status === 'encerrado') renderNotaFinal(pdi);
+  }
+
+  function renderAutoavForm(existing) {
+    const vals = {}, comments = {};
+    for (const c of existing) { vals[c.area] = c.nota_auto; comments[c.area] = c.comentario; }
+    document.getElementById('pdiCompForm').innerHTML = AREAS.map(area => `
+      <div class="pdi-comp-row">
+        <span class="comp-label">${COMP_LABELS[area]}</span>
+        <div class="rating-group" id="rg_${area}" data-selected="${vals[area] || ''}">
+          ${[1,2,3,4].map(n => `<button class="rating-btn${vals[area]===n?' sel':''}" onclick="selectRating('${area}',${n})" title="${NOTA_LABEL[n]}">${n}</button>`).join('')}
+          <span style="font-size:11px;color:var(--muted);" id="rl_${area}">${vals[area] ? NOTA_LABEL[vals[area]] : ''}</span>
+        </div>
+        <div class="ff" style="margin:6px 0 0;"><input type="text" id="rc_${area}" placeholder="Comentário (opcional)" value="${esc(comments[area]||'')}" style="font-size:12px;"></div>
+      </div>
+    `).join('');
+  }
+
+  function selectRating(area, nota) {
+    const rg = document.getElementById(`rg_${area}`);
+    rg.querySelectorAll('.rating-btn').forEach((btn, i) => btn.classList.toggle('sel', i + 1 === nota));
+    document.getElementById(`rl_${area}`).textContent = NOTA_LABEL[nota];
+    rg.dataset.selected = nota;
+  }
+
+  async function submitAutoavaliacao() {
+    const errEl = document.getElementById('pdiAutoErr');
+    const okEl  = document.getElementById('pdiAutoOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    const competencias = AREAS.map(area => ({
+      area,
+      nota_auto: parseInt(document.getElementById(`rg_${area}`)?.dataset.selected || '0'),
+      comentario: (document.getElementById(`rc_${area}`)?.value || '').trim() || undefined,
+    }));
+    const missing = competencias.filter(c => !c.nota_auto);
+    if (missing.length) {
+      errEl.textContent = 'Avalie todas as competências antes de salvar.';
+      errEl.classList.add('show'); return;
+    }
+    const btn = document.querySelector('#pdiAutoavCard .btn-submit');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const d = await callApi({ action: 'pdi_autoavaliacao', competencias });
+    btn.disabled = false; btn.textContent = 'Salvar Autoavaliação';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); }
+    else { okEl.textContent = '✅ Autoavaliação salva! Agora defina suas metas abaixo.'; okEl.classList.add('show'); await loadMeuPdi(); }
+  }
+
+  function renderMetasForm(existing) {
+    pdiMetaCount = 0;
+    document.getElementById('pdiMetasFormList').innerHTML = '';
+    if (existing.length) existing.forEach(m => addMetaForm(m));
+    else addMetaForm();
+    updateBtnAddMeta();
+  }
+
+  function addMetaForm(meta = null) {
+    if (pdiMetaCount >= 5) return;
+    pdiMetaCount++;
+    const idx = pdiMetaCount;
+    const div = document.createElement('div');
+    div.className = 'meta-form-block'; div.id = `metaBlock_${idx}`;
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:13px;" id="metaTitle_${idx}">Meta ${idx}</strong>
+        ${idx > 1 ? `<button class="remove-meta-btn" onclick="removeMetaBlock(${idx})">✕</button>` : ''}
+      </div>
+      <div class="ff"><label>O que quero alcançar *</label><input type="text" id="mDesc_${idx}" placeholder="Ex: Concluir o Cambridge Certificate" value="${esc(meta?.descricao||'')}"></div>
+      <div class="ff"><label>Como vou medir *</label><input type="text" id="mInd_${idx}" placeholder="Ex: Certificado emitido com nota ≥ 70%" value="${esc(meta?.indicador||'')}"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="ff" style="margin:0;"><label>Prazo *</label><input type="date" id="mPrazo_${idx}" value="${meta?.prazo||''}"></div>
+        <div class="ff" style="margin:0;"><label>Área vinculada</label>
+          <select id="mArea_${idx}"><option value="">Selecione…</option>
+            ${AREAS.map(a=>`<option value="${a}"${meta?.area_vinculada===a?' selected':''}>${COMP_LABELS[a]}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    `;
+    document.getElementById('pdiMetasFormList').appendChild(div);
+    updateBtnAddMeta();
+  }
+
+  function removeMetaBlock(idx) {
+    document.getElementById(`metaBlock_${idx}`)?.remove();
+    pdiMetaCount = Math.max(0, pdiMetaCount - 1);
+    document.querySelectorAll('.meta-form-block').forEach((el, i) => {
+      const t = el.querySelector('[id^="metaTitle_"]'); if (t) t.textContent = `Meta ${i + 1}`;
+    });
+    updateBtnAddMeta();
+  }
+
+  function updateBtnAddMeta() {
+    const btn = document.getElementById('btnAddMeta');
+    if (btn) btn.style.display = pdiMetaCount >= 5 ? 'none' : '';
+    const sub = document.getElementById('btnSubmitMetas');
+    if (sub) sub.disabled = pdiMetaCount < 1;
+  }
+
+  async function submitMetas() {
+    const errEl = document.getElementById('pdiMetasErr');
+    const okEl  = document.getElementById('pdiMetasOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    if (!pdiState.pdi?.id) { errEl.textContent = 'Salve a autoavaliação primeiro.'; errEl.classList.add('show'); return; }
+    const metas = [];
+    for (const block of document.querySelectorAll('.meta-form-block')) {
+      const idx = block.id.split('_')[1];
+      const descricao  = (document.getElementById(`mDesc_${idx}`)?.value  || '').trim();
+      const indicador  = (document.getElementById(`mInd_${idx}`)?.value   || '').trim();
+      const prazo      =  document.getElementById(`mPrazo_${idx}`)?.value || '';
+      const area_vinculada = document.getElementById(`mArea_${idx}`)?.value || '';
+      if (!descricao || !indicador || !prazo) {
+        errEl.textContent = `Preencha todos os campos obrigatórios da Meta ${idx}.`;
+        errEl.classList.add('show'); return;
+      }
+      metas.push({ descricao, indicador, prazo, area_vinculada: area_vinculada || undefined });
+    }
+    const btn = document.getElementById('btnSubmitMetas');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const d = await callApi({ action: 'pdi_metas_submit', pdi_id: pdiState.pdi.id, metas });
+    btn.disabled = false; btn.textContent = 'Enviar para Aprovação';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); }
+    else { okEl.textContent = '✅ Metas enviadas para aprovação da gestora!'; okEl.classList.add('show'); await loadMeuPdi(); }
+  }
+
+  function renderCompView(competencias) {
+    document.getElementById('pdiCompView').innerHTML = AREAS.map(area => {
+      const c = competencias.find(x => x.area === area) || {};
+      const autoW = c.nota_auto    ? (c.nota_auto    / 4 * 100).toFixed(0) : 0;
+      const gerW  = c.nota_gestora ? (c.nota_gestora / 4 * 100).toFixed(0) : 0;
+      return `<div class="comp-item">
+        <div class="comp-label">${COMP_LABELS[area]}</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div class="comp-bar-wrap"><div class="comp-bar-fill auto" style="width:${autoW}%"></div></div>
+          ${c.nota_gestora ? `<div class="comp-bar-wrap"><div class="comp-bar-fill ger" style="width:${gerW}%"></div></div>` : ''}
+        </div>
+        <div class="comp-score">${c.nota_auto || '—'}</div>
+        <div class="comp-score ger">${c.nota_gestora || ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMetasView(metas, status) {
+    document.getElementById('pdiMetasCount').textContent = metas.length;
+    document.getElementById('pdiMetasView').innerHTML = metas.map(m => {
+      const controls = status === 'em_andamento' ? `
+        <div class="meta-prog-controls">
+          <span style="font-size:11px;color:var(--muted);">Progresso:</span>
+          <input type="range" min="0" max="100" step="5" value="${m.progressao_pct||0}" id="rng_${m.id}" oninput="document.getElementById('pct_${m.id}').textContent=this.value+'%'">
+          <span id="pct_${m.id}" style="font-size:12px;font-weight:600;min-width:36px;">${m.progressao_pct||0}%</span>
+          <select id="mst_${m.id}">
+            ${Object.entries(META_STATUS_LABEL).map(([v,l])=>`<option value="${v}"${m.status===v?' selected':''}>${l}</option>`).join('')}
+          </select>
+          <button onclick="updateMetaProg('${m.id}')">Salvar</button>
+        </div>` : '';
+      const icon = {pendente:'⏳',em_andamento:'🔄',concluido:'✅',revisado:'🔁'}[m.status]||'';
+      return `<div class="meta-card">
+        <div class="meta-card-top">
+          <div>
+            <div class="meta-desc">${esc(m.descricao)}</div>
+            <div class="meta-meta">📏 ${esc(m.indicador)} · 📅 ${fmtDate(m.prazo)}${m.area_vinculada?` · ${COMP_LABELS[m.area_vinculada]||m.area_vinculada}`:''}</div>
+          </div>
+          <span class="status-badge ${m.status}">${icon} ${META_STATUS_LABEL[m.status]||m.status}</span>
+        </div>
+        <div class="meta-progress-bar"><div class="meta-progress-fill" id="bar_${m.id}" style="width:${m.progressao_pct||0}%"></div></div>
+        <div class="meta-pct">${m.progressao_pct||0}% concluído</div>
+        ${controls}
+        ${m.evidencia_texto ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);"><strong>Evidência:</strong> ${esc(m.evidencia_texto)}</div>` : ''}
+      </div>`;
+    }).join('') || '<div class="empty-state">Nenhuma meta cadastrada.</div>';
+  }
+
+  async function updateMetaProg(metaId) {
+    const rng = document.getElementById(`rng_${metaId}`);
+    const sel = document.getElementById(`mst_${metaId}`);
+    if (!rng || !sel) return;
+    const d = await callApi({ action: 'pdi_meta_progresso', meta_id: metaId, progressao_pct: parseInt(rng.value), status: sel.value });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    const bar = document.getElementById(`bar_${metaId}`);
+    if (bar) bar.style.width = rng.value + '%';
+    await loadMeuPdi();
+  }
+
+  function renderHistorico(acompanhamentos) {
+    document.getElementById('pdiHistorico').innerHTML = acompanhamentos.map(a => {
+      const tipo = a.tipo === 'semestral' ? '📅 Semestral' : '🏁 Final';
+      return `<div class="diploma-row">
+        <div class="diploma-icon">💬</div>
+        <div class="diploma-info">
+          <strong>${tipo} · ${new Date(a.criado_em).toLocaleDateString('pt-BR')}</strong>
+          <div class="meta" style="margin-top:4px;">${esc(a.relato_professora||'')}</div>
+          ${a.feedback_gestora ? `<div style="margin-top:6px;font-size:12px;color:var(--green);"><strong>Feedback da gestora:</strong> ${esc(a.feedback_gestora)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('') || '<div class="empty-state">Nenhum check-in registrado ainda.</div>';
+  }
+
+  function renderNotaFinal(pdi) {
+    const NOTAS = ['','Em Desenvolvimento','Atende','Supera','Referência'];
+    document.getElementById('pdiNotaNum').textContent = pdi.nota_final || '—';
+    document.getElementById('pdiNotaLbl').textContent = NOTAS[pdi.nota_final] || '';
+    document.getElementById('pdiFeedbackFinal').innerHTML = pdi.feedback_gestora
+      ? `<strong>Feedback da gestora:</strong><br>${esc(pdi.feedback_gestora)}` : '';
+  }
+
+  async function submitCheckin() {
+    const errEl = document.getElementById('pdiCheckinErr');
+    const okEl  = document.getElementById('pdiCheckinOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    const tipo   = document.getElementById('checkinTipo').value;
+    const relato = (document.getElementById('checkinRelato').value || '').trim();
+    if (!relato) { errEl.textContent = 'Escreva seu relato.'; errEl.classList.add('show'); return; }
+    if (!pdiState.pdi?.id) { errEl.textContent = 'PDI não encontrado.'; errEl.classList.add('show'); return; }
+    const btn = document.querySelector('#pdiCheckinCard .btn-submit');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const d = await callApi({ action: 'pdi_checkin', pdi_id: pdiState.pdi.id, tipo, relato_professora: relato });
+    btn.disabled = false; btn.textContent = 'Enviar Check-in';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); }
+    else { okEl.textContent = '✅ Check-in registrado!'; okEl.classList.add('show'); document.getElementById('checkinRelato').value = ''; await loadMeuPdi(); }
   }
 
   document.addEventListener('keydown', e => {

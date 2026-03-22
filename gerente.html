@@ -14,7 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;}
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 /* LOGIN */
@@ -205,6 +205,43 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 }
 @media(max-width:900px){.sidebar{width:200px;}.main{margin-left:200px;}.two-col{grid-template-columns:1fr;}}
 @media(max-width:640px){.sidebar{display:none;}.main{margin-left:0;}.content{padding:18px;}.topbar{padding:14px 18px;}.stats-grid{grid-template-columns:repeat(2,1fr);}}
+/* PDI */
+.pdi-sem-table{width:100%;border-collapse:collapse;}
+.pdi-sem-table th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 14px;border-bottom:1.5px solid var(--border);}
+.pdi-sem-table td{padding:12px 14px;border-bottom:1px solid #f5f0ea;vertical-align:middle;font-size:13px;}
+.pdi-sem-table tr:last-child td{border-bottom:none;}.pdi-sem-table tr:hover td{background:#faf8f5;}
+.sem-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;margin-right:5px;}
+.sem-dot.verde{background:#2d7a3a;}.sem-dot.amarelo{background:#d4830a;}.sem-dot.vermelho{background:#C8102E;}.sem-dot.cinza{background:#ccc;}
+.pdi-chip{display:inline-flex;align-items:center;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;}
+.pdi-chip.sem-pdi{background:#f5f0ea;color:var(--muted);}.pdi-chip.rascunho{background:#f5f0ea;color:var(--muted);}
+.pdi-chip.aguardando_aprovacao{background:rgba(212,131,10,.12);color:#c27800;}
+.pdi-chip.em_andamento{background:rgba(45,122,58,.12);color:#1a5c2a;}
+.pdi-chip.encerrado{background:rgba(26,107,181,.12);color:var(--blue);}
+.btn-revisar{padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;}
+.btn-revisar:hover{opacity:.85;}
+#pdiReviewModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:300;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
+#pdiReviewModal.open{display:flex;}
+.pdi-modal{background:var(--white);border-radius:16px;width:100%;max-width:700px;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.25);position:relative;}
+.pdi-modal-close{position:absolute;top:18px;right:18px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;}
+.pdi-modal-title{font-family:'Lora',serif;font-size:18px;font-weight:700;margin-bottom:4px;}
+.pdi-modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+.pdi-sec-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.pdi-comp-grid-g{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.pdi-comp-cell{background:#fdfbf8;border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.pdi-comp-cell-name{font-size:11px;font-weight:700;margin-bottom:4px;}
+.pdi-note-row{display:flex;gap:4px;margin-bottom:4px;}
+.pdi-note-btn{width:30px;height:30px;border-radius:6px;border:1.5px solid var(--border);background:#fdfbf8;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--muted);}
+.pdi-note-btn:hover{border-color:var(--green);color:var(--green);}
+.pdi-note-btn.sel{background:var(--green);color:#fff;border-color:var(--green);}
+.pdi-meta-item{background:#fdfbf8;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;}
+.pdi-nota-final-row{display:flex;gap:10px;margin-bottom:12px;}
+.pdi-nota-btn{width:52px;height:52px;border-radius:10px;border:1.5px solid var(--border);background:#fdfbf8;font-family:'Lora',serif;font-size:20px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--muted);}
+.pdi-nota-btn:hover{border-color:var(--green);color:var(--green);}
+.pdi-nota-btn.sel{background:var(--green);color:#fff;border-color:var(--green);}
+.pdi-action-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.btn-pdi-aprovar{padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-pdi-rejeitar{padding:10px 20px;background:#fdf0f2;color:var(--red);border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-pdi-encerrar{padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
 </style>
 </head>
 <body>
@@ -239,6 +276,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">Professoras</div>
       <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Professoras</a>
       <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
+      <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> PDI</a>
       <a class="nav-item" href="#" onclick="showPanel('secretarias',this)"><span class="ic">🗂️</span> Secretaria</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
@@ -526,6 +564,47 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- PDI -->
+      <div id="panelPdi" class="panel">
+        <div class="dip-stats" id="pdiStatsRow">
+          <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="pdiStatTotal">—</div><div class="stat-sub">professoras</div></div>
+          <div class="stat-card" data-g="integral"><div class="stat-label">Sem PDI</div><div class="stat-value" id="pdiStatSem">—</div><div class="stat-sub">não iniciaram</div></div>
+          <div class="stat-card" data-g="semi"><div class="stat-label">Aguardando</div><div class="stat-value" id="pdiStatAguard">—</div><div class="stat-sub">para aprovar</div></div>
+          <div class="stat-card" data-g="tarde"><div class="stat-label">Em Andamento</div><div class="stat-value" id="pdiStatAtivo">—</div><div class="stat-sub">PDIs aprovados</div></div>
+          <div class="stat-card" data-g="diaria"><div class="stat-label">Encerrados</div><div class="stat-value" id="pdiStatEnc">—</div><div class="stat-sub">ciclo concluído</div></div>
+        </div>
+        <div class="two-col">
+          <div>
+            <div class="sec-title" style="margin-bottom:14px;">
+              Semáforo de PDIs
+              <select id="pdiCicloSelect" onchange="loadPdiPainel()" style="font-family:'DM Sans',sans-serif;font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;color:var(--text);background:#fdfbf8;margin-left:auto;"></select>
+            </div>
+            <div class="table-wrap">
+              <table class="pdi-sem-table">
+                <thead><tr><th>Professora</th><th>Status PDI</th><th>Submetido em</th><th>Ações</th></tr></thead>
+                <tbody id="pdiSemTableBody"><tr><td colspan="4" class="empty-state">⏳ Carregando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="form-card" style="margin-bottom:16px;">
+              <h3>📅 Criar Ciclo de PDI</h3>
+              <div class="ff"><label>Nome do Ciclo</label><input type="text" id="pdiCicloNome" placeholder="Ex: PDI 2026"></div>
+              <div class="ff"><label>Ano</label><input type="number" id="pdiCicloAno" placeholder="2026" min="2020" max="2035"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="ff" style="margin:0;"><label>Início</label><input type="date" id="pdiCicloInicio"></div>
+                <div class="ff" style="margin:0;"><label>Fim</label><input type="date" id="pdiCicloFim"></div>
+              </div>
+              <button class="btn-create" style="margin-top:14px;" onclick="criarCiclo()">Criar Ciclo</button>
+              <div class="f-alert error" id="pdiCicloErr"></div>
+              <div class="f-alert success" id="pdiCicloOk"></div>
+            </div>
+            <div class="sec-title" style="margin-bottom:10px;">Ciclos Cadastrados</div>
+            <div class="list-card" id="pdiCiclosList"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- REUNIÕES -->
       <div id="panelReunioes" class="panel">
         <div class="two-col">
@@ -733,6 +812,26 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- MODAL: PDI Review -->
+<div id="pdiReviewModal" onclick="if(event.target===this)closePdiReview()">
+  <div class="pdi-modal">
+    <button class="pdi-modal-close" onclick="closePdiReview()">✕</button>
+    <div class="pdi-modal-title" id="pdiReviewTitle">PDI</div>
+    <div class="pdi-modal-sub" id="pdiReviewSubtitle"></div>
+
+    <div class="pdi-sec-lbl">Competências</div>
+    <div id="pdiReviewComps"></div>
+
+    <div class="pdi-sec-lbl">Metas SMART</div>
+    <div id="pdiReviewMetas"></div>
+
+    <div class="pdi-sec-lbl">Check-ins</div>
+    <div class="list-card" id="pdiReviewCheckins"></div>
+
+    <div id="pdiReviewActions"></div>
+  </div>
+</div>
+
 <!-- MODAL: definir senha da professora -->
 <div class="senha-modal-overlay" id="senhaModalOverlay">
   <div class="senha-modal">
@@ -846,7 +945,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',diplomas:'Diplomas & Ranking de Professoras',secretarias:'Secretaria — Gestão de Usuárias',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',secretarias:'Secretaria — Gestão de Usuárias',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -855,6 +954,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='dashAtiv')    loadAtivDashboard();
     if(id==='professoras') loadProfessoras();
     if(id==='diplomas')    loadDiplomasPanel();
+    if(id==='pdi')         loadPdiPanel();
     if(id==='secretarias') loadSecretarias();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
@@ -2382,6 +2482,282 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
     okEl.textContent = '✅ Senha definida com sucesso!'; okEl.classList.add('show');
     setTimeout(() => closeSenhaModal(), 1500);
+  }
+
+  // ── PDI (GESTORA) ─────────────────────────────────────────
+  const GCOMP_LABELS = {
+    linguagem:'🗣️ Proficiência no Idioma', metodologia:'📚 Metodologia e Didática',
+    avaliacao:'📊 Avaliação da Aprendizagem', intercultural:'🌍 Competência Intercultural',
+    colaboracao:'🤝 Colaboração e Comunidade', inovacao:'💡 Inovação e Tecnologia',
+    desenvolvimento:'📈 Desenvolvimento Profissional',
+  };
+  const G_STATUS = {rascunho:'✏️ Rascunho',aguardando_aprovacao:'⏳ Aguardando',em_andamento:'✅ Em Andamento',encerrado:'🏁 Encerrado'};
+  const G_NOTA = ['','Em Desenvolvimento','Atende','Supera','Referência'];
+  const META_STATUS_G = {pendente:'⏳ Pendente',em_andamento:'🔄 Em andamento',concluido:'✅ Concluído',revisado:'🔁 Revisado'};
+
+  let pdiReviewData = null;
+
+  async function loadPdiPanel() {
+    await Promise.all([ loadPdiCiclos(), loadPdiPainel() ]);
+  }
+
+  async function loadPdiCiclos() {
+    const d = await callDiplomas({ action: 'pdi_ciclos_list' });
+    const ciclos = d.data || [];
+    const sel = document.getElementById('pdiCicloSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">— Ciclo ativo —</option>' +
+        ciclos.map(c => `<option value="${c.id}"${c.ativo?' selected':''}>${esc(c.nome)}${c.ativo?' ✓':''}</option>`).join('');
+    }
+    const listEl = document.getElementById('pdiCiclosList');
+    if (listEl) {
+      listEl.innerHTML = ciclos.length
+        ? ciclos.map(c => `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);">
+            <div><div style="font-size:13px;font-weight:600;">${esc(c.nome)}</div>
+            <div style="font-size:11px;color:var(--muted);">${c.ano} · ${c.ativo?'🟢 Ativo':'⚫ Inativo'}</div></div>
+          </div>`).join('')
+        : '<div style="padding:16px;text-align:center;font-size:13px;color:var(--muted);">Nenhum ciclo criado.</div>';
+    }
+  }
+
+  async function loadPdiPainel() {
+    const cicloId = document.getElementById('pdiCicloSelect')?.value || '';
+    const d = await callDiplomas({ action: 'pdi_painel', ciclo_id: cicloId || undefined });
+    if (!d.ciclo) {
+      document.getElementById('pdiSemTableBody').innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum ciclo ativo. Crie um ciclo de PDI ao lado.</td></tr>';
+      ['pdiStatTotal','pdiStatSem','pdiStatAguard','pdiStatAtivo','pdiStatEnc'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = '—';
+      });
+      return;
+    }
+    const rows = d.professoras || [];
+    document.getElementById('pdiStatTotal').textContent  = rows.length;
+    document.getElementById('pdiStatSem').textContent    = rows.filter(r => !r.pdi).length;
+    document.getElementById('pdiStatAguard').textContent = rows.filter(r => r.pdi?.status === 'aguardando_aprovacao').length;
+    document.getElementById('pdiStatAtivo').textContent  = rows.filter(r => r.pdi?.status === 'em_andamento').length;
+    document.getElementById('pdiStatEnc').textContent    = rows.filter(r => r.pdi?.status === 'encerrado').length;
+
+    const tb = document.getElementById('pdiSemTableBody');
+    tb.innerHTML = rows.map(r => {
+      const { professora: p, pdi } = r;
+      const status = pdi?.status;
+      const dotClass = !pdi ? 'vermelho' : (status === 'em_andamento' || status === 'encerrado') ? 'verde' : 'amarelo';
+      const chipClass = status || 'sem-pdi';
+      const chipLabel = status ? G_STATUS[status] : '🔴 Sem PDI';
+      const submittedAt = pdi?.submetido_em ? new Date(pdi.submetido_em).toLocaleDateString('pt-BR') : '—';
+      const acoes = pdi ? `<button class="btn-revisar" onclick="openPdiReview('${pdi.id}')">Revisar PDI</button>` : '<span style="font-size:12px;color:var(--muted);">—</span>';
+      return `<tr>
+        <td><strong>${esc(p.nome)}</strong><br><small style="color:var(--muted);">${esc(p.email)}</small></td>
+        <td><span class="pdi-chip ${chipClass}"><span class="sem-dot ${dotClass}"></span>${chipLabel}</span></td>
+        <td class="date-cell">${submittedAt}</td>
+        <td>${acoes}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="4" class="empty-state">Nenhuma professora cadastrada.</td></tr>';
+  }
+
+  async function criarCiclo() {
+    const nome  = (document.getElementById('pdiCicloNome')?.value  || '').trim();
+    const ano   = parseInt(document.getElementById('pdiCicloAno')?.value) || new Date().getFullYear();
+    const inicio = document.getElementById('pdiCicloInicio')?.value || '';
+    const fim    = document.getElementById('pdiCicloFim')?.value    || '';
+    const errEl = document.getElementById('pdiCicloErr');
+    const okEl  = document.getElementById('pdiCicloOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    if (!nome || !inicio || !fim) { errEl.textContent = 'Preencha todos os campos.'; errEl.classList.add('show'); return; }
+    const btn = document.querySelector('#panelPdi .btn-create');
+    btn.disabled = true; btn.textContent = 'Criando…';
+    const d = await callDiplomas({ action: 'pdi_ciclo_criar', nome, ano, data_inicio: inicio, data_fim: fim });
+    btn.disabled = false; btn.textContent = 'Criar Ciclo';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); }
+    else {
+      okEl.textContent = '✅ Ciclo criado!'; okEl.classList.add('show');
+      document.getElementById('pdiCicloNome').value = '';
+      document.getElementById('pdiCicloAno').value  = '';
+      document.getElementById('pdiCicloInicio').value = '';
+      document.getElementById('pdiCicloFim').value    = '';
+      await loadPdiPanel();
+    }
+  }
+
+  async function openPdiReview(pdiId) {
+    const d = await callDiplomas({ action: 'pdi_prof_view', pdi_id: pdiId });
+    if (d.error || !d.data) { alert('Erro ao carregar PDI: ' + (d.error || 'não encontrado')); return; }
+    pdiReviewData = d.data;
+    renderPdiReviewModal(d.data);
+    document.getElementById('pdiReviewModal').classList.add('open');
+  }
+
+  function closePdiReview() {
+    document.getElementById('pdiReviewModal').classList.remove('open');
+    pdiReviewData = null;
+  }
+
+  function renderPdiReviewModal(pdi) {
+    const prof  = pdi.professoras    || {};
+    const ciclo = pdi.pdi_ciclos     || {};
+    const comps = pdi.pdi_competencias || [];
+    const metas = pdi.pdi_metas       || [];
+    const checkins = pdi.pdi_acompanhamentos || [];
+    const status = pdi.status;
+
+    document.getElementById('pdiReviewTitle').textContent    = `PDI — ${esc(prof.nome || '')}`;
+    document.getElementById('pdiReviewSubtitle').textContent = `${ciclo.nome || ''} · ${G_STATUS[status] || status}`;
+
+    // Competências (grid with manager rating)
+    document.getElementById('pdiReviewComps').innerHTML = `
+      <div class="pdi-comp-grid-g">
+        ${Object.entries(GCOMP_LABELS).map(([area, label]) => {
+          const c = comps.find(x => x.area === area) || {};
+          return `<div class="pdi-comp-cell">
+            <div class="pdi-comp-cell-name">${label}</div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Professora: <strong>${c.nota_auto||'—'}</strong> · Gestora:</div>
+            <div class="pdi-note-row" id="gnsel_${area}" data-selected="${c.nota_gestora||''}">
+              ${[1,2,3,4].map(n=>`<button class="pdi-note-btn${c.nota_gestora===n?' sel':''}" onclick="selectGNota('${area}',${n})" title="${G_NOTA[n]}">${n}</button>`).join('')}
+            </div>
+            <input type="text" id="gcmt_${area}" value="${esc(c.comentario||'')}" placeholder="Comentário…" style="width:100%;margin-top:5px;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;font-family:'DM Sans',sans-serif;">
+          </div>`;
+        }).join('')}
+      </div>
+      <button style="margin-top:10px;padding:7px 16px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="saveCompetenciasGerente('${pdi.id}')">Salvar Avaliação de Competências</button>
+      <div class="f-alert error" id="gcompErr" style="margin-top:8px;"></div>
+      <div class="f-alert success" id="gcompOk" style="margin-top:8px;"></div>
+    `;
+
+    // Metas
+    document.getElementById('pdiReviewMetas').innerHTML = metas.length
+      ? metas.map(m => `<div class="pdi-meta-item">
+          <div style="font-size:13px;font-weight:600;">${esc(m.descricao)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">📏 ${esc(m.indicador)} · 📅 ${m.prazo} · ${m.progressao_pct||0}% concluído</div>
+          <span class="status-pill ${m.status}" style="margin-top:5px;display:inline-flex;">${META_STATUS_G[m.status]||m.status}</span>
+        </div>`).join('')
+      : '<div style="padding:12px;font-size:13px;color:var(--muted);">Nenhuma meta definida.</div>';
+
+    // Check-ins
+    document.getElementById('pdiReviewCheckins').innerHTML = checkins.length
+      ? checkins.map(a => `<div style="padding:10px 14px;border-bottom:1px solid var(--border);">
+          <strong style="font-size:12px;">${a.tipo==='semestral'?'📅 Semestral':'🏁 Final'} · ${new Date(a.criado_em).toLocaleDateString('pt-BR')}</strong>
+          <div style="font-size:12px;margin-top:3px;">${esc(a.relato_professora||'')}</div>
+          ${a.feedback_gestora
+            ? `<div style="font-size:11px;color:var(--green);margin-top:3px;"><strong>Feedback:</strong> ${esc(a.feedback_gestora)}</div>`
+            : `<div style="margin-top:6px;display:flex;gap:6px;">
+                <input type="text" id="chkFb_${a.id}" placeholder="Adicionar feedback…" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;font-family:'DM Sans',sans-serif;">
+                <button onclick="saveCheckinFb('${a.id}')" style="padding:5px 10px;background:var(--green);color:#fff;border:none;border-radius:5px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Salvar</button>
+              </div>`
+          }
+        </div>`).join('')
+      : '<div style="padding:12px;font-size:13px;color:var(--muted);">Nenhum check-in registrado.</div>';
+
+    // Workflow actions
+    let actionsHtml = '';
+    if (status === 'aguardando_aprovacao') {
+      actionsHtml = `
+        <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
+          <div class="pdi-sec-lbl" style="margin-top:0;">Aprovação</div>
+          <div class="ff"><label>Feedback (opcional para aprovar, obrigatório para devolver)</label>
+            <textarea id="pdiAprovFeedback" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;min-height:70px;resize:vertical;background:#fdfbf8;" placeholder="Comentários ou orientações…"></textarea>
+          </div>
+          <div class="pdi-action-row">
+            <button class="btn-pdi-aprovar" onclick="aprovaPdi('${pdi.id}')">✅ Aprovar PDI</button>
+            <button class="btn-pdi-rejeitar" onclick="rejeitaPdi('${pdi.id}')">↩ Devolver para revisão</button>
+          </div>
+          <div class="f-alert error" id="pdiAprovErr" style="margin-top:8px;"></div>
+        </div>`;
+    } else if (status === 'em_andamento') {
+      actionsHtml = `
+        <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
+          <div class="pdi-sec-lbl" style="margin-top:0;">Encerrar PDI — Nota Final</div>
+          <div class="pdi-nota-final-row" id="pdiNotaFinalSel">
+            ${[1,2,3,4].map(n=>`<button class="pdi-nota-btn" id="pdiNFbtn_${n}" onclick="selectNotaFinal(${n})" title="${G_NOTA[n]}">${n}</button>`).join('')}
+            <span style="font-size:12px;color:var(--muted);align-self:center;" id="pdiNFLabel">Selecione</span>
+          </div>
+          <div class="ff"><label>Feedback final (obrigatório)</label>
+            <textarea id="pdiEncFeedback" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;min-height:70px;resize:vertical;background:#fdfbf8;" placeholder="Avaliação final do desenvolvimento da professora…"></textarea>
+          </div>
+          <div class="pdi-action-row">
+            <button class="btn-pdi-encerrar" onclick="encerrarPdi('${pdi.id}')">🏁 Encerrar PDI</button>
+          </div>
+          <div class="f-alert error" id="pdiEncErr" style="margin-top:8px;"></div>
+        </div>`;
+    } else if (status === 'encerrado') {
+      actionsHtml = `
+        <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px;">
+          <div class="pdi-sec-lbl" style="margin-top:0;">PDI Encerrado</div>
+          <div style="display:flex;align-items:center;gap:14px;padding:16px;background:#f0ece6;border-radius:10px;">
+            <div style="font-family:'Lora',serif;font-size:40px;font-weight:700;">${pdi.nota_final||'—'}</div>
+            <div>
+              <div style="font-size:14px;font-weight:600;">${G_NOTA[pdi.nota_final]||''}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">${esc(pdi.feedback_gestora||'')}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+    document.getElementById('pdiReviewActions').innerHTML = actionsHtml;
+  }
+
+  function selectGNota(area, nota) {
+    const rg = document.getElementById(`gnsel_${area}`);
+    if (!rg) return;
+    rg.querySelectorAll('.pdi-note-btn').forEach((btn, i) => btn.classList.toggle('sel', i + 1 === nota));
+    rg.dataset.selected = nota;
+  }
+
+  function selectNotaFinal(n) {
+    document.querySelectorAll('.pdi-nota-btn').forEach((btn, i) => btn.classList.toggle('sel', i + 1 === n));
+    const lbl = document.getElementById('pdiNFLabel'); if (lbl) lbl.textContent = G_NOTA[n] || '';
+    const sel = document.getElementById('pdiNotaFinalSel'); if (sel) sel.dataset.selected = n;
+  }
+
+  async function saveCompetenciasGerente(pdiId) {
+    const errEl = document.getElementById('gcompErr');
+    const okEl  = document.getElementById('gcompOk');
+    if (errEl) errEl.classList.remove('show');
+    if (okEl)  okEl.classList.remove('show');
+    const competencias = Object.keys(GCOMP_LABELS).map(area => ({
+      area,
+      nota_gestora: parseInt(document.getElementById(`gnsel_${area}`)?.dataset.selected || '0'),
+      comentario: (document.getElementById(`gcmt_${area}`)?.value || '').trim() || undefined,
+    })).filter(c => c.nota_gestora > 0);
+    if (!competencias.length) { if (errEl) { errEl.textContent = 'Avalie ao menos uma competência.'; errEl.classList.add('show'); } return; }
+    const d = await callDiplomas({ action: 'pdi_competencias_gerente', pdi_id: pdiId, competencias });
+    if (d.error) { if (errEl) { errEl.textContent = d.error; errEl.classList.add('show'); } }
+    else { if (okEl) { okEl.textContent = '✅ Avaliação salva!'; okEl.classList.add('show'); } }
+  }
+
+  async function aprovaPdi(pdiId) {
+    const feedback = (document.getElementById('pdiAprovFeedback')?.value || '').trim();
+    const errEl = document.getElementById('pdiAprovErr');
+    const d = await callDiplomas({ action: 'pdi_aprovar', pdi_id: pdiId, feedback: feedback || undefined });
+    if (d.error) { if (errEl) { errEl.textContent = d.error; errEl.classList.add('show'); } return; }
+    closePdiReview(); await loadPdiPainel();
+  }
+
+  async function rejeitaPdi(pdiId) {
+    const feedback = (document.getElementById('pdiAprovFeedback')?.value || '').trim();
+    const errEl = document.getElementById('pdiAprovErr');
+    if (!feedback) { if (errEl) { errEl.textContent = 'Informe o motivo da devolução.'; errEl.classList.add('show'); } return; }
+    const d = await callDiplomas({ action: 'pdi_rejeitar', pdi_id: pdiId, feedback });
+    if (d.error) { if (errEl) { errEl.textContent = d.error; errEl.classList.add('show'); } return; }
+    closePdiReview(); await loadPdiPainel();
+  }
+
+  async function encerrarPdi(pdiId) {
+    const errEl = document.getElementById('pdiEncErr');
+    if (errEl) errEl.classList.remove('show');
+    const nota_final = parseInt(document.getElementById('pdiNotaFinalSel')?.dataset.selected || '0');
+    const feedback   = (document.getElementById('pdiEncFeedback')?.value || '').trim();
+    if (!nota_final) { if (errEl) { errEl.textContent = 'Selecione a nota final (1-4).'; errEl.classList.add('show'); } return; }
+    if (!feedback)   { if (errEl) { errEl.textContent = 'Informe o feedback final.'; errEl.classList.add('show'); } return; }
+    const d = await callDiplomas({ action: 'pdi_nota_final', pdi_id: pdiId, nota_final, feedback_gestora: feedback });
+    if (d.error) { if (errEl) { errEl.textContent = d.error; errEl.classList.add('show'); } return; }
+    closePdiReview(); await loadPdiPainel();
+  }
+
+  async function saveCheckinFb(acompId) {
+    const val = (document.getElementById(`chkFb_${acompId}`)?.value || '').trim();
+    if (!val) return;
+    const d = await callDiplomas({ action: 'pdi_checkin_feedback', acompanhamento_id: acompId, feedback_gestora: val });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    if (pdiReviewData) await openPdiReview(pdiReviewData.id);
   }
 
   checkSession();

@@ -163,6 +163,8 @@ Deno.serve(async (req) => {
   const isTeacherAction = [
     'professora_logout', 'diploma_submit', 'meus_diplomas',
     'atestado_submit', 'meus_atestados',
+    'pdi_meu_status', 'pdi_autoavaliacao', 'pdi_metas_submit',
+    'pdi_meta_progresso', 'pdi_checkin',
   ].includes(action)
 
   if (isTeacherAction) {
@@ -220,6 +222,164 @@ Deno.serve(async (req) => {
       const { error } = await sb.from('atestados_professoras').insert({
         professora_id: prof.id, data_inicio, data_fim,
         motivo: motivo || null, arquivo_url: up.url, status: 'pendente',
+      })
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    // ── PDI: professora ─────────────────────────────────────
+
+    if (action === 'pdi_meu_status') {
+      // Retorna o ciclo ativo e o PDI da professora nesse ciclo
+      const { data: ciclo } = await sb
+        .from('pdi_ciclos').select('*').eq('ativo', true).maybeSingle()
+      if (!ciclo) return json({ ciclo: null, pdi: null })
+      const { data: pdi } = await sb
+        .from('pdis')
+        .select('*, pdi_competencias(*), pdi_metas(*), pdi_acompanhamentos(*)')
+        .eq('professora_id', prof.id)
+        .eq('ciclo_id', ciclo.id)
+        .maybeSingle()
+      return json({ ciclo, pdi: pdi ?? null })
+    }
+
+    if (action === 'pdi_autoavaliacao') {
+      // body: { competencias: [{ area, nota_auto, comentario }] }
+      const competencias: Array<{ area: string; nota_auto: number; comentario?: string }> =
+        body.competencias || []
+      const AREAS = [
+        'linguagem', 'metodologia', 'avaliacao',
+        'intercultural', 'colaboracao', 'inovacao', 'desenvolvimento',
+      ]
+      if (competencias.length !== 7 || !competencias.every(c => AREAS.includes(c.area)))
+        return json({ error: 'Informe as 7 áreas de competência.' }, 400)
+      for (const c of competencias)
+        if (!c.nota_auto || c.nota_auto < 1 || c.nota_auto > 4)
+          return json({ error: `Nota inválida para a área "${c.area}". Use 1 a 4.` }, 400)
+
+      // Obtém ciclo ativo
+      const { data: ciclo } = await sb
+        .from('pdi_ciclos').select('id').eq('ativo', true).maybeSingle()
+      if (!ciclo) return json({ error: 'Não há ciclo de PDI ativo no momento.' }, 400)
+
+      // Garante ou cria PDI rascunho
+      let pdiId: string
+      const { data: pdiExist } = await sb
+        .from('pdis').select('id, status').eq('professora_id', prof.id).eq('ciclo_id', ciclo.id).maybeSingle()
+      if (pdiExist) {
+        if (['em_andamento', 'encerrado'].includes(pdiExist.status))
+          return json({ error: 'PDI já aprovado. Contate a gestora para alterações.' }, 400)
+        pdiId = pdiExist.id
+      } else {
+        const { data: novo, error: errCria } = await sb
+          .from('pdis').insert({ professora_id: prof.id, ciclo_id: ciclo.id, status: 'rascunho' })
+          .select('id').single()
+        if (errCria) return json({ error: errCria.message }, 400)
+        pdiId = novo.id
+      }
+
+      // Upsert competências
+      for (const c of competencias) {
+        await sb.from('pdi_competencias').upsert(
+          { pdi_id: pdiId, area: c.area, nota_auto: c.nota_auto, comentario: c.comentario ?? null },
+          { onConflict: 'pdi_id,area' }
+        )
+      }
+      return json({ ok: true, pdi_id: pdiId })
+    }
+
+    if (action === 'pdi_metas_submit') {
+      // body: { pdi_id, metas: [{ descricao, indicador, prazo, area_vinculada? }] }
+      const { pdi_id } = body
+      const metas: Array<{ descricao: string; indicador: string; prazo: string; area_vinculada?: string }> =
+        body.metas || []
+      if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
+      if (metas.length < 1 || metas.length > 5)
+        return json({ error: 'Informe entre 1 e 5 metas.' }, 400)
+      for (const m of metas)
+        if (!m.descricao || !m.indicador || !m.prazo)
+          return json({ error: 'Todos os campos das metas são obrigatórios.' }, 400)
+
+      // Verifica que o PDI pertence à professora
+      const { data: pdi } = await sb
+        .from('pdis').select('id, status').eq('id', pdi_id).eq('professora_id', prof.id).maybeSingle()
+      if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
+      if (['em_andamento', 'encerrado'].includes(pdi.status))
+        return json({ error: 'PDI já aprovado. Contate a gestora para alterações.' }, 400)
+
+      // Remove metas antigas e insere novas
+      await sb.from('pdi_metas').delete().eq('pdi_id', pdi_id)
+      const { error } = await sb.from('pdi_metas').insert(
+        metas.map(m => ({
+          pdi_id,
+          descricao: m.descricao,
+          indicador: m.indicador,
+          prazo: m.prazo,
+          area_vinculada: m.area_vinculada ?? null,
+          status: 'pendente',
+          progressao_pct: 0,
+        }))
+      )
+      if (error) return json({ error: error.message }, 400)
+
+      // Avança status do PDI para aguardando_aprovacao
+      await sb.from('pdis').update({
+        status: 'aguardando_aprovacao',
+        submetido_em: new Date().toISOString(),
+      }).eq('id', pdi_id)
+
+      return json({ ok: true })
+    }
+
+    if (action === 'pdi_meta_progresso') {
+      // body: { meta_id, progressao_pct, status, evidencia_texto?, diploma_id? }
+      const { meta_id } = body
+      const progressao_pct: number = parseInt(body.progressao_pct ?? '0')
+      const status: string = body.status || ''
+      if (!meta_id) return json({ error: 'meta_id obrigatório.' }, 400)
+      if (progressao_pct < 0 || progressao_pct > 100)
+        return json({ error: 'Progresso deve ser entre 0 e 100.' }, 400)
+      const STATUS_VALIDOS = ['pendente', 'em_andamento', 'concluido', 'revisado']
+      if (!STATUS_VALIDOS.includes(status))
+        return json({ error: 'Status inválido.' }, 400)
+
+      // Verifica ownership
+      const { data: meta } = await sb
+        .from('pdi_metas')
+        .select('id, pdi_id, pdis!inner(professora_id)')
+        .eq('id', meta_id)
+        .maybeSingle()
+      if (!meta) return json({ error: 'Meta não encontrada.' }, 404)
+      const pdiOwner = (meta as Record<string, unknown> & { pdis: { professora_id: string } }).pdis
+      if (pdiOwner.professora_id !== prof.id)
+        return json({ error: 'Sem permissão.' }, 403)
+
+      const { error } = await sb.from('pdi_metas').update({
+        progressao_pct,
+        status,
+        evidencia_texto: body.evidencia_texto ?? null,
+        diploma_id: body.diploma_id ?? null,
+      }).eq('id', meta_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pdi_checkin') {
+      // body: { pdi_id, tipo, relato_professora }
+      const { pdi_id } = body
+      const tipo: string = body.tipo || ''
+      const relato: string = (body.relato_professora || '').trim()
+      if (!pdi_id || !tipo || !relato) return json({ error: 'Preencha todos os campos do check-in.' }, 400)
+      if (!['semestral', 'final'].includes(tipo)) return json({ error: 'Tipo inválido.' }, 400)
+
+      const { data: pdi } = await sb
+        .from('pdis').select('id, status').eq('id', pdi_id).eq('professora_id', prof.id).maybeSingle()
+      if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
+      if (pdi.status !== 'em_andamento')
+        return json({ error: 'Só é possível registrar check-in em PDIs em andamento.' }, 400)
+
+      const { error } = await sb.from('pdi_acompanhamentos').insert({
+        pdi_id, tipo, relato_professora: relato,
       })
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
@@ -292,6 +452,9 @@ Deno.serve(async (req) => {
     'diplomas_pendentes', 'diplomas_all', 'diploma_aprovar', 'diploma_rejeitar',
     'professora_set_senha',
     'secretarias_list', 'secretaria_create', 'secretaria_delete',
+    'pdi_ciclos_list', 'pdi_ciclo_criar', 'pdi_painel',
+    'pdi_prof_view', 'pdi_aprovar', 'pdi_rejeitar',
+    'pdi_competencias_gerente', 'pdi_nota_final', 'pdi_checkin_feedback',
   ].includes(action)
 
   if (isManagerAction) {
@@ -371,6 +534,155 @@ Deno.serve(async (req) => {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
       const { error } = await sb.from('secretarias').delete().eq('id', id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    // ── PDI: gestora ────────────────────────────────────────
+
+    if (action === 'pdi_ciclos_list') {
+      const { data } = await sb.from('pdi_ciclos').select('*').order('ano', { ascending: false })
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'pdi_ciclo_criar') {
+      const nome: string = (body.nome || '').trim()
+      const ano: number = parseInt(body.ano) || new Date().getFullYear()
+      const data_inicio: string = body.data_inicio || ''
+      const data_fim: string = body.data_fim || ''
+      if (!nome || !data_inicio || !data_fim) return json({ error: 'Preencha todos os campos.' }, 400)
+      // Desativa ciclos anteriores do mesmo ano
+      await sb.from('pdi_ciclos').update({ ativo: false }).eq('ano', ano)
+      const { error } = await sb.from('pdi_ciclos').insert({
+        nome, ano, data_inicio, data_fim, ativo: true, criado_por: ger.nome,
+      })
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pdi_painel') {
+      // Retorna overview de todas as professoras para um ciclo
+      // body: { ciclo_id? } — se omitido, usa o ciclo ativo
+      let cicloId: string = body.ciclo_id || ''
+      if (!cicloId) {
+        const { data: ciclo } = await sb.from('pdi_ciclos').select('id').eq('ativo', true).maybeSingle()
+        if (!ciclo) return json({ ciclo: null, professoras: [] })
+        cicloId = ciclo.id
+      }
+      const { data: ciclo } = await sb.from('pdi_ciclos').select('*').eq('id', cicloId).maybeSingle()
+      const { data: professoras } = await sb.from('professoras').select('id, nome, email').order('nome')
+      const { data: pdis } = await sb
+        .from('pdis').select('id, professora_id, status, submetido_em, aprovado_em, nota_final')
+        .eq('ciclo_id', cicloId)
+
+      const pdiMap: Record<string, typeof pdis[0]> = {}
+      for (const p of pdis ?? []) pdiMap[p.professora_id] = p
+
+      const resultado = (professoras ?? []).map(p => ({
+        professora: p,
+        pdi: pdiMap[p.id] ?? null,
+      }))
+      return json({ ciclo, professoras: resultado })
+    }
+
+    if (action === 'pdi_prof_view') {
+      // Retorna PDI completo de uma professora em um ciclo
+      const { pdi_id } = body
+      if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
+      const { data: pdi } = await sb
+        .from('pdis')
+        .select(`
+          *,
+          professoras(id, nome, email),
+          pdi_ciclos(id, nome, ano),
+          pdi_competencias(*),
+          pdi_metas(*),
+          pdi_acompanhamentos(*)
+        `)
+        .eq('id', pdi_id)
+        .maybeSingle()
+      if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
+      return json({ data: pdi })
+    }
+
+    if (action === 'pdi_aprovar') {
+      const { pdi_id, feedback } = body
+      if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
+      const { data: pdi } = await sb.from('pdis').select('id, status').eq('id', pdi_id).maybeSingle()
+      if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
+      if (pdi.status !== 'aguardando_aprovacao')
+        return json({ error: 'PDI não está aguardando aprovação.' }, 400)
+      const { error } = await sb.from('pdis').update({
+        status: 'em_andamento',
+        feedback_gestora: feedback ?? null,
+        aprovado_em: new Date().toISOString(),
+      }).eq('id', pdi_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pdi_rejeitar') {
+      // Devolve o PDI para rascunho com feedback
+      const { pdi_id, feedback } = body
+      if (!pdi_id || !feedback) return json({ error: 'Informe pdi_id e feedback.' }, 400)
+      const { data: pdi } = await sb.from('pdis').select('id, status').eq('id', pdi_id).maybeSingle()
+      if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
+      const { error } = await sb.from('pdis').update({
+        status: 'rascunho',
+        feedback_gestora: feedback,
+        submetido_em: null,
+      }).eq('id', pdi_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pdi_competencias_gerente') {
+      // body: { pdi_id, competencias: [{ area, nota_gestora, comentario? }] }
+      const { pdi_id } = body
+      const competencias: Array<{ area: string; nota_gestora: number; comentario?: string }> =
+        body.competencias || []
+      if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
+      for (const c of competencias) {
+        if (!c.nota_gestora || c.nota_gestora < 1 || c.nota_gestora > 4)
+          return json({ error: `Nota inválida para "${c.area}".` }, 400)
+        await sb.from('pdi_competencias').upsert(
+          { pdi_id, area: c.area, nota_gestora: c.nota_gestora, comentario: c.comentario ?? null },
+          { onConflict: 'pdi_id,area' }
+        )
+      }
+      return json({ ok: true })
+    }
+
+    if (action === 'pdi_nota_final') {
+      // body: { pdi_id, nota_final (1-4), feedback_gestora }
+      const { pdi_id } = body
+      const nota_final: number = parseInt(body.nota_final) || 0
+      const feedback: string = (body.feedback_gestora || '').trim()
+      if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
+      if (nota_final < 1 || nota_final > 4) return json({ error: 'Nota final deve ser entre 1 e 4.' }, 400)
+      if (!feedback) return json({ error: 'Informe o feedback final.' }, 400)
+      const { data: pdi } = await sb.from('pdis').select('id, status').eq('id', pdi_id).maybeSingle()
+      if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
+      if (pdi.status !== 'em_andamento')
+        return json({ error: 'Só é possível encerrar PDIs em andamento.' }, 400)
+      const { error } = await sb.from('pdis').update({
+        status: 'encerrado',
+        nota_final,
+        feedback_gestora: feedback,
+        encerrado_em: new Date().toISOString(),
+      }).eq('id', pdi_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pdi_checkin_feedback') {
+      // body: { acompanhamento_id, feedback_gestora }
+      const { acompanhamento_id, feedback_gestora } = body
+      if (!acompanhamento_id || !feedback_gestora)
+        return json({ error: 'Informe acompanhamento_id e feedback.' }, 400)
+      const { error } = await sb.from('pdi_acompanhamentos')
+        .update({ feedback_gestora })
+        .eq('id', acompanhamento_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
