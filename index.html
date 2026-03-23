@@ -766,12 +766,18 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
-    const r = await fetch(ACESSO, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-      body: JSON.stringify({ action: 'solicitar', nome, cpf, email, telefone, nome_crianca: nomeCrianca }),
-    });
-    const d = await r.json();
+    let d;
+    try {
+      const r = await fetch(ACESSO, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({ action: 'solicitar', nome, cpf, email, telefone, nome_crianca: nomeCrianca }),
+      });
+      d = await r.json();
+      if (!r.ok && !d.error) d.error = d.message || `Erro ${r.status}`;
+    } catch (e) {
+      d = { error: 'Falha de conexão. Tente novamente.' };
+    }
 
     btn.disabled = false;
     btn.innerHTML = 'Enviar Solicitação';
