@@ -30,12 +30,53 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Credenciais Inter não configuradas.' }), { status: 500, headers: CORS })
     }
 
-    const tokenBody = new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      scope: 'boleto-cobranca.read',
-      grant_type: 'client_credentials',
-    })
+    // Tenta múltiplos scopes — o Inter varia entre versões
+    const scopes = [
+      'cobranca.boleto.read cobranca.boleto.pdf',
+      'boleto-cobranca.read boleto-cobranca.write',
+      'cobranca.read',
+      'boleto-cobranca.read',
+    ]
+
+    let tokenBody: URLSearchParams | null = null
+    let tokenRes: Response | null = null
+    let lastErr = ''
+
+    for (const scope of scopes) {
+      console.log('Tentando scope:', scope)
+      tokenBody = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope,
+        grant_type: 'client_credentials',
+      })
+
+      const tOpts: any = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: tokenBody,
+      }
+      if (httpClient) tOpts.client = httpClient
+
+      tokenRes = await fetch(`${INTER_BASE}/oauth/v2/token`, tOpts)
+
+      if (tokenRes.ok) {
+        console.log('Scope aceito:', scope)
+        break
+      }
+
+      lastErr = await tokenRes.text()
+      console.log('Scope rejeitado:', scope, tokenRes.status, lastErr)
+      tokenRes = null
+    }
+
+    if (!tokenRes) {
+      return new Response(JSON.stringify({
+        error: 'Nenhum scope aceito pelo Inter. Verifique as permissões da aplicação.',
+        tentativas: scopes,
+        ultimo_erro: lastErr
+      }), { status: 502, headers: CORS })
+    }
 
     // Tenta com mTLS se disponível, senão sem
     let httpClient: any = undefined
