@@ -893,15 +893,18 @@ Deno.serve(async (req) => {
       return Math.round((qWords.filter(w => tSet.has(w)).length / qWords.length) * 100)
     }
 
-    const results: {
+    type PriceResult = {
       plataforma: string
       nome: string
       preco: number | null
       preco_fmt: string
-      url: string
+      url_produto: string
+      url_carrinho: string | null   // pre-filled cart link where available
+      item_id: string | null        // platform product ID (ML: "MLB...", Shopee: shopid/itemid)
       match: number
       tipo: 'produto' | 'busca'
-    }[] = []
+    }
+    const results: PriceResult[] = []
 
     // ── 1. Mercado Livre (free public API, real prices) ──────
     try {
@@ -913,6 +916,11 @@ Deno.serve(async (req) => {
         const mlData = await mlRes.json()
         for (const item of (mlData.results ?? []).slice(0, 5)) {
           const m = matchPct(query, item.title ?? '')
+          const mlId = item.id ?? null   // e.g. "MLB2912484956"
+          // ML checkout URL: pre-fills item in cart/checkout flow
+          const urlCarrinho = mlId
+            ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1`
+            : null
           results.push({
             plataforma: 'Mercado Livre',
             nome: item.title ?? '',
@@ -920,7 +928,9 @@ Deno.serve(async (req) => {
             preco_fmt: item.price != null
               ? `R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
               : '—',
-            url: item.permalink ?? `https://lista.mercadolivre.com.br/${encoded}`,
+            url_produto: item.permalink ?? `https://lista.mercadolivre.com.br/${encoded}`,
+            url_carrinho: urlCarrinho,
+            item_id: mlId,
             match: m,
             tipo: 'produto',
           })
@@ -946,14 +956,14 @@ Deno.serve(async (req) => {
         const items: any[] = shopeeData?.items ?? shopeeData?.data?.items ?? []
         for (const raw of items.slice(0, 5)) {
           const it = raw.item_basic ?? raw
-          const shopid  = it.shopid  ?? it.shop_id
-          const itemid  = it.itemid  ?? it.item_id
-          // Shopee prices are in smallest unit (divide by 100000)
+          const shopid = it.shopid ?? it.shop_id
+          const itemid = it.itemid ?? it.item_id
           const rawPrice = it.price_min ?? it.price ?? null
           const preco = rawPrice != null ? rawPrice / 100000 : null
-          const url = shopid && itemid
+          const urlProd = shopid && itemid
             ? `https://shopee.com.br/product/${shopid}/${itemid}`
             : `https://shopee.com.br/search?keyword=${encoded}`
+          // Shopee has no public add-to-cart URL — product page is the entry point
           const m = matchPct(query, it.name ?? '')
           results.push({
             plataforma: 'Shopee',
@@ -962,7 +972,9 @@ Deno.serve(async (req) => {
             preco_fmt: preco != null
               ? `R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
               : '—',
-            url,
+            url_produto: urlProd,
+            url_carrinho: null,
+            item_id: shopid && itemid ? `${shopid}/${itemid}` : null,
             match: m,
             tipo: 'produto',
           })
@@ -976,19 +988,99 @@ Deno.serve(async (req) => {
       nome: `Buscar "${query}" na Amazon Brasil`,
       preco: null,
       preco_fmt: 'Ver na Amazon',
-      url: `https://www.amazon.com.br/s?k=${encoded}`,
+      url_produto: `https://www.amazon.com.br/s?k=${encoded}`,
+      url_carrinho: null,
+      item_id: null,
       match: 0,
       tipo: 'busca',
     })
 
-    // Sort: real products by price asc (nulls last), then search links
+    // Sort: cheapest real products first, search links last
     const produtos = results
       .filter(r => r.tipo === 'produto' && r.preco != null)
       .sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0))
     const semPreco = results.filter(r => r.tipo === 'produto' && r.preco == null)
-    const links   = results.filter(r => r.tipo === 'busca')
+    const links    = results.filter(r => r.tipo === 'busca')
 
     return json({ data: [...produtos, ...semPreco, ...links], query })
+  }
+
+  // ━━ ALMOXARIFADO: PURCHASE TRACKING (gerente only) ━━━━━━━━
+
+  const isAlmCompraAction = [
+    'alm_encaminhar_compra', 'alm_compras_pendentes',
+    'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
+  ].includes(action)
+
+  if (isAlmCompraAction) {
+    const gerente = await getGerente(sb, token)
+    if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
+    // Record items selected for purchase when approving a requisition
+    if (action === 'alm_encaminhar_compra') {
+      // itens: [{insumo_nome, insumo_id, qty, plataforma, produto_nome, preco_unit,
+      //          match_pct, url_produto, url_carrinho}]
+      const { requisicao_id, itens } = body
+      if (!requisicao_id || !itens?.length)
+        return json({ error: 'requisicao_id e itens são obrigatórios.' }, 400)
+      const rows = (itens as any[]).map((it: any) => ({
+        requisicao_id,
+        insumo_nome:     it.insumo_nome,
+        insumo_id:       it.insumo_id   || null,
+        qty:             it.qty         || 1,
+        plataforma:      it.plataforma,
+        produto_nome:    it.produto_nome || null,
+        preco_unit:      it.preco_unit  ?? null,
+        preco_total:     it.preco_unit != null ? it.preco_unit * (it.qty || 1) : null,
+        match_pct:       it.match_pct   ?? null,
+        url_produto:     it.url_produto || null,
+        url_carrinho:    it.url_carrinho|| null,
+        encaminhado_por: gerente.nome,
+      }))
+      const { error } = await sb.from('alm_compras').insert(rows)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true, encaminhados: rows.length })
+    }
+
+    if (action === 'alm_compras_pendentes') {
+      const { data } = await sb
+        .from('alm_compras')
+        .select('*, alm_requisicoes(mes, professoras(nome), alm_turmas(nome,cor))')
+        .eq('status', 'pendente')
+        .order('encaminhado_em', { ascending: false })
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_compras_todas') {
+      const status: string = body.status || ''
+      let q = sb.from('alm_compras')
+        .select('*, alm_requisicoes(mes, professoras(nome), alm_turmas(nome,cor))')
+        .order('encaminhado_em', { ascending: false })
+        .limit(200)
+      if (status) q = q.eq('status', status)
+      const { data } = await q
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_marcar_comprado') {
+      const { ids } = body   // array of alm_compras IDs
+      if (!ids?.length) return json({ error: 'IDs não informados.' }, 400)
+      const { error } = await sb.from('alm_compras').update({
+        status:      'comprado',
+        comprado_em:  new Date().toISOString(),
+        comprado_por: gerente.nome,
+      }).in('id', ids)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_cancelar_compra') {
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { error } = await sb.from('alm_compras').update({ status: 'cancelado' }).eq('id', id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
   }
 
   // ━━ ALMOXARIFADO: TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
