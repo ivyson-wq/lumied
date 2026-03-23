@@ -237,7 +237,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('pdiGestao',this)"><span class="ic">📊</span> Gestão de PDI</a>
       <a class="nav-item" href="professora.html" target="_blank"><span class="ic">🔗</span> Acessar Portal Professora</a>
       <div class="sb-label">Almoxarifado</div>
-      <a class="nav-item" href="#" onclick="showPanel('almox',this)"><span class="ic">📦</span> Gerenciar Almoxarifado</a>
+      <a class="nav-item" href="#" onclick="showPanel('almReqs',this)"><span class="ic">📋</span> Requisições</a>
+      <a class="nav-item" href="#" onclick="showPanel('almCatalogo',this)"><span class="ic">📦</span> Catálogo de Insumos</a>
+      <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Turmas e Orçamentos</a>
+      <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
@@ -705,108 +708,97 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </div>
 
       <!-- ALMOXARIFADO -->
-      <div id="panelAlmox" class="panel">
-        <!-- Tabs -->
-        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
-          <button class="pp-tab active" id="almTabReqs" onclick="almShowTab('reqs')">📋 Requisições <span class="count-badge" id="almReqsPendCount">0</span></button>
-          <button class="pp-tab" id="almTabCatalogo" onclick="almShowTab('catalogo')">📦 Catálogo de Insumos</button>
-          <button class="pp-tab" id="almTabTurmas" onclick="almShowTab('turmas')">🏫 Turmas e Orçamentos</button>
-          <button class="pp-tab" id="almTabCompras" onclick="almShowTab('compras')">🛒 Compras</button>
+      <!-- ALMOXARIFADO: REQUISIÇÕES -->
+      <div id="panelAlmReqs" class="panel">
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <select id="almReqsFiltro" onchange="almLoadReqs()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+            <option value="pendente">Pendentes</option>
+            <option value="all">Todas</option>
+            <option value="aprovado">Aprovadas</option>
+            <option value="rejeitado">Rejeitadas</option>
+          </select>
+          <span style="font-size:12px;color:var(--muted);" id="almReqsInfo"></span>
         </div>
+        <div id="almReqsWrap"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">⏳ Carregando…</div></div>
+      </div>
 
-        <!-- REQUISIÇÕES -->
-        <div id="almSecReqs">
-          <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
-            <select id="almReqsFiltro" onchange="almRenderReqs()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
-              <option value="pendente">Pendentes</option>
-              <option value="all">Todas</option>
-              <option value="aprovado">Aprovadas</option>
-              <option value="rejeitado">Rejeitadas</option>
-            </select>
-            <span style="font-size:12px;color:var(--muted);" id="almReqsInfo"></span>
+      <!-- ALMOXARIFADO: CATÁLOGO -->
+      <div id="panelAlmCatalogo" class="panel">
+        <div class="two-col">
+          <div>
+            <div class="sec-title" style="margin-bottom:14px;">Insumos Cadastrados <span class="count-badge" id="almInsumosCount">0</span></div>
+            <div class="list-card" id="almInsumosList"></div>
           </div>
-          <div id="almReqsWrap"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">⏳ Carregando…</div></div>
-        </div>
-
-        <!-- CATÁLOGO -->
-        <div id="almSecCatalogo" style="display:none;">
-          <div class="two-col">
-            <div>
-              <div class="sec-title" style="margin-bottom:14px;">Insumos Cadastrados <span class="count-badge" id="almInsumosCount">0</span></div>
-              <div class="list-card" id="almInsumosList"></div>
-            </div>
-            <div>
-              <div class="form-card">
-                <h3 id="almInsumoFormTitle">➕ Novo Insumo</h3>
-                <input type="hidden" id="almInsumoEditId">
-                <div class="ff"><label>Nome</label><input type="text" id="almInsumoNome" placeholder="Ex: Papel A4"></div>
-                <div class="ff"><label>Categoria</label><input type="text" id="almInsumoCat" placeholder="Ex: Papelaria"></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                  <div class="ff" style="margin:0;"><label>Unidade</label><input type="text" id="almInsumoUni" placeholder="unidade" value="unidade"></div>
-                  <div class="ff" style="margin:0;"><label>Preço unit. (R$)</label><input type="number" id="almInsumoPreco" step="0.01" min="0" placeholder="0.00"></div>
-                </div>
-                <div class="ff"><label>Estoque</label><input type="number" id="almInsumoEstoque" min="0" value="0"></div>
-                <button class="btn-create" onclick="almSalvarInsumo()">Salvar Insumo</button>
-                <div class="f-alert error" id="almInsumoErr"></div>
-                <div class="f-alert success" id="almInsumoOk"></div>
+          <div>
+            <div class="form-card">
+              <h3 id="almInsumoFormTitle">➕ Novo Insumo</h3>
+              <input type="hidden" id="almInsumoEditId">
+              <div class="ff"><label>Nome</label><input type="text" id="almInsumoNome" placeholder="Ex: Papel A4"></div>
+              <div class="ff"><label>Categoria</label><input type="text" id="almInsumoCat" placeholder="Ex: Papelaria"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="ff" style="margin:0;"><label>Unidade</label><input type="text" id="almInsumoUni" placeholder="unidade" value="unidade"></div>
+                <div class="ff" style="margin:0;"><label>Preço unit. (R$)</label><input type="number" id="almInsumoPreco" step="0.01" min="0" placeholder="0.00"></div>
               </div>
+              <div class="ff"><label>Estoque</label><input type="number" id="almInsumoEstoque" min="0" value="0"></div>
+              <button class="btn-create" onclick="almSalvarInsumo()">Salvar Insumo</button>
+              <div class="f-alert error" id="almInsumoErr"></div>
+              <div class="f-alert success" id="almInsumoOk"></div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- TURMAS E ORÇAMENTOS -->
-        <div id="almSecTurmas" style="display:none;">
-          <div class="two-col">
-            <div>
-              <div class="sec-title" style="margin-bottom:14px;">Turmas <span class="count-badge" id="almTurmasCount">0</span></div>
-              <div class="list-card" id="almTurmasList"></div>
+      <!-- ALMOXARIFADO: TURMAS E ORÇAMENTOS -->
+      <div id="panelAlmTurmas" class="panel">
+        <div class="two-col">
+          <div>
+            <div class="sec-title" style="margin-bottom:14px;">Turmas <span class="count-badge" id="almTurmasCount">0</span></div>
+            <div class="list-card" id="almTurmasList"></div>
 
-              <div style="margin-top:20px;">
-                <div class="sec-title" style="margin-bottom:14px;">Vincular Professora → Turma</div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <select id="almProfSelect" style="flex:1;min-width:150px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></select>
-                  <select id="almProfTurmaSelect" style="flex:1;min-width:150px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></select>
-                  <button onclick="almVincularProf()" style="padding:8px 16px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Vincular</button>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div class="form-card" style="margin-bottom:16px;">
-                <h3>➕ Nova Turma</h3>
-                <div class="ff"><label>Nome</label><input type="text" id="almTurmaNomeNew" placeholder="Ex: Turma A"></div>
-                <div class="ff"><label>Cor</label><input type="color" id="almTurmaCorNew" value="#3B82F6"></div>
-                <button class="btn-create" onclick="almSalvarTurma()">Criar Turma</button>
-                <div class="f-alert error" id="almTurmaErr"></div>
-                <div class="f-alert success" id="almTurmaOk"></div>
-              </div>
-              <div class="form-card">
-                <h3>💰 Orçamentos Mensais</h3>
-                <div class="ff"><label>Mês</label><input type="month" id="almOrcMes" onchange="almLoadOrcamentos()"></div>
-                <div id="almOrcList"></div>
+            <div style="margin-top:20px;">
+              <div class="sec-title" style="margin-bottom:14px;">Vincular Professora → Turma</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <select id="almProfSelect" style="flex:1;min-width:150px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></select>
+                <select id="almProfTurmaSelect" style="flex:1;min-width:150px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></select>
+                <button onclick="almVincularProf()" style="padding:8px 16px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Vincular</button>
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- COMPRAS -->
-        <div id="almSecCompras" style="display:none;">
-          <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-            <select id="almComprasFiltro" onchange="almLoadCompras()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
-              <option value="pendente">Pendentes</option>
-              <option value="">Todas</option>
-              <option value="comprado">Compradas</option>
-              <option value="cancelado">Canceladas</option>
-            </select>
-            <button onclick="almMarcarComprado()" style="padding:8px 16px;background:#065f46;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Marcar selecionadas como compradas</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th><input type="checkbox" id="almComprasCheckAll" onchange="almToggleAllCompras()"></th><th>Insumo</th><th>Plataforma</th><th>Qtd</th><th>Preço Unit.</th><th>Total</th><th>Professora</th><th>Status</th><th></th></tr></thead>
-              <tbody id="almComprasBody"><tr><td colspan="9" class="empty-state">⏳ Carregando…</td></tr></tbody>
-            </table>
+          <div>
+            <div class="form-card" style="margin-bottom:16px;">
+              <h3>➕ Nova Turma</h3>
+              <div class="ff"><label>Nome</label><input type="text" id="almTurmaNomeNew" placeholder="Ex: Turma A"></div>
+              <div class="ff"><label>Cor</label><input type="color" id="almTurmaCorNew" value="#3B82F6"></div>
+              <button class="btn-create" onclick="almSalvarTurma()">Criar Turma</button>
+              <div class="f-alert error" id="almTurmaErr"></div>
+              <div class="f-alert success" id="almTurmaOk"></div>
+            </div>
+            <div class="form-card">
+              <h3>💰 Orçamentos Mensais</h3>
+              <div class="ff"><label>Mês</label><input type="month" id="almOrcMes" onchange="almLoadOrcamentos()"></div>
+              <div id="almOrcList"></div>
+            </div>
           </div>
         </div>
+      </div>
 
+      <!-- ALMOXARIFADO: COMPRAS -->
+      <div id="panelAlmCompras" class="panel">
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <select id="almComprasFiltro" onchange="almLoadCompras()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+            <option value="pendente">Pendentes</option>
+            <option value="">Todas</option>
+            <option value="comprado">Compradas</option>
+            <option value="cancelado">Canceladas</option>
+          </select>
+          <button onclick="almMarcarComprado()" style="padding:8px 16px;background:#065f46;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Marcar selecionadas como compradas</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th><input type="checkbox" id="almComprasCheckAll" onchange="almToggleAllCompras()"></th><th>Insumo</th><th>Plataforma</th><th>Qtd</th><th>Preço Unit.</th><th>Total</th><th>Professora</th><th>Status</th><th></th></tr></thead>
+            <tbody id="almComprasBody"><tr><td colspan="9" class="empty-state">⏳ Carregando…</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
     </div>
@@ -970,7 +962,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',almox:'Gerenciar Almoxarifado',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',almReqs:'Requisições',almCatalogo:'Catálogo de Insumos',almTurmas:'Turmas e Orçamentos',almCompras:'Compras',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -984,7 +976,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='acesso')      loadAcesso();
     if(id==='portalProf')  loadPortalProf();
     if(id==='pdiGestao')   loadPdiGestao();
-    if(id==='almox')       loadAlmox();
+    if(id==='almReqs')     almLoadReqs();
+    if(id==='almCatalogo') almLoadInsumos();
+    if(id==='almTurmas')   almLoadTurmasPage();
+    if(id==='almCompras')  almLoadCompras();
     return false;
   }
 
@@ -2024,20 +2019,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   // ── ALMOXARIFADO (Gerente) ───────────────────────────
   let almReqsData=[], almInsumosData=[], almTurmasData=[], almComprasData=[];
 
-  function almShowTab(tab) {
-    ['reqs','catalogo','turmas','compras'].forEach(t => {
-      const sec = document.getElementById('almSec'+t[0].toUpperCase()+t.slice(1));
-      const btn = document.getElementById('almTab'+t[0].toUpperCase()+t.slice(1));
-      if (sec) sec.style.display = t===tab?'block':'none';
-      if (btn) btn.classList.toggle('active', t===tab);
-    });
-    if (tab==='compras') almLoadCompras();
-  }
-
-  async function loadAlmox() {
+  async function almLoadTurmasPage() {
     const mes = new Date().toISOString().slice(0,7);
     document.getElementById('almOrcMes').value = mes;
-    await Promise.all([almLoadReqs(), almLoadInsumos(), almLoadTurmas(), almLoadOrcamentos()]);
+    await Promise.all([almLoadTurmas(), almLoadOrcamentos()]);
   }
 
   // ── Requisições ──
