@@ -403,6 +403,20 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div class="f-alert error"   id="ativErr"></div>
               <div class="f-alert success" id="ativOk"></div>
             </div>
+
+            <div class="form-card" style="margin-top:16px;">
+              <h3>🍽️ Configuração do Almoço</h3>
+              <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+                Defina o preço padrão do almoço. Cada turma pode ter seu próprio preço ao editar a atividade.
+              </p>
+              <div class="ff">
+                <label>Preço padrão do almoço (R$/dia)</label>
+                <input type="number" id="almocoPreco" placeholder="50.00" step="0.01" min="0">
+              </div>
+              <button class="btn-create" onclick="saveAlmocoPreco()">Salvar Preço</button>
+              <div class="f-alert error"   id="almocoErr"></div>
+              <div class="f-alert success" id="almocoOk"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -423,19 +437,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <button class="btn-create" onclick="createProfessora()">Adicionar Professora</button>
               <div class="f-alert error"   id="profErr"></div>
               <div class="f-alert success" id="profOk"></div>
-            </div>
-            <div class="form-card">
-              <h3>🍽️ Configuração do Almoço</h3>
-              <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
-                Defina o preço padrão do almoço. Cada turma pode ter seu próprio preço ao editar a atividade.
-              </p>
-              <div class="ff">
-                <label>Preço padrão do almoço (R$/dia)</label>
-                <input type="number" id="almocoPreco" placeholder="50.00" step="0.01" min="0">
-              </div>
-              <button class="btn-create" onclick="saveAlmocoPreco()">Salvar Preço</button>
-              <div class="f-alert error"   id="almocoErr"></div>
-              <div class="f-alert success" id="almocoOk"></div>
             </div>
           </div>
         </div>
@@ -730,7 +731,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -993,7 +994,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── ATIVIDADES ────────────────────────────────────────
   async function loadAtividadesPanel() {
-    await Promise.all([ loadAtividadesCRUD(), loadInscricoesAtividades() ]);
+    await Promise.all([ loadAtividadesCRUD(), loadInscricoesAtividades(), loadAlmocoPreco() ]);
+  }
+
+  async function loadAlmocoPreco() {
+    const almocoConf = await api({ action:'config_get', chave:'almoco_preco' });
+    document.getElementById('almocoPreco').value = almocoConf?.valor || '50.00';
   }
 
   async function loadAtividadesCRUD() {
@@ -1775,10 +1781,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── PROFESSORAS ───────────────────────────────────────
   async function loadProfessoras() {
-    const [profs, almocoConf] = await Promise.all([
-      api({ action:'professoras_list' }),
-      api({ action:'config_get', chave:'almoco_preco' })
-    ]);
+    const profs = await api({ action:'professoras_list' });
     const list = Array.isArray(profs) ? profs : [];
     document.getElementById('profsCount').textContent = list.length;
     const el = document.getElementById('profsList');
@@ -1794,8 +1797,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <button class="action-btn del" onclick="deleteProfessora('${p.id}','${esc(p.nome)}')">🗑</button>
         </div>`).join('');
     }
-    // Preenche preço do almoço
-    document.getElementById('almocoPreco').value = almocoConf?.valor || '50.00';
   }
 
   async function createProfessora() {
