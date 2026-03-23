@@ -22,7 +22,6 @@ Deno.serve(async (req) => {
 
     console.log('Sync boletos para CPF:', cpf)
 
-    // 1. Autenticar na API do Inter via OAuth
     const clientId = Deno.env.get('INTER_CLIENT_ID')
     const clientSecret = Deno.env.get('INTER_CLIENT_SECRET')
 
@@ -30,7 +29,20 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Credenciais Inter não configuradas.' }), { status: 500, headers: CORS })
     }
 
-    // Tenta múltiplos scopes — o Inter varia entre versões
+    // ── mTLS (opcional) ──
+    let httpClient: any = undefined
+    try {
+      const cert = Deno.env.get('INTER_CERT')
+      const key = Deno.env.get('INTER_KEY')
+      if (cert && key) {
+        httpClient = Deno.createHttpClient({ certChain: cert, privateKey: key })
+        console.log('mTLS ativo')
+      }
+    } catch (e) {
+      console.log('mTLS indisponível:', String(e))
+    }
+
+    // ── OAuth: tenta múltiplos scopes ──
     const scopes = [
       'cobranca.boleto.read cobranca.boleto.pdf',
       'boleto-cobranca.read boleto-cobranca.write',
@@ -38,93 +50,41 @@ Deno.serve(async (req) => {
       'boleto-cobranca.read',
     ]
 
-    let tokenBody: URLSearchParams | null = null
-    let tokenRes: Response | null = null
-    let lastErr = ''
+    let accessToken = ''
+    let scopeUsado = ''
 
     for (const scope of scopes) {
       console.log('Tentando scope:', scope)
-      tokenBody = new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        scope,
-        grant_type: 'client_credentials',
-      })
 
-      const tOpts: any = {
+      const fetchOpts: any = {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: tokenBody,
+        body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: 'client_credentials' }),
       }
-      if (httpClient) tOpts.client = httpClient
+      if (httpClient) fetchOpts.client = httpClient
 
-      tokenRes = await fetch(`${INTER_BASE}/oauth/v2/token`, tOpts)
+      const res = await fetch(`${INTER_BASE}/oauth/v2/token`, fetchOpts)
 
-      if (tokenRes.ok) {
+      if (res.ok) {
+        const data = await res.json()
+        accessToken = data.access_token
+        scopeUsado = scope
         console.log('Scope aceito:', scope)
         break
       }
 
-      lastErr = await tokenRes.text()
-      console.log('Scope rejeitado:', scope, tokenRes.status, lastErr)
-      tokenRes = null
+      const errText = await res.text()
+      console.log('Scope rejeitado:', scope, res.status, errText)
     }
 
-    if (!tokenRes) {
+    if (!accessToken) {
       return new Response(JSON.stringify({
-        error: 'Nenhum scope aceito pelo Inter. Verifique as permissões da aplicação.',
-        tentativas: scopes,
-        ultimo_erro: lastErr
+        error: 'Nenhum scope aceito pelo Inter.',
+        scopes_tentados: scopes,
       }), { status: 502, headers: CORS })
     }
 
-    // Tenta com mTLS se disponível, senão sem
-    let httpClient: any = undefined
-    try {
-      const cert = Deno.env.get('INTER_CERT')
-      const key = Deno.env.get('INTER_KEY')
-      if (cert && key) {
-        console.log('INTER_CERT length:', cert.length, 'starts with:', cert.substring(0, 30))
-        console.log('INTER_KEY length:', key.length, 'starts with:', key.substring(0, 30))
-        httpClient = Deno.createHttpClient({ certChain: cert, privateKey: key })
-        console.log('mTLS client criado com sucesso')
-      } else {
-        console.log('INTER_CERT ou INTER_KEY não encontrados')
-      }
-    } catch (e) {
-      console.error('mTLS falhou:', String(e))
-    }
-
-    console.log('Autenticando no Inter...')
-    console.log('client_id:', clientId?.substring(0, 8) + '...')
-    console.log('scope: boleto-cobranca.read')
-
-    const tokenFetchOpts: any = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: tokenBody,
-    }
-    if (httpClient) tokenFetchOpts.client = httpClient
-
-    const tokenRes = await fetch(`${INTER_BASE}/oauth/v2/token`, tokenFetchOpts)
-
-    if (!tokenRes.ok) {
-      const errText = await tokenRes.text()
-      const errHeaders: Record<string, string> = {}
-      tokenRes.headers.forEach((v, k) => errHeaders[k] = v)
-      console.error('Auth Inter falhou:', tokenRes.status, errText)
-      console.error('Response headers:', JSON.stringify(errHeaders))
-      return new Response(JSON.stringify({
-        error: 'Autenticação Inter falhou: ' + tokenRes.status,
-        detail: errText || 'Sem detalhe',
-        headers: errHeaders
-      }), { status: 502, headers: CORS })
-    }
-
-    const { access_token } = await tokenRes.json()
-    console.log('Token obtido com sucesso')
-
-    // 2. Buscar boletos dos últimos 12 meses
+    // ── Buscar boletos (últimos 12 meses) ──
     const hoje = new Date()
     const inicio = new Date(hoje)
     inicio.setMonth(inicio.getMonth() - 12)
@@ -134,31 +94,27 @@ Deno.serve(async (req) => {
     const url = `${INTER_BASE}/cobranca/v3/cobrancas?cpfCnpj=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&itensPorPagina=100`
     console.log('Buscando boletos:', url)
 
-    const boletosRes = await fetch(url, {
-      headers: { Authorization: `Bearer ${access_token}` },
-      ...fetchOpts,
-    })
+    const bFetchOpts: any = { headers: { Authorization: `Bearer ${accessToken}` } }
+    if (httpClient) bFetchOpts.client = httpClient
+
+    const boletosRes = await fetch(url, bFetchOpts)
 
     if (!boletosRes.ok) {
       const errText = await boletosRes.text()
       console.error('Consulta boletos falhou:', boletosRes.status, errText)
       if (boletosRes.status === 404) {
-        return new Response(JSON.stringify({ ok: true, sincronizados: 0, total: 0, msg: 'Nenhum boleto encontrado na API do Inter.' }), { headers: CORS })
+        return new Response(JSON.stringify({ ok: true, sincronizados: 0, total: 0 }), { headers: CORS })
       }
       return new Response(JSON.stringify({ error: 'Consulta Inter falhou: ' + boletosRes.status, detail: errText }), { status: 502, headers: CORS })
     }
 
-    const data = await boletosRes.json()
-    const cobrancas = data.cobrancas ?? data.content ?? data ?? []
+    const resData = await boletosRes.json()
+    const cobrancas = resData.cobrancas ?? resData.content ?? resData ?? []
     const lista = Array.isArray(cobrancas) ? cobrancas : []
     console.log('Inter retornou', lista.length, 'boleto(s)')
 
-    // 3. Sincronizar com o banco
-    const sb = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
-
+    // ── Sincronizar com Supabase ──
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
     const cpfFmt = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
     let sincronizados = 0
 
@@ -166,68 +122,49 @@ Deno.serve(async (req) => {
       const nossoNumero = bol.nossoNumero || bol.codigoBarras || ''
       if (!nossoNumero) continue
 
-      // Verifica se já existe
-      const { data: existe } = await sb
-        .from('boletos')
-        .select('id, situacao')
-        .eq('nosso_numero', nossoNumero)
-        .maybeSingle()
-
+      const { data: existe } = await sb.from('boletos').select('id, situacao').eq('nosso_numero', nossoNumero).maybeSingle()
       const situacao = bol.situacao || 'EMITIDO'
 
       if (existe) {
-        // Atualiza situação se mudou
-        if (existe.situacao !== situacao) {
-          await sb.from('boletos').update({ situacao }).eq('id', existe.id)
-        }
+        if (existe.situacao !== situacao) await sb.from('boletos').update({ situacao }).eq('id', existe.id)
         continue
       }
 
-      // Tenta baixar PDF
+      // PDF
       let pdfUrl: string | null = null
       try {
-        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, {
-          headers: { Authorization: `Bearer ${access_token}` },
-          ...fetchOpts,
-        })
+        const pOpts: any = { headers: { Authorization: `Bearer ${accessToken}` } }
+        if (httpClient) pOpts.client = httpClient
+        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, pOpts)
         if (pdfRes.ok) {
           const pdfData = await pdfRes.json()
           if (pdfData.pdf) {
             const binary = atob(pdfData.pdf)
             const bytes = new Uint8Array(binary.length)
             for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-
             await sb.storage.createBucket('boletos', { public: true }).catch(() => {})
             const fileName = `${cpf}/${nossoNumero}.pdf`
-            const { error: upErr } = await sb.storage
-              .from('boletos')
-              .upload(fileName, bytes, { contentType: 'application/pdf', upsert: true })
+            const { error: upErr } = await sb.storage.from('boletos').upload(fileName, bytes, { contentType: 'application/pdf', upsert: true })
             if (!upErr) {
               const { data: urlData } = sb.storage.from('boletos').getPublicUrl(fileName)
               pdfUrl = urlData.publicUrl
             }
           }
         }
-      } catch (e) {
-        console.warn('PDF download falhou para', nossoNumero, e)
-      }
+      } catch (e) { console.warn('PDF falhou:', nossoNumero, e) }
 
-      // Insere no banco
       const { error: dbErr } = await sb.from('boletos').insert({
-        cpf: cpfFmt,
-        nosso_numero: nossoNumero,
+        cpf: cpfFmt, nosso_numero: nossoNumero,
         valor: bol.valorNominal ?? bol.valor ?? 0,
         vencimento: bol.dataVencimento ?? null,
         linha_digitavel: bol.linhaDigitavel ?? '',
-        situacao,
-        pdf_url: pdfUrl,
+        situacao, pdf_url: pdfUrl,
       })
-
       if (!dbErr) sincronizados++
       else console.error('Insert falhou:', dbErr.message)
     }
 
-    console.log('Sync concluído:', sincronizados, 'novos,', lista.length, 'total')
+    console.log('Sync OK:', sincronizados, 'novos,', lista.length, 'total')
     return new Response(JSON.stringify({ ok: true, sincronizados, total: lista.length }), { headers: CORS })
 
   } catch (err) {
