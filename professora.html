@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear — Portal das Professoras</title>
+<meta name="theme-color" content="#1c1712">
+<link rel="icon" href="/icon-apple.png">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
+
+/* LOGIN */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sb);position:relative;overflow:hidden;}
+#loginScreen::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+.login-card{background:var(--white);border-radius:16px;padding:48px 44px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:popIn .4s cubic-bezier(.22,.8,.44,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.login-logo{text-align:center;margin-bottom:28px;}.login-logo .leaf{font-size:40px;}
+.login-logo h1{font-family:'Lora',serif;font-size:18px;margin-top:8px;color:var(--text);}
+.login-logo span{font-size:12px;color:var(--muted);}
+.login-card h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:22px;text-align:center;}
+.lf{margin-bottom:16px;}.lf label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px;}
+.lf input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
+.lf input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.login-btn{width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s;box-shadow:0 4px 16px rgba(200,16,46,.3);}
+.login-btn:hover{background:var(--red-dark);}.login-btn:disabled{opacity:.55;cursor:not-allowed;}
+#loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
+.login-hint{margin-top:16px;text-align:center;font-size:12px;color:var(--muted);}
+
+/* APP */
+#appShell{display:none;min-height:100vh;}
+.topbar{background:var(--sb);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-brand{display:flex;align-items:center;gap:12px;}
+.topbar-brand .leaf{font-size:20px;}
+.topbar-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;line-height:1.2;}
+.topbar-brand span{font-size:11px;color:rgba(255,255,255,.4);}
+.topbar-user{display:flex;align-items:center;gap:12px;}
+.user-name{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
+.logout-btn{padding:7px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:7px;color:rgba(255,255,255,.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;}
+.logout-btn:hover{background:rgba(255,255,255,.14);color:#fff;}
+
+.content{max-width:960px;margin:0 auto;padding:32px 24px 64px;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
+.stat-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:22px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac,var(--red));border-radius:14px 14px 0 0;}
+.stat-card[data-c="pts"]{--ac:var(--gold);}
+.stat-card[data-c="rank"]{--ac:var(--blue);}
+.stat-card[data-c="diplomas"]{--ac:var(--green);}
+.stat-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
+.stat-value{font-family:'Lora',serif;font-size:36px;font-weight:700;color:var(--text);line-height:1;}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* SECTION */
+.sec-title{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.count-badge{background:var(--red-light);color:var(--red);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:2px 10px;border-radius:100px;}
+
+/* RANKING TABLE */
+.ranking-wrap{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:32px;}
+.ranking-row{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid #f0ece6;transition:background .15s;}
+.ranking-row:last-child{border-bottom:none;}
+.ranking-row:hover{background:#faf8f5;}
+.ranking-row.me{background:rgba(200,16,46,.04);border-left:3px solid var(--red);}
+.rank-pos{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-weight:700;font-size:14px;flex-shrink:0;}
+.rank-pos.p1{background:#FFD700;color:#7a5c00;}
+.rank-pos.p2{background:#C0C0C0;color:#444;}
+.rank-pos.p3{background:#CD7F32;color:#fff;}
+.rank-pos.other{background:#f0ece6;color:var(--muted);}
+.rank-nome{flex:1;font-size:14px;font-weight:600;}
+.rank-pts{font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--gold);}
+.rank-pts-label{font-size:11px;color:var(--muted);margin-top:1px;text-align:right;}
+.me-badge{font-size:10px;font-weight:600;background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:100px;border:1px solid rgba(200,16,46,.2);}
+
+/* UPLOAD ZONE */
+.upload-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:32px;}
+.upload-card h3{font-family:'Lora',serif;font-size:15px;font-weight:600;margin-bottom:18px;}
+.ff{margin-bottom:14px;}
+.ff label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
+.ff input,.ff select{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fdfbf8;outline:none;transition:border-color .2s;}
+.ff input:focus,.ff select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.ff .hint{font-size:11px;color:var(--muted);margin-top:4px;}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:#fdfbf8;margin-bottom:14px;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--red);background:var(--red-light);}
+.upload-zone .uz-icon{font-size:28px;margin-bottom:6px;}
+.upload-zone p{font-size:13px;color:var(--muted);margin-bottom:2px;}
+.upload-zone small{font-size:11px;color:var(--muted);}
+.file-name{font-size:12px;color:var(--text);font-weight:500;margin-bottom:12px;display:none;padding:8px 12px;background:#f0ece6;border-radius:6px;}
+.upload-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-bottom:12px;overflow:hidden;display:none;}
+.upload-bar{height:100%;background:var(--red);border-radius:2px;width:0%;transition:width .3s;}
+.btn-submit{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-submit:hover{background:var(--red-dark);}.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+.f-alert{padding:10px 13px;border-radius:7px;font-size:12px;margin-top:12px;display:none;}
+.f-alert.error{background:#fdf0f2;color:#a00d24;border:1px solid rgba(200,16,46,.2);}
+.f-alert.success{background:#edf7f0;color:#1a5c2a;border:1px solid rgba(45,122,58,.2);}.f-alert.show{display:block;}
+
+/* DIPLOMAS LIST */
+.diplomas-list{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.diploma-row{display:flex;align-items:flex-start;gap:16px;padding:16px 20px;border-bottom:1px solid #f0ece6;}
+.diploma-row:last-child{border-bottom:none;}
+.diploma-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
+.diploma-info{flex:1;min-width:0;}
+.diploma-info strong{display:block;font-size:14px;font-weight:600;margin-bottom:3px;}
+.diploma-info .meta{font-size:12px;color:var(--muted);}
+.diploma-side{text-align:right;flex-shrink:0;}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;}
+.status-badge.pendente{background:rgba(212,131,10,.1);color:#c27800;}
+.status-badge.aprovado{background:rgba(45,122,58,.1);color:#1a5c2a;}
+.status-badge.rejeitado{background:rgba(200,16,46,.1);color:var(--red);}
+.diploma-pts{font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--gold);margin-top:4px;}
+.diploma-obs{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic;}
+.empty-state{text-align:center;padding:40px 24px;color:var(--muted);}
+.diploma-link{font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:4px;}
+.diploma-link:hover{text-decoration:underline;}
+
+/* SECTION DIVIDER */
+.section-divider{border:none;border-top:2px solid var(--border);margin:36px 0;}
+
+/* PDI */
+.pdi-ciclo-info{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.pdi-ciclo-name{font-family:'Lora',serif;font-size:16px;font-weight:600;}
+.pdi-ciclo-dates{font-size:12px;color:var(--muted);}
+.pdi-status-chip{padding:5px 14px;border-radius:100px;font-size:12px;font-weight:600;}
+.pdi-status-chip.rascunho{background:#f0ece6;color:var(--muted);}
+.pdi-status-chip.aguardando_aprovacao{background:rgba(212,131,10,.12);color:#c27800;}
+.pdi-status-chip.em_andamento{background:rgba(45,122,58,.12);color:#1a5c2a;}
+.pdi-status-chip.encerrado{background:rgba(26,107,181,.12);color:#1a6bb5;}
+.comp-list{display:flex;flex-direction:column;gap:10px;margin-bottom:4px;}
+.comp-item{display:grid;grid-template-columns:190px 1fr 22px 22px;align-items:center;gap:10px;}
+.comp-label{font-size:12px;font-weight:500;}
+.comp-bar-wrap{background:#f0ece6;border-radius:4px;height:7px;overflow:hidden;}
+.comp-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+.comp-bar-fill.auto{background:var(--blue);}
+.comp-bar-fill.ger{background:var(--green);}
+.comp-score{font-size:12px;font-weight:600;text-align:center;color:var(--muted);}
+.comp-score.ger{color:var(--green);}
+.rating-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.rating-btn{width:38px;height:38px;border-radius:8px;border:1.5px solid var(--border);background:#fdfbf8;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--muted);}
+.rating-btn:hover{border-color:var(--blue);color:var(--blue);}
+.rating-btn.sel{background:var(--blue);color:#fff;border-color:var(--blue);}
+.pdi-comp-form{display:flex;flex-direction:column;gap:14px;}
+.pdi-comp-row{border-bottom:1px solid var(--border);padding-bottom:14px;}
+.pdi-comp-row:last-child{border-bottom:none;padding-bottom:0;}
+.pdi-comp-row .comp-label{font-size:14px;font-weight:600;margin-bottom:8px;display:block;}
+.meta-card{background:#fdfbf8;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;}
+.meta-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.meta-desc{font-size:14px;font-weight:600;line-height:1.4;}
+.meta-meta{font-size:11px;color:var(--muted);margin-top:3px;}
+.meta-progress-bar{height:6px;background:#e2dbd1;border-radius:3px;overflow:hidden;margin-bottom:4px;margin-top:8px;}
+.meta-progress-fill{height:100%;background:var(--blue);border-radius:3px;transition:width .4s;}
+.meta-pct{font-size:11px;color:var(--muted);}
+.meta-prog-controls{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.meta-prog-controls input[type=range]{flex:1;min-width:80px;accent-color:var(--blue);}
+.meta-prog-controls select{padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:#fdfbf8;font-family:'DM Sans',sans-serif;}
+.meta-prog-controls button{padding:5px 12px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.meta-form-block{border:1.5px dashed var(--border);border-radius:10px;padding:16px;margin-bottom:10px;background:#fdfbf8;}
+.meta-form-block .ff{margin-bottom:10px;}
+.meta-form-block .ff:last-child{margin-bottom:0;}
+.add-meta-btn{width:100%;padding:10px;border:1.5px dashed var(--border);background:transparent;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;margin-bottom:12px;}
+.add-meta-btn:hover{border-color:var(--blue);color:var(--blue);}
+.remove-meta-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;border-radius:4px;transition:color .15s;}
+.remove-meta-btn:hover{color:var(--red);}
+.nota-final-display{text-align:center;padding:24px;background:#f0ece6;border-radius:12px;margin-bottom:16px;}
+.nota-final-num{font-family:'Lora',serif;font-size:48px;font-weight:700;color:var(--text);line-height:1;}
+.nota-final-lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+.pdi-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
+.pdi-legend span{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.pdi-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+/* ── ALMOXARIFADO MODAL TABS ── */
+.alm-modal-tab{padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text);}
+.alm-modal-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.alm-upload-zone{border:2px dashed var(--border);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:12px;}
+.alm-upload-zone:hover,.alm-upload-zone.drag-over{border-color:var(--primary);background:rgba(200,16,46,.04);}
+.alm-upload-zone .uz-icon{font-size:32px;margin-bottom:6px;}
+.alm-xlsx-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:4px;font-size:13px;}
+.alm-xlsx-row.ok{background:#f0fdf4;border:1px solid #bbf7d0;}
+.alm-xlsx-row.warn{background:#fffbeb;border:1px solid #fde68a;}
+/* ── ALMOXARIFADO ── */
+.alm-req-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+.alm-req-card.pendente{border-left:4px solid #f6a623;}
+.alm-req-card.aprovado{border-left:4px solid #48bb78;}
+.alm-req-card.rejeitado{border-left:4px solid #e53e3e;}
+.alm-status-chip{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.alm-status-chip.pendente{background:#fff8e1;color:#b07d00;}
+.alm-status-chip.aprovado{background:#f0fff4;color:#2d7a2d;}
+.alm-status-chip.rejeitado{background:#fff0f0;color:#c0392b;}
+.alm-catalog-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f0ece6;gap:12px;}
+.alm-catalog-item:last-child{border-bottom:none;}
+.alm-catalog-item:hover{background:#fafaf8;}
+.alm-cat-info{flex:1;min-width:0;}
+.alm-cat-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.alm-cat-sub{font-size:11px;color:var(--muted);}
+.alm-add-btn{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+.alm-cart-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0ece6;}
+.alm-cart-item:last-child{border-bottom:none;}
+.alm-qty-input{width:64px;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-family:'DM Sans',sans-serif;}
+.alm-notif-item{padding:10px 12px;border-radius:8px;background:#f7f7f7;margin-bottom:6px;font-size:13px;}
+.alm-notif-item.nao-lida{background:#fffbf0;border-left:3px solid #f6a623;}
+/* ── PICKUP QUEUE ── */
+.pickup-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+.pickup-card.urgente{border-color:#f6a623;background:#fffbf2;}
+.pickup-card.chegou{border-color:#48bb78;background:#f0fff4;}
+.pickup-eta{font-size:22px;font-weight:700;min-width:52px;text-align:center;line-height:1;}
+.pickup-eta.soon{color:#e53e3e;}
+.pickup-eta.medium{color:#f6a623;}
+.pickup-eta.ok{color:#48bb78;}
+.pickup-info{flex:1;}
+.pickup-nome{font-weight:600;font-size:14px;color:var(--text);}
+.pickup-serie{font-size:12px;color:var(--muted);margin-top:2px;}
+.pickup-resp{font-size:12px;color:var(--muted);}
+.pickup-btn{background:var(--primary);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.pickup-btn:disabled{opacity:.6;cursor:not-allowed;}
+.series-chip{display:inline-block;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:all .15s;}
+.series-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+@media(max-width:640px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .stat-card:first-child{grid-column:1 / -1;}
+  .topbar{padding:0 16px;}
+  .content{padding:20px 16px 48px;}
+  .comp-item{grid-template-columns:1fr 22px 22px;}.comp-item .comp-label{grid-column:1/-1;}
+  .pickup-card{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="leaf">🍁</div>
+      <h1>Maple Bear</h1>
+      <span>Portal das Professoras</span>
+    </div>
+    <h2>Entrar</h2>
+    <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="professora@escola.com" autocomplete="email"></div>
+    <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <div id="loginError">E-mail ou senha incorretos.</div>
+    <p class="login-hint">Problemas para acessar? Fale com a coordenação.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="leaf">🍁</div>
+      <div><h1>Maple Bear</h1><span>Portal das Professoras</span></div>
+    </div>
+    <div class="topbar-user">
+      <span class="user-name" id="userNome"></span>
+      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card" data-c="pts">
+        <div class="stat-label">Minha Pontuação</div>
+        <div class="stat-value" id="statPontos">—</div>
+        <div class="stat-sub">pontos acumulados</div>
+      </div>
+      <div class="stat-card" data-c="rank">
+        <div class="stat-label">Minha Posição</div>
+        <div class="stat-value" id="statPosicao">—</div>
+        <div class="stat-sub">no ranking geral</div>
+      </div>
+      <div class="stat-card" data-c="diplomas">
+        <div class="stat-label">Diplomas Enviados</div>
+        <div class="stat-value" id="statDiplomas">—</div>
+        <div class="stat-sub">cursos registrados</div>
+      </div>
+    </div>
+
+    <!-- Ranking -->
+    <div class="sec-title">🏆 Ranking de Professoras</div>
+    <div class="ranking-wrap" id="rankingList">
+      <div class="empty-state">⏳ Carregando…</div>
+    </div>
+
+    <!-- Upload Diploma -->
+    <div class="upload-card">
+      <h3>📄 Enviar Diploma de Curso</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+        Envie o diploma ou certificado de conclusão. Após a validação pela coordenação, os pontos serão creditados automaticamente conforme a carga horária do curso.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 180px;gap:12px;">
+        <div class="ff" style="margin:0;">
+          <label>Nome do Curso</label>
+          <input type="text" id="nomeCurso" placeholder="Ex: Psicopedagogia Clínica">
+        </div>
+        <div class="ff" style="margin:0;">
+          <label>Carga Horária (horas)</label>
+          <input type="number" id="cargaHoraria" placeholder="180" min="1">
+        </div>
+      </div>
+      <div class="hint" style="font-size:11px;color:var(--muted);margin:4px 0 14px;">A pontuação corresponde à quantidade de horas do curso.</div>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('diplomaFile').click()">
+        <div class="uz-icon">📎</div>
+        <p>Clique para selecionar ou arraste o arquivo aqui</p>
+        <small>PDF, JPG ou PNG · máximo 10MB</small>
+        <input type="file" id="diplomaFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onFileSelected(event)">
+      </div>
+      <div class="file-name" id="fileName"></div>
+      <div class="upload-bar-wrap" id="uploadBarWrap"><div class="upload-bar" id="uploadBar"></div></div>
+      <button class="btn-submit" id="btnSubmit" onclick="submitDiploma()" disabled>Enviar para Validação</button>
+      <div class="f-alert error" id="uploadErr"></div>
+      <div class="f-alert success" id="uploadOk"></div>
+    </div>
+
+    <!-- My Diplomas -->
+    <div class="sec-title">📋 Meus Diplomas <span class="count-badge" id="diplomasCount">0</span></div>
+    <div class="diplomas-list" id="diplomasList">
+      <div class="empty-state">⏳ Carregando…</div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Upload Atestado -->
+    <div class="upload-card">
+      <h3>🏥 Enviar Atestado Médico</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+        Envie atestados de afastamento para análise da secretaria. Informe o período de ausência e anexe o documento digitalizado.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="ff" style="margin:0;">
+          <label>Data de Início</label>
+          <input type="date" id="atestDataInicio">
+        </div>
+        <div class="ff" style="margin:0;">
+          <label>Data de Fim</label>
+          <input type="date" id="atestDataFim">
+        </div>
+      </div>
+      <div class="ff" style="margin-top:12px;">
+        <label>Motivo (opcional)</label>
+        <input type="text" id="atestMotivo" placeholder="Ex: Consulta médica, cirurgia…">
+      </div>
+      <div class="upload-zone" id="atestUploadZone" onclick="document.getElementById('atestFile').click()">
+        <div class="uz-icon">📋</div>
+        <p>Clique para selecionar ou arraste o arquivo aqui</p>
+        <small>PDF, JPG ou PNG · máximo 10MB</small>
+        <input type="file" id="atestFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onAtestFileSelected(event)">
+      </div>
+      <div class="file-name" id="atestFileName"></div>
+      <div class="upload-bar-wrap" id="atestBarWrap"><div class="upload-bar" id="atestBar"></div></div>
+      <button class="btn-submit" id="btnAtestSubmit" onclick="submitAtestado()" disabled>Enviar para a Secretaria</button>
+      <div class="f-alert error" id="atestErr"></div>
+      <div class="f-alert success" id="atestOk"></div>
+    </div>
+
+    <!-- My Atestados -->
+    <div class="sec-title">📁 Meus Atestados <span class="count-badge" id="atestadosCount">0</span></div>
+    <div class="diplomas-list" id="atestadosList">
+      <div class="empty-state">⏳ Carregando…</div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- PDI Section -->
+    <div class="sec-title">📈 Meu Plano de Desenvolvimento Individual</div>
+    <div id="pdiLoading"><div class="empty-state">⏳ Carregando…</div></div>
+    <div id="pdiNoCiclo" style="display:none">
+      <div class="upload-card" style="text-align:center;padding:40px 24px;">
+        <div style="font-size:36px;margin-bottom:12px;">📅</div>
+        <p style="font-size:13px;color:var(--muted);">Nenhum ciclo de PDI ativo. Aguarde a coordenação abrir o ciclo.</p>
+      </div>
+    </div>
+    <div id="pdiContent" style="display:none">
+
+      <!-- Ciclo info card -->
+      <div class="upload-card" id="pdiInfoCard" style="margin-bottom:16px;"></div>
+
+      <!-- Autoavaliação form (rascunho) -->
+      <div class="upload-card" id="pdiAutoavCard" style="display:none">
+        <h3>✏️ Autoavaliação de Competências</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Avalie suas competências de <strong>1</strong> a <strong>4</strong>: &nbsp;<strong>1</strong> Em desenvolvimento · <strong>2</strong> Atende · <strong>3</strong> Supera · <strong>4</strong> Referência</p>
+        <div class="pdi-comp-form" id="pdiCompForm"></div>
+        <button class="btn-submit" style="margin-top:18px;" onclick="submitAutoavaliacao()">Salvar Autoavaliação</button>
+        <div class="f-alert error" id="pdiAutoErr"></div>
+        <div class="f-alert success" id="pdiAutoOk"></div>
+      </div>
+
+      <!-- Metas form (rascunho) -->
+      <div class="upload-card" id="pdiMetasFormCard" style="display:none">
+        <h3>🎯 Minhas Metas SMART</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Defina entre 1 e 5 metas para este ciclo. Cada meta deve ser específica, mensurável e com prazo definido.</p>
+        <div id="pdiMetasFormList"></div>
+        <button class="add-meta-btn" onclick="addMetaForm()" id="btnAddMeta">+ Adicionar meta</button>
+        <button class="btn-submit" onclick="submitMetas()" id="btnSubmitMetas" disabled>Enviar para Aprovação</button>
+        <div class="f-alert error" id="pdiMetasErr"></div>
+        <div class="f-alert success" id="pdiMetasOk"></div>
+      </div>
+
+      <!-- Competências view (read-only) -->
+      <div class="upload-card" id="pdiCompViewCard" style="display:none">
+        <h3>📊 Competências</h3>
+        <div class="pdi-legend">
+          <span><span class="dot" style="background:var(--blue)"></span> Minha autoavaliação</span>
+          <span><span class="dot" style="background:var(--green)"></span> Avaliação da gestora</span>
+        </div>
+        <div class="comp-list" id="pdiCompView"></div>
+      </div>
+
+      <!-- Metas view -->
+      <div class="upload-card" id="pdiMetasViewCard" style="display:none">
+        <h3>🎯 Minhas Metas <span class="count-badge" id="pdiMetasCount">0</span></h3>
+        <div id="pdiMetasView"></div>
+      </div>
+
+      <!-- Check-in form (em_andamento) -->
+      <div class="upload-card" id="pdiCheckinCard" style="display:none">
+        <h3>📝 Registrar Check-in</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Registre seu acompanhamento do PDI para a gestora.</p>
+        <div class="ff">
+          <label>Tipo</label>
+          <select id="checkinTipo">
+            <option value="semestral">Semestral (revisão do meio do ano)</option>
+            <option value="final">Final (encerramento do ciclo)</option>
+          </select>
+        </div>
+        <div class="ff">
+          <label>Seu relato</label>
+          <textarea id="checkinRelato" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;min-height:100px;resize:vertical;background:#fdfbf8;outline:none;transition:border-color .2s;" placeholder="Descreva seu progresso, conquistas e próximos passos…" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        </div>
+        <button class="btn-submit" onclick="submitCheckin()">Enviar Check-in</button>
+        <div class="f-alert error" id="pdiCheckinErr"></div>
+        <div class="f-alert success" id="pdiCheckinOk"></div>
+      </div>
+
+      <!-- Histórico de check-ins -->
+      <div id="pdiHistoricoCard" style="display:none">
+        <div class="sec-title" style="margin-top:24px;margin-bottom:12px;">💬 Histórico de Check-ins</div>
+        <div class="diplomas-list" id="pdiHistorico"></div>
+      </div>
+
+      <!-- Nota final (encerrado) -->
+      <div class="upload-card" id="pdiNotaFinalCard" style="display:none">
+        <h3>🏁 PDI Encerrado</h3>
+        <div class="nota-final-display">
+          <div class="nota-final-num" id="pdiNotaNum">—</div>
+          <div class="nota-final-lbl" id="pdiNotaLbl"></div>
+        </div>
+        <div id="pdiFeedbackFinal" style="font-size:13px;line-height:1.6;color:var(--text);"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- Pickup Queue Section -->
+  <div class="sec-title">🚗 Fila de Retirada
+    <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+  </div>
+
+  <!-- Series configurator -->
+  <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
+    <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+    <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
+    <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
+  </div>
+
+  <!-- Queue -->
+  <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
+  <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
+  <div id="pickupFilaList"></div>
+
+  <hr class="section-divider">
+
+  <!-- ── ALMOXARIFADO ──────────────────────────────────── -->
+  <div class="sec-title">📦 Almoxarifado
+    <button onclick="almLoadAll()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+  </div>
+
+  <!-- Budget card -->
+  <div class="upload-card" id="almBudgetCard" style="margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;" id="almTurmaNome">—</div>
+        <div style="font-size:12px;color:var(--muted);" id="almMesLabel"></div>
+      </div>
+      <button onclick="almAbrirNovaReq()" class="btn-submit" style="font-size:13px;padding:8px 16px;width:auto;" id="almBtnNovaReq">+ Nova Requisição</button>
+    </div>
+    <div style="background:#f0ece6;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px;">
+      <div id="almBudgetBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
+      <span>Gasto: <strong id="almGastoVal">R$ 0</strong></span>
+      <span>Orçamento: <strong id="almOrcVal">R$ 0</strong></span>
+    </div>
+  </div>
+
+  <!-- Notification badge -->
+  <div id="almNotifBanner" style="display:none;background:#fff8e1;border:1px solid #f6c54a;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;" onclick="almVerNotif()">
+    <span id="almNotifText">🔔 Você tem notificações não lidas</span>
+    <span style="color:var(--muted);font-size:11px;">Ver todas →</span>
+  </div>
+
+  <!-- My requisitions -->
+  <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Minhas Requisições</div>
+  <div id="almReqsLoading" class="empty-state">⏳ Carregando…</div>
+  <div id="almReqsEmpty" class="empty-state" style="display:none;">📋 Nenhuma requisição ainda.</div>
+  <div id="almReqsList"></div>
+
+  <!-- Notification list (collapsible) -->
+  <div id="almNotifSection" style="display:none;margin-top:16px;">
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+      Notificações
+      <button onclick="almMarcarTodasLidas()" style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar todas como lidas</button>
+    </div>
+    <div id="almNotifList"></div>
+  </div>
+
+</div>
+
+<!-- MODAL: Nova Requisição -->
+<div id="almModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;overflow-y:auto;padding:20px;">
+  <div style="background:#fff;border-radius:16px;max-width:660px;margin:0 auto;padding:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <h3 style="font-family:'Lora',serif;font-size:17px;">Nova Requisição de Insumos</h3>
+      <button onclick="almFecharModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:18px;">
+      <button class="alm-modal-tab active" id="almTabBtnBuscar" onclick="almSwitchTab('buscar')">🔍 Buscar no catálogo</button>
+      <button class="alm-modal-tab" id="almTabBtnPlanilha" onclick="almSwitchTab('planilha')">📊 Importar planilha Excel</button>
+    </div>
+
+    <!-- Tab: Buscar -->
+    <div id="almTabBuscar">
+      <div style="position:relative;margin-bottom:12px;">
+        <input type="text" id="almSearchInput" placeholder="Buscar insumo…" oninput="almFiltrarCatalogo()"
+          style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+      </div>
+      <div id="almCatalogList" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:4px;"></div>
+    </div>
+
+    <!-- Tab: Planilha -->
+    <div id="almTabPlanilha" style="display:none;">
+      <!-- Download template -->
+      <div style="background:#f7f5f2;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;">Modelo de planilha</div>
+          <div style="font-size:11px;color:var(--muted);">Baixe, preencha e faça o upload. Inclui aba de instruções.</div>
+        </div>
+        <button onclick="almGerarModelo()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;">
+          📥 Baixar modelo Excel
+        </button>
+      </div>
+
+      <!-- Upload zone -->
+      <div class="alm-upload-zone" id="almXlsxZone"
+        onclick="document.getElementById('almXlsxFile').click()"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="this.classList.remove('drag-over');almHandleXlsxDrop(event)">
+        <div class="uz-icon">📂</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Clique ou arraste sua planilha aqui</div>
+        <div style="font-size:12px;color:var(--muted);">Formatos aceitos: .xlsx · .xls · .csv</div>
+        <input type="file" id="almXlsxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="almHandleXlsxSelect(this)">
+      </div>
+
+      <!-- Parse results -->
+      <div id="almXlsxResult" style="display:none;">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;" id="almXlsxSummary"></div>
+        <div id="almXlsxRows" style="max-height:220px;overflow-y:auto;margin-bottom:10px;"></div>
+        <button onclick="almImportarXlsx()" class="btn-submit" style="width:auto;padding:8px 20px;font-size:13px;" id="almBtnImportar">+ Adicionar ao carrinho</button>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="border-top:1px solid var(--border);margin:16px 0 12px;"></div>
+
+    <!-- Cart (shared) -->
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🛒 Carrinho</div>
+    <div id="almCartEmpty" style="font-size:13px;color:var(--muted);padding:10px 0;">Nenhum item adicionado ainda.</div>
+    <div id="almCartList"></div>
+
+    <!-- Observação -->
+    <div class="ff" style="margin-top:12px;">
+      <label>Observação (opcional)</label>
+      <textarea id="almObservacao" rows="2" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;outline:none;" placeholder="Ex: Urgente para a semana…"></textarea>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;">
+      <div style="font-size:14px;font-weight:600;">Total: <span id="almCartTotal">R$ 0,00</span></div>
+      <button onclick="almSubmitReq()" class="btn-submit" style="width:auto;padding:10px 24px;" id="almBtnEnviar">Enviar Requisição</button>
+    </div>
+    <div class="f-alert error" id="almModalErr" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<script>
+  const DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
+  let currentProf = null;
+  let selectedFile = null;
+  let selectedAtestFile = null;
+  let rankingData = [];
+
+  function getToken() { return localStorage.getItem('prof_token'); }
+
+  async function callApi(body) {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(DIPLOMAS_API, { method: 'POST', headers, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.') { doLogout(); }
+    return d;
+  }
+
+  // ── AUTH ──────────────────────────────────────────────────
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn');
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    const d = await callApi({ action: 'professora_login', email, senha }).catch(() => ({ error: 'Erro de conexão.' }));
+    if (d.error) {
+      errEl.textContent = d.error; errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Entrar'; return;
+    }
+    localStorage.setItem('prof_token', d.token);
+    localStorage.setItem('prof_nome', d.nome);
+    localStorage.setItem('prof_email', d.email);
+    showApp(d);
+  }
+
+  async function doLogout() {
+    await callApi({ action: 'professora_logout' }).catch(() => {});
+    localStorage.removeItem('prof_token');
+    localStorage.removeItem('prof_nome');
+    localStorage.removeItem('prof_email');
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    currentProf = null;
+  }
+
+  function checkSession() {
+    const token = getToken();
+    if (!token) return;
+    const nome = localStorage.getItem('prof_nome');
+    const email = localStorage.getItem('prof_email');
+    showApp({ nome, email });
+  }
+
+  function showApp(user) {
+    currentProf = user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
+    document.getElementById('userNome').textContent = user.nome || user.email || '';
+    loadAll();
+  }
+
+  // ── DATA ──────────────────────────────────────────────────
+  async function loadAll() {
+    await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados(), loadMeuPdi() ]);
+    initPickupPanel();
+    almLoadAll();
+  }
+
+  async function loadRanking() {
+    const d = await callApi({ action: 'ranking' });
+    rankingData = d.data || [];
+    renderRanking();
+  }
+
+  function renderRanking() {
+    const el = document.getElementById('rankingList');
+    if (!rankingData.length) {
+      el.innerHTML = '<div class="empty-state">Nenhuma professora com pontuação ainda.</div>';
+      return;
+    }
+    const myEmail = localStorage.getItem('prof_email') || '';
+    el.innerHTML = rankingData.map((p, i) => {
+      const pos = i + 1;
+      const posClass = pos === 1 ? 'p1' : pos === 2 ? 'p2' : pos === 3 ? 'p3' : 'other';
+      const posLabel = pos <= 3 ? ['🥇','🥈','🥉'][pos-1] : pos + 'º';
+      // Match by email when possible (ranking includes id, nome only)
+      const isMe = p.nome === (localStorage.getItem('prof_nome') || '');
+      return `<div class="ranking-row${isMe?' me':''}">
+        <div class="rank-pos ${posClass}">${posLabel}</div>
+        <div class="rank-nome">${esc(p.nome)}${isMe?' <span class="me-badge">Você</span>':''}</div>
+        <div>
+          <div class="rank-pts">${p.pontuacao}</div>
+          <div class="rank-pts-label">pontos</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Update stats
+    const myNome = localStorage.getItem('prof_nome') || '';
+    const myIdx = rankingData.findIndex(p => p.nome === myNome);
+    if (myIdx !== -1) {
+      document.getElementById('statPontos').textContent = rankingData[myIdx].pontuacao;
+      document.getElementById('statPosicao').textContent = (myIdx + 1) + 'º';
+    } else {
+      document.getElementById('statPontos').textContent = '0';
+      document.getElementById('statPosicao').textContent = '—';
+    }
+  }
+
+  async function loadMeusDiplomas() {
+    const d = await callApi({ action: 'meus_diplomas' });
+    const lista = d.data || [];
+    document.getElementById('diplomasCount').textContent = lista.length;
+    document.getElementById('statDiplomas').textContent = lista.length;
+    const el = document.getElementById('diplomasList');
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state">📭 Nenhum diploma enviado ainda.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(d => {
+      const STATUS = { pendente:'⏳ Aguardando validação', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado' };
+      const date = new Date(d.criado_em).toLocaleDateString('pt-BR');
+      const pts = d.status === 'aprovado' ? `<div class="diploma-pts">+${d.pontuacao} pts</div>` : '';
+      const obs = d.observacao ? `<div class="diploma-obs">Obs: ${esc(d.observacao)}</div>` : '';
+      const link = d.arquivo_url ? `<a class="diploma-link" href="${d.arquivo_url}" target="_blank">📎 Ver arquivo</a>` : '';
+      return `<div class="diploma-row">
+        <div class="diploma-icon">📄</div>
+        <div class="diploma-info">
+          <strong>${esc(d.nome_curso)}</strong>
+          <div class="meta">${d.carga_horaria}h · Enviado em ${date}${d.validado_por?` · Validado por ${esc(d.validado_por)}`:''}</div>
+          ${link}
+        </div>
+        <div class="diploma-side">
+          <span class="status-badge ${d.status}">${STATUS[d.status]||d.status}</span>
+          ${pts}
+          ${obs}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── UPLOAD ────────────────────────────────────────────────
+  function onFileSelected(e) {
+    const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('Arquivo deve ter no máximo 10MB.'); return; }
+    selectedFile = file;
+    const el = document.getElementById('fileName');
+    el.textContent = '📎 ' + file.name; el.style.display = 'block';
+    document.getElementById('btnSubmit').disabled = false;
+  }
+
+  const uz = document.getElementById('uploadZone');
+  uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag'); });
+  uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
+  uz.addEventListener('drop', e => {
+    e.preventDefault(); uz.classList.remove('drag');
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    const dt = new DataTransfer(); dt.items.add(f);
+    document.getElementById('diplomaFile').files = dt.files;
+    onFileSelected({ target: { files: [f] } });
+  });
+
+  async function submitDiploma() {
+    const nomeCurso = document.getElementById('nomeCurso').value.trim();
+    const cargaHoraria = parseInt(document.getElementById('cargaHoraria').value) || 0;
+    const errEl = document.getElementById('uploadErr');
+    const okEl = document.getElementById('uploadOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+
+    if (!nomeCurso) { errEl.textContent = 'Informe o nome do curso.'; errEl.classList.add('show'); return; }
+    if (cargaHoraria <= 0) { errEl.textContent = 'Informe a carga horária.'; errEl.classList.add('show'); return; }
+    if (!selectedFile) { errEl.textContent = 'Selecione o arquivo do diploma.'; errEl.classList.add('show'); return; }
+
+    const btn = document.getElementById('btnSubmit');
+    const bar = document.getElementById('uploadBar');
+    const barWrap = document.getElementById('uploadBarWrap');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    barWrap.style.display = 'block'; bar.style.width = '30%';
+
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const base64 = ev.target.result.split(',')[1];
+      bar.style.width = '60%';
+      const d = await callApi({ action: 'diploma_submit', nome_curso: nomeCurso, carga_horaria: cargaHoraria, base64, mime: selectedFile.type });
+      bar.style.width = '100%';
+      if (d.error) {
+        errEl.textContent = 'Erro: ' + d.error; errEl.classList.add('show');
+      } else {
+        okEl.textContent = '✅ Diploma enviado! Aguarde validação da coordenação.'; okEl.classList.add('show');
+        document.getElementById('nomeCurso').value = '';
+        document.getElementById('cargaHoraria').value = '';
+        document.getElementById('diplomaFile').value = '';
+        document.getElementById('fileName').style.display = 'none';
+        selectedFile = null;
+        loadMeusDiplomas();
+      }
+      btn.disabled = false; btn.textContent = 'Enviar para Validação';
+      barWrap.style.display = 'none'; bar.style.width = '0%';
+    };
+    reader.readAsDataURL(selectedFile);
+  }
+
+  // ── ATESTADOS ─────────────────────────────────────────────
+  function onAtestFileSelected(e) {
+    const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('Arquivo deve ter no máximo 10MB.'); return; }
+    selectedAtestFile = file;
+    const el = document.getElementById('atestFileName');
+    el.textContent = '📎 ' + file.name; el.style.display = 'block';
+    document.getElementById('btnAtestSubmit').disabled = false;
+  }
+
+  const atestUz = document.getElementById('atestUploadZone');
+  atestUz.addEventListener('dragover', e => { e.preventDefault(); atestUz.classList.add('drag'); });
+  atestUz.addEventListener('dragleave', () => atestUz.classList.remove('drag'));
+  atestUz.addEventListener('drop', e => {
+    e.preventDefault(); atestUz.classList.remove('drag');
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    const dt = new DataTransfer(); dt.items.add(f);
+    document.getElementById('atestFile').files = dt.files;
+    onAtestFileSelected({ target: { files: [f] } });
+  });
+
+  async function submitAtestado() {
+    const dataInicio = document.getElementById('atestDataInicio').value;
+    const dataFim    = document.getElementById('atestDataFim').value;
+    const motivo     = document.getElementById('atestMotivo').value.trim();
+    const errEl = document.getElementById('atestErr');
+    const okEl  = document.getElementById('atestOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    if (!dataInicio || !dataFim) { errEl.textContent = 'Informe as datas do atestado.'; errEl.classList.add('show'); return; }
+    if (dataFim < dataInicio) { errEl.textContent = 'Data de fim não pode ser anterior à data de início.'; errEl.classList.add('show'); return; }
+    if (!selectedAtestFile) { errEl.textContent = 'Selecione o arquivo do atestado.'; errEl.classList.add('show'); return; }
+    const btn = document.getElementById('btnAtestSubmit');
+    const bar = document.getElementById('atestBar');
+    const barWrap = document.getElementById('atestBarWrap');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    barWrap.style.display = 'block'; bar.style.width = '30%';
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const base64 = ev.target.result.split(',')[1];
+      bar.style.width = '60%';
+      const d = await callApi({ action: 'atestado_submit', data_inicio: dataInicio, data_fim: dataFim, motivo: motivo || undefined, base64, mime: selectedAtestFile.type });
+      bar.style.width = '100%';
+      if (d.error) {
+        errEl.textContent = 'Erro: ' + d.error; errEl.classList.add('show');
+      } else {
+        okEl.textContent = '✅ Atestado enviado! Aguarde validação da secretaria.'; okEl.classList.add('show');
+        document.getElementById('atestDataInicio').value = '';
+        document.getElementById('atestDataFim').value = '';
+        document.getElementById('atestMotivo').value = '';
+        document.getElementById('atestFile').value = '';
+        document.getElementById('atestFileName').style.display = 'none';
+        selectedAtestFile = null;
+        loadMeusAtestados();
+      }
+      btn.disabled = false; btn.textContent = 'Enviar para a Secretaria';
+      barWrap.style.display = 'none'; bar.style.width = '0%';
+    };
+    reader.readAsDataURL(selectedAtestFile);
+  }
+
+  async function loadMeusAtestados() {
+    const d = await callApi({ action: 'meus_atestados' });
+    const lista = d.data || [];
+    document.getElementById('atestadosCount').textContent = lista.length;
+    const el = document.getElementById('atestadosList');
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state">📭 Nenhum atestado enviado ainda.</div>';
+      return;
+    }
+    const STATUS = { pendente:'⏳ Aguardando secretaria', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado' };
+    el.innerHTML = lista.map(a => {
+      const dtInicio = fmtDate(a.data_inicio);
+      const dtFim    = fmtDate(a.data_fim);
+      const periodo  = a.data_inicio === a.data_fim ? dtInicio : `${dtInicio} → ${dtFim}`;
+      const link = a.arquivo_url ? `<a class="diploma-link" href="${a.arquivo_url}" target="_blank">📎 Ver arquivo</a>` : '';
+      const obs  = a.observacao ? `<div class="diploma-obs">Obs: ${esc(a.observacao)}</div>` : '';
+      return `<div class="diploma-row">
+        <div class="diploma-icon">🏥</div>
+        <div class="diploma-info">
+          <strong>${periodo}</strong>
+          <div class="meta">${a.motivo ? esc(a.motivo) + ' · ' : ''}Enviado em ${new Date(a.criado_em).toLocaleDateString('pt-BR')}${a.validado_por ? ` · Validado por ${esc(a.validado_por)}` : ''}</div>
+          ${link}
+        </div>
+        <div class="diploma-side">
+          <span class="status-badge ${a.status}">${STATUS[a.status]||a.status}</span>
+          ${obs}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function fmtDate(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── PDI ────────────────────────────────────────────────────
+  const COMP_LABELS = {
+    linguagem:      '🗣️ Proficiência no Idioma',
+    metodologia:    '📚 Metodologia e Didática',
+    avaliacao:      '📊 Avaliação da Aprendizagem',
+    intercultural:  '🌍 Competência Intercultural',
+    colaboracao:    '🤝 Colaboração e Comunidade',
+    inovacao:       '💡 Inovação e Tecnologia',
+    desenvolvimento:'📈 Desenvolvimento Profissional',
+  };
+  const AREAS = Object.keys(COMP_LABELS);
+  const NOTA_LABEL = ['','Em Desenvolvimento','Atende','Supera','Referência'];
+  const STATUS_PDI = {
+    rascunho:'✏️ Rascunho', aguardando_aprovacao:'⏳ Aguardando Aprovação',
+    em_andamento:'✅ Em Andamento', encerrado:'🏁 Encerrado',
+  };
+  const META_STATUS_LABEL = {
+    pendente:'Pendente', em_andamento:'Em andamento', concluido:'Concluído', revisado:'Revisado',
+  };
+
+  let pdiState = { ciclo: null, pdi: null };
+  let pdiMetaCount = 0;
+
+  async function loadMeuPdi() {
+    const d = await callApi({ action: 'pdi_meu_status' });
+    document.getElementById('pdiLoading').style.display = 'none';
+    if (!d.ciclo) { document.getElementById('pdiNoCiclo').style.display = 'block'; return; }
+    pdiState = { ciclo: d.ciclo, pdi: d.pdi };
+    document.getElementById('pdiContent').style.display = 'block';
+    renderPdi();
+  }
+
+  function showEl(id, v) { const el = document.getElementById(id); if (el) el.style.display = v ? '' : 'none'; }
+
+  function renderPdi() {
+    const { ciclo, pdi } = pdiState;
+    const status = pdi?.status ?? 'rascunho';
+    // Info card
+    document.getElementById('pdiInfoCard').innerHTML = `
+      <div class="pdi-ciclo-info">
+        <div>
+          <div class="pdi-ciclo-name">${esc(ciclo.nome)}</div>
+          <div class="pdi-ciclo-dates">${fmtDate(ciclo.data_inicio)} → ${fmtDate(ciclo.data_fim)}</div>
+        </div>
+        <span class="pdi-status-chip ${pdi ? status : 'rascunho'}">${STATUS_PDI[pdi ? status : 'rascunho']}</span>
+      </div>
+      ${pdi?.feedback_gestora ? `<div style="margin-top:14px;padding:12px;background:#f0ece6;border-radius:8px;font-size:13px;line-height:1.6;"><strong>Feedback da gestora:</strong><br>${esc(pdi.feedback_gestora)}</div>` : ''}
+    `;
+    // Self-assessment form: show when no PDI yet or rascunho
+    showEl('pdiAutoavCard', !pdi || status === 'rascunho');
+    if (!pdi || status === 'rascunho') renderAutoavForm(pdi?.pdi_competencias ?? []);
+    // Goals form: show when PDI exists and in rascunho
+    showEl('pdiMetasFormCard', pdi && status === 'rascunho');
+    if (pdi && status === 'rascunho') renderMetasForm(pdi.pdi_metas ?? []);
+    // Competencies view
+    const hasComps = !!(pdi?.pdi_competencias?.length);
+    showEl('pdiCompViewCard', hasComps);
+    if (hasComps) renderCompView(pdi.pdi_competencias);
+    // Metas view
+    const hasMetas = !!(pdi?.pdi_metas?.length);
+    showEl('pdiMetasViewCard', hasMetas);
+    if (hasMetas) renderMetasView(pdi.pdi_metas, status);
+    // Check-in
+    showEl('pdiCheckinCard', status === 'em_andamento');
+    // Histórico
+    const hasCheckins = !!(pdi?.pdi_acompanhamentos?.length);
+    showEl('pdiHistoricoCard', hasCheckins);
+    if (hasCheckins) renderHistorico(pdi.pdi_acompanhamentos);
+    // Nota final
+    showEl('pdiNotaFinalCard', status === 'encerrado');
+    if (status === 'encerrado') renderNotaFinal(pdi);
+  }
+
+  function renderAutoavForm(existing) {
+    const vals = {}, comments = {};
+    for (const c of existing) { vals[c.area] = c.nota_auto; comments[c.area] = c.comentario; }
+    document.getElementById('pdiCompForm').innerHTML = AREAS.map(area => `
+      <div class="pdi-comp-row">
+        <span class="comp-label">${COMP_LABELS[area]}</span>
+        <div class="rating-group" id="rg_${area}" data-selected="${vals[area] || ''}">
+          ${[1,2,3,4].map(n => `<button class="rating-btn${vals[area]===n?' sel':''}" onclick="selectRating('${area}',${n})" title="${NOTA_LABEL[n]}">${n}</button>`).join('')}
+          <span style="font-size:11px;color:var(--muted);" id="rl_${area}">${vals[area] ? NOTA_LABEL[vals[area]] : ''}</span>
+        </div>
+        <div class="ff" style="margin:6px 0 0;"><input type="text" id="rc_${area}" placeholder="Comentário (opcional)" value="${esc(comments[area]||'')}" style="font-size:12px;"></div>
+      </div>
+    `).join('');
+  }
+
+  function selectRating(area, nota) {
+    const rg = document.getElementById(`rg_${area}`);
+    rg.querySelectorAll('.rating-btn').forEach((btn, i) => btn.classList.toggle('sel', i + 1 === nota));
+    document.getElementById(`rl_${area}`).textContent = NOTA_LABEL[nota];
+    rg.dataset.selected = nota;
+  }
+
+  async function submitAutoavaliacao() {
+    const errEl = document.getElementById('pdiAutoErr');
+    const okEl  = document.getElementById('pdiAutoOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    const competencias = AREAS.map(area => ({
+      area,
+      nota_auto: parseInt(document.getElementById(`rg_${area}`)?.dataset.selected || '0'),
+      comentario: (document.getElementById(`rc_${area}`)?.value || '').trim() || undefined,
+    }));
+    const missing = competencias.filter(c => !c.nota_auto);
+    if (missing.length) {
+      errEl.textContent = 'Avalie todas as competências antes de salvar.';
+      errEl.classList.add('show'); return;
+    }
+    const btn = document.querySelector('#pdiAutoavCard .btn-submit');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const d = await callApi({ action: 'pdi_autoavaliacao', competencias });
+    btn.disabled = false; btn.textContent = 'Salvar Autoavaliação';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); }
+    else { okEl.textContent = '✅ Autoavaliação salva! Agora defina suas metas abaixo.'; okEl.classList.add('show'); await loadMeuPdi(); }
+  }
+
+  function renderMetasForm(existing) {
+    pdiMetaCount = 0;
+    document.getElementById('pdiMetasFormList').innerHTML = '';
+    if (existing.length) existing.forEach(m => addMetaForm(m));
+    else addMetaForm();
+    updateBtnAddMeta();
+  }
+
+  function addMetaForm(meta = null) {
+    if (pdiMetaCount >= 5) return;
+    pdiMetaCount++;
+    const idx = pdiMetaCount;
+    const div = document.createElement('div');
+    div.className = 'meta-form-block'; div.id = `metaBlock_${idx}`;
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="font-size:13px;" id="metaTitle_${idx}">Meta ${idx}</strong>
+        ${idx > 1 ? `<button class="remove-meta-btn" onclick="removeMetaBlock(${idx})">✕</button>` : ''}
+      </div>
+      <div class="ff"><label>O que quero alcançar *</label><input type="text" id="mDesc_${idx}" placeholder="Ex: Concluir o Cambridge Certificate" value="${esc(meta?.descricao||'')}"></div>
+      <div class="ff"><label>Como vou medir *</label><input type="text" id="mInd_${idx}" placeholder="Ex: Certificado emitido com nota ≥ 70%" value="${esc(meta?.indicador||'')}"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="ff" style="margin:0;"><label>Prazo *</label><input type="date" id="mPrazo_${idx}" value="${meta?.prazo||''}"></div>
+        <div class="ff" style="margin:0;"><label>Área vinculada</label>
+          <select id="mArea_${idx}"><option value="">Selecione…</option>
+            ${AREAS.map(a=>`<option value="${a}"${meta?.area_vinculada===a?' selected':''}>${COMP_LABELS[a]}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    `;
+    document.getElementById('pdiMetasFormList').appendChild(div);
+    updateBtnAddMeta();
+  }
+
+  function removeMetaBlock(idx) {
+    document.getElementById(`metaBlock_${idx}`)?.remove();
+    pdiMetaCount = Math.max(0, pdiMetaCount - 1);
+    document.querySelectorAll('.meta-form-block').forEach((el, i) => {
+      const t = el.querySelector('[id^="metaTitle_"]'); if (t) t.textContent = `Meta ${i + 1}`;
+    });
+    updateBtnAddMeta();
+  }
+
+  function updateBtnAddMeta() {
+    const btn = document.getElementById('btnAddMeta');
+    if (btn) btn.style.display = pdiMetaCount >= 5 ? 'none' : '';
+    const sub = document.getElementById('btnSubmitMetas');
+    if (sub) sub.disabled = pdiMetaCount < 1;
+  }
+
+  async function submitMetas() {
+    const errEl = document.getElementById('pdiMetasErr');
+    const okEl  = document.getElementById('pdiMetasOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    if (!pdiState.pdi?.id) { errEl.textContent = 'Salve a autoavaliação primeiro.'; errEl.classList.add('show'); return; }
+    const metas = [];
+    for (const block of document.querySelectorAll('.meta-form-block')) {
+      const idx = block.id.split('_')[1];
+      const descricao  = (document.getElementById(`mDesc_${idx}`)?.value  || '').trim();
+      const indicador  = (document.getElementById(`mInd_${idx}`)?.value   || '').trim();
+      const prazo      =  document.getElementById(`mPrazo_${idx}`)?.value || '';
+      const area_vinculada = document.getElementById(`mArea_${idx}`)?.value || '';
+      if (!descricao || !indicador || !prazo) {
+        errEl.textContent = `Preencha todos os campos obrigatórios da Meta ${idx}.`;
+        errEl.classList.add('show'); return;
+      }
+      metas.push({ descricao, indicador, prazo, area_vinculada: area_vinculada || undefined });
+    }
+    const btn = document.getElementById('btnSubmitMetas');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const d = await callApi({ action: 'pdi_metas_submit', pdi_id: pdiState.pdi.id, metas });
+    btn.disabled = false; btn.textContent = 'Enviar para Aprovação';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); }
+    else { okEl.textContent = '✅ Metas enviadas para aprovação da gestora!'; okEl.classList.add('show'); await loadMeuPdi(); }
+  }
+
+  function renderCompView(competencias) {
+    document.getElementById('pdiCompView').innerHTML = AREAS.map(area => {
+      const c = competencias.find(x => x.area === area) || {};
+      const autoW = c.nota_auto    ? (c.nota_auto    / 4 * 100).toFixed(0) : 0;
+      const gerW  = c.nota_gestora ? (c.nota_gestora / 4 * 100).toFixed(0) : 0;
+      return `<div class="comp-item">
+        <div class="comp-label">${COMP_LABELS[area]}</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div class="comp-bar-wrap"><div class="comp-bar-fill auto" style="width:${autoW}%"></div></div>
+          ${c.nota_gestora ? `<div class="comp-bar-wrap"><div class="comp-bar-fill ger" style="width:${gerW}%"></div></div>` : ''}
+        </div>
+        <div class="comp-score">${c.nota_auto || '—'}</div>
+        <div class="comp-score ger">${c.nota_gestora || ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMetasView(metas, status) {
+    document.getElementById('pdiMetasCount').textContent = metas.length;
+    document.getElementById('pdiMetasView').innerHTML = metas.map(m => {
+      const controls = status === 'em_andamento' ? `
+        <div class="meta-prog-controls">
+          <span style="font-size:11px;color:var(--muted);">Progresso:</span>
+          <input type="range" min="0" max="100" step="5" value="${m.progressao_pct||0}" id="rng_${m.id}" oninput="document.getElementById('pct_${m.id}').textContent=this.value+'%'">
+          <span id="pct_${m.id}" style="font-size:12px;font-weight:600;min-width:36px;">${m.progressao_pct||0}%</span>
+          <select id="mst_${m.id}">
+            ${Object.entries(META_STATUS_LABEL).map(([v,l])=>`<option value="${v}"${m.status===v?' selected':''}>${l}</option>`).join('')}
+          </select>
+          <button onclick="updateMetaProg('${m.id}')">Salvar</button>
+        </div>` : '';
+      const icon = {pendente:'⏳',em_andamento:'🔄',concluido:'✅',revisado:'🔁'}[m.status]||'';
+      return `<div class="meta-card">
+        <div class="meta-card-top">
+          <div>
+            <div class="meta-desc">${esc(m.descricao)}</div>
+            <div class="meta-meta">📏 ${esc(m.indicador)} · 📅 ${fmtDate(m.prazo)}${m.area_vinculada?` · ${COMP_LABELS[m.area_vinculada]||m.area_vinculada}`:''}</div>
+          </div>
+          <span class="status-badge ${m.status}">${icon} ${META_STATUS_LABEL[m.status]||m.status}</span>
+        </div>
+        <div class="meta-progress-bar"><div class="meta-progress-fill" id="bar_${m.id}" style="width:${m.progressao_pct||0}%"></div></div>
+        <div class="meta-pct">${m.progressao_pct||0}% concluído</div>
+        ${controls}
+        ${m.evidencia_texto ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);"><strong>Evidência:</strong> ${esc(m.evidencia_texto)}</div>` : ''}
+      </div>`;
+    }).join('') || '<div class="empty-state">Nenhuma meta cadastrada.</div>';
+  }
+
+  async function updateMetaProg(metaId) {
+    const rng = document.getElementById(`rng_${metaId}`);
+    const sel = document.getElementById(`mst_${metaId}`);
+    if (!rng || !sel) return;
+    const d = await callApi({ action: 'pdi_meta_progresso', meta_id: metaId, progressao_pct: parseInt(rng.value), status: sel.value });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    const bar = document.getElementById(`bar_${metaId}`);
+    if (bar) bar.style.width = rng.value + '%';
+    await loadMeuPdi();
+  }
+
+  function renderHistorico(acompanhamentos) {
+    document.getElementById('pdiHistorico').innerHTML = acompanhamentos.map(a => {
+      const tipo = a.tipo === 'semestral' ? '📅 Semestral' : '🏁 Final';
+      return `<div class="diploma-row">
+        <div class="diploma-icon">💬</div>
+        <div class="diploma-info">
+          <strong>${tipo} · ${new Date(a.criado_em).toLocaleDateString('pt-BR')}</strong>
+          <div class="meta" style="margin-top:4px;">${esc(a.relato_professora||'')}</div>
+          ${a.feedback_gestora ? `<div style="margin-top:6px;font-size:12px;color:var(--green);"><strong>Feedback da gestora:</strong> ${esc(a.feedback_gestora)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('') || '<div class="empty-state">Nenhum check-in registrado ainda.</div>';
+  }
+
+  function renderNotaFinal(pdi) {
+    const NOTAS = ['','Em Desenvolvimento','Atende','Supera','Referência'];
+    document.getElementById('pdiNotaNum').textContent = pdi.nota_final || '—';
+    document.getElementById('pdiNotaLbl').textContent = NOTAS[pdi.nota_final] || '';
+    document.getElementById('pdiFeedbackFinal').innerHTML = pdi.feedback_gestora
+      ? `<strong>Feedback da gestora:</strong><br>${esc(pdi.feedback_gestora)}` : '';
+  }
+
+  async function submitCheckin() {
+    const errEl = document.getElementById('pdiCheckinErr');
+    const okEl  = document.getElementById('pdiCheckinOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    const tipo   = document.getElementById('checkinTipo').value;
+    const relato = (document.getElementById('checkinRelato').value || '').trim();
+    if (!relato) { errEl.textContent = 'Escreva seu relato.'; errEl.classList.add('show'); return; }
+    if (!pdiState.pdi?.id) { errEl.textContent = 'PDI não encontrado.'; errEl.classList.add('show'); return; }
+    const btn = document.querySelector('#pdiCheckinCard .btn-submit');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const d = await callApi({ action: 'pdi_checkin', pdi_id: pdiState.pdi.id, tipo, relato_professora: relato });
+    btn.disabled = false; btn.textContent = 'Enviar Check-in';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); }
+    else { okEl.textContent = '✅ Check-in registrado!'; okEl.classList.add('show'); document.getElementById('checkinRelato').value = ''; await loadMeuPdi(); }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
+  });
+
+  // ── PICKUP QUEUE ────────────────────────────────────────
+  const SERIES_DISPONIVEIS = ['Berçário','Maternal I','Maternal II','Jardim I','Jardim II','Pré-Escola','1º Ano','2º Ano','3º Ano','4º Ano','5º Ano'];
+  let pickupSeriesSelecionadas = [];
+  let pickupPollInt = null;
+  let pickupUltimaFila = [];
+  let pickupSoundCtx = null;
+
+  function initPickupSeries() {
+    const el = document.getElementById('pickupSeriesBtns');
+    el.innerHTML = SERIES_DISPONIVEIS.map(s =>
+      `<span class="series-chip${pickupSeriesSelecionadas.includes(s) ? ' active' : ''}" onclick="toggleSerie('${s}')">${s}</span>`
+    ).join('');
+  }
+
+  function toggleSerie(s) {
+    if (pickupSeriesSelecionadas.includes(s)) {
+      pickupSeriesSelecionadas = pickupSeriesSelecionadas.filter(x => x !== s);
+    } else {
+      pickupSeriesSelecionadas.push(s);
+    }
+    initPickupSeries();
+  }
+
+  async function savePickupSeries() {
+    const okEl = document.getElementById('pickupSeriesOk');
+    okEl.classList.remove('show');
+    const d = await callApi({ action: 'professora_update_series', series_monitoras: pickupSeriesSelecionadas });
+    if (!d.error) { okEl.textContent = '✅ Turmas salvas!'; okEl.classList.add('show'); setTimeout(() => okEl.classList.remove('show'), 3000); }
+  }
+
+  function renderPickupFila(fila) {
+    // Sound alert for new arrivals
+    const novos = fila.filter(n => !pickupUltimaFila.find(p => p.id === n.id));
+    if (novos.length > 0 && pickupUltimaFila.length > 0) playPickupAlert();
+    pickupUltimaFila = fila;
+
+    if (fila.length === 0) {
+      document.getElementById('pickupFilaEmpty').style.display = 'block';
+      document.getElementById('pickupFilaList').innerHTML = '';
+      return;
+    }
+    document.getElementById('pickupFilaEmpty').style.display = 'none';
+    document.getElementById('pickupFilaList').innerHTML = fila.map(n => {
+      const eta = n.eta_minutos ?? null;
+      const etaClass = eta !== null ? (eta <= 5 ? 'soon' : eta <= 15 ? 'medium' : 'ok') : '';
+      const chegou = n.status === 'chegou';
+      const hora = new Date(n.saiu_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+      return `<div class="pickup-card${eta !== null && eta <= 5 ? ' urgente' : ''}${chegou ? ' chegou' : ''}">
+        <div class="pickup-eta ${etaClass}">${chegou ? '🏫' : (eta !== null ? eta+'m' : '?')}</div>
+        <div class="pickup-info">
+          <div class="pickup-nome">${n.nome_crianca}</div>
+          <div class="pickup-serie">${n.serie || 'Turma não informada'} · saiu às ${hora}</div>
+          <div class="pickup-resp">Resp: ${n.nome_resp}</div>
+        </div>
+        <button class="pickup-btn" onclick="entregarCrianca('${n.id}')" ${chegou ? '' : 'disabled'}>
+          ${chegou ? '✅ Entreguei' : '⏳ A caminho'}
+        </button>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadPickupFila(silent = false) {
+    if (!silent) {
+      document.getElementById('pickupFilaLoading').style.display = 'block';
+      document.getElementById('pickupFilaEmpty').style.display = 'none';
+    }
+    const d = await callApi({ action: 'pickup_fila_hoje' });
+    document.getElementById('pickupFilaLoading').style.display = 'none';
+    renderPickupFila(d.fila || d.data || []);
+  }
+
+  async function entregarCrianca(id) {
+    const d = await callApi({ action: 'pickup_entregar', id });
+    if (!d.error) await loadPickupFila();
+  }
+
+  function playPickupAlert() {
+    try {
+      if (!pickupSoundCtx) pickupSoundCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = pickupSoundCtx.createOscillator();
+      const gain = pickupSoundCtx.createGain();
+      osc.connect(gain); gain.connect(pickupSoundCtx.destination);
+      osc.frequency.setValueAtTime(880, pickupSoundCtx.currentTime);
+      osc.frequency.setValueAtTime(660, pickupSoundCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, pickupSoundCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, pickupSoundCtx.currentTime + 0.4);
+      osc.start(); osc.stop(pickupSoundCtx.currentTime + 0.4);
+    } catch(_) {}
+  }
+
+  function startPickupPoll() {
+    if (pickupPollInt) clearInterval(pickupPollInt);
+    pickupPollInt = setInterval(() => loadPickupFila(true), 15000);
+  }
+
+  async function initPickupPanel() {
+    initPickupSeries();
+    // loadPickupFila returns series_monitoras from server
+    const d = await callApi({ action: 'pickup_fila_hoje' });
+    if (d.series_monitoras) {
+      pickupSeriesSelecionadas = d.series_monitoras;
+      initPickupSeries();
+    }
+    const fila = d.fila || d.data || [];
+    renderPickupFila(fila);
+    startPickupPoll();
+  }
+
+  // ── ALMOXARIFADO ────────────────────────────────────────
+  let almCatalogo = [];
+  let almCart = [];  // [{insumo_id, nome, unidade, preco_unit, qty_solicitado}]
+
+  const fmtBRL = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const mesBR  = mes => { const [y,m] = mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1] + '/' + y; };
+
+  async function almLoadAll() {
+    almLoadBudget();
+    almLoadReqs();
+    almLoadNotif();
+  }
+
+  async function almLoadBudget() {
+    const mes = new Date().toISOString().slice(0,7);
+    const d = await callApi({ action: 'alm_minha_turma', mes });
+    document.getElementById('almMesLabel').textContent = 'Orçamento de ' + mesBR(mes);
+    if (!d.turma) {
+      document.getElementById('almTurmaNome').textContent = 'Sem turma atribuída';
+      document.getElementById('almBtnNovaReq').disabled = true;
+      return;
+    }
+    document.getElementById('almTurmaNome').textContent = d.turma.nome;
+    document.getElementById('almBtnNovaReq').disabled = false;
+    const orc = d.orcamento || 0;
+    const gasto = d.gasto || 0;
+    const pct = orc > 0 ? Math.min(100, (gasto / orc) * 100) : 0;
+    document.getElementById('almBudgetBar').style.width = pct + '%';
+    document.getElementById('almBudgetBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+    document.getElementById('almGastoVal').textContent = fmtBRL(gasto);
+    document.getElementById('almOrcVal').textContent   = fmtBRL(orc);
+  }
+
+  async function almLoadReqs() {
+    document.getElementById('almReqsLoading').style.display = 'block';
+    document.getElementById('almReqsEmpty').style.display   = 'none';
+    document.getElementById('almReqsList').innerHTML = '';
+    const d = await callApi({ action: 'alm_minhas_reqs' });
+    document.getElementById('almReqsLoading').style.display = 'none';
+    const reqs = d.data || [];
+    if (!reqs.length) { document.getElementById('almReqsEmpty').style.display = 'block'; return; }
+    document.getElementById('almReqsList').innerHTML = reqs.map(r => {
+      const itens = r.itens || [];
+      const statusLbl = {pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado'}[r.status] || r.status;
+      const data = new Date(r.criado_em).toLocaleDateString('pt-BR');
+      const turma = r.alm_turmas?.nome || '—';
+      const nota = r.nota_gerente ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">💬 ${r.nota_gerente}</div>` : '';
+      const cancelBtn = r.status === 'pendente'
+        ? `<button onclick="almCancelarReq('${r.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>` : '';
+      const itensHtml = itens.slice(0,3).map((it) =>
+        `<span style="display:inline-block;background:#f0ece6;border-radius:4px;padding:2px 8px;font-size:11px;margin-right:4px;">${it.nome} ×${it.qty_solicitado}</span>`
+      ).join('') + (itens.length > 3 ? `<span style="font-size:11px;color:var(--muted);">+${itens.length-3} mais</span>` : '');
+      return `<div class="alm-req-card ${r.status}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div><span class="alm-status-chip ${r.status}">${statusLbl}</span> <span style="font-size:12px;color:var(--muted);margin-left:6px;">${data} · ${mesBR(r.mes)} · ${turma}</span></div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <strong style="font-size:14px;">${fmtBRL(r.total)}</strong>
+            ${cancelBtn}
+          </div>
+        </div>
+        <div style="margin-top:4px;">${itensHtml}</div>
+        ${nota}
+      </div>`;
+    }).join('');
+  }
+
+  async function almLoadNotif() {
+    const d = await callApi({ action: 'alm_notif_list' });
+    const notifs = d.data || [];
+    const naoLidas = notifs.filter((n) => !n.lida);
+    const banner = document.getElementById('almNotifBanner');
+    if (naoLidas.length > 0) {
+      document.getElementById('almNotifText').textContent = `🔔 ${naoLidas.length} notificação${naoLidas.length > 1 ? 'ões' : ''} não lida${naoLidas.length > 1 ? 's' : ''}`;
+      banner.style.display = 'flex';
+    } else { banner.style.display = 'none'; }
+    if (!notifs.length) { document.getElementById('almNotifSection').style.display = 'none'; return; }
+    document.getElementById('almNotifSection').style.display = 'block';
+    document.getElementById('almNotifList').innerHTML = notifs.map((n) =>
+      `<div class="alm-notif-item ${n.lida ? '' : 'nao-lida'}">
+        <div style="display:flex;justify-content:space-between;">
+          <span>${n.mensagem}</span>
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;margin-left:8px;">${new Date(n.criado_em).toLocaleDateString('pt-BR')}</span>
+        </div>
+      </div>`
+    ).join('');
+  }
+
+  function almVerNotif() {
+    document.getElementById('almNotifSection').style.display = 'block';
+    document.getElementById('almNotifSection').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function almMarcarTodasLidas() {
+    await callApi({ action: 'alm_notif_marcar_lida' });
+    almLoadNotif();
+  }
+
+  async function almCancelarReq(id) {
+    if (!confirm('Cancelar esta requisição?')) return;
+    const d = await callApi({ action: 'alm_cancelar_req', id });
+    if (!d.error) { almLoadReqs(); almLoadBudget(); }
+  }
+
+  // ── Excel: template e upload ───────────────────────────
+  let almXlsxParsed = [];  // itens lidos da planilha aguardando import
+
+  function almSwitchTab(tab) {
+    document.getElementById('almTabBuscar').style.display   = tab === 'buscar'    ? 'block' : 'none';
+    document.getElementById('almTabPlanilha').style.display = tab === 'planilha'  ? 'block' : 'none';
+    document.getElementById('almTabBtnBuscar').classList.toggle('active',   tab === 'buscar');
+    document.getElementById('almTabBtnPlanilha').classList.toggle('active', tab === 'planilha');
+  }
+
+  function almGerarModelo() {
+    const wb = XLSX.utils.book_new();
+
+    // ── Aba principal: Requisição ────────────────────────
+    const dados = [
+      ['Nome do Insumo *', 'Quantidade *', 'Unidade', 'Observação'],
+      ['Papel Sulfite A4 75g Resma 500fls', 2, 'resma', 'Para impressão de avisos'],
+      ['Caneta Esferográfica Azul', 10, 'unidade', ''],
+      ['Fita Adesiva Transparente 45mm', 5, 'rolo', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+    ];
+    const wsReq = XLSX.utils.aoa_to_sheet(dados);
+    wsReq['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 14 }, { wch: 36 }];
+    XLSX.utils.book_append_sheet(wb, wsReq, 'Requisição');
+
+    // ── Aba de Instruções ────────────────────────────────
+    const inst = [
+      ['INSTRUÇÕES — Modelo de Requisição de Insumos · Maple Bear'],
+      [''],
+      ['1. Preencha a aba "Requisição" a partir da linha 2 (linha 1 é o cabeçalho).'],
+      ['2. Não altere nem remova as colunas existentes.'],
+      ['3. Salve o arquivo e faça o upload no portal.'],
+      [''],
+      ['COLUNAS:'],
+      ['  Nome do Insumo *  → Obrigatório. Nome do material. Seja o mais específico possível.'],
+      ['                      Ex: "Papel Sulfite A4 75g" é melhor que apenas "Papel".'],
+      ['  Quantidade *      → Obrigatório. Número inteiro ou decimal. Ex: 2 ou 1.5'],
+      ['  Unidade           → Opcional. Ex: unidade, resma, kg, litro, rolo, caixa.'],
+      ['                      Se omitido, será usado o padrão do catálogo.'],
+      ['  Observação        → Opcional. Informações adicionais para o gerente.'],
+      [''],
+      ['DICAS:'],
+      ['  • Os nomes serão comparados automaticamente com o catálogo do almoxarifado.'],
+      ['  • Itens não encontrados no catálogo são marcados com ⚠ — o gerente poderá'],
+      ['    avaliá-los mesmo assim.'],
+      ['  • Você pode combinar a planilha com a busca manual no portal.'],
+    ];
+    const wsInst = XLSX.utils.aoa_to_sheet(inst);
+    wsInst['!cols'] = [{ wch: 72 }];
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
+
+    XLSX.writeFile(wb, 'modelo_requisicao_maple_bear.xlsx');
+  }
+
+  function almHandleXlsxDrop(e) {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) almProcessarXlsx(file);
+  }
+  function almHandleXlsxSelect(input) {
+    if (input.files[0]) almProcessarXlsx(input.files[0]);
+  }
+
+  // Normalize string for matching
+  const almNorm = s => (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
+
+  function almMatchCatalogo(nome) {
+    const qNorm  = almNorm(nome);
+    const qWords = qNorm.split(' ').filter(Boolean);
+    if (!qWords.length) return null;
+    // Exact match
+    let hit = almCatalogo.find(c => almNorm(c.nome) === qNorm);
+    if (hit) return { item: hit, pct: 100 };
+    // Best word-overlap
+    let best = null, bestScore = 0;
+    for (const c of almCatalogo) {
+      const cSet  = new Set(almNorm(c.nome).split(' ').filter(Boolean));
+      const score = qWords.filter(w => cSet.has(w)).length / qWords.length;
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    if (bestScore >= 0.5) return { item: best, pct: Math.round(bestScore * 100) };
+    return null;
+  }
+
+  async function almProcessarXlsx(file) {
+    const resultEl  = document.getElementById('almXlsxResult');
+    const summaryEl = document.getElementById('almXlsxSummary');
+    const rowsEl    = document.getElementById('almXlsxRows');
+    resultEl.style.display = 'none';
+    almXlsxParsed = [];
+
+    // Make sure catalog is loaded
+    if (!almCatalogo.length) {
+      const d = await callApi({ action: 'alm_catalogo' });
+      almCatalogo = d.data || [];
+    }
+
+    try {
+      const buf = await file.arrayBuffer();
+      const wb  = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      // Use first sheet that isn't "Instruções"
+      const sheetName = wb.SheetNames.find(n => !n.toLowerCase().includes('instru')) || wb.SheetNames[0];
+      const ws   = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Skip header row; filter blank lines
+      const data = rows.slice(1)
+        .filter(r => String(r[0] || '').trim())
+        .map(r => ({
+          nome:    String(r[0] || '').trim(),
+          qty:     parseFloat(String(r[1]).replace(',', '.')) || 0,
+          unidade: String(r[2] || '').trim() || null,
+          obs:     String(r[3] || '').trim(),
+        }))
+        .filter(it => it.qty > 0);
+
+      if (!data.length) {
+        alert('Nenhum item encontrado na planilha. Verifique se a linha 1 é o cabeçalho e os dados estão a partir da linha 2.');
+        return;
+      }
+
+      // Match each row to catalog
+      let matched = 0;
+      almXlsxParsed = data.map(it => {
+        const hit = almMatchCatalogo(it.nome);
+        if (hit) matched++;
+        return {
+          nome:         hit ? hit.item.nome  : it.nome,
+          nome_original: it.nome,
+          insumo_id:    hit ? hit.item.id    : null,
+          qty_solicitado: it.qty,
+          unidade:      it.unidade || (hit ? hit.item.unidade : 'unidade'),
+          preco_unit:   hit ? hit.item.preco : 0,
+          obs:          it.obs,
+          match_pct:    hit ? hit.pct        : 0,
+          catalogado:   !!hit,
+        };
+      });
+
+      summaryEl.textContent = `${data.length} item(ns) lido(s) · ${matched} encontrado(s) no catálogo · ${data.length - matched} não catalogado(s)`;
+      rowsEl.innerHTML = almXlsxParsed.map((it, i) =>
+        `<div class="alm-xlsx-row ${it.catalogado ? 'ok' : 'warn'}">
+          <span style="font-size:14px;">${it.catalogado ? '✅' : '⚠️'}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${it.nome}</div>
+            ${!it.catalogado ? `<div style="font-size:11px;color:#b07d00;">Não encontrado no catálogo — será enviado sem preço unitário</div>` : `<div style="font-size:11px;color:#2d7a2d;">${it.match_pct}% de precisão no catálogo</div>`}
+          </div>
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap;">×${it.qty_solicitado} ${it.unidade}</div>
+          <input type="number" value="${it.qty_solicitado}" min="0.5" step="0.5" style="width:60px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:center;" onchange="almXlsxParsed[${i}].qty_solicitado=parseFloat(this.value)||1">
+        </div>`
+      ).join('');
+      resultEl.style.display = 'block';
+    } catch(e) {
+      alert('Erro ao ler o arquivo. Verifique se é um arquivo Excel (.xlsx/.xls) ou CSV válido.');
+    }
+  }
+
+  function almImportarXlsx() {
+    if (!almXlsxParsed.length) return;
+    let added = 0;
+    for (const it of almXlsxParsed) {
+      // Avoid duplicates by insumo_id (or nome if no id)
+      const dup = almCart.find(c =>
+        it.insumo_id ? c.insumo_id === it.insumo_id : c.nome === it.nome
+      );
+      if (dup) {
+        dup.qty_solicitado = (parseFloat(dup.qty_solicitado) + parseFloat(it.qty_solicitado));
+      } else {
+        almCart.push({
+          insumo_id:     it.insumo_id,
+          nome:          it.nome,
+          unidade:       it.unidade,
+          preco_unit:    it.preco_unit,
+          qty_solicitado: it.qty_solicitado,
+        });
+        added++;
+      }
+    }
+    almRenderCart();
+    // Switch to buscar tab to show the cart
+    almSwitchTab('buscar');
+    document.getElementById('almXlsxResult').style.display = 'none';
+    document.getElementById('almXlsxFile').value = '';
+    almXlsxParsed = [];
+  }
+
+  // ── Modal: Nova Requisição ─────────────────────────────
+  async function almAbrirNovaReq() {
+    almCart = [];
+    almXlsxParsed = [];
+    document.getElementById('almObservacao').value = '';
+    document.getElementById('almModalErr').classList.remove('show');
+    document.getElementById('almSearchInput').value = '';
+    document.getElementById('almXlsxResult').style.display = 'none';
+    almSwitchTab('buscar');
+    document.getElementById('almModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    // Load catalog
+    if (!almCatalogo.length) {
+      const d = await callApi({ action: 'alm_catalogo' });
+      almCatalogo = d.data || [];
+    }
+    almFiltrarCatalogo();
+    almRenderCart();
+  }
+
+  function almFecharModal() {
+    document.getElementById('almModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function almFiltrarCatalogo() {
+    const q = document.getElementById('almSearchInput').value.toLowerCase();
+    const filtered = almCatalogo.filter(it =>
+      it.nome.toLowerCase().includes(q) ||
+      (it.categoria || '').toLowerCase().includes(q)
+    );
+    const el = document.getElementById('almCatalogList');
+    if (!filtered.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Nenhum insumo encontrado.</div>'; return; }
+    // Group by category
+    const cats = {};
+    for (const it of filtered) {
+      const cat = it.categoria || 'Geral';
+      if (!cats[cat]) cats[cat] = [];
+      cats[cat].push(it);
+    }
+    el.innerHTML = Object.entries(cats).map(([cat, items]) =>
+      `<div style="padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#f9f7f4;">${cat}</div>` +
+      (items as any[]).map(it => {
+        const inCart = almCart.find(c => c.insumo_id === it.id);
+        const estoque = it.estoque_qty > 0 ? `${it.estoque_qty} ${it.unidade}` : '<span style="color:#e53e3e;">Sem estoque</span>';
+        return `<div class="alm-catalog-item">
+          <div class="alm-cat-info">
+            <div class="alm-cat-name">${it.nome}</div>
+            <div class="alm-cat-sub">${fmtBRL(it.preco)} / ${it.unidade} · Estoque: ${estoque}</div>
+          </div>
+          <button class="alm-add-btn" onclick="almAddToCart('${it.id}')" ${inCart ? 'style="background:#6b8c6b;"' : ''}>
+            ${inCart ? '✓ No carrinho' : '+ Adicionar'}
+          </button>
+        </div>`;
+      }).join('')
+    ).join('');
+  }
+
+  function almAddToCart(insumoId) {
+    if (almCart.find(c => c.insumo_id === insumoId)) return;
+    const it = almCatalogo.find(c => c.id === insumoId);
+    if (!it) return;
+    almCart.push({ insumo_id: it.id, nome: it.nome, unidade: it.unidade, preco_unit: it.preco, qty_solicitado: 1 });
+    almRenderCart();
+    almFiltrarCatalogo();
+  }
+
+  function almRemoveCart(insumoId) {
+    almCart = almCart.filter(c => c.insumo_id !== insumoId);
+    almRenderCart();
+    almFiltrarCatalogo();
+  }
+
+  function almUpdateQty(insumoId, val) {
+    const it = almCart.find(c => c.insumo_id === insumoId);
+    if (it) it.qty_solicitado = Math.max(1, parseFloat(val) || 1);
+    almRenderCartTotal();
+  }
+
+  function almRenderCart() {
+    const emptyEl = document.getElementById('almCartEmpty');
+    const listEl  = document.getElementById('almCartList');
+    if (!almCart.length) { emptyEl.style.display = 'block'; listEl.innerHTML = ''; almRenderCartTotal(); return; }
+    emptyEl.style.display = 'none';
+    listEl.innerHTML = almCart.map(it =>
+      `<div class="alm-cart-item">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;">${it.nome}</div>
+          <div style="font-size:11px;color:var(--muted);">${fmtBRL(it.preco_unit)} / ${it.unidade}</div>
+        </div>
+        <input type="number" class="alm-qty-input" value="${it.qty_solicitado}" min="1" step="0.5"
+          onchange="almUpdateQty('${it.insumo_id}', this.value)">
+        <button onclick="almRemoveCart('${it.insumo_id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;">×</button>
+      </div>`
+    ).join('');
+    almRenderCartTotal();
+  }
+
+  function almRenderCartTotal() {
+    const total = almCart.reduce((s, it) => s + it.qty_solicitado * it.preco_unit, 0);
+    document.getElementById('almCartTotal').textContent = fmtBRL(total);
+  }
+
+  async function almSubmitReq() {
+    const errEl = document.getElementById('almModalErr');
+    errEl.classList.remove('show');
+    if (!almCart.length) { errEl.textContent = 'Adicione pelo menos um item.'; errEl.classList.add('show'); return; }
+    const btn = document.getElementById('almBtnEnviar');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const d = await callApi({
+      action: 'alm_criar_req',
+      itens: almCart,
+      observacao: document.getElementById('almObservacao').value.trim(),
+    });
+    btn.disabled = false; btn.textContent = 'Enviar Requisição';
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    almFecharModal();
+    almLoadReqs();
+    almLoadBudget();
+  }
+
+  checkSession();
+</script>
+</body>
+</html>
