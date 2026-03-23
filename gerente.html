@@ -459,6 +459,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <h3>➕ Nova Professora</h3>
               <div class="ff"><label>Nome</label><input type="text" id="newProfNome" placeholder="Ex: Professora Ana"></div>
               <div class="ff"><label>E-mail</label><input type="email" id="newProfEmail" placeholder="ana@escola.com"></div>
+              <div class="ff"><label>Senha</label><input type="password" id="newProfSenha" placeholder="Mínimo 6 caracteres"><div class="hint">Senha de acesso ao portal da professora.</div></div>
               <button class="btn-create" onclick="createProfessora()">Adicionar Professora</button>
               <div class="f-alert error"   id="profErr"></div>
               <div class="f-alert success" id="profOk"></div>
@@ -2095,6 +2096,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <strong>${esc(p.nome)}</strong>
             <span>${esc(p.email)}</span>
           </div>
+          <button class="action-btn" onclick="resetSenhaProfessora('${p.id}','${esc(p.nome)}')" title="Redefinir senha">🔑</button>
           <button class="action-btn del" onclick="deleteProfessora('${p.id}','${esc(p.nome)}')">🗑</button>
         </div>`).join('');
     }
@@ -2103,13 +2105,25 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function createProfessora() {
     const nome  = document.getElementById('newProfNome').value.trim();
     const email = document.getElementById('newProfEmail').value.trim();
-    if (!nome || !email) return showAlert('prof','error','Nome e e-mail são obrigatórios.');
-    const d = await api({ action:'professoras_create', nome, email });
+    const senha = document.getElementById('newProfSenha').value;
+    if (!nome || !email || !senha) return showAlert('prof','error','Nome, e-mail e senha são obrigatórios.');
+    if (senha.length < 6) return showAlert('prof','error','Senha deve ter no mínimo 6 caracteres.');
+    const d = await api({ action:'professoras_create', nome, email, senha });
     if (d.error) return showAlert('prof','error', d.error);
     showAlert('prof','success','✅ Professora adicionada!');
     document.getElementById('newProfNome').value = '';
     document.getElementById('newProfEmail').value = '';
+    document.getElementById('newProfSenha').value = '';
     loadProfessoras();
+  }
+
+  async function resetSenhaProfessora(id, nome) {
+    const novaSenha = prompt('Nova senha para "'+nome+'" (mínimo 6 caracteres):');
+    if (!novaSenha) return;
+    if (novaSenha.length < 6) { alert('Senha deve ter no mínimo 6 caracteres.'); return; }
+    const d = await api({ action:'professoras_reset_senha', id, nova_senha: novaSenha });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    alert('✅ Senha de "'+nome+'" redefinida com sucesso!');
   }
 
   async function deleteProfessora(id, nome) {
