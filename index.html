@@ -631,35 +631,53 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   // ── AUTH ──────────────────────────────────────────────
   async function checkAccess(user) {
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
       const r = await fetch(ACESSO, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ action: 'check', email: user.email })
+        body: JSON.stringify({ action: 'check', email: user.email }),
+        signal: controller.signal
       });
+      clearTimeout(timer);
+      if (!r.ok) {
+        console.error('checkAccess HTTP error:', r.status);
+        return false;
+      }
       const d = await r.json();
+      console.log('checkAccess response:', d);
       return d.allowed === true;
-    } catch (_) {
+    } catch (err) {
+      console.error('checkAccess failed:', err);
       return false;
     }
   }
 
-  async function initAuth() {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) {
-      const allowed = await checkAccess(session.user);
-      if (allowed) { currentUser = session.user; showForm(session.user); }
-      else { await sb.auth.signOut(); showLoginWall(); showAccessDenied(); }
-    } else {
-      showLoginWall();
-    }
+  let authProcessing = false;
 
-    sb.auth.onAuthStateChange(async (_e, session) => {
-      if (session?.user) {
-        const allowed = await checkAccess(session.user);
-        if (allowed) { currentUser = session.user; showForm(session.user); }
-        else { await sb.auth.signOut(); showLoginWall(); showAccessDenied(); }
-      } else {
-        showLoginWall();
+  async function initAuth() {
+    sb.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
+      if (event === 'TOKEN_REFRESHED') return;
+      if (authProcessing) return;
+      authProcessing = true;
+      try {
+        if (session?.user) {
+          const allowed = await checkAccess(session.user);
+          if (allowed) {
+            currentUser = session.user;
+            showForm(session.user);
+          } else {
+            await sb.auth.signOut();
+            showLoginWall();
+            showAccessDenied();
+          }
+        } else {
+          currentUser = null;
+          showLoginWall();
+        }
+      } finally {
+        authProcessing = false;
       }
     });
   }
