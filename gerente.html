@@ -232,10 +232,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard Atividades</a>
       <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
       <div class="sb-label">Portal Professora</div>
-      <a class="nav-item" href="#" onclick="showPanel('portalProf',this)"><span class="ic">📋</span> Atestados, Cursos e PDI</a>
+      <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Gerenciar Professoras</a>
+      <a class="nav-item" href="#" onclick="showPanel('portalProf',this)"><span class="ic">📋</span> Atestados e Cursos</a>
+      <a class="nav-item" href="#" onclick="showPanel('pdiGestao',this)"><span class="ic">📊</span> Gestão de PDI</a>
       <a class="nav-item" href="professora.html" target="_blank"><span class="ic">🔗</span> Acessar Portal Professora</a>
       <div class="sb-label">Configurações</div>
-      <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Professoras</a>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('usuarios',this)"><span class="ic">👥</span> Usuários</a>
@@ -657,6 +658,50 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       </div>
 
+      <!-- GESTÃO DE PDI -->
+      <div id="panelPdiGestao" class="panel">
+
+        <!-- Ciclos -->
+        <div class="two-col">
+          <div>
+            <div class="sec-title" style="margin-bottom:14px;">📅 Ciclos de PDI</div>
+            <div class="list-card" id="pdiCiclosList"></div>
+          </div>
+          <div>
+            <div class="form-card" style="margin-bottom:16px;">
+              <h3>➕ Novo Ciclo</h3>
+              <div class="ff"><label>Nome</label><input type="text" id="pdiCicloNome" placeholder="Ex: PDI 2026"></div>
+              <div class="ff"><label>Ano</label><input type="number" id="pdiCicloAno" value="2026" min="2024" max="2030"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="ff" style="margin:0;"><label>Data Início</label><input type="date" id="pdiCicloInicio"></div>
+                <div class="ff" style="margin:0;"><label>Data Fim</label><input type="date" id="pdiCicloFim"></div>
+              </div>
+              <button class="btn-create" onclick="pdiCriarCiclo()">Criar Ciclo</button>
+              <div class="f-alert error" id="pdiCicloErr"></div>
+              <div class="f-alert success" id="pdiCicloOk"></div>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;">
+
+        <!-- Painel de professoras no ciclo ativo -->
+        <div class="sec-title" style="margin-bottom:14px;">👩‍🏫 PDIs das Professoras <span class="count-badge" id="pdiProfCount">0</span></div>
+        <div id="pdiPainelLoading" style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div>
+        <div id="pdiPainelEmpty" style="display:none;text-align:center;padding:24px;color:var(--muted);font-size:13px;">Nenhum ciclo ativo. Crie um ciclo acima.</div>
+        <div id="pdiPainelList"></div>
+
+        <!-- Detalhe de um PDI (expandido) -->
+        <div id="pdiDetalheWrap" style="display:none;margin-top:24px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <button onclick="pdiFecharDetalhe()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;color:var(--muted);">← Voltar</button>
+            <div class="sec-title" style="margin:0;" id="pdiDetalheTitle">PDI</div>
+          </div>
+          <div id="pdiDetalheContent"></div>
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
@@ -818,7 +863,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados, Cursos e PDI',professoras:'Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -831,6 +876,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='usuarios')    loadUsers();
     if(id==='acesso')      loadAcesso();
     if(id==='portalProf')  loadPortalProf();
+    if(id==='pdiGestao')   loadPdiGestao();
     return false;
   }
 
@@ -1073,7 +1119,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── HELPERS ───────────────────────────────────────────
   function showAlert(ctx,type,msg) {
-    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk'],prof:['profErr','profOk'],almoco:['almocoErr','almocoOk'],horario:['horarioErr','horarioOk']};
+    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk'],prof:['profErr','profOk'],almoco:['almocoErr','almocoOk'],horario:['horarioErr','horarioOk'],pdiCiclo:['pdiCicloErr','pdiCicloOk']};
     const [eId,oId]=map[ctx];
     document.getElementById(eId).classList.remove('show'); document.getElementById(oId).classList.remove('show');
     const id=type==='error'?eId:oId;
@@ -1865,6 +1911,285 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg> Compartilhar PDF`;
     btn.disabled = false;
+  }
+
+  // ── GESTÃO DE PDI ────────────────────────────────────
+  const AREAS_PDI = {
+    linguagem:'Proficiência no Idioma', metodologia:'Metodologia e Didática',
+    avaliacao:'Avaliação da Aprendizagem', intercultural:'Competência Intercultural',
+    colaboracao:'Colaboração e Comunidade', inovacao:'Inovação e Tecnologia',
+    desenvolvimento:'Desenvolvimento Profissional'
+  };
+  const STATUS_PDI = {rascunho:'Rascunho',aguardando_aprovacao:'Aguardando Aprovação',em_andamento:'Em Andamento',encerrado:'Encerrado'};
+  let pdiCicloAtivo = null;
+
+  async function loadPdiGestao() {
+    await Promise.all([loadPdiCiclos(), loadPdiPainel()]);
+  }
+
+  async function loadPdiCiclos() {
+    const d = await callProf({ action:'pdi_ciclos_list' });
+    const list = Array.isArray(d?.data) ? d.data : [];
+    const el = document.getElementById('pdiCiclosList');
+    if (!list.length) {
+      el.innerHTML = '<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhum ciclo criado.</span></div>';
+      return;
+    }
+    el.innerHTML = list.map(c => `
+      <div class="list-row">
+        <div class="lr-main">
+          <strong>${esc(c.nome)}</strong>
+          <span>${c.data_inicio?.split('-').reverse().join('/')||''} — ${c.data_fim?.split('-').reverse().join('/')||''} ${c.ativo?'<span style="color:#065f46;font-weight:600;">● Ativo</span>':''}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  async function pdiCriarCiclo() {
+    const nome = document.getElementById('pdiCicloNome').value.trim();
+    const ano = parseInt(document.getElementById('pdiCicloAno').value);
+    const data_inicio = document.getElementById('pdiCicloInicio').value;
+    const data_fim = document.getElementById('pdiCicloFim').value;
+    if (!nome || !data_inicio || !data_fim) return showAlert('pdiCiclo','error','Preencha todos os campos.');
+    const d = await callProf({ action:'pdi_ciclo_criar', nome, ano, data_inicio, data_fim });
+    if (d.error) return showAlert('pdiCiclo','error', d.error);
+    showAlert('pdiCiclo','success','✅ Ciclo criado!');
+    document.getElementById('pdiCicloNome').value = '';
+    document.getElementById('pdiCicloInicio').value = '';
+    document.getElementById('pdiCicloFim').value = '';
+    loadPdiGestao();
+  }
+
+  async function loadPdiPainel() {
+    const loading = document.getElementById('pdiPainelLoading');
+    const empty = document.getElementById('pdiPainelEmpty');
+    const list = document.getElementById('pdiPainelList');
+    loading.style.display = 'block'; empty.style.display = 'none'; list.innerHTML = '';
+
+    const d = await callProf({ action:'pdi_painel' });
+    loading.style.display = 'none';
+
+    if (!d.ciclo) { empty.style.display = 'block'; return; }
+    pdiCicloAtivo = d.ciclo;
+
+    const profs = d.professoras || [];
+    document.getElementById('pdiProfCount').textContent = profs.length;
+
+    if (!profs.length) { empty.textContent = 'Nenhuma professora cadastrada.'; empty.style.display = 'block'; return; }
+
+    list.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Professora</th><th>Status</th><th>Submetido</th><th>Aprovado</th><th>Nota Final</th><th>Ações</th></tr></thead>
+      <tbody>${profs.map(p => {
+        const pdi = p.pdi;
+        const status = pdi ? ppStatusBadge(pdi.status) : '<span style="color:var(--muted);font-size:12px;">Não iniciado</span>';
+        const submetido = pdi?.submetido_em ? new Date(pdi.submetido_em).toLocaleDateString('pt-BR') : '—';
+        const aprovado = pdi?.aprovado_em ? new Date(pdi.aprovado_em).toLocaleDateString('pt-BR') : '—';
+        const nota = pdi?.nota_final ? pdi.nota_final+'/4' : '—';
+        let acoes = '';
+        if (pdi) {
+          acoes += `<button class="pp-action" onclick="pdiVerDetalhe('${pdi.id}','${esc(p.professora.nome)}')">👁 Ver</button>`;
+          if (pdi.status === 'aguardando_aprovacao') {
+            acoes += `<button class="pp-action approve" onclick="pdiAprovarPdi('${pdi.id}')">✓ Aprovar</button>`;
+            acoes += `<button class="pp-action reject" onclick="pdiDevolverPdi('${pdi.id}')">↩ Devolver</button>`;
+          }
+          if (pdi.status === 'em_andamento') {
+            acoes += `<button class="pp-action" onclick="pdiEncerrarPdi('${pdi.id}')">🏁 Encerrar</button>`;
+          }
+        }
+        return `<tr>
+          <td><strong>${esc(p.professora.nome)}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(p.professora.email)}</span></td>
+          <td>${status}</td><td>${submetido}</td><td>${aprovado}</td>
+          <td style="font-weight:600;">${nota}</td>
+          <td style="white-space:nowrap;">${acoes || '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  async function pdiAprovarPdi(id) {
+    const fb = prompt('Feedback para a professora (opcional):');
+    if (fb === null) return;
+    const d = await callProf({ action:'pdi_aprovar', pdi_id:id, feedback:fb||null });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ PDI aprovado!');
+    loadPdiPainel();
+  }
+
+  async function pdiDevolverPdi(id) {
+    const fb = prompt('Feedback para a professora (motivo da devolução):');
+    if (!fb) { alert('Informe o motivo.'); return; }
+    const d = await callProf({ action:'pdi_rejeitar', pdi_id:id, feedback:fb });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('PDI devolvido para revisão.');
+    loadPdiPainel();
+  }
+
+  async function pdiEncerrarPdi(id) {
+    const nota = prompt('Nota final (1-4):\n1 = Em Desenvolvimento\n2 = Atende\n3 = Supera\n4 = Referência');
+    if (!nota) return;
+    const n = parseInt(nota);
+    if (n<1||n>4) { alert('Nota deve ser entre 1 e 4.'); return; }
+    const fb = prompt('Feedback final da gestora:');
+    if (!fb) { alert('Informe o feedback final.'); return; }
+    const d = await callProf({ action:'pdi_nota_final', pdi_id:id, nota_final:n, feedback_gestora:fb });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ PDI encerrado com nota '+n+'/4.');
+    loadPdiPainel();
+  }
+
+  async function pdiVerDetalhe(pdiId, nome) {
+    document.getElementById('pdiPainelList').style.display = 'none';
+    document.getElementById('pdiDetalheWrap').style.display = 'block';
+    document.getElementById('pdiDetalheTitle').textContent = 'PDI — ' + nome;
+    const el = document.getElementById('pdiDetalheContent');
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);"><span class="spinner-sm"></span> Carregando…</div>';
+
+    const d = await callProf({ action:'pdi_prof_view', pdi_id:pdiId });
+    if (d.error) { el.innerHTML = '<div class="empty-state">Erro: '+esc(d.error)+'</div>'; return; }
+    const pdi = d.data;
+    if (!pdi) { el.innerHTML = '<div class="empty-state">PDI não encontrado.</div>'; return; }
+
+    const statusLabel = STATUS_PDI[pdi.status] || pdi.status;
+    const comps = pdi.pdi_competencias || [];
+    const metas = pdi.pdi_metas || [];
+    const acomp = pdi.pdi_acompanhamentos || [];
+
+    // Info
+    let html = `<div class="form-card" style="margin-bottom:16px;">
+      <h3>📋 Informações</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+        <div><strong>Status:</strong> ${ppStatusBadge(pdi.status)}</div>
+        <div><strong>Ciclo:</strong> ${esc(pdi.pdi_ciclos?.nome||'—')}</div>
+        <div><strong>Professora:</strong> ${esc(pdi.professoras?.nome||'—')}</div>
+        <div><strong>Nota Final:</strong> ${pdi.nota_final ? pdi.nota_final+'/4' : '—'}</div>
+      </div>
+      ${pdi.feedback_gestora?`<div style="margin-top:12px;padding:10px 14px;background:#d1fae5;border-radius:8px;font-size:12px;color:#065f46;"><strong>Feedback:</strong> ${esc(pdi.feedback_gestora)}</div>`:''}
+    </div>`;
+
+    // Competências com form de avaliação da gestora
+    if (comps.length) {
+      html += `<div class="form-card" style="margin-bottom:16px;">
+        <h3>📊 Competências</h3>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">
+          <span style="color:#3b82f6;">■</span> Autoavaliação &nbsp;
+          <span style="color:#22c55e;">■</span> Gestora
+        </div>`;
+      comps.forEach(c => {
+        const autoW = (c.nota_auto||0)*25;
+        const gestW = (c.nota_gestora||0)*25;
+        html += `<div style="margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:500;">${AREAS_PDI[c.area]||c.area}</span>
+            <span style="font-size:11px;color:var(--muted);">Auto: ${c.nota_auto||'—'} · Gestora: ${c.nota_gestora||'—'}</span>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <div style="flex:1;height:8px;background:#dbeafe;border-radius:4px;overflow:hidden;"><div style="width:${autoW}%;height:100%;background:#3b82f6;border-radius:4px;"></div></div>
+            <div style="flex:1;height:8px;background:#dcfce7;border-radius:4px;overflow:hidden;"><div style="width:${gestW}%;height:100%;background:#22c55e;border-radius:4px;"></div></div>
+          </div>
+          ${c.comentario?`<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic;">${esc(c.comentario)}</div>`:''}
+        </div>`;
+      });
+
+      // Form para gestora avaliar (se em status aguardando_aprovacao ou em_andamento)
+      if (['aguardando_aprovacao','em_andamento'].includes(pdi.status)) {
+        html += `<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:10px;">Avaliar competências (gestora):</div>`;
+        comps.forEach(c => {
+          html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;">
+            <span style="min-width:180px;">${AREAS_PDI[c.area]||c.area}</span>
+            <select id="gestComp_${c.area}" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+              <option value="">—</option>
+              <option value="1" ${c.nota_gestora===1?'selected':''}>1 - Em Desenv.</option>
+              <option value="2" ${c.nota_gestora===2?'selected':''}>2 - Atende</option>
+              <option value="3" ${c.nota_gestora===3?'selected':''}>3 - Supera</option>
+              <option value="4" ${c.nota_gestora===4?'selected':''}>4 - Referência</option>
+            </select>
+          </div>`;
+        });
+        html += `<button class="pp-action approve" style="margin-top:8px;padding:8px 16px;" onclick="pdiSalvarCompGestora('${pdi.id}')">Salvar avaliação da gestora</button>`;
+      }
+      html += `</div>`;
+    }
+
+    // Metas
+    if (metas.length) {
+      html += `<div class="form-card" style="margin-bottom:16px;">
+        <h3>🎯 Metas (${metas.length})</h3>`;
+      metas.forEach(m => {
+        const statusMeta = {pendente:'⏳ Pendente',em_andamento:'🔄 Em Andamento',concluido:'✅ Concluído',revisado:'📝 Revisado'};
+        const prazo = m.prazo ? m.prazo.split('-').reverse().join('/') : '—';
+        html += `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;background:#fdfbf8;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <strong style="font-size:13px;">${esc(m.descricao)}</strong>
+            <span style="font-size:11px;white-space:nowrap;">${statusMeta[m.status]||m.status}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">📏 ${esc(m.indicador)} · 📅 ${prazo}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;height:8px;background:#f0ece6;border-radius:4px;overflow:hidden;">
+              <div style="width:${m.progressao_pct||0}%;height:100%;background:var(--red);border-radius:4px;"></div>
+            </div>
+            <span style="font-size:11px;font-weight:600;">${m.progressao_pct||0}%</span>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Acompanhamentos
+    if (acomp.length) {
+      html += `<div class="form-card" style="margin-bottom:16px;">
+        <h3>💬 Acompanhamentos (${acomp.length})</h3>`;
+      acomp.forEach(a => {
+        const dt = new Date(a.criado_em).toLocaleDateString('pt-BR');
+        const tipo = a.tipo==='final'?'📋 Final':'📝 Semestral';
+        html += `<div style="border-left:3px solid var(--border);padding:10px 14px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">${tipo} — ${dt}</div>
+          <div style="font-size:12px;color:var(--text);margin-bottom:6px;">${esc(a.relato_professora||'')}</div>
+          ${a.feedback_gestora?`<div style="font-size:12px;color:#065f46;font-style:italic;">💬 Gestora: ${esc(a.feedback_gestora)}</div>`
+            :`<div style="display:flex;gap:6px;align-items:center;">
+              <input type="text" id="fbAcomp_${a.id}" placeholder="Escrever feedback…" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;">
+              <button class="pp-action approve" onclick="pdiEnviarFeedbackAcomp('${a.id}')">Enviar</button>
+            </div>`}
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
+  function pdiFecharDetalhe() {
+    document.getElementById('pdiDetalheWrap').style.display = 'none';
+    document.getElementById('pdiPainelList').style.display = 'block';
+  }
+
+  async function pdiSalvarCompGestora(pdiId) {
+    const areas = Object.keys(AREAS_PDI);
+    const competencias = [];
+    for (const area of areas) {
+      const sel = document.getElementById('gestComp_'+area);
+      if (!sel) continue;
+      const val = parseInt(sel.value);
+      if (val >= 1 && val <= 4) competencias.push({ area, nota_gestora: val });
+    }
+    if (!competencias.length) { alert('Selecione pelo menos uma nota.'); return; }
+    const d = await callProf({ action:'pdi_competencias_gerente', pdi_id:pdiId, competencias });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Avaliação salva!');
+    pdiVerDetalhe(pdiId, document.getElementById('pdiDetalheTitle').textContent.replace('PDI — ',''));
+  }
+
+  async function pdiEnviarFeedbackAcomp(acompId) {
+    const input = document.getElementById('fbAcomp_'+acompId);
+    if (!input || !input.value.trim()) { alert('Escreva o feedback.'); return; }
+    const d = await callProf({ action:'pdi_checkin_feedback', acompanhamento_id:acompId, feedback_gestora:input.value.trim() });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Feedback enviado!');
+    // Recarrega detalhe
+    const nome = document.getElementById('pdiDetalheTitle').textContent.replace('PDI — ','');
+    // Re-fetch by reloading the panel
+    loadPdiPainel();
+    document.getElementById('pdiDetalheWrap').style.display = 'none';
+    document.getElementById('pdiPainelList').style.display = 'block';
   }
 
   // ── PORTAL PROFESSORA (Atestados, Diplomas, PDI) ─────
