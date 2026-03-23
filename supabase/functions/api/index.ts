@@ -426,9 +426,10 @@ serve(async (req: Request) => {
     return ok(data ?? []);
   }
   if (action === "professoras_create") {
-    const { nome, email, senha } = body as { nome: string; email: string; senha: string };
+    const { nome, email, senha, tipo } = body as { nome: string; email: string; senha: string; tipo?: string };
     if (!nome || !email) return err("Nome e e-mail são obrigatórios.");
-    const insertData: Record<string, unknown> = { nome, email };
+    const tiposValidos = ["professora", "professora_assistente", "manutencao"];
+    const insertData: Record<string, unknown> = { nome, email, tipo: tiposValidos.includes(tipo ?? "") ? tipo : "professora" };
     if (senha) {
       if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
       insertData.senha_hash = await hashSenhaProf(senha as string);

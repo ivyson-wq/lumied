@@ -686,6 +686,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     localStorage.setItem('prof_token', d.token);
     localStorage.setItem('prof_nome', d.nome);
     localStorage.setItem('prof_email', d.email);
+    localStorage.setItem('prof_tipo', d.tipo || 'professora');
     showApp(d);
   }
 
@@ -694,6 +695,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     localStorage.removeItem('prof_token');
     localStorage.removeItem('prof_nome');
     localStorage.removeItem('prof_email');
+    localStorage.removeItem('prof_tipo');
     document.getElementById('appShell').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     currentProf = null;
@@ -726,22 +728,57 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (!token) return;
     const nome = localStorage.getItem('prof_nome');
     const email = localStorage.getItem('prof_email');
-    showApp({ nome, email });
+    const tipo = localStorage.getItem('prof_tipo') || 'professora';
+    showApp({ nome, email, tipo });
+  }
+
+  // Controle de acesso por nível
+  // professora: tudo
+  // professora_assistente: tudo exceto almoxarifado
+  // manutencao: apenas manutenção
+  const ACESSO_PAGINAS = {
+    professora:             ['pickup','diplomas','almox','pdi','atestados','manutencao'],
+    professora_assistente:  ['pickup','diplomas','pdi','atestados','manutencao'],
+    manutencao:             ['manutencao'],
+  };
+
+  function aplicarControleAcesso(tipo) {
+    const paginas = ACESSO_PAGINAS[tipo] || ACESSO_PAGINAS.professora;
+    // Mostra/oculta itens do sidebar
+    document.querySelectorAll('.prof-sidebar .nav-item').forEach(nav => {
+      const onclick = nav.getAttribute('onclick') || '';
+      const match = onclick.match(/profShowPanel\('(\w+)'\)/);
+      if (match) {
+        nav.style.display = paginas.includes(match[1]) ? '' : 'none';
+      }
+    });
+    // Navega para a primeira página permitida
+    const primeira = paginas[0] || 'manutencao';
+    profShowPanel(primeira);
   }
 
   function showApp(user) {
     currentProf = user;
+    const tipo = user.tipo || localStorage.getItem('prof_tipo') || 'professora';
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display = 'block';
     document.getElementById('userNome').textContent = user.nome || user.email || '';
-    loadAll();
+    aplicarControleAcesso(tipo);
+    loadAll(tipo);
   }
 
   // ── DATA ──────────────────────────────────────────────────
-  async function loadAll() {
-    await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados(), loadMeuPdi() ]);
-    initPickupPanel();
-    almLoadAll();
+  async function loadAll(tipo) {
+    tipo = tipo || localStorage.getItem('prof_tipo') || 'professora';
+    const paginas = ACESSO_PAGINAS[tipo] || ACESSO_PAGINAS.professora;
+    const tasks = [];
+    if (paginas.includes('diplomas'))   { tasks.push(loadRanking()); tasks.push(loadMeusDiplomas()); }
+    if (paginas.includes('atestados')) tasks.push(loadMeusAtestados());
+    if (paginas.includes('pdi'))       tasks.push(loadMeuPdi());
+    if (paginas.includes('manutencao')) tasks.push(loadMinhasManutencoes());
+    await Promise.all(tasks);
+    if (paginas.includes('pickup')) initPickupPanel();
+    if (paginas.includes('almox'))  almLoadAll();
   }
 
   async function loadRanking() {

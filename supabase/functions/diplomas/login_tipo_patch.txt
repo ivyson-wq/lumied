@@ -1,0 +1,18 @@
+══════════════════════════════════════════════════════════
+ PATCH: Retornar 'tipo' no login da professora
+
+ Na edge function 'diplomas', localize a action 'professora_login'.
+ Encontre a linha que retorna o token:
+
+   return json({ token: tok, nome: prof.nome, email: prof.email })
+
+ Substitua por:
+
+   return json({ token: tok, nome: prof.nome, email: prof.email, tipo: prof.tipo || 'professora' })
+
+ IMPORTANTE: A query de select já inclui os campos necessários:
+   .from('professoras').select('id, nome, email, senha_hash')
+
+ Altere para incluir 'tipo':
+   .from('professoras').select('id, nome, email, senha_hash, tipo')
+══════════════════════════════════════════════════════════

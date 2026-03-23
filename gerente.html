@@ -232,7 +232,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard Atividades</a>
       <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
       <div class="sb-label">Portal Professora</div>
-      <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Gerenciar Professoras</a>
       <a class="nav-item" href="#" onclick="showPanel('portalProf',this)"><span class="ic">🎓</span> Cursos e Diplomas</a>
       <a class="nav-item" href="#" onclick="showPanel('rhAtestados',this)"><span class="ic">🏥</span> RH — Atestados</a>
       <a class="nav-item" href="#" onclick="showPanel('pdiGestao',this)"><span class="ic">📊</span> Gestão de PDI</a>
@@ -464,26 +463,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </div>
 
       <!-- PROFESSORAS -->
-      <div id="panelProfessoras" class="panel">
-        <div class="two-col">
-          <div>
-            <div class="sec-title">Professoras Cadastradas <span class="count-badge" id="profsCount">0</span></div>
-            <div class="hint" style="margin-bottom:12px;">As professoras recebem e-mail de notificação sempre que um responsável registra ausência.</div>
-            <div class="list-card" id="profsList"></div>
-          </div>
-          <div>
-            <div class="form-card" style="margin-bottom:16px;">
-              <h3>➕ Nova Professora</h3>
-              <div class="ff"><label>Nome</label><input type="text" id="newProfNome" placeholder="Ex: Professora Ana"></div>
-              <div class="ff"><label>E-mail</label><input type="email" id="newProfEmail" placeholder="ana@escola.com"></div>
-              <div class="ff"><label>Senha</label><input type="password" id="newProfSenha" placeholder="Mínimo 6 caracteres"><div class="hint">Senha de acesso ao portal da professora.</div></div>
-              <button class="btn-create" onclick="createProfessora()">Adicionar Professora</button>
-              <div class="f-alert error"   id="profErr"></div>
-              <div class="f-alert success" id="profOk"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Painel Professoras removido — unificado em Usuários -->
 
       <!-- REUNIÕES -->
       <div id="panelReunioes" class="panel">
@@ -564,16 +544,39 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div id="panelUsuarios" class="panel">
         <div class="two-col">
           <div>
-            <div class="sec-title">Gerentes <span class="count-badge" id="usersCount">0</span></div>
+            <!-- Filtro por nível -->
+            <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+              <div class="sec-title" style="margin:0;">Todos os Usuários <span class="count-badge" id="usersCount">0</span></div>
+              <select id="usersFilterRole" onchange="renderAllUsers()" style="margin-left:auto;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;">
+                <option value="all">Todos os níveis</option>
+                <option value="gerente">Gerentes</option>
+                <option value="professora">Professoras</option>
+                <option value="professora_assistente">Prof. Assistentes</option>
+                <option value="secretaria">Secretárias</option>
+                <option value="manutencao">Manutenção</option>
+              </select>
+            </div>
             <div class="list-card" id="usersList"></div>
           </div>
           <div>
-            <div class="form-card">
-              <h3>➕ Adicionar Gerente</h3>
-              <div class="ff"><label>Nome</label><input type="text" id="newNome" placeholder="Ex: Simone Ribeiro" autocomplete="off"></div>
-              <div class="ff"><label>E-mail</label><input type="email" id="newEmail" placeholder="gerente@escola.com.br" autocomplete="off"></div>
-              <div class="ff"><label>Senha</label><input type="password" id="newSenha" placeholder="Mínimo 6 caracteres"><div class="hint">Poderá alterar depois.</div></div>
-              <button class="btn-create" onclick="createUser()">Criar Gerente</button>
+            <div class="form-card" style="margin-bottom:16px;">
+              <h3>➕ Novo Usuário</h3>
+              <div class="ff"><label>Nome</label><input type="text" id="newNome" placeholder="Ex: Maria Silva" autocomplete="off"></div>
+              <div class="ff"><label>E-mail</label><input type="email" id="newEmail" placeholder="usuario@escola.com" autocomplete="off"></div>
+              <div class="ff"><label>Senha</label><input type="password" id="newSenha" placeholder="Mínimo 6 caracteres"></div>
+              <div class="ff">
+                <label>Nível de Acesso</label>
+                <select id="newNivel" onchange="onNivelChange()">
+                  <option value="">Selecione…</option>
+                  <option value="gerente">Gerente — acesso integral</option>
+                  <option value="professora">Professora — portal completo</option>
+                  <option value="professora_assistente">Professora Assistente — sem almoxarifado</option>
+                  <option value="secretaria">Secretária — atestados</option>
+                  <option value="manutencao">Manutenção — apenas manutenção</option>
+                </select>
+                <div id="nivelDesc" style="font-size:11px;color:var(--muted);margin-top:6px;display:none;"></div>
+              </div>
+              <button class="btn-create" onclick="createUser()">Criar Usuário</button>
               <div class="f-alert error" id="userErr"></div><div class="f-alert success" id="userOk"></div>
             </div>
             <div class="change-pass-card">
@@ -712,6 +715,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </table>
         </div>
       </div>
+
+      <!-- Painel Secretárias removido — unificado em Usuários -->
 
       <!-- GESTÃO DE PDI -->
       <div id="panelPdiGestao" class="panel">
@@ -1028,20 +1033,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Cursos e Diplomas',rhAtestados:'RH — Atestados',pdiGestao:'Gestão de PDI',almReqs:'Requisições',almCatalogo:'Catálogo de Insumos',almTurmas:'Turmas e Orçamentos',almCompras:'Compras',manutencao:'Solicitações de Manutenção',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Cursos e Diplomas',rhAtestados:'RH — Atestados',pdiGestao:'Gestão de PDI',almReqs:'Requisições',almCatalogo:'Catálogo de Insumos',almTurmas:'Turmas e Orçamentos',almCompras:'Compras',manutencao:'Solicitações de Manutenção',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
     if(id==='series')      loadSeries();
     if(id==='atividades')  loadAtividadesPanel();
     if(id==='dashAtiv')    loadAtivDashboard();
-    if(id==='professoras') loadProfessoras();
+    //if(id==='professoras') loadProfessoras(); // removido — unificado em usuarios
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
     if(id==='usuarios')    loadUsers();
     if(id==='acesso')      loadAcesso();
     if(id==='portalProf')  loadPortalProf();
     if(id==='rhAtestados') loadRhAtestados();
+    //if(id==='secretarias') loadSecretarias(); // removido — unificado em usuarios
     if(id==='pdiGestao')   loadPdiGestao();
     if(id==='almReqs')     almLoadReqs();
     if(id==='almCatalogo') almLoadInsumos();
@@ -1247,35 +1253,148 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   // ── USUÁRIOS ──────────────────────────────────────────
+  let allUsersData = [];
+  const NIVEL_LABELS = {gerente:'Gerente',professora:'Professora',professora_assistente:'Prof. Assistente',secretaria:'Secretária',manutencao:'Manutenção'};
+  const NIVEL_COLORS = {gerente:'#C8102E',professora:'#1a6bb5',professora_assistente:'#6b3fa0',secretaria:'#2d7a3a',manutencao:'#d4830a'};
+  const NIVEL_DESC = {
+    gerente:'Acesso integral ao painel gerencial.',
+    professora:'Acesso ao Portal da Professora: fila de retirada, cursos, almoxarifado, PDI, atestados e manutenção.',
+    professora_assistente:'Acesso ao Portal da Professora sem a página de almoxarifado.',
+    secretaria:'Acesso à área de atestados médicos para aprovação.',
+    manutencao:'Acesso apenas à área de solicitações de manutenção.',
+  };
+
+  function onNivelChange() {
+    const nivel = document.getElementById('newNivel').value;
+    const descEl = document.getElementById('nivelDesc');
+    if (nivel && NIVEL_DESC[nivel]) { descEl.textContent = NIVEL_DESC[nivel]; descEl.style.display = 'block'; }
+    else { descEl.style.display = 'none'; }
+  }
+
   async function loadUsers() {
-    const data=await api({ action:'gerentes_list' });
-    const el=document.getElementById('usersList');
-    const users=Array.isArray(data)?data:[];
-    document.getElementById('usersCount').textContent=users.length;
-    el.innerHTML=users.map(u=>{
-      const isMe=u.email===currentGerente?.email;
+    // Busca gerentes, professoras e secretárias em paralelo
+    const [gerentes, professoras, secretarias] = await Promise.all([
+      api({ action:'gerentes_list' }),
+      api({ action:'professoras_list' }),
+      callProf({ action:'secretarias_list' }),
+    ]);
+    allUsersData = [];
+
+    // Gerentes
+    (Array.isArray(gerentes)?gerentes:[]).forEach(u => {
+      allUsersData.push({ ...u, _nivel:'gerente', _tabela:'gerentes' });
+    });
+
+    // Professoras (com tipo/nivel)
+    (Array.isArray(professoras)?professoras:[]).forEach(u => {
+      const tipo = u.tipo || 'professora';
+      allUsersData.push({ ...u, _nivel:tipo, _tabela:'professoras' });
+    });
+
+    // Secretárias
+    const secList = Array.isArray(secretarias?.data) ? secretarias.data : (Array.isArray(secretarias)?secretarias:[]);
+    secList.forEach(u => {
+      allUsersData.push({ ...u, _nivel:'secretaria', _tabela:'secretarias' });
+    });
+
+    renderAllUsers();
+  }
+
+  function renderAllUsers() {
+    const filtro = document.getElementById('usersFilterRole').value;
+    const list = filtro === 'all' ? allUsersData : allUsersData.filter(u => u._nivel === filtro);
+    document.getElementById('usersCount').textContent = allUsersData.length;
+    const el = document.getElementById('usersList');
+
+    if (!list.length) {
+      el.innerHTML = '<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhum usuário encontrado.</span></div>';
+      return;
+    }
+
+    el.innerHTML = list.map(u => {
+      const isMe = u.email === currentGerente?.email && u._nivel === 'gerente';
+      const cor = NIVEL_COLORS[u._nivel] || '#aaa';
+      const label = NIVEL_LABELS[u._nivel] || u._nivel;
+      const dt = u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-BR') : '';
+
+      let acoes = '';
+      if (isMe) {
+        acoes = '<span class="you-badge">Você</span>';
+      } else {
+        if (u._nivel !== 'gerente') {
+          acoes += `<button class="action-btn" onclick="resetSenhaUsuario('${u.id}','${esc(u.nome||'')}','${u._tabela}','${u._nivel}')" title="Redefinir senha">🔑</button>`;
+        }
+        acoes += `<button class="action-btn del" onclick="deleteUser('${u.id}','${esc(u.nome||u.email)}','${u._tabela}','${u._nivel}')">🗑</button>`;
+      }
+
       return `<div class="list-row">
-        <div class="list-avatar">${(u.nome||u.email||'?')[0].toUpperCase()}</div>
-        <div class="lr-main"><strong>${esc(u.nome||'—')}</strong><span>${esc(u.email)} · ${new Date(u.criado_em).toLocaleDateString('pt-BR')}</span></div>
-        <span class="role-badge">Gerente</span>
-        ${isMe?'<span class="you-badge">Você</span>':'<button class="action-btn del" onclick="deleteUser(\''+u.id+'\',\''+esc(u.nome||u.email)+'\')">🗑</button>'}
+        <div class="list-avatar" style="background:${cor}22;color:${cor};border-color:${cor}44;">${(u.nome||u.email||'?')[0].toUpperCase()}</div>
+        <div class="lr-main">
+          <strong>${esc(u.nome||'—')}</strong>
+          <span>${esc(u.email)}${dt?' · '+dt:''}</span>
+        </div>
+        <span class="role-badge" style="background:${cor}18;color:${cor};border:1px solid ${cor}33;">${label}</span>
+        ${acoes}
       </div>`;
     }).join('');
   }
+
   async function createUser() {
-    const nome=document.getElementById('newNome').value.trim(), email=document.getElementById('newEmail').value.trim(), senha=document.getElementById('newSenha').value;
-    if(!nome||!email||!senha) return showAlert('user','error','Preencha todos os campos.');
-    if(senha.length<6) return showAlert('user','error','Senha mínima de 6 caracteres.');
-    const d=await api({ action:'gerentes_create', nome, email, senha });
-    if(d.error) return showAlert('user','error',d.error);
-    showAlert('user','success','✅ Gerente "'+nome+'" criado!');
-    document.getElementById('newNome').value=document.getElementById('newEmail').value=document.getElementById('newSenha').value='';
+    const nome = document.getElementById('newNome').value.trim();
+    const email = document.getElementById('newEmail').value.trim();
+    const senha = document.getElementById('newSenha').value;
+    const nivel = document.getElementById('newNivel').value;
+
+    if (!nome || !email || !senha || !nivel) return showAlert('user','error','Preencha todos os campos e selecione o nível de acesso.');
+    if (senha.length < 6) return showAlert('user','error','Senha mínima de 6 caracteres.');
+
+    let d;
+    if (nivel === 'gerente') {
+      d = await api({ action:'gerentes_create', nome, email, senha });
+    } else if (nivel === 'secretaria') {
+      d = await callProf({ action:'secretaria_create', nome, email, senha });
+    } else {
+      // professora, professora_assistente, manutencao → tabela professoras com tipo
+      d = await api({ action:'professoras_create', nome, email, senha, tipo: nivel });
+    }
+
+    if (d?.error) return showAlert('user','error', d.error);
+    showAlert('user','success','✅ Usuário "'+nome+'" criado como '+NIVEL_LABELS[nivel]+'!');
+    document.getElementById('newNome').value = '';
+    document.getElementById('newEmail').value = '';
+    document.getElementById('newSenha').value = '';
+    document.getElementById('newNivel').value = '';
+    document.getElementById('nivelDesc').style.display = 'none';
     loadUsers();
   }
-  async function deleteUser(id,nome) {
-    if(!confirm('Remover "'+nome+'"?')) return;
-    const d=await api({ action:'gerentes_delete', id });
-    if(d.error){ alert(d.error); return; } loadUsers();
+
+  async function deleteUser(id, nome, tabela, nivel) {
+    if (!confirm('Remover "'+nome+'" ('+NIVEL_LABELS[nivel]+')?')) return;
+    let d;
+    if (tabela === 'gerentes') {
+      d = await api({ action:'gerentes_delete', id });
+    } else if (tabela === 'secretarias') {
+      d = await callProf({ action:'secretaria_delete', id });
+    } else {
+      d = await api({ action:'professoras_delete', id });
+    }
+    if (d?.error) { alert(d.error); return; }
+    loadUsers();
+  }
+
+  async function resetSenhaUsuario(id, nome, tabela, nivel) {
+    const novaSenha = prompt('Nova senha para "'+nome+'" (mínimo 6 caracteres):');
+    if (!novaSenha) return;
+    if (novaSenha.length < 6) { alert('Senha deve ter no mínimo 6 caracteres.'); return; }
+    let d;
+    if (tabela === 'professoras') {
+      d = await api({ action:'professoras_reset_senha', id, nova_senha: novaSenha });
+    } else {
+      // Para secretárias, usa a mesma lógica (se existir a action)
+      d = await callProf({ action:'professora_set_senha', professora_id: id, senha: novaSenha });
+    }
+    if (d?.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Senha redefinida!');
   }
   async function changePassword() {
     const senhaAtual=document.getElementById('senhaAtual').value, novaSenha=document.getElementById('novaSenha').value, conf=document.getElementById('novaSenhaConf').value;
@@ -1290,7 +1409,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── HELPERS ───────────────────────────────────────────
   function showAlert(ctx,type,msg) {
-    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk'],prof:['profErr','profOk'],almoco:['almocoErr','almocoOk'],horario:['horarioErr','horarioOk'],pdiCiclo:['pdiCicloErr','pdiCicloOk']};
+    const map={serie:['serieErr','serieOk'],logo:['logoErr','logoOk'],user:['userErr','userOk'],pass:['passErr','passOk'],ativ:['ativErr','ativOk'],prof:['profErr','profOk'],almoco:['almocoErr','almocoOk'],horario:['horarioErr','horarioOk'],pdiCiclo:['pdiCicloErr','pdiCicloOk'],sec:['secErr','secOk']};
     const [eId,oId]=map[ctx];
     document.getElementById(eId).classList.remove('show'); document.getElementById(oId).classList.remove('show');
     const id=type==='error'?eId:oId;
@@ -2150,6 +2269,47 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg> Compartilhar PDF`;
     btn.disabled = false;
+  }
+
+  // ── SECRETÁRIAS ──────────────────────────────────────
+  async function loadSecretarias() {
+    const d = await callProf({ action:'secretarias_list' });
+    const list = Array.isArray(d?.data) ? d.data : [];
+    document.getElementById('secCount').textContent = list.length;
+    const el = document.getElementById('secList');
+    if (!list.length) {
+      el.innerHTML = '<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhuma secretária cadastrada.</span></div>';
+    } else {
+      el.innerHTML = list.map(s => `
+        <div class="list-row">
+          <div class="lr-main">
+            <strong>${esc(s.nome)}</strong>
+            <span>${esc(s.email)}</span>
+          </div>
+          <button class="action-btn del" onclick="deleteSecretaria('${s.id}','${esc(s.nome)}')">🗑</button>
+        </div>`).join('');
+    }
+  }
+
+  async function createSecretaria() {
+    const nome  = document.getElementById('newSecNome').value.trim();
+    const email = document.getElementById('newSecEmail').value.trim();
+    const senha = document.getElementById('newSecSenha').value;
+    if (!nome || !email || !senha) return showAlert('sec','error','Nome, e-mail e senha são obrigatórios.');
+    if (senha.length < 6) return showAlert('sec','error','Senha deve ter no mínimo 6 caracteres.');
+    const d = await callProf({ action:'secretaria_create', nome, email, senha });
+    if (d.error) return showAlert('sec','error', d.error);
+    showAlert('sec','success','✅ Secretária adicionada!');
+    document.getElementById('newSecNome').value = '';
+    document.getElementById('newSecEmail').value = '';
+    document.getElementById('newSecSenha').value = '';
+    loadSecretarias();
+  }
+
+  async function deleteSecretaria(id, nome) {
+    if (!confirm('Remover secretária "'+nome+'"?')) return;
+    await callProf({ action:'secretaria_delete', id });
+    loadSecretarias();
   }
 
   // ── RH — ATESTADOS ──────────────────────────────────
