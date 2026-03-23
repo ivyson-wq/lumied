@@ -377,47 +377,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
     <hr class="section-divider">
 
-    <!-- Upload Atestado -->
-    <div class="upload-card">
-      <h3>🏥 Enviar Atestado Médico</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
-        Envie atestados de afastamento para análise da secretaria. Informe o período de ausência e anexe o documento digitalizado.
-      </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="ff" style="margin:0;">
-          <label>Data de Início</label>
-          <input type="date" id="atestDataInicio">
-        </div>
-        <div class="ff" style="margin:0;">
-          <label>Data de Fim</label>
-          <input type="date" id="atestDataFim">
-        </div>
-      </div>
-      <div class="ff" style="margin-top:12px;">
-        <label>Motivo (opcional)</label>
-        <input type="text" id="atestMotivo" placeholder="Ex: Consulta médica, cirurgia…">
-      </div>
-      <div class="upload-zone" id="atestUploadZone" onclick="document.getElementById('atestFile').click()">
-        <div class="uz-icon">📋</div>
-        <p>Clique para selecionar ou arraste o arquivo aqui</p>
-        <small>PDF, JPG ou PNG · máximo 10MB</small>
-        <input type="file" id="atestFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onAtestFileSelected(event)">
-      </div>
-      <div class="file-name" id="atestFileName"></div>
-      <div class="upload-bar-wrap" id="atestBarWrap"><div class="upload-bar" id="atestBar"></div></div>
-      <button class="btn-submit" id="btnAtestSubmit" onclick="submitAtestado()" disabled>Enviar para a Secretaria</button>
-      <div class="f-alert error" id="atestErr"></div>
-      <div class="f-alert success" id="atestOk"></div>
-    </div>
-
-    <!-- My Atestados -->
-    <div class="sec-title">📁 Meus Atestados <span class="count-badge" id="atestadosCount">0</span></div>
-    <div class="diplomas-list" id="atestadosList">
-      <div class="empty-state">⏳ Carregando…</div>
-    </div>
-
-    <hr class="section-divider">
-
     <!-- PDI Section -->
     <div class="sec-title">📈 Meu Plano de Desenvolvimento Individual</div>
     <div id="pdiLoading"><div class="empty-state">⏳ Carregando…</div></div>
@@ -506,6 +465,48 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       </div>
 
     </div>
+
+    <hr class="section-divider">
+
+    <!-- Upload Atestado -->
+    <div class="upload-card">
+      <h3>🏥 Enviar Atestado Médico</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+        Envie atestados de afastamento para análise da secretaria. Informe o período de ausência e anexe o documento digitalizado.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="ff" style="margin:0;">
+          <label>Data de Início</label>
+          <input type="date" id="atestDataInicio">
+        </div>
+        <div class="ff" style="margin:0;">
+          <label>Data de Fim</label>
+          <input type="date" id="atestDataFim">
+        </div>
+      </div>
+      <div class="ff" style="margin-top:12px;">
+        <label>Motivo (opcional)</label>
+        <input type="text" id="atestMotivo" placeholder="Ex: Consulta médica, cirurgia…">
+      </div>
+      <div class="upload-zone" id="atestUploadZone" onclick="document.getElementById('atestFile').click()">
+        <div class="uz-icon">📋</div>
+        <p>Clique para selecionar ou arraste o arquivo aqui</p>
+        <small>PDF, JPG ou PNG · máximo 10MB</small>
+        <input type="file" id="atestFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onAtestFileSelected(event)">
+      </div>
+      <div class="file-name" id="atestFileName"></div>
+      <div class="upload-bar-wrap" id="atestBarWrap"><div class="upload-bar" id="atestBar"></div></div>
+      <button class="btn-submit" id="btnAtestSubmit" onclick="submitAtestado()" disabled>Enviar para a Secretaria</button>
+      <div class="f-alert error" id="atestErr"></div>
+      <div class="f-alert success" id="atestOk"></div>
+    </div>
+
+    <!-- My Atestados -->
+    <div class="sec-title">📁 Meus Atestados <span class="count-badge" id="atestadosCount">0</span></div>
+    <div class="diplomas-list" id="atestadosList">
+      <div class="empty-state">⏳ Carregando…</div>
+    </div>
+
   </div>
 
 
