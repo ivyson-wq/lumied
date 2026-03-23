@@ -872,6 +872,125 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ━━ ALMOXARIFADO: PRICE SEARCH (public, no auth required) ━━━━━━
+
+  if (action === 'alm_buscar_precos') {
+    const { nome, unidade } = body
+    if (!nome) return json({ error: 'Nome do item não informado.' }, 400)
+
+    const query = nome.trim()
+    const encoded = encodeURIComponent(query)
+
+    // ── helper: word-overlap match % ────────────────────────
+    function matchPct(qry: string, title: string): number {
+      const norm = (s: string) =>
+        s.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean)
+      const qWords = norm(qry)
+      if (!qWords.length) return 0
+      const tSet = new Set(norm(title))
+      return Math.round((qWords.filter(w => tSet.has(w)).length / qWords.length) * 100)
+    }
+
+    const results: {
+      plataforma: string
+      nome: string
+      preco: number | null
+      preco_fmt: string
+      url: string
+      match: number
+      tipo: 'produto' | 'busca'
+    }[] = []
+
+    // ── 1. Mercado Livre (free public API, real prices) ──────
+    try {
+      const mlRes = await fetch(
+        `https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&limit=6&sort=price_asc`,
+        { headers: { 'Accept': 'application/json' } }
+      )
+      if (mlRes.ok) {
+        const mlData = await mlRes.json()
+        for (const item of (mlData.results ?? []).slice(0, 5)) {
+          const m = matchPct(query, item.title ?? '')
+          results.push({
+            plataforma: 'Mercado Livre',
+            nome: item.title ?? '',
+            preco: item.price ?? null,
+            preco_fmt: item.price != null
+              ? `R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              : '—',
+            url: item.permalink ?? `https://lista.mercadolivre.com.br/${encoded}`,
+            match: m,
+            tipo: 'produto',
+          })
+        }
+      }
+    } catch (_) { /* graceful skip */ }
+
+    // ── 2. Shopee Brasil (unofficial endpoint, real prices) ──
+    try {
+      const shopeeRes = await fetch(
+        `https://shopee.com.br/api/v4/search/search_items?keyword=${encoded}&limit=5&newest=0&by=price&order=asc&page_type=search&scenario=PAGE_GLOBAL_SEARCH`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Referer': 'https://shopee.com.br/',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'x-shopee-language': 'pt-BR',
+          },
+        }
+      )
+      if (shopeeRes.ok) {
+        const shopeeData = await shopeeRes.json()
+        const items: any[] = shopeeData?.items ?? shopeeData?.data?.items ?? []
+        for (const raw of items.slice(0, 5)) {
+          const it = raw.item_basic ?? raw
+          const shopid  = it.shopid  ?? it.shop_id
+          const itemid  = it.itemid  ?? it.item_id
+          // Shopee prices are in smallest unit (divide by 100000)
+          const rawPrice = it.price_min ?? it.price ?? null
+          const preco = rawPrice != null ? rawPrice / 100000 : null
+          const url = shopid && itemid
+            ? `https://shopee.com.br/product/${shopid}/${itemid}`
+            : `https://shopee.com.br/search?keyword=${encoded}`
+          const m = matchPct(query, it.name ?? '')
+          results.push({
+            plataforma: 'Shopee',
+            nome: it.name ?? '',
+            preco,
+            preco_fmt: preco != null
+              ? `R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              : '—',
+            url,
+            match: m,
+            tipo: 'produto',
+          })
+        }
+      }
+    } catch (_) { /* graceful skip */ }
+
+    // ── 3. Amazon Brasil (no free API — search link only) ────
+    results.push({
+      plataforma: 'Amazon',
+      nome: `Buscar "${query}" na Amazon Brasil`,
+      preco: null,
+      preco_fmt: 'Ver na Amazon',
+      url: `https://www.amazon.com.br/s?k=${encoded}`,
+      match: 0,
+      tipo: 'busca',
+    })
+
+    // Sort: real products by price asc (nulls last), then search links
+    const produtos = results
+      .filter(r => r.tipo === 'produto' && r.preco != null)
+      .sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0))
+    const semPreco = results.filter(r => r.tipo === 'produto' && r.preco == null)
+    const links   = results.filter(r => r.tipo === 'busca')
+
+    return json({ data: [...produtos, ...semPreco, ...links], query })
+  }
+
   // ━━ ALMOXARIFADO: TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
 
   const isAlmProfAction = [
