@@ -621,6 +621,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   const SEND     = SUPABASE_URL + '/functions/v1/send-email';
   const CALENDAR = SUPABASE_URL + '/functions/v1/calendar';
   const ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
+  const INTER    = SUPABASE_URL + '/functions/v1/inter-webhook';
 
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -1462,31 +1463,43 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
   async function renderBoletos(cpf) {
     const el = document.getElementById('boletosConteudo');
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span> Sincronizando com o banco Inter…</div>';
 
-    // Busca boletos pelo CPF — tenta sem formatação e com formatação
     const cpfLimpo = cpf.replace(/\D/g, '');
     const cpfFmt = cpfLimpo.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
 
-    // Tenta primeiro sem formatação
+    // 1. Sincroniza boletos da API do Inter para o banco
+    try {
+      await fetch(INTER, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({ action: 'sync_boletos', cpf: cpfLimpo })
+      });
+    } catch (e) {
+      console.error('Sync Inter falhou (continuando com dados locais):', e);
+    }
+
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span> Carregando boletos…</div>';
+
+    // 2. Busca boletos do banco (o webhook salva formatado: 123.456.789-00)
     let { data: boletos, error } = await sb
       .from('boletos')
       .select('*')
-      .eq('cpf', cpfLimpo)
+      .eq('cpf', cpfFmt)
       .order('vencimento', { ascending: false });
 
-    // Se não encontrou, tenta com formatação
-    if ((!boletos || boletos.length === 0) && cpfFmt !== cpfLimpo) {
+    // Fallback: tenta sem formatação
+    if ((!boletos || boletos.length === 0)) {
       const r2 = await sb
         .from('boletos')
         .select('*')
-        .eq('cpf', cpfFmt)
+        .eq('cpf', cpfLimpo)
         .order('vencimento', { ascending: false });
       boletos = r2.data;
       error = r2.error;
     }
 
-    // Se ainda não encontrou, tenta com ilike (caso tenha espaços ou formato diferente)
+    // Fallback: ilike
     if (!boletos || boletos.length === 0) {
       const r3 = await sb
         .from('boletos')
