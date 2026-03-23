@@ -38,30 +38,46 @@ Deno.serve(async (req) => {
     })
 
     // Tenta com mTLS se disponível, senão sem
-    let fetchOpts: any = {}
+    let httpClient: any = undefined
     try {
       const cert = Deno.env.get('INTER_CERT')
       const key = Deno.env.get('INTER_KEY')
       if (cert && key) {
-        fetchOpts.client = Deno.createHttpClient({ certChain: cert, privateKey: key })
-        console.log('Usando mTLS')
+        console.log('INTER_CERT length:', cert.length, 'starts with:', cert.substring(0, 30))
+        console.log('INTER_KEY length:', key.length, 'starts with:', key.substring(0, 30))
+        httpClient = Deno.createHttpClient({ certChain: cert, privateKey: key })
+        console.log('mTLS client criado com sucesso')
+      } else {
+        console.log('INTER_CERT ou INTER_KEY não encontrados')
       }
     } catch (e) {
-      console.log('mTLS não disponível, usando fetch padrão')
+      console.error('mTLS falhou:', String(e))
     }
 
     console.log('Autenticando no Inter...')
-    const tokenRes = await fetch(`${INTER_BASE}/oauth/v2/token`, {
+    console.log('client_id:', clientId?.substring(0, 8) + '...')
+    console.log('scope: boleto-cobranca.read')
+
+    const tokenFetchOpts: any = {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: tokenBody,
-      ...fetchOpts,
-    })
+    }
+    if (httpClient) tokenFetchOpts.client = httpClient
+
+    const tokenRes = await fetch(`${INTER_BASE}/oauth/v2/token`, tokenFetchOpts)
 
     if (!tokenRes.ok) {
       const errText = await tokenRes.text()
+      const errHeaders: Record<string, string> = {}
+      tokenRes.headers.forEach((v, k) => errHeaders[k] = v)
       console.error('Auth Inter falhou:', tokenRes.status, errText)
-      return new Response(JSON.stringify({ error: 'Autenticação Inter falhou: ' + tokenRes.status, detail: errText }), { status: 502, headers: CORS })
+      console.error('Response headers:', JSON.stringify(errHeaders))
+      return new Response(JSON.stringify({
+        error: 'Autenticação Inter falhou: ' + tokenRes.status,
+        detail: errText || 'Sem detalhe',
+        headers: errHeaders
+      }), { status: 502, headers: CORS })
     }
 
     const { access_token } = await tokenRes.json()
