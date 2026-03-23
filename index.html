@@ -621,7 +621,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   const SEND     = SUPABASE_URL + '/functions/v1/send-email';
   const CALENDAR = SUPABASE_URL + '/functions/v1/calendar';
   const ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
-  const INTER    = SUPABASE_URL + '/functions/v1/inter-webhook';
+  const BOLETOS_SYNC = SUPABASE_URL + '/functions/v1/boletos-sync';
 
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -1470,11 +1470,13 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
     // 1. Sincroniza boletos da API do Inter para o banco
     try {
-      await fetch(INTER, {
+      const syncRes = await fetch(BOLETOS_SYNC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ action: 'sync_boletos', cpf: cpfLimpo })
+        body: JSON.stringify({ cpf: cpfLimpo })
       });
+      const syncData = await syncRes.json();
+      console.log('Sync boletos:', syncData);
     } catch (e) {
       console.error('Sync Inter falhou (continuando com dados locais):', e);
     }
