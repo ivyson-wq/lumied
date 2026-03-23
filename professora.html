@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#1c1712">
 <link rel="icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -167,6 +168,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .pdi-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
 .pdi-legend span{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;}
 .pdi-legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+/* ── ALMOXARIFADO MODAL TABS ── */
+.alm-modal-tab{padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text);}
+.alm-modal-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.alm-upload-zone{border:2px dashed var(--border);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:12px;}
+.alm-upload-zone:hover,.alm-upload-zone.drag-over{border-color:var(--primary);background:rgba(200,16,46,.04);}
+.alm-upload-zone .uz-icon{font-size:32px;margin-bottom:6px;}
+.alm-xlsx-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:4px;font-size:13px;}
+.alm-xlsx-row.ok{background:#f0fdf4;border:1px solid #bbf7d0;}
+.alm-xlsx-row.warn{background:#fffbeb;border:1px solid #fde68a;}
 /* ── ALMOXARIFADO ── */
 .alm-req-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
 .alm-req-card.pendente{border-left:4px solid #f6a623;}
@@ -512,27 +522,69 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
 <!-- MODAL: Nova Requisição -->
 <div id="almModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;overflow-y:auto;padding:20px;">
-  <div style="background:#fff;border-radius:16px;max-width:640px;margin:0 auto;padding:28px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <div style="background:#fff;border-radius:16px;max-width:660px;margin:0 auto;padding:28px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <h3 style="font-family:'Lora',serif;font-size:17px;">Nova Requisição de Insumos</h3>
       <button onclick="almFecharModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
     </div>
 
-    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Pesquise e adicione os insumos desejados ao carrinho.</div>
-
-    <!-- Search catalog -->
-    <div style="position:relative;margin-bottom:12px;">
-      <input type="text" id="almSearchInput" placeholder="Buscar insumo…" oninput="almFiltrarCatalogo()"
-        style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+    <!-- Tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:18px;">
+      <button class="alm-modal-tab active" id="almTabBtnBuscar" onclick="almSwitchTab('buscar')">🔍 Buscar no catálogo</button>
+      <button class="alm-modal-tab" id="almTabBtnPlanilha" onclick="almSwitchTab('planilha')">📊 Importar planilha Excel</button>
     </div>
-    <div id="almCatalogList" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;"></div>
 
-    <!-- Cart -->
-    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Carrinho</div>
-    <div id="almCartEmpty" style="font-size:13px;color:var(--muted);padding:12px 0;">Nenhum item adicionado ainda.</div>
+    <!-- Tab: Buscar -->
+    <div id="almTabBuscar">
+      <div style="position:relative;margin-bottom:12px;">
+        <input type="text" id="almSearchInput" placeholder="Buscar insumo…" oninput="almFiltrarCatalogo()"
+          style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+      </div>
+      <div id="almCatalogList" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:4px;"></div>
+    </div>
+
+    <!-- Tab: Planilha -->
+    <div id="almTabPlanilha" style="display:none;">
+      <!-- Download template -->
+      <div style="background:#f7f5f2;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;">Modelo de planilha</div>
+          <div style="font-size:11px;color:var(--muted);">Baixe, preencha e faça o upload. Inclui aba de instruções.</div>
+        </div>
+        <button onclick="almGerarModelo()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;">
+          📥 Baixar modelo Excel
+        </button>
+      </div>
+
+      <!-- Upload zone -->
+      <div class="alm-upload-zone" id="almXlsxZone"
+        onclick="document.getElementById('almXlsxFile').click()"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="this.classList.remove('drag-over');almHandleXlsxDrop(event)">
+        <div class="uz-icon">📂</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Clique ou arraste sua planilha aqui</div>
+        <div style="font-size:12px;color:var(--muted);">Formatos aceitos: .xlsx · .xls · .csv</div>
+        <input type="file" id="almXlsxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="almHandleXlsxSelect(this)">
+      </div>
+
+      <!-- Parse results -->
+      <div id="almXlsxResult" style="display:none;">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;" id="almXlsxSummary"></div>
+        <div id="almXlsxRows" style="max-height:220px;overflow-y:auto;margin-bottom:10px;"></div>
+        <button onclick="almImportarXlsx()" class="btn-submit" style="width:auto;padding:8px 20px;font-size:13px;" id="almBtnImportar">+ Adicionar ao carrinho</button>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="border-top:1px solid var(--border);margin:16px 0 12px;"></div>
+
+    <!-- Cart (shared) -->
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🛒 Carrinho</div>
+    <div id="almCartEmpty" style="font-size:13px;color:var(--muted);padding:10px 0;">Nenhum item adicionado ainda.</div>
     <div id="almCartList"></div>
 
-    <!-- Observacao -->
+    <!-- Observação -->
     <div class="ff" style="margin-top:12px;">
       <label>Observação (opcional)</label>
       <textarea id="almObservacao" rows="2" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;outline:none;" placeholder="Ex: Urgente para a semana…"></textarea>
@@ -1354,12 +1406,208 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (!d.error) { almLoadReqs(); almLoadBudget(); }
   }
 
+  // ── Excel: template e upload ───────────────────────────
+  let almXlsxParsed = [];  // itens lidos da planilha aguardando import
+
+  function almSwitchTab(tab) {
+    document.getElementById('almTabBuscar').style.display   = tab === 'buscar'    ? 'block' : 'none';
+    document.getElementById('almTabPlanilha').style.display = tab === 'planilha'  ? 'block' : 'none';
+    document.getElementById('almTabBtnBuscar').classList.toggle('active',   tab === 'buscar');
+    document.getElementById('almTabBtnPlanilha').classList.toggle('active', tab === 'planilha');
+  }
+
+  function almGerarModelo() {
+    const wb = XLSX.utils.book_new();
+
+    // ── Aba principal: Requisição ────────────────────────
+    const dados = [
+      ['Nome do Insumo *', 'Quantidade *', 'Unidade', 'Observação'],
+      ['Papel Sulfite A4 75g Resma 500fls', 2, 'resma', 'Para impressão de avisos'],
+      ['Caneta Esferográfica Azul', 10, 'unidade', ''],
+      ['Fita Adesiva Transparente 45mm', 5, 'rolo', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+      ['', '', '', ''],
+    ];
+    const wsReq = XLSX.utils.aoa_to_sheet(dados);
+    wsReq['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 14 }, { wch: 36 }];
+    XLSX.utils.book_append_sheet(wb, wsReq, 'Requisição');
+
+    // ── Aba de Instruções ────────────────────────────────
+    const inst = [
+      ['INSTRUÇÕES — Modelo de Requisição de Insumos · Maple Bear'],
+      [''],
+      ['1. Preencha a aba "Requisição" a partir da linha 2 (linha 1 é o cabeçalho).'],
+      ['2. Não altere nem remova as colunas existentes.'],
+      ['3. Salve o arquivo e faça o upload no portal.'],
+      [''],
+      ['COLUNAS:'],
+      ['  Nome do Insumo *  → Obrigatório. Nome do material. Seja o mais específico possível.'],
+      ['                      Ex: "Papel Sulfite A4 75g" é melhor que apenas "Papel".'],
+      ['  Quantidade *      → Obrigatório. Número inteiro ou decimal. Ex: 2 ou 1.5'],
+      ['  Unidade           → Opcional. Ex: unidade, resma, kg, litro, rolo, caixa.'],
+      ['                      Se omitido, será usado o padrão do catálogo.'],
+      ['  Observação        → Opcional. Informações adicionais para o gerente.'],
+      [''],
+      ['DICAS:'],
+      ['  • Os nomes serão comparados automaticamente com o catálogo do almoxarifado.'],
+      ['  • Itens não encontrados no catálogo são marcados com ⚠ — o gerente poderá'],
+      ['    avaliá-los mesmo assim.'],
+      ['  • Você pode combinar a planilha com a busca manual no portal.'],
+    ];
+    const wsInst = XLSX.utils.aoa_to_sheet(inst);
+    wsInst['!cols'] = [{ wch: 72 }];
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
+
+    XLSX.writeFile(wb, 'modelo_requisicao_maple_bear.xlsx');
+  }
+
+  function almHandleXlsxDrop(e) {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) almProcessarXlsx(file);
+  }
+  function almHandleXlsxSelect(input) {
+    if (input.files[0]) almProcessarXlsx(input.files[0]);
+  }
+
+  // Normalize string for matching
+  const almNorm = s => (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
+
+  function almMatchCatalogo(nome) {
+    const qNorm  = almNorm(nome);
+    const qWords = qNorm.split(' ').filter(Boolean);
+    if (!qWords.length) return null;
+    // Exact match
+    let hit = almCatalogo.find(c => almNorm(c.nome) === qNorm);
+    if (hit) return { item: hit, pct: 100 };
+    // Best word-overlap
+    let best = null, bestScore = 0;
+    for (const c of almCatalogo) {
+      const cSet  = new Set(almNorm(c.nome).split(' ').filter(Boolean));
+      const score = qWords.filter(w => cSet.has(w)).length / qWords.length;
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    if (bestScore >= 0.5) return { item: best, pct: Math.round(bestScore * 100) };
+    return null;
+  }
+
+  async function almProcessarXlsx(file) {
+    const resultEl  = document.getElementById('almXlsxResult');
+    const summaryEl = document.getElementById('almXlsxSummary');
+    const rowsEl    = document.getElementById('almXlsxRows');
+    resultEl.style.display = 'none';
+    almXlsxParsed = [];
+
+    // Make sure catalog is loaded
+    if (!almCatalogo.length) {
+      const d = await callApi({ action: 'alm_catalogo' });
+      almCatalogo = d.data || [];
+    }
+
+    try {
+      const buf = await file.arrayBuffer();
+      const wb  = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      // Use first sheet that isn't "Instruções"
+      const sheetName = wb.SheetNames.find(n => !n.toLowerCase().includes('instru')) || wb.SheetNames[0];
+      const ws   = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Skip header row; filter blank lines
+      const data = rows.slice(1)
+        .filter(r => String(r[0] || '').trim())
+        .map(r => ({
+          nome:    String(r[0] || '').trim(),
+          qty:     parseFloat(String(r[1]).replace(',', '.')) || 0,
+          unidade: String(r[2] || '').trim() || null,
+          obs:     String(r[3] || '').trim(),
+        }))
+        .filter(it => it.qty > 0);
+
+      if (!data.length) {
+        alert('Nenhum item encontrado na planilha. Verifique se a linha 1 é o cabeçalho e os dados estão a partir da linha 2.');
+        return;
+      }
+
+      // Match each row to catalog
+      let matched = 0;
+      almXlsxParsed = data.map(it => {
+        const hit = almMatchCatalogo(it.nome);
+        if (hit) matched++;
+        return {
+          nome:         hit ? hit.item.nome  : it.nome,
+          nome_original: it.nome,
+          insumo_id:    hit ? hit.item.id    : null,
+          qty_solicitado: it.qty,
+          unidade:      it.unidade || (hit ? hit.item.unidade : 'unidade'),
+          preco_unit:   hit ? hit.item.preco : 0,
+          obs:          it.obs,
+          match_pct:    hit ? hit.pct        : 0,
+          catalogado:   !!hit,
+        };
+      });
+
+      summaryEl.textContent = `${data.length} item(ns) lido(s) · ${matched} encontrado(s) no catálogo · ${data.length - matched} não catalogado(s)`;
+      rowsEl.innerHTML = almXlsxParsed.map((it, i) =>
+        `<div class="alm-xlsx-row ${it.catalogado ? 'ok' : 'warn'}">
+          <span style="font-size:14px;">${it.catalogado ? '✅' : '⚠️'}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${it.nome}</div>
+            ${!it.catalogado ? `<div style="font-size:11px;color:#b07d00;">Não encontrado no catálogo — será enviado sem preço unitário</div>` : `<div style="font-size:11px;color:#2d7a2d;">${it.match_pct}% de precisão no catálogo</div>`}
+          </div>
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap;">×${it.qty_solicitado} ${it.unidade}</div>
+          <input type="number" value="${it.qty_solicitado}" min="0.5" step="0.5" style="width:60px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:center;" onchange="almXlsxParsed[${i}].qty_solicitado=parseFloat(this.value)||1">
+        </div>`
+      ).join('');
+      resultEl.style.display = 'block';
+    } catch(e) {
+      alert('Erro ao ler o arquivo. Verifique se é um arquivo Excel (.xlsx/.xls) ou CSV válido.');
+    }
+  }
+
+  function almImportarXlsx() {
+    if (!almXlsxParsed.length) return;
+    let added = 0;
+    for (const it of almXlsxParsed) {
+      // Avoid duplicates by insumo_id (or nome if no id)
+      const dup = almCart.find(c =>
+        it.insumo_id ? c.insumo_id === it.insumo_id : c.nome === it.nome
+      );
+      if (dup) {
+        dup.qty_solicitado = (parseFloat(dup.qty_solicitado) + parseFloat(it.qty_solicitado));
+      } else {
+        almCart.push({
+          insumo_id:     it.insumo_id,
+          nome:          it.nome,
+          unidade:       it.unidade,
+          preco_unit:    it.preco_unit,
+          qty_solicitado: it.qty_solicitado,
+        });
+        added++;
+      }
+    }
+    almRenderCart();
+    // Switch to buscar tab to show the cart
+    almSwitchTab('buscar');
+    document.getElementById('almXlsxResult').style.display = 'none';
+    document.getElementById('almXlsxFile').value = '';
+    almXlsxParsed = [];
+  }
+
   // ── Modal: Nova Requisição ─────────────────────────────
   async function almAbrirNovaReq() {
     almCart = [];
+    almXlsxParsed = [];
     document.getElementById('almObservacao').value = '';
     document.getElementById('almModalErr').classList.remove('show');
     document.getElementById('almSearchInput').value = '';
+    document.getElementById('almXlsxResult').style.display = 'none';
+    almSwitchTab('buscar');
     document.getElementById('almModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
     // Load catalog

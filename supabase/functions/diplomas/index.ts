@@ -1007,6 +1007,29 @@ Deno.serve(async (req) => {
 
   // ━━ ALMOXARIFADO: PURCHASE TRACKING (gerente only) ━━━━━━━━
 
+  // ── Gerente creates requisition on behalf of a teacher ──────
+  if (action === 'alm_criar_req_gerente') {
+    const gerente = await getGerente(sb, token)
+    if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+    const { professora_id, itens, observacao } = body
+    if (!professora_id) return json({ error: 'professora_id obrigatório.' }, 400)
+    if (!itens?.length)  return json({ error: 'Adicione pelo menos um item.' }, 400)
+    const mes = new Date().toISOString().slice(0, 7)
+    const { data: profData } = await sb
+      .from('professoras').select('alm_turma_id').eq('id', professora_id).maybeSingle()
+    const turma_id = (profData as any)?.alm_turma_id ?? null
+    const total = (itens as any[]).reduce((s: number, it: any) =>
+      s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
+    const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
+      professora_id, turma_id, mes,
+      itens,
+      total,
+      observacao: observacao || `Criada pela gerente ${gerente.nome}`,
+    }).select('id').single()
+    if (err) return json({ error: err.message }, 400)
+    return json({ ok: true, id: nova.id })
+  }
+
   const isAlmCompraAction = [
     'alm_encaminhar_compra', 'alm_compras_pendentes',
     'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
