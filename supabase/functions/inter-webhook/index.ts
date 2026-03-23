@@ -2,11 +2,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const INTER_BASE = 'https://cdpj.partners.bancointer.com.br'
 
-function interHttpClient() {
-  return Deno.createHttpClient({
-    certChain: Deno.env.get('INTER_CERT')!,
-    privateKey: Deno.env.get('INTER_KEY')!,
-  })
+// mTLS client — pode falhar em alguns ambientes Deno
+function interHttpClient(): any {
+  try {
+    const cert = Deno.env.get('INTER_CERT')
+    const key = Deno.env.get('INTER_KEY')
+    if (cert && key) {
+      return Deno.createHttpClient({ certChain: cert, privateKey: key })
+    }
+  } catch (e) {
+    console.warn('mTLS client não disponível, usando fetch padrão:', e)
+  }
+  return undefined
 }
 
 async function getInterToken(): Promise<string> {
@@ -18,12 +25,14 @@ async function getInterToken(): Promise<string> {
     grant_type: 'client_credentials',
   })
 
-  const res = await fetch(`${INTER_BASE}/oauth/v2/token`, {
+  const fetchOpts: any = {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
-    client,
-  })
+  }
+  if (client) fetchOpts.client = client
+
+  const res = await fetch(`${INTER_BASE}/oauth/v2/token`, fetchOpts)
 
   if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} ${await res.text()}`)
   return (await res.json()).access_token
@@ -31,20 +40,27 @@ async function getInterToken(): Promise<string> {
 
 async function getBoletoPdf(token: string, nossoNumero: string): Promise<Uint8Array> {
   const client = interHttpClient()
-  const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, {
+  const fetchOpts: any = {
     headers: { Authorization: `Bearer ${token}` },
-    client,
-  })
+  }
+  if (client) fetchOpts.client = client
+
+  const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, fetchOpts)
 
   if (!res.ok) throw new Error(`PDF boleto falhou: ${res.status} ${await res.text()}`)
 
   const data = await res.json()
-  // Inter retorna PDF em base64
   const base64 = data.pdf
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
+}
+
+async function interFetch(url: string, opts: any = {}): Promise<Response> {
+  const client = interHttpClient()
+  if (client) opts.client = client
+  return fetch(url, opts)
 }
 
 const CORS = {
@@ -73,7 +89,6 @@ Deno.serve(async (req) => {
       )
 
       const token = await getInterToken()
-      const client = interHttpClient()
 
       // Busca boletos dos últimos 12 meses
       const hoje = new Date()
@@ -85,9 +100,8 @@ Deno.serve(async (req) => {
       const url = `${INTER_BASE}/cobranca/v3/cobrancas?cpfCnpj=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&itensPorPagina=100`
       console.log('Sync boletos URL:', url)
 
-      const res = await fetch(url, {
+      const res = await interFetch(url, {
         headers: { Authorization: `Bearer ${token}` },
-        client,
       })
 
       if (!res.ok) {
@@ -228,10 +242,10 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    console.error('Erro no webhook Inter:', err)
+    console.error('Erro no webhook/sync Inter:', err)
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: CORS,
     })
   }
 })
