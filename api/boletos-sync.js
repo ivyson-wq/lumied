@@ -13,10 +13,23 @@ function respond(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
+function parsePem(raw) {
+  if (!raw) return undefined;
+  // Se o valor contém \n literal (string), converte para quebra de linha real
+  let pem = raw.replace(/\\n/g, '\n');
+  // Se ainda não tem quebras de linha entre header e conteúdo, adiciona
+  if (!pem.includes('\n')) {
+    pem = pem
+      .replace(/(-----BEGIN [^-]+-----)/, '$1\n')
+      .replace(/(-----END [^-]+-----)/, '\n$1');
+  }
+  return pem;
+}
+
 function interRequest(path, options = {}) {
   return new Promise((resolve, reject) => {
-    const cert = process.env.INTER_CERT;
-    const key = process.env.INTER_KEY;
+    const cert = parsePem(process.env.INTER_CERT);
+    const key = parsePem(process.env.INTER_KEY);
 
     const urlObj = new URL(`https://cdpj.partners.bancointer.com.br${path}`);
     const reqOpts = {
@@ -26,10 +39,9 @@ function interRequest(path, options = {}) {
       headers: options.headers || {},
     };
 
-    // mTLS
     if (cert && key) {
-      reqOpts.cert = cert.replace(/\\n/g, '\n');
-      reqOpts.key = key.replace(/\\n/g, '\n');
+      reqOpts.cert = cert;
+      reqOpts.key = key;
     }
 
     const req = https.request(reqOpts, (resp) => {
