@@ -223,6 +223,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .alm-budget-bar{height:100%;border-radius:6px;transition:width .4s;}
 .alm-insumo-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px;}
 .alm-price-results{border-top:1px solid #f0ece6;padding-top:4px;}
+.alm-price-skeleton{font-size:11px;color:var(--muted);padding:7px 10px;background:#f7f5f2;border-radius:6px;font-style:italic;}
 .alm-item-qty{width:70px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-family:'DM Sans',sans-serif;}
 /* PDI */
 .pdi-sem-table{width:100%;border-collapse:collapse;}
@@ -3033,19 +3034,20 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     almReviewId = id;
     document.getElementById('almReviewNota').value = '';
     document.getElementById('almReviewErr').classList.remove('show');
-    // find req in DOM data (re-fetch for accuracy)
     const d = await callDiplomas({ action: 'alm_pendentes' });
     const req = (d.data||[]).find(r => r.id === id);
     if (!req) { alert('Requisição não encontrada.'); return; }
     const itens = req.itens || [];
+
+    // Render skeleton com placeholder de preço por item
     document.getElementById('almReviewContent').innerHTML = `
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
         <strong>${req.professoras?.nome||'—'}</strong> · ${req.alm_turmas?.nome||'—'} · ${almMesBR(req.mes)} · ${new Date(req.criado_em).toLocaleDateString('pt-BR')}
       </div>
-      ${itens.map(it => `
-        <div class="alm-insumo-row" style="flex-direction:column;align-items:stretch;gap:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="flex:1;">
+      ${itens.map((it, i) => `
+        <div class="alm-insumo-row" id="alm-row-${i}" style="flex-direction:column;align-items:stretch;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;">
               <div style="font-weight:600;">${it.nome}</div>
               <div style="font-size:11px;color:var(--muted);">${almFmtBRL(it.preco_unit)} / ${it.unidade} · Cadastrado</div>
             </div>
@@ -3053,55 +3055,80 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div style="font-size:12px;">Aprovar:
               <input type="number" class="alm-item-qty" data-id="${it.insumo_id}" value="${it.qty_solicitado}" min="0" step="0.5">
             </div>
-            <button onclick="almBuscarPrecos(this,'${it.nome.replace(/'/g,"\\'")}','${it.unidade||'unidade'}')"
-              style="background:#1a6bb5;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">
-              🔍 Preços online
-            </button>
           </div>
-          <div class="alm-price-results" style="display:none;"></div>
+          <!-- preço online: skeleton enquanto carrega -->
+          <div id="alm-price-${i}" class="alm-price-results" style="display:block;">
+            <div class="alm-price-skeleton">⏳ Buscando melhor preço em Mercado Livre, Shopee e Amazon…</div>
+          </div>
         </div>`).join('')}
       <div style="text-align:right;font-weight:600;font-size:14px;margin-top:10px;">Total pedido: ${almFmtBRL(req.total)}</div>
       ${req.observacao ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">📝 ${req.observacao}</div>` : ''}`;
+
     document.getElementById('almReviewModal').style.display = 'block';
+
+    // Buscar preços de todos os itens em paralelo, sem bloquear o modal
+    itens.forEach((it, i) => almFetchPrecos(it.nome, it.unidade, i));
   }
 
-  async function almBuscarPrecos(btn, nome, unidade) {
-    const row = btn.closest('.alm-insumo-row');
-    const resultsEl = row.querySelector('.alm-price-results');
-    btn.disabled = true;
-    btn.textContent = '⏳ Buscando…';
-    resultsEl.style.display = 'block';
-    resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Consultando Mercado Livre, Shopee e Amazon…</div>';
+  const platIcon  = { 'Mercado Livre': '🛒', 'Shopee': '🧡', 'Amazon': '📦' };
+  const matchColor = m => m >= 80 ? '#2d7a2d' : m >= 50 ? '#b07d00' : '#c0392b';
+  const matchLabel = m => m >= 80 ? 'Alta precisão' : m >= 50 ? 'Precisão média' : 'Baixa precisão';
+
+  function almRenderPriceResult(r, compact) {
+    const isBusca = r.tipo === 'busca';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:${compact?'5px':'7px'} 0;border-bottom:1px solid #ede9e3;">
+      <span style="font-size:14px;">${platIcon[r.plataforma]||'🔗'}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;" title="${(r.nome||'').replace(/"/g,'&quot;')}">${r.nome||r.plataforma}</div>
+        <div style="font-size:10px;color:var(--muted);">${r.plataforma}${!isBusca && r.match > 0 ? ` · <span style="color:${matchColor(r.match)};font-weight:700;">${r.match}% — ${matchLabel(r.match)}</span>` : ''}</div>
+      </div>
+      <div style="font-size:${compact?'13':'14'}px;font-weight:700;white-space:nowrap;color:${r.preco!=null?'#2d7a2d':'var(--muted)'};">${r.preco_fmt}</div>
+      <a href="${r.url}" target="_blank" rel="noopener"
+        style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;font-family:'DM Sans',sans-serif;">
+        ${isBusca ? 'Buscar' : 'Ver →'}
+      </a>
+    </div>`;
+  }
+
+  async function almFetchPrecos(nome, unidade, idx) {
+    const el = document.getElementById('alm-price-' + idx);
+    if (!el) return;
     const d = await callDiplomas({ action: 'alm_buscar_precos', nome, unidade });
-    btn.disabled = false;
-    btn.textContent = '🔍 Preços online';
-    if (d.error || !d.data) {
-      resultsEl.innerHTML = `<div style="font-size:12px;color:#e53e3e;padding:4px 0;">Erro ao buscar preços: ${d.error||'tente novamente.'}</div>`;
+    if (!el) return; // modal pode ter fechado
+    if (d.error || !d.data || !d.data.length) {
+      el.innerHTML = `<div class="alm-price-skeleton" style="color:#c0392b;">Não foi possível buscar preços agora.</div>`;
       return;
     }
-    const items = d.data || [];
-    if (!items.length) { resultsEl.innerHTML = '<div style="font-size:12px;color:var(--muted);">Nenhum resultado encontrado.</div>'; return; }
-    const platIcon = { 'Mercado Livre': '🛒', 'Shopee': '🧡', 'Amazon': '📦' };
-    const matchColor = m => m >= 80 ? '#2d7a2d' : m >= 50 ? '#b07d00' : '#888';
-    resultsEl.innerHTML = `
-      <div style="background:#f7f5f2;border-radius:8px;padding:10px 12px;margin-top:4px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">💰 Melhores preços encontrados</div>
-        ${items.map(r => `
-          <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #ede9e3;">
-            <span style="font-size:15px;">${platIcon[r.plataforma]||'🔗'}</span>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;" title="${r.nome.replace(/"/g,'&quot;')}">${r.nome||r.plataforma}</div>
-              <div style="font-size:11px;color:var(--muted);">${r.plataforma}
-                ${r.tipo==='produto' && r.match > 0 ? `· <span style="color:${matchColor(r.match)};font-weight:600;">${r.match}% similar</span>` : ''}
-              </div>
-            </div>
-            <div style="font-size:14px;font-weight:700;white-space:nowrap;color:${r.preco!=null?'#2d7a2d':'var(--muted)'};">${r.preco_fmt}</div>
-            <a href="${r.url}" target="_blank" rel="noopener"
-              style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;font-family:'DM Sans',sans-serif;">
-              ${r.tipo==='busca'?'Buscar':'Ver →'}
-            </a>
-          </div>`).join('')}
+
+    const all     = d.data;
+    const best    = all.find(r => r.tipo === 'produto' && r.preco != null) || all[0];
+    const rest    = all.filter(r => r !== best);
+    const restId  = 'alm-rest-' + idx;
+
+    el.innerHTML = `
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#2d7a2d;margin-bottom:6px;">💰 Melhor preço encontrado</div>
+        ${almRenderPriceResult(best, false)}
+        ${rest.length ? `
+        <div style="margin-top:6px;">
+          <button onclick="almToggleRest('${restId}',this)"
+            style="background:none;border:none;color:#1a6bb5;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;">
+            ▼ Ver mais ${rest.length} resultado${rest.length>1?'s':''}
+          </button>
+          <div id="${restId}" style="display:none;margin-top:6px;">
+            ${rest.map(r => almRenderPriceResult(r, true)).join('')}
+          </div>
+        </div>` : ''}
       </div>`;
+  }
+
+  function almToggleRest(id, btn) {
+    const el = document.getElementById(id);
+    const open = el.style.display !== 'none';
+    el.style.display = open ? 'none' : 'block';
+    btn.textContent  = open
+      ? btn.textContent.replace('▲','▼')
+      : btn.textContent.replace('▼','▲');
   }
 
   function almFecharReview() {
@@ -3114,7 +3141,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const nota = document.getElementById('almReviewNota').value.trim();
     const errEl = document.getElementById('almReviewErr');
     errEl.classList.remove('show');
-    // Collect approved qtys
     const inputs = document.querySelectorAll('#almReviewContent .alm-item-qty');
     const itens_aprovados = Array.from(inputs).map(inp => ({
       insumo_id: inp.dataset.id,
