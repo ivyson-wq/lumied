@@ -682,6 +682,8 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
     sb.auth.onAuthStateChange(async (_e, session) => {
       if (session?.user) {
+        // Se este utilizador já foi verificado nesta sessão, não repetir o check
+        if (currentUser && currentUser.email === session.user.email) return;
         const allowed = await checkAccess(session.user);
         if (allowed) { currentUser = session.user; showForm(session.user); }
         else { await sb.auth.signOut(); showLoginWall(); showAccessDenied(); }

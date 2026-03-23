@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     const cpfFmt = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
     const { error: insErr } = await sb.from('solicitacoes_acesso').insert({
-      nome, cpf: cpfFmt, email, telefone, nome_crianca,
+      nome, cpf: cpfFmt, email, telefone, nome_crianca, status: 'pendente',
     })
     if (insErr) return json({ error: insErr.message }, 400)
 

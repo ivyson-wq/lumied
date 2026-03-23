@@ -2438,6 +2438,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('solicitacoesWrap').innerHTML =
       '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div>';
     const d = await callAcesso({ action: 'solicitacoes_list' });
+    if (d.error) {
+      document.getElementById('solicitacoesWrap').innerHTML =
+        `<p style="text-align:center;padding:16px;color:var(--red);font-size:13px;">Erro ao carregar solicitações: ${escHtml(d.error)}</p>`;
+      return;
+    }
     const lista = d.data || [];
     document.getElementById('acessoBadge').textContent = lista.length;
 
