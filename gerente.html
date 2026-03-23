@@ -205,6 +205,24 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 }
 @media(max-width:900px){.sidebar{width:200px;}.main{margin-left:200px;}.two-col{grid-template-columns:1fr;}}
 @media(max-width:640px){.sidebar{display:none;}.main{margin-left:0;}.content{padding:18px;}.topbar{padding:14px 18px;}.stats-grid{grid-template-columns:repeat(2,1fr);}}
+/* ALMOXARIFADO */
+.alm-tab{padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text);}
+.alm-tab:hover{border-color:var(--red);color:var(--red);}
+.alm-tab.active{background:var(--red);color:#fff;border-color:var(--red);}
+.alm-tab-panel{display:none;}.alm-tab-panel.active{display:block;}
+.alm-req-row{display:flex;align-items:flex-start;gap:14px;padding:14px;background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;}
+.alm-req-row.pendente{border-left:4px solid #f6a623;}
+.alm-req-row.aprovado{border-left:4px solid #48bb78;}
+.alm-req-row.rejeitado{border-left:4px solid #e53e3e;}
+.alm-status{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.alm-status.pendente{background:#fff8e1;color:#b07d00;}
+.alm-status.aprovado{background:#f0fff4;color:#2d7a2d;}
+.alm-status.rejeitado{background:#fff0f0;color:#c0392b;}
+.alm-budget-row{display:flex;align-items:center;gap:14px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.alm-budget-bar-wrap{flex:1;background:#f0ece6;border-radius:6px;height:8px;overflow:hidden;}
+.alm-budget-bar{height:100%;border-radius:6px;transition:width .4s;}
+.alm-insumo-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px;}
+.alm-item-qty{width:70px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-family:'DM Sans',sans-serif;}
 /* PDI */
 .pdi-sem-table{width:100%;border-collapse:collapse;}
 .pdi-sem-table th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 14px;border-bottom:1.5px solid var(--border);}
@@ -277,6 +295,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Professoras</a>
       <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
       <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> PDI</a>
+      <a class="nav-item" href="#" onclick="showPanel('almoxarifado',this)"><span class="ic">📦</span> Almoxarifado</a>
       <a class="nav-item" href="#" onclick="showPanel('secretarias',this)"><span class="ic">🗂️</span> Secretaria</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
@@ -542,6 +561,147 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <tbody id="dipTableBody"><tr><td colspan="7" class="empty-state">⏳ Carregando…</td></tr></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- ALMOXARIFADO -->
+      <div id="panelAlmoxarifado" class="panel">
+
+        <!-- Sub-nav tabs -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;" id="almTabs">
+          <button class="alm-tab active" onclick="almShowTab('dashboard',this)">📊 Dashboard</button>
+          <button class="alm-tab" onclick="almShowTab('pendentes',this)">⏳ Pendentes <span id="almPendBadge" style="background:#e53e3e;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;display:none;margin-left:2px;">0</span></button>
+          <button class="alm-tab" onclick="almShowTab('todas',this)">📋 Todas as Reqs</button>
+          <button class="alm-tab" onclick="almShowTab('insumos',this)">🗃️ Insumos</button>
+          <button class="alm-tab" onclick="almShowTab('turmas',this)">🏫 Turmas</button>
+          <button class="alm-tab" onclick="almShowTab('orcamentos',this)">💰 Orçamentos</button>
+          <button class="alm-tab" onclick="almShowTab('relatorio',this)">📈 Relatório</button>
+        </div>
+
+        <!-- TAB: Dashboard -->
+        <div class="alm-tab-panel active" id="almTab-dashboard">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;">Mês:</label>
+            <input type="month" id="almDashMes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;" onchange="almLoadDashboard()">
+          </div>
+          <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);" id="almDashStats"></div>
+          <div class="sec-title" style="margin-top:20px;">Orçamento por Turma</div>
+          <div id="almDashTurmas"></div>
+        </div>
+
+        <!-- TAB: Pendentes -->
+        <div class="alm-tab-panel" id="almTab-pendentes">
+          <div id="almPendLoading" class="empty-state">⏳ Carregando…</div>
+          <div id="almPendEmpty" class="empty-state" style="display:none;">✅ Nenhuma requisição pendente.</div>
+          <div id="almPendList"></div>
+        </div>
+
+        <!-- TAB: Todas as Reqs -->
+        <div class="alm-tab-panel" id="almTab-todas">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+            <input type="month" id="almTodasMes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;" onchange="almLoadTodas()">
+            <select id="almTodasStatus" onchange="almLoadTodas()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="">Todos os status</option>
+              <option value="pendente">⏳ Pendente</option>
+              <option value="aprovado">✅ Aprovado</option>
+              <option value="rejeitado">❌ Rejeitado</option>
+            </select>
+            <button onclick="almLoadTodas()" class="btn-create" style="padding:7px 16px;">Filtrar</button>
+          </div>
+          <div id="almTodasLoading" class="empty-state">⏳ Carregando…</div>
+          <div id="almTodasList"></div>
+        </div>
+
+        <!-- TAB: Insumos -->
+        <div class="alm-tab-panel" id="almTab-insumos">
+          <div class="two-col">
+            <div>
+              <div class="sec-title">Catálogo de Insumos <span class="count-badge" id="almInsumosCount">0</span></div>
+              <div id="almInsumosList"></div>
+            </div>
+            <div class="form-card" id="almInsumoFormCard">
+              <h3 id="almInsumoFormTitle">➕ Novo Insumo</h3>
+              <input type="hidden" id="almInsumoId">
+              <div class="ff"><label>Nome *</label><input type="text" id="almInsumoNome" placeholder="Ex: Papel A4"></div>
+              <div class="ff"><label>Descrição</label><input type="text" id="almInsumoDesc" placeholder="Ex: Resma 500 folhas"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="ff" style="margin:0;"><label>Unidade</label><input type="text" id="almInsumoUnidade" placeholder="unidade" value="unidade"></div>
+                <div class="ff" style="margin:0;"><label>Estoque</label><input type="number" id="almInsumoEstoque" placeholder="0" min="0" step="0.5"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+                <div class="ff" style="margin:0;"><label>Preço unit. (R$)</label><input type="number" id="almInsumoPreco" placeholder="0,00" min="0" step="0.01"></div>
+                <div class="ff" style="margin:0;"><label>Categoria</label><input type="text" id="almInsumoCategoria" placeholder="Ex: Papel"></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:14px;">
+                <button class="btn-create" onclick="almSalvarInsumo()">Salvar</button>
+                <button onclick="almLimparInsumoForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Limpar</button>
+              </div>
+              <div class="f-alert error" id="almInsumoErr" style="margin-top:8px;"></div>
+              <div class="f-alert success" id="almInsumoOk" style="margin-top:8px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Turmas -->
+        <div class="alm-tab-panel" id="almTab-turmas">
+          <div class="two-col">
+            <div>
+              <div class="sec-title">Turmas <span class="count-badge" id="almTurmasCount">0</span></div>
+              <div class="hint" style="margin-bottom:12px;">Associe as professoras às suas turmas no painel de Professoras.</div>
+              <div id="almTurmasList"></div>
+            </div>
+            <div class="form-card">
+              <h3 id="almTurmaFormTitle">➕ Nova Turma</h3>
+              <input type="hidden" id="almTurmaId">
+              <div class="ff"><label>Nome da Turma *</label><input type="text" id="almTurmaNome" placeholder="Ex: Year 1"></div>
+              <div class="ff"><label>Cor</label><input type="color" id="almTurmaCor" value="#3B82F6" style="padding:4px;height:38px;cursor:pointer;border:1.5px solid var(--border);border-radius:8px;width:100%;"></div>
+              <button class="btn-create" onclick="almSalvarTurma()">Salvar Turma</button>
+              <div class="f-alert error" id="almTurmaErr" style="margin-top:8px;"></div>
+              <div class="f-alert success" id="almTurmaOk" style="margin-top:8px;"></div>
+            </div>
+          </div>
+          <!-- Professor-turma assignment -->
+          <div class="sec-title" style="margin-top:24px;">Associar Professoras a Turmas</div>
+          <div id="almProfTurmaList" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- TAB: Orçamentos -->
+        <div class="alm-tab-panel" id="almTab-orcamentos">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;">Mês:</label>
+            <input type="month" id="almOrcMes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;" onchange="almLoadOrcamentos()">
+            <button onclick="almLoadOrcamentos()" class="btn-create" style="padding:7px 16px;">Carregar</button>
+          </div>
+          <div id="almOrcList"></div>
+          <div class="f-alert success" id="almOrcOk" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- TAB: Relatório -->
+        <div class="alm-tab-panel" id="almTab-relatorio">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;">Mês:</label>
+            <input type="month" id="almRelMes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;" onchange="almLoadRelatorio()">
+            <button onclick="almLoadRelatorio()" class="btn-create" style="padding:7px 16px;">Gerar Relatório</button>
+          </div>
+          <div id="almRelatorio"></div>
+        </div>
+
+        <!-- Review Modal -->
+        <div id="almReviewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;overflow-y:auto;padding:24px;">
+          <div style="background:#fff;border-radius:16px;max-width:640px;margin:0 auto;padding:28px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+              <h3 style="font-family:'Lora',serif;font-size:17px;">Analisar Requisição</h3>
+              <button onclick="almFecharReview()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+            </div>
+            <div id="almReviewContent"></div>
+            <div class="ff" style="margin-top:16px;"><label>Nota para a professora (opcional)</label><textarea id="almReviewNota" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;"></textarea></div>
+            <div style="display:flex;gap:10px;margin-top:14px;">
+              <button onclick="almAprovar()" class="btn-create" style="background:#2d7a2d;flex:1;">✅ Aprovar</button>
+              <button onclick="almRejeitar()" class="btn-create" style="background:#e53e3e;flex:1;">❌ Rejeitar</button>
+            </div>
+            <div class="f-alert error" id="almReviewErr" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
       </div>
 
       <!-- SECRETARIA -->
@@ -945,7 +1105,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',secretarias:'Secretaria — Gestão de Usuárias',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',professoras:'Professoras & Almoço',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',almoxarifado:'Almoxarifado — Gestão de Insumos',secretarias:'Secretaria — Gestão de Usuárias',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -954,8 +1114,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='dashAtiv')    loadAtivDashboard();
     if(id==='professoras') loadProfessoras();
     if(id==='diplomas')    loadDiplomasPanel();
-    if(id==='pdi')         loadPdiPanel();
-    if(id==='secretarias') loadSecretarias();
+    if(id==='pdi')           loadPdiPanel();
+    if(id==='almoxarifado')  almInitPanel();
+    if(id==='secretarias')   loadSecretarias();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
     if(id==='usuarios')    loadUsers();
@@ -2758,6 +2919,363 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const d = await callDiplomas({ action: 'pdi_checkin_feedback', acompanhamento_id: acompId, feedback_gestora: val });
     if (d.error) { alert('Erro: ' + d.error); return; }
     if (pdiReviewData) await openPdiReview(pdiReviewData.id);
+  }
+
+  // ── ALMOXARIFADO ─────────────────────────────────────────
+  let almReviewId = null;
+  const almFmtBRL = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const almMesBR  = mes => { const [y,m]=mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1]+'/'+y; };
+
+  function almShowTab(tab, btn) {
+    document.querySelectorAll('#almTabs .alm-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#panelAlmoxarifado .alm-tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('almTab-' + tab).classList.add('active');
+    if (tab === 'dashboard')  almLoadDashboard();
+    if (tab === 'pendentes')  almLoadPendentes();
+    if (tab === 'todas')      almLoadTodas();
+    if (tab === 'insumos')    almLoadInsumos();
+    if (tab === 'turmas')     almLoadTurmas();
+    if (tab === 'orcamentos') almLoadOrcamentos();
+    if (tab === 'relatorio')  almLoadRelatorio();
+  }
+
+  async function almInitPanel() {
+    // Set current month as default
+    const mes = new Date().toISOString().slice(0,7);
+    ['almDashMes','almOrcMes','almRelMes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value) el.value = mes;
+    });
+    almLoadDashboard();
+    almLoadPendentes();
+  }
+
+  async function almLoadDashboard() {
+    const mes = document.getElementById('almDashMes').value || new Date().toISOString().slice(0,7);
+    const d = await callDiplomas({ action: 'alm_painel', mes });
+    const stats = document.getElementById('almDashStats');
+    stats.innerHTML = `
+      <div class="stat-card" data-g="total"><div class="stat-label">Pendentes</div><div class="stat-value" style="color:#f6a623;">${d.pendentes??0}</div><div class="stat-sub">aguardando análise</div></div>
+      <div class="stat-card" data-g="integral"><div class="stat-label">Total Aprovado</div><div class="stat-value">${almFmtBRL(d.totalAprovado)}</div><div class="stat-sub">em ${almMesBR(mes)}</div></div>
+      <div class="stat-card" data-g="semi"><div class="stat-label">Turmas Ativas</div><div class="stat-value">${(d.turmas||[]).length}</div><div class="stat-sub">com orçamento</div></div>`;
+    const badge = document.getElementById('almPendBadge');
+    if (d.pendentes > 0) { badge.textContent = d.pendentes; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
+    const turmasEl = document.getElementById('almDashTurmas');
+    if (!(d.turmas||[]).length) { turmasEl.innerHTML = '<div class="empty-state">Nenhuma turma cadastrada.</div>'; return; }
+    turmasEl.innerHTML = d.turmas.map(t => {
+      const pct = t.orcamento > 0 ? Math.min(100, (t.gasto/t.orcamento)*100) : 0;
+      const barColor = pct>=90 ? '#e53e3e' : pct>=70 ? '#f6a623' : '#48bb78';
+      return `<div class="alm-budget-row">
+        <div style="width:12px;height:12px;border-radius:50%;background:${t.cor};flex-shrink:0;"></div>
+        <div style="min-width:120px;font-weight:600;font-size:13px;">${t.nome}</div>
+        <div class="alm-budget-bar-wrap"><div class="alm-budget-bar" style="width:${pct}%;background:${barColor};"></div></div>
+        <div style="font-size:12px;color:var(--muted);white-space:nowrap;">${almFmtBRL(t.gasto)} / ${almFmtBRL(t.orcamento)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function almLoadPendentes() {
+    document.getElementById('almPendLoading').style.display = 'block';
+    document.getElementById('almPendEmpty').style.display = 'none';
+    document.getElementById('almPendList').innerHTML = '';
+    const d = await callDiplomas({ action: 'alm_pendentes' });
+    document.getElementById('almPendLoading').style.display = 'none';
+    const reqs = d.data || [];
+    const badge = document.getElementById('almPendBadge');
+    badge.textContent = reqs.length; badge.style.display = reqs.length ? 'inline' : 'none';
+    if (!reqs.length) { document.getElementById('almPendEmpty').style.display = 'block'; return; }
+    document.getElementById('almPendList').innerHTML = reqs.map(r => almRenderReqRow(r, true)).join('');
+  }
+
+  async function almLoadTodas() {
+    const mes    = document.getElementById('almTodasMes').value;
+    const status = document.getElementById('almTodasStatus').value;
+    document.getElementById('almTodasLoading').style.display = 'block';
+    document.getElementById('almTodasList').innerHTML = '';
+    const d = await callDiplomas({ action: 'alm_todas_reqs', mes, status });
+    document.getElementById('almTodasLoading').style.display = 'none';
+    const reqs = d.data || [];
+    if (!reqs.length) { document.getElementById('almTodasList').innerHTML = '<div class="empty-state">Nenhuma requisição encontrada.</div>'; return; }
+    document.getElementById('almTodasList').innerHTML = reqs.map(r => almRenderReqRow(r, r.status==='pendente')).join('');
+  }
+
+  function almRenderReqRow(r, showBtn) {
+    const statusLbl = {pendente:'⏳ Pendente',aprovado:'✅ Aprovado',rejeitado:'❌ Rejeitado'}[r.status]||r.status;
+    const itens = r.itens || [];
+    const turmaColor = r.alm_turmas?.cor || '#aaa';
+    const turmaNome  = r.alm_turmas?.nome || '—';
+    const profNome   = r.professoras?.nome || r.professoras?.email || '—';
+    const data = new Date(r.criado_em).toLocaleDateString('pt-BR');
+    const itensHtml = itens.map(it =>
+      `<span style="display:inline-block;background:#f0ece6;border-radius:4px;padding:2px 8px;font-size:11px;margin:2px;">${it.nome} ×${it.qty_solicitado}</span>`
+    ).join('');
+    return `<div class="alm-req-row ${r.status}">
+      <div style="width:10px;align-self:stretch;border-radius:4px;background:${turmaColor};flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span class="alm-status ${r.status}">${statusLbl}</span>
+          <span style="font-weight:600;font-size:13px;">${profNome}</span>
+          <span style="font-size:12px;color:var(--muted);">${turmaNome} · ${almMesBR(r.mes)} · ${data}</span>
+          <strong style="margin-left:auto;">${almFmtBRL(r.total)}</strong>
+        </div>
+        <div style="margin-top:4px;">${itensHtml}</div>
+        ${r.observacao ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">📝 ${r.observacao}</div>` : ''}
+        ${r.nota_gerente ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">💬 ${r.nota_gerente}</div>` : ''}
+      </div>
+      ${showBtn ? `<button onclick="almAbrirReview('${r.id}')" class="btn-create" style="padding:6px 14px;font-size:12px;white-space:nowrap;">Analisar</button>` : ''}
+    </div>`;
+  }
+
+  async function almAbrirReview(id) {
+    almReviewId = id;
+    document.getElementById('almReviewNota').value = '';
+    document.getElementById('almReviewErr').classList.remove('show');
+    // find req in DOM data (re-fetch for accuracy)
+    const d = await callDiplomas({ action: 'alm_pendentes' });
+    const req = (d.data||[]).find(r => r.id === id);
+    if (!req) { alert('Requisição não encontrada.'); return; }
+    const itens = req.itens || [];
+    document.getElementById('almReviewContent').innerHTML = `
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+        <strong>${req.professoras?.nome||'—'}</strong> · ${req.alm_turmas?.nome||'—'} · ${almMesBR(req.mes)} · ${new Date(req.criado_em).toLocaleDateString('pt-BR')}
+      </div>
+      ${itens.map(it => `
+        <div class="alm-insumo-row">
+          <div style="flex:1;">
+            <div style="font-weight:600;">${it.nome}</div>
+            <div style="font-size:11px;color:var(--muted);">${almFmtBRL(it.preco_unit)} / ${it.unidade}</div>
+          </div>
+          <div style="font-size:13px;color:var(--muted);">Pedido: <strong>${it.qty_solicitado}</strong></div>
+          <div style="font-size:12px;">Aprovar:
+            <input type="number" class="alm-item-qty" data-id="${it.insumo_id}" value="${it.qty_solicitado}" min="0" step="0.5">
+          </div>
+        </div>`).join('')}
+      <div style="text-align:right;font-weight:600;font-size:14px;margin-top:10px;">Total pedido: ${almFmtBRL(req.total)}</div>
+      ${req.observacao ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">📝 ${req.observacao}</div>` : ''}`;
+    document.getElementById('almReviewModal').style.display = 'block';
+  }
+
+  function almFecharReview() {
+    document.getElementById('almReviewModal').style.display = 'none';
+    almReviewId = null;
+  }
+
+  async function almAprovar() {
+    if (!almReviewId) return;
+    const nota = document.getElementById('almReviewNota').value.trim();
+    const errEl = document.getElementById('almReviewErr');
+    errEl.classList.remove('show');
+    // Collect approved qtys
+    const inputs = document.querySelectorAll('#almReviewContent .alm-item-qty');
+    const itens_aprovados = Array.from(inputs).map(inp => ({
+      insumo_id: inp.dataset.id,
+      qty_aprovado: parseFloat(inp.value) || 0,
+    }));
+    const d = await callDiplomas({ action: 'alm_aprovar', id: almReviewId, nota_gerente: nota, itens_aprovados });
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    almFecharReview();
+    almLoadPendentes();
+    almLoadDashboard();
+  }
+
+  async function almRejeitar() {
+    if (!almReviewId) return;
+    const nota = document.getElementById('almReviewNota').value.trim();
+    if (!nota && !confirm('Rejeitar sem nota explicativa?')) return;
+    const errEl = document.getElementById('almReviewErr');
+    errEl.classList.remove('show');
+    const d = await callDiplomas({ action: 'alm_rejeitar', id: almReviewId, nota_gerente: nota });
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    almFecharReview();
+    almLoadPendentes();
+    almLoadDashboard();
+  }
+
+  async function almLoadInsumos() {
+    const d = await callDiplomas({ action: 'alm_insumos_list' });
+    const insumos = d.data || [];
+    document.getElementById('almInsumosCount').textContent = insumos.filter((i:any)=>i.ativo).length;
+    document.getElementById('almInsumosList').innerHTML = insumos.map((it) => `
+      <div class="alm-insumo-row" style="${!it.ativo ? 'opacity:.5;' : ''}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;">${it.nome}</div>
+          <div style="font-size:11px;color:var(--muted);">${it.categoria||'Geral'} · ${it.unidade} · Estoque: ${it.estoque_qty} · ${almFmtBRL(it.preco)}</div>
+        </div>
+        <button onclick="almEditarInsumo(${JSON.stringify(it).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
+        ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Desativar</button>` : ''}
+      </div>`).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
+  }
+
+  function almEditarInsumo(it) {
+    document.getElementById('almInsumoId').value       = it.id;
+    document.getElementById('almInsumoNome').value     = it.nome;
+    document.getElementById('almInsumoDesc').value     = it.descricao||'';
+    document.getElementById('almInsumoUnidade').value  = it.unidade;
+    document.getElementById('almInsumoEstoque').value  = it.estoque_qty;
+    document.getElementById('almInsumoPreco').value    = it.preco;
+    document.getElementById('almInsumoCategoria').value= it.categoria||'';
+    document.getElementById('almInsumoFormTitle').textContent = '✏️ Editar Insumo';
+    document.getElementById('almInsumoFormCard').scrollIntoView({ behavior:'smooth' });
+  }
+
+  function almLimparInsumoForm() {
+    ['almInsumoId','almInsumoNome','almInsumoDesc','almInsumoEstoque','almInsumoPreco','almInsumoCategoria'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('almInsumoUnidade').value = 'unidade';
+    document.getElementById('almInsumoFormTitle').textContent = '➕ Novo Insumo';
+  }
+
+  async function almSalvarInsumo() {
+    const errEl = document.getElementById('almInsumoErr');
+    const okEl  = document.getElementById('almInsumoOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    const d = await callDiplomas({
+      action: 'alm_insumo_save',
+      id:           document.getElementById('almInsumoId').value || undefined,
+      nome:         document.getElementById('almInsumoNome').value.trim(),
+      descricao:    document.getElementById('almInsumoDesc').value.trim(),
+      unidade:      document.getElementById('almInsumoUnidade').value.trim() || 'unidade',
+      estoque_qty:  parseFloat(document.getElementById('almInsumoEstoque').value) || 0,
+      preco:        parseFloat(document.getElementById('almInsumoPreco').value) || 0,
+      categoria:    document.getElementById('almInsumoCategoria').value.trim(),
+    });
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    okEl.textContent = '✅ Insumo salvo!'; okEl.classList.add('show');
+    almLimparInsumoForm();
+    almLoadInsumos();
+  }
+
+  async function almDesativarInsumo(id) {
+    if (!confirm('Desativar este insumo?')) return;
+    const d = await callDiplomas({ action: 'alm_insumo_del', id });
+    if (!d.error) almLoadInsumos();
+  }
+
+  async function almLoadTurmas() {
+    const d = await callDiplomas({ action: 'alm_turmas_list' });
+    const turmas = d.data || [];
+    document.getElementById('almTurmasCount').textContent = turmas.length;
+    document.getElementById('almTurmasList').innerHTML = turmas.map(t => `
+      <div class="alm-insumo-row">
+        <div style="width:18px;height:18px;border-radius:50%;background:${t.cor};flex-shrink:0;"></div>
+        <div style="flex:1;font-weight:600;font-size:13px;">${t.nome}</div>
+        <div style="font-size:11px;color:var(--muted);">${(t.professoras||[]).length} professora(s)</div>
+        <button onclick="almEditarTurma(${JSON.stringify(t).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
+        <button onclick="almDelTurma('${t.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Remover</button>
+      </div>`).join('') || '<div class="empty-state">Nenhuma turma cadastrada.</div>';
+    // Professor-turma assignment list
+    const profsRaw = await api({ action: 'professoras_list' }).catch(() => []);
+    const allProfs = Array.isArray(profsRaw) ? profsRaw : [];
+    document.getElementById('almProfTurmaList').innerHTML = allProfs.length
+      ? allProfs.map((p) => `
+          <div class="alm-insumo-row">
+            <div style="flex:1;font-size:13px;"><strong>${p.nome}</strong> <span style="color:var(--muted);">${p.email}</span></div>
+            <select onchange="almSetProfTurma('${p.id}',this.value)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;">
+              <option value="">— Sem turma —</option>
+              ${turmas.map((t) => `<option value="${t.id}" ${p.alm_turma_id===t.id?'selected':''}>${t.nome}</option>`).join('')}
+            </select>
+          </div>`).join('')
+      : '<div class="empty-state">Carregue o painel de professoras primeiro.</div>';
+  }
+
+  function almEditarTurma(t) {
+    document.getElementById('almTurmaId').value   = t.id;
+    document.getElementById('almTurmaNome').value = t.nome;
+    document.getElementById('almTurmaCor').value  = t.cor || '#3B82F6';
+    document.getElementById('almTurmaFormTitle').textContent = '✏️ Editar Turma';
+  }
+
+  async function almSalvarTurma() {
+    const errEl = document.getElementById('almTurmaErr');
+    const okEl  = document.getElementById('almTurmaOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    const d = await callDiplomas({
+      action: 'alm_turma_save',
+      id:   document.getElementById('almTurmaId').value || undefined,
+      nome: document.getElementById('almTurmaNome').value.trim(),
+      cor:  document.getElementById('almTurmaCor').value,
+    });
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    okEl.textContent = '✅ Turma salva!'; okEl.classList.add('show');
+    document.getElementById('almTurmaId').value = '';
+    document.getElementById('almTurmaNome').value = '';
+    document.getElementById('almTurmaFormTitle').textContent = '➕ Nova Turma';
+    almLoadTurmas();
+  }
+
+  async function almDelTurma(id) {
+    if (!confirm('Remover esta turma?')) return;
+    await callDiplomas({ action: 'alm_turma_del', id });
+    almLoadTurmas();
+  }
+
+  async function almSetProfTurma(professora_id, turma_id) {
+    await callDiplomas({ action: 'alm_prof_set_turma', professora_id, turma_id: turma_id || null });
+  }
+
+  async function almLoadOrcamentos() {
+    const mes = document.getElementById('almOrcMes').value || new Date().toISOString().slice(0,7);
+    const d = await callDiplomas({ action: 'alm_orcamentos_list', mes });
+    const turmas = d.data || [];
+    if (!turmas.length) { document.getElementById('almOrcList').innerHTML = '<div class="empty-state">Cadastre turmas primeiro.</div>'; return; }
+    document.getElementById('almOrcList').innerHTML = `
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+          <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Turma</th>
+          <th style="text-align:right;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Orçamento (R$)</th>
+          <th style="padding:10px 14px;border-bottom:1.5px solid var(--border);"></th>
+        </tr></thead>
+        <tbody>${turmas.map(t => `
+          <tr>
+            <td style="padding:12px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${t.cor};margin-right:8px;"></span>
+              ${t.nome}
+            </td>
+            <td style="padding:12px 14px;text-align:right;border-bottom:1px solid #f5f0ea;">
+              <input type="number" id="orc-${t.id}" value="${t.valor||0}" min="0" step="50"
+                style="width:120px;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;text-align:right;font-family:'DM Sans',sans-serif;font-size:13px;">
+            </td>
+            <td style="padding:12px 14px;border-bottom:1px solid #f5f0ea;">
+              <button onclick="almSalvarOrcamento('${t.id}','${mes}')" class="btn-create" style="padding:5px 12px;font-size:12px;">Salvar</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function almSalvarOrcamento(turma_id, mes) {
+    const valor = parseFloat(document.getElementById('orc-' + turma_id).value) || 0;
+    const d = await callDiplomas({ action: 'alm_orcamento_set', turma_id, mes, valor });
+    const okEl = document.getElementById('almOrcOk');
+    if (!d.error) { okEl.textContent = '✅ Orçamento salvo!'; okEl.classList.add('show'); setTimeout(() => okEl.classList.remove('show'), 2500); }
+  }
+
+  async function almLoadRelatorio() {
+    const mes = document.getElementById('almRelMes').value || new Date().toISOString().slice(0,7);
+    const d = await callDiplomas({ action: 'alm_relatorio', mes });
+    const grupos = d.data || [];
+    if (!grupos.length) { document.getElementById('almRelatorio').innerHTML = '<div class="empty-state">Nenhuma requisição no período.</div>'; return; }
+    document.getElementById('almRelatorio').innerHTML = grupos.map(g => {
+      const pct = g.orcamento > 0 ? Math.min(100,(g.gasto/g.orcamento)*100).toFixed(1) : 0;
+      const barColor = pct>=90?'#e53e3e':pct>=70?'#f6a623':'#48bb78';
+      return `<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:${g.turma.cor};"></div>
+          <strong style="font-size:15px;">${g.turma.nome}</strong>
+          <span style="font-size:12px;color:var(--muted);margin-left:auto;">Orçamento: ${almFmtBRL(g.orcamento)}</span>
+        </div>
+        <div style="display:flex;gap:20px;margin-bottom:10px;font-size:13px;">
+          <span>✅ Aprovado: <strong style="color:#2d7a2d;">${almFmtBRL(g.gasto)}</strong></span>
+          <span>⏳ Pendente: <strong style="color:#b07d00;">${almFmtBRL(g.pendente)}</strong></span>
+          <span>❌ Rejeitado: <strong style="color:#c0392b;">${almFmtBRL(g.rejeitado)}</strong></span>
+        </div>
+        <div style="background:#f0ece6;border-radius:6px;height:8px;overflow:hidden;margin-bottom:4px;">
+          <div style="width:${pct}%;height:100%;background:${barColor};border-radius:6px;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);">${pct}% do orçamento utilizado</div>
+      </div>`;
+    }).join('');
   }
 
   checkSession();

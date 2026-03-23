@@ -872,5 +872,332 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ━━ ALMOXARIFADO: TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const isAlmProfAction = [
+    'alm_catalogo', 'alm_minha_turma', 'alm_minhas_reqs',
+    'alm_criar_req', 'alm_cancelar_req',
+    'alm_notif_list', 'alm_notif_marcar_lida',
+  ].includes(action)
+
+  if (isAlmProfAction) {
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
+    if (action === 'alm_catalogo') {
+      const { data } = await sb
+        .from('alm_insumos').select('*')
+        .eq('ativo', true).order('categoria').order('nome')
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_minha_turma') {
+      const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const { data: profData } = await sb
+        .from('professoras').select('alm_turma_id, alm_turmas(id, nome, cor)')
+        .eq('id', prof.id).maybeSingle()
+      const turma = (profData as any)?.alm_turmas ?? null
+      if (!turma) return json({ turma: null, orcamento: null })
+      const { data: orc } = await sb
+        .from('alm_orcamentos').select('valor')
+        .eq('turma_id', turma.id).eq('mes', mes).maybeSingle()
+      // Total spent (approved) this month for this turma
+      const { data: reqs } = await sb
+        .from('alm_requisicoes').select('total')
+        .eq('turma_id', turma.id).eq('mes', mes).eq('status', 'aprovado')
+      const gasto = (reqs ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
+      return json({ turma, orcamento: orc?.valor ?? 0, gasto })
+    }
+
+    if (action === 'alm_minhas_reqs') {
+      const { data } = await sb
+        .from('alm_requisicoes').select('*, alm_turmas(nome)')
+        .eq('professora_id', prof.id)
+        .order('criado_em', { ascending: false })
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_criar_req') {
+      const itens: any[] = body.itens || []
+      const observacao: string = body.observacao || ''
+      if (!itens.length) return json({ error: 'Adicione pelo menos um item.' }, 400)
+      const mes = new Date().toISOString().slice(0, 7)
+      // Get teacher's turma
+      const { data: profData } = await sb
+        .from('professoras').select('alm_turma_id').eq('id', prof.id).maybeSingle()
+      const turma_id = (profData as any)?.alm_turma_id ?? null
+      const total = itens.reduce((s: number, it: any) =>
+        s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
+      const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
+        professora_id: prof.id, turma_id, mes, itens, total, observacao,
+      }).select('id').single()
+      if (err) return json({ error: err.message }, 400)
+      return json({ ok: true, id: nova.id })
+    }
+
+    if (action === 'alm_cancelar_req') {
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { error } = await sb.from('alm_requisicoes')
+        .delete().eq('id', id).eq('professora_id', prof.id).eq('status', 'pendente')
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_notif_list') {
+      const { data } = await sb
+        .from('alm_notificacoes').select('*, alm_requisicoes(mes, total, status)')
+        .eq('professora_id', prof.id)
+        .order('criado_em', { ascending: false })
+        .limit(50)
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_notif_marcar_lida') {
+      const { id } = body  // if null, marks all
+      let q = sb.from('alm_notificacoes').update({ lida: true }).eq('professora_id', prof.id)
+      if (id) q = q.eq('id', id)
+      const { error } = await q
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+  }
+
+  // ━━ ALMOXARIFADO: MANAGER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const isAlmGerenteAction = [
+    'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
+    'alm_aprovar', 'alm_rejeitar',
+    'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del',
+    'alm_turmas_list', 'alm_turma_save', 'alm_turma_del',
+    'alm_orcamentos_list', 'alm_orcamento_set',
+    'alm_relatorio', 'alm_prof_set_turma',
+  ].includes(action)
+
+  if (isAlmGerenteAction) {
+    const gerente = await getGerente(sb, token)
+    if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
+    if (action === 'alm_painel') {
+      const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const [{ count: pendentes }, { data: aprovadas }, { data: turmas }, { data: orcamentos }] =
+        await Promise.all([
+          sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
+          sb.from('alm_requisicoes').select('total, turma_id').eq('mes', mes).eq('status', 'aprovado'),
+          sb.from('alm_turmas').select('id, nome, cor').eq('ativo', true),
+          sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
+        ])
+      const totalAprovado = (aprovadas ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
+      const orcMap: Record<string, number> = {}
+      for (const o of orcamentos ?? []) orcMap[o.turma_id] = o.valor
+      const gastoMap: Record<string, number> = {}
+      for (const r of aprovadas ?? []) gastoMap[r.turma_id] = (gastoMap[r.turma_id] ?? 0) + r.total
+      const turmasStats = (turmas ?? []).map((t: any) => ({
+        ...t,
+        orcamento: orcMap[t.id] ?? 0,
+        gasto: gastoMap[t.id] ?? 0,
+      }))
+      return json({ pendentes: pendentes ?? 0, totalAprovado, turmas: turmasStats, mes })
+    }
+
+    if (action === 'alm_pendentes') {
+      const { data } = await sb
+        .from('alm_requisicoes')
+        .select('*, professoras(nome, email), alm_turmas(nome, cor)')
+        .eq('status', 'pendente').order('criado_em', { ascending: true })
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_todas_reqs') {
+      const mes: string = body.mes || ''
+      const status: string = body.status || ''
+      let q = sb.from('alm_requisicoes')
+        .select('*, professoras(nome, email), alm_turmas(nome, cor)')
+        .order('criado_em', { ascending: false })
+      if (mes)    q = q.eq('mes', mes)
+      if (status) q = q.eq('status', status)
+      const { data } = await q.limit(200)
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_aprovar') {
+      const { id, nota_gerente, itens_aprovados } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      // itens_aprovados: optional override of qty_aprovado per item
+      const { data: req } = await sb.from('alm_requisicoes').select('*')
+        .eq('id', id).maybeSingle()
+      if (!req) return json({ error: 'Requisição não encontrada.' }, 404)
+      if (req.status !== 'pendente') return json({ error: 'Requisição já processada.' }, 400)
+      // Merge approved quantities into items
+      const itens = (req.itens as any[]).map((it: any) => {
+        const override = itens_aprovados?.find((x: any) => x.insumo_id === it.insumo_id)
+        return { ...it, qty_aprovado: override?.qty_aprovado ?? it.qty_solicitado }
+      })
+      const total = itens.reduce((s: number, it: any) =>
+        s + (parseFloat(it.qty_aprovado) * parseFloat(it.preco_unit || 0)), 0)
+      const { error: errUpdate } = await sb.from('alm_requisicoes').update({
+        status: 'aprovado', nota_gerente: nota_gerente || null,
+        itens, total, aprovado_em: new Date().toISOString(),
+      }).eq('id', id)
+      if (errUpdate) return json({ error: errUpdate.message }, 400)
+      // Deduct from stock
+      for (const it of itens) {
+        if (it.insumo_id && it.qty_aprovado > 0) {
+          const { data: ins } = await sb.from('alm_insumos')
+            .select('estoque_qty').eq('id', it.insumo_id).maybeSingle()
+          if (ins) {
+            await sb.from('alm_insumos').update({
+              estoque_qty: Math.max(0, (ins as any).estoque_qty - parseFloat(it.qty_aprovado))
+            }).eq('id', it.insumo_id)
+          }
+        }
+      }
+      // Notify the teacher
+      await sb.from('alm_notificacoes').insert({
+        professora_id: req.professora_id,
+        requisicao_id: id,
+        mensagem: `Sua requisição de ${new Date(req.criado_em).toLocaleDateString('pt-BR')} foi ✅ aprovada.${nota_gerente ? ' Nota: ' + nota_gerente : ''}`,
+      })
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_rejeitar') {
+      const { id, nota_gerente } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { data: req } = await sb.from('alm_requisicoes').select('professora_id, criado_em, status')
+        .eq('id', id).maybeSingle()
+      if (!req) return json({ error: 'Requisição não encontrada.' }, 404)
+      if (req.status !== 'pendente') return json({ error: 'Requisição já processada.' }, 400)
+      const { error } = await sb.from('alm_requisicoes').update({
+        status: 'rejeitado', nota_gerente: nota_gerente || null,
+        rejeitado_em: new Date().toISOString(),
+      }).eq('id', id)
+      if (error) return json({ error: error.message }, 400)
+      await sb.from('alm_notificacoes').insert({
+        professora_id: req.professora_id,
+        requisicao_id: id,
+        mensagem: `Sua requisição de ${new Date(req.criado_em).toLocaleDateString('pt-BR')} foi ❌ rejeitada.${nota_gerente ? ' Motivo: ' + nota_gerente : ''}`,
+      })
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_insumos_list') {
+      const { data } = await sb.from('alm_insumos').select('*').order('categoria').order('nome')
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_insumo_save') {
+      const { id, nome, descricao, unidade, estoque_qty, preco, categoria } = body
+      if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
+      if (id) {
+        const { error } = await sb.from('alm_insumos').update(
+          { nome, descricao, unidade, estoque_qty, preco, categoria }
+        ).eq('id', id)
+        if (error) return json({ error: error.message }, 400)
+        return json({ ok: true })
+      } else {
+        const { data: novo, error } = await sb.from('alm_insumos').insert(
+          { nome, descricao, unidade: unidade || 'unidade', estoque_qty: estoque_qty || 0, preco: preco || 0, categoria }
+        ).select('id').single()
+        if (error) return json({ error: error.message }, 400)
+        return json({ ok: true, id: novo.id })
+      }
+    }
+
+    if (action === 'alm_insumo_del') {
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { error } = await sb.from('alm_insumos').update({ ativo: false }).eq('id', id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_turmas_list') {
+      const { data } = await sb.from('alm_turmas').select('*, professoras(id, nome, email)')
+        .eq('ativo', true).order('nome')
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_turma_save') {
+      const { id, nome, cor } = body
+      if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
+      if (id) {
+        const { error } = await sb.from('alm_turmas').update({ nome, cor: cor || '#3B82F6' }).eq('id', id)
+        if (error) return json({ error: error.message }, 400)
+        return json({ ok: true })
+      } else {
+        const { data: nova, error } = await sb.from('alm_turmas').insert(
+          { nome, cor: cor || '#3B82F6' }
+        ).select('id').single()
+        if (error) return json({ error: error.message }, 400)
+        return json({ ok: true, id: nova.id })
+      }
+    }
+
+    if (action === 'alm_turma_del') {
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { error } = await sb.from('alm_turmas').update({ ativo: false }).eq('id', id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_orcamentos_list') {
+      const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const { data: turmas } = await sb.from('alm_turmas').select('id, nome, cor').eq('ativo', true).order('nome')
+      const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
+      const map: Record<string, number> = {}
+      for (const o of orcs ?? []) map[o.turma_id] = o.valor
+      const result = (turmas ?? []).map((t: any) => ({ ...t, valor: map[t.id] ?? 0 }))
+      return json({ data: result, mes })
+    }
+
+    if (action === 'alm_orcamento_set') {
+      const { turma_id, mes, valor } = body
+      if (!turma_id || !mes) return json({ error: 'turma_id e mes são obrigatórios.' }, 400)
+      const { error } = await sb.from('alm_orcamentos').upsert(
+        { turma_id, mes, valor: parseFloat(valor) || 0 },
+        { onConflict: 'turma_id,mes' }
+      )
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_relatorio') {
+      const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const { data: reqs } = await sb
+        .from('alm_requisicoes')
+        .select('turma_id, total, status, itens, professoras(nome), alm_turmas(nome, cor)')
+        .eq('mes', mes)
+      const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
+      const orcMap: Record<string, number> = {}
+      for (const o of orcs ?? []) orcMap[o.turma_id] = o.valor
+      // Group by turma
+      const turmaMap: Record<string, any> = {}
+      for (const r of reqs ?? []) {
+        const tid = r.turma_id ?? 'sem_turma'
+        if (!turmaMap[tid]) turmaMap[tid] = {
+          turma: (r as any).alm_turmas ?? { nome: 'Sem turma', cor: '#aaa' },
+          orcamento: orcMap[tid] ?? 0,
+          gasto: 0, pendente: 0, rejeitado: 0, requisicoes: [],
+        }
+        if (r.status === 'aprovado')  turmaMap[tid].gasto     += r.total
+        if (r.status === 'pendente')  turmaMap[tid].pendente  += r.total
+        if (r.status === 'rejeitado') turmaMap[tid].rejeitado += r.total
+        turmaMap[tid].requisicoes.push(r)
+      }
+      return json({ data: Object.values(turmaMap), mes })
+    }
+
+    if (action === 'alm_prof_set_turma') {
+      const { professora_id, turma_id } = body
+      if (!professora_id) return json({ error: 'professora_id obrigatório.' }, 400)
+      const { error } = await sb.from('professoras')
+        .update({ alm_turma_id: turma_id || null }).eq('id', professora_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+  }
+
   return json({ error: 'Ação desconhecida' }, 400)
 })
