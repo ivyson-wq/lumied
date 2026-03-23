@@ -628,56 +628,27 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
   let resendCooldown = null;
 
-  // ── AUTH ──────────────────────────────────────────────
-  async function checkAccess(user) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 8000);
-      const r = await fetch(ACESSO, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ action: 'check', email: user.email }),
-        signal: controller.signal
-      });
-      clearTimeout(timer);
-      if (!r.ok) {
-        console.error('checkAccess HTTP error:', r.status);
-        return false;
-      }
-      const d = await r.json();
-      console.log('checkAccess response:', d);
-      return d.allowed === true;
-    } catch (err) {
-      console.error('checkAccess failed:', err);
-      return false;
-    }
-  }
-
-  let authProcessing = false;
-
+  // ── AUTH (reescrito — login direto sem checkAccess) ──
   async function initAuth() {
-    sb.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth event:', event);
-      if (event === 'TOKEN_REFRESHED') return;
-      if (authProcessing) return;
-      authProcessing = true;
-      try {
-        if (session?.user) {
-          const allowed = await checkAccess(session.user);
-          if (allowed) {
-            currentUser = session.user;
-            showForm(session.user);
-          } else {
-            await sb.auth.signOut();
-            showLoginWall();
-            showAccessDenied();
-          }
-        } else {
-          currentUser = null;
-          showLoginWall();
-        }
-      } finally {
-        authProcessing = false;
+    // 1. Verifica sessão existente ao carregar a página
+    const { data: { session }, error } = await sb.auth.getSession();
+    console.log('initAuth — session:', session?.user?.email, 'error:', error);
+    if (session?.user) {
+      currentUser = session.user;
+      showForm(session.user);
+    } else {
+      showLoginWall();
+    }
+
+    // 2. Escuta mudanças de auth (magic link callback, Google OAuth, logout)
+    sb.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, session?.user?.email);
+      if (event === 'SIGNED_IN' && session?.user) {
+        currentUser = session.user;
+        showForm(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        showLoginWall();
       }
     });
   }
@@ -780,20 +751,10 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
     const btn = document.getElementById('btnMagic');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Verificando…';
-
-    const allowed = await checkAccess({ email });
-    if (!allowed) {
-      btn.disabled = false;
-      btn.innerHTML = '✉️ Enviar link de acesso';
-      document.getElementById('emailState').style.display = 'none';
-      showAccessDenied();
-      return;
-    }
-
     btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
     const redirectTo = window.location.origin + window.location.pathname;
+    console.log('Magic link redirectTo:', redirectTo);
 
     const { error } = await sb.auth.signInWithOtp({
       email,
@@ -850,9 +811,11 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   async function loginGoogle() {
     document.getElementById('btnGoogle').disabled = true;
     document.getElementById('btnGoogle').innerHTML = '<span class="spinner dark"></span> Redirecionando…';
+    const redirectTo = window.location.origin + window.location.pathname;
+    console.log('Google OAuth redirectTo:', redirectTo);
     await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href }
+      options: { redirectTo }
     });
   }
 
