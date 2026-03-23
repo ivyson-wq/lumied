@@ -257,6 +257,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   </div>
 
   <div class="content">
+    <!-- Pickup Queue Section -->
+    <div class="sec-title">🚗 Fila de Retirada
+      <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+    </div>
+    <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
+      <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+      <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
+      <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
+    </div>
+    <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
+    <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
+    <div id="pickupFilaList"></div>
+
+    <hr class="section-divider">
+
     <!-- Stats -->
     <div class="stats-row">
       <div class="stat-card" data-c="pts">
@@ -316,6 +333,46 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <div class="sec-title">📋 Meus Diplomas <span class="count-badge" id="diplomasCount">0</span></div>
     <div class="diplomas-list" id="diplomasList">
       <div class="empty-state">⏳ Carregando…</div>
+    </div>
+
+    <hr class="section-divider">
+
+    <hr class="section-divider">
+
+    <!-- ── ALMOXARIFADO ──────────────────────────────────── -->
+    <div class="sec-title">📦 Almoxarifado
+      <button onclick="almLoadAll()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+    </div>
+    <div class="upload-card" id="almBudgetCard" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;" id="almTurmaNome">—</div>
+          <div style="font-size:12px;color:var(--muted);" id="almMesLabel"></div>
+        </div>
+        <button onclick="almAbrirNovaReq()" class="btn-submit" style="font-size:13px;padding:8px 16px;width:auto;" id="almBtnNovaReq">+ Nova Requisição</button>
+      </div>
+      <div style="background:#f0ece6;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px;">
+        <div id="almBudgetBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
+        <span>Gasto: <strong id="almGastoVal">R$ 0</strong></span>
+        <span>Orçamento: <strong id="almOrcVal">R$ 0</strong></span>
+      </div>
+    </div>
+    <div id="almNotifBanner" style="display:none;background:#fff8e1;border:1px solid #f6c54a;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;" onclick="almVerNotif()">
+      <span id="almNotifText">🔔 Você tem notificações não lidas</span>
+      <span style="color:var(--muted);font-size:11px;">Ver todas →</span>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Minhas Requisições</div>
+    <div id="almReqsLoading" class="empty-state">⏳ Carregando…</div>
+    <div id="almReqsEmpty" class="empty-state" style="display:none;">📋 Nenhuma requisição ainda.</div>
+    <div id="almReqsList"></div>
+    <div id="almNotifSection" style="display:none;margin-top:16px;">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        Notificações
+        <button onclick="almMarcarTodasLidas()" style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar todas como lidas</button>
+      </div>
+      <div id="almNotifList"></div>
     </div>
 
     <hr class="section-divider">
@@ -451,72 +508,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     </div>
   </div>
 
-  <hr class="section-divider">
-
-  <!-- Pickup Queue Section -->
-  <div class="sec-title">🚗 Fila de Retirada
-    <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
-  </div>
-
-  <!-- Series configurator -->
-  <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
-    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
-    <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
-    <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
-    <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
-  </div>
-
-  <!-- Queue -->
-  <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
-  <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
-  <div id="pickupFilaList"></div>
-
-  <hr class="section-divider">
-
-  <!-- ── ALMOXARIFADO ──────────────────────────────────── -->
-  <div class="sec-title">📦 Almoxarifado
-    <button onclick="almLoadAll()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
-  </div>
-
-  <!-- Budget card -->
-  <div class="upload-card" id="almBudgetCard" style="margin-bottom:12px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div>
-        <div style="font-size:13px;font-weight:600;" id="almTurmaNome">—</div>
-        <div style="font-size:12px;color:var(--muted);" id="almMesLabel"></div>
-      </div>
-      <button onclick="almAbrirNovaReq()" class="btn-submit" style="font-size:13px;padding:8px 16px;width:auto;" id="almBtnNovaReq">+ Nova Requisição</button>
-    </div>
-    <div style="background:#f0ece6;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px;">
-      <div id="almBudgetBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
-      <span>Gasto: <strong id="almGastoVal">R$ 0</strong></span>
-      <span>Orçamento: <strong id="almOrcVal">R$ 0</strong></span>
-    </div>
-  </div>
-
-  <!-- Notification badge -->
-  <div id="almNotifBanner" style="display:none;background:#fff8e1;border:1px solid #f6c54a;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;" onclick="almVerNotif()">
-    <span id="almNotifText">🔔 Você tem notificações não lidas</span>
-    <span style="color:var(--muted);font-size:11px;">Ver todas →</span>
-  </div>
-
-  <!-- My requisitions -->
-  <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Minhas Requisições</div>
-  <div id="almReqsLoading" class="empty-state">⏳ Carregando…</div>
-  <div id="almReqsEmpty" class="empty-state" style="display:none;">📋 Nenhuma requisição ainda.</div>
-  <div id="almReqsList"></div>
-
-  <!-- Notification list (collapsible) -->
-  <div id="almNotifSection" style="display:none;margin-top:16px;">
-    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-      Notificações
-      <button onclick="almMarcarTodasLidas()" style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar todas como lidas</button>
-    </div>
-    <div id="almNotifList"></div>
-  </div>
 
 </div>
 
