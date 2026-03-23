@@ -14,7 +14,7 @@ const CORS = {
 const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
 const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-// ── Hashing de senha (Web Crypto / PBKDF2) ─────────────────────
+// ── Hashing de senha — gerentes (formato v1:base64:base64, 120k iter) ──
 async function hashSenha(senha: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key  = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
@@ -22,6 +22,17 @@ async function hashSenha(senha: string): Promise<string> {
   const s = btoa(String.fromCharCode(...salt));
   const h = btoa(String.fromCharCode(...new Uint8Array(bits)));
   return `v1:${s}:${h}`;
+}
+
+// ── Hashing de senha — professoras (formato hex:hex, 100k iter) ──
+// Compatível com a edge function 'diplomas' que faz o login da professora
+async function hashSenhaProf(senha: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
+  const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${saltHex}:${hashHex}`;
 }
 
 async function verificarSenha(senha: string, stored: string): Promise<boolean> {
@@ -420,7 +431,7 @@ serve(async (req: Request) => {
     const insertData: Record<string, unknown> = { nome, email };
     if (senha) {
       if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
-      insertData.senha_hash = await hashSenha(senha as string);
+      insertData.senha_hash = await hashSenhaProf(senha as string);
     }
     const { error } = await admin.from("professoras").insert(insertData);
     if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
@@ -430,7 +441,7 @@ serve(async (req: Request) => {
     const { id, nova_senha } = body as { id: string; nova_senha: string };
     if (!id || !nova_senha) return err("ID e nova senha são obrigatórios.");
     if ((nova_senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
-    const senha_hash = await hashSenha(nova_senha as string);
+    const senha_hash = await hashSenhaProf(nova_senha as string);
     const { error } = await admin.from("professoras").update({ senha_hash }).eq("id", id);
     if (error) return err(error.message);
     return ok({ success: true });
