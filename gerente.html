@@ -241,6 +241,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('almCatalogo',this)"><span class="ic">📦</span> Catálogo de Insumos</a>
       <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Turmas e Orçamentos</a>
       <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
+      <div class="sb-label">Manutenção</div>
+      <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Solicitações</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
@@ -801,6 +803,22 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- MANUTENÇÃO -->
+      <div id="panelManutencao" class="panel">
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <select id="manutGerFiltro" onchange="loadManutencoes()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+            <option value="all">Todas</option>
+            <option value="pendente">Pendentes</option>
+            <option value="aprovada">Aprovadas</option>
+            <option value="em_execucao">Em Execução</option>
+            <option value="concluida">Concluídas</option>
+            <option value="rejeitada">Rejeitadas</option>
+          </select>
+          <span style="font-size:12px;color:var(--muted);" id="manutGerInfo"></span>
+        </div>
+        <div id="manutGerList"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">⏳ Carregando…</div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -962,7 +980,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',almReqs:'Requisições',almCatalogo:'Catálogo de Insumos',almTurmas:'Turmas e Orçamentos',almCompras:'Compras',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',almReqs:'Requisições',almCatalogo:'Catálogo de Insumos',almTurmas:'Turmas e Orçamentos',almCompras:'Compras',manutencao:'Solicitações de Manutenção',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -980,6 +998,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='almCatalogo') almLoadInsumos();
     if(id==='almTurmas')   almLoadTurmasPage();
     if(id==='almCompras')  almLoadCompras();
+    if(id==='manutencao')  loadManutencoes();
     return false;
   }
 
@@ -2014,6 +2033,117 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg> Compartilhar PDF`;
     btn.disabled = false;
+  }
+
+  // ── MANUTENÇÃO (Gerente) ─────────────────────────────
+  let manutGerData = [];
+
+  async function loadManutencoes() {
+    const filtro = document.getElementById('manutGerFiltro').value;
+    const params = { action:'manutencao_list_all' };
+    if (filtro !== 'all') params.status = filtro;
+    const d = await callProf(params);
+    manutGerData = Array.isArray(d?.data) ? d.data : [];
+    document.getElementById('manutGerInfo').textContent = manutGerData.length + ' solicitação(ões)';
+    renderManutencoes();
+  }
+
+  function renderManutencoes() {
+    const el = document.getElementById('manutGerList');
+    if (!manutGerData.length) { el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Nenhuma solicitação encontrada.</div>'; return; }
+
+    const urgLabels = {baixa:'🟢 Baixa',media:'🟡 Média',alta:'🟠 Alta',critica:'🔴 Crítica'};
+    const urgColors = {baixa:'#22c55e',media:'#eab308',alta:'#f97316',critica:'#ef4444'};
+    const statusLabels = {pendente:'Pendente',aprovada:'Aprovada',em_execucao:'Em Execução',concluida:'Concluída',rejeitada:'Rejeitada'};
+
+    el.innerHTML = manutGerData.map(m => {
+      const dt = new Date(m.criado_em).toLocaleDateString('pt-BR');
+      const profNome = m.professoras?.nome || m.professora_nome || '—';
+      const foto = m.foto_url ? `<a href="${m.foto_url}" target="_blank" style="font-size:11px;color:var(--blue);">📷 Ver foto</a>` : '';
+      const urgCor = urgColors[m.urgencia] || '#aaa';
+
+      let acoes = '';
+      if (m.status === 'pendente') {
+        acoes = `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          <button class="pp-action approve" onclick="manutAprovar('${m.id}')">✓ Aprovar</button>
+          <button class="pp-action reject" onclick="manutRejeitar('${m.id}')">✕ Rejeitar</button>
+        </div>`;
+      } else if (m.status === 'aprovada') {
+        acoes = `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          <button class="pp-action" onclick="manutDefinirEquipe('${m.id}')">👷 Definir equipe</button>
+          <button class="pp-action approve" onclick="manutIniciarExecucao('${m.id}')">🔄 Iniciar execução</button>
+        </div>`;
+      } else if (m.status === 'em_execucao') {
+        acoes = `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          <button class="pp-action" onclick="manutDefinirEquipe('${m.id}')">👷 Alterar equipe</button>
+          <button class="pp-action approve" onclick="manutConcluir('${m.id}')">✅ Marcar concluída</button>
+        </div>`;
+      }
+
+      return `<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid ${urgCor};border-radius:12px;padding:16px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong style="font-size:14px;">${esc(m.descricao)}</strong>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">📍 ${esc(m.localizacao)} · ${urgLabels[m.urgencia]||m.urgencia} · 👩‍🏫 ${esc(profNome)} · ${dt}</div>
+          </div>
+          <span class="pp-status ${m.status==='concluida'?'aprovado':m.status==='rejeitada'?'rejeitado':m.status==='pendente'?'pendente':'em_andamento'}">${statusLabels[m.status]||m.status}</span>
+        </div>
+        ${m.equipe_responsavel?`<div style="font-size:12px;margin-bottom:4px;">👷 <strong>Equipe:</strong> ${esc(m.equipe_responsavel)}</div>`:''}
+        ${m.data_conclusao?`<div style="font-size:12px;color:#065f46;margin-bottom:4px;">✅ Concluída em ${new Date(m.data_conclusao).toLocaleDateString('pt-BR')}</div>`:''}
+        ${m.observacao_gerente?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:4px;">💬 ${esc(m.observacao_gerente)}</div>`:''}
+        ${foto}
+        ${acoes}
+      </div>`;
+    }).join('');
+  }
+
+  async function manutAprovar(id) {
+    const obs = prompt('Observação (opcional):');
+    if (obs === null) return;
+    const d = await callProf({ action:'manutencao_aprovar', id, observacao:obs||null });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Solicitação aprovada!');
+    loadManutencoes();
+  }
+
+  async function manutRejeitar(id) {
+    const obs = prompt('Motivo da rejeição:');
+    if (!obs) return;
+    const d = await callProf({ action:'manutencao_rejeitar', id, observacao:obs });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('Solicitação rejeitada.');
+    loadManutencoes();
+  }
+
+  async function manutDefinirEquipe(id) {
+    const equipe = prompt('Nome da equipe ou responsável pela manutenção:');
+    if (!equipe) return;
+    const d = await callProf({ action:'manutencao_definir_equipe', id, equipe_responsavel:equipe });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Equipe definida!');
+    loadManutencoes();
+  }
+
+  async function manutIniciarExecucao(id) {
+    if (!confirm('Iniciar execução desta manutenção?')) return;
+    const d = await callProf({ action:'manutencao_iniciar_execucao', id });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('🔄 Manutenção em execução.');
+    loadManutencoes();
+  }
+
+  async function manutConcluir(id) {
+    const data = prompt('Data de conclusão (DD/MM/AAAA):', new Date().toLocaleDateString('pt-BR'));
+    if (!data) return;
+    // Converte DD/MM/AAAA para YYYY-MM-DD
+    const parts = data.split('/');
+    const dataISO = parts.length === 3 ? `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}` : new Date().toISOString().split('T')[0];
+    const obs = prompt('Observação final (opcional):');
+    if (obs === null) return;
+    const d = await callProf({ action:'manutencao_concluir', id, data_conclusao:dataISO, observacao:obs||null });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Manutenção concluída!');
+    loadManutencoes();
   }
 
   // ── ALMOXARIFADO (Gerente) ───────────────────────────

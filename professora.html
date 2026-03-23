@@ -280,6 +280,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <a class="nav-item" onclick="profShowPanel('almox')"><span class="ic">📦</span> Almoxarifado</a>
     <a class="nav-item" onclick="profShowPanel('pdi')"><span class="ic">📈</span> PDI</a>
     <a class="nav-item" onclick="profShowPanel('atestados')"><span class="ic">🏥</span> Atestados</a>
+    <a class="nav-item" onclick="profShowPanel('manutencao')"><span class="ic">🔧</span> Manutenção</a>
   </div>
 
   <div class="prof-main">
@@ -514,6 +515,57 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       </div>
     </div>
 
+    <!-- ═══ PAINEL: MANUTENÇÃO ═══ -->
+    <div class="prof-panel" id="profPanelManutencao">
+      <div class="upload-card">
+        <h3>🔧 Nova Solicitação de Manutenção</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+          Descreva o problema e a localização. A coordenação será notificada e acompanhará a execução.
+        </p>
+        <div class="ff">
+          <label>Descrição do problema <span style="color:var(--red);">*</span></label>
+          <textarea id="manutDescricao" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;min-height:80px;resize:vertical;background:#fdfbf8;outline:none;" placeholder="Ex: Torneira do banheiro do 2º andar está vazando…"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="ff" style="margin:0;">
+            <label>Localização <span style="color:var(--red);">*</span></label>
+            <input type="text" id="manutLocal" placeholder="Ex: Sala 3, Banheiro térreo, Pátio…">
+          </div>
+          <div class="ff" style="margin:0;">
+            <label>Grau de urgência <span style="color:var(--red);">*</span></label>
+            <select id="manutUrgencia">
+              <option value="">Selecione…</option>
+              <option value="baixa">Baixa — pode esperar</option>
+              <option value="media">Média — resolver em breve</option>
+              <option value="alta">Alta — resolver o mais rápido possível</option>
+              <option value="critica">Crítica — risco imediato</option>
+            </select>
+          </div>
+        </div>
+        <div class="ff" style="margin-top:12px;">
+          <label>Foto (opcional)</label>
+          <div class="upload-zone" id="manutUploadZone" onclick="document.getElementById('manutFotoFile').click()" style="padding:16px;">
+            <div class="uz-icon">📷</div>
+            <p>Clique para adicionar uma foto</p>
+            <small>JPG ou PNG · máximo 10MB</small>
+            <input type="file" id="manutFotoFile" accept=".jpg,.jpeg,.png" style="display:none" onchange="onManutFotoSelected(event)">
+          </div>
+          <div id="manutFotoPreview" style="display:none;margin-top:8px;">
+            <img id="manutFotoImg" style="max-width:200px;max-height:150px;border-radius:8px;border:1px solid var(--border);">
+            <button onclick="manutRemoverFoto()" style="margin-left:8px;background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;">✕ Remover</button>
+          </div>
+        </div>
+        <button class="btn-submit" id="btnManutSubmit" onclick="submitManutencao()">Enviar Solicitação</button>
+        <div class="f-alert error" id="manutErr"></div>
+        <div class="f-alert success" id="manutOk"></div>
+      </div>
+
+      <div class="sec-title">📋 Minhas Solicitações <span class="count-badge" id="manutCount">0</span></div>
+      <div id="manutList">
+        <div class="empty-state">⏳ Carregando…</div>
+      </div>
+    </div>
+
   </div>
   </div>
 
@@ -648,7 +700,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── NAVEGAÇÃO POR PAINÉIS ────────────────────────────
-  const profPanelTitles = {pickup:'Fila de Retirada',diplomas:'Cursos e Diplomas',almox:'Almoxarifado',pdi:'PDI',atestados:'Atestados'};
+  const profPanelTitles = {pickup:'Fila de Retirada',diplomas:'Cursos e Diplomas',almox:'Almoxarifado',pdi:'PDI',atestados:'Atestados',manutencao:'Manutenção'};
 
   function profShowPanel(id) {
     document.querySelectorAll('.prof-panel').forEach(p => p.classList.remove('active'));
@@ -666,6 +718,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (id==='pdi') loadMeuPdi();
     if (id==='atestados') loadMeusAtestados();
     if (id==='pickup') loadPickupFila();
+    if (id==='manutencao') loadMinhasManutencoes();
   }
 
   function checkSession() {
@@ -1214,6 +1267,107 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
   });
+
+  // ── MANUTENÇÃO ──────────────────────────────────────────
+  let selectedManutFoto = null;
+
+  function onManutFotoSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10*1024*1024) { alert('Arquivo muito grande (máx. 10MB).'); return; }
+    selectedManutFoto = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      document.getElementById('manutFotoImg').src = reader.result;
+      document.getElementById('manutFotoPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function manutRemoverFoto() {
+    selectedManutFoto = null;
+    document.getElementById('manutFotoPreview').style.display = 'none';
+    document.getElementById('manutFotoFile').value = '';
+  }
+
+  async function submitManutencao() {
+    const descricao = document.getElementById('manutDescricao').value.trim();
+    const local = document.getElementById('manutLocal').value.trim();
+    const urgencia = document.getElementById('manutUrgencia').value;
+    const errEl = document.getElementById('manutErr');
+    const okEl = document.getElementById('manutOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+
+    if (!descricao || !local || !urgencia) {
+      errEl.textContent = 'Preencha descrição, localização e urgência.';
+      errEl.classList.add('show'); return;
+    }
+
+    const btn = document.getElementById('btnManutSubmit');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+
+    const body = { action: 'manutencao_criar', descricao, localizacao: local, urgencia };
+
+    if (selectedManutFoto) {
+      const reader = new FileReader();
+      const b64 = await new Promise(resolve => {
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(selectedManutFoto);
+      });
+      body.foto_base64 = b64;
+      body.foto_mime = selectedManutFoto.type;
+    }
+
+    const d = await callApi(body);
+    btn.disabled = false; btn.textContent = 'Enviar Solicitação';
+
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+
+    okEl.textContent = '✅ Solicitação enviada com sucesso!';
+    okEl.classList.add('show');
+    document.getElementById('manutDescricao').value = '';
+    document.getElementById('manutLocal').value = '';
+    document.getElementById('manutUrgencia').value = '';
+    manutRemoverFoto();
+    loadMinhasManutencoes();
+  }
+
+  async function loadMinhasManutencoes() {
+    const d = await callApi({ action: 'manutencao_minhas' });
+    const list = Array.isArray(d?.data) ? d.data : [];
+    document.getElementById('manutCount').textContent = list.length;
+    const el = document.getElementById('manutList');
+
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-state">Nenhuma solicitação de manutenção.</div>';
+      return;
+    }
+
+    const urgLabels = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🟠 Alta', critica:'🔴 Crítica' };
+    const statusLabels = { pendente:'Pendente', aprovada:'Aprovada', em_execucao:'Em Execução', concluida:'✅ Concluída', rejeitada:'Rejeitada' };
+    const statusClass = { pendente:'pendente', aprovada:'aprovado', em_execucao:'aprovado', concluida:'aprovado', rejeitada:'rejeitado' };
+
+    el.innerHTML = '<div class="diplomas-list">' + list.map(m => {
+      const dt = new Date(m.criado_em).toLocaleDateString('pt-BR');
+      const foto = m.foto_url ? `<a href="${m.foto_url}" target="_blank" style="font-size:11px;color:var(--blue);">📷 Ver foto</a>` : '';
+      const concluida = m.status === 'concluida';
+      const dtConclusao = m.data_conclusao ? new Date(m.data_conclusao).toLocaleDateString('pt-BR') : '';
+      return `<div class="diploma-row">
+        <div class="diploma-icon">${concluida?'✅':'🔧'}</div>
+        <div class="diploma-info">
+          <strong>${m.descricao}</strong>
+          <div class="meta">📍 ${m.localizacao} · ${urgLabels[m.urgencia]||m.urgencia} · ${dt}</div>
+          ${m.equipe_responsavel?`<div class="meta" style="margin-top:2px;">👷 Equipe: ${m.equipe_responsavel}</div>`:''}
+          ${concluida?`<div class="meta" style="color:#1a5c2a;margin-top:2px;">Concluída em ${dtConclusao}</div>`:''}
+          ${m.observacao_gerente?`<div class="diploma-obs">💬 ${m.observacao_gerente}</div>`:''}
+          ${foto}
+        </div>
+        <div class="diploma-side">
+          <span class="status-badge ${statusClass[m.status]||'pendente'}">${statusLabels[m.status]||m.status}</span>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  }
 
   // ── PICKUP QUEUE ────────────────────────────────────────
   const SERIES_DISPONIVEIS = ['Berçário','Maternal I','Maternal II','Jardim I','Jardim II','Pré-Escola','1º Ano','2º Ano','3º Ano','4º Ano','5º Ano'];
