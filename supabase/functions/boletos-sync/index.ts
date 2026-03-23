@@ -29,19 +29,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Credenciais Inter não configuradas.' }), { status: 500, headers: CORS })
     }
 
-    // ── mTLS (opcional) ──
-    let httpClient: any = undefined
-    try {
-      const cert = Deno.env.get('INTER_CERT')
-      const key = Deno.env.get('INTER_KEY')
-      if (cert && key) {
-        httpClient = Deno.createHttpClient({ certChain: cert, privateKey: key })
-        console.log('mTLS ativo')
-      }
-    } catch (e) {
-      console.log('mTLS indisponível:', String(e))
-    }
-
     // ── OAuth: tenta múltiplos scopes ──
     const scopes = [
       'cobranca.boleto.read cobranca.boleto.pdf',
@@ -61,8 +48,6 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: 'client_credentials' }),
       }
-      if (httpClient) fetchOpts.client = httpClient
-
       const res = await fetch(`${INTER_BASE}/oauth/v2/token`, fetchOpts)
 
       if (res.ok) {
@@ -94,10 +79,7 @@ Deno.serve(async (req) => {
     const url = `${INTER_BASE}/cobranca/v3/cobrancas?cpfCnpj=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&itensPorPagina=100`
     console.log('Buscando boletos:', url)
 
-    const bFetchOpts: any = { headers: { Authorization: `Bearer ${accessToken}` } }
-    if (httpClient) bFetchOpts.client = httpClient
-
-    const boletosRes = await fetch(url, bFetchOpts)
+    const boletosRes = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
 
     if (!boletosRes.ok) {
       const errText = await boletosRes.text()
@@ -133,9 +115,7 @@ Deno.serve(async (req) => {
       // PDF
       let pdfUrl: string | null = null
       try {
-        const pOpts: any = { headers: { Authorization: `Bearer ${accessToken}` } }
-        if (httpClient) pOpts.client = httpClient
-        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, pOpts)
+        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, { headers: { Authorization: `Bearer ${accessToken}` } })
         if (pdfRes.ok) {
           const pdfData = await pdfRes.json()
           if (pdfData.pdf) {
