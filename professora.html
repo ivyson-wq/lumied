@@ -1641,7 +1641,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     }
     el.innerHTML = Object.entries(cats).map(([cat, items]) =>
       `<div style="padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#f9f7f4;">${cat}</div>` +
-      (items as any[]).map(it => {
+      items.map(it => {
         const inCart = almCart.find(c => c.insumo_id === it.id);
         const estoque = it.estoque_qty > 0 ? `${it.estoque_qty} ${it.unidade}` : '<span style="color:#e53e3e;">Sem estoque</span>';
         return `<div class="alm-catalog-item">
