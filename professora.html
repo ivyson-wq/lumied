@@ -30,7 +30,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .login-hint{margin-top:16px;text-align:center;font-size:12px;color:var(--muted);}
 
 /* APP */
-#appShell{display:none;min-height:100vh;}
+#appShell{display:none;min-height:100vh;display:none;}
 .topbar{background:var(--sb);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
 .topbar-brand{display:flex;align-items:center;gap:12px;}
 .topbar-brand .leaf{font-size:20px;}
@@ -40,8 +40,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .user-name{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
 .logout-btn{padding:7px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:7px;color:rgba(255,255,255,.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;}
 .logout-btn:hover{background:rgba(255,255,255,.14);color:#fff;}
+.topbar-title{font-family:'Lora',serif;font-size:14px;color:rgba(255,255,255,.85);font-weight:600;}
 
+/* SIDEBAR */
+.prof-sidebar{width:220px;background:var(--sb);position:fixed;top:60px;left:0;bottom:0;overflow-y:auto;z-index:40;padding:16px 0;}
+.prof-sidebar .sb-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.3);padding:16px 20px 6px;}
+.prof-sidebar .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:rgba(255,255,255,.6);text-decoration:none;font-size:13px;transition:all .15s;cursor:pointer;border-left:3px solid transparent;}
+.prof-sidebar .nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9);}
+.prof-sidebar .nav-item.active{background:rgba(255,255,255,.1);color:#fff;border-left-color:var(--red);}
+.prof-sidebar .nav-item .ic{font-size:15px;width:20px;text-align:center;}
+
+.prof-main{margin-left:220px;}
 .content{max-width:960px;margin:0 auto;padding:32px 24px 64px;}
+.prof-panel{display:none;}
+.prof-panel.active{display:block;}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
@@ -214,7 +226,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .pickup-btn:disabled{opacity:.6;cursor:not-allowed;}
 .series-chip{display:inline-block;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:all .15s;}
 .series-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+@media(max-width:900px){.prof-sidebar{width:180px;}.prof-main{margin-left:180px;}}
 @media(max-width:640px){
+  .prof-sidebar{display:none;}
+  .prof-main{margin-left:0;}
   .stats-row{grid-template-columns:1fr 1fr;}
   .stat-card:first-child{grid-column:1 / -1;}
   .topbar{padding:0 16px;}
@@ -250,265 +265,257 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div class="leaf">🍁</div>
       <div><h1>Maple Bear</h1><span>Portal das Professoras</span></div>
     </div>
+    <div class="topbar-title" id="profTopbarTitle">Fila de Retirada</div>
     <div class="topbar-user">
       <span class="user-name" id="userNome"></span>
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
     </div>
   </div>
 
+  <!-- SIDEBAR -->
+  <div class="prof-sidebar">
+    <div class="sb-label">Principal</div>
+    <a class="nav-item active" onclick="profShowPanel('pickup')"><span class="ic">🚗</span> Fila de Retirada</a>
+    <a class="nav-item" onclick="profShowPanel('diplomas')"><span class="ic">🎓</span> Cursos e Diplomas</a>
+    <a class="nav-item" onclick="profShowPanel('almox')"><span class="ic">📦</span> Almoxarifado</a>
+    <a class="nav-item" onclick="profShowPanel('pdi')"><span class="ic">📈</span> PDI</a>
+    <a class="nav-item" onclick="profShowPanel('atestados')"><span class="ic">🏥</span> Atestados</a>
+  </div>
+
+  <div class="prof-main">
   <div class="content">
-    <!-- Pickup Queue Section -->
-    <div class="sec-title">🚗 Fila de Retirada
-      <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
-    </div>
-    <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
-      <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
-      <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
-      <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
-    </div>
-    <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
-    <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
-    <div id="pickupFilaList"></div>
 
-    <hr class="section-divider">
-
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-card" data-c="pts">
-        <div class="stat-label">Minha Pontuação</div>
-        <div class="stat-value" id="statPontos">—</div>
-        <div class="stat-sub">pontos acumulados</div>
+    <!-- ═══ PAINEL: FILA DE RETIRADA ═══ -->
+    <div class="prof-panel active" id="profPanelPickup">
+      <div class="sec-title">🚗 Fila de Retirada
+        <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
       </div>
-      <div class="stat-card" data-c="rank">
-        <div class="stat-label">Minha Posição</div>
-        <div class="stat-value" id="statPosicao">—</div>
-        <div class="stat-sub">no ranking geral</div>
+      <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
+        <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+        <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
+        <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
       </div>
-      <div class="stat-card" data-c="diplomas">
-        <div class="stat-label">Diplomas Enviados</div>
-        <div class="stat-value" id="statDiplomas">—</div>
-        <div class="stat-sub">cursos registrados</div>
-      </div>
+      <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
+      <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
+      <div id="pickupFilaList"></div>
     </div>
 
-    <!-- Ranking -->
-    <div class="sec-title">🏆 Ranking de Professoras</div>
-    <div class="ranking-wrap" id="rankingList">
-      <div class="empty-state">⏳ Carregando…</div>
-    </div>
-
-    <!-- Upload Diploma -->
-    <div class="upload-card">
-      <h3>📄 Enviar Diploma de Curso</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
-        Envie o diploma ou certificado de conclusão. Após a validação pela coordenação, os pontos serão creditados automaticamente conforme a carga horária do curso.
-      </p>
-      <div style="display:grid;grid-template-columns:1fr 180px;gap:12px;">
-        <div class="ff" style="margin:0;">
-          <label>Nome do Curso</label>
-          <input type="text" id="nomeCurso" placeholder="Ex: Psicopedagogia Clínica">
+    <!-- ═══ PAINEL: CURSOS E DIPLOMAS ═══ -->
+    <div class="prof-panel" id="profPanelDiplomas">
+      <div class="stats-row">
+        <div class="stat-card" data-c="pts">
+          <div class="stat-label">Minha Pontuação</div>
+          <div class="stat-value" id="statPontos">—</div>
+          <div class="stat-sub">pontos acumulados</div>
         </div>
-        <div class="ff" style="margin:0;">
-          <label>Carga Horária (horas)</label>
-          <input type="number" id="cargaHoraria" placeholder="180" min="1">
+        <div class="stat-card" data-c="rank">
+          <div class="stat-label">Minha Posição</div>
+          <div class="stat-value" id="statPosicao">—</div>
+          <div class="stat-sub">no ranking geral</div>
+        </div>
+        <div class="stat-card" data-c="diplomas">
+          <div class="stat-label">Diplomas Enviados</div>
+          <div class="stat-value" id="statDiplomas">—</div>
+          <div class="stat-sub">cursos registrados</div>
         </div>
       </div>
-      <div class="hint" style="font-size:11px;color:var(--muted);margin:4px 0 14px;">A pontuação corresponde à quantidade de horas do curso.</div>
-      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('diplomaFile').click()">
-        <div class="uz-icon">📎</div>
-        <p>Clique para selecionar ou arraste o arquivo aqui</p>
-        <small>PDF, JPG ou PNG · máximo 10MB</small>
-        <input type="file" id="diplomaFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onFileSelected(event)">
+
+      <div class="sec-title">🏆 Ranking de Professoras</div>
+      <div class="ranking-wrap" id="rankingList">
+        <div class="empty-state">⏳ Carregando…</div>
       </div>
-      <div class="file-name" id="fileName"></div>
-      <div class="upload-bar-wrap" id="uploadBarWrap"><div class="upload-bar" id="uploadBar"></div></div>
-      <button class="btn-submit" id="btnSubmit" onclick="submitDiploma()" disabled>Enviar para Validação</button>
-      <div class="f-alert error" id="uploadErr"></div>
-      <div class="f-alert success" id="uploadOk"></div>
-    </div>
 
-    <!-- My Diplomas -->
-    <div class="sec-title">📋 Meus Diplomas <span class="count-badge" id="diplomasCount">0</span></div>
-    <div class="diplomas-list" id="diplomasList">
-      <div class="empty-state">⏳ Carregando…</div>
-    </div>
-
-    <hr class="section-divider">
-
-    <hr class="section-divider">
-
-    <!-- ── ALMOXARIFADO ──────────────────────────────────── -->
-    <div class="sec-title">📦 Almoxarifado
-      <button onclick="almLoadAll()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
-    </div>
-    <div class="upload-card" id="almBudgetCard" style="margin-bottom:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div>
-          <div style="font-size:13px;font-weight:600;" id="almTurmaNome">—</div>
-          <div style="font-size:12px;color:var(--muted);" id="almMesLabel"></div>
+      <div class="upload-card">
+        <h3>📄 Enviar Diploma de Curso</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+          Envie o diploma ou certificado de conclusão. Após a validação pela coordenação, os pontos serão creditados automaticamente conforme a carga horária do curso.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 180px;gap:12px;">
+          <div class="ff" style="margin:0;">
+            <label>Nome do Curso</label>
+            <input type="text" id="nomeCurso" placeholder="Ex: Psicopedagogia Clínica">
+          </div>
+          <div class="ff" style="margin:0;">
+            <label>Carga Horária (horas)</label>
+            <input type="number" id="cargaHoraria" placeholder="180" min="1">
+          </div>
         </div>
-        <button onclick="almAbrirNovaReq()" class="btn-submit" style="font-size:13px;padding:8px 16px;width:auto;" id="almBtnNovaReq">+ Nova Requisição</button>
+        <div class="hint" style="font-size:11px;color:var(--muted);margin:4px 0 14px;">A pontuação corresponde à quantidade de horas do curso.</div>
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('diplomaFile').click()">
+          <div class="uz-icon">📎</div>
+          <p>Clique para selecionar ou arraste o arquivo aqui</p>
+          <small>PDF, JPG ou PNG · máximo 10MB</small>
+          <input type="file" id="diplomaFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onFileSelected(event)">
+        </div>
+        <div class="file-name" id="fileName"></div>
+        <div class="upload-bar-wrap" id="uploadBarWrap"><div class="upload-bar" id="uploadBar"></div></div>
+        <button class="btn-submit" id="btnSubmit" onclick="submitDiploma()" disabled>Enviar para Validação</button>
+        <div class="f-alert error" id="uploadErr"></div>
+        <div class="f-alert success" id="uploadOk"></div>
       </div>
-      <div style="background:#f0ece6;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px;">
-        <div id="almBudgetBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
-        <span>Gasto: <strong id="almGastoVal">R$ 0</strong></span>
-        <span>Orçamento: <strong id="almOrcVal">R$ 0</strong></span>
+
+      <div class="sec-title">📋 Meus Diplomas <span class="count-badge" id="diplomasCount">0</span></div>
+      <div class="diplomas-list" id="diplomasList">
+        <div class="empty-state">⏳ Carregando…</div>
       </div>
     </div>
-    <div id="almNotifBanner" style="display:none;background:#fff8e1;border:1px solid #f6c54a;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;" onclick="almVerNotif()">
-      <span id="almNotifText">🔔 Você tem notificações não lidas</span>
-      <span style="color:var(--muted);font-size:11px;">Ver todas →</span>
-    </div>
-    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Minhas Requisições</div>
-    <div id="almReqsLoading" class="empty-state">⏳ Carregando…</div>
-    <div id="almReqsEmpty" class="empty-state" style="display:none;">📋 Nenhuma requisição ainda.</div>
-    <div id="almReqsList"></div>
-    <div id="almNotifSection" style="display:none;margin-top:16px;">
-      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
-        Notificações
-        <button onclick="almMarcarTodasLidas()" style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar todas como lidas</button>
+
+    <!-- ═══ PAINEL: ALMOXARIFADO ═══ -->
+    <div class="prof-panel" id="profPanelAlmox">
+      <div class="sec-title">📦 Almoxarifado
+        <button onclick="almLoadAll()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
       </div>
-      <div id="almNotifList"></div>
-    </div>
-
-    <hr class="section-divider">
-
-    <!-- PDI Section -->
-    <div class="sec-title">📈 Meu Plano de Desenvolvimento Individual</div>
-    <div id="pdiLoading"><div class="empty-state">⏳ Carregando…</div></div>
-    <div id="pdiNoCiclo" style="display:none">
-      <div class="upload-card" style="text-align:center;padding:40px 24px;">
-        <div style="font-size:36px;margin-bottom:12px;">📅</div>
-        <p style="font-size:13px;color:var(--muted);">Nenhum ciclo de PDI ativo. Aguarde a coordenação abrir o ciclo.</p>
-      </div>
-    </div>
-    <div id="pdiContent" style="display:none">
-
-      <!-- Ciclo info card -->
-      <div class="upload-card" id="pdiInfoCard" style="margin-bottom:16px;"></div>
-
-      <!-- Autoavaliação form (rascunho) -->
-      <div class="upload-card" id="pdiAutoavCard" style="display:none">
-        <h3>✏️ Autoavaliação de Competências</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Avalie suas competências de <strong>1</strong> a <strong>4</strong>: &nbsp;<strong>1</strong> Em desenvolvimento · <strong>2</strong> Atende · <strong>3</strong> Supera · <strong>4</strong> Referência</p>
-        <div class="pdi-comp-form" id="pdiCompForm"></div>
-        <button class="btn-submit" style="margin-top:18px;" onclick="submitAutoavaliacao()">Salvar Autoavaliação</button>
-        <div class="f-alert error" id="pdiAutoErr"></div>
-        <div class="f-alert success" id="pdiAutoOk"></div>
-      </div>
-
-      <!-- Metas form (rascunho) -->
-      <div class="upload-card" id="pdiMetasFormCard" style="display:none">
-        <h3>🎯 Minhas Metas SMART</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Defina entre 1 e 5 metas para este ciclo. Cada meta deve ser específica, mensurável e com prazo definido.</p>
-        <div id="pdiMetasFormList"></div>
-        <button class="add-meta-btn" onclick="addMetaForm()" id="btnAddMeta">+ Adicionar meta</button>
-        <button class="btn-submit" onclick="submitMetas()" id="btnSubmitMetas" disabled>Enviar para Aprovação</button>
-        <div class="f-alert error" id="pdiMetasErr"></div>
-        <div class="f-alert success" id="pdiMetasOk"></div>
-      </div>
-
-      <!-- Competências view (read-only) -->
-      <div class="upload-card" id="pdiCompViewCard" style="display:none">
-        <h3>📊 Competências</h3>
-        <div class="pdi-legend">
-          <span><span class="dot" style="background:var(--blue)"></span> Minha autoavaliação</span>
-          <span><span class="dot" style="background:var(--green)"></span> Avaliação da gestora</span>
+      <div class="upload-card" id="almBudgetCard" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-size:13px;font-weight:600;" id="almTurmaNome">—</div>
+            <div style="font-size:12px;color:var(--muted);" id="almMesLabel"></div>
+          </div>
+          <button onclick="almAbrirNovaReq()" class="btn-submit" style="font-size:13px;padding:8px 16px;width:auto;" id="almBtnNovaReq">+ Nova Requisição</button>
         </div>
-        <div class="comp-list" id="pdiCompView"></div>
-      </div>
-
-      <!-- Metas view -->
-      <div class="upload-card" id="pdiMetasViewCard" style="display:none">
-        <h3>🎯 Minhas Metas <span class="count-badge" id="pdiMetasCount">0</span></h3>
-        <div id="pdiMetasView"></div>
-      </div>
-
-      <!-- Check-in form (em_andamento) -->
-      <div class="upload-card" id="pdiCheckinCard" style="display:none">
-        <h3>📝 Registrar Check-in</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Registre seu acompanhamento do PDI para a gestora.</p>
-        <div class="ff">
-          <label>Tipo</label>
-          <select id="checkinTipo">
-            <option value="semestral">Semestral (revisão do meio do ano)</option>
-            <option value="final">Final (encerramento do ciclo)</option>
-          </select>
+        <div style="background:#f0ece6;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px;">
+          <div id="almBudgetBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
         </div>
-        <div class="ff">
-          <label>Seu relato</label>
-          <textarea id="checkinRelato" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;min-height:100px;resize:vertical;background:#fdfbf8;outline:none;transition:border-color .2s;" placeholder="Descreva seu progresso, conquistas e próximos passos…" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-        </div>
-        <button class="btn-submit" onclick="submitCheckin()">Enviar Check-in</button>
-        <div class="f-alert error" id="pdiCheckinErr"></div>
-        <div class="f-alert success" id="pdiCheckinOk"></div>
-      </div>
-
-      <!-- Histórico de check-ins -->
-      <div id="pdiHistoricoCard" style="display:none">
-        <div class="sec-title" style="margin-top:24px;margin-bottom:12px;">💬 Histórico de Check-ins</div>
-        <div class="diplomas-list" id="pdiHistorico"></div>
-      </div>
-
-      <!-- Nota final (encerrado) -->
-      <div class="upload-card" id="pdiNotaFinalCard" style="display:none">
-        <h3>🏁 PDI Encerrado</h3>
-        <div class="nota-final-display">
-          <div class="nota-final-num" id="pdiNotaNum">—</div>
-          <div class="nota-final-lbl" id="pdiNotaLbl"></div>
-        </div>
-        <div id="pdiFeedbackFinal" style="font-size:13px;line-height:1.6;color:var(--text);"></div>
-      </div>
-
-    </div>
-
-    <hr class="section-divider">
-
-    <!-- Upload Atestado -->
-    <div class="upload-card">
-      <h3>🏥 Enviar Atestado Médico</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
-        Envie atestados de afastamento para análise da secretaria. Informe o período de ausência e anexe o documento digitalizado.
-      </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="ff" style="margin:0;">
-          <label>Data de Início</label>
-          <input type="date" id="atestDataInicio">
-        </div>
-        <div class="ff" style="margin:0;">
-          <label>Data de Fim</label>
-          <input type="date" id="atestDataFim">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
+          <span>Gasto: <strong id="almGastoVal">R$ 0</strong></span>
+          <span>Orçamento: <strong id="almOrcVal">R$ 0</strong></span>
         </div>
       </div>
-      <div class="ff" style="margin-top:12px;">
-        <label>Motivo (opcional)</label>
-        <input type="text" id="atestMotivo" placeholder="Ex: Consulta médica, cirurgia…">
+      <div id="almNotifBanner" style="display:none;background:#fff8e1;border:1px solid #f6c54a;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;" onclick="almVerNotif()">
+        <span id="almNotifText">🔔 Você tem notificações não lidas</span>
+        <span style="color:var(--muted);font-size:11px;">Ver todas →</span>
       </div>
-      <div class="upload-zone" id="atestUploadZone" onclick="document.getElementById('atestFile').click()">
-        <div class="uz-icon">📋</div>
-        <p>Clique para selecionar ou arraste o arquivo aqui</p>
-        <small>PDF, JPG ou PNG · máximo 10MB</small>
-        <input type="file" id="atestFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onAtestFileSelected(event)">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Minhas Requisições</div>
+      <div id="almReqsLoading" class="empty-state">⏳ Carregando…</div>
+      <div id="almReqsEmpty" class="empty-state" style="display:none;">📋 Nenhuma requisição ainda.</div>
+      <div id="almReqsList"></div>
+      <div id="almNotifSection" style="display:none;margin-top:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+          Notificações
+          <button onclick="almMarcarTodasLidas()" style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar todas como lidas</button>
+        </div>
+        <div id="almNotifList"></div>
       </div>
-      <div class="file-name" id="atestFileName"></div>
-      <div class="upload-bar-wrap" id="atestBarWrap"><div class="upload-bar" id="atestBar"></div></div>
-      <button class="btn-submit" id="btnAtestSubmit" onclick="submitAtestado()" disabled>Enviar para a Secretaria</button>
-      <div class="f-alert error" id="atestErr"></div>
-      <div class="f-alert success" id="atestOk"></div>
     </div>
 
-    <!-- My Atestados -->
-    <div class="sec-title">📁 Meus Atestados <span class="count-badge" id="atestadosCount">0</span></div>
-    <div class="diplomas-list" id="atestadosList">
-      <div class="empty-state">⏳ Carregando…</div>
+    <!-- ═══ PAINEL: PDI ═══ -->
+    <div class="prof-panel" id="profPanelPdi">
+      <div class="sec-title">📈 Meu Plano de Desenvolvimento Individual</div>
+      <div id="pdiLoading"><div class="empty-state">⏳ Carregando…</div></div>
+      <div id="pdiNoCiclo" style="display:none">
+        <div class="upload-card" style="text-align:center;padding:40px 24px;">
+          <div style="font-size:36px;margin-bottom:12px;">📅</div>
+          <p style="font-size:13px;color:var(--muted);">Nenhum ciclo de PDI ativo. Aguarde a coordenação abrir o ciclo.</p>
+        </div>
+      </div>
+      <div id="pdiContent" style="display:none">
+        <div class="upload-card" id="pdiInfoCard" style="margin-bottom:16px;"></div>
+        <div class="upload-card" id="pdiAutoavCard" style="display:none">
+          <h3>✏️ Autoavaliação de Competências</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Avalie suas competências de <strong>1</strong> a <strong>4</strong>: &nbsp;<strong>1</strong> Em desenvolvimento · <strong>2</strong> Atende · <strong>3</strong> Supera · <strong>4</strong> Referência</p>
+          <div class="pdi-comp-form" id="pdiCompForm"></div>
+          <button class="btn-submit" style="margin-top:18px;" onclick="submitAutoavaliacao()">Salvar Autoavaliação</button>
+          <div class="f-alert error" id="pdiAutoErr"></div>
+          <div class="f-alert success" id="pdiAutoOk"></div>
+        </div>
+        <div class="upload-card" id="pdiMetasFormCard" style="display:none">
+          <h3>🎯 Minhas Metas SMART</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Defina entre 1 e 5 metas para este ciclo. Cada meta deve ser específica, mensurável e com prazo definido.</p>
+          <div id="pdiMetasFormList"></div>
+          <button class="add-meta-btn" onclick="addMetaForm()" id="btnAddMeta">+ Adicionar meta</button>
+          <button class="btn-submit" onclick="submitMetas()" id="btnSubmitMetas" disabled>Enviar para Aprovação</button>
+          <div class="f-alert error" id="pdiMetasErr"></div>
+          <div class="f-alert success" id="pdiMetasOk"></div>
+        </div>
+        <div class="upload-card" id="pdiCompViewCard" style="display:none">
+          <h3>📊 Competências</h3>
+          <div class="pdi-legend">
+            <span><span class="dot" style="background:var(--blue)"></span> Minha autoavaliação</span>
+            <span><span class="dot" style="background:var(--green)"></span> Avaliação da gestora</span>
+          </div>
+          <div class="comp-list" id="pdiCompView"></div>
+        </div>
+        <div class="upload-card" id="pdiMetasViewCard" style="display:none">
+          <h3>🎯 Minhas Metas <span class="count-badge" id="pdiMetasCount">0</span></h3>
+          <div id="pdiMetasView"></div>
+        </div>
+        <div class="upload-card" id="pdiCheckinCard" style="display:none">
+          <h3>📝 Registrar Check-in</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Registre seu acompanhamento do PDI para a gestora.</p>
+          <div class="ff">
+            <label>Tipo</label>
+            <select id="checkinTipo">
+              <option value="semestral">Semestral (revisão do meio do ano)</option>
+              <option value="final">Final (encerramento do ciclo)</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label>Seu relato</label>
+            <textarea id="checkinRelato" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;min-height:100px;resize:vertical;background:#fdfbf8;outline:none;transition:border-color .2s;" placeholder="Descreva seu progresso, conquistas e próximos passos…" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+          </div>
+          <button class="btn-submit" onclick="submitCheckin()">Enviar Check-in</button>
+          <div class="f-alert error" id="pdiCheckinErr"></div>
+          <div class="f-alert success" id="pdiCheckinOk"></div>
+        </div>
+        <div id="pdiHistoricoCard" style="display:none">
+          <div class="sec-title" style="margin-top:24px;margin-bottom:12px;">💬 Histórico de Check-ins</div>
+          <div class="diplomas-list" id="pdiHistorico"></div>
+        </div>
+        <div class="upload-card" id="pdiNotaFinalCard" style="display:none">
+          <h3>🏁 PDI Encerrado</h3>
+          <div class="nota-final-display">
+            <div class="nota-final-num" id="pdiNotaNum">—</div>
+            <div class="nota-final-lbl" id="pdiNotaLbl"></div>
+          </div>
+          <div id="pdiFeedbackFinal" style="font-size:13px;line-height:1.6;color:var(--text);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAINEL: ATESTADOS ═══ -->
+    <div class="prof-panel" id="profPanelAtestados">
+      <div class="upload-card">
+        <h3>🏥 Enviar Atestado Médico</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">
+          Envie atestados de afastamento para análise da secretaria. Informe o período de ausência e anexe o documento digitalizado.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="ff" style="margin:0;">
+            <label>Data de Início</label>
+            <input type="date" id="atestDataInicio">
+          </div>
+          <div class="ff" style="margin:0;">
+            <label>Data de Fim</label>
+            <input type="date" id="atestDataFim">
+          </div>
+        </div>
+        <div class="ff" style="margin-top:12px;">
+          <label>Motivo (opcional)</label>
+          <input type="text" id="atestMotivo" placeholder="Ex: Consulta médica, cirurgia…">
+        </div>
+        <div class="upload-zone" id="atestUploadZone" onclick="document.getElementById('atestFile').click()">
+          <div class="uz-icon">📋</div>
+          <p>Clique para selecionar ou arraste o arquivo aqui</p>
+          <small>PDF, JPG ou PNG · máximo 10MB</small>
+          <input type="file" id="atestFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="onAtestFileSelected(event)">
+        </div>
+        <div class="file-name" id="atestFileName"></div>
+        <div class="upload-bar-wrap" id="atestBarWrap"><div class="upload-bar" id="atestBar"></div></div>
+        <button class="btn-submit" id="btnAtestSubmit" onclick="submitAtestado()" disabled>Enviar para a Secretaria</button>
+        <div class="f-alert error" id="atestErr"></div>
+        <div class="f-alert success" id="atestOk"></div>
+      </div>
+
+      <div class="sec-title">📁 Meus Atestados <span class="count-badge" id="atestadosCount">0</span></div>
+      <div class="diplomas-list" id="atestadosList">
+        <div class="empty-state">⏳ Carregando…</div>
+      </div>
     </div>
 
   </div>
-
+  </div>
 
 </div>
 
@@ -638,6 +645,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('appShell').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     currentProf = null;
+  }
+
+  // ── NAVEGAÇÃO POR PAINÉIS ────────────────────────────
+  const profPanelTitles = {pickup:'Fila de Retirada',diplomas:'Cursos e Diplomas',almox:'Almoxarifado',pdi:'PDI',atestados:'Atestados'};
+
+  function profShowPanel(id) {
+    document.querySelectorAll('.prof-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.prof-sidebar .nav-item').forEach(n => n.classList.remove('active'));
+    const panel = document.getElementById('profPanel'+id[0].toUpperCase()+id.slice(1));
+    if (panel) panel.classList.add('active');
+    const navItems = document.querySelectorAll('.prof-sidebar .nav-item');
+    navItems.forEach(n => { if (n.textContent.trim() === (profPanelTitles[id]||'')) n.classList.add('active'); });
+    // Highlight by matching onclick
+    navItems.forEach(n => { const oc = n.getAttribute('onclick')||''; if (oc.includes("'"+id+"'")) n.classList.add('active'); });
+    document.getElementById('profTopbarTitle').textContent = profPanelTitles[id] || id;
+    // Load data for specific panels
+    if (id==='diplomas') { loadRanking(); loadMeusDiplomas(); }
+    if (id==='almox') almLoadAll();
+    if (id==='pdi') loadMeuPdi();
+    if (id==='atestados') loadMeusAtestados();
+    if (id==='pickup') loadPickupFila();
   }
 
   function checkSession() {
