@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS pickup_notificacoes (
 
 -- 3. Índices
 CREATE INDEX IF NOT EXISTS idx_pickup_data_status
-  ON pickup_notificacoes(DATE(saiu_em), status);
+  ON pickup_notificacoes(saiu_em, status);
 CREATE INDEX IF NOT EXISTS idx_pickup_email
   ON pickup_notificacoes(email_pai);
 CREATE INDEX IF NOT EXISTS idx_pickup_serie
-  ON pickup_notificacoes(serie, DATE(saiu_em));
+  ON pickup_notificacoes(serie, saiu_em);
