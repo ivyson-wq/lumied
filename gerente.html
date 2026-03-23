@@ -233,7 +233,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
       <div class="sb-label">Portal Professora</div>
       <a class="nav-item" href="#" onclick="showPanel('professoras',this)"><span class="ic">👩‍🏫</span> Gerenciar Professoras</a>
-      <a class="nav-item" href="#" onclick="showPanel('portalProf',this)"><span class="ic">📋</span> Atestados e Cursos</a>
+      <a class="nav-item" href="#" onclick="showPanel('portalProf',this)"><span class="ic">🎓</span> Cursos e Diplomas</a>
+      <a class="nav-item" href="#" onclick="showPanel('rhAtestados',this)"><span class="ic">🏥</span> RH — Atestados</a>
       <a class="nav-item" href="#" onclick="showPanel('pdiGestao',this)"><span class="ic">📊</span> Gestão de PDI</a>
       <a class="nav-item" href="professora.html" target="_blank"><span class="ic">🔗</span> Acessar Portal Professora</a>
       <div class="sb-label">Almoxarifado</div>
@@ -673,6 +674,45 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       </div>
 
+      <!-- RH — ATESTADOS -->
+      <div id="panelRhAtestados" class="panel">
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <select id="rhAtestFiltro" onchange="loadRhAtestados()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+            <option value="all">Todos</option>
+            <option value="pendente" selected>Pendentes</option>
+            <option value="aprovado">Aprovados</option>
+            <option value="rejeitado">Rejeitados</option>
+          </select>
+          <span style="font-size:12px;color:var(--muted);" id="rhAtestInfo"></span>
+        </div>
+
+        <!-- Stats resumo -->
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+          <div class="stat-card" data-g="total">
+            <div class="stat-label">Pendentes</div>
+            <div class="stat-value" id="rhAtestPendentes">—</div>
+            <div class="stat-sub">aguardando análise</div>
+          </div>
+          <div class="stat-card" data-g="integral">
+            <div class="stat-label">Aprovados</div>
+            <div class="stat-value" id="rhAtestAprovados">—</div>
+            <div class="stat-sub">este mês</div>
+          </div>
+          <div class="stat-card" data-g="semi">
+            <div class="stat-label">Dias de Afastamento</div>
+            <div class="stat-value" id="rhAtestDias">—</div>
+            <div class="stat-sub">total aprovados</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Professora</th><th>Data Início</th><th>Data Fim</th><th>Dias</th><th>Motivo</th><th>Status</th><th>Arquivo</th><th>Ações</th></tr></thead>
+            <tbody id="rhAtestBody"><tr><td colspan="8" class="empty-state">⏳ Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- GESTÃO DE PDI -->
       <div id="panelPdiGestao" class="panel">
 
@@ -988,7 +1028,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',almReqs:'Requisições',almCatalogo:'Catálogo de Insumos',almTurmas:'Turmas e Orçamentos',almCompras:'Compras',manutencao:'Solicitações de Manutenção',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Cursos e Diplomas',rhAtestados:'RH — Atestados',pdiGestao:'Gestão de PDI',almReqs:'Requisições',almCatalogo:'Catálogo de Insumos',almTurmas:'Turmas e Orçamentos',almCompras:'Compras',manutencao:'Solicitações de Manutenção',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1001,6 +1041,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='usuarios')    loadUsers();
     if(id==='acesso')      loadAcesso();
     if(id==='portalProf')  loadPortalProf();
+    if(id==='rhAtestados') loadRhAtestados();
     if(id==='pdiGestao')   loadPdiGestao();
     if(id==='almReqs')     almLoadReqs();
     if(id==='almCatalogo') almLoadInsumos();
@@ -2109,6 +2150,83 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg> Compartilhar PDF`;
     btn.disabled = false;
+  }
+
+  // ── RH — ATESTADOS ──────────────────────────────────
+  let rhAtestData = [];
+
+  async function loadRhAtestados() {
+    const filtro = document.getElementById('rhAtestFiltro').value;
+    const params = { action:'atestados_all' };
+    if (filtro !== 'all') params.status = filtro;
+    const d = await callProf(params);
+    rhAtestData = Array.isArray(d?.data) ? d.data : [];
+
+    // Stats
+    const todos = await callProf({ action:'atestados_all' });
+    const todosData = Array.isArray(todos?.data) ? todos.data : [];
+    const pendentes = todosData.filter(a => a.status === 'pendente').length;
+    const aprovados = todosData.filter(a => a.status === 'aprovado');
+    let diasTotal = 0;
+    aprovados.forEach(a => {
+      if (a.data_inicio && a.data_fim) {
+        const d1 = new Date(a.data_inicio);
+        const d2 = new Date(a.data_fim);
+        diasTotal += Math.max(1, Math.round((d2 - d1) / (1000*60*60*24)) + 1);
+      }
+    });
+    document.getElementById('rhAtestPendentes').textContent = pendentes;
+    document.getElementById('rhAtestAprovados').textContent = aprovados.length;
+    document.getElementById('rhAtestDias').textContent = diasTotal;
+    document.getElementById('rhAtestInfo').textContent = rhAtestData.length + ' atestado(s)';
+
+    renderRhAtestados();
+  }
+
+  function renderRhAtestados() {
+    const el = document.getElementById('rhAtestBody');
+    if (!rhAtestData.length) {
+      el.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum atestado encontrado.</td></tr>';
+      return;
+    }
+    el.innerHTML = rhAtestData.map(a => {
+      const profNome = a.professoras?.nome || '—';
+      const di = a.data_inicio ? a.data_inicio.split('-').reverse().join('/') : '—';
+      const df = a.data_fim ? a.data_fim.split('-').reverse().join('/') : '—';
+      let dias = '—';
+      if (a.data_inicio && a.data_fim) {
+        const d1 = new Date(a.data_inicio);
+        const d2 = new Date(a.data_fim);
+        dias = Math.max(1, Math.round((d2 - d1) / (1000*60*60*24)) + 1) + ' dia(s)';
+      }
+      const arquivo = a.arquivo_url ? `<a href="${a.arquivo_url}" target="_blank" style="color:var(--red);font-size:12px;">📎 Ver</a>` : '—';
+      const acoes = a.status === 'pendente'
+        ? `<button class="pp-action approve" onclick="rhAtestAprovar('${a.id}')">✓ Aprovar</button><button class="pp-action reject" onclick="rhAtestRejeitar('${a.id}')">✕ Rejeitar</button>`
+        : `<span style="font-size:11px;color:var(--muted);">${a.validado_por ? 'por ' + esc(a.validado_por) : ''}</span>`;
+
+      return `<tr>
+        <td><strong>${esc(profNome)}</strong></td>
+        <td>${di}</td><td>${df}</td>
+        <td style="font-weight:600;">${dias}</td>
+        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(a.motivo || '—')}</td>
+        <td>${ppStatusBadge(a.status)}</td>
+        <td>${arquivo}</td>
+        <td style="white-space:nowrap;">${acoes}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function rhAtestAprovar(id) {
+    if (!confirm('Aprovar este atestado?')) return;
+    await callProf({ action:'atestado_aprovar', id });
+    loadRhAtestados();
+  }
+
+  async function rhAtestRejeitar(id) {
+    const obs = prompt('Motivo da rejeição (opcional):');
+    if (obs === null) return;
+    await callProf({ action:'atestado_rejeitar', id, observacao: obs || null });
+    loadRhAtestados();
   }
 
   // ── MANUTENÇÃO (Gerente) ─────────────────────────────
