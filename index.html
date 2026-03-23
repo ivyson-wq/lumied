@@ -1415,7 +1415,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
 
     // Busca CPF da família pelo e-mail na tabela familias
-    const { data: familia } = await supabase
+    const { data: familia } = await sb
       .from('familias')
       .select('cpf')
       .eq('email', currentUser.email)
@@ -1426,7 +1426,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       return;
     }
 
-    const { data: boletos, error } = await supabase
+    const { data: boletos, error } = await sb
       .from('boletos')
       .select('*')
       .eq('cpf', familia.cpf)
