@@ -236,6 +236,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('portalProf',this)"><span class="ic">📋</span> Atestados e Cursos</a>
       <a class="nav-item" href="#" onclick="showPanel('pdiGestao',this)"><span class="ic">📊</span> Gestão de PDI</a>
       <a class="nav-item" href="professora.html" target="_blank"><span class="ic">🔗</span> Acessar Portal Professora</a>
+      <div class="sb-label">Almoxarifado</div>
+      <a class="nav-item" href="#" onclick="showPanel('almox',this)"><span class="ic">📦</span> Gerenciar Almoxarifado</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
@@ -702,6 +704,111 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       </div>
 
+      <!-- ALMOXARIFADO -->
+      <div id="panelAlmox" class="panel">
+        <!-- Tabs -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+          <button class="pp-tab active" id="almTabReqs" onclick="almShowTab('reqs')">📋 Requisições <span class="count-badge" id="almReqsPendCount">0</span></button>
+          <button class="pp-tab" id="almTabCatalogo" onclick="almShowTab('catalogo')">📦 Catálogo de Insumos</button>
+          <button class="pp-tab" id="almTabTurmas" onclick="almShowTab('turmas')">🏫 Turmas e Orçamentos</button>
+          <button class="pp-tab" id="almTabCompras" onclick="almShowTab('compras')">🛒 Compras</button>
+        </div>
+
+        <!-- REQUISIÇÕES -->
+        <div id="almSecReqs">
+          <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+            <select id="almReqsFiltro" onchange="almRenderReqs()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="pendente">Pendentes</option>
+              <option value="all">Todas</option>
+              <option value="aprovado">Aprovadas</option>
+              <option value="rejeitado">Rejeitadas</option>
+            </select>
+            <span style="font-size:12px;color:var(--muted);" id="almReqsInfo"></span>
+          </div>
+          <div id="almReqsWrap"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">⏳ Carregando…</div></div>
+        </div>
+
+        <!-- CATÁLOGO -->
+        <div id="almSecCatalogo" style="display:none;">
+          <div class="two-col">
+            <div>
+              <div class="sec-title" style="margin-bottom:14px;">Insumos Cadastrados <span class="count-badge" id="almInsumosCount">0</span></div>
+              <div class="list-card" id="almInsumosList"></div>
+            </div>
+            <div>
+              <div class="form-card">
+                <h3 id="almInsumoFormTitle">➕ Novo Insumo</h3>
+                <input type="hidden" id="almInsumoEditId">
+                <div class="ff"><label>Nome</label><input type="text" id="almInsumoNome" placeholder="Ex: Papel A4"></div>
+                <div class="ff"><label>Categoria</label><input type="text" id="almInsumoCat" placeholder="Ex: Papelaria"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                  <div class="ff" style="margin:0;"><label>Unidade</label><input type="text" id="almInsumoUni" placeholder="unidade" value="unidade"></div>
+                  <div class="ff" style="margin:0;"><label>Preço unit. (R$)</label><input type="number" id="almInsumoPreco" step="0.01" min="0" placeholder="0.00"></div>
+                </div>
+                <div class="ff"><label>Estoque</label><input type="number" id="almInsumoEstoque" min="0" value="0"></div>
+                <button class="btn-create" onclick="almSalvarInsumo()">Salvar Insumo</button>
+                <div class="f-alert error" id="almInsumoErr"></div>
+                <div class="f-alert success" id="almInsumoOk"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TURMAS E ORÇAMENTOS -->
+        <div id="almSecTurmas" style="display:none;">
+          <div class="two-col">
+            <div>
+              <div class="sec-title" style="margin-bottom:14px;">Turmas <span class="count-badge" id="almTurmasCount">0</span></div>
+              <div class="list-card" id="almTurmasList"></div>
+
+              <div style="margin-top:20px;">
+                <div class="sec-title" style="margin-bottom:14px;">Vincular Professora → Turma</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <select id="almProfSelect" style="flex:1;min-width:150px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></select>
+                  <select id="almProfTurmaSelect" style="flex:1;min-width:150px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></select>
+                  <button onclick="almVincularProf()" style="padding:8px 16px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Vincular</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="form-card" style="margin-bottom:16px;">
+                <h3>➕ Nova Turma</h3>
+                <div class="ff"><label>Nome</label><input type="text" id="almTurmaNomeNew" placeholder="Ex: Turma A"></div>
+                <div class="ff"><label>Cor</label><input type="color" id="almTurmaCorNew" value="#3B82F6"></div>
+                <button class="btn-create" onclick="almSalvarTurma()">Criar Turma</button>
+                <div class="f-alert error" id="almTurmaErr"></div>
+                <div class="f-alert success" id="almTurmaOk"></div>
+              </div>
+              <div class="form-card">
+                <h3>💰 Orçamentos Mensais</h3>
+                <div class="ff"><label>Mês</label><input type="month" id="almOrcMes" onchange="almLoadOrcamentos()"></div>
+                <div id="almOrcList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMPRAS -->
+        <div id="almSecCompras" style="display:none;">
+          <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+            <select id="almComprasFiltro" onchange="almLoadCompras()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="pendente">Pendentes</option>
+              <option value="">Todas</option>
+              <option value="comprado">Compradas</option>
+              <option value="cancelado">Canceladas</option>
+            </select>
+            <button onclick="almMarcarComprado()" style="padding:8px 16px;background:#065f46;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">✓ Marcar selecionadas como compradas</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th><input type="checkbox" id="almComprasCheckAll" onchange="almToggleAllCompras()"></th><th>Insumo</th><th>Plataforma</th><th>Qtd</th><th>Preço Unit.</th><th>Total</th><th>Professora</th><th>Status</th><th></th></tr></thead>
+              <tbody id="almComprasBody"><tr><td colspan="9" class="empty-state">⏳ Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
@@ -863,7 +970,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',portalProf:'Atestados e Cursos',pdiGestao:'Gestão de PDI',almox:'Gerenciar Almoxarifado',professoras:'Gerenciar Professoras',reunioes:'Reuniões',logo:'Logotipo',usuarios:'Usuários',acesso:'Controle de Acesso'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -877,6 +984,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='acesso')      loadAcesso();
     if(id==='portalProf')  loadPortalProf();
     if(id==='pdiGestao')   loadPdiGestao();
+    if(id==='almox')       loadAlmox();
     return false;
   }
 
@@ -1911,6 +2019,314 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg> Compartilhar PDF`;
     btn.disabled = false;
+  }
+
+  // ── ALMOXARIFADO (Gerente) ───────────────────────────
+  let almReqsData=[], almInsumosData=[], almTurmasData=[], almComprasData=[];
+
+  function almShowTab(tab) {
+    ['reqs','catalogo','turmas','compras'].forEach(t => {
+      const sec = document.getElementById('almSec'+t[0].toUpperCase()+t.slice(1));
+      const btn = document.getElementById('almTab'+t[0].toUpperCase()+t.slice(1));
+      if (sec) sec.style.display = t===tab?'block':'none';
+      if (btn) btn.classList.toggle('active', t===tab);
+    });
+    if (tab==='compras') almLoadCompras();
+  }
+
+  async function loadAlmox() {
+    const mes = new Date().toISOString().slice(0,7);
+    document.getElementById('almOrcMes').value = mes;
+    await Promise.all([almLoadReqs(), almLoadInsumos(), almLoadTurmas(), almLoadOrcamentos()]);
+  }
+
+  // ── Requisições ──
+  async function almLoadReqs() {
+    const filtro = document.getElementById('almReqsFiltro').value;
+    let d;
+    if (filtro === 'pendente') {
+      d = await callProf({ action:'alm_pendentes' });
+    } else {
+      const params = { action:'alm_todas_reqs' };
+      if (filtro !== 'all') params.status = filtro;
+      d = await callProf(params);
+    }
+    almReqsData = Array.isArray(d?.data) ? d.data : [];
+    const pendentes = almReqsData.filter(r => r.status==='pendente').length;
+    document.getElementById('almReqsPendCount').textContent = filtro==='pendente' ? almReqsData.length : pendentes;
+    almRenderReqs();
+  }
+
+  function almRenderReqs() {
+    const el = document.getElementById('almReqsWrap');
+    const list = almReqsData;
+    document.getElementById('almReqsInfo').textContent = list.length+' requisição(ões)';
+    if (!list.length) { el.innerHTML='<div class="empty-state">Nenhuma requisição encontrada.</div>'; return; }
+
+    el.innerHTML = list.map(r => {
+      const profNome = r.professoras?.nome || '—';
+      const turmaNome = r.alm_turmas?.nome || '—';
+      const turmaCor = r.alm_turmas?.cor || '#aaa';
+      const dt = new Date(r.criado_em).toLocaleDateString('pt-BR');
+      const total = Number(r.total||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+      const statusBadge = r.status==='pendente'?'<span class="pp-status pendente">Pendente</span>'
+        : r.status==='aprovado'?'<span class="pp-status aprovado">Aprovado</span>'
+        : '<span class="pp-status rejeitado">Rejeitado</span>';
+
+      const itensHTML = (r.itens||[]).map(it =>
+        `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f5f0ea;">
+          <span>${esc(it.nome||it.insumo_nome||'—')}</span>
+          <span style="color:var(--muted);">${it.qty_solicitado||1} ${it.unidade||'un'} × R$ ${Number(it.preco_unit||0).toFixed(2)}</span>
+        </div>`
+      ).join('');
+
+      const acoes = r.status==='pendente' ? `
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button class="pp-action approve" onclick="almAprovarReq('${r.id}')">✓ Aprovar</button>
+          <button class="pp-action reject" onclick="almRejeitarReq('${r.id}')">✕ Rejeitar</button>
+          <button class="pp-action" onclick="almBuscarPrecosReq('${r.id}')">🔍 Buscar preços</button>
+        </div>` : '';
+
+      return `<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong style="font-size:14px;">${esc(profNome)}</strong>
+            <span style="display:inline-block;background:${turmaCor}22;color:${turmaCor};border:1px solid ${turmaCor}44;padding:1px 8px;border-radius:100px;font-size:11px;font-weight:600;margin-left:8px;">${esc(turmaNome)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${statusBadge}
+            <span style="font-size:12px;color:var(--muted);">${dt}</span>
+          </div>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:6px;">${itensHTML}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:14px;color:var(--red);">${total}</strong>
+          ${r.observacao?`<span style="font-size:11px;color:var(--muted);font-style:italic;">${esc(r.observacao)}</span>`:''}
+        </div>
+        ${r.nota_gerente?`<div style="font-size:12px;color:#065f46;margin-top:6px;">💬 ${esc(r.nota_gerente)}</div>`:''}
+        ${acoes}
+      </div>`;
+    }).join('');
+  }
+
+  async function almAprovarReq(id) {
+    const nota = prompt('Nota para a professora (opcional):');
+    if (nota === null) return;
+    const d = await callProf({ action:'alm_aprovar', id, nota_gerente:nota||null });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Requisição aprovada!');
+    almLoadReqs();
+  }
+
+  async function almRejeitarReq(id) {
+    const nota = prompt('Motivo da rejeição:');
+    if (!nota) return;
+    const d = await callProf({ action:'alm_rejeitar', id, nota_gerente:nota });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('Requisição rejeitada.');
+    almLoadReqs();
+  }
+
+  async function almBuscarPrecosReq(id) {
+    const req = almReqsData.find(r => r.id===id);
+    if (!req) return;
+    const itens = req.itens || [];
+    if (!itens.length) { alert('Nenhum item na requisição.'); return; }
+    let msg = '🔍 Buscando preços...\n\n';
+    for (const it of itens) {
+      const d = await callProf({ action:'alm_buscar_precos', nome:it.nome||it.insumo_nome });
+      const produtos = (d.data||[]).filter(p=>p.preco!=null).slice(0,3);
+      msg += `📦 ${it.nome||it.insumo_nome}:\n`;
+      if (produtos.length) {
+        produtos.forEach(p => { msg += `  ${p.plataforma}: ${p.preco_fmt} — ${p.nome.substring(0,50)}\n`; });
+      } else { msg += '  Nenhum resultado encontrado.\n'; }
+      msg += '\n';
+    }
+    alert(msg);
+  }
+
+  // ── Catálogo de Insumos ──
+  async function almLoadInsumos() {
+    const d = await callProf({ action:'alm_insumos_list' });
+    almInsumosData = Array.isArray(d?.data) ? d.data : [];
+    document.getElementById('almInsumosCount').textContent = almInsumosData.length;
+    const el = document.getElementById('almInsumosList');
+    if (!almInsumosData.length) { el.innerHTML='<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhum insumo cadastrado.</span></div>'; return; }
+    el.innerHTML = almInsumosData.map(i => `
+      <div class="list-row">
+        <div class="lr-main">
+          <strong>${esc(i.nome)}</strong>
+          <span>${esc(i.categoria||'Sem categoria')} · R$ ${Number(i.preco||0).toFixed(2)}/${i.unidade||'un'} · Estoque: ${i.estoque_qty||0}</span>
+        </div>
+        <button class="action-btn" onclick="almEditInsumo('${i.id}')">✎</button>
+        <button class="action-btn del" onclick="almDelInsumo('${i.id}','${esc(i.nome)}')">🗑</button>
+      </div>`).join('');
+  }
+
+  function almEditInsumo(id) {
+    const i = almInsumosData.find(x=>x.id===id);
+    if (!i) return;
+    document.getElementById('almInsumoEditId').value = id;
+    document.getElementById('almInsumoNome').value = i.nome||'';
+    document.getElementById('almInsumoCat').value = i.categoria||'';
+    document.getElementById('almInsumoUni').value = i.unidade||'unidade';
+    document.getElementById('almInsumoPreco').value = i.preco||0;
+    document.getElementById('almInsumoEstoque').value = i.estoque_qty||0;
+    document.getElementById('almInsumoFormTitle').textContent = '✎ Editar Insumo';
+  }
+
+  async function almSalvarInsumo() {
+    const id = document.getElementById('almInsumoEditId').value;
+    const nome = document.getElementById('almInsumoNome').value.trim();
+    const categoria = document.getElementById('almInsumoCat').value.trim();
+    const unidade = document.getElementById('almInsumoUni').value.trim()||'unidade';
+    const preco = parseFloat(document.getElementById('almInsumoPreco').value)||0;
+    const estoque_qty = parseInt(document.getElementById('almInsumoEstoque').value)||0;
+    if (!nome) { document.getElementById('almInsumoErr').textContent='Nome é obrigatório.'; document.getElementById('almInsumoErr').classList.add('show'); return; }
+    const params = { action:'alm_insumo_save', nome, categoria, unidade, preco, estoque_qty };
+    if (id) params.id = id;
+    const d = await callProf(params);
+    if (d.error) { document.getElementById('almInsumoErr').textContent=d.error; document.getElementById('almInsumoErr').classList.add('show'); return; }
+    document.getElementById('almInsumoErr').classList.remove('show');
+    document.getElementById('almInsumoOk').textContent='✅ Salvo!'; document.getElementById('almInsumoOk').classList.add('show');
+    document.getElementById('almInsumoEditId').value='';
+    document.getElementById('almInsumoNome').value='';
+    document.getElementById('almInsumoCat').value='';
+    document.getElementById('almInsumoPreco').value='';
+    document.getElementById('almInsumoEstoque').value='0';
+    document.getElementById('almInsumoFormTitle').textContent='➕ Novo Insumo';
+    almLoadInsumos();
+  }
+
+  async function almDelInsumo(id,nome) {
+    if (!confirm('Desativar insumo "'+nome+'"?')) return;
+    await callProf({ action:'alm_insumo_del', id });
+    almLoadInsumos();
+  }
+
+  // ── Turmas e Orçamentos ──
+  async function almLoadTurmas() {
+    const d = await callProf({ action:'alm_turmas_list' });
+    almTurmasData = Array.isArray(d?.data) ? d.data : [];
+    document.getElementById('almTurmasCount').textContent = almTurmasData.length;
+    const el = document.getElementById('almTurmasList');
+    if (!almTurmasData.length) { el.innerHTML='<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhuma turma.</span></div>'; }
+    else {
+      el.innerHTML = almTurmasData.map(t => {
+        const profs = (t.professoras||[]).map(p=>esc(p.nome)).join(', ');
+        return `<div class="list-row">
+          <span style="width:12px;height:12px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></span>
+          <div class="lr-main">
+            <strong>${esc(t.nome)}</strong>
+            <span>${profs||'Sem professoras vinculadas'}</span>
+          </div>
+          <button class="action-btn del" onclick="almDelTurma('${t.id}','${esc(t.nome)}')">🗑</button>
+        </div>`;
+      }).join('');
+    }
+    // Popula selects de vincular professora
+    const profSel = document.getElementById('almProfSelect');
+    const turmaSel = document.getElementById('almProfTurmaSelect');
+    const profs = await api({ action:'professoras_list' });
+    const profList = Array.isArray(profs)?profs:[];
+    profSel.innerHTML = '<option value="">Selecione professora…</option>'+profList.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+    turmaSel.innerHTML = '<option value="">Sem turma</option>'+almTurmasData.map(t=>`<option value="${t.id}">${esc(t.nome)}</option>`).join('');
+  }
+
+  async function almSalvarTurma() {
+    const nome = document.getElementById('almTurmaNomeNew').value.trim();
+    const cor = document.getElementById('almTurmaCorNew').value;
+    if (!nome) { document.getElementById('almTurmaErr').textContent='Nome obrigatório.'; document.getElementById('almTurmaErr').classList.add('show'); return; }
+    const d = await callProf({ action:'alm_turma_save', nome, cor });
+    if (d.error) { document.getElementById('almTurmaErr').textContent=d.error; document.getElementById('almTurmaErr').classList.add('show'); return; }
+    document.getElementById('almTurmaErr').classList.remove('show');
+    document.getElementById('almTurmaOk').textContent='✅ Turma criada!'; document.getElementById('almTurmaOk').classList.add('show');
+    document.getElementById('almTurmaNomeNew').value='';
+    almLoadTurmas();
+  }
+
+  async function almDelTurma(id,nome) {
+    if (!confirm('Desativar turma "'+nome+'"?')) return;
+    await callProf({ action:'alm_turma_del', id });
+    almLoadTurmas();
+  }
+
+  async function almVincularProf() {
+    const professora_id = document.getElementById('almProfSelect').value;
+    const turma_id = document.getElementById('almProfTurmaSelect').value;
+    if (!professora_id) { alert('Selecione uma professora.'); return; }
+    const d = await callProf({ action:'alm_prof_set_turma', professora_id, turma_id:turma_id||null });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Professora vinculada!');
+    almLoadTurmas();
+  }
+
+  async function almLoadOrcamentos() {
+    const mes = document.getElementById('almOrcMes').value;
+    if (!mes) return;
+    const d = await callProf({ action:'alm_orcamentos_list', mes });
+    const list = Array.isArray(d?.data)?d.data:[];
+    const el = document.getElementById('almOrcList');
+    if (!list.length) { el.innerHTML='<p style="font-size:13px;color:var(--muted);">Crie turmas primeiro.</p>'; return; }
+    el.innerHTML = list.map(t => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></span>
+        <span style="flex:1;font-size:13px;font-weight:500;">${esc(t.nome)}</span>
+        <input type="number" id="almOrc_${t.id}" value="${t.valor||0}" min="0" step="0.01"
+          style="width:120px;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;">
+        <button onclick="almSetOrc('${t.id}')" style="padding:6px 12px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">Salvar</button>
+      </div>`).join('');
+  }
+
+  async function almSetOrc(turmaId) {
+    const mes = document.getElementById('almOrcMes').value;
+    const valor = parseFloat(document.getElementById('almOrc_'+turmaId).value)||0;
+    const d = await callProf({ action:'alm_orcamento_set', turma_id:turmaId, mes, valor });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ Orçamento salvo!');
+  }
+
+  // ── Compras ──
+  async function almLoadCompras() {
+    const status = document.getElementById('almComprasFiltro').value;
+    const d = await callProf({ action:'alm_compras_todas', status });
+    almComprasData = Array.isArray(d?.data)?d.data:[];
+    const el = document.getElementById('almComprasBody');
+    if (!almComprasData.length) { el.innerHTML='<tr><td colspan="9" class="empty-state">Nenhuma compra encontrada.</td></tr>'; return; }
+    el.innerHTML = almComprasData.map(c => {
+      const profNome = c.alm_requisicoes?.professoras?.nome||'—';
+      const statusBadge = c.status==='pendente'?'<span class="pp-status pendente">Pendente</span>'
+        :c.status==='comprado'?'<span class="pp-status aprovado">Comprado</span>'
+        :'<span class="pp-status rejeitado">Cancelado</span>';
+      const precoUnit = c.preco_unit!=null?'R$ '+Number(c.preco_unit).toFixed(2):'—';
+      const precoTotal = c.preco_total!=null?'R$ '+Number(c.preco_total).toFixed(2):'—';
+      return `<tr>
+        <td><input type="checkbox" class="almCompraCheck" value="${c.id}" ${c.status!=='pendente'?'disabled':''}></td>
+        <td><strong>${esc(c.insumo_nome||'—')}</strong>${c.produto_nome?`<br><span style="font-size:11px;color:var(--muted);">${esc(c.produto_nome).substring(0,40)}</span>`:''}</td>
+        <td>${esc(c.plataforma||'—')}</td>
+        <td>${c.qty||1}</td>
+        <td>${precoUnit}</td>
+        <td style="font-weight:600;">${precoTotal}</td>
+        <td>${esc(profNome)}</td>
+        <td>${statusBadge}</td>
+        <td>${c.url_produto?`<a href="${c.url_produto}" target="_blank" style="color:var(--red);font-size:12px;">🔗</a>`:''} ${c.url_carrinho?`<a href="${c.url_carrinho}" target="_blank" style="color:#065f46;font-size:12px;">🛒</a>`:''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function almToggleAllCompras() {
+    const all = document.getElementById('almComprasCheckAll').checked;
+    document.querySelectorAll('.almCompraCheck:not(:disabled)').forEach(cb => cb.checked = all);
+  }
+
+  async function almMarcarComprado() {
+    const ids = [...document.querySelectorAll('.almCompraCheck:checked')].map(cb=>cb.value);
+    if (!ids.length) { alert('Selecione pelo menos uma compra.'); return; }
+    if (!confirm('Marcar '+ids.length+' item(ns) como comprado(s)?')) return;
+    const d = await callProf({ action:'alm_marcar_comprado', ids });
+    if (d.error) { alert('Erro: '+d.error); return; }
+    alert('✅ '+ids.length+' item(ns) marcado(s) como comprado(s)!');
+    almLoadCompras();
   }
 
   // ── GESTÃO DE PDI ────────────────────────────────────
