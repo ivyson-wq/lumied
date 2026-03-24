@@ -22,6 +22,13 @@ function interHttpClient() {
 }
 
 async function getInterToken(): Promise<string> {
+  const certRaw = Deno.env.get('INTER_CERT') ?? ''
+  const keyRaw = Deno.env.get('INTER_KEY') ?? ''
+  console.log('CLIENT_ID presente:', !!Deno.env.get('INTER_CLIENT_ID'))
+  console.log('CLIENT_SECRET presente:', !!Deno.env.get('INTER_CLIENT_SECRET'))
+  console.log('CERT header:', certRaw.replace(/\\n/g, '\n').split('\n')[0])
+  console.log('KEY header:', keyRaw.replace(/\\n/g, '\n').split('\n')[0])
+
   const client = interHttpClient()
   const body = new URLSearchParams({
     client_id: Deno.env.get('INTER_CLIENT_ID')!,
@@ -38,6 +45,9 @@ async function getInterToken(): Promise<string> {
   })
 
   const resText = await res.text()
+  console.log('Inter OAuth status:', res.status)
+  console.log('Inter OAuth headers:', JSON.stringify(Object.fromEntries(res.headers)))
+  console.log('Inter OAuth body:', resText || '(vazio)')
   if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${resText}`)
   return JSON.parse(resText).access_token
 }
