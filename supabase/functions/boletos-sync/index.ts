@@ -101,8 +101,9 @@ Deno.serve(async (req) => {
     let sincronizados = 0
 
     for (const bol of lista) {
-      const nossoNumero = bol.nossoNumero || bol.codigoBarras || ''
-      if (!nossoNumero) continue
+      const boletoId = bol.codigoSolicitacao || bol.nossoNumero || bol.codigoBarras || ''
+      if (!boletoId) continue
+      const nossoNumero = bol.nossoNumero || boletoId
 
       const { data: existe } = await sb.from('boletos').select('id, situacao').eq('nosso_numero', nossoNumero).maybeSingle()
       const situacao = bol.situacao || 'EMITIDO'
@@ -115,7 +116,7 @@ Deno.serve(async (req) => {
       // PDF
       let pdfUrl: string | null = null
       try {
-        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, { headers: { Authorization: `Bearer ${accessToken}` } })
+        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${boletoId}/pdf`, { headers: { Authorization: `Bearer ${accessToken}` } })
         if (pdfRes.ok) {
           const pdfData = await pdfRes.json()
           if (pdfData.pdf) {
