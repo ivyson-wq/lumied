@@ -82,33 +82,33 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Método não permitido', { status: 405 })
 
   try {
-    const { email } = await req.json()
-    if (!email) {
-      return new Response(JSON.stringify({ error: 'E-mail obrigatório' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
+    const body = await req.json()
+    const email: string | undefined = body.email
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Busca CPF pelo e-mail
-    const { data: sol } = await supabase
-      .from('solicitacoes_acesso')
-      .select('cpf')
-      .ilike('email', email)
-      .maybeSingle()
+    // Aceita CPF direto no payload ou busca pelo e-mail em solicitacoes_acesso
+    let cpfRaw: string | undefined
 
-    if (!sol?.cpf) {
+    if (body.cpf) {
+      cpfRaw = String(body.cpf).replace(/\D/g, '')
+    } else if (email) {
+      const { data: sol } = await supabase
+        .from('solicitacoes_acesso')
+        .select('cpf')
+        .ilike('email', email)
+        .maybeSingle()
+      if (sol?.cpf) cpfRaw = sol.cpf.replace(/\D/g, '')
+    }
+
+    if (!cpfRaw || cpfRaw.length !== 11) {
       return new Response(JSON.stringify({ boletos: [] }), {
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    const cpfRaw = sol.cpf.replace(/\D/g, '')
     const cpfFormatado = cpfRaw.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
     // Sincroniza com Inter e salva novos boletos no Supabase
