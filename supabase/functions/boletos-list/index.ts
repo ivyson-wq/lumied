@@ -84,6 +84,11 @@ async function getInterToken(): Promise<string> {
     console.log('KEY crypto import: FALHOU -', String(e1).slice(0, 120))
   }
 
+  // Diagnóstico do client_secret
+  const secret = Deno.env.get('INTER_CLIENT_SECRET') ?? ''
+  console.log('CLIENT_SECRET length:', secret.length)
+  console.log('CLIENT_SECRET primeiros 4 chars:', secret.slice(0, 4))
+
   // Cria o cliente mTLS e verifica se não joga exceção
   let client: Deno.HttpClient
   try {
@@ -93,17 +98,30 @@ async function getInterToken(): Promise<string> {
     console.log('mTLS HttpClient: ERRO ao criar -', String(clientErr))
     throw clientErr
   }
-  const body = new URLSearchParams({
+
+  const oauthBody = new URLSearchParams({
     client_id: Deno.env.get('INTER_CLIENT_ID')!,
-    client_secret: Deno.env.get('INTER_CLIENT_SECRET')!,
+    client_secret: secret,
     scope: 'boleto-cobranca.read',
     grant_type: 'client_credentials',
   })
 
+  // Teste sem mTLS para comparar o erro (diagnóstico)
+  try {
+    const resNoTls = await fetch(`${INTER_BASE}/oauth/v2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(oauthBody),
+    })
+    console.log('Sem-mTLS status:', resNoTls.status, '| body:', (await resNoTls.text()).slice(0, 100))
+  } catch (noTlsErr) {
+    console.log('Sem-mTLS erro (esperado se Inter exige cert):', String(noTlsErr).slice(0, 100))
+  }
+
   const res = await fetch(`${INTER_BASE}/oauth/v2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    body: oauthBody,
     client,
   })
 
