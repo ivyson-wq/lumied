@@ -139,6 +139,8 @@ Deno.serve(async (req) => {
       const token = await getInterToken()
       const cobrancas = await listarCobrancasInter(token, cpfRaw)
 
+      if (cobrancas.length > 0) console.log('Estrutura cobranca[0]:', JSON.stringify(cobrancas[0]))
+
       for (const c of cobrancas) {
         const nossoNumero: string = c.nossoNumero
         const codigoSolicitacao: string = c.codigoSolicitacao
