@@ -655,20 +655,19 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
   let resendCooldown = null;
 
-
-
+  // ── AUTH ──────────────────────────────────────────────
   async function initAuth() {
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
-     
+      currentUser = session.user; showForm(session.user);
     } else {
       showLoginWall();
     }
 
     sb.auth.onAuthStateChange(async (_e, session) => {
       if (session?.user) {
-        // Se este utilizador já foi verificado nesta sessão, não repetir o check
         if (currentUser && currentUser.email === session.user.email) return;
+        currentUser = session.user; showForm(session.user);
       } else {
         showLoginWall();
       }
@@ -785,14 +784,6 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Verificando…';
 
-    const allowed = await checkAccess({ email });
-    if (!allowed) {
-      btn.disabled = false;
-      btn.innerHTML = '✉️ Enviar link de acesso';
-      document.getElementById('emailState').style.display = 'none';
-      showAccessDenied();
-      return;
-    }
 
     btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
