@@ -29,9 +29,9 @@ async function getInterToken(): Promise<string> {
   return (await res.json()).access_token
 }
 
-async function getBoletoPdf(token: string, nossoNumero: string): Promise<Uint8Array> {
+async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<Uint8Array> {
   const client = interHttpClient()
-  const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, {
+  const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
     headers: { Authorization: `Bearer ${token}` },
     client,
   })
@@ -63,13 +63,14 @@ Deno.serve(async (req) => {
     }
 
     const nossoNumero: string = payload.nossoNumero
+    const codigoSolicitacao: string = payload.codigoSolicitacao
     const cpf: string = payload.pagador?.cpfCnpj?.replace(/\D/g, '')
     const valor: number = payload.valorNominal ?? payload.valor
     const vencimento: string = payload.dataVencimento
     const linhaDigitavel: string = payload.linhaDigitavel ?? ''
 
-    if (!nossoNumero || !cpf) {
-      return new Response(JSON.stringify({ error: 'nossoNumero ou CPF ausente' }), {
+    if (!nossoNumero || !codigoSolicitacao || !cpf) {
+      return new Response(JSON.stringify({ error: 'nossoNumero, codigoSolicitacao ou CPF ausente' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
 
     // Busca PDF no Inter
     const token = await getInterToken()
-    const pdfBytes = await getBoletoPdf(token, nossoNumero)
+    const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
 
     // Faz upload do PDF no Storage
     const fileName = `${cpf}/${nossoNumero}.pdf`

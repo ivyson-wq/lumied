@@ -163,10 +163,10 @@ async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> 
   return data.content ?? data.cobrancas ?? []
 }
 
-async function getBoletoPdf(token: string, nossoNumero: string): Promise<Uint8Array | null> {
+async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<Uint8Array | null> {
   try {
     const client = interHttpClient()
-    const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, {
+    const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
       headers: { Authorization: `Bearer ${token}` },
       client,
     })
@@ -222,6 +222,7 @@ Deno.serve(async (req) => {
 
       for (const c of cobrancas) {
         const nossoNumero: string = c.nossoNumero
+        const codigoSolicitacao: string = c.codigoSolicitacao
         const situacao: string = c.situacao ?? 'EMITIDO'
         const valor: number = c.valorNominal ?? c.valor
         const vencimento: string = c.dataVencimento
@@ -230,7 +231,7 @@ Deno.serve(async (req) => {
         // Verifica se já existe para decidir entre insert ou update de situação
         const { data: existing } = await supabase
           .from('boletos')
-          .select('id, pdf_url')
+          .select('id, pdf_url, situacao')
           .eq('nosso_numero', nossoNumero)
           .maybeSingle()
 
@@ -238,7 +239,7 @@ Deno.serve(async (req) => {
 
         // Busca PDF apenas se ainda não tiver
         if (!pdfUrl) {
-          const pdfBytes = await getBoletoPdf(token, nossoNumero)
+          const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
           if (pdfBytes) {
             const fileName = `${cpfRaw}/${nossoNumero}.pdf`
             const { error: uploadError } = await supabase.storage
