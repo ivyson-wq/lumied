@@ -1651,27 +1651,34 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
 
     // Busca CPF pelo e-mail na tabela solicitacoes_acesso
-    const { data: sol } = await supabase
+    const { data: sol, error: solError } = await supabase
       .from('solicitacoes_acesso')
       .select('cpf')
       .ilike('email', currentUser.email)
       .maybeSingle();
 
+    console.debug('[boletos] email:', currentUser.email);
+    console.debug('[boletos] sol:', sol, 'erro:', solError);
+
     const cpfRaw = sol?.cpf?.replace(/\D/g, '');
 
     if (!cpfRaw || cpfRaw.length !== 11) {
+      console.debug('[boletos] CPF não encontrado em solicitacoes_acesso');
       el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Nenhum boleto encontrado.</p>';
       return;
     }
 
     // Tenta os dois formatos que podem estar salvos: com e sem formatação
     const cpfFormatado = cpfRaw.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+    console.debug('[boletos] buscando CPF raw:', cpfRaw, '/ formatado:', cpfFormatado);
 
     const { data: boletos, error } = await supabase
       .from('boletos')
       .select('*')
       .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfRaw}`)
       .order('vencimento', { ascending: false });
+
+    console.debug('[boletos] resultado:', boletos, 'erro:', error);
 
     if (error || !boletos || boletos.length === 0) {
       el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Nenhum boleto disponível.</p>';
