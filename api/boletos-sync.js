@@ -1,11 +1,19 @@
 const SUPABASE_URL  = process.env.SUPABASE_URL
-const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json',
+}
+
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  })
+  return res.json()
 }
 
 module.exports = async (req, res) => {
@@ -22,27 +30,25 @@ module.exports = async (req, res) => {
     return res.end(JSON.stringify({ error: 'CPF inválido.' }))
   }
 
-  // Busca e-mail pelo CPF para chamar o Edge Function
-  const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/solicitacoes_acesso?select=email&cpf=ilike.*${cpf}*&limit=1`, {
-    headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }
-  })
-  const rows = await sbRes.json()
-  const email = rows?.[0]?.email
+  const cpfFmt = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
-  if (!email) {
-    res.writeHead(200, CORS)
-    return res.end(JSON.stringify({ ok: true, sincronizados: 0, total: 0 }))
-  }
+  // 1. Tenta sincronizar via Edge Function (mTLS Deno) em background
+  try {
+    const solRows = await sbFetch(`solicitacoes_acesso?select=email&or=(cpf.eq.${encodeURIComponent(cpfFmt)},cpf.eq.${encodeURIComponent(cpf)})&limit=1`)
+    const email = solRows?.[0]?.email
+    if (email) {
+      fetch(`${SUPABASE_URL}/functions/v1/boletos-list`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SERVICE_KEY },
+        body: JSON.stringify({ email }),
+      }).catch(() => {})
+    }
+  } catch (_) {}
 
-  // Delega para Edge Function Supabase (Deno — mTLS nativo)
-  const upstream = await fetch(`${SUPABASE_URL}/functions/v1/boletos-list`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON },
-    body: JSON.stringify({ email }),
-  })
+  // 2. Lê boletos do banco (ambos formatos de CPF)
+  const boletos = await sbFetch(`boletos?or=(cpf.eq.${encodeURIComponent(cpfFmt)},cpf.eq.${encodeURIComponent(cpf)})&order=vencimento.desc`)
 
-  const data = await upstream.json()
-  const total = data.boletos?.length ?? 0
-  res.writeHead(upstream.status, CORS)
-  res.end(JSON.stringify({ ok: upstream.ok, sincronizados: total, total, boletos: data.boletos }))
+  const total = Array.isArray(boletos) ? boletos.length : 0
+  res.writeHead(200, CORS)
+  res.end(JSON.stringify({ ok: true, sincronizados: total, total, boletos: Array.isArray(boletos) ? boletos : [] }))
 }
