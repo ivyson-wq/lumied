@@ -496,7 +496,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   </div>
 
   <!-- Notification badge -->
-  <div id="almNotifBanner" style="display:none;background:#fff8e1;border:1px solid #f6c54a;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;" onclick="almVerNotif()">
+  <div id="almNotifBanner" style="display:none;background:#fff8e1;border:1px solid #f6c54a;border-radius:10px;padding:10px 14px;margin-bottom:12px;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;" onclick="almVerNotif()">
     <span id="almNotifText">🔔 Você tem notificações não lidas</span>
     <span style="color:var(--muted);font-size:11px;">Ver todas →</span>
   </div>
@@ -1239,13 +1239,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       const eta = n.eta_minutos ?? null;
       const etaClass = eta !== null ? (eta <= 5 ? 'soon' : eta <= 15 ? 'medium' : 'ok') : '';
       const chegou = n.status === 'chegou';
-      const hora = new Date(n.saiu_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+      const hora = n.saiu_em ? new Date(n.saiu_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '--:--';
       return `<div class="pickup-card${eta !== null && eta <= 5 ? ' urgente' : ''}${chegou ? ' chegou' : ''}">
         <div class="pickup-eta ${etaClass}">${chegou ? '🏫' : (eta !== null ? eta+'m' : '?')}</div>
         <div class="pickup-info">
-          <div class="pickup-nome">${n.nome_crianca}</div>
-          <div class="pickup-serie">${n.serie || 'Turma não informada'} · saiu às ${hora}</div>
-          <div class="pickup-resp">Resp: ${n.nome_resp}</div>
+          <div class="pickup-nome">${esc(n.nome_crianca)}</div>
+          <div class="pickup-serie">${esc(n.serie || 'Turma não informada')} · saiu às ${hora}</div>
+          <div class="pickup-resp">Resp: ${esc(n.nome_resp)}</div>
         </div>
         <button class="pickup-btn" onclick="entregarCrianca('${n.id}')" ${chegou ? '' : 'disabled'}>
           ${chegou ? '✅ Entreguei' : '⏳ A caminho'}
@@ -1351,12 +1351,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       const itens = r.itens || [];
       const statusLbl = {pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado'}[r.status] || r.status;
       const data = new Date(r.criado_em).toLocaleDateString('pt-BR');
-      const turma = r.alm_turmas?.nome || '—';
-      const nota = r.nota_gerente ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">💬 ${r.nota_gerente}</div>` : '';
+      const turma = esc(r.alm_turmas?.nome || '—');
+      const nota = r.nota_gerente ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">💬 ${esc(r.nota_gerente)}</div>` : '';
       const cancelBtn = r.status === 'pendente'
         ? `<button onclick="almCancelarReq('${r.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>` : '';
       const itensHtml = itens.slice(0,3).map((it) =>
-        `<span style="display:inline-block;background:#f0ece6;border-radius:4px;padding:2px 8px;font-size:11px;margin-right:4px;">${it.nome} ×${it.qty_solicitado}</span>`
+        `<span style="display:inline-block;background:#f0ece6;border-radius:4px;padding:2px 8px;font-size:11px;margin-right:4px;">${esc(it.nome)} ×${it.qty_solicitado}</span>`
       ).join('') + (itens.length > 3 ? `<span style="font-size:11px;color:var(--muted);">+${itens.length-3} mais</span>` : '');
       return `<div class="alm-req-card ${r.status}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -1386,7 +1386,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('almNotifList').innerHTML = notifs.map((n) =>
       `<div class="alm-notif-item ${n.lida ? '' : 'nao-lida'}">
         <div style="display:flex;justify-content:space-between;">
-          <span>${n.mensagem}</span>
+          <span>${esc(n.mensagem)}</span>
           <span style="font-size:11px;color:var(--muted);white-space:nowrap;margin-left:8px;">${new Date(n.criado_em).toLocaleDateString('pt-BR')}</span>
         </div>
       </div>`
@@ -1560,7 +1560,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         `<div class="alm-xlsx-row ${it.catalogado ? 'ok' : 'warn'}">
           <span style="font-size:14px;">${it.catalogado ? '✅' : '⚠️'}</span>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${it.nome}</div>
+            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(it.nome)}</div>
             ${!it.catalogado ? `<div style="font-size:11px;color:#b07d00;">Não encontrado no catálogo — será enviado sem preço unitário</div>` : `<div style="font-size:11px;color:#2d7a2d;">${it.match_pct}% de precisão no catálogo</div>`}
           </div>
           <div style="font-size:12px;color:var(--muted);white-space:nowrap;">×${it.qty_solicitado} ${it.unidade}</div>
@@ -1649,7 +1649,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         const estoque = it.estoque_qty > 0 ? `${it.estoque_qty} ${it.unidade}` : '<span style="color:#e53e3e;">Sem estoque</span>';
         return `<div class="alm-catalog-item">
           <div class="alm-cat-info">
-            <div class="alm-cat-name">${it.nome}</div>
+            <div class="alm-cat-name">${esc(it.nome)}</div>
             <div class="alm-cat-sub">${fmtBRL(it.preco)} / ${it.unidade} · Estoque: ${estoque}</div>
           </div>
           <button class="alm-add-btn" onclick="almAddToCart('${it.id}')" ${inCart ? 'style="background:#6b8c6b;"' : ''}>
@@ -1689,8 +1689,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     listEl.innerHTML = almCart.map(it =>
       `<div class="alm-cart-item">
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;">${it.nome}</div>
-          <div style="font-size:11px;color:var(--muted);">${fmtBRL(it.preco_unit)} / ${it.unidade}</div>
+          <div style="font-weight:600;font-size:13px;">${esc(it.nome)}</div>
+          <div style="font-size:11px;color:var(--muted);">${fmtBRL(it.preco_unit)} / ${esc(it.unidade)}</div>
         </div>
         <input type="number" class="alm-qty-input" value="${it.qty_solicitado}" min="1" step="0.5"
           onchange="almUpdateQty('${it.insumo_id}', this.value)">
@@ -1724,6 +1724,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   checkSession();
+
+  // ── OFFLINE DETECTION ──────────────────────────────────
+  function showOfflineBanner(show) {
+    let b = document.getElementById('offlineBanner');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'offlineBanner';
+      b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#d4830a;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:9999;font-family:"DM Sans",sans-serif;transition:transform .3s;';
+      b.textContent = '📡 Sem conexão com a internet';
+      document.body.appendChild(b);
+    }
+    b.style.transform = show ? 'translateY(0)' : 'translateY(100%)';
+  }
+  window.addEventListener('offline', () => showOfflineBanner(true));
+  window.addEventListener('online', () => showOfflineBanner(false));
+  if (!navigator.onLine) showOfflineBanner(true);
+
+  // ── CLEANUP ON UNLOAD ─────────────────────────────────
+  window.addEventListener('beforeunload', () => { if (pickupPollInt) clearInterval(pickupPollInt); });
 </script>
 </body>
 </html>

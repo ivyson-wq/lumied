@@ -1050,7 +1050,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       const previewTags = turmas.map(t => {
         const d = t.vagas_disponiveis ?? 999;
         const cor = d === 0 ? '#aaa' : d <= 3 ? '#d4830a' : 'var(--muted)';
-        return `<span class="ativ-horario-tag" style="color:${cor}">🕐 ${esc2(t.turma)}${t.vagas!=null?' ('+d+' vaga'+(d!==1?'s':')'):''}</span>`;
+        return `<span class="ativ-horario-tag" style="color:${cor}">🕐 ${esc2(t.turma)}${t.vagas!=null?' ('+d+' vaga'+(d!==1?'s':'')+ ')':''}</span>`;
       }).join('');
 
       return `<div class="ativ-item${!temVaga?' ativ-esgotada':''}" id="ativ_${a.id}">
@@ -1107,6 +1107,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const atividade = todasAtividades.find(a => a.id === atividadeId);
     if (!atividade) return;
     const turma = atividade.horarios[turmaIndex];
+    if (!turma) return;
     atividadesSelecionadas.set(atividadeId, { turma: turma.turma, slots: turma.slots, almoco: false, almoco_preco: turma.almoco_preco || 50 });
 
     // Esconde todos os botões de almoço desta atividade, mostra o correto
@@ -1292,7 +1293,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       const nomeCrianca = (d.eventos[0]?.crianca || '').replace(/"/g, '');
       const eventosHTML = d.eventos.map(e =>
         `<div class="dia-crianca-item">
-          <div class="dia-crianca-dot" style="background:${e.cor};"></div>
+          <div class="dia-crianca-dot" style="background:${esc2(e.cor || '#C8102E')};"></div>
           <div class="dia-crianca-info">
             <strong>${esc2(e.crianca)}</strong>
             <span>${esc2(e.label)}</span>
@@ -1497,8 +1498,8 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     list.innerHTML = criancas.map(c => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:#fafafa;">
         <div>
-          <div style="font-weight:600;font-size:14px;">${c.nome_crianca}</div>
-          <div style="font-size:12px;color:var(--muted);">${c.serie || 'Turma não informada'}</div>
+          <div style="font-weight:600;font-size:14px;">${esc2(c.nome_crianca)}</div>
+          <div style="font-size:12px;color:var(--muted);">${esc2(c.serie || 'Turma não informada')}</div>
         </div>
         <button onclick="avisarChegada('${escHtml(c.nome_crianca)}','${escHtml(c.serie||'')}')"
           style="background:#C8102E;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
@@ -1508,7 +1509,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     `).join('');
   }
 
-  function escHtml(s) { return s.replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
 
   async function avisarChegada(nomeCrianca, serie) {
     const errEl = document.getElementById('pickupErr');
@@ -1625,13 +1626,19 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const el = document.getElementById('boletosConteudo');
     el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
 
-    const res = await fetch(SUPABASE_URL + '/functions/v1/boletos-list', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-      body: JSON.stringify({ email: currentUser.email }),
-    });
-    const json = await res.json();
-    const boletos = json.boletos;
+    let boletos;
+    try {
+      const res = await fetch(SUPABASE_URL + '/functions/v1/boletos-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({ email: currentUser.email }),
+      });
+      const json = await res.json();
+      boletos = json.boletos;
+    } catch(e) {
+      el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Erro ao carregar boletos. Tente novamente mais tarde.</p>';
+      return;
+    }
 
     if (!boletos || boletos.length === 0) {
       el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Nenhum boleto disponível.</p>';
@@ -1945,6 +1952,25 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   window.addEventListener('appinstalled', () => {
     document.getElementById('installBanner').style.display = 'none';
   });
+
+  // ── OFFLINE DETECTION ──────────────────────────────────
+  function showOfflineBanner(show) {
+    let b = document.getElementById('offlineBanner');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'offlineBanner';
+      b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#d4830a;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:9999;font-family:"DM Sans",sans-serif;transition:transform .3s;';
+      b.textContent = '📡 Sem conexão com a internet';
+      document.body.appendChild(b);
+    }
+    b.style.transform = show ? 'translateY(0)' : 'translateY(100%)';
+  }
+  window.addEventListener('offline', () => showOfflineBanner(true));
+  window.addEventListener('online', () => showOfflineBanner(false));
+  if (!navigator.onLine) showOfflineBanner(true);
+
+  // ── CLEANUP ON UNLOAD ─────────────────────────────────
+  window.addEventListener('beforeunload', () => { stopPickupPoll(); });
 </script>
 </body>
 </html>
