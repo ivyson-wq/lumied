@@ -3,15 +3,20 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const INTER_BASE = 'https://cdpj.partners.bancointer.com.br'
 
 function parsePem(raw: string): string {
-  // Converte \n literal para quebra de linha real
-  let pem = raw.replace(/\\n/g, '\n')
-  // Se ainda não tem quebras de linha, insere após o header e antes do footer
-  if (!pem.includes('\n')) {
-    pem = pem
-      .replace(/(-----BEGIN [^-]+-----)([^\n])/, '$1\n$2')
-      .replace(/([^\n])(-----END [^-]+-----)/, '$1\n$2')
-  }
-  return pem.trim()
+  const pem = raw.replace(/\\n/g, '\n').trim()
+  const headerMatch = pem.match(/-----BEGIN ([^-]+)-----/)
+  const footerMatch = pem.match(/-----END ([^-]+)-----/)
+  if (!headerMatch || !footerMatch) return pem
+  const header = `-----BEGIN ${headerMatch[1]}-----`
+  const footer = `-----END ${footerMatch[1]}-----`
+  // Extrai só o base64, remove tudo que não é base64
+  const b64 = pem
+    .replace(/-----BEGIN [^-]+-----/, '')
+    .replace(/-----END [^-]+-----/, '')
+    .replace(/[\s]/g, '')
+  // Quebra em linhas de 64 chars conforme padrão PEM
+  const lines = b64.match(/.{1,64}/g) ?? []
+  return [header, ...lines, footer].join('\n')
 }
 
 function interHttpClient() {
