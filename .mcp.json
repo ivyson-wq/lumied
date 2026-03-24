@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "vercel": {
+      "type": "url",
+      "url": "https://mcp.vercel.com/sse"
+    },
+    "supabase": {
+      "type": "url",
+      "url": "https://mcp.supabase.com/sse"
+    }
+  }
+}
