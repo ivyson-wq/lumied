@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
-:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;}
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;--primary:#C8102E;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
@@ -257,6 +257,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   </div>
 
   <div class="content">
+    <!-- Pickup Queue Section -->
+    <div class="sec-title">🚗 Fila de Retirada
+      <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+    </div>
+
+    <!-- Series configurator -->
+    <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
+      <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+      <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
+      <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
+    </div>
+
+    <!-- Queue -->
+    <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
+    <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
+    <div id="pickupFilaList"></div>
+
+    <hr class="section-divider">
+
     <!-- Stats -->
     <div class="stats-row">
       <div class="stat-card" data-c="pts">
@@ -450,29 +471,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
     </div>
   </div>
-
-  <hr class="section-divider">
-
-  <!-- Pickup Queue Section -->
-  <div class="sec-title">🚗 Fila de Retirada
-    <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
-  </div>
-
-  <!-- Series configurator -->
-  <div class="upload-card" id="pickupSeriesCard" style="margin-bottom:12px;">
-    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Minhas turmas monitoradas</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Selecione as turmas que você monitora para filtrar a fila. Deixe vazio para ver todos.</div>
-    <div id="pickupSeriesBtns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
-    <button onclick="savePickupSeries()" class="btn-submit" style="font-size:12px;padding:6px 14px;width:auto;">Salvar turmas</button>
-    <div class="f-alert success" id="pickupSeriesOk" style="margin-top:6px;font-size:12px;"></div>
-  </div>
-
-  <!-- Queue -->
-  <div id="pickupFilaLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;display:none;"><span class="spinner dark"></span> Atualizando fila…</div>
-  <div id="pickupFilaEmpty" style="display:none;" class="empty-state">🎉 Nenhum pai a caminho no momento.</div>
-  <div id="pickupFilaList"></div>
-
-  <hr class="section-divider">
 
   <!-- ── ALMOXARIFADO ──────────────────────────────────── -->
   <div class="sec-title">📦 Almoxarifado
@@ -1196,7 +1194,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   });
 
   // ── PICKUP QUEUE ────────────────────────────────────────
-  const SERIES_DISPONIVEIS = ['Berçário','Maternal I','Maternal II','Jardim I','Jardim II','Pré-Escola','1º Ano','2º Ano','3º Ano','4º Ano','5º Ano'];
+  let SERIES_DISPONIVEIS = ['Berçário','Maternal I','Maternal II','Jardim I','Jardim II','Pré-Escola','1º Ano','2º Ano','3º Ano','4º Ano','5º Ano'];
   let pickupSeriesSelecionadas = [];
   let pickupPollInt = null;
   let pickupUltimaFila = [];
@@ -1291,6 +1289,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   async function initPickupPanel() {
+    // Load series from database so names match registered children
+    try {
+      const sd = await callApi({ action: 'series_list_pub' });
+      if (sd.data && sd.data.length) SERIES_DISPONIVEIS = sd.data;
+    } catch(_) {}
     initPickupSeries();
     // loadPickupFila returns series_monitoras from server
     const d = await callApi({ action: 'pickup_fila_hoje' });
