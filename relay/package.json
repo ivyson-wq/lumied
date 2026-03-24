@@ -1,0 +1,12 @@
+{
+  "name": "inter-relay",
+  "version": "1.0.0",
+  "description": "Relay mTLS para API do Inter",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
