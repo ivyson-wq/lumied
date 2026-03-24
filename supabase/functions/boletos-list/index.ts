@@ -153,7 +153,10 @@ async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> 
   })
 
   const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
+    },
     client,
   })
 
@@ -167,7 +170,10 @@ async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<U
   try {
     const client = interHttpClient()
     const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
+      },
       client,
     })
     if (!res.ok) return null

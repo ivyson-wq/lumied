@@ -32,7 +32,10 @@ async function getInterToken(): Promise<string> {
 async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<Uint8Array> {
   const client = interHttpClient()
   const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
+    },
     client,
   })
 
