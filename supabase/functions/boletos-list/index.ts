@@ -16,6 +16,10 @@ async function interFetch(
     body: JSON.stringify({ path, method: init.method ?? 'GET', headers: init.headers ?? {}, body: bodyStr }),
   })
 
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Relay retornou ${res.status}: ${text.slice(0, 200)}`)
+  }
   const { status, body } = await res.json() as { status: number; body: string }
   return {
     ok: status >= 200 && status < 300,
