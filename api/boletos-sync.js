@@ -26,7 +26,6 @@ module.exports = async (req, res) => {
   const upstream = await fetch(`${SUPABASE_URL}/functions/v1/boletos-list`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
-
     body: JSON.stringify({ cpf }),
   })
 

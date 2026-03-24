@@ -1,23 +1,31 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const INTER_BASE = 'https://cdpj.partners.bancointer.com.br'
+async function interFetch(
+  path: string,
+  init: { method?: string; headers?: Record<string, string>; body?: string | URLSearchParams } = {}
+): Promise<{ ok: boolean; status: number; text(): Promise<string>; json(): Promise<unknown> }> {
+  const relayUrl = Deno.env.get('INTER_RELAY_URL')!
+  const relaySecret = Deno.env.get('RELAY_SECRET')!
+  const bodyStr = init.body instanceof URLSearchParams
+    ? init.body.toString()
+    : (init.body ?? '')
 
-// mTLS client — pode falhar em alguns ambientes Deno
-function interHttpClient(): any {
-  try {
-    const cert = Deno.env.get('INTER_CERT')
-    const key = Deno.env.get('INTER_KEY')
-    if (cert && key) {
-      return Deno.createHttpClient({ certChain: cert, privateKey: key })
-    }
-  } catch (e) {
-    console.warn('mTLS client não disponível, usando fetch padrão:', e)
+  const res = await fetch(`${relayUrl}/inter-proxy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${relaySecret}` },
+    body: JSON.stringify({ path, method: init.method ?? 'GET', headers: init.headers ?? {}, body: bodyStr }),
+  })
+
+  const { status, body } = await res.json() as { status: number; body: string }
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: () => Promise.resolve(body),
+    json: () => Promise.resolve(JSON.parse(body)),
   }
-  return undefined
 }
 
 async function getInterToken(): Promise<string> {
-  const client = interHttpClient()
   const body = new URLSearchParams({
     client_id: Deno.env.get('INTER_CLIENT_ID')!,
     client_secret: Deno.env.get('INTER_CLIENT_SECRET')!,
@@ -25,159 +33,42 @@ async function getInterToken(): Promise<string> {
     grant_type: 'client_credentials',
   })
 
-  const fetchOpts: any = {
+  const res = await interFetch('/oauth/v2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
-  }
-  if (client) fetchOpts.client = client
+  })
 
-  const res = await fetch(`${INTER_BASE}/oauth/v2/token`, fetchOpts)
-
-  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} ${await res.text()}`)
-  return (await res.json()).access_token
+  const text = await res.text()
+  console.log('Inter OAuth status:', res.status, '| body:', text.slice(0, 200))
+  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${text}`)
+  return (JSON.parse(text) as { access_token: string }).access_token
 }
 
-async function getBoletoPdf(token: string, nossoNumero: string): Promise<Uint8Array> {
-  const client = interHttpClient()
-  const fetchOpts: any = {
-    headers: { Authorization: `Bearer ${token}` },
-  }
-  if (client) fetchOpts.client = client
+async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<Uint8Array> {
+  const res = await interFetch(`/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
+    },
+  })
 
-  const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${nossoNumero}/pdf`, fetchOpts)
+  const text = await res.text()
+  if (!res.ok) throw new Error(`PDF boleto falhou: ${res.status} | ${text}`)
 
-  if (!res.ok) throw new Error(`PDF boleto falhou: ${res.status} ${await res.text()}`)
-
-  const data = await res.json()
-  const base64 = data.pdf
-  const binary = atob(base64)
+  const data = JSON.parse(text) as { pdf: string }
+  const binary = atob(data.pdf)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
 }
 
-async function interFetch(url: string, opts: any = {}): Promise<Response> {
-  const client = interHttpClient()
-  if (client) opts.client = client
-  return fetch(url, opts)
-}
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Content-Type': 'application/json',
-}
-
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
   if (req.method !== 'POST') return new Response('Método não permitido', { status: 405 })
 
   try {
     const payload = await req.json()
-
-    // ── SYNC: busca boletos na API do Inter e sincroniza com o banco ──
-    if (payload.action === 'sync_boletos') {
-      const cpf = (payload.cpf || '').replace(/\D/g, '')
-      if (!cpf || cpf.length !== 11) {
-        return new Response(JSON.stringify({ error: 'CPF inválido.' }), { status: 400, headers: CORS })
-      }
-
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      )
-
-      const token = await getInterToken()
-
-      // Busca boletos dos últimos 12 meses
-      const hoje = new Date()
-      const inicio = new Date(hoje)
-      inicio.setMonth(inicio.getMonth() - 12)
-      const dataInicial = inicio.toISOString().split('T')[0]
-      const dataFinal = hoje.toISOString().split('T')[0]
-
-      const url = `${INTER_BASE}/cobranca/v3/cobrancas?cpfCnpj=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&itensPorPagina=100`
-      console.log('Sync boletos URL:', url)
-
-      const res = await interFetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (!res.ok) {
-        const errText = await res.text()
-        console.error('Inter API error:', res.status, errText)
-        // Se 404 ou sem boletos, retorna lista vazia
-        if (res.status === 404) {
-          return new Response(JSON.stringify({ ok: true, sincronizados: 0 }), { headers: CORS })
-        }
-        return new Response(JSON.stringify({ error: 'Erro ao consultar Inter: ' + res.status }), { status: 500, headers: CORS })
-      }
-
-      const data = await res.json()
-      const cobrancas = data.cobrancas ?? data.content ?? []
-      console.log(`Inter retornou ${cobrancas.length} boleto(s)`)
-
-      let sincronizados = 0
-      const cpfFormatado = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
-
-      for (const bol of cobrancas) {
-        const nossoNumero = bol.nossoNumero || bol.codigoBarras || ''
-        if (!nossoNumero) continue
-
-        // Verifica se já existe no banco
-        const { data: existe } = await supabase
-          .from('boletos')
-          .select('id')
-          .eq('nosso_numero', nossoNumero)
-          .maybeSingle()
-
-        if (existe) {
-          // Atualiza situação se mudou
-          const novaSituacao = bol.situacao || 'EMITIDO'
-          await supabase.from('boletos')
-            .update({ situacao: novaSituacao })
-            .eq('nosso_numero', nossoNumero)
-          continue
-        }
-
-        // Boleto novo — tenta baixar PDF
-        let pdfUrl: string | null = null
-        try {
-          const pdfBytes = await getBoletoPdf(token, nossoNumero)
-          const fileName = `${cpf}/${nossoNumero}.pdf`
-          await supabase.storage.createBucket('boletos', { public: true }).catch(() => {})
-          const { error: upErr } = await supabase.storage
-            .from('boletos')
-            .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
-          if (!upErr) {
-            const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
-            pdfUrl = urlData.publicUrl
-          }
-        } catch (e) {
-          console.error('PDF download falhou para', nossoNumero, e)
-        }
-
-        // Insere no banco
-        const { error: dbErr } = await supabase.from('boletos').insert({
-          cpf: cpfFormatado,
-          nosso_numero: nossoNumero,
-          valor: bol.valorNominal ?? bol.valor ?? 0,
-          vencimento: bol.dataVencimento ?? null,
-          linha_digitavel: bol.linhaDigitavel ?? '',
-          situacao: bol.situacao || 'EMITIDO',
-          pdf_url: pdfUrl,
-        })
-
-        if (!dbErr) sincronizados++
-        else console.error('Insert boleto falhou:', dbErr.message)
-      }
-
-      console.log(`Sync concluído: ${sincronizados} novos boletos inseridos`)
-      return new Response(JSON.stringify({ ok: true, sincronizados, total: cobrancas.length }), { headers: CORS })
-    }
-
-    // ── WEBHOOK: recebe eventos do banco Inter ──
     console.log('Webhook Inter recebido:', JSON.stringify(payload))
 
     const situacao = payload.situacao ?? payload.evento
@@ -188,13 +79,14 @@ Deno.serve(async (req) => {
     }
 
     const nossoNumero: string = payload.nossoNumero
+    const codigoSolicitacao: string = payload.codigoSolicitacao
     const cpf: string = payload.pagador?.cpfCnpj?.replace(/\D/g, '')
     const valor: number = payload.valorNominal ?? payload.valor
     const vencimento: string = payload.dataVencimento
     const linhaDigitavel: string = payload.linhaDigitavel ?? ''
 
-    if (!nossoNumero || !cpf) {
-      return new Response(JSON.stringify({ error: 'nossoNumero ou CPF ausente' }), {
+    if (!nossoNumero || !codigoSolicitacao || !cpf) {
+      return new Response(JSON.stringify({ error: 'nossoNumero, codigoSolicitacao ou CPF ausente' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -205,11 +97,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Busca PDF no Inter
     const token = await getInterToken()
-    const pdfBytes = await getBoletoPdf(token, nossoNumero)
+    const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
 
-    // Faz upload do PDF no Storage
     const fileName = `${cpf}/${nossoNumero}.pdf`
     const { error: uploadError } = await supabase.storage
       .from('boletos')
@@ -220,10 +110,8 @@ Deno.serve(async (req) => {
     const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
     const pdfUrl = urlData.publicUrl
 
-    // Formata CPF para o padrão do banco: 123.456.789-00
     const cpfFormatado = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
-    // Salva boleto na tabela
     const { error: dbError } = await supabase.from('boletos').insert({
       cpf: cpfFormatado,
       nosso_numero: nossoNumero,
@@ -242,10 +130,10 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    console.error('Erro no webhook/sync Inter:', err)
+    console.error('Erro no webhook Inter:', err)
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: CORS,
+      headers: { 'Content-Type': 'application/json' },
     })
   }
 })

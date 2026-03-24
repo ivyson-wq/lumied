@@ -1,12 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Content-Type': 'application/json',
 }
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
 }
+
 // ── PBKDF2 helpers ─────────────────────────────────────────
 async function hashSenha(senha: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16))
@@ -21,6 +24,7 @@ async function hashSenha(senha: string): Promise<string> {
   const hashHex = Array.from(new Uint8Array(derived)).map(b => b.toString(16).padStart(2, '0')).join('')
   return saltHex + ':' + hashHex
 }
+
 async function verificarSenha(senha: string, hash: string): Promise<boolean> {
   const [saltHex, hashHex] = hash.split(':')
   if (!saltHex || !hashHex) return false
@@ -35,10 +39,12 @@ async function verificarSenha(senha: string, hash: string): Promise<boolean> {
   const computed = Array.from(new Uint8Array(derived)).map(b => b.toString(16).padStart(2, '0')).join('')
   return computed === hashHex
 }
+
 function randomToken(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(32)))
     .map(b => b.toString(16).padStart(2, '0')).join('')
 }
+
 // ── Session validators ──────────────────────────────────────
 async function getProfessora(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
@@ -47,10 +53,11 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
     .eq('token', token).maybeSingle()
   if (!sessao || new Date(sessao.expira_em) < new Date()) return null
   const { data } = await sb
-    .from('professoras').select('id, nome, email, tipo')
+    .from('professoras').select('id, nome, email')
     .eq('id', sessao.professora_id).maybeSingle()
   return data ?? null
 }
+
 async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
   const { data: sessao } = await sb
@@ -62,6 +69,7 @@ async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
     .eq('id', sessao.gerente_id).maybeSingle()
   return data ?? null
 }
+
 async function getSecretaria(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
   const { data: sessao } = await sb
@@ -73,12 +81,14 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
     .eq('id', sessao.secretaria_id).maybeSingle()
   return data ?? null
 }
+
 // ── Parent (Supabase Auth JWT) validator ────────────────────
 async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string): Promise<string | null> {
   if (!token) return null
   const { data: { user } } = await sb.auth.getUser(token)
   return user?.email ?? null
 }
+
 // ── Pickup ETA helpers ──────────────────────────────────────
 async function calcEtaGoogleMaps(
   latPai: number, lonPai: number
@@ -101,6 +111,7 @@ async function calcEtaGoogleMaps(
     return null
   }
 }
+
 function calcEtaLocal(latPai: number, lonPai: number): number {
   const schoolLat = parseFloat(Deno.env.get('SCHOOL_LAT') || '-28.8628')
   const schoolLon = parseFloat(Deno.env.get('SCHOOL_LON') || '-51.5201')
@@ -110,8 +121,9 @@ function calcEtaLocal(latPai: number, lonPai: number): number {
   const a = Math.sin(dLat / 2) ** 2 +
     Math.cos(latPai * Math.PI / 180) * Math.cos(schoolLat * Math.PI / 180) * Math.sin(dLon / 2) ** 2
   const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return Math.max(1, Math.ceil(dist / 40 * 60))
+  return Math.max(1, Math.ceil(dist / 40 * 60)) // 40 km/h average urban speed
 }
+
 // ── Upload helper ───────────────────────────────────────────
 async function uploadArquivo(
   sb: ReturnType<typeof createClient>,
@@ -128,16 +140,21 @@ async function uploadArquivo(
   const { data: { publicUrl } } = sb.storage.from(bucket).getPublicUrl(fileName)
   return { url: publicUrl }
 }
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+
   const sb = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
+
   const body = await req.json()
   const { action } = body
   const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
+
   // ━━ PUBLIC ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   if (action === 'ranking') {
     const { data: professoras } = await sb.from('professoras').select('id, nome').order('nome')
     if (!professoras) return json({ data: [] })
@@ -150,12 +167,13 @@ Deno.serve(async (req) => {
       .sort((a, b) => b.pontuacao - a.pontuacao || a.nome.localeCompare(b.nome))
     return json({ data: ranking })
   }
+
   if (action === 'professora_login') {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
     const { data: prof } = await sb
-      .from('professoras').select('id, nome, email, senha_hash, tipo').ilike('email', email).maybeSingle()
+      .from('professoras').select('id, nome, email, senha_hash').ilike('email', email).maybeSingle()
     if (!prof || !prof.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     if (!await verificarSenha(senha, prof.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     const tok = randomToken()
@@ -163,8 +181,9 @@ Deno.serve(async (req) => {
       professora_id: prof.id, token: tok,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
-    return json({ token: tok, nome: prof.nome, email: prof.email, tipo: prof.tipo || 'professora' })
+    return json({ token: tok, nome: prof.nome, email: prof.email })
   }
+
   if (action === 'secretaria_login') {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
@@ -180,27 +199,32 @@ Deno.serve(async (req) => {
     })
     return json({ token: tok, nome: sec.nome, email: sec.email })
   }
+
   // ━━ TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   const isTeacherAction = [
     'professora_logout', 'diploma_submit', 'meus_diplomas',
     'atestado_submit', 'meus_atestados',
     'pdi_meu_status', 'pdi_autoavaliacao', 'pdi_metas_submit',
     'pdi_meta_progresso', 'pdi_checkin',
-    'manutencao_criar', 'manutencao_minhas',
   ].includes(action)
+
   if (isTeacherAction) {
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
     if (action === 'professora_logout') {
       await sb.from('professora_sessoes').delete().eq('token', token)
       return json({ ok: true })
     }
+
     if (action === 'meus_diplomas') {
       const { data } = await sb
         .from('diplomas_professoras').select('*')
         .eq('professora_id', prof.id).order('criado_em', { ascending: false })
       return json({ data: data ?? [] })
     }
+
     if (action === 'diploma_submit') {
       const nome_curso: string = (body.nome_curso || '').trim()
       const carga_horaria: number = parseInt(body.carga_horaria) || 0
@@ -218,12 +242,14 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'meus_atestados') {
       const { data } = await sb
         .from('atestados_professoras').select('*')
         .eq('professora_id', prof.id).order('criado_em', { ascending: false })
       return json({ data: data ?? [] })
     }
+
     if (action === 'atestado_submit') {
       const data_inicio: string = body.data_inicio || ''
       const data_fim: string = body.data_fim || ''
@@ -242,8 +268,11 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     // ── PDI: professora ─────────────────────────────────────
+
     if (action === 'pdi_meu_status') {
+      // Retorna o ciclo ativo e o PDI da professora nesse ciclo
       const { data: ciclo } = await sb
         .from('pdi_ciclos').select('*').eq('ativo', true).maybeSingle()
       if (!ciclo) return json({ ciclo: null, pdi: null })
@@ -255,7 +284,9 @@ Deno.serve(async (req) => {
         .maybeSingle()
       return json({ ciclo, pdi: pdi ?? null })
     }
+
     if (action === 'pdi_autoavaliacao') {
+      // body: { competencias: [{ area, nota_auto, comentario }] }
       const competencias: Array<{ area: string; nota_auto: number; comentario?: string }> =
         body.competencias || []
       const AREAS = [
@@ -267,9 +298,13 @@ Deno.serve(async (req) => {
       for (const c of competencias)
         if (!c.nota_auto || c.nota_auto < 1 || c.nota_auto > 4)
           return json({ error: `Nota inválida para a área "${c.area}". Use 1 a 4.` }, 400)
+
+      // Obtém ciclo ativo
       const { data: ciclo } = await sb
         .from('pdi_ciclos').select('id').eq('ativo', true).maybeSingle()
       if (!ciclo) return json({ error: 'Não há ciclo de PDI ativo no momento.' }, 400)
+
+      // Garante ou cria PDI rascunho
       let pdiId: string
       const { data: pdiExist } = await sb
         .from('pdis').select('id, status').eq('professora_id', prof.id).eq('ciclo_id', ciclo.id).maybeSingle()
@@ -284,6 +319,8 @@ Deno.serve(async (req) => {
         if (errCria) return json({ error: errCria.message }, 400)
         pdiId = novo.id
       }
+
+      // Upsert competências
       for (const c of competencias) {
         await sb.from('pdi_competencias').upsert(
           { pdi_id: pdiId, area: c.area, nota_auto: c.nota_auto, comentario: c.comentario ?? null },
@@ -292,7 +329,9 @@ Deno.serve(async (req) => {
       }
       return json({ ok: true, pdi_id: pdiId })
     }
+
     if (action === 'pdi_metas_submit') {
+      // body: { pdi_id, metas: [{ descricao, indicador, prazo, area_vinculada? }] }
       const { pdi_id } = body
       const metas: Array<{ descricao: string; indicador: string; prazo: string; area_vinculada?: string }> =
         body.metas || []
@@ -302,11 +341,15 @@ Deno.serve(async (req) => {
       for (const m of metas)
         if (!m.descricao || !m.indicador || !m.prazo)
           return json({ error: 'Todos os campos das metas são obrigatórios.' }, 400)
+
+      // Verifica que o PDI pertence à professora
       const { data: pdi } = await sb
         .from('pdis').select('id, status').eq('id', pdi_id).eq('professora_id', prof.id).maybeSingle()
       if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
       if (['em_andamento', 'encerrado'].includes(pdi.status))
         return json({ error: 'PDI já aprovado. Contate a gestora para alterações.' }, 400)
+
+      // Remove metas antigas e insere novas
       await sb.from('pdi_metas').delete().eq('pdi_id', pdi_id)
       const { error } = await sb.from('pdi_metas').insert(
         metas.map(m => ({
@@ -320,13 +363,18 @@ Deno.serve(async (req) => {
         }))
       )
       if (error) return json({ error: error.message }, 400)
+
+      // Avança status do PDI para aguardando_aprovacao
       await sb.from('pdis').update({
         status: 'aguardando_aprovacao',
         submetido_em: new Date().toISOString(),
       }).eq('id', pdi_id)
+
       return json({ ok: true })
     }
+
     if (action === 'pdi_meta_progresso') {
+      // body: { meta_id, progressao_pct, status, evidencia_texto?, diploma_id? }
       const { meta_id } = body
       const progressao_pct: number = parseInt(body.progressao_pct ?? '0')
       const status: string = body.status || ''
@@ -336,6 +384,8 @@ Deno.serve(async (req) => {
       const STATUS_VALIDOS = ['pendente', 'em_andamento', 'concluido', 'revisado']
       if (!STATUS_VALIDOS.includes(status))
         return json({ error: 'Status inválido.' }, 400)
+
+      // Verifica ownership
       const { data: meta } = await sb
         .from('pdi_metas')
         .select('id, pdi_id, pdis!inner(professora_id)')
@@ -345,6 +395,7 @@ Deno.serve(async (req) => {
       const pdiOwner = (meta as Record<string, unknown> & { pdis: { professora_id: string } }).pdis
       if (pdiOwner.professora_id !== prof.id)
         return json({ error: 'Sem permissão.' }, 403)
+
       const { error } = await sb.from('pdi_metas').update({
         progressao_pct,
         status,
@@ -354,82 +405,52 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'pdi_checkin') {
+      // body: { pdi_id, tipo, relato_professora }
       const { pdi_id } = body
       const tipo: string = body.tipo || ''
       const relato: string = (body.relato_professora || '').trim()
       if (!pdi_id || !tipo || !relato) return json({ error: 'Preencha todos os campos do check-in.' }, 400)
       if (!['semestral', 'final'].includes(tipo)) return json({ error: 'Tipo inválido.' }, 400)
+
       const { data: pdi } = await sb
         .from('pdis').select('id, status').eq('id', pdi_id).eq('professora_id', prof.id).maybeSingle()
       if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
       if (pdi.status !== 'em_andamento')
         return json({ error: 'Só é possível registrar check-in em PDIs em andamento.' }, 400)
+
       const { error } = await sb.from('pdi_acompanhamentos').insert({
         pdi_id, tipo, relato_professora: relato,
       })
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
-    // ── MANUTENÇÃO: professora ───────────────────────────────
-    if (action === 'manutencao_criar') {
-      const descricao: string = (body.descricao || '').trim()
-      const localizacao: string = (body.localizacao || '').trim()
-      const urgencia: string = body.urgencia || ''
-      if (!descricao || !localizacao || !urgencia)
-        return json({ error: 'Descrição, localização e urgência são obrigatórios.' }, 400)
-      if (!['baixa', 'media', 'alta', 'critica'].includes(urgencia))
-        return json({ error: 'Urgência inválida.' }, 400)
-
-      let foto_url: string | null = null
-      if (body.foto_base64) {
-        const base64: string = body.foto_base64
-        const mime: string = body.foto_mime || 'image/jpeg'
-        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
-        if (bytes.length > 10 * 1024 * 1024)
-          return json({ error: 'Foto muito grande (máx. 10MB).' }, 400)
-        const ext = mime === 'image/png' ? 'png' : 'jpg'
-        const fileName = `${prof.id}/${Date.now()}.${ext}`
-        await sb.storage.createBucket('manutencoes', { public: true }).catch(() => {})
-        const { error: upErr } = await sb.storage
-          .from('manutencoes').upload(fileName, bytes, { contentType: mime, upsert: false })
-        if (upErr) return json({ error: 'Erro ao fazer upload da foto: ' + upErr.message }, 400)
-        const { data: { publicUrl } } = sb.storage.from('manutencoes').getPublicUrl(fileName)
-        foto_url = publicUrl
-      }
-
-      const { error } = await sb.from('manutencoes').insert({
-        professora_id: prof.id, descricao, localizacao, urgencia, foto_url, status: 'pendente',
-      })
-      if (error) return json({ error: error.message }, 400)
-      return json({ ok: true })
-    }
-    if (action === 'manutencao_minhas') {
-      const { data } = await sb
-        .from('manutencoes').select('*')
-        .eq('professora_id', prof.id)
-        .order('criado_em', { ascending: false })
-      return json({ data: data ?? [] })
-    }
   }
+
   // ━━ SECRETARIA ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   const isSecretariaAction = [
     'secretaria_logout', 'atestados_pendentes', 'atestados_all',
     'atestado_aprovar', 'atestado_rejeitar',
   ].includes(action)
+
   if (isSecretariaAction) {
     const sec = await getSecretaria(sb, token)
     if (!sec) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
     if (action === 'secretaria_logout') {
       await sb.from('secretaria_sessoes').delete().eq('token', token)
       return json({ ok: true })
     }
+
     if (action === 'atestados_pendentes') {
       const { data } = await sb
         .from('atestados_professoras').select('*, professoras(nome, email)')
         .eq('status', 'pendente').order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
     }
+
     if (action === 'atestados_all') {
       const filterStatus: string | undefined = body.status
       let query = sb
@@ -439,6 +460,7 @@ Deno.serve(async (req) => {
       const { data } = await query
       return json({ data: data ?? [] })
     }
+
     if (action === 'atestado_aprovar') {
       const { id } = body
       if (!id) return json({ error: 'ID do atestado não informado.' }, 400)
@@ -451,6 +473,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'atestado_rejeitar') {
       const { id } = body
       if (!id) return json({ error: 'ID do atestado não informado.' }, 400)
@@ -464,7 +487,9 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
   }
+
   // ━━ MANAGER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   const isManagerAction = [
     'diplomas_pendentes', 'diplomas_all', 'diploma_aprovar', 'diploma_rejeitar',
     'professora_set_senha',
@@ -472,12 +497,12 @@ Deno.serve(async (req) => {
     'pdi_ciclos_list', 'pdi_ciclo_criar', 'pdi_painel',
     'pdi_prof_view', 'pdi_aprovar', 'pdi_rejeitar',
     'pdi_competencias_gerente', 'pdi_nota_final', 'pdi_checkin_feedback',
-    'manutencao_list_all', 'manutencao_aprovar', 'manutencao_rejeitar',
-    'manutencao_definir_equipe', 'manutencao_iniciar_execucao', 'manutencao_concluir',
   ].includes(action)
+
   if (isManagerAction) {
     const ger = await getGerente(sb, token)
     if (!ger) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
     if (action === 'professora_set_senha') {
       const { professora_id, senha } = body
       if (!professora_id || !senha) return json({ error: 'Dados incompletos.' }, 400)
@@ -487,12 +512,14 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'diplomas_pendentes') {
       const { data } = await sb
         .from('diplomas_professoras').select('*, professoras(nome, email)')
         .eq('status', 'pendente').order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
     }
+
     if (action === 'diplomas_all') {
       const filterStatus: string | undefined = body.status
       let query = sb.from('diplomas_professoras').select('*, professoras(nome, email)')
@@ -501,6 +528,7 @@ Deno.serve(async (req) => {
       const { data } = await query
       return json({ data: data ?? [] })
     }
+
     if (action === 'diploma_aprovar') {
       const { id } = body
       if (!id) return json({ error: 'ID do diploma não informado.' }, 400)
@@ -515,6 +543,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'diploma_rejeitar') {
       const { id } = body
       if (!id) return json({ error: 'ID do diploma não informado.' }, 400)
@@ -526,10 +555,12 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'secretarias_list') {
       const { data } = await sb.from('secretarias').select('id, nome, email, criado_em').order('nome')
       return json({ data: data ?? [] })
     }
+
     if (action === 'secretaria_create') {
       const nome: string = (body.nome || '').trim()
       const email: string = (body.email || '').toLowerCase().trim()
@@ -540,6 +571,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.code === '23505' ? 'E-mail já cadastrado.' : error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'secretaria_delete') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
@@ -547,17 +579,21 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     // ── PDI: gestora ────────────────────────────────────────
+
     if (action === 'pdi_ciclos_list') {
       const { data } = await sb.from('pdi_ciclos').select('*').order('ano', { ascending: false })
       return json({ data: data ?? [] })
     }
+
     if (action === 'pdi_ciclo_criar') {
       const nome: string = (body.nome || '').trim()
       const ano: number = parseInt(body.ano) || new Date().getFullYear()
       const data_inicio: string = body.data_inicio || ''
       const data_fim: string = body.data_fim || ''
       if (!nome || !data_inicio || !data_fim) return json({ error: 'Preencha todos os campos.' }, 400)
+      // Desativa ciclos anteriores do mesmo ano
       await sb.from('pdi_ciclos').update({ ativo: false }).eq('ano', ano)
       const { error } = await sb.from('pdi_ciclos').insert({
         nome, ano, data_inicio, data_fim, ativo: true, criado_por: ger.nome,
@@ -565,7 +601,10 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'pdi_painel') {
+      // Retorna overview de todas as professoras para um ciclo
+      // body: { ciclo_id? } — se omitido, usa o ciclo ativo
       let cicloId: string = body.ciclo_id || ''
       if (!cicloId) {
         const { data: ciclo } = await sb.from('pdi_ciclos').select('id').eq('ativo', true).maybeSingle()
@@ -577,15 +616,19 @@ Deno.serve(async (req) => {
       const { data: pdis } = await sb
         .from('pdis').select('id, professora_id, status, submetido_em, aprovado_em, nota_final')
         .eq('ciclo_id', cicloId)
-      const pdiMap: Record<string, any> = {}
+
+      const pdiMap: Record<string, typeof pdis[0]> = {}
       for (const p of pdis ?? []) pdiMap[p.professora_id] = p
+
       const resultado = (professoras ?? []).map(p => ({
         professora: p,
         pdi: pdiMap[p.id] ?? null,
       }))
       return json({ ciclo, professoras: resultado })
     }
+
     if (action === 'pdi_prof_view') {
+      // Retorna PDI completo de uma professora em um ciclo
       const { pdi_id } = body
       if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
       const { data: pdi } = await sb
@@ -603,6 +646,7 @@ Deno.serve(async (req) => {
       if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
       return json({ data: pdi })
     }
+
     if (action === 'pdi_aprovar') {
       const { pdi_id, feedback } = body
       if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
@@ -618,7 +662,9 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'pdi_rejeitar') {
+      // Devolve o PDI para rascunho com feedback
       const { pdi_id, feedback } = body
       if (!pdi_id || !feedback) return json({ error: 'Informe pdi_id e feedback.' }, 400)
       const { data: pdi } = await sb.from('pdis').select('id, status').eq('id', pdi_id).maybeSingle()
@@ -631,7 +677,9 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'pdi_competencias_gerente') {
+      // body: { pdi_id, competencias: [{ area, nota_gestora, comentario? }] }
       const { pdi_id } = body
       const competencias: Array<{ area: string; nota_gestora: number; comentario?: string }> =
         body.competencias || []
@@ -646,7 +694,9 @@ Deno.serve(async (req) => {
       }
       return json({ ok: true })
     }
+
     if (action === 'pdi_nota_final') {
+      // body: { pdi_id, nota_final (1-4), feedback_gestora }
       const { pdi_id } = body
       const nota_final: number = parseInt(body.nota_final) || 0
       const feedback: string = (body.feedback_gestora || '').trim()
@@ -666,7 +716,9 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'pdi_checkin_feedback') {
+      // body: { acompanhamento_id, feedback_gestora }
       const { acompanhamento_id, feedback_gestora } = body
       if (!acompanhamento_id || !feedback_gestora)
         return json({ error: 'Informe acompanhamento_id e feedback.' }, 400)
@@ -676,78 +728,20 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
-    // ── MANUTENÇÃO: gerente ──────────────────────────────────
-    if (action === 'manutencao_list_all') {
-      const filterStatus: string | undefined = body.status
-      let query = sb.from('manutencoes').select('*, professoras(nome, email)')
-        .order('criado_em', { ascending: false })
-      if (filterStatus && filterStatus !== 'all') query = query.eq('status', filterStatus)
-      const { data } = await query
-      return json({ data: data ?? [] })
-    }
-    if (action === 'manutencao_aprovar') {
-      const { id } = body
-      if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('manutencoes').update({
-        status: 'aprovada',
-        observacao_gerente: body.observacao || null,
-        atualizado_em: new Date().toISOString(),
-      }).eq('id', id)
-      if (error) return json({ error: error.message }, 400)
-      return json({ ok: true })
-    }
-    if (action === 'manutencao_rejeitar') {
-      const { id } = body
-      if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('manutencoes').update({
-        status: 'rejeitada',
-        observacao_gerente: body.observacao || null,
-        atualizado_em: new Date().toISOString(),
-      }).eq('id', id)
-      if (error) return json({ error: error.message }, 400)
-      return json({ ok: true })
-    }
-    if (action === 'manutencao_definir_equipe') {
-      const { id, equipe_responsavel } = body
-      if (!id || !equipe_responsavel) return json({ error: 'ID e equipe são obrigatórios.' }, 400)
-      const { error } = await sb.from('manutencoes').update({
-        equipe_responsavel,
-        atualizado_em: new Date().toISOString(),
-      }).eq('id', id)
-      if (error) return json({ error: error.message }, 400)
-      return json({ ok: true })
-    }
-    if (action === 'manutencao_iniciar_execucao') {
-      const { id } = body
-      if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('manutencoes').update({
-        status: 'em_execucao',
-        atualizado_em: new Date().toISOString(),
-      }).eq('id', id)
-      if (error) return json({ error: error.message }, 400)
-      return json({ ok: true })
-    }
-    if (action === 'manutencao_concluir') {
-      const { id, data_conclusao } = body
-      if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('manutencoes').update({
-        status: 'concluida',
-        data_conclusao: data_conclusao || new Date().toISOString().split('T')[0],
-        observacao_gerente: body.observacao || null,
-        atualizado_em: new Date().toISOString(),
-      }).eq('id', id)
-      if (error) return json({ error: error.message }, 400)
-      return json({ ok: true })
-    }
   }
+
   // ━━ PICKUP: PARENT ACTIONS (Supabase Auth JWT) ━━━━━━━━━━━━
+
   const isPickupPaiAction = [
     'pickup_meus_filhos', 'pickup_avisar', 'pickup_cancelar', 'pickup_meus_hoje',
   ].includes(action)
+
   if (isPickupPaiAction) {
     const emailPai = await getPaiEmail(sb, token)
     if (!emailPai) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
     if (action === 'pickup_meus_filhos') {
+      // Returns distinct children registered for this parent
       const { data: sols } = await sb
         .from('solicitacoes').select('nome_crianca, serie')
         .ilike('email', emailPai).order('criado_em', { ascending: false })
@@ -758,6 +752,7 @@ Deno.serve(async (req) => {
       })
       return json({ data: filhos })
     }
+
     if (action === 'pickup_avisar') {
       const nome_crianca: string = (body.nome_crianca || '').trim()
       const serie: string        = (body.serie || '').trim()
@@ -765,7 +760,10 @@ Deno.serve(async (req) => {
       const lat_pai: number | null = body.lat_pai != null ? parseFloat(body.lat_pai) : null
       const lon_pai: number | null = body.lon_pai != null ? parseFloat(body.lon_pai) : null
       const eta_manual: number | null = body.eta_minutos ? parseInt(body.eta_minutos) : null
+
       if (!nome_crianca) return json({ error: 'Informe o nome da criança.' }, 400)
+
+      // Check no active notification for this child today
       const today = new Date().toISOString().split('T')[0]
       const { data: existing } = await sb
         .from('pickup_notificacoes').select('id, status')
@@ -773,18 +771,23 @@ Deno.serve(async (req) => {
         .gte('saiu_em', today + 'T00:00:00Z').in('status', ['a_caminho', 'chegou'])
         .maybeSingle()
       if (existing) return json({ error: 'Já existe um aviso ativo para essa criança hoje.' }, 400)
+
+      // Calculate ETA
       let eta_minutos: number | null = eta_manual
       let eta_modo = 'manual'
+
       if (lat_pai != null && lon_pai != null) {
         const gmaps = await calcEtaGoogleMaps(lat_pai, lon_pai)
         if (gmaps) {
           eta_minutos = gmaps.etaMinutos
           eta_modo    = gmaps.modo
         } else {
+          // Fallback: local calculation
           eta_minutos = calcEtaLocal(lat_pai, lon_pai)
           eta_modo    = 'calculo_local'
         }
       }
+
       const { data: novo, error: err } = await sb.from('pickup_notificacoes').insert({
         email_pai: emailPai, nome_resp, nome_crianca,
         serie: serie || null, lat_pai, lon_pai,
@@ -793,6 +796,7 @@ Deno.serve(async (req) => {
       if (err) return json({ error: err.message }, 400)
       return json({ ok: true, id: novo.id, eta_minutos: novo.eta_minutos, eta_modo: novo.eta_modo })
     }
+
     if (action === 'pickup_cancelar') {
       const { id } = body
       if (!id) return json({ error: 'ID do aviso não informado.' }, 400)
@@ -801,6 +805,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'pickup_meus_hoje') {
       const today = new Date().toISOString().split('T')[0]
       const { data } = await sb
@@ -811,37 +816,49 @@ Deno.serve(async (req) => {
       return json({ data: data ?? [] })
     }
   }
+
   // ━━ PICKUP: TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   const isPickupProfAction = [
     'pickup_fila_hoje', 'pickup_entregar', 'professora_update_series', 'series_list_pub',
   ].includes(action)
+
   if (isPickupProfAction) {
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
     if (action === 'series_list_pub') {
       const { data } = await sb.from('series').select('nome').order('nome')
       return json({ data: (data ?? []).map((s: { nome: string }) => s.nome) })
     }
+
     if (action === 'professora_update_series') {
       const series_monitoras: string[] = body.series_monitoras || []
       const { error } = await sb.from('professoras').update({ series_monitoras }).eq('id', prof.id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'pickup_fila_hoje') {
       const today = new Date().toISOString().split('T')[0]
+      // Get professora's monitored series
       const { data: profData } = await sb
         .from('professoras').select('series_monitoras').eq('id', prof.id).maybeSingle()
       const series: string[] = profData?.series_monitoras || []
+
       let query = sb
         .from('pickup_notificacoes').select('*')
         .gte('saiu_em', today + 'T00:00:00Z')
         .in('status', ['a_caminho', 'chegou'])
         .order('saiu_em', { ascending: true })
+
+      // Filter by series only if the teacher has configured them
       if (series.length > 0) query = query.in('serie', series)
+
       const { data } = await query
       return json({ data: data ?? [], series_monitoras: series })
     }
+
     if (action === 'pickup_entregar') {
       const { id } = body
       if (!id) return json({ error: 'ID do aviso não informado.' }, 400)
@@ -854,12 +871,17 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
   }
+
   // ━━ ALMOXARIFADO: PRICE SEARCH (public, no auth required) ━━━━━━
+
   if (action === 'alm_buscar_precos') {
-    const { nome } = body
+    const { nome, unidade } = body
     if (!nome) return json({ error: 'Nome do item não informado.' }, 400)
+
     const query = nome.trim()
     const encoded = encodeURIComponent(query)
+
+    // ── helper: word-overlap match % ────────────────────────
     function matchPct(qry: string, title: string): number {
       const norm = (s: string) =>
         s.toLowerCase()
@@ -870,12 +892,21 @@ Deno.serve(async (req) => {
       const tSet = new Set(norm(title))
       return Math.round((qWords.filter(w => tSet.has(w)).length / qWords.length) * 100)
     }
+
     type PriceResult = {
-      plataforma: string; nome: string; preco: number | null; preco_fmt: string;
-      url_produto: string; url_carrinho: string | null; item_id: string | null;
-      match: number; tipo: 'produto' | 'busca'
+      plataforma: string
+      nome: string
+      preco: number | null
+      preco_fmt: string
+      url_produto: string
+      url_carrinho: string | null   // pre-filled cart link where available
+      item_id: string | null        // platform product ID (ML: "MLB...", Shopee: shopid/itemid)
+      match: number
+      tipo: 'produto' | 'busca'
     }
     const results: PriceResult[] = []
+
+    // ── 1. Mercado Livre (free public API, real prices) ──────
     try {
       const mlRes = await fetch(
         `https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&limit=6&sort=price_asc`,
@@ -885,22 +916,40 @@ Deno.serve(async (req) => {
         const mlData = await mlRes.json()
         for (const item of (mlData.results ?? []).slice(0, 5)) {
           const m = matchPct(query, item.title ?? '')
-          const mlId = item.id ?? null
-          const urlCarrinho = mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null
+          const mlId = item.id ?? null   // e.g. "MLB2912484956"
+          // ML checkout URL: pre-fills item in cart/checkout flow
+          const urlCarrinho = mlId
+            ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1`
+            : null
           results.push({
-            plataforma: 'Mercado Livre', nome: item.title ?? '',
+            plataforma: 'Mercado Livre',
+            nome: item.title ?? '',
             preco: item.price ?? null,
-            preco_fmt: item.price != null ? `R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—',
+            preco_fmt: item.price != null
+              ? `R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              : '—',
             url_produto: item.permalink ?? `https://lista.mercadolivre.com.br/${encoded}`,
-            url_carrinho: urlCarrinho, item_id: mlId, match: m, tipo: 'produto',
+            url_carrinho: urlCarrinho,
+            item_id: mlId,
+            match: m,
+            tipo: 'produto',
           })
         }
       }
-    } catch (_) {}
+    } catch (_) { /* graceful skip */ }
+
+    // ── 2. Shopee Brasil (unofficial endpoint, real prices) ──
     try {
       const shopeeRes = await fetch(
         `https://shopee.com.br/api/v4/search/search_items?keyword=${encoded}&limit=5&newest=0&by=price&order=asc&page_type=search&scenario=PAGE_GLOBAL_SEARCH`,
-        { headers: { 'Accept': 'application/json', 'Referer': 'https://shopee.com.br/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'x-shopee-language': 'pt-BR' } }
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Referer': 'https://shopee.com.br/',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'x-shopee-language': 'pt-BR',
+          },
+        }
       )
       if (shopeeRes.ok) {
         const shopeeData = await shopeeRes.json()
@@ -911,29 +960,54 @@ Deno.serve(async (req) => {
           const itemid = it.itemid ?? it.item_id
           const rawPrice = it.price_min ?? it.price ?? null
           const preco = rawPrice != null ? rawPrice / 100000 : null
-          const urlProd = shopid && itemid ? `https://shopee.com.br/product/${shopid}/${itemid}` : `https://shopee.com.br/search?keyword=${encoded}`
+          const urlProd = shopid && itemid
+            ? `https://shopee.com.br/product/${shopid}/${itemid}`
+            : `https://shopee.com.br/search?keyword=${encoded}`
+          // Shopee has no public add-to-cart URL — product page is the entry point
           const m = matchPct(query, it.name ?? '')
           results.push({
-            plataforma: 'Shopee', nome: it.name ?? '', preco,
-            preco_fmt: preco != null ? `R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—',
-            url_produto: urlProd, url_carrinho: null,
-            item_id: shopid && itemid ? `${shopid}/${itemid}` : null, match: m, tipo: 'produto',
+            plataforma: 'Shopee',
+            nome: it.name ?? '',
+            preco,
+            preco_fmt: preco != null
+              ? `R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              : '—',
+            url_produto: urlProd,
+            url_carrinho: null,
+            item_id: shopid && itemid ? `${shopid}/${itemid}` : null,
+            match: m,
+            tipo: 'produto',
           })
         }
       }
-    } catch (_) {}
+    } catch (_) { /* graceful skip */ }
+
+    // ── 3. Amazon Brasil (no free API — search link only) ────
     results.push({
-      plataforma: 'Amazon', nome: `Buscar "${query}" na Amazon Brasil`,
-      preco: null, preco_fmt: 'Ver na Amazon',
+      plataforma: 'Amazon',
+      nome: `Buscar "${query}" na Amazon Brasil`,
+      preco: null,
+      preco_fmt: 'Ver na Amazon',
       url_produto: `https://www.amazon.com.br/s?k=${encoded}`,
-      url_carrinho: null, item_id: null, match: 0, tipo: 'busca',
+      url_carrinho: null,
+      item_id: null,
+      match: 0,
+      tipo: 'busca',
     })
-    const produtos = results.filter(r => r.tipo === 'produto' && r.preco != null).sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0))
+
+    // Sort: cheapest real products first, search links last
+    const produtos = results
+      .filter(r => r.tipo === 'produto' && r.preco != null)
+      .sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0))
     const semPreco = results.filter(r => r.tipo === 'produto' && r.preco == null)
     const links    = results.filter(r => r.tipo === 'busca')
+
     return json({ data: [...produtos, ...semPreco, ...links], query })
   }
+
   // ━━ ALMOXARIFADO: PURCHASE TRACKING (gerente only) ━━━━━━━━
+
+  // ── Gerente creates requisition on behalf of a teacher ──────
   if (action === 'alm_criar_req_gerente') {
     const gerente = await getGerente(sb, token)
     if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
@@ -941,61 +1015,88 @@ Deno.serve(async (req) => {
     if (!professora_id) return json({ error: 'professora_id obrigatório.' }, 400)
     if (!itens?.length)  return json({ error: 'Adicione pelo menos um item.' }, 400)
     const mes = new Date().toISOString().slice(0, 7)
-    const { data: profData } = await sb.from('professoras').select('alm_turma_id').eq('id', professora_id).maybeSingle()
+    const { data: profData } = await sb
+      .from('professoras').select('alm_turma_id').eq('id', professora_id).maybeSingle()
     const turma_id = (profData as any)?.alm_turma_id ?? null
-    const total = (itens as any[]).reduce((s: number, it: any) => s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
+    const total = (itens as any[]).reduce((s: number, it: any) =>
+      s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
     const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
-      professora_id, turma_id, mes, itens, total,
+      professora_id, turma_id, mes,
+      itens,
+      total,
       observacao: observacao || `Criada pela gerente ${gerente.nome}`,
     }).select('id').single()
     if (err) return json({ error: err.message }, 400)
     return json({ ok: true, id: nova.id })
   }
+
   const isAlmCompraAction = [
-    'alm_encaminhar_compra', 'alm_compras_pendentes', 'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
+    'alm_encaminhar_compra', 'alm_compras_pendentes',
+    'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
   ].includes(action)
+
   if (isAlmCompraAction) {
     const gerente = await getGerente(sb, token)
     if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
+    // Record items selected for purchase when approving a requisition
     if (action === 'alm_encaminhar_compra') {
+      // itens: [{insumo_nome, insumo_id, qty, plataforma, produto_nome, preco_unit,
+      //          match_pct, url_produto, url_carrinho}]
       const { requisicao_id, itens } = body
-      if (!requisicao_id || !itens?.length) return json({ error: 'requisicao_id e itens são obrigatórios.' }, 400)
+      if (!requisicao_id || !itens?.length)
+        return json({ error: 'requisicao_id e itens são obrigatórios.' }, 400)
       const rows = (itens as any[]).map((it: any) => ({
-        requisicao_id, insumo_nome: it.insumo_nome, insumo_id: it.insumo_id || null,
-        qty: it.qty || 1, plataforma: it.plataforma, produto_nome: it.produto_nome || null,
-        preco_unit: it.preco_unit ?? null,
-        preco_total: it.preco_unit != null ? it.preco_unit * (it.qty || 1) : null,
-        match_pct: it.match_pct ?? null, url_produto: it.url_produto || null,
-        url_carrinho: it.url_carrinho || null, encaminhado_por: gerente.nome,
+        requisicao_id,
+        insumo_nome:     it.insumo_nome,
+        insumo_id:       it.insumo_id   || null,
+        qty:             it.qty         || 1,
+        plataforma:      it.plataforma,
+        produto_nome:    it.produto_nome || null,
+        preco_unit:      it.preco_unit  ?? null,
+        preco_total:     it.preco_unit != null ? it.preco_unit * (it.qty || 1) : null,
+        match_pct:       it.match_pct   ?? null,
+        url_produto:     it.url_produto || null,
+        url_carrinho:    it.url_carrinho|| null,
+        encaminhado_por: gerente.nome,
       }))
       const { error } = await sb.from('alm_compras').insert(rows)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true, encaminhados: rows.length })
     }
+
     if (action === 'alm_compras_pendentes') {
-      const { data } = await sb.from('alm_compras')
+      const { data } = await sb
+        .from('alm_compras')
         .select('*, alm_requisicoes(mes, professoras(nome), alm_turmas(nome,cor))')
-        .eq('status', 'pendente').order('encaminhado_em', { ascending: false })
+        .eq('status', 'pendente')
+        .order('encaminhado_em', { ascending: false })
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_compras_todas') {
       const status: string = body.status || ''
       let q = sb.from('alm_compras')
         .select('*, alm_requisicoes(mes, professoras(nome), alm_turmas(nome,cor))')
-        .order('encaminhado_em', { ascending: false }).limit(200)
+        .order('encaminhado_em', { ascending: false })
+        .limit(200)
       if (status) q = q.eq('status', status)
       const { data } = await q
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_marcar_comprado') {
-      const { ids } = body
+      const { ids } = body   // array of alm_compras IDs
       if (!ids?.length) return json({ error: 'IDs não informados.' }, 400)
       const { error } = await sb.from('alm_compras').update({
-        status: 'comprado', comprado_em: new Date().toISOString(), comprado_por: gerente.nome,
+        status:      'comprado',
+        comprado_em:  new Date().toISOString(),
+        comprado_por: gerente.nome,
       }).in('id', ids)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'alm_cancelar_compra') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
@@ -1004,48 +1105,70 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
   }
+
   // ━━ ALMOXARIFADO: TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
+
   const isAlmProfAction = [
     'alm_catalogo', 'alm_minha_turma', 'alm_minhas_reqs',
     'alm_criar_req', 'alm_cancelar_req',
     'alm_notif_list', 'alm_notif_marcar_lida',
   ].includes(action)
+
   if (isAlmProfAction) {
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
     if (action === 'alm_catalogo') {
-      const { data } = await sb.from('alm_insumos').select('*').eq('ativo', true).order('categoria').order('nome')
+      const { data } = await sb
+        .from('alm_insumos').select('*')
+        .eq('ativo', true).order('categoria').order('nome')
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_minha_turma') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
-      const { data: profData } = await sb.from('professoras').select('alm_turma_id, alm_turmas(id, nome, cor)').eq('id', prof.id).maybeSingle()
+      const { data: profData } = await sb
+        .from('professoras').select('alm_turma_id, alm_turmas(id, nome, cor)')
+        .eq('id', prof.id).maybeSingle()
       const turma = (profData as any)?.alm_turmas ?? null
       if (!turma) return json({ turma: null, orcamento: null })
-      const { data: orc } = await sb.from('alm_orcamentos').select('valor').eq('turma_id', turma.id).eq('mes', mes).maybeSingle()
-      const { data: reqs } = await sb.from('alm_requisicoes').select('total').eq('turma_id', turma.id).eq('mes', mes).eq('status', 'aprovado')
+      const { data: orc } = await sb
+        .from('alm_orcamentos').select('valor')
+        .eq('turma_id', turma.id).eq('mes', mes).maybeSingle()
+      // Total spent (approved) this month for this turma
+      const { data: reqs } = await sb
+        .from('alm_requisicoes').select('total')
+        .eq('turma_id', turma.id).eq('mes', mes).eq('status', 'aprovado')
       const gasto = (reqs ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
       return json({ turma, orcamento: orc?.valor ?? 0, gasto })
     }
+
     if (action === 'alm_minhas_reqs') {
-      const { data } = await sb.from('alm_requisicoes').select('*, alm_turmas(nome)')
-        .eq('professora_id', prof.id).order('criado_em', { ascending: false })
+      const { data } = await sb
+        .from('alm_requisicoes').select('*, alm_turmas(nome)')
+        .eq('professora_id', prof.id)
+        .order('criado_em', { ascending: false })
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_criar_req') {
       const itens: any[] = body.itens || []
       const observacao: string = body.observacao || ''
       if (!itens.length) return json({ error: 'Adicione pelo menos um item.' }, 400)
       const mes = new Date().toISOString().slice(0, 7)
-      const { data: profData } = await sb.from('professoras').select('alm_turma_id').eq('id', prof.id).maybeSingle()
+      // Get teacher's turma
+      const { data: profData } = await sb
+        .from('professoras').select('alm_turma_id').eq('id', prof.id).maybeSingle()
       const turma_id = (profData as any)?.alm_turma_id ?? null
-      const total = itens.reduce((s: number, it: any) => s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
+      const total = itens.reduce((s: number, it: any) =>
+        s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
       const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
         professora_id: prof.id, turma_id, mes, itens, total, observacao,
       }).select('id').single()
       if (err) return json({ error: err.message }, 400)
       return json({ ok: true, id: nova.id })
     }
+
     if (action === 'alm_cancelar_req') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
@@ -1054,13 +1177,18 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'alm_notif_list') {
-      const { data } = await sb.from('alm_notificacoes').select('*, alm_requisicoes(mes, total, status)')
-        .eq('professora_id', prof.id).order('criado_em', { ascending: false }).limit(50)
+      const { data } = await sb
+        .from('alm_notificacoes').select('*, alm_requisicoes(mes, total, status)')
+        .eq('professora_id', prof.id)
+        .order('criado_em', { ascending: false })
+        .limit(50)
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_notif_marcar_lida') {
-      const { id } = body
+      const { id } = body  // if null, marks all
       let q = sb.from('alm_notificacoes').update({ lida: true }).eq('professora_id', prof.id)
       if (id) q = q.eq('id', id)
       const { error } = await q
@@ -1068,7 +1196,9 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
   }
+
   // ━━ ALMOXARIFADO: MANAGER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
+
   const isAlmGerenteAction = [
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
     'alm_aprovar', 'alm_rejeitar',
@@ -1077,154 +1207,213 @@ Deno.serve(async (req) => {
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
   ].includes(action)
+
   if (isAlmGerenteAction) {
     const gerente = await getGerente(sb, token)
     if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+
     if (action === 'alm_painel') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
-      const [{ count: pendentes }, { data: aprovadas }, { data: turmas }, { data: orcamentos }] = await Promise.all([
-        sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
-        sb.from('alm_requisicoes').select('total, turma_id').eq('mes', mes).eq('status', 'aprovado'),
-        sb.from('alm_turmas').select('id, nome, cor').eq('ativo', true),
-        sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
-      ])
+      const [{ count: pendentes }, { data: aprovadas }, { data: turmas }, { data: orcamentos }] =
+        await Promise.all([
+          sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
+          sb.from('alm_requisicoes').select('total, turma_id').eq('mes', mes).eq('status', 'aprovado'),
+          sb.from('alm_turmas').select('id, nome, cor').eq('ativo', true),
+          sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
+        ])
       const totalAprovado = (aprovadas ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
       const orcMap: Record<string, number> = {}
       for (const o of orcamentos ?? []) orcMap[o.turma_id] = o.valor
       const gastoMap: Record<string, number> = {}
       for (const r of aprovadas ?? []) gastoMap[r.turma_id] = (gastoMap[r.turma_id] ?? 0) + r.total
-      const turmasStats = (turmas ?? []).map((t: any) => ({ ...t, orcamento: orcMap[t.id] ?? 0, gasto: gastoMap[t.id] ?? 0 }))
+      const turmasStats = (turmas ?? []).map((t: any) => ({
+        ...t,
+        orcamento: orcMap[t.id] ?? 0,
+        gasto: gastoMap[t.id] ?? 0,
+      }))
       return json({ pendentes: pendentes ?? 0, totalAprovado, turmas: turmasStats, mes })
     }
+
     if (action === 'alm_pendentes') {
-      const { data } = await sb.from('alm_requisicoes')
+      const { data } = await sb
+        .from('alm_requisicoes')
         .select('*, professoras(nome, email), alm_turmas(nome, cor)')
         .eq('status', 'pendente').order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_todas_reqs') {
-      const mes: string = body.mes || ''; const status: string = body.status || ''
-      let q = sb.from('alm_requisicoes').select('*, professoras(nome, email), alm_turmas(nome, cor)')
+      const mes: string = body.mes || ''
+      const status: string = body.status || ''
+      let q = sb.from('alm_requisicoes')
+        .select('*, professoras(nome, email), alm_turmas(nome, cor)')
         .order('criado_em', { ascending: false })
-      if (mes) q = q.eq('mes', mes); if (status) q = q.eq('status', status)
+      if (mes)    q = q.eq('mes', mes)
+      if (status) q = q.eq('status', status)
       const { data } = await q.limit(200)
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_aprovar') {
       const { id, nota_gerente, itens_aprovados } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { data: req } = await sb.from('alm_requisicoes').select('*').eq('id', id).maybeSingle()
+      // itens_aprovados: optional override of qty_aprovado per item
+      const { data: req } = await sb.from('alm_requisicoes').select('*')
+        .eq('id', id).maybeSingle()
       if (!req) return json({ error: 'Requisição não encontrada.' }, 404)
       if (req.status !== 'pendente') return json({ error: 'Requisição já processada.' }, 400)
+      // Merge approved quantities into items
       const itens = (req.itens as any[]).map((it: any) => {
         const override = itens_aprovados?.find((x: any) => x.insumo_id === it.insumo_id)
         return { ...it, qty_aprovado: override?.qty_aprovado ?? it.qty_solicitado }
       })
-      const total = itens.reduce((s: number, it: any) => s + (parseFloat(it.qty_aprovado) * parseFloat(it.preco_unit || 0)), 0)
+      const total = itens.reduce((s: number, it: any) =>
+        s + (parseFloat(it.qty_aprovado) * parseFloat(it.preco_unit || 0)), 0)
       const { error: errUpdate } = await sb.from('alm_requisicoes').update({
-        status: 'aprovado', nota_gerente: nota_gerente || null, itens, total, aprovado_em: new Date().toISOString(),
+        status: 'aprovado', nota_gerente: nota_gerente || null,
+        itens, total, aprovado_em: new Date().toISOString(),
       }).eq('id', id)
       if (errUpdate) return json({ error: errUpdate.message }, 400)
+      // Deduct from stock
       for (const it of itens) {
         if (it.insumo_id && it.qty_aprovado > 0) {
-          const { data: ins } = await sb.from('alm_insumos').select('estoque_qty').eq('id', it.insumo_id).maybeSingle()
-          if (ins) await sb.from('alm_insumos').update({ estoque_qty: Math.max(0, (ins as any).estoque_qty - parseFloat(it.qty_aprovado)) }).eq('id', it.insumo_id)
+          const { data: ins } = await sb.from('alm_insumos')
+            .select('estoque_qty').eq('id', it.insumo_id).maybeSingle()
+          if (ins) {
+            await sb.from('alm_insumos').update({
+              estoque_qty: Math.max(0, (ins as any).estoque_qty - parseFloat(it.qty_aprovado))
+            }).eq('id', it.insumo_id)
+          }
         }
       }
+      // Notify the teacher
       await sb.from('alm_notificacoes').insert({
-        professora_id: req.professora_id, requisicao_id: id,
+        professora_id: req.professora_id,
+        requisicao_id: id,
         mensagem: `Sua requisição de ${new Date(req.criado_em).toLocaleDateString('pt-BR')} foi ✅ aprovada.${nota_gerente ? ' Nota: ' + nota_gerente : ''}`,
       })
       return json({ ok: true })
     }
+
     if (action === 'alm_rejeitar') {
       const { id, nota_gerente } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { data: req } = await sb.from('alm_requisicoes').select('professora_id, criado_em, status').eq('id', id).maybeSingle()
+      const { data: req } = await sb.from('alm_requisicoes').select('professora_id, criado_em, status')
+        .eq('id', id).maybeSingle()
       if (!req) return json({ error: 'Requisição não encontrada.' }, 404)
       if (req.status !== 'pendente') return json({ error: 'Requisição já processada.' }, 400)
       const { error } = await sb.from('alm_requisicoes').update({
-        status: 'rejeitado', nota_gerente: nota_gerente || null, rejeitado_em: new Date().toISOString(),
+        status: 'rejeitado', nota_gerente: nota_gerente || null,
+        rejeitado_em: new Date().toISOString(),
       }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
       await sb.from('alm_notificacoes').insert({
-        professora_id: req.professora_id, requisicao_id: id,
+        professora_id: req.professora_id,
+        requisicao_id: id,
         mensagem: `Sua requisição de ${new Date(req.criado_em).toLocaleDateString('pt-BR')} foi ❌ rejeitada.${nota_gerente ? ' Motivo: ' + nota_gerente : ''}`,
       })
       return json({ ok: true })
     }
+
     if (action === 'alm_insumos_list') {
       const { data } = await sb.from('alm_insumos').select('*').order('categoria').order('nome')
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_insumo_save') {
       const { id, nome, descricao, unidade, estoque_qty, preco, categoria } = body
       if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
       if (id) {
-        const { error } = await sb.from('alm_insumos').update({ nome, descricao, unidade, estoque_qty, preco, categoria }).eq('id', id)
+        const { error } = await sb.from('alm_insumos').update(
+          { nome, descricao, unidade, estoque_qty, preco, categoria }
+        ).eq('id', id)
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true })
       } else {
-        const { data: novo, error } = await sb.from('alm_insumos').insert({ nome, descricao, unidade: unidade || 'unidade', estoque_qty: estoque_qty || 0, preco: preco || 0, categoria }).select('id').single()
+        const { data: novo, error } = await sb.from('alm_insumos').insert(
+          { nome, descricao, unidade: unidade || 'unidade', estoque_qty: estoque_qty || 0, preco: preco || 0, categoria }
+        ).select('id').single()
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true, id: novo.id })
       }
     }
+
     if (action === 'alm_insumo_del') {
-      const { id } = body; if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
       const { error } = await sb.from('alm_insumos').update({ ativo: false }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'alm_turmas_list') {
-      const { data } = await sb.from('alm_turmas').select('*, professoras(id, nome, email)').eq('ativo', true).order('nome')
+      const { data } = await sb.from('alm_turmas').select('*, professoras(id, nome, email)')
+        .eq('ativo', true).order('nome')
       return json({ data: data ?? [] })
     }
+
     if (action === 'alm_turma_save') {
-      const { id, nome, cor } = body; if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
+      const { id, nome, cor } = body
+      if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
       if (id) {
         const { error } = await sb.from('alm_turmas').update({ nome, cor: cor || '#3B82F6' }).eq('id', id)
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true })
       } else {
-        const { data: nova, error } = await sb.from('alm_turmas').insert({ nome, cor: cor || '#3B82F6' }).select('id').single()
+        const { data: nova, error } = await sb.from('alm_turmas').insert(
+          { nome, cor: cor || '#3B82F6' }
+        ).select('id').single()
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true, id: nova.id })
       }
     }
+
     if (action === 'alm_turma_del') {
-      const { id } = body; if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
       const { error } = await sb.from('alm_turmas').update({ ativo: false }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'alm_orcamentos_list') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
       const { data: turmas } = await sb.from('alm_turmas').select('id, nome, cor').eq('ativo', true).order('nome')
       const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
-      const map: Record<string, number> = {}; for (const o of orcs ?? []) map[o.turma_id] = o.valor
+      const map: Record<string, number> = {}
+      for (const o of orcs ?? []) map[o.turma_id] = o.valor
       const result = (turmas ?? []).map((t: any) => ({ ...t, valor: map[t.id] ?? 0 }))
       return json({ data: result, mes })
     }
+
     if (action === 'alm_orcamento_set') {
       const { turma_id, mes, valor } = body
       if (!turma_id || !mes) return json({ error: 'turma_id e mes são obrigatórios.' }, 400)
-      const { error } = await sb.from('alm_orcamentos').upsert({ turma_id, mes, valor: parseFloat(valor) || 0 }, { onConflict: 'turma_id,mes' })
+      const { error } = await sb.from('alm_orcamentos').upsert(
+        { turma_id, mes, valor: parseFloat(valor) || 0 },
+        { onConflict: 'turma_id,mes' }
+      )
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+
     if (action === 'alm_relatorio') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
-      const { data: reqs } = await sb.from('alm_requisicoes')
-        .select('turma_id, total, status, itens, professoras(nome), alm_turmas(nome, cor)').eq('mes', mes)
+      const { data: reqs } = await sb
+        .from('alm_requisicoes')
+        .select('turma_id, total, status, itens, professoras(nome), alm_turmas(nome, cor)')
+        .eq('mes', mes)
       const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
-      const orcMap: Record<string, number> = {}; for (const o of orcs ?? []) orcMap[o.turma_id] = o.valor
+      const orcMap: Record<string, number> = {}
+      for (const o of orcs ?? []) orcMap[o.turma_id] = o.valor
+      // Group by turma
       const turmaMap: Record<string, any> = {}
       for (const r of reqs ?? []) {
         const tid = r.turma_id ?? 'sem_turma'
         if (!turmaMap[tid]) turmaMap[tid] = {
           turma: (r as any).alm_turmas ?? { nome: 'Sem turma', cor: '#aaa' },
-          orcamento: orcMap[tid] ?? 0, gasto: 0, pendente: 0, rejeitado: 0, requisicoes: [],
+          orcamento: orcMap[tid] ?? 0,
+          gasto: 0, pendente: 0, rejeitado: 0, requisicoes: [],
         }
         if (r.status === 'aprovado')  turmaMap[tid].gasto     += r.total
         if (r.status === 'pendente')  turmaMap[tid].pendente  += r.total
@@ -1233,13 +1422,16 @@ Deno.serve(async (req) => {
       }
       return json({ data: Object.values(turmaMap), mes })
     }
+
     if (action === 'alm_prof_set_turma') {
       const { professora_id, turma_id } = body
       if (!professora_id) return json({ error: 'professora_id obrigatório.' }, 400)
-      const { error } = await sb.from('professoras').update({ alm_turma_id: turma_id || null }).eq('id', professora_id)
+      const { error } = await sb.from('professoras')
+        .update({ alm_turma_id: turma_id || null }).eq('id', professora_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
   }
+
   return json({ error: 'Ação desconhecida' }, 400)
 })
