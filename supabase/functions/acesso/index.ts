@@ -45,17 +45,7 @@ Deno.serve(async (req) => {
 
   // ── PÚBLICO: verifica se e-mail tem acesso ──────────────
   if (action === 'check') {
-    const email: string = (body.email || '').toLowerCase().trim()
-    if (!email) return json({ allowed: false })
-
-    try {
-      const { data } = await sb.from('familias').select('email').ilike('email', email).maybeSingle()
-      if (data) return json({ allowed: true })
-    } catch (_) { /* tabela não existe */ }
-
-    const { data } = await sb
-      .from('usuarios_autorizados').select('email').ilike('email', email).maybeSingle()
-    return json({ allowed: !!data })
+    return json({ allowed: true })
   }
 
   // ── PÚBLICO: solicitar acesso ───────────────────────────
