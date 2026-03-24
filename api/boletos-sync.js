@@ -25,7 +25,8 @@ module.exports = async (req, res) => {
   // Delega para Edge Function Supabase (Deno — mTLS nativo) passando CPF direto
   const upstream = await fetch(`${SUPABASE_URL}/functions/v1/boletos-list`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: SERVICE_KEY },
+    headers: { 'Content-Type': 'application/json', apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+
     body: JSON.stringify({ cpf }),
   })
 
