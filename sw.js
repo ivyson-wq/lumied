@@ -1,5 +1,5 @@
 // Maple Bear RS — Service Worker
-const CACHE = 'maple-bear-v1';
+const CACHE = 'maple-bear-v2';
 const OFFLINE_ASSETS = [
   '/',
   '/index.html',

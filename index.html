@@ -1473,6 +1473,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
   async function loadPickupCard() {
     if (!currentUser) return;
+    document.getElementById('pickupCard').style.display = 'block';
     const loading = document.getElementById('pickupLoading');
     const errEl   = document.getElementById('pickupErr');
     const filhos  = document.getElementById('pickupFilhos');
