@@ -405,6 +405,32 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 <!-- FORMULÁRIO -->
 <div class="form-wrap" id="formWrap">
 
+  <!-- ESTOU A CAMINHO -->
+  <div class="card" id="pickupCard" style="display:none;">
+    <div class="card-title" style="margin-bottom:12px;">
+      🚗 Estou a Caminho
+      <button onclick="loadPickupCard()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Avise a escola quando você estiver a caminho para buscar seu filho. A professora será notificada e preparará a criança.</p>
+    <div id="pickupFilhos" style="display:none;">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Selecione a criança</div>
+      <div id="pickupFilhosList"></div>
+    </div>
+    <div id="pickupAviso" style="display:none;">
+      <div style="background:#f0f9f0;border:1px solid #b6deb6;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:600;color:#2d7a2d;margin-bottom:4px;">✅ Aviso enviado!</div>
+        <div id="pickupAvisoInfo" style="font-size:13px;color:#2d7a2d;"></div>
+      </div>
+      <button onclick="cancelarAviso()" class="btn-submit" style="background:#e53e3e;font-size:13px;padding:8px 16px;width:auto;">Cancelar aviso</button>
+    </div>
+    <div id="pickupLoading" style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>
+    <div id="pickupErr" class="f-alert" style="display:none;margin-top:8px;"></div>
+    <div id="pickupHistorico" style="margin-top:16px;display:none;">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Avisos de hoje</div>
+      <div id="pickupHistoricoList"></div>
+    </div>
+  </div>
+
   <!-- AGENDA PERMANENTE -->
   <div class="card" id="agendaCard" style="display:none;">
     <div class="card-title" style="margin-bottom:12px;">
@@ -621,7 +647,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   const SEND     = SUPABASE_URL + '/functions/v1/send-email';
   const CALENDAR = SUPABASE_URL + '/functions/v1/calendar';
   const ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
-  const BOLETOS_SYNC = '/api/boletos-sync';
+  const DIPLOMAS = SUPABASE_URL + '/functions/v1/diplomas';
 
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -629,32 +655,29 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
   let resendCooldown = null;
 
-  // ── AUTH (reescrito — login direto sem checkAccess) ──
+  // ── AUTH ──────────────────────────────────────────────
   async function initAuth() {
-    // 1. Verifica sessão existente ao carregar a página
-    const { data: { session }, error } = await sb.auth.getSession();
-    console.log('initAuth — session:', session?.user?.email, 'error:', error);
+    const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
-      currentUser = session.user;
-      showForm(session.user);
+      currentUser = session.user; showForm(session.user);
     } else {
       showLoginWall();
     }
 
-    // 2. Escuta mudanças de auth (magic link callback, Google OAuth, logout)
-    sb.auth.onAuthStateChange((event, session) => {
-      console.log('Auth event:', event, session?.user?.email);
-      if (event === 'SIGNED_IN' && session?.user) {
-        currentUser = session.user;
-        showForm(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        currentUser = null;
+    sb.auth.onAuthStateChange(async (_e, session) => {
+      if (session?.user) {
+        if (currentUser && currentUser.email === session.user.email) return;
+        currentUser = session.user; showForm(session.user);
+      } else {
         showLoginWall();
       }
     });
   }
 
-  function showAccessDenied() {
+  let deniedEmail = '';
+
+  function showAccessDenied(email) {
+    if (email) deniedEmail = email;
     document.getElementById('emailState').style.display = 'none';
     document.getElementById('sentState').style.display = 'none';
     document.getElementById('solicitarState').style.display = 'none';
@@ -663,9 +686,10 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   }
 
   function showSolicitarForm() {
-    // pré-preenche e-mail se o usuário já tinha digitado
+    // pré-preenche e-mail se o usuário já tinha digitado ou veio do Google
     const emailDigitado = document.getElementById('mlEmail').value.trim()
-      || document.getElementById('sentEmailBadge').textContent.trim();
+      || document.getElementById('sentEmailBadge').textContent.trim()
+      || deniedEmail;
     if (emailDigitado && emailDigitado !== '—') {
       document.getElementById('solEmail').value = emailDigitado;
     }
@@ -723,12 +747,18 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
-    const r = await fetch(ACESSO, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-      body: JSON.stringify({ action: 'solicitar', nome, cpf, email, telefone, nome_crianca: nomeCrianca }),
-    });
-    const d = await r.json();
+    let d;
+    try {
+      const r = await fetch(ACESSO, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({ action: 'solicitar', nome, cpf, email, telefone, nome_crianca: nomeCrianca }),
+      });
+      d = await r.json();
+      if (!r.ok && !d.error) d.error = d.message || `Erro ${r.status}`;
+    } catch (e) {
+      d = { error: 'Falha de conexão. Tente novamente.' };
+    }
 
     btn.disabled = false;
     btn.innerHTML = 'Enviar Solicitação';
@@ -752,10 +782,12 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
     const btn = document.getElementById('btnMagic');
     btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Verificando…';
+
+
     btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
     const redirectTo = window.location.origin + window.location.pathname;
-    console.log('Magic link redirectTo:', redirectTo);
 
     const { error } = await sb.auth.signInWithOtp({
       email,
@@ -812,11 +844,9 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   async function loginGoogle() {
     document.getElementById('btnGoogle').disabled = true;
     document.getElementById('btnGoogle').innerHTML = '<span class="spinner dark"></span> Redirecionando…';
-    const redirectTo = window.location.origin + window.location.pathname;
-    console.log('Google OAuth redirectTo:', redirectTo);
     await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo }
+      options: { redirectTo: window.location.origin + window.location.pathname }
     });
   }
 
@@ -831,7 +861,8 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     document.getElementById('userBar').style.display = 'none';
     document.getElementById('formWrap').style.display = 'none';
     document.getElementById('successPanel').style.display = 'none';
-    document.getElementById('agendaCard').style.display = 'none';
+    document.getElementById('pickupCard').style.display  = 'none';
+    document.getElementById('agendaCard').style.display  = 'none';
     document.getElementById('boletosCard').style.display = 'none';
     document.getElementById('reuniaoCard').style.display = 'none';
     document.getElementById('emailState').style.display = 'block';
@@ -870,10 +901,12 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       document.getElementById('nomeResp').nextElementSibling.style.display = 'none';
     }
 
-    document.getElementById('loginWall').style.display  = 'none';
-    document.getElementById('formWrap').style.display   = 'block';
-    document.getElementById('agendaCard').style.display = 'block';
+    document.getElementById('loginWall').style.display   = 'none';
+    document.getElementById('formWrap').style.display    = 'block';
+    document.getElementById('pickupCard').style.display  = 'block';
+    document.getElementById('agendaCard').style.display  = 'block';
     document.getElementById('boletosCard').style.display = 'block';
+    loadPickupCard();
     carregarAgenda();
     carregarBoletos();
     carregarReunioesUI();
@@ -1392,6 +1425,182 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     await carregarAgenda();
   }
 
+  // ── PICKUP (ESTOU A CAMINHO) ───────────────────────────
+  let pickupAtivoId = null;
+  let pickupPollTimer = null;
+
+  async function callDiplomas(body) {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || SUPABASE_ANON;
+    const r = await fetch(DIPLOMAS, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  async function loadPickupCard() {
+    if (!currentUser) return;
+    document.getElementById('pickupCard').style.display = 'block';
+    const loading = document.getElementById('pickupLoading');
+    const errEl   = document.getElementById('pickupErr');
+    const filhos  = document.getElementById('pickupFilhos');
+    const aviso   = document.getElementById('pickupAviso');
+    errEl.style.display = 'none';
+    loading.style.display = 'block';
+    filhos.style.display  = 'none';
+    aviso.style.display   = 'none';
+
+    try {
+      // Verifica se há aviso ativo hoje
+      const hist = await callDiplomas({ action: 'pickup_meus_hoje' });
+      const ativos = (hist.data || []).filter(n => n.status === 'a_caminho');
+      if (ativos.length > 0) {
+        pickupAtivoId = ativos[0].id;
+        showPickupAtivo(ativos[0]);
+        renderPickupHistorico(hist.data);
+        loading.style.display = 'none';
+        startPickupPoll();
+        return;
+      }
+      pickupAtivoId = null;
+      stopPickupPoll();
+
+      // Carrega lista de filhos
+      const res = await callDiplomas({ action: 'pickup_meus_filhos' });
+      loading.style.display = 'none';
+      if (res.error) { errEl.textContent = res.error; errEl.style.display = 'block'; return; }
+      const criancas = res.data || res.criancas || [];
+      if (criancas.length === 0) {
+        errEl.textContent = 'Nenhuma criança cadastrada para seu e-mail.';
+        errEl.style.display = 'block';
+        return;
+      }
+      renderPickupFilhos(criancas);
+      filhos.style.display = 'block';
+      renderPickupHistorico(hist.data || []);
+    } catch(e) {
+      loading.style.display = 'none';
+      errEl.textContent = 'Erro ao carregar. Tente novamente.';
+      errEl.style.display = 'block';
+    }
+  }
+
+  function renderPickupFilhos(criancas) {
+    const list = document.getElementById('pickupFilhosList');
+    list.innerHTML = criancas.map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:#fafafa;">
+        <div>
+          <div style="font-weight:600;font-size:14px;">${c.nome_crianca}</div>
+          <div style="font-size:12px;color:var(--muted);">${c.serie || 'Turma não informada'}</div>
+        </div>
+        <button onclick="avisarChegada('${escHtml(c.nome_crianca)}','${escHtml(c.serie||'')}')"
+          style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          🚗 Estou a caminho
+        </button>
+      </div>
+    `).join('');
+  }
+
+  function escHtml(s) { return s.replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
+
+  async function avisarChegada(nomeCrianca, serie) {
+    const errEl = document.getElementById('pickupErr');
+    errEl.style.display = 'none';
+    document.getElementById('pickupFilhos').style.display = 'none';
+    document.getElementById('pickupLoading').style.display = 'block';
+
+    let lat = null, lon = null;
+    try {
+      const pos = await new Promise((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 60000 })
+      );
+      lat = pos.coords.latitude;
+      lon = pos.coords.longitude;
+    } catch(_) { /* fallback: servidor usará modo manual */ }
+
+    const body = { action: 'pickup_avisar', nome_crianca: nomeCrianca, serie };
+    if (lat !== null) { body.lat_pai = lat; body.lon_pai = lon; }
+
+    const res = await callDiplomas(body);
+    document.getElementById('pickupLoading').style.display = 'none';
+
+    if (res.error) {
+      errEl.textContent = res.error;
+      errEl.style.display = 'block';
+      document.getElementById('pickupFilhos').style.display = 'block';
+      return;
+    }
+    pickupAtivoId = res.id;
+    showPickupAtivo({ ...res, nome_crianca: nomeCrianca });
+    loadPickupCard();
+  }
+
+  function showPickupAtivo(n) {
+    const aviso = document.getElementById('pickupAviso');
+    const info  = document.getElementById('pickupAvisoInfo');
+    let txt = `Aviso enviado para <strong>${n.nome_crianca}</strong>.`;
+    if (n.eta_minutos) {
+      const modo = n.eta_modo === 'google_maps' ? '📍 Google Maps' : n.eta_modo === 'calculo_local' ? '📐 Estimativa' : '⏱ Manual';
+      txt += ` ETA: <strong>${n.eta_minutos} min</strong> (${modo})`;
+    } else {
+      txt += ' Tempo estimado não disponível.';
+    }
+    info.innerHTML = txt;
+    aviso.style.display = 'block';
+    document.getElementById('pickupFilhos').style.display = 'none';
+  }
+
+  async function cancelarAviso() {
+    if (!pickupAtivoId) return;
+    const errEl = document.getElementById('pickupErr');
+    errEl.style.display = 'none';
+    const res = await callDiplomas({ action: 'pickup_cancelar', id: pickupAtivoId });
+    if (res.error) { errEl.textContent = res.error; errEl.style.display = 'block'; return; }
+    pickupAtivoId = null;
+    stopPickupPoll();
+    loadPickupCard();
+  }
+
+  function renderPickupHistorico(lista) {
+    const wrap = document.getElementById('pickupHistorico');
+    const list = document.getElementById('pickupHistoricoList');
+    if (!lista || lista.length === 0) { wrap.style.display = 'none'; return; }
+    const statusLabel = { a_caminho:'🚗 A caminho', chegou:'🏫 Chegou', entregue:'✅ Entregue', cancelado:'❌ Cancelado' };
+    list.innerHTML = lista.map(n => {
+      const eta = n.eta_minutos ? `${n.eta_minutos} min` : '—';
+      const hora = new Date(n.saiu_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:8px;background:#f7f7f7;margin-bottom:6px;font-size:13px;">
+        <div><strong>${n.nome_crianca}</strong> · <span style="color:var(--muted);">${hora}</span></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="color:var(--muted);">ETA ${eta}</span>
+          <span>${statusLabel[n.status]||n.status}</span>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.style.display = 'block';
+  }
+
+  function startPickupPoll() {
+    stopPickupPoll();
+    pickupPollTimer = setInterval(async () => {
+      if (!pickupAtivoId) { stopPickupPoll(); return; }
+      const hist = await callDiplomas({ action: 'pickup_meus_hoje' });
+      const ativos = (hist.data || []).filter(n => n.status === 'a_caminho');
+      if (ativos.length === 0) { pickupAtivoId = null; stopPickupPoll(); loadPickupCard(); }
+      else renderPickupHistorico(hist.data || []);
+    }, 15000);
+  }
+
+  function stopPickupPoll() {
+    if (pickupPollTimer) { clearInterval(pickupPollTimer); pickupPollTimer = null; }
+  }
+
   // ── REUNIÕES ──────────────────────────────────────────
   let gestoras = [];
   let gestoraAtual = null;
@@ -1415,116 +1624,20 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const el = document.getElementById('boletosConteudo');
     el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
 
-    // Tenta descobrir o CPF do responsável:
-    // 1. localStorage (se já informou antes)
-    // 2. tabela familias (CPF vinculado ao e-mail)
-    let cpf = localStorage.getItem('mb_cpf_boletos');
+    const res = await fetch(SUPABASE_URL + '/functions/v1/boletos-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+      body: JSON.stringify({ email: currentUser.email }),
+    });
+    const json = await res.json();
+    const boletos = json.boletos;
 
-    if (!cpf) {
-      try {
-        const { data: familia } = await sb
-          .from('familias')
-          .select('cpf')
-          .ilike('email', currentUser.email)
-          .maybeSingle();
-        if (familia?.cpf) {
-          cpf = familia.cpf.replace(/\D/g, '');
-          localStorage.setItem('mb_cpf_boletos', cpf);
-        }
-      } catch (_) {}
-    }
-
-    // Se não encontrou, pede ao usuário
-    if (!cpf) {
-      el.innerHTML = `
-        <div style="text-align:center;padding:20px;">
-          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Para visualizar seus boletos, informe seu CPF:</p>
-          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-            <input type="text" id="boletoCpfInput" placeholder="000.000.000-00" maxlength="14"
-              oninput="let v=this.value.replace(/\\D/g,'').slice(0,11);v=v.replace(/^(\\d{3})(\\d)/,'$1.$2');v=v.replace(/^(\\d{3})\\.(\\d{3})(\\d)/,'$1.$2.$3');v=v.replace(/\\.(\\d{3})(\\d)/,'.$1-$2');this.value=v;"
-              style="padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;width:180px;text-align:center;">
-            <button onclick="buscarBoletosPorCpf()" style="padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Buscar</button>
-          </div>
-          <p style="font-size:11px;color:var(--muted);margin-top:10px;">O CPF será salvo para consultas futuras.</p>
-        </div>`;
-      return;
-    }
-
-    await renderBoletos(cpf);
-  }
-
-  async function buscarBoletosPorCpf() {
-    const input = document.getElementById('boletoCpfInput');
-    const cpf = input.value.replace(/\D/g, '');
-    if (cpf.length !== 11) { alert('Informe um CPF válido com 11 dígitos.'); return; }
-    localStorage.setItem('mb_cpf_boletos', cpf);
-    await renderBoletos(cpf);
-  }
-
-  async function renderBoletos(cpf) {
-    const el = document.getElementById('boletosConteudo');
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span> Sincronizando com o banco Inter…</div>';
-
-    const cpfLimpo = cpf.replace(/\D/g, '');
-    const cpfFmt = cpfLimpo.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
-
-    // 1. Sincroniza boletos da API do Inter para o banco
-    try {
-      const syncRes = await fetch(BOLETOS_SYNC, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cpf: cpfLimpo })
-      });
-      const syncData = await syncRes.json();
-      console.log('Sync boletos:', syncData);
-    } catch (e) {
-      console.error('Sync Inter falhou (continuando com dados locais):', e);
-    }
-
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span> Carregando boletos…</div>';
-
-    // 2. Busca boletos do banco (o webhook salva formatado: 123.456.789-00)
-    let { data: boletos, error } = await sb
-      .from('boletos')
-      .select('*')
-      .eq('cpf', cpfFmt)
-      .order('vencimento', { ascending: false });
-
-    // Fallback: tenta sem formatação
-    if ((!boletos || boletos.length === 0)) {
-      const r2 = await sb
-        .from('boletos')
-        .select('*')
-        .eq('cpf', cpfLimpo)
-        .order('vencimento', { ascending: false });
-      boletos = r2.data;
-      error = r2.error;
-    }
-
-    // Fallback: ilike
     if (!boletos || boletos.length === 0) {
-      const r3 = await sb
-        .from('boletos')
-        .select('*')
-        .ilike('cpf', `%${cpfLimpo.slice(0,3)}%${cpfLimpo.slice(3,6)}%${cpfLimpo.slice(6,9)}%${cpfLimpo.slice(9)}%`)
-        .order('vencimento', { ascending: false });
-      boletos = r3.data;
-      error = r3.error;
-    }
-
-    if (error || !boletos || boletos.length === 0) {
-      el.innerHTML = `<div style="text-align:center;padding:20px;">
-        <p style="color:var(--muted);font-size:13px;margin-bottom:10px;">Nenhum boleto encontrado para o CPF informado.</p>
-        <button onclick="localStorage.removeItem('mb_cpf_boletos');carregarBoletos()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;color:var(--muted);">Tentar outro CPF</button>
-      </div>`;
+      el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Nenhum boleto disponível.</p>';
       return;
     }
 
-    const cpfDisplay = cpfFmt;
-    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);">
-      <span style="font-size:12px;color:var(--muted);">CPF: <strong>${cpfDisplay}</strong> · ${boletos.length} boleto(s)</span>
-      <button onclick="localStorage.removeItem('mb_cpf_boletos');carregarBoletos()" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline;">Alterar CPF</button>
-    </div>` + boletos.map(b => {
+    el.innerHTML = boletos.map(b => {
       const venc = b.vencimento.split('-').reverse().join('/');
       const valor = Number(b.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
       const hoje = new Date(); hoje.setHours(0,0,0,0);

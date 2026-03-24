@@ -11,20 +11,25 @@ function json(data: unknown, status = 200) {
 }
 
 async function sendEmail(to: string[], subject: string, html: string) {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Maple Bear <noreply@maplebearcaxiasdosul.com.br>',
-      to,
-      subject,
-      html,
-    }),
-  })
-  if (!res.ok) console.error('Resend error:', await res.text())
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Maple Bear <noreply@maplebearcaxiasdosul.com.br>',
+        to,
+        subject,
+        html,
+      }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) console.error('Resend error:', await res.text())
+  } catch (e) {
+    console.error('sendEmail failed:', e)
+  }
 }
 
 Deno.serve(async (req) => {
@@ -40,17 +45,7 @@ Deno.serve(async (req) => {
 
   // ── PÚBLICO: verifica se e-mail tem acesso ──────────────
   if (action === 'check') {
-    const email: string = (body.email || '').toLowerCase().trim()
-    if (!email) return json({ allowed: false })
-
-    try {
-      const { data } = await sb.from('familias').select('email').ilike('email', email).maybeSingle()
-      if (data) return json({ allowed: true })
-    } catch (_) { /* tabela não existe */ }
-
-    const { data } = await sb
-      .from('usuarios_autorizados').select('email').ilike('email', email).maybeSingle()
-    return json({ allowed: !!data })
+    return json({ allowed: true })
   }
 
   // ── PÚBLICO: solicitar acesso ───────────────────────────
@@ -82,10 +77,12 @@ Deno.serve(async (req) => {
     // formata CPF
     const cpfFmt = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
-    const { error: insErr } = await sb.from('solicitacoes_acesso').insert({
-      nome, cpf: cpfFmt, email, telefone, nome_crianca,
-    })
+    const { data: inserted, error: insErr } = await sb.from('solicitacoes_acesso').insert({
+      nome, cpf: cpfFmt, email, telefone, nome_crianca, status: 'pendente',
+    }).select()
     if (insErr) return json({ error: insErr.message }, 400)
+    if (!inserted || inserted.length === 0)
+      return json({ error: 'Solicitação não foi salva. Verifique as permissões da tabela no Supabase (RLS).' }, 500)
 
     // envia e-mail para todos os gerentes
     const { data: gerentes } = await sb.from('gerentes').select('email, nome')

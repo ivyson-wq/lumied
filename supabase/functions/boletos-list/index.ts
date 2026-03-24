@@ -1,180 +1,215 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const INTER_BASE = 'https://cdpj.partners.bancointer.com.br'
+async function interFetch(
+  path: string,
+  init: { method?: string; headers?: Record<string, string>; body?: string | URLSearchParams } = {}
+): Promise<{ ok: boolean; status: number; text(): Promise<string>; json(): Promise<unknown> }> {
+  const relayUrl = Deno.env.get('INTER_RELAY_URL')!
+  const relaySecret = Deno.env.get('RELAY_SECRET')!
+  const bodyStr = init.body instanceof URLSearchParams
+    ? init.body.toString()
+    : (init.body ?? '')
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Content-Type': 'application/json',
-}
+  const fullUrl = `${relayUrl}/inter-proxy`
+  console.log('interFetch ->', init.method ?? 'GET', path, '| relay:', fullUrl)
+  const res = await fetch(fullUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${relaySecret}` },
+    body: JSON.stringify({ path, method: init.method ?? 'GET', headers: init.headers ?? {}, body: bodyStr }),
+  })
 
-function interHttpClient(): any {
-  try {
-    const cert = Deno.env.get('INTER_CERT')
-    const key = Deno.env.get('INTER_KEY')
-    if (cert && key) {
-      return Deno.createHttpClient({ certChain: cert, privateKey: key })
-    }
-  } catch (e) {
-    console.warn('mTLS client não disponível, usando fetch padrão:', e)
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Relay retornou ${res.status}: ${text.slice(0, 200)}`)
   }
-  return undefined
-}
-
-async function interFetch(url: string, opts: any = {}): Promise<Response> {
-  const client = interHttpClient()
-  if (client) opts.client = client
-  console.log(`interFetch -> ${opts.method || 'GET'} ${url.replace(INTER_BASE, '')} | relay: ${Deno.env.get('INTER_RELAY_URL') || 'none'}`)
-  return fetch(url, opts)
+  const { status, body } = await res.json() as { status: number; body: string }
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: () => Promise.resolve(body),
+    json: () => Promise.resolve(JSON.parse(body)),
+  }
 }
 
 async function getInterToken(): Promise<string> {
-  const scopes = [
-    'cobranca.boleto.read cobranca.boleto.pdf',
-    'boleto-cobranca.read boleto-cobranca.write',
-    'cobranca.read',
-    'boleto-cobranca.read',
-  ]
+  const body = new URLSearchParams({
+    client_id: Deno.env.get('INTER_CLIENT_ID')!,
+    client_secret: Deno.env.get('INTER_CLIENT_SECRET')!,
+    scope: 'boleto-cobranca.read',
+    grant_type: 'client_credentials',
+  })
 
-  const clientId = Deno.env.get('INTER_CLIENT_ID')!
-  const clientSecret = Deno.env.get('INTER_CLIENT_SECRET')!
+  const res = await interFetch('/oauth/v2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
 
-  for (const scope of scopes) {
-    const res = await interFetch(`${INTER_BASE}/oauth/v2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: 'client_credentials' }),
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      return data.access_token
-    }
-    await res.text() // consume body
-  }
-
-  throw new Error('Nenhum scope aceito pelo Inter.')
+  const text = await res.text()
+  console.log('Inter OAuth status:', res.status, '| body:', text.slice(0, 200))
+  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${text}`)
+  return (JSON.parse(text) as { access_token: string }).access_token
 }
 
-/** Extract the billing ID used for the PDF endpoint.
- *  Inter API v3 uses `codigoSolicitacao` as the primary identifier. */
-function getBoletoId(bol: any): string | undefined {
-  return bol.codigoSolicitacao || bol.nossoNumero || bol.codigoBarras || undefined
+async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> {
+  const hoje = new Date()
+  const dataFinal = hoje.toISOString().slice(0, 10)
+  const dataInicial = new Date(hoje.setFullYear(hoje.getFullYear() - 1))
+    .toISOString()
+    .slice(0, 10)
+
+  const params = new URLSearchParams({
+    dataInicial,
+    dataFinal,
+    filtrarPor: 'VENCIMENTO',
+    cpfCnpjPagador: cpf,
+    itensPorPagina: '50',
+    paginaAtual: '0',
+  })
+
+  const res = await interFetch(`/cobranca/v3/cobrancas?${params}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
+    },
+  })
+
+  const text = await res.text()
+  if (!res.ok) throw new Error(`Inter listagem falhou: ${res.status} | ${text}`)
+
+  const data = JSON.parse(text) as { content?: any[]; cobrancas?: any[] }
+  return data.content ?? data.cobrancas ?? []
+}
+
+async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<Uint8Array | null> {
+  try {
+    const res = await interFetch(`/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
+      },
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { pdf: string }
+    const binary = atob(data.pdf)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    return bytes
+  } catch {
+    return null
+  }
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: CORS })
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
+  if (req.method !== 'POST') return new Response('Método não permitido', { status: 405 })
 
   try {
     const body = await req.json()
-    const cpf = (body.cpf || '').replace(/\D/g, '')
+    const email: string | undefined = body.email
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
 
-    if (!cpf || cpf.length !== 11) {
-      return new Response(JSON.stringify({ error: 'CPF inválido.' }), { status: 400, headers: CORS })
+    // Aceita CPF direto no payload ou busca pelo e-mail em solicitacoes_acesso
+    let cpfRaw: string | undefined
+
+    if (body.cpf) {
+      cpfRaw = String(body.cpf).replace(/\D/g, '')
+    } else if (email) {
+      const { data: sol } = await supabase
+        .from('solicitacoes_acesso')
+        .select('cpf')
+        .ilike('email', email)
+        .maybeSingle()
+      if (sol?.cpf) cpfRaw = sol.cpf.replace(/\D/g, '')
     }
 
-    console.log('boletos-list: buscando para CPF:', cpf)
-
-    const token = await getInterToken()
-
-    // Busca boletos dos últimos 12 meses
-    const hoje = new Date()
-    const inicio = new Date(hoje)
-    inicio.setMonth(inicio.getMonth() - 12)
-    const dataInicial = inicio.toISOString().split('T')[0]
-    const dataFinal = hoje.toISOString().split('T')[0]
-
-    const url = `${INTER_BASE}/cobranca/v3/cobrancas?cpfCnpj=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&itensPorPagina=100`
-    const boletosRes = await interFetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (!boletosRes.ok) {
-      const errText = await boletosRes.text()
-      console.error('Inter API error:', boletosRes.status, errText)
-      if (boletosRes.status === 404) {
-        return new Response(JSON.stringify({ ok: true, boletos: [] }), { headers: CORS })
-      }
-      return new Response(JSON.stringify({ error: 'Consulta Inter falhou: ' + boletosRes.status }), { status: 502, headers: CORS })
+    if (!cpfRaw || cpfRaw.length !== 11) {
+      return new Response(JSON.stringify({ boletos: [] }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
-    const resData = await boletosRes.json()
-    const cobrancas = resData.cobrancas ?? resData.content ?? resData ?? []
-    const lista = Array.isArray(cobrancas) ? cobrancas : []
-    console.log(`Inter retornou ${lista.length} boleto(s)`)
+    const cpfFormatado = cpfRaw.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
-    // Sincroniza com Supabase e monta lista de retorno
-    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const cpfFmt = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
-    const boletos: any[] = []
+    // Sincroniza com Inter e salva novos boletos no Supabase
+    try {
+      const token = await getInterToken()
+      const cobrancas = await listarCobrancasInter(token, cpfRaw)
 
-    for (const bol of lista) {
-      const boletoId = getBoletoId(bol)
-      if (!boletoId) {
-        console.warn('Boleto sem ID válido, pulando:', JSON.stringify(bol).slice(0, 200))
-        continue
-      }
+      if (cobrancas.length > 0) console.log('Estrutura cobranca[0]:', JSON.stringify(cobrancas[0]))
 
-      const nossoNumero = bol.nossoNumero || boletoId
-      const situacao = bol.situacao || 'EMITIDO'
+      for (const c of cobrancas) {
+        const nossoNumero: string = c.nossoNumero
+        const codigoSolicitacao: string = c.codigoSolicitacao
+        const situacao: string = c.situacao ?? 'EMITIDO'
+        const valor: number = c.valorNominal ?? c.valor
+        const vencimento: string = c.dataVencimento
+        const linhaDigitavel: string = c.linhaDigitavel ?? ''
 
-      // Verifica se já existe
-      const { data: existe } = await sb.from('boletos').select('id, situacao, pdf_url').eq('nosso_numero', nossoNumero).maybeSingle()
+        const { data: existing } = await supabase
+          .from('boletos')
+          .select('id, pdf_url, situacao')
+          .eq('nosso_numero', nossoNumero)
+          .maybeSingle()
 
-      if (existe) {
-        if (existe.situacao !== situacao) {
-          await sb.from('boletos').update({ situacao }).eq('id', existe.id)
-        }
-        boletos.push({ ...bol, pdf_url: existe.pdf_url, situacao })
-        continue
-      }
+        let pdfUrl = existing?.pdf_url ?? null
 
-      // Tenta baixar PDF usando o ID correto
-      let pdfUrl: string | null = null
-      try {
-        const pdfRes = await interFetch(`${INTER_BASE}/cobranca/v3/cobrancas/${boletoId}/pdf`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (pdfRes.ok) {
-          const pdfData = await pdfRes.json()
-          if (pdfData.pdf) {
-            const binary = atob(pdfData.pdf)
-            const bytes = new Uint8Array(binary.length)
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-            await sb.storage.createBucket('boletos', { public: true }).catch(() => {})
-            const fileName = `${cpf}/${nossoNumero}.pdf`
-            const { error: upErr } = await sb.storage.from('boletos').upload(fileName, bytes, { contentType: 'application/pdf', upsert: true })
-            if (!upErr) {
-              const { data: urlData } = sb.storage.from('boletos').getPublicUrl(fileName)
+        if (!pdfUrl) {
+          const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
+          if (pdfBytes) {
+            const fileName = `${cpfRaw}/${nossoNumero}.pdf`
+            const { error: uploadError } = await supabase.storage
+              .from('boletos')
+              .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
+            if (!uploadError) {
+              const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
               pdfUrl = urlData.publicUrl
             }
           }
-        } else {
-          console.warn(`PDF fetch falhou para ${boletoId}:`, pdfRes.status)
         }
-      } catch (e) {
-        console.warn('PDF falhou:', boletoId, e)
+
+        if (existing) {
+          if (existing.situacao !== situacao || (!existing.pdf_url && pdfUrl)) {
+            await supabase
+              .from('boletos')
+              .update({ situacao, pdf_url: pdfUrl ?? existing.pdf_url })
+              .eq('nosso_numero', nossoNumero)
+          }
+        } else {
+          await supabase.from('boletos').insert({
+            cpf: cpfFormatado,
+            nosso_numero: nossoNumero,
+            valor,
+            vencimento,
+            linha_digitavel: linhaDigitavel,
+            situacao,
+            pdf_url: pdfUrl,
+          })
+        }
       }
-
-      // Insere no banco
-      const { error: dbErr } = await sb.from('boletos').insert({
-        cpf: cpfFmt, nosso_numero: nossoNumero,
-        valor: bol.valorNominal ?? bol.valor ?? 0,
-        vencimento: bol.dataVencimento ?? null,
-        linha_digitavel: bol.linhaDigitavel ?? '',
-        situacao, pdf_url: pdfUrl,
-      })
-      if (dbErr) console.error('Insert falhou:', dbErr.message)
-
-      boletos.push({ ...bol, pdf_url: pdfUrl })
+    } catch (syncErr) {
+      console.error('Sync Inter falhou (retornando cache):', syncErr)
     }
 
-    console.log(`boletos-list: ${boletos.length} boletos processados`)
-    return new Response(JSON.stringify({ ok: true, boletos }), { headers: CORS })
+    const { data: boletos, error: dbError } = await supabase
+      .from('boletos')
+      .select('*')
+      .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfRaw}`)
+      .order('vencimento', { ascending: false })
 
+    if (dbError) throw new Error(dbError.message)
+
+    return new Response(JSON.stringify({ boletos: boletos ?? [] }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (err) {
-    console.error('Erro geral boletos-list:', err)
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS })
+    console.error('Erro em boletos-list:', err)
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 })
