@@ -3677,7 +3677,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function almLoadInsumos() {
     const d = await callDiplomas({ action: 'alm_insumos_list' });
     const insumos = d.data || [];
-    document.getElementById('almInsumosCount').textContent = insumos.filter((i:any)=>i.ativo).length;
+    document.getElementById('almInsumosCount').textContent = insumos.filter((i)=>i.ativo).length;
     document.getElementById('almInsumosList').innerHTML = insumos.map((it) => `
       <div class="alm-insumo-row" style="${!it.ativo ? 'opacity:.5;' : ''}">
         <div style="flex:1;min-width:0;">
