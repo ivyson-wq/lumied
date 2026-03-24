@@ -1,6 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import https from 'node:https'
+import { Buffer } from 'node:buffer'
 
-const INTER_BASE = 'https://cdpj.partners.bancointer.com.br'
+const INTER_BASE_HOST = 'cdpj.partners.bancointer.com.br'
 
 function parsePem(raw: string): string {
   const pem = raw.replace(/\\n/g, '\n').trim()
@@ -9,134 +11,79 @@ function parsePem(raw: string): string {
   if (!headerMatch || !footerMatch) return pem
   const header = `-----BEGIN ${headerMatch[1]}-----`
   const footer = `-----END ${footerMatch[1]}-----`
-  // Extrai só o base64, remove tudo que não é base64
   const b64 = pem
     .replace(/-----BEGIN [^-]+-----/, '')
     .replace(/-----END [^-]+-----/, '')
     .replace(/[\s]/g, '')
-  // Quebra em linhas de 64 chars conforme padrão PEM
   const lines = b64.match(/.{1,64}/g) ?? []
   return [header, ...lines, footer].join('\n')
 }
 
-function interHttpClient() {
-  return Deno.createHttpClient({
-    certChain: parsePem(Deno.env.get('INTER_CERT')!),
-    privateKey: parsePem(Deno.env.get('INTER_KEY')!),
+function interFetch(
+  path: string,
+  init: { method?: string; headers?: Record<string, string>; body?: string | URLSearchParams } = {}
+): Promise<{ ok: boolean; status: number; text(): Promise<string>; json(): Promise<unknown> }> {
+  const cert = parsePem(Deno.env.get('INTER_CERT')!)
+  const key = parsePem(Deno.env.get('INTER_KEY')!)
+  const bodyStr = init.body instanceof URLSearchParams
+    ? init.body.toString()
+    : (init.body ?? '')
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: INTER_BASE_HOST,
+        path,
+        method: init.method ?? 'GET',
+        cert,
+        key,
+        headers: {
+          ...init.headers,
+          ...(bodyStr ? { 'Content-Length': String(Buffer.byteLength(bodyStr)) } : {}),
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = []
+        res.on('data', (chunk: Buffer) => chunks.push(chunk))
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString()
+          const status = res.statusCode ?? 0
+          resolve({
+            ok: status >= 200 && status < 300,
+            status,
+            text: () => Promise.resolve(text),
+            json: () => Promise.resolve(JSON.parse(text)),
+          })
+        })
+      }
+    )
+    req.on('error', reject)
+    if (bodyStr) req.write(bodyStr)
+    req.end()
   })
 }
 
 async function getInterToken(): Promise<string> {
-  const certRaw = Deno.env.get('INTER_CERT') ?? ''
-  const keyRaw = Deno.env.get('INTER_KEY') ?? ''
-  const clientId = Deno.env.get('INTER_CLIENT_ID') ?? ''
-  console.log('CLIENT_ID (primeiros 8 chars):', clientId.slice(0, 8))
-  console.log('CLIENT_SECRET presente:', !!Deno.env.get('INTER_CLIENT_SECRET'))
-  console.log('CERT OU esperado:       dd093e1b')
-  console.log('CERT header:', certRaw.replace(/\\n/g, '\n').split('\n')[0])
-
-  // Diagnóstico da chave privada
-  const parsedKey = parsePem(keyRaw)
-  const keyLines = parsedKey.split('\n')
-  console.log('KEY presente:', keyRaw.length > 0)
-  console.log('KEY header:', keyLines[0] ?? '(ausente)')
-  console.log('KEY footer:', keyLines[keyLines.length - 1] ?? '(ausente)')
-  console.log('KEY base64 length:', keyLines.slice(1, -1).join('').length)
-
-  // Verifica correspondência chave/certificado
-  try {
-    // Parseia DER do certificado para extrair SubjectPublicKeyInfo (SPKI)
-    function readTLV(buf: Uint8Array, off: number) {
-      const tag = buf[off++]
-      let len = buf[off++]
-      if (len & 0x80) { const nb = len & 0x7f; len = 0; for (let i = 0; i < nb; i++) len = (len << 8) | buf[off++] }
-      return { tag, len, vs: off, end: off + len }
-    }
-    const parsedCert = parsePem(certRaw)
-    const certB64 = parsedCert.split('\n').slice(1, -1).join('')
-    const certDer = Uint8Array.from(atob(certB64), c => c.charCodeAt(0))
-    // Navega: outer SEQUENCE → TBSCert SEQUENCE → skip version/serial/sig/issuer/validity/subject → SPKI
-    const outer = readTLV(certDer, 0)
-    const tbs = readTLV(certDer, outer.vs)
-    let p = tbs.vs
-    if (certDer[p] === 0xa0) { const v = readTLV(certDer, p); p = v.end }
-    for (let i = 0; i < 5; i++) { const t = readTLV(certDer, p); p = t.end } // serial, sig, issuer, validity, subject
-    const spkiTLV = readTLV(certDer, p)
-    const spkiBytes = certDer.slice(p, spkiTLV.end)
-
-    // Importa chave privada (extractable) e chave pública do cert
-    const keyB64 = keyLines.slice(1, -1).join('')
-    const keyDer = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0))
-    const algo = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
-    const privKey = await crypto.subtle.importKey('pkcs8', keyDer, algo, true, ['sign'])
-    const pubKeyFromCert = await crypto.subtle.importKey('spki', spkiBytes, algo, true, ['verify'])
-    console.log('KEY crypto import: OK (PKCS8/RSA)')
-
-    // Exporta módulos como JWK e compara
-    const privJwk = await crypto.subtle.exportKey('jwk', privKey)
-    const certJwk = await crypto.subtle.exportKey('jwk', pubKeyFromCert)
-    const nKey = (privJwk as any).n ?? ''
-    const nCert = (certJwk as any).n ?? ''
-    console.log('KEY modulus (primeiros 20):', nKey.slice(0, 20))
-    console.log('CERT modulus (primeiros 20):', nCert.slice(0, 20))
-    console.log('KEY/CERT correspondem:', nKey === nCert)
-  } catch (e1) {
-    console.log('KEY crypto import: FALHOU -', String(e1).slice(0, 120))
-  }
-
-  // Diagnóstico do client_secret
-  const secret = Deno.env.get('INTER_CLIENT_SECRET') ?? ''
-  console.log('CLIENT_SECRET length:', secret.length)
-  console.log('CLIENT_SECRET primeiros 4 chars:', secret.slice(0, 4))
-
-  // Cria o cliente mTLS e verifica se não joga exceção
-  let client: Deno.HttpClient
-  try {
-    client = interHttpClient()
-    console.log('mTLS HttpClient: criado com sucesso')
-  } catch (clientErr) {
-    console.log('mTLS HttpClient: ERRO ao criar -', String(clientErr))
-    throw clientErr
-  }
-
-  const oauthBody = new URLSearchParams({
+  const body = new URLSearchParams({
     client_id: Deno.env.get('INTER_CLIENT_ID')!,
-    client_secret: secret,
+    client_secret: Deno.env.get('INTER_CLIENT_SECRET')!,
     scope: 'boleto-cobranca.read',
     grant_type: 'client_credentials',
   })
 
-  // Teste sem mTLS para comparar o erro (diagnóstico)
-  try {
-    const resNoTls = await fetch(`${INTER_BASE}/oauth/v2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(oauthBody),
-    })
-    console.log('Sem-mTLS status:', resNoTls.status, '| body:', (await resNoTls.text()).slice(0, 100))
-  } catch (noTlsErr) {
-    console.log('Sem-mTLS erro (esperado se Inter exige cert):', String(noTlsErr).slice(0, 100))
-  }
-
-  const res = await fetch(`${INTER_BASE}/oauth/v2/token`, {
+  const res = await interFetch('/oauth/v2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: oauthBody,
-    client,
+    body,
   })
 
-  const resText = await res.text()
-  console.log('Inter OAuth status:', res.status)
-  console.log('Inter OAuth headers:', JSON.stringify(Object.fromEntries(res.headers)))
-  console.log('Inter OAuth body:', resText || '(vazio)')
-  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${resText}`)
-  return JSON.parse(resText).access_token
+  const text = await res.text()
+  console.log('Inter OAuth status:', res.status, '| body:', text.slice(0, 200))
+  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${text}`)
+  return (JSON.parse(text) as { access_token: string }).access_token
 }
 
 async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> {
-  const client = interHttpClient()
-
-  // Inter exige intervalo de datas — buscamos últimos 12 meses
   const hoje = new Date()
   const dataFinal = hoje.toISOString().slice(0, 10)
   const dataInicial = new Date(hoje.setFullYear(hoje.getFullYear() - 1))
@@ -152,32 +99,30 @@ async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> 
     paginaAtual: '0',
   })
 
-  const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas?${params}`, {
+  const res = await interFetch(`/cobranca/v3/cobrancas?${params}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
     },
-    client,
   })
 
-  if (!res.ok) throw new Error(`Inter listagem falhou: ${res.status} ${await res.text()}`)
+  const text = await res.text()
+  if (!res.ok) throw new Error(`Inter listagem falhou: ${res.status} | ${text}`)
 
-  const data = await res.json()
+  const data = JSON.parse(text) as { content?: any[]; cobrancas?: any[] }
   return data.content ?? data.cobrancas ?? []
 }
 
 async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<Uint8Array | null> {
   try {
-    const client = interHttpClient()
-    const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
+    const res = await interFetch(`/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
       },
-      client,
     })
     if (!res.ok) return null
-    const data = await res.json()
+    const data = await res.json() as { pdf: string }
     const binary = atob(data.pdf)
     const bytes = new Uint8Array(binary.length)
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
@@ -234,7 +179,6 @@ Deno.serve(async (req) => {
         const vencimento: string = c.dataVencimento
         const linhaDigitavel: string = c.linhaDigitavel ?? ''
 
-        // Verifica se já existe para decidir entre insert ou update de situação
         const { data: existing } = await supabase
           .from('boletos')
           .select('id, pdf_url, situacao')
@@ -243,7 +187,6 @@ Deno.serve(async (req) => {
 
         let pdfUrl = existing?.pdf_url ?? null
 
-        // Busca PDF apenas se ainda não tiver
         if (!pdfUrl) {
           const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
           if (pdfBytes) {
@@ -259,7 +202,6 @@ Deno.serve(async (req) => {
         }
 
         if (existing) {
-          // Atualiza só a situação se mudou
           if (existing.situacao !== situacao || (!existing.pdf_url && pdfUrl)) {
             await supabase
               .from('boletos')
@@ -279,11 +221,9 @@ Deno.serve(async (req) => {
         }
       }
     } catch (syncErr) {
-      // Falha na sincronização com Inter não bloqueia — retorna o que há no banco
       console.error('Sync Inter falhou (retornando cache):', syncErr)
     }
 
-    // Retorna boletos do banco (já sincronizados ou cache)
     const { data: boletos, error: dbError } = await supabase
       .from('boletos')
       .select('*')

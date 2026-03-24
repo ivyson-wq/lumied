@@ -1,16 +1,69 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import https from 'node:https'
+import { Buffer } from 'node:buffer'
 
-const INTER_BASE = 'https://cdpj.partners.bancointer.com.br'
+const INTER_BASE_HOST = 'cdpj.partners.bancointer.com.br'
 
-function interHttpClient() {
-  return Deno.createHttpClient({
-    certChain: Deno.env.get('INTER_CERT')!,
-    privateKey: Deno.env.get('INTER_KEY')!,
+function parsePem(raw: string): string {
+  const pem = raw.replace(/\\n/g, '\n').trim()
+  const headerMatch = pem.match(/-----BEGIN ([^-]+)-----/)
+  const footerMatch = pem.match(/-----END ([^-]+)-----/)
+  if (!headerMatch || !footerMatch) return pem
+  const header = `-----BEGIN ${headerMatch[1]}-----`
+  const footer = `-----END ${footerMatch[1]}-----`
+  const b64 = pem
+    .replace(/-----BEGIN [^-]+-----/, '')
+    .replace(/-----END [^-]+-----/, '')
+    .replace(/[\s]/g, '')
+  const lines = b64.match(/.{1,64}/g) ?? []
+  return [header, ...lines, footer].join('\n')
+}
+
+function interFetch(
+  path: string,
+  init: { method?: string; headers?: Record<string, string>; body?: string | URLSearchParams } = {}
+): Promise<{ ok: boolean; status: number; text(): Promise<string>; json(): Promise<unknown> }> {
+  const cert = parsePem(Deno.env.get('INTER_CERT')!)
+  const key = parsePem(Deno.env.get('INTER_KEY')!)
+  const bodyStr = init.body instanceof URLSearchParams
+    ? init.body.toString()
+    : (init.body ?? '')
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: INTER_BASE_HOST,
+        path,
+        method: init.method ?? 'GET',
+        cert,
+        key,
+        headers: {
+          ...init.headers,
+          ...(bodyStr ? { 'Content-Length': String(Buffer.byteLength(bodyStr)) } : {}),
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = []
+        res.on('data', (chunk: Buffer) => chunks.push(chunk))
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString()
+          const status = res.statusCode ?? 0
+          resolve({
+            ok: status >= 200 && status < 300,
+            status,
+            text: () => Promise.resolve(text),
+            json: () => Promise.resolve(JSON.parse(text)),
+          })
+        })
+      }
+    )
+    req.on('error', reject)
+    if (bodyStr) req.write(bodyStr)
+    req.end()
   })
 }
 
 async function getInterToken(): Promise<string> {
-  const client = interHttpClient()
   const body = new URLSearchParams({
     client_id: Deno.env.get('INTER_CLIENT_ID')!,
     client_secret: Deno.env.get('INTER_CLIENT_SECRET')!,
@@ -18,33 +71,30 @@ async function getInterToken(): Promise<string> {
     grant_type: 'client_credentials',
   })
 
-  const res = await fetch(`${INTER_BASE}/oauth/v2/token`, {
+  const res = await interFetch('/oauth/v2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
-    client,
   })
 
-  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} ${await res.text()}`)
-  return (await res.json()).access_token
+  const text = await res.text()
+  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${text}`)
+  return (JSON.parse(text) as { access_token: string }).access_token
 }
 
 async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<Uint8Array> {
-  const client = interHttpClient()
-  const res = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
+  const res = await interFetch(`/cobranca/v3/cobrancas/${codigoSolicitacao}/pdf`, {
     headers: {
       Authorization: `Bearer ${token}`,
       'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
     },
-    client,
   })
 
-  if (!res.ok) throw new Error(`PDF boleto falhou: ${res.status} ${await res.text()}`)
+  const text = await res.text()
+  if (!res.ok) throw new Error(`PDF boleto falhou: ${res.status} | ${text}`)
 
-  const data = await res.json()
-  // Inter retorna PDF em base64
-  const base64 = data.pdf
-  const binary = atob(base64)
+  const data = JSON.parse(text) as { pdf: string }
+  const binary = atob(data.pdf)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
@@ -84,11 +134,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Busca PDF no Inter
     const token = await getInterToken()
     const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
 
-    // Faz upload do PDF no Storage
     const fileName = `${cpf}/${nossoNumero}.pdf`
     const { error: uploadError } = await supabase.storage
       .from('boletos')
@@ -99,10 +147,8 @@ Deno.serve(async (req) => {
     const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
     const pdfUrl = urlData.publicUrl
 
-    // Formata CPF para o padrão do banco: 123.456.789-00
     const cpfFormatado = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
-    // Salva boleto na tabela
     const { error: dbError } = await supabase.from('boletos').insert({
       cpf: cpfFormatado,
       nosso_numero: nossoNumero,
