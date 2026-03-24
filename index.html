@@ -656,37 +656,18 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   let resendCooldown = null;
 
   // ── AUTH ──────────────────────────────────────────────
-  async function checkAccess(user) {
-    try {
-      const r = await fetch(ACESSO, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ action: 'check', email: user.email })
-      });
-      const d = await r.json();
-      return d.allowed === true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   async function initAuth() {
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
-      const allowed = await checkAccess(session.user);
-      if (allowed) { currentUser = session.user; showForm(session.user); }
-      else { await sb.auth.signOut(); showLoginWall(); showAccessDenied(session.user.email); }
+      currentUser = session.user; showForm(session.user);
     } else {
       showLoginWall();
     }
 
     sb.auth.onAuthStateChange(async (_e, session) => {
       if (session?.user) {
-        // Se este utilizador já foi verificado nesta sessão, não repetir o check
         if (currentUser && currentUser.email === session.user.email) return;
-        const allowed = await checkAccess(session.user);
-        if (allowed) { currentUser = session.user; showForm(session.user); }
-        else { await sb.auth.signOut(); showLoginWall(); showAccessDenied(session.user.email); }
+        currentUser = session.user; showForm(session.user);
       } else {
         showLoginWall();
       }
@@ -803,14 +784,6 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Verificando…';
 
-    const allowed = await checkAccess({ email });
-    if (!allowed) {
-      btn.disabled = false;
-      btn.innerHTML = '✉️ Enviar link de acesso';
-      document.getElementById('emailState').style.display = 'none';
-      showAccessDenied();
-      return;
-    }
 
     btn.innerHTML = '<span class="spinner"></span> Enviando…';
 
