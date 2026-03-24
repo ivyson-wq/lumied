@@ -1650,38 +1650,27 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const el = document.getElementById('boletosConteudo');
     el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
 
-    // Busca CPF pelo e-mail — tenta familias, depois solicitacoes_acesso
-    let cpfRaw = null;
-
-    const { data: familia } = await supabase
-      .from('familias')
+    // Busca CPF pelo e-mail na tabela solicitacoes_acesso
+    const { data: sol } = await supabase
+      .from('solicitacoes_acesso')
       .select('cpf')
       .ilike('email', currentUser.email)
       .maybeSingle();
 
-    if (familia?.cpf) {
-      cpfRaw = familia.cpf.replace(/\D/g, '');
-    } else {
-      const { data: sol } = await supabase
-        .from('solicitacoes_acesso')
-        .select('cpf')
-        .ilike('email', currentUser.email)
-        .maybeSingle();
-      if (sol?.cpf) cpfRaw = sol.cpf.replace(/\D/g, '');
-    }
+    const cpfRaw = sol?.cpf?.replace(/\D/g, '');
 
     if (!cpfRaw || cpfRaw.length !== 11) {
       el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Nenhum boleto encontrado.</p>';
       return;
     }
 
-    // Normaliza para o formato salvo pelo webhook: 123.456.789-00
+    // Tenta os dois formatos que podem estar salvos: com e sem formatação
     const cpfFormatado = cpfRaw.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
 
     const { data: boletos, error } = await supabase
       .from('boletos')
       .select('*')
-      .eq('cpf', cpfFormatado)
+      .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfRaw}`)
       .order('vencimento', { ascending: false });
 
     if (error || !boletos || boletos.length === 0) {
