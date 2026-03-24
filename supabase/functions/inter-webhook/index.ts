@@ -122,8 +122,9 @@ Deno.serve(async (req) => {
       const cpfFormatado = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
       for (const bol of cobrancas) {
-        const nossoNumero = bol.nossoNumero || bol.codigoBarras || ''
-        if (!nossoNumero) continue
+        const boletoId = bol.codigoSolicitacao || bol.nossoNumero || bol.codigoBarras || ''
+        if (!boletoId) continue
+        const nossoNumero = bol.nossoNumero || boletoId
 
         // Verifica se já existe no banco
         const { data: existe } = await supabase
@@ -144,7 +145,7 @@ Deno.serve(async (req) => {
         // Boleto novo — tenta baixar PDF
         let pdfUrl: string | null = null
         try {
-          const pdfBytes = await getBoletoPdf(token, nossoNumero)
+          const pdfBytes = await getBoletoPdf(token, boletoId)
           const fileName = `${cpf}/${nossoNumero}.pdf`
           await supabase.storage.createBucket('boletos', { public: true }).catch(() => {})
           const { error: upErr } = await supabase.storage
