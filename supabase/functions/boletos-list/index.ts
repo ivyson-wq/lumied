@@ -2,10 +2,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const INTER_BASE = 'https://cdpj.partners.bancointer.com.br'
 
+function parsePem(raw: string): string {
+  // Converte \n literal para quebra de linha real
+  let pem = raw.replace(/\\n/g, '\n')
+  // Se ainda não tem quebras de linha, insere após o header e antes do footer
+  if (!pem.includes('\n')) {
+    pem = pem
+      .replace(/(-----BEGIN [^-]+-----)([^\n])/, '$1\n$2')
+      .replace(/([^\n])(-----END [^-]+-----)/, '$1\n$2')
+  }
+  return pem.trim()
+}
+
 function interHttpClient() {
   return Deno.createHttpClient({
-    certChain: Deno.env.get('INTER_CERT')!,
-    privateKey: Deno.env.get('INTER_KEY')!,
+    certChain: parsePem(Deno.env.get('INTER_CERT')!),
+    privateKey: parsePem(Deno.env.get('INTER_KEY')!),
   })
 }
 
@@ -25,8 +37,9 @@ async function getInterToken(): Promise<string> {
     client,
   })
 
-  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} ${await res.text()}`)
-  return (await res.json()).access_token
+  const resText = await res.text()
+  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${resText}`)
+  return JSON.parse(resText).access_token
 }
 
 async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> {
