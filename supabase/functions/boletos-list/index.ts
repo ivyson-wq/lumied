@@ -35,7 +35,40 @@ async function getInterToken(): Promise<string> {
   console.log('CERT OU esperado:       dd093e1b')
   console.log('CERT header:', certRaw.replace(/\\n/g, '\n').split('\n')[0])
 
-  const client = interHttpClient()
+  // Diagnóstico da chave privada
+  const parsedKey = parsePem(keyRaw)
+  const keyLines = parsedKey.split('\n')
+  console.log('KEY presente:', keyRaw.length > 0)
+  console.log('KEY header:', keyLines[0] ?? '(ausente)')
+  console.log('KEY footer:', keyLines[keyLines.length - 1] ?? '(ausente)')
+  console.log('KEY base64 length:', keyLines.slice(1, -1).join('').length)
+
+  // Tenta importar a chave para validar formato
+  try {
+    const keyB64 = keyLines.slice(1, -1).join('')
+    const keyDer = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0))
+    await crypto.subtle.importKey('pkcs8', keyDer, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign'])
+    console.log('KEY crypto import: OK (PKCS8/RSA)')
+  } catch (e1) {
+    try {
+      const keyB64 = keyLines.slice(1, -1).join('')
+      const keyDer = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0))
+      await crypto.subtle.importKey('pkcs8', keyDer, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'])
+      console.log('KEY crypto import: OK (PKCS8/EC)')
+    } catch (e2) {
+      console.log('KEY crypto import: FALHOU -', String(e1).slice(0, 80))
+    }
+  }
+
+  // Cria o cliente mTLS e verifica se não joga exceção
+  let client: Deno.HttpClient
+  try {
+    client = interHttpClient()
+    console.log('mTLS HttpClient: criado com sucesso')
+  } catch (clientErr) {
+    console.log('mTLS HttpClient: ERRO ao criar -', String(clientErr))
+    throw clientErr
+  }
   const body = new URLSearchParams({
     client_id: Deno.env.get('INTER_CLIENT_ID')!,
     client_secret: Deno.env.get('INTER_CLIENT_SECRET')!,
