@@ -746,15 +746,16 @@ Deno.serve(async (req) => {
 
     if (action === 'pickup_meus_filhos') {
       // Returns distinct children registered for this parent
-      const { data: sols } = await sb
-        .from('solicitacoes').select('nome_crianca, serie')
+      const { data: sols, error: solsErr } = await sb
+        .from('solicitacoes').select('nome_crianca, serie, email')
         .ilike('email', emailPai).order('criado_em', { ascending: false })
       const seen = new Set<string>()
       const filhos = (sols ?? []).filter(s => {
         if (seen.has(s.nome_crianca)) return false
         seen.add(s.nome_crianca); return true
       })
-      return json({ data: filhos })
+      // debug: retorna email usado e total de registros para diagnóstico
+      return json({ data: filhos, _debug: { emailPai, total: sols?.length ?? 0, erro: solsErr?.message ?? null } })
     }
 
     if (action === 'pickup_avisar') {
