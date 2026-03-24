@@ -33,7 +33,7 @@ Portal web para pais/responsáveis, professoras, secretaria e gerência da escol
 
 ## Estado Atual
 
-### Sessão 2025-03-24
+### Sessão 2026-03-24 (continuação)
 
 **Feito nesta sessão:**
 
@@ -52,6 +52,17 @@ Portal web para pais/responsáveis, professoras, secretaria e gerência da escol
 7. **Fix pickup `getPaiEmail`** — adicionado fallback `body._email` quando `sb.auth.getUser(token)` falha. Cliente agora envia `_email` em todas as chamadas `callDiplomas`.
 
 8. **Debug `pickup_meus_filhos`** — retorna `_debug: { emailPai, total, erro }` para diagnóstico (temporário, remover após resolver).
+
+9. **JWT Verification desabilitado** — Supabase dashboard → Edge Functions → diplomas → JWT Verification: OFF. Permite chamadas anon sem 401.
+
+10. **Botão "Estou a Caminho" branco** — `--primary` não definido em `:root`. Corrigido em `index.html`: `background:var(--primary)` → `background:#C8102E`.
+
+11. **Correção do login da professora** — TypeScript `(items as any[]).map(it =>` em JS causava erro de parse. Corrigido para `(items).map(it =>`.
+
+12. **Portal das professoras — 3 correções:**
+    - **Fila de Retirada no topo** — seção movida para primeira posição dentro de `.content`, antes do Ranking e demais seções.
+    - **Botões brancos** — adicionado `--primary:#C8102E` ao `:root` do `professora.html`.
+    - **Nomes de turmas dinâmicos** — `SERIES_DISPONIVEIS` agora começa com fallback hardcoded mas é substituído pela lista real do banco via `callApi({ action: 'series_list_pub' })` no `initPickupPanel()`.
 
 ---
 
@@ -86,19 +97,15 @@ Portal web para pais/responsáveis, professoras, secretaria e gerência da escol
 
 ### Pendente / Em aberto
 
-1. **Diagnóstico do pickup** — Após o usuário ver o `_debug` no console do navegador (Network → resposta de `pickup_meus_filhos`), verificar:
-   - Qual `emailPai` está sendo usado pela função
-   - Se `total` é 0 (nenhum registro em `solicitacoes` para esse e-mail)
-   - Possível causa: crianças podem estar na tabela `familias` (schema desconhecido) em vez de `solicitacoes`
-   - **Remover o campo `_debug`** após resolver o problema
+1. **Remover campo `_debug`** da resposta de `pickup_meus_filhos` na função `diplomas` (edge function). Foi adicionado para diagnóstico; pickup já funciona, então o debug é desnecessário. Também remover o campo `email` extra no `.select('nome_crianca, serie, email')`.
 
-2. **Remover campo `serie` do select debug** em `pickup_meus_filhos` (adicionado temporariamente para debug).
+2. **Verificar schema da tabela `familias`** — se ela contém `nome_crianca` e `serie`, o pickup deve também consultá-la como fallback (atualmente só busca em `solicitacoes`).
 
-3. **Verificar schema da tabela `familias`** — se ela contém `nome_crianca` e `serie`, o pickup deve também consultá-la como fallback.
+3. **Boletos** — integração com Banco Inter via relay Fly.io. Status do relay e mTLS não foi verificado.
 
-4. **Boletos** — integração com Banco Inter via relay Fly.io. Status do relay e mTLS não foi verificado nesta sessão.
+4. **Testar auto-merge** — confirmar que o GitHub Actions `.github/workflows/auto-merge-claude.yml` está fazendo merge correto para `main` após cada push.
 
-5. **PR pendente** — verificar se o GitHub Actions está funcionando corretamente para auto-merge após as últimas mudanças.
+5. **Painel "Cadastrar Família"** no gerente — verificar se `public_submit` e `solicitacoes_list` na edge function `api` estão funcionando corretamente com o novo painel.
 
 ---
 
