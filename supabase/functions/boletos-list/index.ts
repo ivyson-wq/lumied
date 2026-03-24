@@ -43,21 +43,45 @@ async function getInterToken(): Promise<string> {
   console.log('KEY footer:', keyLines[keyLines.length - 1] ?? '(ausente)')
   console.log('KEY base64 length:', keyLines.slice(1, -1).join('').length)
 
-  // Tenta importar a chave para validar formato
+  // Verifica correspondência chave/certificado
   try {
+    // Parseia DER do certificado para extrair SubjectPublicKeyInfo (SPKI)
+    function readTLV(buf: Uint8Array, off: number) {
+      const tag = buf[off++]
+      let len = buf[off++]
+      if (len & 0x80) { const nb = len & 0x7f; len = 0; for (let i = 0; i < nb; i++) len = (len << 8) | buf[off++] }
+      return { tag, len, vs: off, end: off + len }
+    }
+    const parsedCert = parsePem(certRaw)
+    const certB64 = parsedCert.split('\n').slice(1, -1).join('')
+    const certDer = Uint8Array.from(atob(certB64), c => c.charCodeAt(0))
+    // Navega: outer SEQUENCE → TBSCert SEQUENCE → skip version/serial/sig/issuer/validity/subject → SPKI
+    const outer = readTLV(certDer, 0)
+    const tbs = readTLV(certDer, outer.vs)
+    let p = tbs.vs
+    if (certDer[p] === 0xa0) { const v = readTLV(certDer, p); p = v.end }
+    for (let i = 0; i < 5; i++) { const t = readTLV(certDer, p); p = t.end } // serial, sig, issuer, validity, subject
+    const spkiTLV = readTLV(certDer, p)
+    const spkiBytes = certDer.slice(p, spkiTLV.end)
+
+    // Importa chave privada (extractable) e chave pública do cert
     const keyB64 = keyLines.slice(1, -1).join('')
     const keyDer = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0))
-    await crypto.subtle.importKey('pkcs8', keyDer, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign'])
+    const algo = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
+    const privKey = await crypto.subtle.importKey('pkcs8', keyDer, algo, true, ['sign'])
+    const pubKeyFromCert = await crypto.subtle.importKey('spki', spkiBytes, algo, true, ['verify'])
     console.log('KEY crypto import: OK (PKCS8/RSA)')
+
+    // Exporta módulos como JWK e compara
+    const privJwk = await crypto.subtle.exportKey('jwk', privKey)
+    const certJwk = await crypto.subtle.exportKey('jwk', pubKeyFromCert)
+    const nKey = (privJwk as any).n ?? ''
+    const nCert = (certJwk as any).n ?? ''
+    console.log('KEY modulus (primeiros 20):', nKey.slice(0, 20))
+    console.log('CERT modulus (primeiros 20):', nCert.slice(0, 20))
+    console.log('KEY/CERT correspondem:', nKey === nCert)
   } catch (e1) {
-    try {
-      const keyB64 = keyLines.slice(1, -1).join('')
-      const keyDer = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0))
-      await crypto.subtle.importKey('pkcs8', keyDer, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'])
-      console.log('KEY crypto import: OK (PKCS8/EC)')
-    } catch (e2) {
-      console.log('KEY crypto import: FALHOU -', String(e1).slice(0, 80))
-    }
+    console.log('KEY crypto import: FALHOU -', String(e1).slice(0, 120))
   }
 
   // Cria o cliente mTLS e verifica se não joga exceção
