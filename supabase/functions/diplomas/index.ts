@@ -83,10 +83,14 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
 }
 
 // ── Parent (Supabase Auth JWT) validator ────────────────────
-async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string): Promise<string | null> {
-  if (!token) return null
-  const { data: { user } } = await sb.auth.getUser(token)
-  return user?.email ?? null
+async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string, fallbackEmail?: string): Promise<string | null> {
+  if (token) {
+    try {
+      const { data: { user } } = await sb.auth.getUser(token)
+      if (user?.email) return user.email.toLowerCase().trim()
+    } catch (_) { /* ignora */ }
+  }
+  return fallbackEmail ? fallbackEmail.toLowerCase().trim() : null
 }
 
 // ── Pickup ETA helpers ──────────────────────────────────────
@@ -737,7 +741,7 @@ Deno.serve(async (req) => {
   ].includes(action)
 
   if (isPickupPaiAction) {
-    const emailPai = await getPaiEmail(sb, token)
+    const emailPai = await getPaiEmail(sb, token, body._email)
     if (!emailPai) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
 
     if (action === 'pickup_meus_filhos') {
