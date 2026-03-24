@@ -1,6 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import https from 'node:https'
-import { Buffer } from 'node:buffer'
 
 const INTER_BASE_HOST = 'cdpj.partners.bancointer.com.br'
 
@@ -19,48 +17,93 @@ function parsePem(raw: string): string {
   return [header, ...lines, footer].join('\n')
 }
 
-function interFetch(
+function parseHttpResponse(raw: string): { status: number; body: string } {
+  const headerEnd = raw.indexOf('\r\n\r\n')
+  if (headerEnd < 0) throw new Error('Resposta HTTP inválida')
+  const headerSection = raw.slice(0, headerEnd)
+  const lines = headerSection.split('\r\n')
+  const status = parseInt(lines[0].split(' ')[1] ?? '0')
+  const headers: Record<string, string> = {}
+  for (const line of lines.slice(1)) {
+    const colon = line.indexOf(':')
+    if (colon > 0) headers[line.slice(0, colon).trim().toLowerCase()] = line.slice(colon + 1).trim()
+  }
+  const rawBody = raw.slice(headerEnd + 4)
+  let body: string
+  if (headers['transfer-encoding']?.toLowerCase().includes('chunked')) {
+    let decoded = ''
+    let pos = 0
+    while (pos < rawBody.length) {
+      const end = rawBody.indexOf('\r\n', pos)
+      if (end < 0) break
+      const size = parseInt(rawBody.slice(pos, end), 16)
+      if (!size) break
+      pos = end + 2
+      decoded += rawBody.slice(pos, pos + size)
+      pos += size + 2
+    }
+    body = decoded
+  } else {
+    body = rawBody
+  }
+  return { status, body }
+}
+
+async function interFetch(
   path: string,
   init: { method?: string; headers?: Record<string, string>; body?: string | URLSearchParams } = {}
 ): Promise<{ ok: boolean; status: number; text(): Promise<string>; json(): Promise<unknown> }> {
   const cert = parsePem(Deno.env.get('INTER_CERT')!)
   const key = parsePem(Deno.env.get('INTER_KEY')!)
+  const method = init.method ?? 'GET'
   const bodyStr = init.body instanceof URLSearchParams
     ? init.body.toString()
     : (init.body ?? '')
 
-  return new Promise((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: INTER_BASE_HOST,
-        path,
-        method: init.method ?? 'GET',
-        cert,
-        key,
-        headers: {
-          ...init.headers,
-          ...(bodyStr ? { 'Content-Length': String(Buffer.byteLength(bodyStr)) } : {}),
-        },
-      },
-      (res) => {
-        const chunks: Buffer[] = []
-        res.on('data', (chunk: Buffer) => chunks.push(chunk))
-        res.on('end', () => {
-          const text = Buffer.concat(chunks).toString()
-          const status = res.statusCode ?? 0
-          resolve({
-            ok: status >= 200 && status < 300,
-            status,
-            text: () => Promise.resolve(text),
-            json: () => Promise.resolve(JSON.parse(text)),
-          })
-        })
-      }
-    )
-    req.on('error', reject)
-    if (bodyStr) req.write(bodyStr)
-    req.end()
+  const conn = await Deno.connectTls({
+    hostname: INTER_BASE_HOST,
+    port: 443,
+    certChain: cert,
+    privateKey: key,
   })
+
+  try {
+    const allHeaders: Record<string, string> = {
+      Host: INTER_BASE_HOST,
+      Connection: 'close',
+      ...init.headers,
+    }
+    if (bodyStr) allHeaders['Content-Length'] = String(new TextEncoder().encode(bodyStr).length)
+
+    const headerLines = Object.entries(allHeaders).map(([k, v]) => `${k}: ${v}`).join('\r\n')
+    const rawRequest = `${method} ${path} HTTP/1.1\r\n${headerLines}\r\n\r\n${bodyStr}`
+
+    await conn.write(new TextEncoder().encode(rawRequest))
+
+    const chunks: Uint8Array[] = []
+    const tmp = new Uint8Array(8192)
+    while (true) {
+      let n: number | null
+      try { n = await conn.read(tmp) } catch { break }
+      if (n === null) break
+      chunks.push(tmp.slice(0, n))
+    }
+
+    const total = chunks.reduce((a, b) => a + b.length, 0)
+    const merged = new Uint8Array(total)
+    let off = 0
+    for (const c of chunks) { merged.set(c, off); off += c.length }
+
+    const { status, body } = parseHttpResponse(new TextDecoder().decode(merged))
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      text: () => Promise.resolve(body),
+      json: () => Promise.resolve(JSON.parse(body)),
+    }
+  } finally {
+    try { conn.close() } catch { /* ignorado */ }
+  }
 }
 
 async function getInterToken(): Promise<string> {
