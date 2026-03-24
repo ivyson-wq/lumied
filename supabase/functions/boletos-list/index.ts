@@ -10,7 +10,9 @@ async function interFetch(
     ? init.body.toString()
     : (init.body ?? '')
 
-  const res = await fetch(`${relayUrl}/inter-proxy`, {
+  const fullUrl = `${relayUrl}/inter-proxy`
+  console.log('interFetch ->', init.method ?? 'GET', path, '| relay:', fullUrl)
+  const res = await fetch(fullUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${relaySecret}` },
     body: JSON.stringify({ path, method: init.method ?? 'GET', headers: init.headers ?? {}, body: bodyStr }),
