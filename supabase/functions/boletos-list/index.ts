@@ -29,10 +29,11 @@ function interHttpClient() {
 async function getInterToken(): Promise<string> {
   const certRaw = Deno.env.get('INTER_CERT') ?? ''
   const keyRaw = Deno.env.get('INTER_KEY') ?? ''
-  console.log('CLIENT_ID presente:', !!Deno.env.get('INTER_CLIENT_ID'))
+  const clientId = Deno.env.get('INTER_CLIENT_ID') ?? ''
+  console.log('CLIENT_ID (primeiros 8 chars):', clientId.slice(0, 8))
   console.log('CLIENT_SECRET presente:', !!Deno.env.get('INTER_CLIENT_SECRET'))
+  console.log('CERT OU esperado:       dd093e1b')
   console.log('CERT header:', certRaw.replace(/\\n/g, '\n').split('\n')[0])
-  console.log('KEY header:', keyRaw.replace(/\\n/g, '\n').split('\n')[0])
 
   const client = interHttpClient()
   const body = new URLSearchParams({
