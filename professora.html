@@ -441,12 +441,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <!-- ═══ PAGE: PDI ═══ -->
     <div class="prof-page" id="pagePdi">
     <!-- PDI Section -->
-    <div class="sec-title">📈 Meu Plano de Desenvolvimento Individual</div>
+    <div class="sec-title">📈 My Annual Growth Plan</div>
     <div id="pdiLoading"><div class="empty-state">⏳ Carregando…</div></div>
     <div id="pdiNoCiclo" style="display:none">
       <div class="upload-card" style="text-align:center;padding:40px 24px;">
         <div style="font-size:36px;margin-bottom:12px;">📅</div>
-        <p style="font-size:13px;color:var(--muted);">Nenhum ciclo de PDI ativo. Aguarde a coordenação abrir o ciclo.</p>
+        <p style="font-size:13px;color:var(--muted);">Nenhum ciclo do Annual Growth Plan ativo. Aguarde a coordenação abrir o ciclo.</p>
       </div>
     </div>
     <div id="pdiContent" style="display:none">
@@ -494,7 +494,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <!-- Check-in form (em_andamento) -->
       <div class="upload-card" id="pdiCheckinCard" style="display:none">
         <h3>📝 Registrar Check-in</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Registre seu acompanhamento do PDI para a gestora.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Registre seu acompanhamento do Annual Growth Plan para a gestora.</p>
         <div class="ff">
           <label>Tipo</label>
           <select id="checkinTipo">
@@ -519,7 +519,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
       <!-- Nota final (encerrado) -->
       <div class="upload-card" id="pdiNotaFinalCard" style="display:none">
-        <h3>🏁 PDI Encerrado</h3>
+        <h3>🏁 Annual Growth Plan Encerrado</h3>
         <div class="nota-final-display">
           <div class="nota-final-num" id="pdiNotaNum">—</div>
           <div class="nota-final-lbl" id="pdiNotaLbl"></div>
@@ -676,7 +676,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   </button>
   <button class="pbnav-item" onclick="switchProfPage('pdi',this)" data-page="pdi">
     <span class="pbnav-icon">📈</span>
-    <span class="pbnav-label">PDI</span>
+    <span class="pbnav-label">Growth Plan</span>
   </button>
   <button class="pbnav-item" onclick="switchProfPage('almox',this)" data-page="almox">
     <span class="pbnav-icon">📦</span>

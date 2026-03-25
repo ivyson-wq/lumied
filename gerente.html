@@ -326,7 +326,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">Professoras</div>
       <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
       <a class="nav-item" href="#" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
-      <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> PDI</a>
+      <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Annual Growth Plan</a>
       <div class="sb-label">Almoxarifado</div>
       <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
       <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
@@ -1034,9 +1034,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div id="panelPdi" class="panel">
         <div class="dip-stats" id="pdiStatsRow">
           <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="pdiStatTotal">—</div><div class="stat-sub">professoras</div></div>
-          <div class="stat-card" data-g="integral"><div class="stat-label">Sem PDI</div><div class="stat-value" id="pdiStatSem">—</div><div class="stat-sub">não iniciaram</div></div>
+          <div class="stat-card" data-g="integral"><div class="stat-label">Sem Plano</div><div class="stat-value" id="pdiStatSem">—</div><div class="stat-sub">não iniciaram</div></div>
           <div class="stat-card" data-g="semi"><div class="stat-label">Aguardando</div><div class="stat-value" id="pdiStatAguard">—</div><div class="stat-sub">para aprovar</div></div>
-          <div class="stat-card" data-g="tarde"><div class="stat-label">Em Andamento</div><div class="stat-value" id="pdiStatAtivo">—</div><div class="stat-sub">PDIs aprovados</div></div>
+          <div class="stat-card" data-g="tarde"><div class="stat-label">Em Andamento</div><div class="stat-value" id="pdiStatAtivo">—</div><div class="stat-sub">planos aprovados</div></div>
           <div class="stat-card" data-g="diaria"><div class="stat-label">Encerrados</div><div class="stat-value" id="pdiStatEnc">—</div><div class="stat-sub">ciclo concluído</div></div>
         </div>
         <div class="two-col">
@@ -1542,7 +1542,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');

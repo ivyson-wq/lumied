@@ -836,7 +836,7 @@ Deno.serve(async (req) => {
       }).eq('id', pdi_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = pdi.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'PDI aprovado', `Seu PDI foi ✅ aprovado e está em andamento.${feedback ? ' Feedback: ' + feedback : ''}`, 'success')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Growth Plan aprovado', `Seu Annual Growth Plan foi ✅ aprovado e está em andamento.${feedback ? ' Feedback: ' + feedback : ''}`, 'success')
       return json({ ok: true })
     }
 
@@ -852,7 +852,7 @@ Deno.serve(async (req) => {
       }).eq('id', pdi_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = pdi.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'PDI devolvido', `Seu PDI foi devolvido para revisão. Feedback: ${feedback}`, 'warning')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Growth Plan devolvido', `Seu Annual Growth Plan foi devolvido para revisão. Feedback: ${feedback}`, 'warning')
       return json({ ok: true })
     }
 
