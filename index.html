@@ -746,6 +746,7 @@ body.has-bottomnav{padding-bottom:72px;}
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (tab === 'solicitar') setModo('turno');
     if (tab === 'atividades') initAtividadesTab();
+    if (tab === 'boletos') carregarBoletos();
   }
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
@@ -1043,8 +1044,6 @@ body.has-bottomnav{padding-bottom:72px;}
 
     loadPickupCard();
     carregarAgenda();
-    carregarBoletos();
-    carregarReunioesUI();
   }
 
   // ── TURNO ─────────────────────────────────────────────
