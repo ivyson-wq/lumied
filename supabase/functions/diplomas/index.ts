@@ -259,14 +259,16 @@ Deno.serve(async (req) => {
       })
       const t = await res.json()
       if (t.access_token) {
-        // Delete old tokens and save new
-        await sb.from('ml_tokens').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-        await sb.from('ml_tokens').insert({
+        // Delete old tokens
+        const { error: delErr } = await sb.from('ml_tokens').delete().gte('criado_em', '2000-01-01')
+        // Save new token
+        const { error: insErr } = await sb.from('ml_tokens').insert({
           access_token: t.access_token,
           refresh_token: t.refresh_token,
-          expires_at: new Date(Date.now() + t.expires_in * 1000).toISOString(),
+          expires_at: new Date(Date.now() + (t.expires_in || 21600) * 1000).toISOString(),
           user_id: String(t.user_id || ''),
         })
+        if (insErr) return new Response('Erro ao salvar token: ' + insErr.message, { status: 500 })
         return new Response(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mercado Livre Conectado</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
@@ -292,7 +294,7 @@ p{font-size:14px;color:#7a7169;line-height:1.6;margin-bottom:24px;}
 </div>
 </body></html>`, { status: 200, headers: { 'Content-Type': 'text/html' } })
       }
-      return new Response('Erro ao obter token: ' + JSON.stringify(t), { status: 400 })
+      return new Response('Erro ao obter token do ML: ' + JSON.stringify(t), { status: 400, headers: { 'Content-Type': 'text/plain' } })
     } catch (e) { return new Response('Erro: ' + (e as Error).message, { status: 500 }) }
   }
 
