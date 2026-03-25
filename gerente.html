@@ -677,7 +677,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div id="mlStatus" style="font-size:11px;margin-top:4px;"></div>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-              <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Atualizar Preços Agora</button>
+              <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Buscar Referências de Preço</button>
               <button id="almBtnML" onclick="conectarML()" style="background:#ffe600;color:#333;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🛒 Conectar Mercado Livre</button>
             </div>
           </div>
@@ -4331,15 +4331,35 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const d = await callDiplomas({ action: 'alm_insumos_list' });
     const insumos = d.data || [];
     document.getElementById('almInsumosCount').textContent = insumos.filter((i)=>i.ativo).length;
-    document.getElementById('almInsumosList').innerHTML = insumos.map((it) => `
-      <div class="alm-insumo-row" style="${!it.ativo ? 'opacity:.5;' : ''}">
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;">${it.nome}</div>
-          <div style="font-size:11px;color:var(--muted);">${it.categoria||'Geral'} · ${it.unidade} · Estoque: ${it.estoque_qty} · ${almFmtBRL(it.preco)}</div>
+    document.getElementById('almInsumosList').innerHTML = insumos.map((it) => {
+      const temRef = it.preco_referencia != null;
+      const refHtml = temRef ? `
+        <div style="margin-top:6px;padding:8px 10px;background:#fff8e1;border:1px solid #f0dfa0;border-radius:8px;font-size:11px;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <strong style="color:#b07d00;">Referencia encontrada: ${almFmtBRL(it.preco_referencia)}</strong>
+            <span style="color:var(--muted);">via ${esc(it.referencia_fonte||'?')}</span>
+          </div>
+          <div style="color:#7a5e00;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(it.referencia_nome||'')}">
+            ${esc(it.referencia_nome||'')}
+          </div>
+          ${it.referencia_url ? `<a href="${esc(it.referencia_url)}" target="_blank" style="color:#1a6bb5;font-size:10px;">Ver produto</a>` : ''}
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button onclick="almAplicarReferencia('${it.id}')" style="padding:3px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aceitar preco</button>
+            <button onclick="almDescartarReferencia('${it.id}')" style="padding:3px 10px;background:none;border:1px solid var(--border);border-radius:5px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Descartar</button>
+          </div>
+        </div>` : '';
+      return `<div class="alm-insumo-row" style="flex-direction:column;align-items:stretch;${!it.ativo ? 'opacity:.5;' : ''}">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;">${it.nome}</div>
+            <div style="font-size:11px;color:var(--muted);">${it.categoria||'Geral'} · ${it.unidade} · Estoque: ${it.estoque_qty} · <strong>${almFmtBRL(it.preco)}</strong></div>
+          </div>
+          <button onclick="almEditarInsumo(${JSON.stringify(it).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
+          ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
         </div>
-        <button onclick="almEditarInsumo(${JSON.stringify(it).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
-        ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Desativar</button>` : ''}
-      </div>`).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
+        ${refHtml}
+      </div>`;
+    }).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
   }
 
   function almEditarInsumo(it) {
@@ -4614,36 +4634,47 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const btn = document.getElementById('almBtnAtualizarPrecos');
     btn.disabled = true;
 
-    // 1. Busca lista de insumos ativos
     const insData = await callDiplomas({ action: 'alm_insumos_list' });
     const insumos = (insData.data || []).filter(i => i.ativo);
-    if (!insumos.length) { showToast('Nenhum insumo ativo.', 'warning'); btn.disabled = false; btn.textContent = '🔄 Atualizar Preços Agora'; return; }
+    if (!insumos.length) { showToast('Nenhum insumo ativo.', 'warning'); btn.disabled = false; btn.textContent = '🔄 Buscar Referências de Preço'; return; }
 
-    let atualizados = 0;
+    let encontrados = 0;
     const total = insumos.length;
 
-    // 2. Busca preço de cada insumo individualmente
     for (let i = 0; i < total; i++) {
       const ins = insumos[i];
       btn.textContent = `⏳ ${i+1}/${total} — ${ins.nome.substring(0,25)}...`;
       try {
         const d = await callDiplomas({ action: 'alm_buscar_precos', nome: ins.nome, unidade: ins.unidade });
         const resultados = d.data || [];
-        // Encontra melhor preço com match >= 70%
         const produtos = resultados.filter(r => r.tipo === 'produto' && r.preco != null && r.match >= 70);
         if (produtos.length) {
           produtos.sort((a, b) => a.preco - b.preco);
           const melhor = produtos[0];
-          // Atualiza preço no banco
-          await callDiplomas({ action: 'alm_insumo_save', id: ins.id, nome: ins.nome, descricao: ins.descricao, unidade: ins.unidade, estoque_qty: ins.estoque_qty, preco: melhor.preco, categoria: ins.categoria });
-          atualizados++;
+          // Salva como REFERÊNCIA (não sobrescreve o preço)
+          await callDiplomas({ action: 'alm_insumo_set_referencia', id: ins.id, preco_referencia: melhor.preco, referencia_nome: melhor.nome, referencia_fonte: melhor.plataforma, referencia_url: melhor.url_produto });
+          encontrados++;
         }
       } catch(_) {}
     }
 
     btn.disabled = false;
-    btn.textContent = '🔄 Atualizar Preços Agora';
-    showToast(`Preços atualizados: ${atualizados} de ${total} insumos`, 'success', 5000);
+    btn.textContent = '🔄 Buscar Referências de Preço';
+    showToast(`Referências encontradas: ${encontrados} de ${total} insumos. Revise antes de aplicar.`, 'success', 6000);
+    almLoadInsumos();
+  }
+
+  async function almAplicarReferencia(id) {
+    const insData = await callDiplomas({ action: 'alm_insumos_list' });
+    const ins = (insData.data || []).find(i => i.id === id);
+    if (!ins || !ins.preco_referencia) return;
+    await callDiplomas({ action: 'alm_insumo_save', id: ins.id, nome: ins.nome, descricao: ins.descricao, unidade: ins.unidade, estoque_qty: ins.estoque_qty, preco: ins.preco_referencia, categoria: ins.categoria });
+    showToast('Preço atualizado para ' + almFmtBRL(ins.preco_referencia), 'success');
+    almLoadInsumos();
+  }
+
+  async function almDescartarReferencia(id) {
+    await callDiplomas({ action: 'alm_insumo_set_referencia', id, preco_referencia: null, referencia_nome: null, referencia_fonte: null, referencia_url: null });
     almLoadInsumos();
   }
 

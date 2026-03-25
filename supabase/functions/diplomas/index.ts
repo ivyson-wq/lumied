@@ -1610,7 +1610,7 @@ Deno.serve(async (req) => {
   const isAlmGerenteAction = [
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
     'alm_aprovar', 'alm_rejeitar',
-    'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del',
+    'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del', 'alm_insumo_set_referencia',
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
@@ -1766,6 +1766,20 @@ Deno.serve(async (req) => {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
       const { error } = await sb.from('alm_insumos').update({ ativo: false }).eq('id', id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_insumo_set_referencia') {
+      const { id, preco_referencia, referencia_nome, referencia_fonte, referencia_url } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { error } = await sb.from('alm_insumos').update({
+        preco_referencia: preco_referencia ?? null,
+        referencia_nome: referencia_nome ?? null,
+        referencia_fonte: referencia_fonte ?? null,
+        referencia_url: referencia_url ?? null,
+        preco_atualizado_em: preco_referencia ? new Date().toISOString() : null,
+      }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
