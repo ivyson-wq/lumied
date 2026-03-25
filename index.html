@@ -221,26 +221,6 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .dia-crianca-info span{font-size:10px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dia-vazio{font-size:11px;color:var(--muted);font-style:italic;text-align:center;padding:8px 0;}
 @media(max-width:600px){.dias-semana-grid{grid-template-columns:repeat(2,1fr)!important;}}
-/* REUNIÕES */
-.gestora-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px;}
-.gestora-card{border:2px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s;background:#fdfbf8;text-align:center;}
-.gestora-card:hover{border-color:#bbb;background:#f7f5f2;}
-.gestora-card.selected{border-color:var(--red);background:var(--red-light);}
-.gestora-icon{font-size:32px;margin-bottom:8px;}
-.gestora-cargo{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;}
-.gestora-nome{font-family:'Lora',serif;font-size:14px;font-weight:700;color:var(--text);}
-.gestora-card.selected .gestora-nome{color:var(--red);}
-.slots-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px;}
-.slot-btn{padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;cursor:pointer;transition:all .15s;text-align:left;font-family:'DM Sans',sans-serif;width:100%;}
-.slot-btn:hover{border-color:var(--red);background:var(--red-light);}
-.slot-btn.selected{border-color:var(--red);background:var(--red-light);}
-.slot-data{font-size:11px;color:var(--muted);display:block;margin-bottom:2px;}
-.slot-hora{font-size:13px;font-weight:600;color:var(--text);}
-.slot-btn.selected .slot-hora{color:var(--red);}
-.reuniao-agendada{border:1.5px solid rgba(45,122,58,.3);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:rgba(45,122,58,.04);}
-.reuniao-agendada .ra-title{font-weight:600;font-size:13px;color:#1a5c2a;margin-bottom:4px;}
-.reuniao-agendada .ra-info{font-size:12px;color:var(--muted);}
-
 .almoco-opt{margin-top:12px;padding:12px 14px;background:rgba(45,122,58,.06);border:1.5px solid rgba(45,122,58,.2);border-radius:9px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;}
 .almoco-opt:hover{background:rgba(45,122,58,.1);}
 .almoco-opt.selected{background:rgba(45,122,58,.12);border-color:rgba(45,122,58,.5);}
@@ -728,7 +708,6 @@ body.has-bottomnav{padding-bottom:72px;}
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
   const API      = SUPABASE_URL + '/functions/v1/api';
   const SEND     = SUPABASE_URL + '/functions/v1/send-email';
-  const CALENDAR = SUPABASE_URL + '/functions/v1/calendar';
   const ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
   const DIPLOMAS = SUPABASE_URL + '/functions/v1/diplomas';
 
@@ -978,7 +957,6 @@ body.has-bottomnav{padding-bottom:72px;}
     document.getElementById('pickupCard').style.display  = 'none';
     document.getElementById('agendaCard').style.display  = 'none';
     document.getElementById('boletosCard').style.display = 'none';
-    document.getElementById('reuniaoCard').style.display = 'none';
     document.getElementById('bottomNav').classList.remove('visible');
     document.getElementById('greetingBar').style.display = 'none';
     document.getElementById('quickBadges').style.display = 'none';
@@ -1026,7 +1004,6 @@ body.has-bottomnav{padding-bottom:72px;}
     document.getElementById('pickupCard').style.display  = 'block';
     document.getElementById('agendaCard').style.display  = 'block';
     document.getElementById('boletosCard').style.display = 'block';
-    document.getElementById('reuniaoCard').style.display = 'block';
 
     // Header compacto + greeting
     document.querySelector('.site-header').classList.add('compact');
@@ -1772,24 +1749,6 @@ body.has-bottomnav{padding-bottom:72px;}
     if (pickupPollTimer) { clearInterval(pickupPollTimer); pickupPollTimer = null; }
   }
 
-  // ── REUNIÕES ──────────────────────────────────────────
-  let gestoras = [];
-  let gestoraAtual = null;
-  let slotAtual = null;
-
-  async function callCalendar(body) {
-    const r = await fetch(CALENDAR, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON,
-        'Authorization': 'Bearer ' + SUPABASE_ANON
-      },
-      body: JSON.stringify(body)
-    });
-    return r.json();
-  }
-
   async function carregarBoletos(cpfDireto) {
     if (!currentUser) return;
     const el = document.getElementById('boletosConteudo');
@@ -1864,134 +1823,6 @@ body.has-bottomnav{padding-bottom:72px;}
     if (cpf.length !== 11) { showToast('Informe um CPF válido (11 dígitos).', 'warning'); return; }
     localStorage.setItem('mb_cpf', cpf);
     carregarBoletos(cpf);
-  }
-
-  async function carregarReunioesUI() {
-    if (!currentUser) return;
-
-    try {
-      // Carrega gestoras
-      gestoras = await callCalendar({ action: 'gestoras_list' });
-      if (!Array.isArray(gestoras)) gestoras = [];
-
-      const icons = { diretora: '👩‍💼', coordenadora: '👩‍🏫' };
-      const cargos = { diretora: 'Diretora Pedagógica', coordenadora: 'Coordenadora Pedagógica' };
-
-      if (!gestoras.length) {
-        document.getElementById('gestoraCards').innerHTML =
-          '<p style="font-size:13px;color:var(--muted);">Nenhuma gestora cadastrada ainda.</p>';
-      } else {
-        document.getElementById('gestoraCards').innerHTML = gestoras.map(g =>
-          `<div class="gestora-card" id="gcard_${g.id}" onclick="selecionarGestora('${g.id}')">
-            <div class="gestora-icon">${icons[g.cargo] || '👩'}</div>
-            <div class="gestora-cargo">${cargos[g.cargo] || g.cargo}</div>
-            <div class="gestora-nome">${esc2(g.nome)}</div>
-          </div>`
-        ).join('');
-      }
-
-      await carregarMinhasReunioes();
-    } catch(e) {
-      console.error('Erro ao carregar reuniões:', e);
-      document.getElementById('gestoraCards').innerHTML =
-        '<p style="font-size:13px;color:var(--muted);">Serviço de agendamento temporariamente indisponível.</p>';
-    }
-  }
-
-  async function carregarMinhasReunioes() {
-    const data = await callCalendar({ action: 'minhas_reunioes', email: currentUser.email });
-    const el = document.getElementById('reunioesAgendadas');
-    const qr = document.getElementById('qbReunioes');
-    if (qr) qr.textContent = Array.isArray(data) ? data.length : 0;
-    if (!Array.isArray(data) || !data.length) { el.innerHTML = ''; return; }
-    el.innerHTML = '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">Suas reuniões agendadas</div>' +
-      data.map(r => {
-        const dataFmt = new Date(r.data_reuniao + 'T12:00:00').toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
-        return `<div class="reuniao-agendada">
-          <div class="ra-title">📅 ${dataFmt} às ${r.hora_inicio.substring(0,5)}</div>
-          <div class="ra-info">${r.gestoras?.nome || ''} · ${r.assunto || 'Sem assunto especificado'}</div>
-          <button onclick="cancelarReuniao('${r.id}')" style="margin-top:8px;background:none;border:none;color:#a00d24;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline;padding:0;">Cancelar agendamento</button>
-        </div>`;
-      }).join('');
-  }
-
-  async function selecionarGestora(id) {
-    gestoraAtual = id;
-    slotAtual = null;
-    document.querySelectorAll('.gestora-card').forEach(c => c.classList.remove('selected'));
-    document.getElementById('gcard_' + id)?.classList.add('selected');
-    document.getElementById('slotsSection').style.display = 'block';
-    document.getElementById('assuntoSection').style.display = 'none';
-    document.getElementById('slotsLista').innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando horários…</div>';
-
-    const slots = await callCalendar({ action: 'slots_disponiveis', gestora_id: id, semanas: 4 });
-    if (!Array.isArray(slots) || !slots.length) {
-      document.getElementById('slotsLista').innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhum horário disponível nas próximas 4 semanas.</div>';
-      return;
-    }
-    document.getElementById('slotsLista').innerHTML =
-      '<div class="slots-grid">' + slots.map((s, i) =>
-        `<button class="slot-btn" id="slot_${i}"
-          data-data="${s.data}" data-inicio="${s.hora_inicio}" data-fim="${s.hora_fim}"
-          onclick="selecionarSlot(this, '${s.data}', '${s.hora_inicio}', '${s.hora_fim}')">
-          <span class="slot-data">${s.data_fmt}</span>
-          <span class="slot-hora">${s.hora_inicio} – ${s.hora_fim}</span>
-        </button>`
-      ).join('') + '</div>';
-  }
-
-  function selecionarSlot(el, data, inicio, fim) {
-    slotAtual = { data, inicio, fim };
-    document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
-    el.classList.add('selected');
-    document.getElementById('assuntoSection').style.display = 'block';
-    document.getElementById('reuniaoErr').classList.remove('show');
-    document.getElementById('reuniaoAssunto').focus();
-  }
-
-  async function confirmarReuniao() {
-    if (!gestoraAtual || !slotAtual || !currentUser) return;
-    const assunto = document.getElementById('reuniaoAssunto').value.trim();
-    const btn = document.querySelector('#assuntoSection .btn-submit');
-    btn.disabled = true; btn.textContent = 'Agendando…';
-
-    const meta = currentUser.user_metadata || {};
-    const nomeResp = meta.full_name || meta.name || currentUser.email;
-
-    const d = await callCalendar({
-      action: 'agendar_reuniao',
-      gestora_id: gestoraAtual,
-      email_resp: currentUser.email,
-      nome_resp: nomeResp,
-      data_reuniao: slotAtual.data,
-      hora_inicio: slotAtual.inicio,
-      hora_fim: slotAtual.fim,
-      assunto: assunto || null,
-    });
-
-    btn.disabled = false; btn.textContent = 'Confirmar Agendamento';
-
-    if (d.error) {
-      const errEl = document.getElementById('reuniaoErr');
-      errEl.textContent = d.error; errEl.classList.add('show'); return;
-    }
-
-    // Sucesso — reseta
-    slotAtual = null; gestoraAtual = null;
-    document.querySelectorAll('.gestora-card').forEach(c => c.classList.remove('selected'));
-    document.getElementById('slotsSection').style.display = 'none';
-    document.getElementById('assuntoSection').style.display = 'none';
-    document.getElementById('reuniaoAssunto').value = '';
-    await carregarMinhasReunioes();
-    showToast('Reunião agendada com sucesso! Você receberá um convite no e-mail.', 'success', 5000);
-  }
-
-  async function cancelarReuniao(id) {
-    if (!confirm('Cancelar esta reunião?')) return;
-    await callCalendar({ action: 'cancelar_reuniao', id });
-    await carregarMinhasReunioes();
-    // Recarrega slots se gestoraAtual estiver selecionada
-    if (gestoraAtual) await selecionarGestora(gestoraAtual);
   }
 
   // ── DADOS ─────────────────────────────────────────────
