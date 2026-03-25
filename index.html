@@ -475,13 +475,6 @@ body.has-bottomnav{padding-bottom:72px;}
     <div id="agendaConteudo"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div></div>
   </div>
 
-  <!-- ACHADOS & PERDIDOS -->
-  <div class="card" id="achadosCard" style="display:none;">
-    <div class="card-title" style="margin-bottom:12px;">🔍 Achados & Perdidos</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Itens encontrados na escola que ainda não foram retirados.</p>
-    <div id="achadosPaisLista"></div>
-  </div>
-
   </div><!-- /tabInicio -->
 
   <!-- TAB: MUDANÇA DE TURNO -->
@@ -631,6 +624,17 @@ body.has-bottomnav{padding-bottom:72px;}
   </div>
   </div><!-- /tabBoletos -->
 
+  <!-- TAB: ACHADOS & PERDIDOS -->
+  <div class="tab-panel" id="tabAchados">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">
+        🔍 Achados & Perdidos
+        <button onclick="carregarAchados()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Itens encontrados na escola que ainda não foram retirados. Se reconhecer algum item do seu filho, procure a secretaria.</p>
+      <div id="achadosPaisLista"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+    </div>
+  </div>
 
 </div><!-- /formWrap -->
 
@@ -651,6 +655,10 @@ body.has-bottomnav{padding-bottom:72px;}
   <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos">
     <span class="bnav-icon">💰</span>
     <span class="bnav-label">Boletos</span>
+  </button>
+  <button class="bnav-item" onclick="switchTab('achados')" data-tab="achados">
+    <span class="bnav-icon">🔍</span>
+    <span class="bnav-label">Achados & Perdidos</span>
   </button>
 </nav>
 
@@ -731,6 +739,7 @@ body.has-bottomnav{padding-bottom:72px;}
     if (tab === 'solicitar') setModo('turno');
     if (tab === 'atividades') initAtividadesTab();
     if (tab === 'boletos') carregarBoletos();
+    if (tab === 'achados') carregarAchados();
   }
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
@@ -2028,10 +2037,8 @@ body.has-bottomnav{padding-bottom:72px;}
   async function carregarAchados() {
     const d = await callDiplomas({ action: 'achados_lista_publica' });
     const items = d.data || [];
-    const card = document.getElementById('achadosCard');
     const el = document.getElementById('achadosPaisLista');
-    card.style.display = 'block';
-    if (!items.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhum item encontrado no momento.</div>'; return; }
+    if (!items.length) { el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Nenhum item encontrado no momento. 🎉</div>'; return; }
     el.innerHTML = items.map(it => {
       const dt = new Date(it.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' });
       return `<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f0ece6;">

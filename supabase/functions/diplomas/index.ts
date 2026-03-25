@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
         // Save new token
         const { error: insErr } = await sb.from('ml_tokens').insert({
           access_token: t.access_token,
-          refresh_token: t.refresh_token,
+          refresh_token: t.refresh_token || t.access_token,
           expires_at: new Date(Date.now() + (t.expires_in || 21600) * 1000).toISOString(),
           user_id: String(t.user_id || ''),
         })
