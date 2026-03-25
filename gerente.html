@@ -727,14 +727,28 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div class="form-card" id="almInsumoFormCard">
               <h3 id="almInsumoFormTitle">➕ Novo Insumo</h3>
               <input type="hidden" id="almInsumoId">
-              <div class="ff"><label>Nome *</label><input type="text" id="almInsumoNome" placeholder="Ex: Papel A4"></div>
-              <div class="ff"><label>Descrição</label><input type="text" id="almInsumoDesc" placeholder="Ex: Resma 500 folhas"></div>
+              <div class="ff"><label>Nome *</label><input type="text" id="almInsumoNome" placeholder="Ex: Caneta Esferografica Azul"></div>
+              <div class="ff"><label>Descricao</label><input type="text" id="almInsumoDesc" placeholder="Ex: Ponta 1.0mm"></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="ff" style="margin:0;"><label>Unidade</label><input type="text" id="almInsumoUnidade" placeholder="unidade" value="unidade"></div>
-                <div class="ff" style="margin:0;"><label>Estoque</label><input type="number" id="almInsumoEstoque" placeholder="0" min="0" step="0.5"></div>
+                <div class="ff" style="margin:0;"><label>Unidade de consumo</label><input type="text" id="almInsumoUnidade" placeholder="unidade" value="unidade">
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px;">Como a professora pede (ex: unidade, folha)</div>
+                </div>
+                <div class="ff" style="margin:0;"><label>Estoque (consumo)</label><input type="number" id="almInsumoEstoque" placeholder="0" min="0" step="0.5"></div>
+              </div>
+              <div style="background:#f7f5f2;border-radius:8px;padding:10px;margin-top:10px;">
+                <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Embalagem de compra</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <div class="ff" style="margin:0;"><label>Embalagem</label><input type="text" id="almInsumoUnidadeCompra" placeholder="Ex: caixa, pacote, resma">
+                  </div>
+                  <div class="ff" style="margin:0;"><label>Qtd por embalagem</label><input type="number" id="almInsumoQtdEmb" placeholder="1" min="1" step="1" value="1" oninput="almAtualizarPrecoUnit()">
+                    <div style="font-size:10px;color:var(--muted);margin-top:2px;">Ex: 100 (caixa c/ 100 un)</div>
+                  </div>
+                </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-                <div class="ff" style="margin:0;"><label>Preço unit. (R$)</label><input type="number" id="almInsumoPreco" placeholder="0,00" min="0" step="0.01"></div>
+                <div class="ff" style="margin:0;"><label>Preco da embalagem (R$)</label><input type="number" id="almInsumoPreco" placeholder="0,00" min="0" step="0.01" oninput="almAtualizarPrecoUnit()">
+                  <div style="font-size:10px;margin-top:2px;" id="almPrecoUnitInfo"></div>
+                </div>
                 <div class="ff" style="margin:0;"><label>Categoria</label>
                   <select id="almInsumoCategoria" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;">
                     <option value="">— sem categoria —</option>
@@ -4352,7 +4366,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:600;font-size:13px;">${it.nome}</div>
-            <div style="font-size:11px;color:var(--muted);">${it.categoria||'Geral'} · ${it.unidade} · Estoque: ${it.estoque_qty} · <strong>${almFmtBRL(it.preco)}</strong></div>
+            <div style="font-size:11px;color:var(--muted);">
+              ${it.categoria||'Geral'} · Estoque: ${it.estoque_qty} ${it.unidade}
+              ${it.qtd_por_embalagem > 1 ? ` · Embalagem: ${it.unidade_compra||'cx'} c/ ${it.qtd_por_embalagem} ${it.unidade}` : ''}
+            </div>
+            <div style="font-size:11px;">
+              <strong>${almFmtBRL(it.preco)}</strong>${it.qtd_por_embalagem > 1 ? `/${it.unidade_compra||'emb'} <span style="color:#2d7a3a;font-weight:600;">(${almFmtBRL(it.preco/it.qtd_por_embalagem)}/${it.unidade})</span>` : `/${it.unidade}`}
+            </div>
           </div>
           <button onclick="almEditarInsumo(${JSON.stringify(it).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
           ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
@@ -4370,14 +4390,32 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('almInsumoEstoque').value  = it.estoque_qty;
     document.getElementById('almInsumoPreco').value    = it.preco;
     document.getElementById('almInsumoCategoria').value= it.categoria||'';
+    document.getElementById('almInsumoUnidadeCompra').value = it.unidade_compra||'';
+    document.getElementById('almInsumoQtdEmb').value   = it.qtd_por_embalagem||1;
+    almAtualizarPrecoUnit();
     document.getElementById('almInsumoFormTitle').textContent = '✏️ Editar Insumo';
     document.getElementById('almInsumoFormCard').scrollIntoView({ behavior:'smooth' });
   }
 
   function almLimparInsumoForm() {
-    ['almInsumoId','almInsumoNome','almInsumoDesc','almInsumoEstoque','almInsumoPreco','almInsumoCategoria'].forEach(id => document.getElementById(id).value='');
+    ['almInsumoId','almInsumoNome','almInsumoDesc','almInsumoEstoque','almInsumoPreco','almInsumoCategoria','almInsumoUnidadeCompra'].forEach(id => document.getElementById(id).value='');
     document.getElementById('almInsumoUnidade').value = 'unidade';
+    document.getElementById('almInsumoQtdEmb').value = '1';
+    document.getElementById('almPrecoUnitInfo').textContent = '';
     document.getElementById('almInsumoFormTitle').textContent = '➕ Novo Insumo';
+  }
+
+  function almAtualizarPrecoUnit() {
+    const preco = parseFloat(document.getElementById('almInsumoPreco').value) || 0;
+    const qtd = parseFloat(document.getElementById('almInsumoQtdEmb').value) || 1;
+    const el = document.getElementById('almPrecoUnitInfo');
+    if (qtd > 1 && preco > 0) {
+      el.textContent = 'Preco por ' + document.getElementById('almInsumoUnidade').value + ': ' + almFmtBRL(preco / qtd);
+      el.style.color = '#2d7a3a';
+      el.style.fontWeight = '600';
+    } else {
+      el.textContent = '';
+    }
   }
 
   async function almSalvarInsumo() {
@@ -4386,13 +4424,15 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     errEl.classList.remove('show'); okEl.classList.remove('show');
     const d = await callDiplomas({
       action: 'alm_insumo_save',
-      id:           document.getElementById('almInsumoId').value || undefined,
-      nome:         document.getElementById('almInsumoNome').value.trim(),
-      descricao:    document.getElementById('almInsumoDesc').value.trim(),
-      unidade:      document.getElementById('almInsumoUnidade').value.trim() || 'unidade',
-      estoque_qty:  parseFloat(document.getElementById('almInsumoEstoque').value) || 0,
-      preco:        parseFloat(document.getElementById('almInsumoPreco').value) || 0,
-      categoria:    document.getElementById('almInsumoCategoria').value.trim(),
+      id:               document.getElementById('almInsumoId').value || undefined,
+      nome:             document.getElementById('almInsumoNome').value.trim(),
+      descricao:        document.getElementById('almInsumoDesc').value.trim(),
+      unidade:          document.getElementById('almInsumoUnidade').value.trim() || 'unidade',
+      estoque_qty:      parseFloat(document.getElementById('almInsumoEstoque').value) || 0,
+      preco:            parseFloat(document.getElementById('almInsumoPreco').value) || 0,
+      categoria:        document.getElementById('almInsumoCategoria').value.trim(),
+      unidade_compra:   document.getElementById('almInsumoUnidadeCompra').value.trim() || null,
+      qtd_por_embalagem: parseFloat(document.getElementById('almInsumoQtdEmb').value) || 1,
     });
     if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
     okEl.textContent = '✅ Insumo salvo!'; okEl.classList.add('show');

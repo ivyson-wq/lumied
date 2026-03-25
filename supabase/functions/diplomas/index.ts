@@ -1745,18 +1745,16 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'alm_insumo_save') {
-      const { id, nome, descricao, unidade, estoque_qty, preco, categoria } = body
+      const { id, nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra, qtd_por_embalagem } = body
       if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
+      const data = { nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra: unidade_compra || null, qtd_por_embalagem: qtd_por_embalagem || 1 }
       if (id) {
-        const { error } = await sb.from('alm_insumos').update(
-          { nome, descricao, unidade, estoque_qty, preco, categoria }
-        ).eq('id', id)
+        const { error } = await sb.from('alm_insumos').update(data).eq('id', id)
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true })
       } else {
-        const { data: novo, error } = await sb.from('alm_insumos').insert(
-          { nome, descricao, unidade: unidade || 'unidade', estoque_qty: estoque_qty || 0, preco: preco || 0, categoria }
-        ).select('id').single()
+        const ins = { ...data, unidade: data.unidade || 'unidade', estoque_qty: data.estoque_qty || 0, preco: data.preco || 0 }
+        const { data: novo, error } = await sb.from('alm_insumos').insert(ins).select('id').single()
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true, id: novo.id })
       }

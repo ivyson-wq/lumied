@@ -1922,7 +1922,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         return `<div class="alm-catalog-item">
           <div class="alm-cat-info">
             <div class="alm-cat-name">${esc(it.nome)}</div>
-            <div class="alm-cat-sub">${fmtBRL(it.preco)}/${it.unidade} · ${estoqueTxt}</div>
+            <div class="alm-cat-sub">${fmtBRL(it.qtd_por_embalagem > 1 ? it.preco / it.qtd_por_embalagem : it.preco)}/${it.unidade} · ${estoqueTxt}</div>
           </div>
           <button class="alm-add-btn" onclick="almAddToCart('${it.id}')" ${inCart ? 'style="background:#6b8c6b;"' : ''}>
             ${inCart ? '✓ Adicionado' : '+ Adicionar'}
@@ -1936,7 +1936,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (almCart.find(c => c.insumo_id === insumoId)) return;
     const it = almCatalogo.find(c => c.id === insumoId);
     if (!it) return;
-    almCart.push({ insumo_id: it.id, nome: it.nome, unidade: it.unidade, preco_unit: it.preco, qty_solicitado: 1 });
+    const precoUnit = it.qtd_por_embalagem > 1 ? it.preco / it.qtd_por_embalagem : it.preco;
+    almCart.push({ insumo_id: it.id, nome: it.nome, unidade: it.unidade, preco_unit: precoUnit, qty_solicitado: 1 });
     almRenderCart();
     almFiltrarCatalogo();
   }
