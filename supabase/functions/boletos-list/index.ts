@@ -86,6 +86,7 @@ async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> 
     console.log('Tentando query:', `/cobranca/v3/cobrancas?${q}`)
     const attempt = await interFetch(`/cobranca/v3/cobrancas?${q}`, { headers })
     lastText = await attempt.text()
+    console.log('Inter response status:', attempt.status, '| body:', lastText.slice(0, 500))
     if (attempt.ok) { res = { ...attempt, text: () => Promise.resolve(lastText), json: () => Promise.resolve(JSON.parse(lastText)) }; break }
     console.log('Query falhou:', attempt.status, lastText.slice(0, 200))
   }
@@ -152,19 +153,33 @@ Deno.serve(async (req) => {
     const cpfFormatado = cpfRaw.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
     // Sincroniza com Inter e salva novos boletos no Supabase
+    let cobrancas: any[] = []
+    let insertErrors: string[] = []
     try {
       const token = await getInterToken()
-      const cobrancas = await listarCobrancasInter(token, cpfRaw)
+      cobrancas = await listarCobrancasInter(token, cpfRaw)
 
+      console.log('Total cobrancas retornadas:', cobrancas.length)
       if (cobrancas.length > 0) console.log('Estrutura cobranca[0]:', JSON.stringify(cobrancas[0]))
 
-      for (const c of cobrancas) {
-        const nossoNumero: string = c.nossoNumero
-        const codigoSolicitacao: string = c.codigoSolicitacao
-        const situacao: string = c.situacao ?? 'EMITIDO'
-        const valor: number = c.valorNominal ?? c.valor
-        const vencimento: string = c.dataVencimento
-        const linhaDigitavel: string = c.linhaDigitavel ?? ''
+      // Log primeiro boleto para entender a estrutura
+      if (cobrancas.length > 0) {
+        console.log('Estrutura cobranca[0] COMPLETA:', JSON.stringify(cobrancas[0]).slice(0, 1000))
+      }
+
+      const insertErrors: string[] = []
+      for (const raw of cobrancas) {
+        // API Inter v3 retorna { cobranca: {...}, boleto: {...}, pix: {...} }
+        const cob = raw.cobranca ?? raw
+        const bol = raw.boleto ?? {}
+        const nossoNumero: string = cob.nossoNumero ?? bol.nossoNumero ?? cob.seuNumero ?? ''
+        const codigoSolicitacao: string = cob.codigoSolicitacao ?? ''
+        const situacao: string = cob.situacao ?? 'EMITIDO'
+        const valor: number = cob.valorNominal ?? cob.valor ?? 0
+        const vencimento: string = cob.dataVencimento ?? ''
+        const linhaDigitavel: string = bol.linhaDigitavel ?? cob.linhaDigitavel ?? ''
+
+        if (!nossoNumero) { insertErrors.push('sem nossoNumero: keys=' + JSON.stringify(Object.keys(cob)).slice(0, 200)); continue }
 
         const { data: existing } = await supabase
           .from('boletos')
@@ -174,29 +189,32 @@ Deno.serve(async (req) => {
 
         let pdfUrl = existing?.pdf_url ?? null
 
-        if (!pdfUrl) {
-          const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
-          if (pdfBytes) {
-            const fileName = `${cpfRaw}/${nossoNumero}.pdf`
-            const { error: uploadError } = await supabase.storage
-              .from('boletos')
-              .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
-            if (!uploadError) {
-              const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
-              pdfUrl = urlData.publicUrl
+        if (!pdfUrl && codigoSolicitacao) {
+          try {
+            const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
+            if (pdfBytes) {
+              const fileName = `${cpfRaw}/${nossoNumero}.pdf`
+              const { error: uploadError } = await supabase.storage
+                .from('boletos')
+                .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
+                pdfUrl = urlData.publicUrl
+              }
             }
-          }
+          } catch { /* PDF download optional */ }
         }
 
         if (existing) {
           if (existing.situacao !== situacao || (!existing.pdf_url && pdfUrl)) {
-            await supabase
+            const { error: updErr } = await supabase
               .from('boletos')
               .update({ situacao, pdf_url: pdfUrl ?? existing.pdf_url })
               .eq('nosso_numero', nossoNumero)
+            if (updErr) insertErrors.push(`update ${nossoNumero}: ${updErr.message}`)
           }
         } else {
-          await supabase.from('boletos').insert({
+          const { error: insErr } = await supabase.from('boletos').insert({
             cpf: cpfFormatado,
             nosso_numero: nossoNumero,
             valor,
@@ -205,10 +223,21 @@ Deno.serve(async (req) => {
             situacao,
             pdf_url: pdfUrl,
           })
+          if (insErr) insertErrors.push(`insert ${nossoNumero}: ${insErr.message}`)
         }
       }
+      console.log('Insert errors:', insertErrors)
     } catch (syncErr) {
       console.error('Sync Inter falhou (retornando cache):', syncErr)
+      // Retorna erro de sync para diagnóstico
+      const { data: cached } = await supabase
+        .from('boletos')
+        .select('*')
+        .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfRaw}`)
+        .order('vencimento', { ascending: false })
+      return new Response(JSON.stringify({ boletos: cached ?? [] }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     const { data: boletos, error: dbError } = await supabase
