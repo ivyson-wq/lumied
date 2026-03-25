@@ -646,7 +646,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const errEl = document.getElementById('loginError');
     errEl.style.display = 'none';
     btn.disabled = true; btn.textContent = 'Entrando…';
-    const d = await callApi({ action: 'professora_login', email, senha }).catch(() => ({ error: 'Erro de conexão.' }));
+    // Tenta login unificado primeiro, fallback para legado
+    let d = await callApi({ action: 'unified_login', email, senha, papel: '' }).catch(() => null);
+    if (!d || d.error) d = await callApi({ action: 'professora_login', email, senha }).catch(() => ({ error: 'Erro de conexão.' }));
     if (d.error) {
       errEl.textContent = d.error; errEl.style.display = 'block';
       btn.disabled = false; btn.textContent = 'Entrar'; return;
@@ -658,6 +660,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   async function doLogout() {
+    await callApi({ action: 'unified_logout' }).catch(() => {});
     await callApi({ action: 'professora_logout' }).catch(() => {});
     localStorage.removeItem('prof_token');
     localStorage.removeItem('prof_nome');

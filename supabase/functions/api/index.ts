@@ -300,6 +300,72 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Usuários Unificados ──────────────────────────────────────
+  if (action === "usuarios_list") {
+    const { data } = await admin.from("usuarios").select("id, nome, email, papel, ativo, criado_em").order("papel").order("nome");
+    return ok(data ?? []);
+  }
+  if (action === "usuarios_create") {
+    const { nome, email, senha, papel } = body as { nome: string; email: string; senha: string; papel: string };
+    if (!nome || !email || !senha || !papel) return err("Nome, e-mail, senha e papel são obrigatórios.");
+    const papeisValidos = ["gerente", "professora", "professora_assistente", "secretaria", "manutencao"];
+    if (!papeisValidos.includes(papel)) return err("Papel inválido.");
+    if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
+    // Usa hash hex (100k iter) padrão unificado
+    const senha_hash = await hashSenhaProf(senha as string);
+    const { error } = await admin.from("usuarios").insert({ nome, email, senha_hash, papel });
+    if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    // Sincroniza com tabela legada correspondente
+    if (papel === "gerente") {
+      await admin.from("gerentes").insert({ nome, email, senha_hash: await hashSenha(senha as string) }).catch(() => {});
+    } else if (papel === "professora" || papel === "professora_assistente" || papel === "manutencao") {
+      await admin.from("professoras").insert({ nome, email, senha_hash, tipo: papel === "professora" ? "professora" : papel }).catch(() => {});
+    } else if (papel === "secretaria") {
+      await admin.from("secretarias").insert({ nome, email, senha_hash }).catch(() => {});
+    }
+    return ok({ success: true });
+  }
+  if (action === "usuarios_update") {
+    const { id, nome, email, papel } = body as { id: string; nome: string; email: string; papel: string };
+    if (!id) return err("ID obrigatório.");
+    const update: Record<string, unknown> = {};
+    if (nome) update.nome = nome;
+    if (email) update.email = email;
+    if (papel) update.papel = papel;
+    const { error } = await admin.from("usuarios").update(update).eq("id", id);
+    if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    return ok({ success: true });
+  }
+  if (action === "usuarios_delete") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatório.");
+    // Busca o usuário para saber o papel
+    const { data: u } = await admin.from("usuarios").select("email, papel").eq("id", id).single();
+    if (!u) return err("Usuário não encontrado.");
+    // Não permite excluir a si mesmo
+    if (u.email === gerente.email) return err("Você não pode remover sua própria conta.");
+    // Verifica se é o último gerente
+    if (u.papel === "gerente") {
+      const { count } = await admin.from("usuarios").select("*", { count: "exact", head: true }).eq("papel", "gerente");
+      if ((count ?? 0) <= 1) return err("É necessário manter pelo menos um gerente.");
+    }
+    await admin.from("usuarios").delete().eq("id", id);
+    // Remove da tabela legada correspondente
+    if (u.papel === "gerente") await admin.from("gerentes").delete().eq("email", u.email).catch(() => {});
+    else if (["professora", "professora_assistente", "manutencao"].includes(u.papel)) await admin.from("professoras").delete().eq("email", u.email).catch(() => {});
+    else if (u.papel === "secretaria") await admin.from("secretarias").delete().eq("email", u.email).catch(() => {});
+    return ok({ success: true });
+  }
+  if (action === "usuarios_reset_senha") {
+    const { id, nova_senha } = body as { id: string; nova_senha: string };
+    if (!id || !nova_senha) return err("ID e nova senha são obrigatórios.");
+    if ((nova_senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
+    const senha_hash = await hashSenhaProf(nova_senha as string);
+    const { error } = await admin.from("usuarios").update({ senha_hash }).eq("id", id);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+
   // ── Configurações ────────────────────────────────────────────
   if (action === "config_set") {
     const { chave, valor } = body as { chave: string; valor: string };

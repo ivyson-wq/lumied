@@ -82,6 +82,19 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   return data ?? null
 }
 
+// ── Unified session validator (new) ──────────────────────────
+async function getUsuario(sb: ReturnType<typeof createClient>, token: string) {
+  if (!token) return null
+  const { data: sessao } = await sb
+    .from('sessoes').select('usuario_id, expira_em')
+    .eq('token', token).maybeSingle()
+  if (!sessao || new Date(sessao.expira_em) < new Date()) return null
+  const { data } = await sb
+    .from('usuarios').select('id, nome, email, papel')
+    .eq('id', sessao.usuario_id).maybeSingle()
+  return data ?? null
+}
+
 // ── Parent (Supabase Auth JWT) validator ────────────────────
 async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string, fallbackEmail?: string): Promise<string | null> {
   if (token) {
@@ -172,6 +185,28 @@ Deno.serve(async (req) => {
     return json({ data: ranking })
   }
 
+  // ── Login Unificado ──────────────────────────────────────────
+  if (action === 'unified_login') {
+    const email: string = (body.email || '').toLowerCase().trim()
+    const senha: string = body.senha || ''
+    const papelEsperado: string = body.papel || '' // opcional: filtra por papel
+    if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
+    const query = sb.from('usuarios').select('id, nome, email, senha_hash, papel').ilike('email', email)
+    if (papelEsperado) query.eq('papel', papelEsperado)
+    const { data: user } = await query.maybeSingle()
+    if (!user || !user.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    if (!await verificarSenha(senha, user.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    const tok = randomToken()
+    await sb.from('sessoes').insert({ usuario_id: user.id, token: tok, expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+    return json({ token: tok, nome: user.nome, email: user.email, papel: user.papel })
+  }
+
+  if (action === 'unified_logout') {
+    await sb.from('sessoes').delete().eq('token', token)
+    return json({ ok: true })
+  }
+
+  // ── Login legado (backward compat) ─────────────────────────
   if (action === 'professora_login') {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
