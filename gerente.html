@@ -4851,6 +4851,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     }
   })();
   function showBioRegisterButton() {
+    if (typeof WebAuthnClient === 'undefined') return;
     WebAuthnClient.isPlatformAvailable().then(ok => {
       if (!ok) return;
       if (!localStorage.getItem('mb_bio_email')) document.getElementById('bioRegBtn').style.display = 'block';
