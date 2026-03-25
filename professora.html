@@ -1583,10 +1583,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   let almXlsxParsed = [];  // itens lidos da planilha aguardando import
 
   function almSwitchTab(tab) {
-    document.getElementById('almTabBuscar').style.display   = tab === 'buscar'    ? 'block' : 'none';
-    document.getElementById('almTabPlanilha').style.display = tab === 'planilha'  ? 'block' : 'none';
-    document.getElementById('almTabBtnBuscar').classList.toggle('active',   tab === 'buscar');
-    document.getElementById('almTabBtnPlanilha').classList.toggle('active', tab === 'planilha');
+    // Tabs foram removidas no redesign — função mantida como no-op
   }
 
   function almGerarModelo() {
@@ -1775,12 +1772,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   // ── Modal: Nova Requisição ─────────────────────────────
   async function almAbrirNovaReq() {
     almCart = [];
-    almXlsxParsed = [];
     document.getElementById('almObservacao').value = '';
     document.getElementById('almModalErr').classList.remove('show');
     document.getElementById('almSearchInput').value = '';
-    document.getElementById('almXlsxResult').style.display = 'none';
-    almSwitchTab('buscar');
+    const livres = document.getElementById('almItensLivres');
+    if (livres) livres.value = '';
     document.getElementById('almModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
     // Load catalog
