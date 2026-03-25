@@ -4404,11 +4404,17 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <strong>${almFmtBRL(it.preco)}</strong>${it.qtd_por_embalagem > 1 ? `/${it.unidade_compra||'emb'} <span style="color:#2d7a3a;font-weight:600;">(${almFmtBRL(it.preco/it.qtd_por_embalagem)}/${it.unidade})</span>` : `/${it.unidade}`}
             </div>
           </div>
-          <button onclick="almEditarInsumo(${JSON.stringify(it).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
+          <button onclick="almEditarInsumoById('${it.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
           <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;${it.preco_atualizado_em?'color:#1a6bb5;':''}">📊${it.preco_atualizado_em?' '+new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):''}</button>
           ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
       </div>`;
     }).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
+  }
+
+  async function almEditarInsumoById(id) {
+    const d = await callDiplomas({ action: 'alm_insumos_list' });
+    const it = (d.data || []).find(i => i.id === id);
+    if (it) almEditarInsumo(it);
   }
 
   function almEditarInsumo(it) {
