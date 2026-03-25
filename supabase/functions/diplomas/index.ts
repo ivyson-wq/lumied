@@ -1444,6 +1444,22 @@ Deno.serve(async (req) => {
           }
         }
       }
+      // Auto-create insumos for non-cataloged items
+      for (const it of itens) {
+        if (!it.insumo_id && it.nome && it.qty_aprovado > 0) {
+          const { data: novo } = await sb.from('alm_insumos').insert({
+            nome: it.nome,
+            unidade: it.unidade || 'unidade',
+            preco: parseFloat(it.preco_unit) || 0,
+            estoque_qty: 0,
+            categoria: it.categoria || null,
+          }).select('id').maybeSingle()
+          if (novo) it.insumo_id = novo.id
+        }
+      }
+      // Update items with new insumo_ids
+      await sb.from('alm_requisicoes').update({ itens }).eq('id', id)
+
       // Notify the teacher
       await sb.from('alm_notificacoes').insert({
         professora_id: req.professora_id,

@@ -669,6 +669,34 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Categorias de insumos ───────────────────────────────
+  if (action === "alm_categorias_list") {
+    const { data } = await admin.from("alm_categorias").select("*").eq("ativo", true).order("nome");
+    return ok(data ?? []);
+  }
+  if (action === "alm_categorias_list_all") {
+    const { data } = await admin.from("alm_categorias").select("*").order("nome");
+    return ok(data ?? []);
+  }
+  if (action === "alm_categoria_save") {
+    const { id, nome } = body as { id?: string; nome: string };
+    if (!nome) return err("Nome obrigatório.");
+    if (id) {
+      const { error } = await admin.from("alm_categorias").update({ nome }).eq("id", id);
+      if (error) return err(error.message);
+    } else {
+      const { error } = await admin.from("alm_categorias").insert({ nome });
+      if (error) return err(error.message.includes("unique") ? "Já existe uma categoria com este nome." : error.message);
+    }
+    return ok({ success: true });
+  }
+  if (action === "alm_categoria_toggle") {
+    const { id, ativo } = body as { id: string; ativo: boolean };
+    if (!id) return err("ID obrigatório.");
+    await admin.from("alm_categorias").update({ ativo }).eq("id", id);
+    return ok({ success: true });
+  }
+
   // ── Atribuir turma/série a professora ───────────────────
   if (action === "usuarios_set_serie") {
     const { email, serie_id } = body as { email: string; serie_id: string | null };

@@ -628,6 +628,44 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
         <!-- TAB: Insumos -->
         <div class="alm-tab-panel" id="almTab-insumos">
+
+          <!-- Importar Excel -->
+          <div style="background:#f7f5f2;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-size:14px;font-weight:600;">📊 Importar Insumos via Excel</div>
+              <div style="font-size:12px;color:var(--muted);">Baixe o modelo, preencha e faça upload para cadastrar insumos em lote.</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button onclick="almGerarModeloInsumos()" style="background:var(--green,#2d7a3a);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📥 Baixar Modelo</button>
+              <button onclick="document.getElementById('almInsumoXlsx').click()" style="background:var(--blue,#1a6bb5);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar Planilha</button>
+              <input type="file" id="almInsumoXlsx" accept=".xlsx,.xls,.csv" style="display:none" onchange="almImportarInsumosXlsx(this)">
+            </div>
+          </div>
+          <div id="almInsumoXlsxResult" style="display:none;margin-bottom:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px;" id="almInsumoXlsxSummary"></div>
+            <div id="almInsumoXlsxRows" style="max-height:300px;overflow-y:auto;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="almConfirmarImportInsumos()" class="btn-create">Cadastrar todos os insumos</button>
+              <button onclick="document.getElementById('almInsumoXlsxResult').style.display='none'" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- Categorias configuráveis -->
+          <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div class="sec-title" style="margin:0;">🏷️ Categorias</div>
+              <button onclick="toggleAlmCatConfig()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">⚙️ Gerenciar</button>
+            </div>
+            <div id="almCatChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+            <div id="almCatConfig" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+              <div id="almCatList" style="margin-bottom:8px;"></div>
+              <div style="display:flex;gap:8px;">
+                <input type="text" id="almNovaCat" placeholder="Nova categoria" style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;">
+                <button onclick="addAlmCategoria()" style="padding:6px 12px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">+ Adicionar</button>
+              </div>
+            </div>
+          </div>
+
           <div class="two-col">
             <div>
               <div class="sec-title">Catálogo de Insumos <span class="count-badge" id="almInsumosCount">0</span></div>
@@ -644,7 +682,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
                 <div class="ff" style="margin:0;"><label>Preço unit. (R$)</label><input type="number" id="almInsumoPreco" placeholder="0,00" min="0" step="0.01"></div>
-                <div class="ff" style="margin:0;"><label>Categoria</label><input type="text" id="almInsumoCategoria" placeholder="Ex: Papel"></div>
+                <div class="ff" style="margin:0;"><label>Categoria</label>
+                  <select id="almInsumoCategoria" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;">
+                    <option value="">— sem categoria —</option>
+                  </select>
+                </div>
               </div>
               <div style="display:flex;gap:8px;margin-top:14px;">
                 <button class="btn-create" onclick="almSalvarInsumo()">Salvar</button>
@@ -681,6 +723,19 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
         <!-- TAB: Orçamentos -->
         <div class="alm-tab-panel" id="almTab-orcamentos">
+          <!-- Orçamento padrão -->
+          <div style="background:#f0f7ff;border:1.5px solid rgba(26,107,181,.2);border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-size:14px;font-weight:600;color:#1a6bb5;">💰 Orçamento Padrão</div>
+              <div style="font-size:12px;color:var(--muted);">Aplica o mesmo valor para todas as turmas no mês selecionado.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:13px;font-weight:600;">R$</span>
+              <input type="number" id="almOrcPadrao" value="500" min="0" step="50" style="width:110px;padding:8px 10px;border:1.5px solid rgba(26,107,181,.3);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;text-align:right;">
+              <button onclick="almAplicarOrcPadrao()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aplicar a Todas</button>
+            </div>
+          </div>
+
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
             <label style="font-size:13px;font-weight:600;">Mês:</label>
             <input type="month" id="almOrcMes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;" onchange="almLoadOrcamentos()">
@@ -3545,6 +3600,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     });
     almLoadDashboard();
     almLoadPendentes();
+    almLoadCategorias();
   }
 
   async function almLoadDashboard() {
@@ -4310,6 +4366,138 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const d = await callDiplomas({ action: 'alm_orcamento_set', turma_id, mes, valor });
     const okEl = document.getElementById('almOrcOk');
     if (!d.error) { okEl.textContent = '✅ Orçamento salvo!'; okEl.classList.add('show'); setTimeout(() => okEl.classList.remove('show'), 2500); }
+  }
+
+  async function almAplicarOrcPadrao() {
+    const valor = parseFloat(document.getElementById('almOrcPadrao').value) || 0;
+    const mes = document.getElementById('almOrcMes').value || new Date().toISOString().slice(0,7);
+    if (!confirm('Aplicar R$ ' + valor.toFixed(2).replace('.',',') + ' para TODAS as turmas em ' + mes + '?')) return;
+    const d = await callDiplomas({ action: 'alm_orcamentos_list', mes });
+    const turmas = d.data || [];
+    for (const t of turmas) {
+      await callDiplomas({ action: 'alm_orcamento_set', turma_id: t.id, mes, valor });
+    }
+    showToast('Orçamento padrão aplicado a ' + turmas.length + ' turmas!', 'success');
+    almLoadOrcamentos();
+  }
+
+  // ── IMPORTAR INSUMOS VIA EXCEL ──────────────────────
+  let almInsumoXlsxParsed = [];
+
+  function almGerarModeloInsumos() {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Nome *', 'Descrição', 'Unidade', 'Preço Unitário (R$)', 'Categoria', 'Estoque Inicial'],
+      ['Papel Sulfite A4 75g', 'Resma 500 folhas', 'resma', 12.90, 'Papelaria', 100],
+      ['Caneta Esferográfica Azul', 'Ponta fina', 'unidade', 2.50, 'Canetas', 200],
+      ['TNT Vermelho', 'Rolo 50m', 'rolo', 35.00, 'Decoração', 10],
+      ['Cola Bastão 40g', '', 'unidade', 4.50, 'Papelaria', 50],
+      ['','','','','',''],['','','','','',''],['','','','','',''],
+      ['','','','','',''],['','','','','',''],
+    ]);
+    ws['!cols'] = [{ wch: 36 }, { wch: 24 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Insumos');
+    const wsInst = XLSX.utils.aoa_to_sheet([
+      ['INSTRUÇÕES — Modelo de Cadastro de Insumos · Maple Bear'],
+      [''],
+      ['1. Preencha a aba "Insumos" a partir da linha 2 (linha 1 é o cabeçalho).'],
+      ['2. Apenas o Nome é obrigatório. Os demais campos são opcionais.'],
+      ['3. Categorias sugeridas: Papelaria, Canetas, Decoração, Limpeza, Higiene, Descartáveis, Didático, Escritório'],
+      ['4. Salve o arquivo e faça o upload no portal.'],
+    ]);
+    wsInst['!cols'] = [{ wch: 72 }];
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
+    XLSX.writeFile(wb, 'modelo_insumos_maple_bear.xlsx');
+  }
+
+  async function almImportarInsumosXlsx(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type:'array' });
+      const sheetName = wb.SheetNames.find(n => !n.toLowerCase().includes('instru')) || wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header:1, defval:'' });
+      almInsumoXlsxParsed = rows.slice(1)
+        .filter(r => String(r[0]||'').trim())
+        .map(r => ({
+          nome: String(r[0]||'').trim(),
+          descricao: String(r[1]||'').trim(),
+          unidade: String(r[2]||'').trim() || 'unidade',
+          preco: parseFloat(String(r[3]).replace(',','.'))||0,
+          categoria: String(r[4]||'').trim(),
+          estoque_qty: parseFloat(String(r[5]).replace(',','.'))||0,
+        }));
+      if (!almInsumoXlsxParsed.length) { showToast('Nenhum insumo encontrado na planilha.','warning'); return; }
+      document.getElementById('almInsumoXlsxSummary').textContent = almInsumoXlsxParsed.length + ' insumo(s) encontrado(s)';
+      document.getElementById('almInsumoXlsxRows').innerHTML = almInsumoXlsxParsed.map((it,i) =>
+        `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;margin-bottom:4px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:12px;">
+          <strong style="flex:1;">${esc(it.nome)}</strong>
+          <span style="color:var(--muted);">${esc(it.categoria||'—')} · ${esc(it.unidade)} · R$ ${it.preco.toFixed(2).replace('.',',')} · Est: ${it.estoque_qty}</span>
+        </div>`
+      ).join('');
+      document.getElementById('almInsumoXlsxResult').style.display = 'block';
+    } catch(e) { showToast('Erro ao ler arquivo: ' + e.message, 'error'); }
+  }
+
+  async function almConfirmarImportInsumos() {
+    let ok = 0, erros = 0;
+    for (const it of almInsumoXlsxParsed) {
+      const d = await callDiplomas({ action:'alm_insumo_save', ...it });
+      if (d.error) erros++; else ok++;
+    }
+    showToast(ok + ' insumo(s) cadastrado(s)' + (erros ? ', ' + erros + ' erro(s)' : ''), erros ? 'warning' : 'success');
+    document.getElementById('almInsumoXlsxResult').style.display = 'none';
+    almInsumoXlsxParsed = [];
+    almLoadInsumos();
+  }
+
+  // ── CATEGORIAS DE INSUMOS ────────────────────────────
+  let almCategorias = [];
+  async function almLoadCategorias() {
+    const d = await api({ action: 'alm_categorias_list' });
+    almCategorias = Array.isArray(d) ? d : [];
+    // Atualiza chips
+    document.getElementById('almCatChips').innerHTML = almCategorias.map(c =>
+      `<span style="padding:4px 12px;background:var(--red-light);color:var(--red);border-radius:20px;font-size:11px;font-weight:600;">${esc(c.nome)}</span>`
+    ).join('');
+    // Atualiza select no form de insumo
+    const sel = document.getElementById('almInsumoCategoria');
+    if (sel && sel.tagName === 'SELECT') {
+      const val = sel.value;
+      sel.innerHTML = '<option value="">— sem categoria —</option>' + almCategorias.map(c => `<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join('');
+      sel.value = val;
+    }
+  }
+  function toggleAlmCatConfig() {
+    const el = document.getElementById('almCatConfig');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') renderAlmCatConfig();
+  }
+  async function renderAlmCatConfig() {
+    const d = await api({ action: 'alm_categorias_list_all' });
+    const cats = Array.isArray(d) ? d : [];
+    document.getElementById('almCatList').innerHTML = cats.map(c =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f0ea;">
+        <span style="flex:1;font-size:12px;${c.ativo?'':'opacity:.5;text-decoration:line-through;'}">${esc(c.nome)}</span>
+        <button onclick="toggleAlmCat('${c.id}',${!c.ativo})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">${c.ativo?'Desativar':'Ativar'}</button>
+      </div>`
+    ).join('');
+  }
+  async function toggleAlmCat(id, ativo) {
+    await api({ action: 'alm_categoria_toggle', id, ativo });
+    await almLoadCategorias();
+    renderAlmCatConfig();
+  }
+  async function addAlmCategoria() {
+    const nome = document.getElementById('almNovaCat').value.trim();
+    if (!nome) return;
+    const d = await api({ action: 'alm_categoria_save', nome });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    document.getElementById('almNovaCat').value = '';
+    await almLoadCategorias();
+    renderAlmCatConfig();
   }
 
   async function almLoadRelatorio() {
