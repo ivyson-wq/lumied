@@ -667,6 +667,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <div id="panelAlmInsumos" class="panel">
 
+          <!-- Atualizar preços -->
+          <div style="background:#f0f7ff;border:1.5px solid rgba(26,107,181,.2);border-radius:12px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#1a6bb5;">💰 Atualização de Preços</div>
+              <div style="font-size:12px;color:var(--muted);">Busca preços atualizados em Mercado Livre, Shopee, Reval e Amazon. Atualiza itens com compatibilidade > 70%.</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">Atualização automática: 1o dia de cada mês às 06h.</div>
+            </div>
+            <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Atualizar Preços Agora</button>
+          </div>
+
           <!-- Importar Excel -->
           <div style="background:#f7f5f2;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
             <div>
@@ -3826,7 +3836,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     almReviewItens.forEach((it, i) => almFetchPrecos(it.nome, it.unidade, i, it));
   }
 
-  const platIcon  = { 'Mercado Livre': '🛒', 'Shopee': '🧡', 'Amazon': '📦' };
+  const platIcon  = { 'Mercado Livre': '🛒', 'Shopee': '🧡', 'Amazon': '📦', 'Reval': '🏪' };
   const matchColor = m => m >= 80 ? '#2d7a2d' : m >= 50 ? '#b07d00' : '#c0392b';
   const matchLabel = m => m >= 80 ? 'Alta precisão' : m >= 50 ? 'Precisão média' : 'Baixa precisão';
 
@@ -4566,6 +4576,19 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('almInsumoXlsxResult').style.display = 'none';
     almInsumoXlsxParsed = [];
     almLoadInsumos();
+  }
+
+  // ── ATUALIZAR PREÇOS ─────────────────────────────────
+  async function almAtualizarPrecos() {
+    const btn = document.getElementById('almBtnAtualizarPrecos');
+    btn.disabled = true; btn.textContent = '⏳ Atualizando preços... (pode levar alguns minutos)';
+    try {
+      const d = await callDiplomas({ action: 'alm_atualizar_precos' });
+      if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+      showToast(`Preços atualizados: ${d.atualizados} de ${d.total} insumos`, 'success', 5000);
+      almLoadInsumos();
+    } catch(e) { showToast('Erro ao atualizar preços.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = '🔄 Atualizar Preços Agora'; }
   }
 
   // ── CATEGORIAS DE INSUMOS ────────────────────────────
