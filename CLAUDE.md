@@ -7,7 +7,7 @@ Portal web para pais/responsáveis, professoras, secretaria e gerência da escol
 **Stack:**
 - Frontend: HTML/CSS/JS puro (sem framework), hospedado no **Vercel**
 - Backend: **Supabase** (PostgreSQL + Auth + Edge Functions em Deno/TypeScript)
-- Relay mTLS: Node.js no **Fly.io** (para chamadas à API do Banco Inter)
+- Relay mTLS: Node.js no **Render** (para chamadas à API do Banco Inter) — `https://inter-relay-maple-bear-rs.onrender.com`
 - Git: GitHub (`ivyson-wq/maple-bear-rs`)
 
 **Arquivos principais:**
@@ -64,6 +64,19 @@ Portal web para pais/responsáveis, professoras, secretaria e gerência da escol
     - **Botões brancos** — adicionado `--primary:#C8102E` ao `:root` do `professora.html`.
     - **Nomes de turmas dinâmicos** — `SERIES_DISPONIVEIS` agora começa com fallback hardcoded mas é substituído pela lista real do banco via `callApi({ action: 'series_list_pub' })` no `initPickupPanel()`.
 
+### Sessão 2026-03-25
+
+**Feito nesta sessão:**
+
+13. **Integração Boletos Banco Inter — funcionando end-to-end:**
+    - **Parser API Inter v3** — A API retorna estrutura aninhada `{ cobranca: {...}, boleto: {...}, pix: {...} }`, não campos diretos. Parser corrigido para extrair dados de `raw.cobranca` e `raw.boleto`.
+    - **Header Authorization no frontend** — `carregarBoletos()` enviava apenas `apikey`, causando 401 JWT. Adicionado `Authorization: Bearer` com chave anon.
+    - **CORS na Edge Function `boletos-list`** — Navegador bloqueava chamadas por falta de `Access-Control-Allow-Origin`. Adicionados headers CORS em todas as respostas (OPTIONS, sucesso e erro).
+    - **Filtro por CPF do pagador** — A API Inter retorna todas as cobranças da conta, não apenas do CPF filtrado. Adicionado filtro local via `cob.pagador.cpfCnpj` para retornar apenas boletos do CPF solicitado.
+    - **Status Inter mapeados** — Inter usa `RECEBIDO` (= pago) e `A_RECEBER` (= em aberto). Frontend atualizado para reconhecer `RECEBIDO` como "Pago".
+    - **Relay no Render** — Relay mTLS migrado de Fly.io para Render (`https://inter-relay-maple-bear-rs.onrender.com`). Variável `INTER_RELAY_URL` no Supabase já aponta para lá.
+    - **Chave anon atualizada** — O projeto usa uma chave anon diferente da original (ver `index.html` linha ~645).
+
 ---
 
 ## Decisões Arquiteturais
@@ -87,9 +100,14 @@ Portal web para pais/responsáveis, professoras, secretaria e gerência da escol
 - O pickup (`pickup_meus_filhos`) busca filhos em `solicitacoes` via `.ilike('email', emailPai)`.
 
 ### mTLS / Banco Inter
-- Supabase Edge Functions não suportam mTLS direto via HTTP proxy interno.
-- Solução: relay Node.js no Fly.io que faz as chamadas mTLS para o Inter.
-- `boletos-list` chama o relay, que repassa para a API do Inter.
+- Supabase Edge Functions não suportam mTLS direto.
+- Solução: relay Node.js no **Render** (`inter-relay-maple-bear-rs`) que faz as chamadas mTLS para o Inter.
+- Host Inter: `cdpj.partners.bancointer.com.br` (API v3).
+- `boletos-list` chama o relay via `INTER_RELAY_URL`, que repassa para a API do Inter com certificados mTLS.
+- API Inter v3 retorna cobranças com estrutura aninhada: `{ cobranca: {...}, boleto: {...}, pix: {...} }`.
+- A API retorna TODAS as cobranças da conta — filtro por CPF do pagador é feito localmente via `cobranca.pagador.cpfCnpj`.
+- Status Inter: `RECEBIDO` = pago, `A_RECEBER` = em aberto, `EXPIRADO` = vencido.
+- Edge Functions que chamam o Inter precisam de CORS headers explícitos.
 
 ---
 
@@ -101,9 +119,9 @@ Portal web para pais/responsáveis, professoras, secretaria e gerência da escol
 
 2. **Verificar schema da tabela `familias`** — se ela contém `nome_crianca` e `serie`, o pickup deve também consultá-la como fallback (atualmente só busca em `solicitacoes`).
 
-3. **Boletos** — integração com Banco Inter via relay Fly.io. Status do relay e mTLS não foi verificado.
+3. ~~**Boletos**~~ — ✅ Integração com Banco Inter funcionando via relay Render. Boletos sincronizados, filtrados por CPF, com PDF e status corretos.
 
-4. **Testar auto-merge** — confirmar que o GitHub Actions `.github/workflows/auto-merge-claude.yml` está fazendo merge correto para `main` após cada push.
+4. ~~**Testar auto-merge**~~ — ✅ Confirmado funcionando (commit `44386f2 auto-merge: claude/boletos-fix`).
 
 5. **Painel "Cadastrar Família"** no gerente — verificar se `public_submit` e `solicitacoes_list` na edge function `api` estão funcionando corretamente com o novo painel.
 
@@ -119,8 +137,11 @@ git push origin HEAD:claude/<session-branch>
 supabase functions deploy diplomas
 supabase functions deploy acesso
 
-# Ver logs do relay (Fly.io)
-fly logs --app <nome-do-app>
+# Deploy de Edge Function boletos-list
+supabase functions deploy boletos-list
+
+# Ver logs do relay (Render)
+# Dashboard: https://dashboard.render.com → inter-relay-maple-bear-rs
 ```
 
 ## Estrutura de Tabelas Conhecidas
@@ -145,3 +166,4 @@ fly logs --app <nome-do-app>
 | `alm_turmas` | Turmas do almoxarifado |
 | `alm_compras` | Compras encaminhadas |
 | `usuarios_autorizados` | Whitelist antiga (não usada mais) |
+| `boletos` | Boletos sincronizados do Banco Inter (cpf, nosso_numero, valor, vencimento, linha_digitavel, situacao, pdf_url) |
