@@ -4157,11 +4157,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(r.nome_responsavel||'—')}</td>
             <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(r.cpf||'—')}</td>
             <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">
-              <select onchange="updateFamSerie('${esc(r.cpf)}',this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);">
+              <select id="famSel_${esc(r.cpf)}" onchange="updateFamSerie('${esc(r.cpf)}',this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);">
                 <option value="">— sem série —</option>
                 ${famSeriesOpts}
               </select>
-              <script>document.currentScript.previousElementSibling.value="${esc(r.serie||'')}";</script>
             </td>
             <td style="padding:11px 14px;border-bottom:1px solid #f5f0ea;text-align:right;">
               <button class="action-btn del" onclick="deleteFamilia('${esc(r.cpf)}','${esc(r.nome_aluno)}')">🗑</button>
@@ -4169,6 +4168,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </tr>`).join('')}
         </tbody>
       </table>`;
+    // Seta valores dos selects de série
+    lista.forEach(r => {
+      const sel = document.getElementById('famSel_' + r.cpf);
+      if (sel && r.serie) sel.value = r.serie;
+    });
   }
 
   async function updateFamSerie(cpf, serie) {
