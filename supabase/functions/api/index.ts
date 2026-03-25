@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode } from "../_shared/webauthn.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -115,6 +116,36 @@ serve(async (req: Request) => {
     const logoutToken = (body._token as string) || req.headers.get("authorization")?.replace("Bearer ", "");
     if (logoutToken) await admin.from("gerente_sessoes").delete().eq("token", logoutToken);
     return ok({ success: true });
+  }
+
+  // WebAuthn login (público)
+  if (action === "webauthn_login_challenge") {
+    const { email, rp_id } = body as { email: string; rp_id: string };
+    if (!email || !rp_id) return err("email e rp_id obrigatórios.", 400);
+    const { data: g } = await admin.from("gerentes").select("id").eq("email", email).maybeSingle();
+    if (!g) return err("Usuário não encontrado.", 404);
+    const { data: creds } = await admin.from("webauthn_credentials").select("credential_id, transports").eq("usuario_tipo", "gerente").eq("usuario_id", g.id);
+    if (!creds?.length) return err("Nenhuma biometria cadastrada.", 404);
+    const challenge = generateChallenge();
+    await admin.from("webauthn_challenges").insert({ challenge, usuario_tipo: "gerente", usuario_id: g.id, email, tipo: "login", rp_id });
+    return ok({ challenge, rp_id, allowCredentials: creds.map(c => ({ id: c.credential_id, transports: c.transports })) });
+  }
+  if (action === "webauthn_login_verify") {
+    const { credential, rp_id } = body as { credential: any; rp_id: string };
+    if (!credential || !rp_id) return err("Dados incompletos.", 400);
+    const { data: cred } = await admin.from("webauthn_credentials").select("*").eq("credential_id", credential.id).maybeSingle();
+    if (!cred || cred.usuario_tipo !== "gerente") return err("Credencial não encontrada.", 404);
+    const { data: ch } = await admin.from("webauthn_challenges").select("*").eq("tipo", "login").eq("usuario_id", cred.usuario_id).gt("expira_em", new Date().toISOString()).order("criado_em", { ascending: false }).limit(1).maybeSingle();
+    if (!ch) return err("Challenge expirado.", 400);
+    await admin.from("webauthn_challenges").delete().eq("id", ch.id);
+    try {
+      const result = await verifyAuthentication(credential.response.clientDataJSON, credential.response.authenticatorData, credential.response.signature, ch.challenge, rp_id, cred.public_key, cred.sign_count);
+      await admin.from("webauthn_credentials").update({ sign_count: result.newSignCount }).eq("id", cred.id);
+      const { data: g } = await admin.from("gerentes").select("nome, email").eq("id", cred.usuario_id).maybeSingle();
+      if (!g) return err("Gerente não encontrado.", 404);
+      const { data: sess } = await admin.from("gerente_sessoes").insert({ gerente_id: cred.usuario_id }).select("token").single();
+      return ok({ token: sess!.token, nome: g.nome, email: g.email });
+    } catch (e) { return err("Verificação falhou: " + (e as Error).message, 400); }
   }
 
   // Leitura pública de séries (para o formulário)
@@ -728,5 +759,29 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── WebAuthn / Biometria (gerente) ──────────────────────
+  if (action === "webauthn_register_challenge") {
+    const rp_id = body.rp_id as string;
+    if (!rp_id || !gerente) return err("Sessão inválida.", 401);
+    const challenge = generateChallenge();
+    await admin.from("webauthn_challenges").insert({ challenge, usuario_tipo: "gerente", usuario_id: gerente.id, tipo: "register", rp_id });
+    await admin.from("webauthn_challenges").delete().lt("expira_em", new Date().toISOString());
+    return ok({ challenge, rp_id, user_id: b64urlEncode(new TextEncoder().encode(gerente.id)), user_name: gerente.email, user_display_name: gerente.nome });
+  }
+  if (action === "webauthn_register_verify") {
+    const { credential, rp_id } = body as { credential: any; rp_id: string };
+    if (!credential || !rp_id || !gerente) return err("Dados incompletos.", 400);
+    const { data: ch } = await admin.from("webauthn_challenges").select("*").eq("tipo", "register").eq("usuario_id", gerente.id).gt("expira_em", new Date().toISOString()).order("criado_em", { ascending: false }).limit(1).maybeSingle();
+    if (!ch) return err("Challenge expirado.", 400);
+    await admin.from("webauthn_challenges").delete().eq("id", ch.id);
+    try {
+      const result = await verifyRegistration(credential.response.clientDataJSON, credential.response.attestationObject, ch.challenge, rp_id);
+      await admin.from("webauthn_credentials").insert({ usuario_tipo: "gerente", usuario_id: gerente.id, credential_id: result.credentialId, public_key: result.publicKey, sign_count: result.signCount, transports: credential.transports || ["internal"], rp_id });
+      return ok({ success: true });
+    } catch (e) { return err("Verificação falhou: " + (e as Error).message, 400); }
+  }
+
+  // WebAuthn login (public — before session validation)
+  // These are handled above in the public section, but we put them here as fallthrough
   return err("Ação desconhecida.");
 });

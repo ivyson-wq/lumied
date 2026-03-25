@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode } from '../_shared/webauthn.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -1629,6 +1630,102 @@ Deno.serve(async (req) => {
     if (!portal || !email) return json({ error: 'portal e email obrigatórios.' }, 400)
     await sb.from('notificacoes').update({ lida: true }).eq('portal', portal).eq('destinatario', email).eq('lida', false)
     return json({ ok: true })
+  }
+
+  // ━━ WEBAUTHN / BIOMETRIA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'webauthn_register_challenge') {
+    // Requires authenticated session (professora or secretaria)
+    const rp_id = body.rp_id as string
+    if (!rp_id) return json({ error: 'rp_id obrigatório.' }, 400)
+    const token = (body._token as string) || (body._prof_token as string)
+    let usuario_tipo = '', usuario_id = '', user_name = '', user_email = ''
+    const prof = await getProfessora(sb, token)
+    if (prof) { usuario_tipo = 'professora'; usuario_id = prof.id; user_name = prof.nome; user_email = prof.email }
+    else {
+      const sec = await getSecretaria(sb, token)
+      if (sec) { usuario_tipo = 'secretaria'; usuario_id = sec.id; user_name = sec.nome; user_email = sec.email }
+    }
+    if (!usuario_id) return json({ error: 'Sessão inválida.' }, 401)
+    const challenge = generateChallenge()
+    await sb.from('webauthn_challenges').insert({ challenge, usuario_tipo, usuario_id, tipo: 'register', rp_id })
+    // Cleanup expired
+    await sb.from('webauthn_challenges').delete().lt('expira_em', new Date().toISOString())
+    return json({ challenge, rp_id, user_id: b64urlEncode(new TextEncoder().encode(usuario_id)), user_name: user_email, user_display_name: user_name })
+  }
+
+  if (action === 'webauthn_register_verify') {
+    const { credential, rp_id } = body as { credential: any; rp_id: string }
+    if (!credential || !rp_id) return json({ error: 'Dados incompletos.' }, 400)
+    const { data: ch } = await sb.from('webauthn_challenges').select('*').eq('tipo', 'register')
+      .gt('expira_em', new Date().toISOString()).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    if (!ch) return json({ error: 'Challenge expirado ou inválido.' }, 400)
+    await sb.from('webauthn_challenges').delete().eq('id', ch.id)
+    try {
+      const result = await verifyRegistration(credential.response.clientDataJSON, credential.response.attestationObject, ch.challenge, rp_id)
+      await sb.from('webauthn_credentials').insert({
+        usuario_tipo: ch.usuario_tipo, usuario_id: ch.usuario_id,
+        credential_id: result.credentialId, public_key: result.publicKey,
+        sign_count: result.signCount, transports: credential.transports || ['internal'], rp_id,
+      })
+      return json({ ok: true })
+    } catch (e) { return json({ error: 'Verificação falhou: ' + (e as Error).message }, 400) }
+  }
+
+  if (action === 'webauthn_login_challenge') {
+    const { email, portal, rp_id } = body as { email: string; portal: string; rp_id: string }
+    if (!email || !portal || !rp_id) return json({ error: 'email, portal e rp_id obrigatórios.' }, 400)
+    // Find user
+    let usuario_id = ''
+    if (portal === 'professora') {
+      const { data: p } = await sb.from('professoras').select('id').ilike('email', email).maybeSingle()
+      if (p) usuario_id = p.id
+    } else if (portal === 'secretaria') {
+      const { data: s } = await sb.from('secretarias').select('id').ilike('email', email).maybeSingle()
+      if (s) usuario_id = s.id
+    }
+    if (!usuario_id) return json({ error: 'Usuário não encontrado.' }, 404)
+    const { data: creds } = await sb.from('webauthn_credentials').select('credential_id, transports')
+      .eq('usuario_tipo', portal).eq('usuario_id', usuario_id)
+    if (!creds?.length) return json({ error: 'Nenhuma biometria cadastrada para este e-mail.' }, 404)
+    const challenge = generateChallenge()
+    await sb.from('webauthn_challenges').insert({ challenge, usuario_tipo: portal, usuario_id, email, tipo: 'login', rp_id })
+    await sb.from('webauthn_challenges').delete().lt('expira_em', new Date().toISOString())
+    return json({ challenge, rp_id, allowCredentials: creds.map(c => ({ id: c.credential_id, transports: c.transports })) })
+  }
+
+  if (action === 'webauthn_login_verify') {
+    const { credential, rp_id } = body as { credential: any; rp_id: string }
+    if (!credential || !rp_id) return json({ error: 'Dados incompletos.' }, 400)
+    // Find credential
+    const { data: cred } = await sb.from('webauthn_credentials').select('*').eq('credential_id', credential.id).maybeSingle()
+    if (!cred) return json({ error: 'Credencial não encontrada.' }, 404)
+    // Find challenge
+    const { data: ch } = await sb.from('webauthn_challenges').select('*').eq('tipo', 'login')
+      .eq('usuario_tipo', cred.usuario_tipo).eq('usuario_id', cred.usuario_id)
+      .gt('expira_em', new Date().toISOString()).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    if (!ch) return json({ error: 'Challenge expirado ou inválido.' }, 400)
+    await sb.from('webauthn_challenges').delete().eq('id', ch.id)
+    try {
+      const result = await verifyAuthentication(
+        credential.response.clientDataJSON, credential.response.authenticatorData,
+        credential.response.signature, ch.challenge, rp_id, cred.public_key, cred.sign_count
+      )
+      await sb.from('webauthn_credentials').update({ sign_count: result.newSignCount }).eq('id', cred.id)
+      // Create session
+      let token = '', nome = '', email = ''
+      if (cred.usuario_tipo === 'professora') {
+        const { data: p } = await sb.from('professoras').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
+        if (!p) return json({ error: 'Professora não encontrada.' }, 404)
+        const { data: sess } = await sb.from('professora_sessoes').insert({ professora_id: cred.usuario_id }).select('token').single()
+        token = sess!.token; nome = p.nome; email = p.email
+      } else if (cred.usuario_tipo === 'secretaria') {
+        const { data: s } = await sb.from('secretarias').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
+        if (!s) return json({ error: 'Secretária não encontrada.' }, 404)
+        const { data: sess } = await sb.from('secretaria_sessoes').insert({ secretaria_id: cred.usuario_id }).select('token').single()
+        token = sess!.token; nome = s.nome; email = s.email
+      }
+      return json({ token, nome, email })
+    } catch (e) { return json({ error: 'Verificação falhou: ' + (e as Error).message }, 400) }
   }
 
   return json({ error: 'Ação desconhecida' }, 400)
