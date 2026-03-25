@@ -10,7 +10,9 @@
       "Bash(grep -n icon-apple C:UsersIvy_lProjectsmaple-bear-rs/*.html)",
       "Bash(grep -n \"as any\\\\|:any\\\\|interface\\\\|type \" C:UsersIvy_lProjectsmaple-bear-rs/*.html)",
       "Bash(grep -n calendar C:UsersIvy_lProjectsmaple-bear-rssupabasefunctions/*.ts)",
-      "Bash(grep -o functions/v1/[a-z-]* C:UsersIvy_lProjectsmaple-bear-rs/*.html)"
+      "Bash(grep -o functions/v1/[a-z-]* C:UsersIvy_lProjectsmaple-bear-rs/*.html)",
+      "Bash(grep:*)",
+      "Bash(ls:*)"
     ]
   }
 }
