@@ -677,7 +677,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div id="mlStatus" style="font-size:11px;margin-top:4px;"></div>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-              <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Buscar Referências de Preço</button>
+              <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Atualizar Precos</button>
               <button id="almBtnML" onclick="conectarML()" style="background:#ffe600;color:#333;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🛒 Conectar Mercado Livre</button>
             </div>
           </div>
@@ -4346,20 +4346,17 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const insumos = d.data || [];
     document.getElementById('almInsumosCount').textContent = insumos.filter((i)=>i.ativo).length;
     document.getElementById('almInsumosList').innerHTML = insumos.map((it) => {
-      const temRef = it.preco_referencia != null;
+      const temRef = it.referencia_nome != null;
       const refHtml = temRef ? `
-        <div style="margin-top:6px;padding:8px 10px;background:#fff8e1;border:1px solid #f0dfa0;border-radius:8px;font-size:11px;">
+        <div style="margin-top:6px;padding:8px 10px;background:#f0f7ff;border:1px solid #c7d9f0;border-radius:8px;font-size:11px;">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <strong style="color:#b07d00;">Referencia encontrada: ${almFmtBRL(it.preco_referencia)}</strong>
-            <span style="color:var(--muted);">via ${esc(it.referencia_fonte||'?')}</span>
+            <span style="color:#1a6bb5;">Ultima ref: ${almFmtBRL(it.preco_referencia)} via ${esc(it.referencia_fonte||'?')}</span>
+            ${it.preco_atualizado_em ? `<span style="color:var(--muted);">· ${new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</span>` : ''}
           </div>
-          <div style="color:#7a5e00;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(it.referencia_nome||'')}">
-            ${esc(it.referencia_nome||'')}
-          </div>
-          ${it.referencia_url ? `<a href="${esc(it.referencia_url)}" target="_blank" style="color:#1a6bb5;font-size:10px;">Ver produto</a>` : ''}
-          <div style="display:flex;gap:6px;margin-top:6px;">
-            <button onclick="almAplicarReferencia('${it.id}')" style="padding:3px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aceitar preco</button>
-            <button onclick="almDescartarReferencia('${it.id}')" style="padding:3px 10px;background:none;border:1px solid var(--border);border-radius:5px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Descartar</button>
+          <div style="color:#555;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(it.referencia_nome||'')}">${esc(it.referencia_nome||'')}</div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            ${it.referencia_url ? `<a href="${esc(it.referencia_url)}" target="_blank" style="color:#1a6bb5;font-size:10px;">Ver produto</a>` : ''}
+            <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:none;color:#1a6bb5;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;">📊 Historico</button>
           </div>
         </div>` : '';
       return `<div class="alm-insumo-row" style="flex-direction:column;align-items:stretch;${!it.ativo ? 'opacity:.5;' : ''}">
@@ -4676,9 +4673,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     const insData = await callDiplomas({ action: 'alm_insumos_list' });
     const insumos = (insData.data || []).filter(i => i.ativo);
-    if (!insumos.length) { showToast('Nenhum insumo ativo.', 'warning'); btn.disabled = false; btn.textContent = '🔄 Buscar Referências de Preço'; return; }
+    if (!insumos.length) { showToast('Nenhum insumo ativo.', 'warning'); btn.disabled = false; btn.textContent = '🔄 Atualizar Precos'; return; }
 
-    let encontrados = 0;
+    let atualizados = 0;
     const total = insumos.length;
 
     for (let i = 0; i < total; i++) {
@@ -4691,31 +4688,56 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         if (produtos.length) {
           produtos.sort((a, b) => a.preco - b.preco);
           const melhor = produtos[0];
-          // Salva como REFERÊNCIA (não sobrescreve o preço)
-          await callDiplomas({ action: 'alm_insumo_set_referencia', id: ins.id, preco_referencia: melhor.preco, referencia_nome: melhor.nome, referencia_fonte: melhor.plataforma, referencia_url: melhor.url_produto });
-          encontrados++;
+          await callDiplomas({
+            action: 'alm_insumo_atualizar_auto',
+            id: ins.id,
+            preco: melhor.preco,
+            produto_nome: melhor.nome,
+            fonte: melhor.plataforma,
+            url: melhor.url_produto,
+            match_pct: melhor.match,
+          });
+          atualizados++;
         }
       } catch(_) {}
     }
 
     btn.disabled = false;
-    btn.textContent = '🔄 Buscar Referências de Preço';
-    showToast(`Referências encontradas: ${encontrados} de ${total} insumos. Revise antes de aplicar.`, 'success', 6000);
+    btn.textContent = '🔄 Atualizar Precos';
+    showToast(`${atualizados} de ${total} insumos atualizados automaticamente.`, 'success', 5000);
     almLoadInsumos();
   }
 
-  async function almAplicarReferencia(id) {
-    const insData = await callDiplomas({ action: 'alm_insumos_list' });
-    const ins = (insData.data || []).find(i => i.id === id);
-    if (!ins || !ins.preco_referencia) return;
-    await callDiplomas({ action: 'alm_insumo_save', id: ins.id, nome: ins.nome, descricao: ins.descricao, unidade: ins.unidade, estoque_qty: ins.estoque_qty, preco: ins.preco_referencia, categoria: ins.categoria });
-    showToast('Preço atualizado para ' + almFmtBRL(ins.preco_referencia), 'success');
-    almLoadInsumos();
-  }
+  async function almVerHistorico(id, nome) {
+    const d = await callDiplomas({ action: 'alm_insumo_historico', id });
+    const hist = d.data || [];
+    if (!hist.length) { showToast('Nenhum historico de preco para este item.', 'info'); return; }
+    const html = hist.map(h => {
+      const dt = new Date(h.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const mudouEmb = h.qtd_emb_nova !== h.qtd_emb_anterior;
+      return `<div style="padding:10px 0;border-bottom:1px solid #f0ece6;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--muted);">${dt} · ${esc(h.fonte||'?')}</span>
+          <span><span style="text-decoration:line-through;color:var(--muted);">${almFmtBRL(h.preco_anterior)}</span> → <strong style="color:#2d7a3a;">${almFmtBRL(h.preco_novo)}</strong></span>
+        </div>
+        <div style="margin-top:3px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(h.produto_encontrado||'')}">${esc(h.produto_encontrado||'—')}</div>
+        ${mudouEmb ? `<div style="margin-top:2px;color:#1a6bb5;font-size:11px;">Embalagem: ${h.unidade_compra_nova||'?'} c/ ${h.qtd_emb_nova} un</div>` : ''}
+        ${h.url ? `<a href="${esc(h.url)}" target="_blank" style="color:#1a6bb5;font-size:10px;">Ver produto</a>` : ''}
+      </div>`;
+    }).join('');
 
-  async function almDescartarReferencia(id) {
-    await callDiplomas({ action: 'alm_insumo_set_referencia', id, preco_referencia: null, referencia_nome: null, referencia_fonte: null, referencia_url: null });
-    almLoadInsumos();
+    // Usar modal simples
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:24px;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="font-family:'Lora',serif;font-size:16px;">Historico de Precos — ${esc(nome)}</h3>
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">×</button>
+      </div>
+      ${html}
+    </div>`;
+    document.body.appendChild(overlay);
   }
 
   // ── CATEGORIAS DE INSUMOS ────────────────────────────

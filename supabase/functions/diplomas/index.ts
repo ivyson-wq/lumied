@@ -1611,6 +1611,7 @@ Deno.serve(async (req) => {
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
     'alm_aprovar', 'alm_rejeitar',
     'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del', 'alm_insumo_set_referencia',
+    'alm_insumo_atualizar_auto', 'alm_insumo_historico',
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
@@ -1780,6 +1781,88 @@ Deno.serve(async (req) => {
       }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
+    }
+
+    // Atualiza preco, embalagem e historico automaticamente a partir de busca
+    if (action === 'alm_insumo_atualizar_auto') {
+      const { id, preco, produto_nome, fonte, url, match_pct } = body
+      if (!id || preco == null) return json({ error: 'id e preco obrigatorios.' }, 400)
+
+      // Busca insumo atual
+      const { data: ins } = await sb.from('alm_insumos').select('*').eq('id', id).maybeSingle()
+      if (!ins) return json({ error: 'Insumo nao encontrado.' }, 404)
+
+      // Tenta extrair embalagem do nome do produto encontrado
+      const nomeProd = (produto_nome || '').toLowerCase()
+      let unidadeCompra = ins.unidade_compra
+      let qtdEmb = ins.qtd_por_embalagem || 1
+
+      // Regex para detectar embalagem: "caixa com 100", "pacote 50un", "cx 12 un", "resma 500", etc.
+      const embPatterns = [
+        /(?:caixa|cx|pack|kit)\s*(?:com|c\/)?\s*(\d+)\s*(?:un|unid|pcs|pecas)?/i,
+        /(?:pacote|pct|pc)\s*(?:com|c\/)?\s*(\d+)\s*(?:un|unid|folhas|fls)?/i,
+        /(?:resma)\s*(?:com|c\/)?\s*(\d+)\s*(?:folhas|fls)?/i,
+        /(\d+)\s*(?:un|unid|unidades|pecas|pcs|folhas|fls)\b/i,
+        /(?:fardo|fd)\s*(?:com|c\/)?\s*(\d+)/i,
+        /(?:rolo|rl)\s*(?:com|c\/)?\s*(\d+)\s*(?:m|metros)?/i,
+      ]
+      const embTypes: Record<string, string> = {
+        'caixa': 'caixa', 'cx': 'caixa', 'pack': 'pacote', 'kit': 'kit',
+        'pacote': 'pacote', 'pct': 'pacote', 'pc': 'pacote',
+        'resma': 'resma', 'fardo': 'fardo', 'fd': 'fardo', 'rolo': 'rolo', 'rl': 'rolo',
+      }
+
+      for (const pat of embPatterns) {
+        const m = pat.exec(nomeProd)
+        if (m) {
+          const qty = parseInt(m[1])
+          if (qty > 1 && qty <= 10000) {
+            qtdEmb = qty
+            // Detecta tipo de embalagem
+            const typeMatch = nomeProd.match(/\b(caixa|cx|pack|kit|pacote|pct|resma|fardo|fd|rolo|rl)\b/i)
+            if (typeMatch) unidadeCompra = embTypes[typeMatch[1].toLowerCase()] || typeMatch[1]
+            else if (qtdEmb >= 100) unidadeCompra = 'caixa'
+            else unidadeCompra = 'pacote'
+            break
+          }
+        }
+      }
+
+      // Salva historico
+      await sb.from('alm_insumo_historico').insert({
+        insumo_id: id,
+        preco_anterior: ins.preco,
+        preco_novo: preco,
+        unidade_compra_anterior: ins.unidade_compra,
+        unidade_compra_nova: unidadeCompra,
+        qtd_emb_anterior: ins.qtd_por_embalagem,
+        qtd_emb_nova: qtdEmb,
+        produto_encontrado: produto_nome,
+        fonte, url, match_pct,
+      })
+
+      // Atualiza insumo
+      await sb.from('alm_insumos').update({
+        preco: preco,
+        unidade_compra: unidadeCompra,
+        qtd_por_embalagem: qtdEmb,
+        referencia_nome: produto_nome,
+        referencia_fonte: fonte,
+        referencia_url: url,
+        preco_referencia: preco,
+        preco_atualizado_em: new Date().toISOString(),
+      }).eq('id', id)
+
+      return json({ ok: true, qtd_por_embalagem: qtdEmb, unidade_compra: unidadeCompra })
+    }
+
+    // Historico de precos de um insumo
+    if (action === 'alm_insumo_historico') {
+      const { id } = body
+      if (!id) return json({ error: 'ID obrigatorio.' }, 400)
+      const { data } = await sb.from('alm_insumo_historico').select('*')
+        .eq('insumo_id', id).order('criado_em', { ascending: false }).limit(20)
+      return json({ data: data ?? [] })
     }
 
     if (action === 'alm_series_list') {
