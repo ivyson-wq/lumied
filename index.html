@@ -1650,7 +1650,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     try {
       const res = await fetch(SUPABASE_URL + '/functions/v1/boletos-list', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
         body: JSON.stringify(payload),
       });
       const json = await res.json();
@@ -1679,8 +1679,9 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       const valor = Number(b.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
       const hoje = new Date(); hoje.setHours(0,0,0,0);
       const dvenc = new Date(b.vencimento + 'T12:00:00');
-      const vencido = dvenc < hoje && b.situacao !== 'PAGO';
-      const badge = b.situacao === 'PAGO'
+      const pago = b.situacao === 'PAGO' || b.situacao === 'RECEBIDO';
+      const vencido = dvenc < hoje && !pago;
+      const badge = pago
         ? '<span style="background:#d1fae5;color:#065f46;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;">Pago</span>'
         : vencido
           ? '<span style="background:#fee2e2;color:#991b1b;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;">Vencido</span>'
