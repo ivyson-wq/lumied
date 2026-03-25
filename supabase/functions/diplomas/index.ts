@@ -818,7 +818,7 @@ Deno.serve(async (req) => {
   // ━━ PICKUP: PARENT ACTIONS (Supabase Auth JWT) ━━━━━━━━━━━━
 
   const isPickupPaiAction = [
-    'pickup_meus_filhos', 'pickup_avisar', 'pickup_cancelar', 'pickup_meus_hoje',
+    'pickup_meus_filhos', 'pickup_avisar', 'pickup_cancelar', 'pickup_chegou', 'pickup_meus_hoje',
   ].includes(action)
 
   if (isPickupPaiAction) {
@@ -911,6 +911,16 @@ Deno.serve(async (req) => {
       if (!id) return json({ error: 'ID do aviso não informado.' }, 400)
       const { error } = await sb.from('pickup_notificacoes').update({ status: 'cancelado' })
         .eq('id', id).eq('email_pai', emailPai).in('status', ['a_caminho', 'chegou'])
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'pickup_chegou') {
+      const { id } = body
+      if (!id) return json({ error: 'ID do aviso não informado.' }, 400)
+      const { error } = await sb.from('pickup_notificacoes').update({
+        status: 'chegou', chegou_em: new Date().toISOString()
+      }).eq('id', id).eq('email_pai', emailPai).eq('status', 'a_caminho')
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
