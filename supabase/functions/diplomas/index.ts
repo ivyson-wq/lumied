@@ -1639,11 +1639,19 @@ Deno.serve(async (req) => {
     if (!rp_id) return json({ error: 'rp_id obrigatório.' }, 400)
     const token = (body._token as string) || (body._prof_token as string)
     let usuario_tipo = '', usuario_id = '', user_name = '', user_email = ''
+    // Try professora/secretaria session first
     const prof = await getProfessora(sb, token)
     if (prof) { usuario_tipo = 'professora'; usuario_id = prof.id; user_name = prof.nome; user_email = prof.email }
     else {
       const sec = await getSecretaria(sb, token)
       if (sec) { usuario_tipo = 'secretaria'; usuario_id = sec.id; user_name = sec.nome; user_email = sec.email }
+    }
+    // Fallback: Supabase Auth user (portal dos pais)
+    if (!usuario_id && body._email) {
+      user_email = body._email as string
+      usuario_tipo = 'pais'
+      usuario_id = user_email // use email as ID for parents
+      user_name = user_email.split('@')[0]
     }
     if (!usuario_id) return json({ error: 'Sessão inválida.' }, 401)
     const challenge = generateChallenge()
@@ -1682,6 +1690,8 @@ Deno.serve(async (req) => {
     } else if (portal === 'secretaria') {
       const { data: s } = await sb.from('secretarias').select('id').ilike('email', email).maybeSingle()
       if (s) usuario_id = s.id
+    } else if (portal === 'pais') {
+      usuario_id = email // parents use email as ID
     }
     if (!usuario_id) return json({ error: 'Usuário não encontrado.' }, 404)
     const { data: creds } = await sb.from('webauthn_credentials').select('credential_id, transports')
