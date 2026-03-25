@@ -305,6 +305,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
       <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> PDI</a>
       <a class="nav-item" href="#" onclick="showPanel('almoxarifado',this)"><span class="ic">📦</span> Almoxarifado</a>
+      <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
@@ -779,6 +780,41 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <!-- panelSecretarias kept hidden for backward compat -->
       <div id="panelSecretarias" class="panel" style="display:none;"></div>
 
+      <!-- MANUTENÇÃO -->
+      <div id="panelManutencao" class="panel">
+        <div class="dip-stats" id="manutStatsRow">
+          <div class="stat-card" data-g="total"><div class="stat-label">Pendentes</div><div class="stat-value" id="manutPend">—</div><div class="stat-sub">aguardando análise</div></div>
+          <div class="stat-card" data-g="integral"><div class="stat-label">Em Execução</div><div class="stat-value" id="manutExec">—</div><div class="stat-sub">em andamento</div></div>
+          <div class="stat-card" data-g="semi"><div class="stat-label">Concluídas</div><div class="stat-value" id="manutDone">—</div><div class="stat-sub">este mês</div></div>
+          <div class="stat-card" data-g="diaria"><div class="stat-label">Críticas</div><div class="stat-value" id="manutCrit">—</div><div class="stat-sub">urgência máxima</div></div>
+        </div>
+        <div class="sec-title">Chamados de Manutenção <span class="count-badge" id="manutCount">0</span></div>
+        <div class="filter-bar" style="margin-bottom:12px;">
+          <button class="fb active" onclick="setManutFilter('todos',this)">Todos</button>
+          <button class="fb" onclick="setManutFilter('pendente',this)">Pendentes</button>
+          <button class="fb" onclick="setManutFilter('em_execucao',this)">Em Execução</button>
+          <button class="fb" onclick="setManutFilter('concluida',this)">Concluídas</button>
+          <button class="fb" onclick="setManutFilter('critica',this)">Críticas</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Urgência</th><th>Descrição</th><th>Local</th><th>Solicitante</th><th>Equipe</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+            <tbody id="manutBody"><tr><td colspan="8" class="empty-state">⏳ Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Manutenção -->
+      <div class="modal-overlay" id="manutModalOverlay" onclick="if(event.target===this)closeManutModal()">
+        <div class="modal" style="max-width:520px;">
+          <h3 id="manutModalTitle">Gerenciar Chamado</h3>
+          <div id="manutModalContent"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+            <button class="btn-cancel" onclick="closeManutModal()">Fechar</button>
+          </div>
+        </div>
+      </div>
+
       <!-- PDI -->
       <div id="panelPdi" class="panel">
         <div class="dip-stats" id="pdiStatsRow">
@@ -1252,7 +1288,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(el) el.classList.add('active');
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',almoxarifado:'Almoxarifado — Gestão de Insumos',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',cadastro:'Cadastrar Família'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',almoxarifado:'Almoxarifado — Gestão de Insumos',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',cadastro:'Cadastrar Família'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1263,6 +1299,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='diplomas')    loadDiplomasPanel();
     if(id==='pdi')           loadPdiPanel();
     if(id==='almoxarifado')  almInitPanel();
+    if(id==='manutencao')    loadManutPanel();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
     if(id==='acesso')      loadAcesso();
@@ -2378,6 +2415,110 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const d = await api({ action:'config_set', chave:'almoco_preco', valor: preco.toFixed(2) });
     if (d.error) return showAlert('almoco','error', d.error);
     showAlert('almoco','success','✅ Preço salvo!');
+  }
+
+  // ── MANUTENÇÃO ──────────────────────────────────────────
+  let manutData = [], manutFilter = 'todos';
+  const URGENCIA_LABEL = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🟠 Alta', critica:'🔴 Crítica' };
+  const MANUT_STATUS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
+  const EQUIPES = ['Elétrica','Hidráulica','Gesso/Pintura','Marcenaria','Limpeza','TI','Jardinagem','Geral'];
+
+  async function loadManutPanel() {
+    const d = await api({ action:'manutencao_list' });
+    manutData = Array.isArray(d) ? d : (d.data || []);
+    updateManutStats();
+    renderManutTable();
+  }
+  function updateManutStats() {
+    document.getElementById('manutPend').textContent = manutData.filter(m => m.status === 'pendente').length;
+    document.getElementById('manutExec').textContent = manutData.filter(m => m.status === 'em_execucao').length;
+    const now = new Date(), y = now.getFullYear(), mo = now.getMonth();
+    document.getElementById('manutDone').textContent = manutData.filter(m => m.status === 'concluida' && m.data_conclusao && new Date(m.data_conclusao).getMonth() === mo && new Date(m.data_conclusao).getFullYear() === y).length;
+    document.getElementById('manutCrit').textContent = manutData.filter(m => m.urgencia === 'critica' && m.status !== 'concluida' && m.status !== 'rejeitada').length;
+  }
+  function setManutFilter(f, btn) {
+    manutFilter = f;
+    document.querySelectorAll('#panelManutencao .filter-bar .fb').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderManutTable();
+  }
+  function renderManutTable() {
+    let list = manutData;
+    if (manutFilter === 'critica') list = list.filter(m => m.urgencia === 'critica' && m.status !== 'concluida');
+    else if (manutFilter !== 'todos') list = list.filter(m => m.status === manutFilter);
+    document.getElementById('manutCount').textContent = list.length;
+    const tb = document.getElementById('manutBody');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum chamado encontrado.</td></tr>'; return; }
+    tb.innerHTML = list.map(m => {
+      const user = m.usuarios || {};
+      const data = new Date(m.criado_em).toLocaleDateString('pt-BR');
+      return `<tr>
+        <td><span style="font-size:12px;font-weight:600;">${URGENCIA_LABEL[m.urgencia]||m.urgencia}</span></td>
+        <td style="max-width:200px;"><strong style="font-size:12px;">${esc(m.descricao?.substring(0,80))}</strong>${m.foto_url ? ' <a href="'+esc(m.foto_url)+'" target="_blank" style="font-size:11px;color:var(--blue);">📎 foto</a>' : ''}</td>
+        <td style="font-size:12px;">${esc(m.localizacao)}</td>
+        <td style="font-size:12px;">${esc(user.nome||'—')}<br><small style="color:var(--muted);">${esc(user.email||'')}</small></td>
+        <td style="font-size:12px;">${esc(m.equipe_responsavel||'—')}</td>
+        <td><span class="status-pill ${m.status}">${MANUT_STATUS[m.status]||m.status}</span></td>
+        <td style="font-size:12px;color:var(--muted);">${data}</td>
+        <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="openManutModal('${m.id}')">✎</button>
+          <button class="action-btn del" onclick="deleteManut('${m.id}')">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  function openManutModal(id) {
+    const m = manutData.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('manutModalTitle').textContent = 'Chamado #' + id.substring(0,8);
+    const equipesOpts = EQUIPES.map(e => `<option value="${e}" ${m.equipe_responsavel===e?'selected':''}>${e}</option>`).join('');
+    document.getElementById('manutModalContent').innerHTML = `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Descrição</div>
+        <div style="font-size:13px;background:#f5f0ea;padding:10px 12px;border-radius:8px;">${esc(m.descricao)}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Local</div>
+          <div style="font-size:13px;">${esc(m.localizacao)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Urgência</div>
+          <div style="font-size:13px;">${URGENCIA_LABEL[m.urgencia]}</div>
+        </div>
+      </div>
+      ${m.foto_url ? `<div style="margin-bottom:12px;"><a href="${esc(m.foto_url)}" target="_blank"><img src="${esc(m.foto_url)}" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);"></a></div>` : ''}
+      <div class="ff"><label>Encaminhar para equipe</label>
+        <select id="manutEquipe" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <option value="">— selecione —</option>${equipesOpts}
+        </select>
+      </div>
+      <div class="ff"><label>Observação</label>
+        <textarea id="manutObs" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;min-height:60px;resize:vertical;">${esc(m.observacao_gerente||'')}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-aprovar" onclick="updateManutStatus('${id}','em_execucao')">🔧 Iniciar Execução</button>
+        <button class="btn-aprovar" style="background:var(--green);" onclick="updateManutStatus('${id}','concluida')">✅ Concluir</button>
+        <button class="btn-rejeitar" onclick="updateManutStatus('${id}','rejeitada')">✕ Rejeitar</button>
+      </div>
+    `;
+    document.getElementById('manutModalOverlay').classList.add('show');
+  }
+  function closeManutModal() { document.getElementById('manutModalOverlay').classList.remove('show'); }
+  async function updateManutStatus(id, status) {
+    const equipe = document.getElementById('manutEquipe')?.value || undefined;
+    const obs = document.getElementById('manutObs')?.value?.trim() || undefined;
+    const d = await api({ action:'manutencao_update_status', id, status, equipe_responsavel: equipe, observacao_gerente: obs });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Status atualizado!', 'success');
+    closeManutModal();
+    loadManutPanel();
+  }
+  async function deleteManut(id) {
+    if (!confirm('Remover este chamado?')) return;
+    const d = await api({ action:'manutencao_delete', id });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    loadManutPanel();
   }
 
   // ── REUNIÕES ──────────────────────────────────────────

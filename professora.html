@@ -472,6 +472,40 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     </div>
   </div>
 
+  <!-- ── MANUTENÇÃO ──────────────────────────────────── -->
+  <div class="sec-title">🔧 Manutenção
+    <button onclick="loadMeusManut()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;">Abrir Chamado</h3>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Descrição *</label>
+      <textarea id="manutDesc" placeholder="Descreva o problema..." style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;min-height:70px;resize:vertical;"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Local *</label>
+        <input type="text" id="manutLocal" placeholder="Ex: Sala 3, Banheiro térreo..." style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Urgência *</label>
+        <select id="manutUrg" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <option value="baixa">🟢 Baixa</option>
+          <option value="media" selected>🟡 Média</option>
+          <option value="alta">🟠 Alta</option>
+          <option value="critica">🔴 Crítica</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Foto (opcional)</label>
+      <input type="file" id="manutFoto" accept="image/*" style="font-size:12px;font-family:'DM Sans',sans-serif;">
+    </div>
+    <button id="manutSubmitBtn" onclick="submitManut()" style="width:100%;padding:11px;background:var(--primary, #C8102E);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Enviar Chamado</button>
+    <div id="manutErr" class="f-alert error" style="display:none;margin-top:8px;"></div>
+  </div>
+  <div id="meusManutList" style="margin-bottom:24px;"></div>
+
   <!-- ── ALMOXARIFADO ──────────────────────────────────── -->
   <div class="sec-title">📦 Almoxarifado
     <button onclick="almLoadAll()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
@@ -691,6 +725,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados(), loadMeuPdi() ]);
     initPickupPanel();
     almLoadAll();
+    loadMeusManut();
   }
 
   async function loadRanking() {
@@ -1745,6 +1780,73 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     almFecharModal();
     almLoadReqs();
     almLoadBudget();
+  }
+
+  // ── MANUTENÇÃO ──────────────────────────────────────────
+  const MANUT_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
+  async function callManutApi(body) {
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
+    const r = await fetch(MANUT_API, { method: 'POST', headers, body: JSON.stringify(body) });
+    return r.json();
+  }
+
+  async function submitManut() {
+    const desc = document.getElementById('manutDesc').value.trim();
+    const local = document.getElementById('manutLocal').value.trim();
+    const urg = document.getElementById('manutUrg').value;
+    const errEl = document.getElementById('manutErr');
+    errEl.style.display = 'none';
+    if (!desc || !local) { errEl.textContent = 'Preencha descrição e local.'; errEl.style.display = 'block'; return; }
+
+    const btn = document.getElementById('manutSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+
+    let base64 = null, mime = null;
+    const fileInput = document.getElementById('manutFoto');
+    if (fileInput.files[0]) {
+      const file = fileInput.files[0];
+      mime = file.type;
+      base64 = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const d = await callManutApi({
+      action: 'manutencao_submit', descricao: desc, localizacao: local, urgencia: urg,
+      base64, mime, _email: currentProf?.email
+    }).catch(() => ({ error: 'Erro de conexão.' }));
+
+    btn.disabled = false; btn.textContent = 'Enviar Chamado';
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+    showToast('Chamado enviado com sucesso!', 'success');
+    document.getElementById('manutDesc').value = '';
+    document.getElementById('manutLocal').value = '';
+    document.getElementById('manutUrg').value = 'media';
+    fileInput.value = '';
+    loadMeusManut();
+  }
+
+  async function loadMeusManut() {
+    if (!currentProf) return;
+    const d = await callManutApi({ action: 'manutencao_list' });
+    const list = (Array.isArray(d) ? d : (d.data || [])).filter(m =>
+      m.usuarios?.email?.toLowerCase() === currentProf.email?.toLowerCase()
+    );
+    const el = document.getElementById('meusManutList');
+    if (!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:12px;">Nenhum chamado enviado.</div>'; return; }
+    const URG = { baixa:'🟢', media:'🟡', alta:'🟠', critica:'🔴' };
+    const STS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
+    el.innerHTML = list.map(m => `
+      <div class="card" style="margin-bottom:8px;padding:12px 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:12px;font-weight:600;">${URG[m.urgencia]} ${esc(m.descricao?.substring(0,60))}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:100px;background:#f5f0ea;">${STS[m.status]||m.status}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);">📍 ${esc(m.localizacao)} · ${new Date(m.criado_em).toLocaleDateString('pt-BR')}${m.equipe_responsavel ? ' · Equipe: '+esc(m.equipe_responsavel) : ''}${m.observacao_gerente ? '<br>💬 '+esc(m.observacao_gerente) : ''}</div>
+      </div>
+    `).join('');
   }
 
   checkSession();

@@ -219,6 +219,33 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Manutenção — envio público (qualquer portal) ─────────────
+  if (action === "manutencao_submit") {
+    const { descricao, localizacao, urgencia, usuario_id, _email, base64, mime } = body as Record<string, unknown>;
+    if (!descricao || !localizacao || !urgencia) return err("Descrição, localização e urgência são obrigatórios.");
+    const urgencias = ["baixa", "media", "alta", "critica"];
+    if (!urgencias.includes(urgencia as string)) return err("Urgência inválida. Use: baixa, media, alta, critica.");
+    let foto_url: string | null = null;
+    if (base64 && mime) {
+      const allowed = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowed.includes(mime as string)) return err("Tipo de imagem não permitido.");
+      const bytes = Uint8Array.from(atob(base64 as string), c => c.charCodeAt(0));
+      if (bytes.length > 10 * 1024 * 1024) return err("Imagem muito grande (máx. 10MB).");
+      const ext = (mime as string).split("/")[1];
+      const path = `fotos/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      await admin.storage.createBucket("manutencoes", { public: true }).catch(() => {});
+      const { error: upErr } = await admin.storage.from("manutencoes").upload(path, bytes, { contentType: mime as string, upsert: false });
+      if (upErr) return err("Erro ao enviar foto: " + upErr.message);
+      const { data: { publicUrl } } = admin.storage.from("manutencoes").getPublicUrl(path);
+      foto_url = publicUrl;
+    }
+    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url };
+    if (usuario_id) insert.usuario_id = usuario_id;
+    const { error } = await admin.from("manutencoes").insert(insert);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+
   // ════════════════════════════════════════════════════════════
   //  AÇÕES AUTENTICADAS
   // ════════════════════════════════════════════════════════════
@@ -516,6 +543,68 @@ serve(async (req: Request) => {
   if (action === "professoras_delete") {
     const { id } = body as { id: string };
     await admin.from("professoras").delete().eq("id", id);
+    return ok({ success: true });
+  }
+
+  // ── Manutenção CRUD (autenticado — gerente) ─────────────────
+  if (action === "manutencao_list") {
+    const { data, error } = await admin
+      .from("manutencoes")
+      .select("*, usuarios(nome, email)")
+      .order("criado_em", { ascending: false });
+    if (error) return err(error.message);
+    // Sort by urgencia priority: critica > alta > media > baixa, then by criado_em desc
+    const prioridade: Record<string, number> = { critica: 0, alta: 1, media: 2, baixa: 3 };
+    const sorted = (data ?? []).sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const pa = prioridade[a.urgencia as string] ?? 9;
+      const pb = prioridade[b.urgencia as string] ?? 9;
+      if (pa !== pb) return pa - pb;
+      return new Date(b.criado_em as string).getTime() - new Date(a.criado_em as string).getTime();
+    });
+    return ok(sorted);
+  }
+  if (action === "manutencao_create") {
+    const { descricao, localizacao, urgencia, foto_url: fotoUrlBody, usuario_id, base64, mime } = body as Record<string, unknown>;
+    if (!descricao || !localizacao || !urgencia) return err("Descrição, localização e urgência são obrigatórios.");
+    const urgencias = ["baixa", "media", "alta", "critica"];
+    if (!urgencias.includes(urgencia as string)) return err("Urgência inválida. Use: baixa, media, alta, critica.");
+    let foto_url: string | null = (fotoUrlBody as string) ?? null;
+    if (base64 && mime) {
+      const allowed = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowed.includes(mime as string)) return err("Tipo de imagem não permitido.");
+      const bytes = Uint8Array.from(atob(base64 as string), c => c.charCodeAt(0));
+      if (bytes.length > 10 * 1024 * 1024) return err("Imagem muito grande (máx. 10MB).");
+      const ext = (mime as string).split("/")[1];
+      const path = `fotos/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      await admin.storage.createBucket("manutencoes", { public: true }).catch(() => {});
+      const { error: upErr } = await admin.storage.from("manutencoes").upload(path, bytes, { contentType: mime as string, upsert: false });
+      if (upErr) return err("Erro ao enviar foto: " + upErr.message);
+      const { data: { publicUrl } } = admin.storage.from("manutencoes").getPublicUrl(path);
+      foto_url = publicUrl;
+    }
+    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url };
+    if (usuario_id) insert.usuario_id = usuario_id;
+    const { error } = await admin.from("manutencoes").insert(insert);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+  if (action === "manutencao_update_status") {
+    const { id, status, equipe_responsavel, observacao_gerente } = body as Record<string, unknown>;
+    if (!id || !status) return err("ID e status são obrigatórios.");
+    const statusValidos = ["aprovada", "em_execucao", "concluida", "rejeitada"];
+    if (!statusValidos.includes(status as string)) return err("Status inválido. Use: aprovada, em_execucao, concluida, rejeitada.");
+    const update: Record<string, unknown> = { status, atualizado_em: new Date().toISOString() };
+    if (equipe_responsavel !== undefined) update.equipe_responsavel = equipe_responsavel;
+    if (observacao_gerente !== undefined) update.observacao_gerente = observacao_gerente;
+    if (status === "concluida") update.data_conclusao = new Date().toISOString().split("T")[0];
+    const { error } = await admin.from("manutencoes").update(update).eq("id", id);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+  if (action === "manutencao_delete") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatório.");
+    await admin.from("manutencoes").delete().eq("id", id);
     return ok({ success: true });
   }
 
