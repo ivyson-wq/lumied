@@ -3564,7 +3564,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       const pct = t.orcamento > 0 ? Math.min(100, (t.gasto/t.orcamento)*100) : 0;
       const barColor = pct>=90 ? '#e53e3e' : pct>=70 ? '#f6a623' : '#48bb78';
       return `<div class="alm-budget-row">
-        <div style="width:12px;height:12px;border-radius:50%;background:${t.cor};flex-shrink:0;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></div>
         <div style="min-width:120px;font-weight:600;font-size:13px;">${t.nome}</div>
         <div class="alm-budget-bar-wrap"><div class="alm-budget-bar" style="width:${pct}%;background:${barColor};"></div></div>
         <div style="font-size:12px;color:var(--muted);white-space:nowrap;">${almFmtBRL(t.gasto)} / ${almFmtBRL(t.orcamento)}</div>
@@ -3600,8 +3600,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   function almRenderReqRow(r, showBtn) {
     const statusLbl = {pendente:'⏳ Pendente',aprovado:'✅ Aprovado',rejeitado:'❌ Rejeitado'}[r.status]||r.status;
     const itens = r.itens || [];
-    const turmaColor = r.alm_turmas?.cor || '#aaa';
-    const turmaNome  = r.alm_turmas?.nome || '—';
+    const turmaColor = r.series?.cor || '#3B82F6';
+    const turmaNome  = r.series?.nome || '—';
     const profNome   = r.professoras?.nome || r.professoras?.email || '—';
     const data = new Date(r.criado_em).toLocaleDateString('pt-BR');
     const itensHtml = itens.map(it =>
@@ -3637,7 +3637,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     document.getElementById('almReviewContent').innerHTML = `
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
-        <strong>${req.professoras?.nome||'—'}</strong> · ${req.alm_turmas?.nome||'—'} · ${almMesBR(req.mes)} · ${new Date(req.criado_em).toLocaleDateString('pt-BR')}
+        <strong>${req.professoras?.nome||'—'}</strong> · ${req.series?.nome||'—'} · ${almMesBR(req.mes)} · ${new Date(req.criado_em).toLocaleDateString('pt-BR')}
       </div>
       ${almReviewItens.map((it, i) => `
         <div class="alm-insumo-row" id="alm-row-${i}" style="flex-direction:column;align-items:stretch;gap:8px;">
@@ -3858,7 +3858,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
         ${cols.map(c => {
           const req  = c.alm_requisicoes || {};
-          const turma = req.alm_turmas?.nome || '—';
+          const turma = req.series?.nome || '—';
           const prof  = req.professoras?.nome || '—';
           const comprado = c.status === 'comprado';
           const cancelado = c.status === 'cancelado';
@@ -4219,7 +4219,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('almTurmasCount').textContent = turmas.length;
     document.getElementById('almTurmasList').innerHTML = turmas.map(t => `
       <div class="alm-insumo-row">
-        <div style="width:18px;height:18px;border-radius:50%;background:${t.cor};flex-shrink:0;"></div>
+        <div style="width:18px;height:18px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></div>
         <div style="flex:1;font-weight:600;font-size:13px;">${t.nome}</div>
         <div style="font-size:11px;color:var(--muted);">${(t.professoras||[]).length} professora(s)</div>
         <button onclick="almEditarTurma(${JSON.stringify(t).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
@@ -4290,7 +4290,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <tbody>${turmas.map(t => `
           <tr>
             <td style="padding:12px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${t.cor};margin-right:8px;"></span>
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${t.cor||'#3B82F6'};margin-right:8px;"></span>
               ${t.nome}
             </td>
             <td style="padding:12px 14px;text-align:right;border-bottom:1px solid #f5f0ea;">
@@ -4322,7 +4322,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       const barColor = pct>=90?'#e53e3e':pct>=70?'#f6a623':'#48bb78';
       return `<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:14px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <div style="width:14px;height:14px;border-radius:50%;background:${g.turma.cor};"></div>
+          <div style="width:14px;height:14px;border-radius:50%;background:${g.turma?.cor||'#3B82F6'};"></div>
           <strong style="font-size:15px;">${g.turma.nome}</strong>
           <span style="font-size:12px;color:var(--muted);margin-left:auto;">Orçamento: ${almFmtBRL(g.orcamento)}</span>
         </div>
