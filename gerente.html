@@ -4581,14 +4581,39 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   // ── ATUALIZAR PREÇOS ─────────────────────────────────
   async function almAtualizarPrecos() {
     const btn = document.getElementById('almBtnAtualizarPrecos');
-    btn.disabled = true; btn.textContent = '⏳ Atualizando preços... (pode levar alguns minutos)';
-    try {
-      const d = await callDiplomas({ action: 'alm_atualizar_precos' });
-      if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
-      showToast(`Preços atualizados: ${d.atualizados} de ${d.total} insumos`, 'success', 5000);
-      almLoadInsumos();
-    } catch(e) { showToast('Erro ao atualizar preços.', 'error'); }
-    finally { btn.disabled = false; btn.textContent = '🔄 Atualizar Preços Agora'; }
+    btn.disabled = true;
+
+    // 1. Busca lista de insumos ativos
+    const insData = await callDiplomas({ action: 'alm_insumos_list' });
+    const insumos = (insData.data || []).filter(i => i.ativo);
+    if (!insumos.length) { showToast('Nenhum insumo ativo.', 'warning'); btn.disabled = false; btn.textContent = '🔄 Atualizar Preços Agora'; return; }
+
+    let atualizados = 0;
+    const total = insumos.length;
+
+    // 2. Busca preço de cada insumo individualmente
+    for (let i = 0; i < total; i++) {
+      const ins = insumos[i];
+      btn.textContent = `⏳ ${i+1}/${total} — ${ins.nome.substring(0,25)}...`;
+      try {
+        const d = await callDiplomas({ action: 'alm_buscar_precos', nome: ins.nome, unidade: ins.unidade });
+        const resultados = d.data || [];
+        // Encontra melhor preço com match >= 70%
+        const produtos = resultados.filter(r => r.tipo === 'produto' && r.preco != null && r.match >= 70);
+        if (produtos.length) {
+          produtos.sort((a, b) => a.preco - b.preco);
+          const melhor = produtos[0];
+          // Atualiza preço no banco
+          await callDiplomas({ action: 'alm_insumo_save', id: ins.id, nome: ins.nome, descricao: ins.descricao, unidade: ins.unidade, estoque_qty: ins.estoque_qty, preco: melhor.preco, categoria: ins.categoria });
+          atualizados++;
+        }
+      } catch(_) {}
+    }
+
+    btn.disabled = false;
+    btn.textContent = '🔄 Atualizar Preços Agora';
+    showToast(`Preços atualizados: ${atualizados} de ${total} insumos`, 'success', 5000);
+    almLoadInsumos();
   }
 
   // ── CATEGORIAS DE INSUMOS ────────────────────────────
