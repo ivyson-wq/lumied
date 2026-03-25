@@ -1293,7 +1293,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       return;
     }
     document.getElementById('pickupFilaEmpty').style.display = 'none';
-    document.getElementById('pickupFilaList').innerHTML = fila.map(n => {
+
+    const chegaram = fila.filter(n => n.status === 'chegou');
+    const aCaminho = fila.filter(n => n.status === 'a_caminho');
+
+    function renderCard(n) {
       const eta = n.eta_minutos ?? null;
       const etaClass = eta !== null ? (eta <= 5 ? 'soon' : eta <= 15 ? 'medium' : 'ok') : '';
       const chegou = n.status === 'chegou';
@@ -1309,7 +1313,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
           ${chegou ? '✅ Entreguei' : '🚗 Entreguei'}
         </button>
       </div>`;
-    }).join('');
+    }
+
+    let html = '';
+    if (chegaram.length > 0) {
+      html += `<div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:#065f46;margin-bottom:8px;display:flex;align-items:center;gap:6px;">🏫 Chegaram (${chegaram.length})</div>
+        ${chegaram.map(renderCard).join('')}
+      </div>`;
+    }
+    if (aCaminho.length > 0) {
+      html += `<div>
+        <div style="font-size:13px;font-weight:700;color:#854d0e;margin-bottom:8px;display:flex;align-items:center;gap:6px;">🚗 A caminho (${aCaminho.length})</div>
+        ${aCaminho.map(renderCard).join('')}
+      </div>`;
+    }
+    document.getElementById('pickupFilaList').innerHTML = html;
   }
 
   async function loadPickupFila(silent = false) {
