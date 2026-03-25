@@ -456,11 +456,6 @@ body.has-bottomnav{padding-bottom:72px;}
       <div class="qbadge-value" id="qbBoletos">—</div>
       <div class="qbadge-label">Boletos em aberto</div>
     </div>
-    <div class="qbadge" onclick="switchTab('reunioes')">
-      <div class="qbadge-icon">🤝</div>
-      <div class="qbadge-value" id="qbReunioes">—</div>
-      <div class="qbadge-label">Reuniões agendadas</div>
-    </div>
   </div>
 
   <!-- TAB: INICIO -->
@@ -504,30 +499,15 @@ body.has-bottomnav{padding-bottom:72px;}
 
   </div><!-- /tabInicio -->
 
-  <!-- TAB: SOLICITAR -->
+  <!-- TAB: MUDANÇA DE TURNO -->
   <div class="tab-panel" id="tabSolicitar">
   <form id="mainForm" novalidate>
 
-    <!-- SELEÇÃO DE MODO -->
-    <div class="card" id="cardModo">
-      <div class="card-title">📋 O que deseja solicitar?</div>
-      <div class="modo-grid">
-        <div class="modo-opt" id="modoTurnoOpt" onclick="setModo('turno')">
-          <div class="modo-icon">🕐</div>
-          <div class="modo-nome">Alteração de Turno</div>
-          <div class="modo-desc">Solicite a alteração do turno da sua criança para o mês seguinte.</div>
-        </div>
-        <div class="modo-opt" id="modoAtivOpt" onclick="setModo('atividade')">
-          <div class="modo-icon">🎯</div>
-          <div class="modo-nome">Atividades Extracurriculares</div>
-          <div class="modo-desc">Inscreva sua criança em atividades como Futebol, Balé, Karatê e mais.</div>
-        </div>
-      </div>
-      <div class="err-msg" id="modoErr" style="margin-top:10px;">Selecione o tipo de solicitação.</div>
-    </div>
+    <div style="display:none;" id="cardModo"></div>
+    <div class="err-msg" id="modoErr" style="display:none;"></div>
 
     <!-- DADOS COMUNS -->
-    <div class="card" id="cardDados" style="display:none;">
+    <div class="card" id="cardDados">
       <div class="card-title">👤 Seus Dados</div>
       <div class="field">
         <label for="email">E-mail</label>
@@ -549,7 +529,7 @@ body.has-bottomnav{padding-bottom:72px;}
     </div>
 
     <!-- SÉRIE (comum) -->
-    <div class="card" id="cardSerie" style="display:none;">
+    <div class="card" id="cardSerie">
       <div class="card-title">🎒 Série</div>
       <div class="field">
         <label for="serieSelect">Série da criança <span class="req">*</span></label>
@@ -559,7 +539,7 @@ body.has-bottomnav{padding-bottom:72px;}
     </div>
 
     <!-- SEÇÃO: TURNO -->
-    <div id="secaoTurno" style="display:none;">
+    <div id="secaoTurno">
       <div class="card">
         <div class="card-title">🕐 Turno Desejado</div>
         <div class="field">
@@ -592,7 +572,7 @@ body.has-bottomnav{padding-bottom:72px;}
       </div>
     </div>
 
-    <!-- SEÇÃO: ATIVIDADES -->
+    <!-- SEÇÃO: ATIVIDADES (usada no tabAtividades) -->
     <div id="secaoAtividades" style="display:none;">
       <div class="card">
         <div class="card-title">🎯 Atividades Extracurriculares</div>
@@ -606,10 +586,54 @@ body.has-bottomnav{padding-bottom:72px;}
       </div>
     </div>
 
-    <button type="submit" class="btn-submit" id="submitBtn" style="display:none;">Enviar Solicitação</button>
-    <p class="submit-note" id="submitNote" style="display:none;">Você receberá um e-mail de confirmação após o envio.</p>
+    <button type="submit" class="btn-submit" id="submitBtn">Enviar Solicitação de Turno</button>
+    <p class="submit-note" id="submitNote">Você receberá um e-mail de confirmação após o envio.</p>
   </form>
   </div><!-- /tabSolicitar -->
+
+  <!-- TAB: ATIVIDADES -->
+  <div class="tab-panel" id="tabAtividades">
+    <div class="card">
+      <div class="card-title">👤 Seus Dados</div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="emailAtiv" readonly>
+        <div class="locked-badge">🔒 Confirmado pelo seu login</div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="nomeRespAtiv">Seu nome completo <span class="req">*</span></label>
+          <input type="text" id="nomeRespAtiv" placeholder="Ex: Ana Paula Corrêa" autocomplete="name">
+          <div class="err-msg" id="nomeRespAtivErr">Informe seu nome completo.</div>
+        </div>
+        <div class="field">
+          <label for="nomeCriancaAtiv">Nome da criança <span class="req">*</span></label>
+          <input type="text" id="nomeCriancaAtiv" placeholder="Ex: Pedro Corrêa">
+          <div class="err-msg" id="nomeCriancaAtivErr">Informe o nome da criança.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎒 Série</div>
+      <div class="field">
+        <label for="serieSelectAtiv">Série da criança <span class="req">*</span></label>
+        <select id="serieSelectAtiv"><option value="">Carregando…</option></select>
+        <div class="err-msg" id="serieAtivErr">Selecione a série.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎯 Atividades Extracurriculares</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Selecione uma ou mais atividades. Os horários não podem ser conflitantes.</p>
+      <div id="atividadesListaAtiv">
+        <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando atividades…</div>
+      </div>
+      <div id="conflictAlertAtiv" style="display:none;margin-top:14px;padding:12px 16px;background:#fdf0f2;border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;color:#a00d24;line-height:1.6;"></div>
+      <div id="totalAtividadesAtiv" style="display:none;margin-top:14px;padding:12px 16px;background:rgba(45,122,58,.08);border:1px solid rgba(45,122,58,.2);border-radius:8px;font-size:13px;color:#1a5c2a;font-weight:600;"></div>
+      <div class="err-msg" id="ativErr2Ativ" style="margin-top:10px;">Selecione pelo menos uma atividade.</div>
+    </div>
+    <button type="button" class="btn-submit" id="submitBtnAtiv" onclick="submitAtividades()">Confirmar Inscrição nas Atividades</button>
+    <p class="submit-note">Você receberá um e-mail de confirmação após o envio.</p>
+  </div><!-- /tabAtividades -->
 
   <!-- TAB: BOLETOS -->
   <div class="tab-panel" id="tabBoletos">
@@ -622,29 +646,6 @@ body.has-bottomnav{padding-bottom:72px;}
   </div>
   </div><!-- /tabBoletos -->
 
-  <!-- TAB: REUNIÕES -->
-  <div class="tab-panel" id="tabReunioes">
-  <div class="card" id="reuniaoCard" style="display:none;">
-    <div class="card-title">🤝 Agendar Reunião</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Agende uma reunião com a Direção ou Coordenação Pedagógica.</p>
-    <div id="reunioesAgendadas" style="margin-bottom:16px;"></div>
-    <div style="margin-bottom:16px;">
-      <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:10px;">Com quem deseja reunir?</label>
-      <div class="gestora-cards" id="gestoraCards"></div>
-    </div>
-    <div id="slotsSection" style="display:none;">
-      <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:6px;">Escolha o horário</label>
-      <div id="slotsLista"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando horários…</div></div>
-      <div id="assuntoSection" style="display:none;margin-top:14px;">
-        <label style="font-size:13px;font-weight:500;color:var(--text);display:block;margin-bottom:7px;">Assunto da reunião (opcional)</label>
-        <input type="text" id="reuniaoAssunto" placeholder="Ex: Desenvolvimento da criança, dúvidas sobre o programa…"
-          style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
-        <button onclick="confirmarReuniao()" class="btn-submit" style="margin-top:12px;">Confirmar Agendamento</button>
-        <div class="err-msg" id="reuniaoErr" style="margin-top:8px;"></div>
-      </div>
-    </div>
-  </div>
-  </div><!-- /tabReunioes -->
 
 </div><!-- /formWrap -->
 
@@ -655,16 +656,16 @@ body.has-bottomnav{padding-bottom:72px;}
     <span class="bnav-label">Início</span>
   </button>
   <button class="bnav-item" onclick="switchTab('solicitar')" data-tab="solicitar">
-    <span class="bnav-icon">📋</span>
-    <span class="bnav-label">Solicitar</span>
+    <span class="bnav-icon">🕐</span>
+    <span class="bnav-label">Mudança de Turno</span>
+  </button>
+  <button class="bnav-item" onclick="switchTab('atividades')" data-tab="atividades">
+    <span class="bnav-icon">🎯</span>
+    <span class="bnav-label">Atividades</span>
   </button>
   <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos">
     <span class="bnav-icon">💰</span>
     <span class="bnav-label">Boletos</span>
-  </button>
-  <button class="bnav-item" onclick="switchTab('reunioes')" data-tab="reunioes">
-    <span class="bnav-icon">🤝</span>
-    <span class="bnav-label">Reuniões</span>
   </button>
 </nav>
 
@@ -743,6 +744,8 @@ body.has-bottomnav{padding-bottom:72px;}
     if (panel) panel.classList.add('active');
     document.querySelectorAll('.bnav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (tab === 'solicitar') setModo('turno');
+    if (tab === 'atividades') initAtividadesTab();
   }
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
@@ -1006,6 +1009,7 @@ body.has-bottomnav{padding-bottom:72px;}
     }
 
     document.getElementById('email').value    = email;
+    document.getElementById('emailAtiv').value = email;
     // Nome: pré-preenche se vier do Google; deixa editável para magic link
     if (name) {
       document.getElementById('nomeResp').value    = name;
@@ -2014,21 +2018,131 @@ body.has-bottomnav{padding-bottom:72px;}
 
   function setModo(modo) {
     modoAtual = modo;
-    document.getElementById('modoErr').classList.remove('show');
-    document.getElementById('modoTurnoOpt').classList.toggle('selected', modo==='turno');
-    document.getElementById('modoAtivOpt').classList.toggle('selected', modo==='atividade');
-    document.getElementById('cardDados').style.display    = 'block';
-    document.getElementById('cardSerie').style.display    = 'block';
     document.getElementById('secaoTurno').style.display      = modo==='turno'     ? 'block' : 'none';
     document.getElementById('secaoAtividades').style.display  = modo==='atividade' ? 'block' : 'none';
-    document.getElementById('submitBtn').style.display   = 'block';
-    document.getElementById('submitNote').style.display  = 'block';
     document.getElementById('submitBtn').textContent = modo==='turno'
       ? 'Enviar Solicitação de Turno'
       : 'Confirmar Inscrição nas Atividades';
-
-    // Carrega atividades ao selecionar o modo (garante dados frescos)
     if (modo === 'atividade') loadAtividades();
+  }
+
+  // ── TAB ATIVIDADES (separado) ────────────────────────
+  let ativTabInited = false;
+  async function initAtividadesTab() {
+    if (currentUser) {
+      document.getElementById('emailAtiv').value = currentUser.email;
+    }
+    if (!ativTabInited) {
+      const data = await call({ action:'series_list' });
+      const sel = document.getElementById('serieSelectAtiv');
+      if (!Array.isArray(data)||!data.length) { sel.innerHTML='<option value="">Nenhuma série cadastrada</option>'; }
+      else { sel.innerHTML='<option value="">Selecione a série…</option>'+data.map(s=>'<option value="'+s.nome+'">'+s.nome+'</option>').join(''); }
+      ativTabInited = true;
+    }
+    loadAtividadesAtiv();
+  }
+
+  let todasAtividadesAtiv = [];
+  let ativSelecionadasAtiv = new Map();
+
+  async function loadAtividadesAtiv() {
+    const data = await call({ action: 'atividades_list' });
+    todasAtividadesAtiv = Array.isArray(data) ? data : [];
+    renderAtividadesAtiv();
+  }
+
+  function renderAtividadesAtiv() {
+    const el = document.getElementById('atividadesListaAtiv');
+    if (!todasAtividadesAtiv.length) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada no momento.</div>';
+      return;
+    }
+    el.innerHTML = todasAtividadesAtiv.map(a => {
+      const temVaga = a.horarios?.some(h => h.vagas > (h.inscritos||0));
+      const sel = ativSelecionadasAtiv.has(a.id);
+      return `
+        <div class="ativ-card ${sel?'selected':''}" id="ativAtiv_${a.id}">
+          <div class="ativ-header" onclick="${temVaga?`toggleAtividadeAtiv('${a.id}')`:''}" style="${!temVaga?'cursor:default;opacity:.6':'cursor:pointer'}">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="ativ-check">${sel?'✓':''}</div>
+              <div>
+                <div class="ativ-name">${esc2(a.nome)}${a.preco?' · <strong>R$ '+Number(a.preco).toFixed(2).replace('.',',')+'</strong>/mês':''}</div>
+                ${!temVaga?'<div style="color:#a00d24;font-size:11px;font-weight:600;margin-top:2px;">ESGOTADO</div>':''}
+              </div>
+            </div>
+          </div>
+          ${a.descricao ? `<div class="ativ-desc" onclick="${temVaga?`toggleAtividadeAtiv('${a.id}')`:''}">${esc2(a.descricao)}</div>` : ''}
+          ${sel && a.horarios?.length ? `<div class="ativ-turmas">${a.horarios.map((h,i) => {
+            const vagasRest = h.vagas - (h.inscritos||0);
+            const chosen = ativSelecionadasAtiv.get(a.id)?.turma === h.turma;
+            return `<label class="turma-radio ${chosen?'chosen':''} ${vagasRest<=0?'esgotada':''}" onclick="${vagasRest>0?`selectTurmaAtiv('${a.id}',${i})`:''}" style="${vagasRest<=0?'opacity:.5;cursor:not-allowed':''}">
+              <input type="radio" name="turmaAtiv_${a.id}" ${chosen?'checked':''} ${vagasRest<=0?'disabled':''}>
+              <span><strong>${esc2(h.turma)}</strong><br><span style="font-size:11px;color:var(--muted)">${h.slots?.map(s=>s.dia+' '+s.inicio+'–'+s.fim).join(', ')||''} · ${vagasRest} vaga${vagasRest!==1?'s':''}</span></span>
+            </label>`;
+          }).join('')}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function toggleAtividadeAtiv(id) {
+    if (ativSelecionadasAtiv.has(id)) {
+      ativSelecionadasAtiv.delete(id);
+    } else {
+      ativSelecionadasAtiv.set(id, null);
+    }
+    renderAtividadesAtiv();
+    updateTotalAtiv();
+  }
+
+  function selectTurmaAtiv(atividadeId, turmaIndex) {
+    const atividade = todasAtividadesAtiv.find(a => a.id === atividadeId);
+    if (!atividade) return;
+    const turma = atividade.horarios[turmaIndex];
+    ativSelecionadasAtiv.set(atividadeId, { turma: turma.turma, slots: turma.slots, almoco: false, almoco_preco: turma.almoco_preco || 50 });
+    renderAtividadesAtiv();
+    updateTotalAtiv();
+  }
+
+  function updateTotalAtiv() {
+    const selecionadas = todasAtividadesAtiv.filter(a => ativSelecionadasAtiv.has(a.id));
+    const el = document.getElementById('totalAtividadesAtiv');
+    if (!selecionadas.length) { el.style.display='none'; return; }
+    let total = selecionadas.reduce((s,a)=>s+(Number(a.preco)||0),0);
+    el.style.display='block';
+    el.textContent = `✅ ${selecionadas.length} atividade(s) — Total: R$ ${total.toFixed(2).replace('.',',')} /mês`;
+  }
+
+  async function submitAtividades() {
+    if (!currentUser) { showToast('Faça login para enviar.', 'warning'); return; }
+    const email = currentUser.email;
+    const nomeResp = document.getElementById('nomeRespAtiv').value.trim();
+    const nomeCrianca = document.getElementById('nomeCriancaAtiv').value.trim();
+    const serie = document.getElementById('serieSelectAtiv').value;
+    let ok = true;
+    if (!nomeResp) { document.getElementById('nomeRespAtivErr').classList.add('show'); ok=false; } else { document.getElementById('nomeRespAtivErr').classList.remove('show'); }
+    if (!nomeCrianca) { document.getElementById('nomeCriancaAtivErr').classList.add('show'); ok=false; } else { document.getElementById('nomeCriancaAtivErr').classList.remove('show'); }
+    if (!serie) { document.getElementById('serieAtivErr').classList.add('show'); ok=false; } else { document.getElementById('serieAtivErr').classList.remove('show'); }
+    if (!ok) return;
+    if (ativSelecionadasAtiv.size === 0) { showToast('Selecione pelo menos uma atividade.', 'warning'); return; }
+    for (const [id, sel] of ativSelecionadasAtiv) {
+      if (!sel) { const a = todasAtividadesAtiv.find(x=>x.id===id); showToast(`Escolha o horário para "${a?.nome||''}"`, 'warning'); return; }
+    }
+    const btn = document.getElementById('submitBtnAtiv');
+    btn.disabled=true; btn.textContent='Enviando…';
+    const atividadesIds = [...ativSelecionadasAtiv.keys()];
+    const turmasSelecionadas = [...ativSelecionadasAtiv.entries()].map(([id,sel])=>({ atividade_id:id, turma:sel.turma, slots:sel.slots, almoco:sel.almoco||false, almoco_preco:sel.almoco_preco||50 }));
+    const atividadesDetalhe = todasAtividadesAtiv.filter(a => ativSelecionadasAtiv.has(a.id)).map(a => ({
+      nome:a.nome, preco:a.preco, turma_selecionada: ativSelecionadasAtiv.get(a.id)?.turma, slots_selecionados: ativSelecionadasAtiv.get(a.id)?.slots
+    }));
+    const d = await call({ action:'inscricao_atividade_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, atividades_ids:atividadesIds, atividades_detalhe:atividadesDetalhe, turmas_selecionadas:turmasSelecionadas });
+    if (d.error) { showToast(d.error, 'error'); btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return; }
+    try { await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
+      body: JSON.stringify({ tipo:'atividade', nomeResp, nomeCrianca, email, serie, atividades:atividadesDetalhe }) }); } catch(_) {}
+    showToast('Inscrição nas atividades enviada com sucesso!', 'success', 5000);
+    btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades';
+    ativSelecionadasAtiv.clear();
+    renderAtividadesAtiv();
+    updateTotalAtiv();
   }
 
   // ── SUBMIT ────────────────────────────────────────────
@@ -2038,11 +2152,7 @@ body.has-bottomnav{padding-bottom:72px;}
     e.preventDefault();
     if (!currentUser) { showToast('Faça login para enviar.', 'warning'); return; }
 
-    if (!modoAtual) {
-      document.getElementById('modoErr').classList.add('show');
-      document.getElementById('cardModo').scrollIntoView({behavior:'smooth'}); return;
-    }
-
+    modoAtual = 'turno';
     const email       = document.getElementById('email').value.trim();
     const nomeResp    = document.getElementById('nomeResp').value.trim();
     const nomeCrianca = document.getElementById('nomeCrianca').value.trim();
@@ -2053,49 +2163,21 @@ body.has-bottomnav{padding-bottom:72px;}
     ok = setErr('serieSelect','serieErr',       !serie)       && ok;
     if (!ok) return;
 
+    const turno = document.getElementById('turnoSelect').value;
     const btn = document.getElementById('submitBtn');
     btn.disabled=true; btn.textContent='Enviando…';
 
     try {
-      if (modoAtual === 'turno') {
-        const turno = document.getElementById('turnoSelect').value;
-        if (!turno) { setErr('turnoSelect','turnoErr',true); btn.disabled=false; btn.textContent='Enviar Solicitação de Turno'; return; }
-        if (PRECISA_DIAS(turno) && diasSelecionados.length !== TURNO_INFO[turno].freq) {
-          document.getElementById('turnoErr').textContent='Escolha os dias da semana.';
-          document.getElementById('turnoErr').classList.add('show');
-          openDiasModal(turno); btn.disabled=false; btn.textContent='Enviar Solicitação de Turno'; return;
-        }
-        const d = await call({ action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno, dias_semana:diasSelecionados.length?diasSelecionados:null });
-        if (d.error) throw new Error(d.error);
-        await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
-          body: JSON.stringify({ tipo:'turno', nomeResp, nomeCrianca, turno, email, serie, diasSemana:diasSelecionados }) });
-
-      } else {
-        if (atividadesSelecionadas.size === 0) {
-          document.getElementById('ativErr2').classList.add('show');
-          btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return;
-        }
-        // Valida que todas as atividades têm turma escolhida
-        for (const [id, sel] of atividadesSelecionadas) {
-          if (!sel) {
-            const a = todasAtividades.find(x=>x.id===id);
-            showToast(`Escolha o horário para a atividade "${a?.nome||''}".`, 'warning');
-            btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return;
-          }
-        }
-        if (!checkConflicts()) { btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return; }
-        const atividadesIds     = [...atividadesSelecionadas.keys()];
-        const turmasSelecionadas = [...atividadesSelecionadas.entries()].map(([id,sel])=>({ atividade_id:id, turma:sel.turma, slots:sel.slots, almoco:sel.almoco||false, almoco_preco:sel.almoco_preco||50 }));
-        const atividadesDetalhe = todasAtividades.filter(a => atividadesSelecionadas.has(a.id)).map(a => ({
-          ...a,
-          turma_selecionada: atividadesSelecionadas.get(a.id)?.turma,
-          slots_selecionados: atividadesSelecionadas.get(a.id)?.slots,
-        }));
-        const d2 = await call({ action:'inscricao_atividade_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, atividades_ids:atividadesIds, atividades_detalhe:atividadesDetalhe, turmas_selecionadas:turmasSelecionadas });
-        if (d2.error) throw new Error(d2.error);
-        await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
-          body: JSON.stringify({ tipo:'atividade', nomeResp, nomeCrianca, email, serie, atividades:atividadesDetalhe }) });
+      if (!turno) { setErr('turnoSelect','turnoErr',true); btn.disabled=false; btn.textContent='Enviar Solicitação de Turno'; return; }
+      if (PRECISA_DIAS(turno) && diasSelecionados.length !== TURNO_INFO[turno].freq) {
+        document.getElementById('turnoErr').textContent='Escolha os dias da semana.';
+        document.getElementById('turnoErr').classList.add('show');
+        openDiasModal(turno); btn.disabled=false; btn.textContent='Enviar Solicitação de Turno'; return;
       }
+      const d = await call({ action:'public_submit', email, nome_resp:nomeResp, nome_crianca:nomeCrianca, serie, turno, dias_semana:diasSelecionados.length?diasSelecionados:null });
+      if (d.error) throw new Error(d.error);
+      await fetch(SEND, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
+        body: JSON.stringify({ tipo:'turno', nomeResp, nomeCrianca, turno, email, serie, diasSemana:diasSelecionados }) });
 
       document.getElementById('formWrap').style.display='none';
       document.getElementById('successPanel').style.display='block';
@@ -2103,7 +2185,7 @@ body.has-bottomnav{padding-bottom:72px;}
     } catch(err) {
       showToast('Erro ao enviar. Tente novamente.', 'error', 5000);
       btn.disabled=false;
-      btn.textContent = modoAtual==='turno' ? 'Enviar Solicitação de Turno' : 'Confirmar Inscrição nas Atividades';
+      btn.textContent = 'Enviar Solicitação de Turno';
     }
   });
 
