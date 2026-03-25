@@ -10,6 +10,10 @@ function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
 }
 
+async function criarNotif(sb: any, portal: string, destinatario: string, titulo: string, mensagem: string, tipo = 'info') {
+  await sb.from('notificacoes').insert({ portal, destinatario, titulo, mensagem, tipo })
+}
+
 // ── PBKDF2 helpers ─────────────────────────────────────────
 async function hashSenha(senha: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16))
@@ -325,6 +329,11 @@ Deno.serve(async (req) => {
         arquivo_url: up.url, status: 'pendente', pontuacao: 0,
       })
       if (error) return json({ error: error.message }, 400)
+      // Notifica todos os gerentes
+      const { data: gerentes } = await sb.from('gerentes').select('email')
+      for (const g of gerentes ?? []) {
+        await criarNotif(sb, 'gerente', g.email, 'Novo diploma', `${prof.nome} enviou o diploma "${nome_curso}" (${carga_horaria}h) para validação.`, 'info')
+      }
       return json({ ok: true })
     }
 
@@ -351,6 +360,11 @@ Deno.serve(async (req) => {
         motivo: motivo || null, arquivo_url: up.url, status: 'pendente',
       })
       if (error) return json({ error: error.message }, 400)
+      // Notifica todas as secretárias
+      const { data: secs } = await sb.from('secretarias').select('email')
+      for (const s of secs ?? []) {
+        await criarNotif(sb, 'secretaria', s.email, 'Novo atestado', `${prof.nome} enviou um atestado (${data_inicio} a ${data_fim}) para validação.`, 'info')
+      }
       return json({ ok: true })
     }
 
@@ -549,6 +563,7 @@ Deno.serve(async (req) => {
     if (action === 'atestado_aprovar') {
       const { id } = body
       if (!id) return json({ error: 'ID do atestado não informado.' }, 400)
+      const { data: atest } = await sb.from('atestados_professoras').select('professora_id, data_inicio, data_fim, professoras(email)').eq('id', id).maybeSingle()
       const { error } = await sb.from('atestados_professoras').update({
         status: 'aprovado',
         validado_por: sec.nome,
@@ -556,12 +571,15 @@ Deno.serve(async (req) => {
         observacao: body.observacao || null,
       }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
+      const profEmail = atest?.professoras?.email
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado aprovado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ✅ aprovado pela secretaria.`, 'success')
       return json({ ok: true })
     }
 
     if (action === 'atestado_rejeitar') {
       const { id } = body
       if (!id) return json({ error: 'ID do atestado não informado.' }, 400)
+      const { data: atest } = await sb.from('atestados_professoras').select('professora_id, data_inicio, data_fim, professoras(email)').eq('id', id).maybeSingle()
       const { error } = await sb.from('atestados_professoras').update({
         status: 'rejeitado',
         validado_por: sec.nome,
@@ -569,6 +587,8 @@ Deno.serve(async (req) => {
         observacao: body.observacao || null,
       }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
+      const profEmail = atest?.professoras?.email
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado rejeitado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error')
       return json({ ok: true })
     }
   }
@@ -618,7 +638,7 @@ Deno.serve(async (req) => {
       const { id } = body
       if (!id) return json({ error: 'ID do diploma não informado.' }, 400)
       const { data: diploma } = await sb
-        .from('diplomas_professoras').select('carga_horaria').eq('id', id).maybeSingle()
+        .from('diplomas_professoras').select('carga_horaria, nome_curso, professora_id, professoras(email)').eq('id', id).maybeSingle()
       if (!diploma) return json({ error: 'Diploma não encontrado.' }, 404)
       const { error } = await sb.from('diplomas_professoras').update({
         status: 'aprovado', pontuacao: diploma.carga_horaria,
@@ -626,18 +646,24 @@ Deno.serve(async (req) => {
         observacao: body.observacao || null,
       }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
+      const profEmail = diploma.professoras?.email
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Diploma aprovado', `Seu diploma "${diploma.nome_curso}" foi ✅ aprovado! +${diploma.carga_horaria} pontos.`, 'success')
       return json({ ok: true })
     }
 
     if (action === 'diploma_rejeitar') {
       const { id } = body
       if (!id) return json({ error: 'ID do diploma não informado.' }, 400)
+      const { data: diploma } = await sb
+        .from('diplomas_professoras').select('nome_curso, professora_id, professoras(email)').eq('id', id).maybeSingle()
       const { error } = await sb.from('diplomas_professoras').update({
         status: 'rejeitado', pontuacao: 0,
         validado_por: ger.nome, data_validacao: new Date().toISOString(),
         observacao: body.observacao || null,
       }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
+      const profEmail = diploma?.professoras?.email
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Diploma rejeitado', `Seu diploma "${diploma.nome_curso}" foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error')
       return json({ ok: true })
     }
 
@@ -735,7 +761,7 @@ Deno.serve(async (req) => {
     if (action === 'pdi_aprovar') {
       const { pdi_id, feedback } = body
       if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
-      const { data: pdi } = await sb.from('pdis').select('id, status').eq('id', pdi_id).maybeSingle()
+      const { data: pdi } = await sb.from('pdis').select('id, status, professora_id, professoras(email)').eq('id', pdi_id).maybeSingle()
       if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
       if (pdi.status !== 'aguardando_aprovacao')
         return json({ error: 'PDI não está aguardando aprovação.' }, 400)
@@ -745,14 +771,15 @@ Deno.serve(async (req) => {
         aprovado_em: new Date().toISOString(),
       }).eq('id', pdi_id)
       if (error) return json({ error: error.message }, 400)
+      const profEmail = pdi.professoras?.email
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'PDI aprovado', `Seu PDI foi ✅ aprovado e está em andamento.${feedback ? ' Feedback: ' + feedback : ''}`, 'success')
       return json({ ok: true })
     }
 
     if (action === 'pdi_rejeitar') {
-      // Devolve o PDI para rascunho com feedback
       const { pdi_id, feedback } = body
       if (!pdi_id || !feedback) return json({ error: 'Informe pdi_id e feedback.' }, 400)
-      const { data: pdi } = await sb.from('pdis').select('id, status').eq('id', pdi_id).maybeSingle()
+      const { data: pdi } = await sb.from('pdis').select('id, status, professora_id, professoras(email)').eq('id', pdi_id).maybeSingle()
       if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
       const { error } = await sb.from('pdis').update({
         status: 'rascunho',
@@ -760,6 +787,8 @@ Deno.serve(async (req) => {
         submetido_em: null,
       }).eq('id', pdi_id)
       if (error) return json({ error: error.message }, 400)
+      const profEmail = pdi.professoras?.email
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'PDI devolvido', `Seu PDI foi devolvido para revisão. Feedback: ${feedback}`, 'warning')
       return json({ ok: true })
     }
 
@@ -1560,6 +1589,30 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
+  }
+
+  // ━━ NOTIFICAÇÕES (qualquer portal) ━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'notif_list') {
+    const { portal, email } = body
+    if (!portal || !email) return json({ error: 'portal e email obrigatórios.' }, 400)
+    const { data } = await sb.from('notificacoes').select('*')
+      .eq('portal', portal).eq('destinatario', email)
+      .order('criado_em', { ascending: false }).limit(50)
+    return json({ data: data ?? [] })
+  }
+
+  if (action === 'notif_marcar_lida') {
+    const { ids } = body
+    if (!ids || !Array.isArray(ids)) return json({ error: 'ids obrigatório (array).' }, 400)
+    await sb.from('notificacoes').update({ lida: true }).in('id', ids)
+    return json({ ok: true })
+  }
+
+  if (action === 'notif_marcar_todas') {
+    const { portal, email } = body
+    if (!portal || !email) return json({ error: 'portal e email obrigatórios.' }, 400)
+    await sb.from('notificacoes').update({ lida: true }).eq('portal', portal).eq('destinatario', email).eq('lida', false)
+    return json({ ok: true })
   }
 
   return json({ error: 'Ação desconhecida' }, 400)
