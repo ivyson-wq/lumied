@@ -728,6 +728,100 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Calendario Escolar ─────────────────────────────────
+  if (action === "calendario_list") {
+    const { mes, ano } = body as { mes?: string; ano?: string };
+    let query = admin.from("calendario_eventos").select("*").order("data_inicio");
+    if (mes) {
+      const [y, m] = mes.split("-");
+      const inicio = `${y}-${m}-01`;
+      const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+      const fim = `${y}-${m}-${lastDay}`;
+      query = query.gte("data_inicio", inicio).lte("data_inicio", fim);
+    } else if (ano) {
+      query = query.gte("data_inicio", `${ano}-01-01`).lte("data_inicio", `${ano}-12-31`);
+    }
+    const { data } = await query;
+    return ok(data ?? []);
+  }
+  if (action === "calendario_list_public") {
+    // Para pais e professoras (sem auth)
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const [y, m] = mes.split("-");
+    const inicio = `${y}-${m}-01`;
+    const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+    const fim = `${y}-${m}-${lastDay}`;
+    const portal = (body as any).portal || "pais";
+    let query = admin.from("calendario_eventos").select("*")
+      .gte("data_inicio", inicio).lte("data_inicio", fim).order("data_inicio");
+    if (portal === "pais") query = query.eq("visivel_pais", true);
+    else query = query.eq("visivel_professoras", true);
+    const { data } = await query;
+    return ok(data ?? []);
+  }
+  if (action === "calendario_save") {
+    const { id, titulo, descricao, data_inicio, data_fim, tipo, cor, visivel_pais, visivel_professoras } = body as any;
+    if (!titulo || !data_inicio) return err("Titulo e data obrigatorios.");
+    const data = { titulo, descricao: descricao || null, data_inicio, data_fim: data_fim || data_inicio, tipo: tipo || "evento", cor: cor || "#C8102E", visivel_pais: visivel_pais ?? true, visivel_professoras: visivel_professoras ?? true, criado_por: gerente?.nome };
+    if (id) {
+      await admin.from("calendario_eventos").update(data).eq("id", id);
+    } else {
+      await admin.from("calendario_eventos").insert(data);
+    }
+    return ok({ success: true });
+  }
+  if (action === "calendario_delete") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatorio.");
+    await admin.from("calendario_eventos").delete().eq("id", id);
+    return ok({ success: true });
+  }
+
+  // ── Analytics Dashboard ───────────────────────────────
+  if (action === "analytics_dashboard") {
+    const ano = (body as any).ano || new Date().getFullYear().toString();
+    // Solicitacoes por mes
+    const { data: sols } = await admin.from("solicitacoes").select("criado_em, turno").gte("criado_em", `${ano}-01-01`).lte("criado_em", `${ano}-12-31T23:59:59`);
+    const solsPorMes = Array(12).fill(0);
+    for (const s of sols ?? []) { const m = new Date(s.criado_em).getMonth(); solsPorMes[m]++; }
+
+    // Almoxarifado gastos por mes
+    const { data: reqs } = await admin.from("alm_requisicoes").select("mes, total, status").like("mes", `${ano}-%`);
+    const gastosPorMes = Array(12).fill(0);
+    for (const r of reqs ?? []) {
+      if (r.status === "aprovado") {
+        const m = parseInt(r.mes.split("-")[1]) - 1;
+        gastosPorMes[m] += r.total || 0;
+      }
+    }
+
+    // Manutencao por status
+    const { data: manuts } = await admin.from("manutencoes").select("status, urgencia, criado_em").gte("criado_em", `${ano}-01-01`);
+    const manutStatus: Record<string, number> = {};
+    const manutPorMes = Array(12).fill(0);
+    for (const m of manuts ?? []) {
+      manutStatus[m.status] = (manutStatus[m.status] || 0) + 1;
+      const mo = new Date(m.criado_em).getMonth();
+      manutPorMes[mo]++;
+    }
+
+    // Atividades inscritos
+    const { data: ativs } = await admin.from("atividades").select("nome, horarios").eq("ativo", true);
+    const atividadesData = (ativs ?? []).map((a: any) => ({
+      nome: a.nome,
+      inscritos: (a.horarios || []).reduce((s: number, h: any) => s + (h.inscritos || 0), 0),
+    }));
+
+    return ok({
+      solicitacoes_por_mes: solsPorMes,
+      gastos_almox_por_mes: gastosPorMes,
+      manutencao_status: manutStatus,
+      manutencao_por_mes: manutPorMes,
+      atividades: atividadesData,
+      ano,
+    });
+  }
+
   // ── Atribuir turma/série a professora ───────────────────
   if (action === "usuarios_set_serie") {
     const { email, serie_id } = body as { email: string; serie_id: string | null };

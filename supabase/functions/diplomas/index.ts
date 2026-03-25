@@ -1979,6 +1979,22 @@ Deno.serve(async (req) => {
     return json({ ok: true })
   }
 
+  // ━━ CALENDARIO PUBLICO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'calendario_publico') {
+    const mes = (body.mes as string) || new Date().toISOString().slice(0, 7)
+    const [y, m] = mes.split('-')
+    const inicio = `${y}-${m}-01`
+    const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate()
+    const fim = `${y}-${m}-${lastDay}`
+    const portal = (body.portal as string) || 'pais'
+    let query = sb.from('calendario_eventos').select('id, titulo, descricao, data_inicio, data_fim, tipo, cor')
+      .gte('data_inicio', inicio).lte('data_inicio', fim).order('data_inicio')
+    if (portal === 'pais') query = query.eq('visivel_pais', true)
+    else query = query.eq('visivel_professoras', true)
+    const { data } = await query
+    return json({ data: data ?? [] })
+  }
+
   // ━━ MERCADO LIVRE OAUTH ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (action === 'ml_auth_url') {
     const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`
