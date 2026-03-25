@@ -211,6 +211,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .pbnav-icon{font-size:18px;line-height:1;}
 .pbnav-label{font-size:9px;font-weight:600;letter-spacing:.3px;}
 .has-prof-bnav{padding-bottom:70px;}
+
+/* GREETING BAR */
+.greeting-bar{background:var(--white);border-bottom:1px solid var(--border);padding:16px 24px;text-align:center;}
+.greeting-name{font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--text);}
+.greeting-date{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* NOTIFICATION BELL */
+.notif-bell{position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;}
+.notif-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid var(--sb);display:none;}
+.notif-panel{display:none;position:fixed;top:60px;right:16px;width:340px;max-height:400px;background:#fff;border-radius:12px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:500;overflow-y:auto;}
+.notif-panel.open{display:block;}
+.notif-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;}
+.notif-header button{background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.notif-item{padding:12px 16px;border-bottom:1px solid #f5f0ea;font-size:13px;line-height:1.5;}
+.notif-item.unread{background:#fdf8f0;}
+.notif-item .notif-time{font-size:10px;color:var(--muted);margin-top:4px;}
+.notif-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px;}
 .alm-notif-item.nao-lida{background:#fffbf0;border-left:3px solid #f6a623;}
 /* ── PICKUP QUEUE ── */
 .pickup-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
@@ -265,9 +282,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div><h1>Maple Bear</h1><span>Portal das Professoras</span></div>
     </div>
     <div class="topbar-user">
+      <button class="notif-bell" onclick="toggleNotifPanel()">🔔<span class="notif-dot" id="notifDot"></span></button>
       <span class="user-name" id="userNome"></span>
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
     </div>
+    <div class="notif-panel" id="notifPanel">
+      <div class="notif-header">Notificações <button onclick="marcarTodasLidas()">Marcar todas como lidas</button></div>
+      <div id="notifList"><div class="notif-empty">Nenhuma notificação.</div></div>
+    </div>
+  </div>
+
+  <div class="greeting-bar" id="greetingBar">
+    <div class="greeting-name" id="greetingName"></div>
+    <div class="greeting-date" id="greetingDate"></div>
   </div>
 
   <div class="content">
@@ -777,6 +804,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display = 'block';
     document.getElementById('userNome').textContent = user.nome || user.email || '';
+    const firstName = (user.nome || user.email || '').split(/[\s@]/)[0];
+    document.getElementById('greetingName').textContent = 'Olá, ' + firstName;
+    const hoje = new Date();
+    document.getElementById('greetingDate').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     document.getElementById('profBottomNav').classList.add('visible');
     document.body.classList.add('has-prof-bnav');
     loadAll();
@@ -797,6 +828,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     initPickupPanel();
     almLoadAll();
     loadMeusManut();
+    loadNotificacoes();
   }
 
   async function loadRanking() {
@@ -1937,6 +1969,44 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         <div style="font-size:11px;color:var(--muted);">📍 ${esc(m.localizacao)} · ${new Date(m.criado_em).toLocaleDateString('pt-BR')}${m.equipe_responsavel ? ' · Equipe: '+esc(m.equipe_responsavel) : ''}${m.observacao_gerente ? '<br>💬 '+esc(m.observacao_gerente) : ''}</div>
       </div>
     `).join('');
+  }
+
+  // ── NOTIFICAÇÕES ─────────────────────────────────────
+  let notifData = [];
+  async function loadNotificacoes() {
+    if (!currentProf) return;
+    const d = await callApi({ action: 'notif_list', portal: 'professora', email: currentProf.email });
+    notifData = Array.isArray(d?.data) ? d.data : [];
+    renderNotif();
+  }
+  function renderNotif() {
+    const el = document.getElementById('notifList');
+    const dot = document.getElementById('notifDot');
+    const unread = notifData.filter(n => !n.lida);
+    dot.style.display = unread.length > 0 ? 'block' : 'none';
+    if (!notifData.length) { el.innerHTML = '<div class="notif-empty">Nenhuma notificação.</div>'; return; }
+    el.innerHTML = notifData.slice(0, 20).map(n => {
+      const dt = new Date(n.criado_em);
+      const tempo = dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }) + ' ' + dt.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+      return `<div class="notif-item ${n.lida?'':'unread'}" onclick="marcarLida('${n.id}')">
+        <strong>${esc(n.titulo)}</strong><br>${esc(n.mensagem)}
+        <div class="notif-time">${tempo}</div>
+      </div>`;
+    }).join('');
+  }
+  function toggleNotifPanel() {
+    document.getElementById('notifPanel').classList.toggle('open');
+  }
+  async function marcarLida(id) {
+    await callApi({ action: 'notif_marcar_lida', ids: [id] });
+    const n = notifData.find(x => x.id === id);
+    if (n) n.lida = true;
+    renderNotif();
+  }
+  async function marcarTodasLidas() {
+    await callApi({ action: 'notif_marcar_todas', portal: 'professora', email: currentProf.email });
+    notifData.forEach(n => n.lida = true);
+    renderNotif();
   }
 
   checkSession();

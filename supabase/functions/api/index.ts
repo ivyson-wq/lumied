@@ -630,5 +630,27 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Notificações ────────────────────────────────────────
+  if (action === "notif_list") {
+    const { portal, email } = body as { portal: string; email: string };
+    if (!portal || !email) return err("portal e email obrigatórios.");
+    const { data } = await admin.from("notificacoes").select("*")
+      .eq("portal", portal).eq("destinatario", email)
+      .order("criado_em", { ascending: false }).limit(50);
+    return ok(data ?? []);
+  }
+  if (action === "notif_marcar_lida") {
+    const { ids } = body as { ids: string[] };
+    if (!ids || !Array.isArray(ids)) return err("ids obrigatório (array).");
+    await admin.from("notificacoes").update({ lida: true }).in("id", ids);
+    return ok({ success: true });
+  }
+  if (action === "notif_marcar_todas") {
+    const { portal, email } = body as { portal: string; email: string };
+    if (!portal || !email) return err("portal e email obrigatórios.");
+    await admin.from("notificacoes").update({ lida: true }).eq("portal", portal).eq("destinatario", email).eq("lida", false);
+    return ok({ success: true });
+  }
+
   return err("Ação desconhecida.");
 });
