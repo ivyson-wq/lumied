@@ -1189,48 +1189,51 @@ Deno.serve(async (req) => {
       results.push({ plataforma: 'Zoom', nome: `Buscar "${query}" no Zoom`, preco: null, preco_fmt: 'Ver no Zoom', url_produto: `https://www.zoom.com.br/search?q=${encoded}`, url_carrinho: null, item_id: null, match: 0, tipo: 'busca' })
     }
 
-    // ── 1. Mercado Livre (OAuth API) ──────
+    // ── 1. Mercado Livre (web scraping — API search está bloqueada) ──────
     try {
-      const mlToken = await getMLToken(sb)
-      const mlHeaders: Record<string, string> = { 'Accept': 'application/json' }
-      if (mlToken) mlHeaders['Authorization'] = `Bearer ${mlToken}`
-      const mlRes = await fetch(
-        `https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&limit=6&sort=price_asc`,
-        { headers: mlHeaders }
-      )
+      const mlSearchUrl = `https://lista.mercadolivre.com.br/${query.replace(/\s+/g, '-')}`
+      const mlRes = await fetch(mlSearchUrl, {
+        headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+      })
       if (mlRes.ok) {
-        const mlData = await mlRes.json()
-        for (const item of (mlData.results ?? []).slice(0, 5)) {
-          const m = matchPct(query, item.title ?? '')
-          const mlId = item.id ?? null   // e.g. "MLB2912484956"
-          // ML checkout URL: pre-fills item in cart/checkout flow
-          const urlCarrinho = mlId
-            ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1`
-            : null
-          results.push({
-            plataforma: 'Mercado Livre',
-            nome: item.title ?? '',
-            preco: item.price ?? null,
-            preco_fmt: item.price != null
-              ? `R$ ${parseFloat(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-              : '—',
-            url_produto: item.permalink ?? `https://lista.mercadolivre.com.br/${encoded}`,
-            url_carrinho: urlCarrinho,
-            item_id: mlId,
-            match: m,
-            tipo: 'produto',
-          })
+        const html = await mlRes.text()
+        // ML embeds product data as JSON — extract prices and titles
+        const priceMatches = html.match(/"price":(\d+(?:\.\d+)?)/g) || []
+        const titleMatches = html.match(/"title":"([^"]+)"/g) || []
+        const permalinkMatches = html.match(/"permalink":"(https:[^"]+)"/g) || []
+        const idMatches = html.match(/"id":"(MLB\d+)"/g) || []
+        const count = Math.min(priceMatches.length, titleMatches.length, 5)
+        for (let pi = 0; pi < count; pi++) {
+          const price = parseFloat(priceMatches[pi].replace('"price":', ''))
+          const title = titleMatches[pi].replace('"title":"', '').replace('"', '')
+          const permalink = permalinkMatches[pi] ? permalinkMatches[pi].replace('"permalink":"', '').replace('"', '').replace(/\\u002F/g, '/') : mlSearchUrl
+          const mlId = idMatches[pi] ? idMatches[pi].replace('"id":"', '').replace('"', '') : null
+          if (price > 0 && title) {
+            const m = matchPct(query, title)
+            const urlCarrinho = mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null
+            results.push({
+              plataforma: 'Mercado Livre',
+              nome: title,
+              preco: price,
+              preco_fmt: `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+              url_produto: permalink,
+              url_carrinho: urlCarrinho,
+              item_id: mlId,
+              match: m,
+              tipo: 'produto',
+            })
+          }
         }
       }
     } catch (_) { /* graceful skip */ }
 
-    // Fallback: se ML não retornou produtos, adiciona link de busca
+    // Fallback ML
     if (!results.some(r => r.plataforma === 'Mercado Livre')) {
       results.push({
         plataforma: 'Mercado Livre',
         nome: `Buscar "${query}" no Mercado Livre`,
         preco: null, preco_fmt: 'Ver no ML',
-        url_produto: `https://lista.mercadolivre.com.br/${encoded}`,
+        url_produto: `https://lista.mercadolivre.com.br/${query.replace(/\s+/g, '-')}`,
         url_carrinho: null, item_id: null, match: 0, tipo: 'busca',
       })
     }
