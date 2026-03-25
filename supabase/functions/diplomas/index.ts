@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode } from '../_shared/webauthn.ts'
+import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode, b64urlDecode } from '../_shared/webauthn.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -1666,21 +1666,23 @@ Deno.serve(async (req) => {
     }
     if (!usuario_id) return json({ error: 'Sessão inválida.' }, 401)
     const challenge = generateChallenge()
-    await sb.from('webauthn_challenges').insert({ challenge, usuario_tipo, usuario_id, tipo: 'register', rp_id })
-    // Cleanup expired
+    // Cleanup expired first
     await sb.from('webauthn_challenges').delete().lt('expira_em', new Date().toISOString())
+    const { error: insErr } = await sb.from('webauthn_challenges').insert({ challenge, usuario_tipo, usuario_id, tipo: 'register', rp_id })
+    if (insErr) return json({ error: 'Erro ao criar challenge: ' + insErr.message }, 500)
     return json({ challenge, rp_id, user_id: b64urlEncode(new TextEncoder().encode(usuario_id)), user_name: user_email, user_display_name: user_name })
   }
 
   if (action === 'webauthn_register_verify') {
     const { credential, rp_id } = body as { credential: any; rp_id: string }
     if (!credential || !rp_id) return json({ error: 'Dados incompletos.' }, 400)
-    // Clean expired first
+    // Extract challenge from clientDataJSON to find the matching record
+    const cdJson = JSON.parse(new TextDecoder().decode(b64urlDecode(credential.response.clientDataJSON)))
+    const sentChallenge = cdJson.challenge
     await sb.from('webauthn_challenges').delete().lt('expira_em', new Date().toISOString())
-    const { data: chs } = await sb.from('webauthn_challenges').select('*').eq('tipo', 'register')
-      .gt('expira_em', new Date().toISOString()).order('criado_em', { ascending: false }).limit(1)
-    const ch = chs?.[0] ?? null
-    if (!ch) return json({ error: 'Challenge expirado ou inválido.' }, 400)
+    const { data: ch } = await sb.from('webauthn_challenges').select('*')
+      .eq('challenge', sentChallenge).eq('tipo', 'register').maybeSingle()
+    if (!ch) return json({ error: 'Challenge expirado ou invalido. Tente novamente.' }, 400)
     await sb.from('webauthn_challenges').delete().eq('id', ch.id)
     try {
       const result = await verifyRegistration(credential.response.clientDataJSON, credential.response.attestationObject, ch.challenge, rp_id)
