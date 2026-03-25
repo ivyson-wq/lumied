@@ -1313,7 +1313,7 @@ Deno.serve(async (req) => {
       const itens: any[] = body.itens || []
       const observacao: string = body.observacao || ''
       if (!itens.length) return json({ error: 'Adicione pelo menos um item.' }, 400)
-      const mes = new Date().toISOString().slice(0, 7)
+      const mes = (body.mes as string) || new Date().toISOString().slice(0, 7)
       // Get teacher's turma
       const { data: profData } = await sb
         .from('professoras').select('serie_id').eq('id', prof.id).maybeSingle()

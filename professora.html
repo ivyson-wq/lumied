@@ -569,6 +569,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button onclick="almLoadAll()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
   </div>
 
+  <!-- Seletor de mês -->
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+    <input type="hidden" id="almProfMes">
+    <div style="display:inline-flex;align-items:center;gap:4px;">
+      <div style="display:inline-flex;align-items:center;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;background:var(--white);">
+        <button onclick="almProfNavYear(-1)" style="background:none;border:none;padding:6px 8px;cursor:pointer;font-size:14px;color:var(--muted);">&#8249;</button>
+        <span id="almProfMesYear" style="padding:4px 6px;font-size:13px;font-weight:600;min-width:36px;text-align:center;cursor:pointer;" onclick="almProfNavToday()"></span>
+        <button onclick="almProfNavYear(1)" style="background:none;border:none;padding:6px 8px;cursor:pointer;font-size:14px;color:var(--muted);">&#8250;</button>
+      </div>
+      <div style="display:inline-flex;align-items:center;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;background:var(--white);">
+        <button onclick="almProfNavMonth(-1)" style="background:none;border:none;padding:6px 8px;cursor:pointer;font-size:14px;color:var(--muted);">&#8249;</button>
+        <span id="almProfMesMonth" style="padding:4px 6px;font-size:13px;font-weight:600;min-width:80px;text-align:center;cursor:pointer;" onclick="almProfNavToday()"></span>
+        <button onclick="almProfNavMonth(1)" style="background:none;border:none;padding:6px 8px;cursor:pointer;font-size:14px;color:var(--muted);">&#8250;</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Budget card -->
   <div class="upload-card" id="almBudgetCard" style="margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -1484,13 +1501,43 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   const mesBR  = mes => { const [y,m] = mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1] + '/' + y; };
 
   async function almLoadAll() {
+    almProfSetMes(new Date().toISOString().slice(0,7));
     almLoadBudget();
     almLoadReqs();
     almLoadNotif();
   }
 
+  // ── MONTH NAV PROFESSORA ────────────────────────────
+  const MESES_PT_PROF = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  function almProfSetMes(val) {
+    document.getElementById('almProfMes').value = val;
+    const [y, m] = val.split('-');
+    document.getElementById('almProfMesYear').textContent = y;
+    document.getElementById('almProfMesMonth').textContent = MESES_PT_PROF[parseInt(m)-1];
+  }
+  function almProfNavYear(delta) {
+    const cur = document.getElementById('almProfMes').value || new Date().toISOString().slice(0,7);
+    const [y, m] = cur.split('-').map(Number);
+    almProfSetMes((y+delta)+'-'+String(m).padStart(2,'0'));
+    almLoadBudget();
+  }
+  function almProfNavMonth(delta) {
+    const cur = document.getElementById('almProfMes').value || new Date().toISOString().slice(0,7);
+    const [y, m] = cur.split('-').map(Number);
+    const d = new Date(y, m-1+delta, 1);
+    almProfSetMes(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+    almLoadBudget();
+  }
+  function almProfNavToday() {
+    almProfSetMes(new Date().toISOString().slice(0,7));
+    almLoadBudget();
+  }
+  function almGetMes() {
+    return document.getElementById('almProfMes')?.value || new Date().toISOString().slice(0,7);
+  }
+
   async function almLoadBudget() {
-    const mes = new Date().toISOString().slice(0,7);
+    const mes = almGetMes();
     const d = await callApi({ action: 'alm_minha_turma', mes });
     document.getElementById('almMesLabel').textContent = 'Orçamento de ' + mesBR(mes);
     if (!d.turma) {
@@ -1892,6 +1939,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const d = await callApi({
       action: 'alm_criar_req',
       itens: todosItens,
+      mes: almGetMes(),
       observacao: document.getElementById('almObservacao').value.trim(),
     });
     btn.disabled = false; btn.innerHTML = '📋 Enviar Requisição';
