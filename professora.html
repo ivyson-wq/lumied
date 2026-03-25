@@ -1569,10 +1569,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('almBtnNovaReq').disabled = false;
     const orc = d.orcamento || 0;
     const gasto = d.gasto || 0;
+    const gastoPend = d.gasto_pendente || 0;
     const pct = orc > 0 ? Math.min(100, (gasto / orc) * 100) : 0;
     document.getElementById('almBudgetBar').style.width = pct + '%';
     document.getElementById('almBudgetBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
-    document.getElementById('almGastoVal').textContent = fmtBRL(gasto);
+    document.getElementById('almGastoVal').innerHTML = fmtBRL(gasto) + (gastoPend > 0 ? ` <span style="font-size:10px;color:#b07d00;">(${fmtBRL(gastoPend)} pendente)</span>` : '');
     document.getElementById('almOrcVal').textContent   = fmtBRL(orc);
   }
 

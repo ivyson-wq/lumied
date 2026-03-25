@@ -1305,12 +1305,13 @@ Deno.serve(async (req) => {
       const { data: orc } = await sb
         .from('alm_orcamentos').select('valor')
         .eq('turma_id', turma.id).eq('mes', mes).maybeSingle()
-      // Total spent (approved) this month for this turma
+      // Total spent (approved + pending) this month for this turma
       const { data: reqs } = await sb
-        .from('alm_requisicoes').select('total')
-        .eq('turma_id', turma.id).eq('mes', mes).eq('status', 'aprovado')
+        .from('alm_requisicoes').select('total, status')
+        .eq('turma_id', turma.id).eq('mes', mes).in('status', ['aprovado', 'pendente'])
       const gasto = (reqs ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
-      return json({ turma, orcamento: orc?.valor ?? 0, gasto })
+      const gastoPendente = (reqs ?? []).filter((r: any) => r.status === 'pendente').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
+      return json({ turma, orcamento: orc?.valor ?? 0, gasto, gasto_pendente: gastoPendente })
     }
 
     if (action === 'alm_minhas_reqs') {
