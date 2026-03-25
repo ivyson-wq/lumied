@@ -641,6 +641,34 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Equipes de manutenção (CRUD) ────────────────────────
+  if (action === "manut_equipes_list") {
+    const { data } = await admin.from("manut_equipes").select("*").eq("ativo", true).order("nome");
+    return ok(data ?? []);
+  }
+  if (action === "manut_equipes_list_all") {
+    const { data } = await admin.from("manut_equipes").select("*").order("nome");
+    return ok(data ?? []);
+  }
+  if (action === "manut_equipe_save") {
+    const { id, nome } = body as { id?: string; nome: string };
+    if (!nome) return err("Nome obrigatório.");
+    if (id) {
+      const { error } = await admin.from("manut_equipes").update({ nome }).eq("id", id);
+      if (error) return err(error.message);
+    } else {
+      const { error } = await admin.from("manut_equipes").insert({ nome });
+      if (error) return err(error.message.includes("unique") ? "Já existe uma equipe com este nome." : error.message);
+    }
+    return ok({ success: true });
+  }
+  if (action === "manut_equipe_toggle") {
+    const { id, ativo } = body as { id: string; ativo: boolean };
+    if (!id) return err("ID obrigatório.");
+    await admin.from("manut_equipes").update({ ativo }).eq("id", id);
+    return ok({ success: true });
+  }
+
   // ── Atribuir turma/série a professora ───────────────────
   if (action === "usuarios_set_serie") {
     const { email, serie_id } = body as { email: string; serie_id: string | null };
