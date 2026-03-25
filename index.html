@@ -429,14 +429,6 @@ body.has-bottomnav{padding-bottom:72px;}
     <div class="greeting-date" id="greetingDate"></div>
   </div>
 
-  <!-- QUICK BADGES -->
-  <div class="quick-badges" id="quickBadges" style="display:none;">
-    <div class="qbadge" onclick="switchTab('boletos')">
-      <div class="qbadge-icon">💰</div>
-      <div class="qbadge-value" id="qbBoletos">—</div>
-      <div class="qbadge-label">Boletos em aberto</div>
-    </div>
-  </div>
 
   <!-- TAB: INICIO -->
   <div class="tab-panel active" id="tabInicio">
@@ -959,7 +951,6 @@ body.has-bottomnav{padding-bottom:72px;}
     document.getElementById('boletosCard').style.display = 'none';
     document.getElementById('bottomNav').classList.remove('visible');
     document.getElementById('greetingBar').style.display = 'none';
-    document.getElementById('quickBadges').style.display = 'none';
     document.body.classList.remove('has-bottomnav');
     document.querySelector('.site-header').classList.remove('compact');
     document.getElementById('emailState').style.display = 'block';
@@ -1012,7 +1003,6 @@ body.has-bottomnav{padding-bottom:72px;}
     const hoje = new Date();
     document.getElementById('greetingDate').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     document.getElementById('greetingBar').style.display = 'block';
-    document.getElementById('quickBadges').style.display = 'flex';
 
     // Bottom nav
     document.getElementById('bottomNav').classList.add('visible');
@@ -1770,11 +1760,6 @@ body.has-bottomnav{padding-bottom:72px;}
       el.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Erro ao carregar boletos. Tente novamente mais tarde.</p>';
       return;
     }
-
-    // Update quick badge
-    const abertos = (boletos||[]).filter(b => b.situacao !== 'PAGO' && b.situacao !== 'RECEBIDO').length;
-    const qb = document.getElementById('qbBoletos');
-    if (qb) qb.textContent = abertos;
 
     if (!boletos || boletos.length === 0) {
       // Mostra formulário para vincular CPF
