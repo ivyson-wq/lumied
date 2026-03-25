@@ -809,6 +809,23 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <div class="stat-card" data-g="semi"><div class="stat-label">Concluídas</div><div class="stat-value" id="manutDone">—</div><div class="stat-sub">este mês</div></div>
           <div class="stat-card" data-g="diaria"><div class="stat-label">Críticas</div><div class="stat-value" id="manutCrit">—</div><div class="stat-sub">urgência máxima</div></div>
         </div>
+
+        <!-- Ações rápidas -->
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <button onclick="openManutRelatorio()" class="btn-export" style="display:flex;align-items:center;gap:6px;">📄 Relatório por Equipe</button>
+          <button onclick="toggleManutEquipesConfig()" class="btn-export" style="display:flex;align-items:center;gap:6px;">⚙️ Configurar Equipes</button>
+        </div>
+
+        <!-- Config Equipes (colapsável) -->
+        <div id="manutEquipesConfig" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+          <div class="sec-title" style="margin-bottom:12px;">Equipes de Manutenção</div>
+          <div id="manutEquipesList" style="margin-bottom:12px;"></div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="manutNovaEquipe" placeholder="Nome da nova equipe" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <button onclick="addManutEquipe()" class="btn-create" style="white-space:nowrap;">+ Adicionar</button>
+          </div>
+        </div>
+
         <div class="sec-title">Chamados de Manutenção <span class="count-badge" id="manutCount">0</span></div>
         <div class="filter-bar" style="margin-bottom:12px;">
           <button class="fb active" onclick="setManutFilter('todos',this)">Todos</button>
@@ -822,6 +839,25 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <thead><tr><th>Urgência</th><th>Descrição</th><th>Local</th><th>Solicitante</th><th>Equipe</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
             <tbody id="manutBody"><tr><td colspan="8" class="empty-state">⏳ Carregando…</td></tr></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Modal Relatório Manutenção -->
+      <div class="modal-overlay" id="manutRelatorioOverlay" onclick="if(event.target===this)closeManutRelatorio()">
+        <div class="modal" style="max-width:800px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3>Relatório de Pendências por Equipe</h3>
+            <div style="display:flex;gap:8px;">
+              <button onclick="printManutRelatorio()" class="btn-export" style="font-size:12px;">🖨 Imprimir</button>
+              <button onclick="shareManutRelatorio()" class="btn-export" style="font-size:12px;">📤 Compartilhar</button>
+              <button class="btn-cancel" onclick="closeManutRelatorio()">✕</button>
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Filtrar equipes:</div>
+            <div id="relatorioEquipesFiltro" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          </div>
+          <div id="relatorioConteudo"></div>
         </div>
       </div>
 
@@ -2504,9 +2540,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   let manutData = [], manutFilter = 'todos';
   const URGENCIA_LABEL = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🟠 Alta', critica:'🔴 Crítica' };
   const MANUT_STATUS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
-  const EQUIPES = ['Elétrica','Hidráulica','Gesso/Pintura','Marcenaria','Limpeza','TI','Jardinagem','Geral'];
+  let EQUIPES = [];
+  let relatorioEquipesSel = new Set();
+
+  async function loadManutEquipes() {
+    const d = await api({ action:'manut_equipes_list' });
+    EQUIPES = Array.isArray(d) ? d.map(e => e.nome) : [];
+  }
 
   async function loadManutPanel() {
+    if (!EQUIPES.length) await loadManutEquipes();
     const d = await api({ action:'manutencao_list' });
     manutData = Array.isArray(d) ? d : (d.data || []);
     updateManutStats();
@@ -2602,6 +2645,133 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const d = await api({ action:'manutencao_delete', id });
     if (d.error) { showToast(d.error, 'error'); return; }
     loadManutPanel();
+  }
+
+  // ── CONFIG EQUIPES MANUTENÇÃO ────────────────────────
+  function toggleManutEquipesConfig() {
+    const el = document.getElementById('manutEquipesConfig');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') renderManutEquipesConfig();
+  }
+  async function renderManutEquipesConfig() {
+    const d = await api({ action: 'manut_equipes_list_all' });
+    const equipes = Array.isArray(d) ? d : [];
+    const el = document.getElementById('manutEquipesList');
+    el.innerHTML = equipes.map(e => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f0ea;">
+      <span style="flex:1;font-size:13px;${e.ativo?'':'opacity:.5;text-decoration:line-through;'}">${esc(e.nome)}</span>
+      <button onclick="toggleManutEquipe('${e.id}',${!e.ativo})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">${e.ativo?'Desativar':'Ativar'}</button>
+    </div>`).join('');
+  }
+  async function toggleManutEquipe(id, ativo) {
+    await api({ action: 'manut_equipe_toggle', id, ativo });
+    await loadManutEquipes();
+    renderManutEquipesConfig();
+  }
+  async function addManutEquipe() {
+    const nome = document.getElementById('manutNovaEquipe').value.trim();
+    if (!nome) return;
+    const d = await api({ action: 'manut_equipe_save', nome });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    document.getElementById('manutNovaEquipe').value = '';
+    await loadManutEquipes();
+    renderManutEquipesConfig();
+  }
+
+  // ── RELATÓRIO MANUTENÇÃO ───────────────────────────
+  function openManutRelatorio() {
+    relatorioEquipesSel = new Set([...EQUIPES, 'Sem equipe']);
+    renderRelatorioFiltros();
+    renderRelatorioConteudo();
+    document.getElementById('manutRelatorioOverlay').classList.add('show');
+  }
+  function closeManutRelatorio() { document.getElementById('manutRelatorioOverlay').classList.remove('show'); }
+
+  function renderRelatorioFiltros() {
+    const todas = [...EQUIPES, 'Sem equipe'];
+    document.getElementById('relatorioEquipesFiltro').innerHTML = todas.map(e => {
+      const sel = relatorioEquipesSel.has(e);
+      return `<button onclick="toggleRelatorioEquipe('${esc(e)}')" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;border:1.5px solid ${sel?'var(--red)':'var(--border)'};background:${sel?'rgba(200,16,46,.08)':'#fff'};color:${sel?'var(--red)':'var(--muted)'};">${esc(e)}</button>`;
+    }).join('');
+  }
+  function toggleRelatorioEquipe(e) {
+    if (relatorioEquipesSel.has(e)) relatorioEquipesSel.delete(e);
+    else relatorioEquipesSel.add(e);
+    renderRelatorioFiltros();
+    renderRelatorioConteudo();
+  }
+
+  function renderRelatorioConteudo() {
+    const pendentes = manutData.filter(m => m.status !== 'concluida' && m.status !== 'rejeitada');
+    const agrupado = {};
+    for (const m of pendentes) {
+      const eq = m.equipe_responsavel || 'Sem equipe';
+      if (!relatorioEquipesSel.has(eq)) continue;
+      if (!agrupado[eq]) agrupado[eq] = [];
+      agrupado[eq].push(m);
+    }
+    const el = document.getElementById('relatorioConteudo');
+    if (!Object.keys(agrupado).length) {
+      el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Nenhum chamado pendente para as equipes selecionadas.</div>';
+      return;
+    }
+    el.innerHTML = Object.entries(agrupado).map(([eq, items]) => `
+      <div style="margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:700;padding:8px 12px;background:#f5f0ea;border-radius:8px;margin-bottom:8px;">${esc(eq)} <span style="font-weight:400;color:var(--muted);font-size:12px;">(${items.length} pendência${items.length>1?'s':''})</span></div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="border-bottom:1.5px solid var(--border);">
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Urg.</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Descrição</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Local</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Status</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Data</th>
+          </tr></thead>
+          <tbody>${items.map(m => `<tr style="border-bottom:1px solid #f5f0ea;">
+            <td style="padding:6px 8px;">${URGENCIA_LABEL[m.urgencia]||m.urgencia}</td>
+            <td style="padding:6px 8px;">${esc(m.descricao?.substring(0,80))}</td>
+            <td style="padding:6px 8px;">${esc(m.localizacao)}</td>
+            <td style="padding:6px 8px;">${MANUT_STATUS[m.status]||m.status}</td>
+            <td style="padding:6px 8px;color:var(--muted);">${new Date(m.criado_em).toLocaleDateString('pt-BR')}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    `).join('');
+  }
+
+  function printManutRelatorio() {
+    const conteudo = document.getElementById('relatorioConteudo').innerHTML;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Relatório Manutenção — Maple Bear</title>
+      <style>body{font-family:'DM Sans',Helvetica,sans-serif;padding:32px;color:#1a1a1a;}
+      h1{font-size:18px;margin-bottom:4px;} .sub{font-size:12px;color:#999;margin-bottom:24px;}
+      table{width:100%;border-collapse:collapse;} th,td{text-align:left;padding:6px 8px;font-size:12px;}
+      th{border-bottom:2px solid #ccc;text-transform:uppercase;font-size:10px;color:#888;}
+      tr{border-bottom:1px solid #eee;} @media print{body{padding:16px;}}</style></head>
+      <body><h1>Relatório de Pendências — Manutenção</h1>
+      <div class="sub">Maple Bear Caxias do Sul · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+      ${conteudo}</body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 300);
+  }
+
+  async function shareManutRelatorio() {
+    const equipes = [...relatorioEquipesSel];
+    const pendentes = manutData.filter(m => m.status !== 'concluida' && m.status !== 'rejeitada');
+    let texto = 'RELATÓRIO DE MANUTENÇÃO — Maple Bear\\n' + new Date().toLocaleDateString('pt-BR') + '\\n\\n';
+    for (const eq of equipes) {
+      const items = pendentes.filter(m => (m.equipe_responsavel || 'Sem equipe') === eq);
+      if (!items.length) continue;
+      texto += '=== ' + eq + ' (' + items.length + ') ===\\n';
+      items.forEach(m => {
+        texto += '• ' + (URGENCIA_LABEL[m.urgencia]||'').replace(/[^\w\s]/g,'') + ' | ' + m.descricao?.substring(0,60) + ' | ' + m.localizacao + '\\n';
+      });
+      texto += '\\n';
+    }
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Relatório Manutenção', text: texto }); } catch(_) {}
+    } else {
+      await navigator.clipboard.writeText(texto);
+      showToast('Relatório copiado para a área de transferência!', 'success');
+    }
   }
 
   // ── REUNIÕES ──────────────────────────────────────────
