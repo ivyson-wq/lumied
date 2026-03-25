@@ -862,7 +862,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <h3>Relatório de Pendências por Equipe</h3>
             <div style="display:flex;gap:8px;">
               <button onclick="printManutRelatorio()" class="btn-export" style="font-size:12px;">🖨 Imprimir</button>
-              <button onclick="shareManutRelatorio()" class="btn-export" style="font-size:12px;">📤 Compartilhar</button>
+              <button onclick="shareManutWhatsApp()" class="btn-export" style="font-size:12px;background:#25D366;color:#fff;">📲 WhatsApp</button>
               <button class="btn-cancel" onclick="closeManutRelatorio()">✕</button>
             </div>
           </div>
@@ -2771,25 +2771,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     setTimeout(() => win.print(), 300);
   }
 
-  async function shareManutRelatorio() {
+  function shareManutWhatsApp() {
     const equipes = [...relatorioEquipesSel];
     const pendentes = manutData.filter(m => m.status !== 'concluida' && m.status !== 'rejeitada');
-    let texto = 'RELATÓRIO DE MANUTENÇÃO — Maple Bear\\n' + new Date().toLocaleDateString('pt-BR') + '\\n\\n';
+    let texto = '*RELATÓRIO DE MANUTENÇÃO — Maple Bear*\n' + new Date().toLocaleDateString('pt-BR') + '\n\n';
     for (const eq of equipes) {
       const items = pendentes.filter(m => (m.equipe_responsavel || 'Sem equipe') === eq);
       if (!items.length) continue;
-      texto += '=== ' + eq + ' (' + items.length + ') ===\\n';
+      texto += '*' + eq + '* (' + items.length + ')\n';
       items.forEach(m => {
-        texto += '• ' + (URGENCIA_LABEL[m.urgencia]||'').replace(/[^\w\s]/g,'') + ' | ' + m.descricao?.substring(0,60) + ' | ' + m.localizacao + '\\n';
+        const urg = {baixa:'🟢',media:'🟡',alta:'🟠',critica:'🔴'}[m.urgencia]||'';
+        texto += urg + ' ' + (m.descricao||'').substring(0,60) + ' — _' + (m.localizacao||'') + '_\n';
       });
-      texto += '\\n';
+      texto += '\n';
     }
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Relatório Manutenção', text: texto }); } catch(_) {}
-    } else {
-      await navigator.clipboard.writeText(texto);
-      showToast('Relatório copiado para a área de transferência!', 'success');
-    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
   }
 
   // ── REUNIÕES ──────────────────────────────────────────
