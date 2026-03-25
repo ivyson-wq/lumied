@@ -365,7 +365,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <button class="fb" onclick="setFilter('semi',this)">🟠 Semi-Integral</button>
           <button class="fb" onclick="setFilter('tarde',this)">🔵 Tarde</button>
           <button class="fb" onclick="setFilter('diaria',this)">🟣 Diária</button>
-          <input class="search-input" id="searchInput" type="text" placeholder="🔍  Buscar..." oninput="renderTable()">
+          <input class="search-input" id="searchInput" type="text" placeholder="🔍  Buscar..." oninput="debouncedRenderTable()">
         </div>
         <div class="table-wrap">
           <table>
@@ -418,7 +418,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
         <!-- Tabela de inscrições -->
         <div class="sec-title">Inscrições Recebidas <span class="count-badge" id="adInscricoesCount">0</span>
-          <input class="search-input" id="adSearchInput" type="text" placeholder="🔍  Buscar..." oninput="renderAtivDashTable()" style="margin-left:auto;">
+          <input class="search-input" id="adSearchInput" type="text" placeholder="🔍  Buscar..." oninput="debouncedAtivDash()" style="margin-left:auto;">
         </div>
         <div class="table-wrap">
           <table>
@@ -738,7 +738,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
             <!-- Tab Buscar -->
             <div id="almNRTabBuscar">
-              <input type="text" id="almNRSearchInput" placeholder="Buscar insumo no catálogo…" oninput="almNRFiltrarCatalogo()"
+              <input type="text" id="almNRSearchInput" placeholder="Buscar insumo no catálogo…" oninput="debouncedAlmNR()"
                 style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:8px;">
               <div id="almNRCatalogList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:4px;"></div>
             </div>
@@ -1045,7 +1045,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div class="sec-title" style="margin-bottom:16px;">Solicitações Cadastradas <span class="count-badge" id="cadCount">0</span></div>
         <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
-            <input type="text" id="cadSearch" placeholder="Buscar por nome ou e-mail…" oninput="renderCadastroLista()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <input type="text" id="cadSearch" placeholder="Buscar por nome ou e-mail…" oninput="debouncedCadastro()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           </div>
           <div id="cadLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div></div>
         </div>
@@ -1175,6 +1175,23 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   let allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
   let currentGerente=null, pollInterval=null;
+
+  // ── TOAST NOTIFICATIONS ────────────────────────────────
+  function showToast(msg, type = 'info', duration = 4000) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;max-width:380px;';
+      document.body.appendChild(container);
+    }
+    const colors = { success:'#2d7a3a', error:'#C8102E', info:'#1a6bb5', warning:'#d4830a' };
+    const toast = document.createElement('div');
+    toast.style.cssText = `background:${colors[type]||colors.info};color:#fff;padding:12px 18px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:popIn .3s ease;line-height:1.4;`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(() => toast.remove(), 300); }, duration);
+  }
   let dipFilter='todos', dipPendingAction=null, editingSenhaId=null;
 
   const TURNO_INFO = {
@@ -1371,6 +1388,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+  const debouncedRenderTable = debounce(renderTable);
+  const debouncedAtivDash = debounce(() => { if (typeof renderAtivDashTable === 'function') renderAtivDashTable(); });
+  const debouncedAlmNR = debounce(() => { if (typeof almNRFiltrarCatalogo === 'function') almNRFiltrarCatalogo(); });
+  const debouncedCadastro = debounce(() => { if (typeof renderCadastroLista === 'function') renderCadastroLista(); });
   function setFilter(f,btn){ currentFilter=f; document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderTable(); }
 
   // ── TURNO MODAL ───────────────────────────────────────
@@ -1442,7 +1464,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
   function onLogoSelected(e) {
     const file=e.target.files[0]; if(!file) return;
-    if(file.size>5*1024*1024){ alert('Máximo 5MB.'); return; }
+    if(file.size>5*1024*1024){ showToast('Máximo 5MB.','warning'); return; }
     selectedFile=file;
     document.getElementById('logoFileName').textContent='📎 '+file.name; document.getElementById('logoFileName').style.display='block';
     document.getElementById('btnUpload').disabled=false;
@@ -1507,7 +1529,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function deleteUser(id,nome) {
     if(!confirm('Remover "'+nome+'"?')) return;
     const d=await api({ action:'gerentes_delete', id });
-    if(d.error){ alert(d.error); return; } loadUsers();
+    if(d.error){ showToast(d.error,'error'); return; } loadUsers();
   }
   async function changePassword() {
     const senhaAtual=document.getElementById('senhaAtual').value, novaSenha=document.getElementById('novaSenha').value, conf=document.getElementById('novaSenhaConf').value;
@@ -2304,7 +2326,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 
     } catch(e) {
-      alert('Erro ao gerar link: ' + e.message);
+      showToast('Erro ao gerar link: ' + e.message, 'error');
     }
 
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg> Compartilhar PDF`;
@@ -2425,8 +2447,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const email      = document.getElementById('gemail_' + id).value.trim();
     const calendar_id = document.getElementById('gcal_' + id).value.trim();
     const d = await callCalendar({ action: 'gestoras_update', id, nome, email, calendar_id });
-    if (d.error) { alert('Erro: ' + d.error); return; }
-    alert('✅ Salvo!');
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Salvo com sucesso!', 'success');
   }
 
   async function loadHorariosList() {
@@ -2546,7 +2568,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   async function acAprovar(id) {
     const d = await callAcesso({ action: 'aprovar', id });
-    if (d.error) { alert('Erro: ' + d.error); return; }
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     carregarSolicitacoes();
     carregarAutorizados();
   }
@@ -2554,7 +2576,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function acRejeitar(id, nome) {
     if (!confirm('Rejeitar solicitação de ' + nome + '?')) return;
     const d = await callAcesso({ action: 'rejeitar', id });
-    if (d.error) { alert('Erro: ' + d.error); return; }
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     carregarSolicitacoes();
   }
 
@@ -2613,7 +2635,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function acRemover(id, email) {
     if (!confirm('Remover acesso de ' + email + '?')) return;
     const d = await callAcesso({ action: 'remove', id });
-    if (d.error) { alert('Erro: ' + d.error); return; }
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     carregarAutorizados();
   }
 
@@ -2666,7 +2688,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function deleteSecretaria(id, nome) {
     if (!confirm('Remover "'+nome+'" da secretaria?')) return;
     const d = await callDiplomas({ action: 'secretaria_delete', id });
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error, 'error'); return; }
     loadSecretarias();
   }
 
@@ -2783,7 +2805,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const action = tipo === 'aprovar' ? 'diploma_aprovar' : 'diploma_rejeitar';
     const d = await callDiplomas({ action, id, observacao: observacao || undefined });
     btn.disabled = false;
-    if (d.error) { alert('Erro: ' + d.error); btn.textContent = tipo === 'aprovar' ? 'Aprovar' : 'Rejeitar'; return; }
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); btn.textContent = tipo === 'aprovar' ? 'Aprovar' : 'Rejeitar'; return; }
     closeObsModal();
     loadDiplomasPanel();
   }
@@ -2911,7 +2933,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   async function openPdiReview(pdiId) {
     const d = await callDiplomas({ action: 'pdi_prof_view', pdi_id: pdiId });
-    if (d.error || !d.data) { alert('Erro ao carregar PDI: ' + (d.error || 'não encontrado')); return; }
+    if (d.error || !d.data) { showToast('Erro ao carregar PDI: ' + (d.error || 'não encontrado'), 'error'); return; }
     pdiReviewData = d.data;
     renderPdiReviewModal(d.data);
     document.getElementById('pdiReviewModal').classList.add('open');
@@ -3086,7 +3108,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const val = (document.getElementById(`chkFb_${acompId}`)?.value || '').trim();
     if (!val) return;
     const d = await callDiplomas({ action: 'pdi_checkin_feedback', acompanhamento_id: acompId, feedback_gestora: val });
-    if (d.error) { alert('Erro: ' + d.error); return; }
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     if (pdiReviewData) await openPdiReview(pdiReviewData.id);
   }
 
@@ -3208,7 +3230,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('almAprovInfo').style.display = 'none';
     const d = await callDiplomas({ action: 'alm_pendentes' });
     const req = (d.data||[]).find(r => r.id === id);
-    if (!req) { alert('Requisição não encontrada.'); return; }
+    if (!req) { showToast('Requisição não encontrada.', 'warning'); return; }
     almReviewItens = req.itens || [];
 
     document.getElementById('almReviewContent').innerHTML = `
@@ -3485,7 +3507,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function almMarcarSelecionados() {
     const checks = document.querySelectorAll('.alm-compra-chk:checked');
     const ids = Array.from(checks).map(c => c.dataset.id);
-    if (!ids.length) { alert('Selecione ao menos um item.'); return; }
+    if (!ids.length) { showToast('Selecione ao menos um item.', 'warning'); return; }
     await almMarcarComprado(ids);
   }
 
@@ -3677,7 +3699,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         .filter(r => String(r[0]||'').trim())
         .map(r => ({ nome:String(r[0]||'').trim(), qty:parseFloat(String(r[1]).replace(',','.'))||0, unidade:String(r[2]||'').trim()||null, obs:String(r[3]||'').trim() }))
         .filter(it => it.qty > 0);
-      if (!data.length) { alert('Nenhum item encontrado na planilha.'); return; }
+      if (!data.length) { showToast('Nenhum item encontrado na planilha.', 'warning'); return; }
       let matched = 0;
       almNRXlsxParsed = data.map(it => {
         const hit = almNRMatchCatalogo(it.nome);
@@ -3695,7 +3717,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>`
       ).join('');
       document.getElementById('almNRXlsxResult').style.display = 'block';
-    } catch(e) { alert('Erro ao ler o arquivo. Verifique o formato.'); }
+    } catch(e) { showToast('Erro ao ler o arquivo. Verifique o formato.', 'error'); }
   }
 
   function almNRImportarXlsx() {
