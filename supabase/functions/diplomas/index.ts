@@ -780,12 +780,29 @@ Deno.serve(async (req) => {
     if (!emailPai) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
 
     if (action === 'pickup_meus_filhos') {
-      // Returns distinct children registered for this parent
-      const { data: sols, error: solsErr } = await sb
-        .from('solicitacoes').select('nome_crianca, serie')
-        .ilike('email', emailPai).order('criado_em', { ascending: false })
+      // Busca crianças pelo email logado E por outros emails do mesmo responsável
+      const { data: meusRegs } = await sb
+        .from('solicitacoes').select('nome_resp')
+        .ilike('email', emailPai).limit(1)
+      const nomeResp = meusRegs?.[0]?.nome_resp
+
+      let sols: any[] = []
+      if (nomeResp) {
+        // Busca todas as crianças do mesmo responsável (qualquer email)
+        const { data } = await sb
+          .from('solicitacoes').select('nome_crianca, serie')
+          .ilike('nome_resp', nomeResp).order('criado_em', { ascending: false })
+        sols = data ?? []
+      } else {
+        // Fallback: busca apenas pelo email
+        const { data } = await sb
+          .from('solicitacoes').select('nome_crianca, serie')
+          .ilike('email', emailPai).order('criado_em', { ascending: false })
+        sols = data ?? []
+      }
+
       const seen = new Set<string>()
-      const filhos = (sols ?? []).filter(s => {
+      const filhos = sols.filter(s => {
         if (seen.has(s.nome_crianca)) return false
         seen.add(s.nome_crianca); return true
       })
@@ -795,7 +812,14 @@ Deno.serve(async (req) => {
     if (action === 'pickup_avisar') {
       const nome_crianca: string = (body.nome_crianca || '').trim()
       const serie: string        = (body.serie || '').trim()
-      const nome_resp: string    = (body.nome_resp || emailPai).trim()
+      // Busca nome real do responsável no banco
+      let nome_resp: string = (body.nome_resp || '').trim()
+      if (!nome_resp) {
+        const { data: respData } = await sb
+          .from('solicitacoes').select('nome_resp')
+          .ilike('email', emailPai).limit(1)
+        nome_resp = respData?.[0]?.nome_resp || emailPai
+      }
       const lat_pai: number | null = body.lat_pai != null ? parseFloat(body.lat_pai) : null
       const lon_pai: number | null = body.lon_pai != null ? parseFloat(body.lon_pai) : null
       const eta_manual: number | null = body.eta_minutos ? parseInt(body.eta_minutos) : null
