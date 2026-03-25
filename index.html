@@ -433,7 +433,7 @@ body.has-bottomnav{padding-bottom:72px;}
 
   <div id="bioRegBanner" style="display:none;background:#eef4ff;border-bottom:1px solid #c7d9f0;padding:12px 24px;text-align:center;">
     <button id="bioRegBtn" onclick="registerBiometric()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔐 Ativar login por biometria (Face ID / Digital)</button>
-    <button onclick="document.getElementById('bioRegBanner').style.display='none';localStorage.setItem('bio_dismissed','1')" style="background:none;border:none;color:#7a7169;font-size:18px;cursor:pointer;margin-left:12px;vertical-align:middle;">×</button>
+    <button onclick="document.getElementById('bioRegBanner').style.display='none';sessionStorage.setItem('bio_banner_shown','1')" style="background:none;border:none;color:#7a7169;font-size:18px;cursor:pointer;margin-left:12px;vertical-align:middle;">×</button>
   </div>
 
   <!-- TAB: INICIO -->
@@ -2057,8 +2057,9 @@ body.has-bottomnav{padding-bottom:72px;}
     WebAuthnClient.isPlatformAvailable().then(ok => {
       console.log('[WebAuthn] isPlatformAvailable:', ok);
       if (!ok) return;
-      if (!localStorage.getItem('pais_bio_email') && !localStorage.getItem('bio_dismissed')) {
+      if (!localStorage.getItem('pais_bio_email') && !sessionStorage.getItem('bio_banner_shown')) {
         document.getElementById('bioRegBanner').style.display = 'block';
+        sessionStorage.setItem('bio_banner_shown', '1');
       }
     });
   }
