@@ -611,5 +611,24 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Famílias (CRUD) ─────────────────────────────────────
+  if (action === "familias_list") {
+    const { data } = await admin.from("familias").select("*").order("nome_aluno");
+    return ok(data ?? []);
+  }
+  if (action === "familias_update") {
+    const { cpf, serie } = body as { cpf: string; serie: string | null };
+    if (!cpf) return err("CPF obrigatório.");
+    const { error } = await admin.from("familias").update({ serie }).eq("cpf", cpf);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+  if (action === "familias_delete") {
+    const { cpf } = body as { cpf: string };
+    if (!cpf) return err("CPF obrigatório.");
+    await admin.from("familias").delete().eq("cpf", cpf);
+    return ok({ success: true });
+  }
+
   return err("Ação desconhecida.");
 });

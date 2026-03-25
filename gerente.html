@@ -322,6 +322,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Controle de Acesso</a>
+      <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
       <a class="nav-item" href="#" onclick="showPanel('cadastro',this)"><span class="ic">👧</span> Cadastrar Família</a>
       <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
       <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Professoras</a>
@@ -1017,6 +1018,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </div>
 
       <!-- ── CADASTRAR FAMÍLIA ── -->
+      <div id="panelFamilias" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">Famílias Cadastradas <span class="count-badge" id="famCount">0</span></div>
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+            <input type="text" id="famSearch" placeholder="Buscar por nome, e-mail ou CPF…" oninput="debouncedFamilias()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <div id="famLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div></div>
+        </div>
+      </div>
+
       <div id="panelCadastro" class="panel">
         <div class="sec-title" style="margin-bottom:16px;">Nova Solicitação</div>
         <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
@@ -1325,6 +1336,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
     if(id==='acesso')      loadAcesso();
+    if(id==='familias')   loadFamiliasPanel();
     if(id==='cadastro')    loadCadastroPanel();
     return false;
   }
@@ -1422,6 +1434,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   const debouncedAtivDash = debounce(() => { if (typeof renderAtivDashTable === 'function') renderAtivDashTable(); });
   const debouncedAlmNR = debounce(() => { if (typeof almNRFiltrarCatalogo === 'function') almNRFiltrarCatalogo(); });
   const debouncedCadastro = debounce(() => { if (typeof renderCadastroLista === 'function') renderCadastroLista(); });
+  const debouncedFamilias = debounce(() => { if (typeof renderFamiliasLista === 'function') renderFamiliasLista(); });
   function setFilter(f,btn){ currentFilter=f; document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderTable(); }
 
   // ── TURNO MODAL ───────────────────────────────────────
@@ -4092,6 +4105,71 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div style="font-size:11px;color:var(--muted);">${pct}% do orçamento utilizado</div>
       </div>`;
     }).join('');
+  }
+
+  // ── FAMÍLIAS (tabela familias) ────────────────────────
+  let famDados = [];
+  let famSeriesOpts = '';
+
+  async function loadFamiliasPanel() {
+    if (!famSeriesOpts) {
+      const s = await api({ action: 'series_list' });
+      const arr = Array.isArray(s) ? s : [];
+      famSeriesOpts = arr.map(x => `<option value="${esc(x.nome)}">${esc(x.nome)}</option>`).join('');
+    }
+    const d = await api({ action: 'familias_list' });
+    famDados = Array.isArray(d) ? d : [];
+    renderFamiliasLista();
+  }
+
+  function renderFamiliasLista() {
+    const q = (document.getElementById('famSearch')?.value || '').toLowerCase();
+    const lista = famDados.filter(r =>
+      !q || [r.nome_aluno, r.nome_responsavel, r.email, r.cpf, r.serie].some(v => v?.toLowerCase().includes(q))
+    );
+    document.getElementById('famCount').textContent = lista.length;
+    if (!lista.length) {
+      document.getElementById('famLista').innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Nenhuma família encontrada.</div>';
+      return;
+    }
+    document.getElementById('famLista').innerHTML = `
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+          <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Aluno</th>
+          <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Responsável</th>
+          <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">CPF</th>
+          <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Série</th>
+          <th style="padding:10px 14px;border-bottom:1.5px solid var(--border);"></th>
+        </tr></thead>
+        <tbody>${lista.map(r => `
+          <tr data-cpf="${esc(r.cpf)}">
+            <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;"><strong>${esc(r.nome_aluno)}</strong><br><small style="color:var(--muted)">${esc(r.email||'')}</small></td>
+            <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(r.nome_responsavel||'—')}</td>
+            <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(r.cpf||'—')}</td>
+            <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">
+              <select onchange="updateFamSerie('${esc(r.cpf)}',this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);">
+                <option value="">— sem série —</option>
+                ${famSeriesOpts}
+              </select>
+              <script>document.currentScript.previousElementSibling.value="${esc(r.serie||'')}";</script>
+            </td>
+            <td style="padding:11px 14px;border-bottom:1px solid #f5f0ea;text-align:right;">
+              <button class="action-btn del" onclick="deleteFamilia('${esc(r.cpf)}','${esc(r.nome_aluno)}')">🗑</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function updateFamSerie(cpf, serie) {
+    const d = await api({ action: 'familias_update', cpf, serie: serie || null });
+    if (d.error) alert('Erro ao atualizar série: ' + d.error);
+  }
+
+  async function deleteFamilia(cpf, nome) {
+    if (!confirm('Remover ' + nome + ' da lista de famílias?')) return;
+    await api({ action: 'familias_delete', cpf });
+    await loadFamiliasPanel();
   }
 
   // ── CADASTRAR FAMÍLIA ─────────────────────────────────
