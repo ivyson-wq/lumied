@@ -802,11 +802,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('appShell').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     currentProf = null;
+    // Show bio login if registered
+    const bioEmail = localStorage.getItem('prof_bio_email');
+    document.getElementById('bioLoginBtn').style.display = bioEmail ? 'block' : 'none';
+    if (bioEmail) document.getElementById('loginEmail').value = bioEmail;
   }
 
   function checkSession() {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      // Show bio login button if registered
+      const bioEmail = localStorage.getItem('prof_bio_email');
+      if (bioEmail) {
+        document.getElementById('bioLoginBtn').style.display = 'block';
+        document.getElementById('loginEmail').value = bioEmail;
+      }
+      return;
+    }
     const nome = localStorage.getItem('prof_nome');
     const email = localStorage.getItem('prof_email');
     showApp({ nome, email });

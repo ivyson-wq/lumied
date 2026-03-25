@@ -1435,7 +1435,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   // ── AUTH ──────────────────────────────────────────────
   function checkSession() {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      const bioEmail = localStorage.getItem('mb_bio_email');
+      if (bioEmail) {
+        document.getElementById('bioLoginBtn').style.display = 'block';
+        document.getElementById('loginEmail').value = bioEmail;
+      }
+      return;
+    }
     const nome  = localStorage.getItem('mb_nome');
     const email = localStorage.getItem('mb_email');
     showApp({ nome, email });
@@ -1465,6 +1472,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     clearInterval(pollInterval);
     document.getElementById('appShell').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
+    const bioEmail = localStorage.getItem('mb_bio_email');
+    if (bioEmail) {
+      document.getElementById('bioLoginBtn').style.display = 'block';
+      document.getElementById('loginEmail').value = bioEmail;
+    }
   }
 
   function showApp(user) {

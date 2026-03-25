@@ -957,10 +957,14 @@ body.has-bottomnav{padding-bottom:72px;}
     document.getElementById('boletosCard').style.display = 'none';
     document.getElementById('bottomNav').classList.remove('visible');
     document.getElementById('greetingBar').style.display = 'none';
+    document.getElementById('bioRegBanner').style.display = 'none';
     document.body.classList.remove('has-bottomnav');
     document.querySelector('.site-header').classList.remove('compact');
     document.getElementById('emailState').style.display = 'block';
     document.getElementById('sentState').style.display = 'none';
+    // Show biometric login button if registered
+    const bioEmail = localStorage.getItem('pais_bio_email');
+    document.getElementById('bioLoginBtn').style.display = bioEmail ? 'block' : 'none';
     const btn = document.getElementById('btnMagic');
     btn.disabled = false; btn.innerHTML = '✉️ Enviar link de acesso';
     document.getElementById('btnGoogle').disabled = false;
