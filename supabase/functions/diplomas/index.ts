@@ -267,7 +267,30 @@ Deno.serve(async (req) => {
           expires_at: new Date(Date.now() + t.expires_in * 1000).toISOString(),
           user_id: String(t.user_id || ''),
         })
-        return new Response('<html><body style="font-family:sans-serif;text-align:center;padding:60px;"><h1>Mercado Livre conectado!</h1><p>Voce ja pode fechar esta janela e voltar ao painel.</p></body></html>', { status: 200, headers: { 'Content-Type': 'text/html' } })
+        return new Response(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mercado Livre Conectado</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#f8f5f0;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{background:#fff;border-radius:20px;padding:48px 40px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.08);border:1px solid #e6ddd3;}
+.icon{width:80px;height:80px;background:linear-gradient(135deg,#ffe600,#ffcd00);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:36px;box-shadow:0 4px 16px rgba(255,230,0,.3);}
+h1{font-family:'Lora',serif;font-size:22px;color:#1a1a1a;margin-bottom:8px;}
+p{font-size:14px;color:#7a7169;line-height:1.6;margin-bottom:24px;}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:#edf7f0;color:#2d7a3a;border-radius:100px;font-size:13px;font-weight:600;border:1px solid rgba(45,122,58,.2);margin-bottom:20px;}
+.btn{display:inline-block;padding:12px 28px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .2s;}
+.btn:hover{background:#a00d24;}
+.footer{margin-top:24px;font-size:11px;color:#bbb;}
+</style></head><body>
+<div class="card">
+  <div class="icon">🛒</div>
+  <div class="badge">✅ Conexao realizada</div>
+  <h1>Mercado Livre Conectado!</h1>
+  <p>Sua conta do Mercado Livre foi vinculada com sucesso ao sistema Maple Bear. Os precos dos insumos serao atualizados automaticamente.</p>
+  <a href="/gerente.html" class="btn">Voltar ao Painel</a>
+  <div class="footer">Maple Bear Caxias do Sul</div>
+</div>
+</body></html>`, { status: 200, headers: { 'Content-Type': 'text/html' } })
       }
       return new Response('Erro ao obter token: ' + JSON.stringify(t), { status: 400 })
     } catch (e) { return new Response('Erro: ' + (e as Error).message, { status: 500 }) }
