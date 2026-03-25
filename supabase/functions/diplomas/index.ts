@@ -847,6 +847,16 @@ Deno.serve(async (req) => {
         sols = data ?? []
       }
 
+      // Fallback: busca também na tabela familias
+      const { data: fams } = await sb
+        .from('familias').select('nome_aluno, serie')
+        .ilike('email', emailPai)
+      if (fams?.length) {
+        for (const f of fams) {
+          sols.push({ nome_crianca: f.nome_aluno, serie: f.serie ?? null })
+        }
+      }
+
       const seen = new Set<string>()
       const filhos = sols.filter(s => {
         if (seen.has(s.nome_crianca)) return false
