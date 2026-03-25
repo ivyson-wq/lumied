@@ -1193,46 +1193,56 @@ Deno.serve(async (req) => {
       results.push({ plataforma: 'Zoom', nome: `Buscar "${query}" no Zoom`, preco: null, preco_fmt: 'Ver no Zoom', url_produto: `https://www.zoom.com.br/search?q=${encoded}`, url_carrinho: null, item_id: null, match: 0, tipo: 'busca' })
     }
 
-    // ── 1. Mercado Livre (web scraping — API search está bloqueada) ──────
+    // ── 1. Mercado Livre (API: products/search → products/{id}/items) ──────
     try {
-      const mlSearchUrl = `https://lista.mercadolivre.com.br/${query.replace(/\s+/g, '-')}`
-      const mlRes = await fetch(mlSearchUrl, {
-        headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-      })
-      if (mlRes.ok) {
-        const html = await mlRes.text()
-        // ML embeds product data as JSON — extract prices and titles
-        const priceMatches = html.match(/"price":(\d+(?:\.\d+)?)/g) || []
-        const titleMatches = html.match(/"title":"([^"]+)"/g) || []
-        const permalinkMatches = html.match(/"permalink":"(https:[^"]+)"/g) || []
-        const idMatches = html.match(/"id":"(MLB\d+)"/g) || []
-        const count = Math.min(priceMatches.length, titleMatches.length, 5)
-        let mlCount = 0
-        for (let pi = 0; pi < count; pi++) {
-          const price = parseFloat(priceMatches[pi].replace('"price":', ''))
-          const title = titleMatches[pi].replace('"title":"', '').replace('"', '')
-          const permalink = permalinkMatches[pi] ? permalinkMatches[pi].replace('"permalink":"', '').replace('"', '').replace(/\\u002F/g, '/') : mlSearchUrl
-          const mlId = idMatches[pi] ? idMatches[pi].replace('"id":"', '').replace('"', '') : null
-          if (price > 0 && title) {
-            const m = matchPct(query, title)
-            const urlCarrinho = mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null
-            results.push({
-              plataforma: 'Mercado Livre',
-              nome: title,
-              preco: price,
-              preco_fmt: `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-              url_produto: permalink,
-              url_carrinho: urlCarrinho,
-              item_id: mlId,
-              match: m,
-              tipo: 'produto',
-            })
-            mlCount++
-          }
+      const mlToken = await getMLToken(sb)
+      const mlHeaders: Record<string, string> = { 'Accept': 'application/json' }
+      if (mlToken) mlHeaders['Authorization'] = `Bearer ${mlToken}`
+
+      // Step 1: Search products
+      const mlSearchRes = await fetch(
+        `https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=${encoded}&limit=5`,
+        { headers: mlHeaders }
+      )
+      let mlCount = 0
+      if (mlSearchRes.ok) {
+        const mlSearchData = await mlSearchRes.json()
+        const products = mlSearchData.results ?? []
+
+        // Step 2: For each product, get items with prices
+        for (const prod of products.slice(0, 5)) {
+          try {
+            const itemsRes = await fetch(
+              `https://api.mercadolibre.com/products/${prod.id}/items?limit=1`,
+              { headers: mlHeaders }
+            )
+            if (itemsRes.ok) {
+              const itemsData = await itemsRes.json()
+              for (const it of (itemsData.results ?? []).slice(0, 1)) {
+                if (it.price > 0) {
+                  const title = it.title ?? prod.name ?? ''
+                  const m = matchPct(query, title)
+                  const mlId = it.item_id ?? null
+                  results.push({
+                    plataforma: 'Mercado Livre',
+                    nome: title,
+                    preco: it.price,
+                    preco_fmt: `R$ ${parseFloat(it.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                    url_produto: it.permalink ?? `https://www.mercadolivre.com.br/p/${prod.id}`,
+                    url_carrinho: mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null,
+                    item_id: mlId,
+                    match: m,
+                    tipo: 'produto',
+                  })
+                  mlCount++
+                }
+              }
+            }
+          } catch (_) { /* skip this product */ }
         }
         fontes['Mercado Livre'] = { status: mlCount > 0 ? 'ok' : 'sem resultados', produtos: mlCount }
       } else {
-        fontes['Mercado Livre'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${mlRes.status}` }
+        fontes['Mercado Livre'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${mlSearchRes.status}` }
       }
     } catch (e) { fontes['Mercado Livre'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
