@@ -956,38 +956,38 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <!-- CALENDARIO ESCOLAR -->
       <div id="panelCalendario" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
-          <div class="sec-title" style="margin:0;">Calendario Escolar</div>
+          <div class="sec-title" style="margin:0;">Calendario Escolar <span id="calAnoLabel">2026</span></div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <input type="hidden" id="calMes">
-            <div class="month-nav">
-              <div class="mn-group">
-                <button class="mn-btn" onclick="monthNavYear('calMes',-1,loadCalendario)">&#8249;</button>
-                <span class="mn-val" id="calMesYear" onclick="monthNavToday('calMes',loadCalendario)"></span>
-                <button class="mn-btn" onclick="monthNavYear('calMes',1,loadCalendario)">&#8250;</button>
-              </div>
-              <div class="mn-group">
-                <button class="mn-btn" onclick="monthNavMonth('calMes',-1,loadCalendario)">&#8249;</button>
-                <span class="mn-val month" id="calMesMonth" onclick="monthNavToday('calMes',loadCalendario)"></span>
-                <button class="mn-btn" onclick="monthNavMonth('calMes',1,loadCalendario)">&#8250;</button>
-              </div>
-            </div>
+            <button onclick="calMudarAno(-1)" class="mn-btn" style="border:1.5px solid var(--border);border-radius:8px;">&#8249;</button>
+            <button onclick="calMudarAno(1)" class="mn-btn" style="border:1.5px solid var(--border);border-radius:8px;">&#8250;</button>
+            <button onclick="calToggleForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Novo Evento</button>
           </div>
         </div>
-        <div class="two-col">
-          <div>
-            <div id="calGrid" style="background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;"></div>
-            <div id="calEventos" style="margin-top:16px;"></div>
-          </div>
+
+        <!-- Legenda -->
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;font-size:11px;">
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#E57373;"></span> Feriados</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#FFD54F;"></span> Datas Comemorativas</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#CE93D8;"></span> Reunioes</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#FFB74D;"></span> Atividades</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#4DB6AC;"></span> Planejamentos</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#90CAF9;"></span> Report Cards</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#BCAAA4;"></span> Recesso</span>
+        </div>
+
+        <!-- Grid anual 4x3 -->
+        <div id="calAnualGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;"></div>
+
+        <!-- Form (colapsavel) -->
+        <div id="calFormWrap" style="display:none;margin-top:20px;">
           <div class="form-card">
             <h3 id="calFormTitle">Novo Evento</h3>
             <input type="hidden" id="calEventoId">
             <div class="ff"><label>Titulo *</label><input type="text" id="calTitulo" placeholder="Ex: Reuniao de Pais"></div>
             <div class="ff"><label>Descricao</label><input type="text" id="calDescricao" placeholder="Detalhes do evento"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
               <div class="ff" style="margin:0;"><label>Data inicio *</label><input type="date" id="calDataInicio"></div>
               <div class="ff" style="margin:0;"><label>Data fim</label><input type="date" id="calDataFim"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
               <div class="ff" style="margin:0;"><label>Tipo</label>
                 <select id="calTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
                   <option value="evento">Evento</option><option value="feriado">Feriado</option><option value="reuniao">Reuniao</option>
@@ -996,13 +996,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               </div>
               <div class="ff" style="margin:0;"><label>Cor</label><input type="color" id="calCor" value="#C8102E" style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;padding:4px;"></div>
             </div>
-            <div style="display:flex;gap:12px;margin-top:10px;">
+            <div style="display:flex;gap:12px;margin-top:10px;align-items:center;">
               <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="calVisPais" checked> Pais</label>
               <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="calVisProf" checked> Professoras</label>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:14px;">
-              <button class="btn-create" onclick="salvarEvento()">Salvar</button>
-              <button onclick="limparCalForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Limpar</button>
+              <div style="margin-left:auto;display:flex;gap:8px;">
+                <button class="btn-create" onclick="salvarEvento()" style="width:auto;padding:8px 20px;">Salvar</button>
+                <button onclick="calToggleForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+              </div>
             </div>
             <div class="f-alert error" id="calErr" style="margin-top:8px;"></div>
           </div>
@@ -1638,7 +1638,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='familias')   loadFamiliasPanel();
     if(id==='cadastro')    loadCadastroPanel();
     if(id==='achados')     loadAchadosGerente();
-    if(id==='calendario')  { almInitMonths(); monthNavSet('calMes', new Date().toISOString().slice(0,7)); loadCalendario(); }
+    if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
     return false;
   }
@@ -4418,21 +4418,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const insumos = d.data || [];
     document.getElementById('almInsumosCount').textContent = insumos.filter((i)=>i.ativo).length;
     document.getElementById('almInsumosList').innerHTML = insumos.map((it) => {
-      const temRef = it.referencia_nome != null;
-      const refHtml = temRef ? `
-        <div style="margin-top:6px;padding:8px 10px;background:#f0f7ff;border:1px solid #c7d9f0;border-radius:8px;font-size:11px;">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <span style="color:#1a6bb5;">Ultima ref: ${almFmtBRL(it.preco_referencia)} via ${esc(it.referencia_fonte||'?')}</span>
-            ${it.preco_atualizado_em ? `<span style="color:var(--muted);">· ${new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</span>` : ''}
-          </div>
-          <div style="color:#555;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(it.referencia_nome||'')}">${esc(it.referencia_nome||'')}</div>
-          <div style="display:flex;gap:6px;margin-top:4px;">
-            ${it.referencia_url ? `<a href="${esc(it.referencia_url)}" target="_blank" style="color:#1a6bb5;font-size:10px;">Ver produto</a>` : ''}
-            <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:none;color:#1a6bb5;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;">📊 Historico</button>
-          </div>
-        </div>` : '';
-      return `<div class="alm-insumo-row" style="flex-direction:column;align-items:stretch;${!it.ativo ? 'opacity:.5;' : ''}">
-        <div style="display:flex;align-items:center;gap:10px;">
+      return `<div class="alm-insumo-row" style="${!it.ativo ? 'opacity:.5;' : ''}">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:600;font-size:13px;">${it.nome}</div>
             <div style="font-size:11px;color:var(--muted);">
@@ -4444,9 +4431,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             </div>
           </div>
           <button onclick="almEditarInsumo(${JSON.stringify(it).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
+          <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;${it.preco_atualizado_em?'color:#1a6bb5;':''}">📊${it.preco_atualizado_em?' '+new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):''}</button>
           ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
-        </div>
-        ${refHtml}
       </div>`;
     }).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
   }
@@ -5102,54 +5088,80 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── CALENDARIO ESCOLAR ──────────────────────────────
   let calEventos = [];
-  const CAL_TIPOS = { feriado:'🔴 Feriado', reuniao:'🤝 Reuniao', evento:'📅 Evento', data_comemorativa:'🎉 Data Comemorativa', recesso:'🏖️ Recesso', avaliacao:'📝 Avaliacao' };
+  let calAno = new Date().getFullYear();
+  const CAL_TIPOS = { feriado:'Feriado', reuniao:'Reuniao', evento:'Evento', data_comemorativa:'Data Comemorativa', recesso:'Recesso', avaliacao:'Avaliacao' };
+  const CAL_MESES = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  const CAL_DIAS = ['D','S','T','Q','Q','S','S'];
+
+  function calMudarAno(delta) { calAno += delta; loadCalendario(); }
+  function calToggleForm() {
+    const el = document.getElementById('calFormWrap');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'none') limparCalForm();
+  }
 
   async function loadCalendario() {
-    const mes = document.getElementById('calMes').value || new Date().toISOString().slice(0,7);
-    const d = await api({ action: 'calendario_list', mes });
+    document.getElementById('calAnoLabel').textContent = calAno;
+    const d = await api({ action: 'calendario_list', ano: String(calAno) });
     calEventos = Array.isArray(d) ? d : [];
-    renderCalGrid(mes);
-    renderCalEventos();
+    renderCalAnual();
   }
 
-  function renderCalGrid(mes) {
-    const [y, m] = mes.split('-').map(Number);
-    const firstDay = new Date(y, m-1, 1).getDay();
-    const daysInMonth = new Date(y, m, 0).getDate();
+  function renderCalAnual() {
     const today = new Date();
-    const isCurrentMonth = today.getFullYear() === y && today.getMonth() === m-1;
-    const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
-    let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;">';
-    html += dias.map(d => `<div style="padding:8px 4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);">${d}</div>`).join('');
-    for (let i = 0; i < firstDay; i++) html += '<div style="padding:8px;"></div>';
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const evts = calEventos.filter(e => e.data_inicio <= dateStr && (e.data_fim || e.data_inicio) >= dateStr);
-      const isToday = isCurrentMonth && today.getDate() === d;
-      const dots = evts.map(e => `<div style="width:6px;height:6px;border-radius:50%;background:${e.cor||'#C8102E'};"></div>`).join('');
-      html += `<div style="padding:6px 4px;cursor:${evts.length?'pointer':'default'};${isToday?'background:rgba(200,16,46,.08);border-radius:8px;':''}">
-        <div style="font-size:13px;font-weight:${isToday?'700':'400'};color:${isToday?'var(--red)':'var(--text)'};">${d}</div>
-        <div style="display:flex;gap:2px;justify-content:center;margin-top:2px;">${dots}</div>
-      </div>`;
-    }
-    html += '</div>';
-    document.getElementById('calGrid').innerHTML = html;
-  }
+    let html = '';
+    for (let m = 0; m < 12; m++) {
+      const firstDay = new Date(calAno, m, 1).getDay();
+      const daysInMonth = new Date(calAno, m+1, 0).getDate();
+      const isCurrentMonth = today.getFullYear() === calAno && today.getMonth() === m;
+      // Count school days (weekdays without feriado/recesso)
+      let diasLetivos = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dow = new Date(calAno, m, d).getDay();
+        if (dow === 0 || dow === 6) continue;
+        const ds = `${calAno}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isFeriado = calEventos.some(e => (e.tipo==='feriado'||e.tipo==='recesso') && e.data_inicio<=ds && (e.data_fim||e.data_inicio)>=ds);
+        if (!isFeriado) diasLetivos++;
+      }
 
-  function renderCalEventos() {
-    const el = document.getElementById('calEventos');
-    if (!calEventos.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhum evento neste mes.</div>'; return; }
-    el.innerHTML = calEventos.map(e => {
-      const dt = new Date(e.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'short' });
-      return `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--white);border:1px solid var(--border);border-left:4px solid ${e.cor||'#C8102E'};border-radius:8px;margin-bottom:8px;">
-        <div style="flex:1;">
-          <div style="font-weight:600;font-size:13px;">${esc(e.titulo)}</div>
-          <div style="font-size:11px;color:var(--muted);">${dt} · ${CAL_TIPOS[e.tipo]||e.tipo}${e.descricao?' · '+esc(e.descricao):''}</div>
-        </div>
-        <button onclick="editarEvento(${JSON.stringify(e).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">Editar</button>
-        <button onclick="excluirEvento('${e.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">Excluir</button>
-      </div>`;
-    }).join('');
+      html += `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;">`;
+      html += `<div style="background:#f5f0ea;padding:8px;text-align:center;font-weight:700;font-size:12px;letter-spacing:1px;">${CAL_MESES[m]}</div>`;
+      html += `<div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;padding:4px;">`;
+      html += CAL_DIAS.map(d => `<div style="font-size:9px;font-weight:700;color:#999;padding:2px;">${d}</div>`).join('');
+      for (let i = 0; i < firstDay; i++) html += '<div></div>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const ds = `${calAno}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const evts = calEventos.filter(e => e.data_inicio <= ds && (e.data_fim || e.data_inicio) >= ds);
+        const isToday = isCurrentMonth && today.getDate() === d;
+        const dow = new Date(calAno, m, d).getDay();
+        const isSunday = dow === 0;
+        let bg = 'transparent';
+        if (evts.length) bg = evts[0].cor || '#FFD54F';
+        html += `<div style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:${isToday?'800':'500'};border-radius:4px;background:${bg};color:${bg!=='transparent'?'#333':isSunday?'#e53e3e':'#333'};${isToday?'outline:2px solid var(--red);':''}" title="${evts.map(e=>e.titulo).join(', ')}">${d}</div>`;
+      }
+      html += '</div>';
+      // Events list for this month
+      const monthEvents = calEventos.filter(e => {
+        const em = parseInt(e.data_inicio.split('-')[1]);
+        return em === m+1;
+      });
+      if (monthEvents.length) {
+        html += `<div style="padding:6px 8px;border-top:1px solid var(--border);font-size:9px;color:#555;max-height:100px;overflow-y:auto;">`;
+        html += `<div style="font-weight:700;margin-bottom:3px;">DIAS LETIVOS: ${diasLetivos}</div>`;
+        monthEvents.forEach(e => {
+          const day = parseInt(e.data_inicio.split('-')[2]);
+          html += `<div style="display:flex;gap:4px;margin-bottom:1px;cursor:pointer;" onclick="editarEvento(${JSON.stringify(e).replace(/"/g,'&quot;')})">
+            <span style="font-weight:700;color:${e.cor||'#333'};">${String(day).padStart(2,'0')}</span>
+            <span>- ${esc(e.titulo)}</span>
+          </div>`;
+        });
+        html += '</div>';
+      } else {
+        html += `<div style="padding:6px 8px;border-top:1px solid var(--border);font-size:9px;font-weight:700;color:#555;">DIAS LETIVOS: ${diasLetivos}</div>`;
+      }
+      html += '</div>';
+    }
+    document.getElementById('calAnualGrid').innerHTML = html;
   }
 
   function editarEvento(e) {
