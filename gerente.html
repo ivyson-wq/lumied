@@ -323,8 +323,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
       <div class="sb-label">Professoras</div>
       <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
+      <a class="nav-item" href="#" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
       <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> PDI</a>
-      <a class="nav-item" href="#" onclick="showPanel('almoxarifado',this)"><span class="ic">📦</span> Almoxarifado</a>
+      <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Almox. Dashboard</a>
+      <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Almox. Pendentes</a>
+      <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Almox. Requisições</a>
+      <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Almox. Insumos</a>
+      <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Almox. Turmas</a>
+      <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Almox. Orçamentos</a>
+      <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Almox. Relatório</a>
+      <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Almox. Compras</a>
       <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
@@ -586,23 +594,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
-      <!-- ALMOXARIFADO -->
-      <div id="panelAlmoxarifado" class="panel">
+      <!-- ATESTADOS -->
+      <div id="panelAtestados" class="panel">
+        <div class="sec-title">🏥 Atestados das Professoras</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Os atestados são gerenciados pelo Portal da Secretaria. Acesse <a href="secretaria.html" target="_blank" style="color:var(--blue);">secretaria.html</a> para aprovar ou rejeitar atestados.</p>
+      </div>
 
-        <!-- Sub-nav tabs -->
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;" id="almTabs">
-          <button class="alm-tab active" onclick="almShowTab('dashboard',this)">📊 Dashboard</button>
-          <button class="alm-tab" onclick="almShowTab('pendentes',this)">⏳ Pendentes <span id="almPendBadge" style="background:#e53e3e;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;display:none;margin-left:2px;">0</span></button>
-          <button class="alm-tab" onclick="almShowTab('todas',this)">📋 Todas as Reqs</button>
-          <button class="alm-tab" onclick="almShowTab('insumos',this)">🗃️ Insumos</button>
-          <button class="alm-tab" onclick="almShowTab('turmas',this)">🏫 Turmas</button>
-          <button class="alm-tab" onclick="almShowTab('orcamentos',this)">💰 Orçamentos</button>
-          <button class="alm-tab" onclick="almShowTab('relatorio',this)">📈 Relatório</button>
-          <button class="alm-tab" onclick="almShowTab('compras',this)">🛒 Compras <span id="almComprasBadge" style="background:#e53e3e;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;display:none;margin-left:2px;">0</span></button>
-        </div>
+      <!-- ALMOXARIFADO — painéis separados -->
+      <div id="panelAlmoxarifado" class="panel" style="display:none;"></div>
 
-        <!-- TAB: Dashboard -->
-        <div class="alm-tab-panel active" id="almTab-dashboard">
+      <div id="panelAlmDash" class="panel">
           <div style="margin-bottom:16px;">
             <input type="hidden" id="almDashMes">
             <div class="month-nav">
@@ -624,14 +625,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
 
         <!-- TAB: Pendentes -->
-        <div class="alm-tab-panel" id="almTab-pendentes">
+      </div>
+      <div id="panelAlmPend" class="panel">
           <div id="almPendLoading" class="empty-state">⏳ Carregando…</div>
           <div id="almPendEmpty" class="empty-state" style="display:none;">✅ Nenhuma requisição pendente.</div>
           <div id="almPendList"></div>
         </div>
 
         <!-- TAB: Todas as Reqs -->
-        <div class="alm-tab-panel" id="almTab-todas">
+      </div>
+      <div id="panelAlmTodas" class="panel">
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
             <input type="hidden" id="almTodasMes">
             <div class="month-nav">
@@ -659,7 +662,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
 
         <!-- TAB: Insumos -->
-        <div class="alm-tab-panel" id="almTab-insumos">
+      </div>
+      <div id="panelAlmInsumos" class="panel">
 
           <!-- Importar Excel -->
           <div style="background:#f7f5f2;border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -730,8 +734,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </div>
         </div>
 
-        <!-- TAB: Turmas -->
-        <div class="alm-tab-panel" id="almTab-turmas">
+      </div>
+      <div id="panelAlmTurmas" class="panel">
           <div class="two-col">
             <div>
               <div class="sec-title">Turmas <span class="count-badge" id="almTurmasCount">0</span></div>
@@ -753,8 +757,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <div id="almProfTurmaList" style="margin-top:8px;"></div>
         </div>
 
-        <!-- TAB: Orçamentos -->
-        <div class="alm-tab-panel" id="almTab-orcamentos">
+      </div>
+      <div id="panelAlmOrc" class="panel">
           <!-- Orçamento padrão -->
           <div style="background:#f0f7ff;border:1.5px solid rgba(26,107,181,.2);border-radius:12px;padding:16px 20px;margin-bottom:18px;">
             <div style="font-size:14px;font-weight:600;color:#1a6bb5;margin-bottom:8px;">💰 Orçamento Padrão</div>
@@ -789,7 +793,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
 
         <!-- TAB: Relatório -->
-        <div class="alm-tab-panel" id="almTab-relatorio">
+      </div>
+      <div id="panelAlmRel" class="panel">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
             <input type="hidden" id="almRelMes">
             <div class="month-nav">
@@ -809,7 +814,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
 
         <!-- TAB: Compras -->
-        <div class="alm-tab-panel" id="almTab-compras">
+      </div>
+      <div id="panelAlmCompras" class="panel">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
             <select id="almComprasStatus" onchange="almLoadCompras()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
               <option value="pendente">⏳ Pendentes de compra</option>
@@ -823,9 +829,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <div id="almComprasLoading" class="empty-state">⏳ Carregando…</div>
           <div id="almComprasList"></div>
           <div class="f-alert success" id="almComprasOk" style="margin-top:8px;"></div>
-        </div>
+      </div>
 
-        <!-- Modal: Criar Requisição (gerente em nome de professora) -->
+      <!-- Modais do Almoxarifado (fora dos painéis) -->
+      <!-- Modal: Criar Requisição (gerente em nome de professora) -->
         <div id="almNovaReqModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;overflow-y:auto;padding:24px;">
           <div style="background:#fff;border-radius:16px;max-width:660px;margin:0 auto;padding:28px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
@@ -916,8 +923,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div class="f-alert error" id="almReviewErr" style="margin-top:8px;"></div>
           </div>
         </div>
-
-      </div>
 
       <!-- panelSecretarias kept hidden for backward compat -->
       <div id="panelSecretarias" class="panel" style="display:none;"></div>
@@ -1493,7 +1498,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',almoxarifado:'Almoxarifado — Gestão de Insumos',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1503,7 +1508,15 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='equipe')      loadEquipe();
     if(id==='diplomas')    loadDiplomasPanel();
     if(id==='pdi')           loadPdiPanel();
-    if(id==='almoxarifado')  almInitPanel();
+    if(id==='atestados')     loadAtestadosPanel?.();
+    if(id==='almDash')     { almInitPanel(); }
+    if(id==='almPend')     almLoadPendentes();
+    if(id==='almTodas')    almLoadTodas();
+    if(id==='almInsumos')  { almLoadInsumos(); almLoadCategorias(); }
+    if(id==='almTurmas')   almLoadTurmas();
+    if(id==='almOrc')      almLoadOrcamentos();
+    if(id==='almRel')      almLoadRelatorio();
+    if(id==='almCompras')  almLoadCompras();
     if(id==='manutencao')    loadManutPanel();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
