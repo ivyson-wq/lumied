@@ -2069,6 +2069,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   })();
 
   function showBioRegisterButton() {
+    if (typeof WebAuthnClient === 'undefined') return;
     WebAuthnClient.isPlatformAvailable().then(ok => {
       if (!ok) return;
       if (!localStorage.getItem('prof_bio_email')) {

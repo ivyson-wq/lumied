@@ -1,12 +1,16 @@
 // WebAuthn/Passkeys client helper — Maple Bear RS
 const WebAuthnClient = {
   isAvailable() {
-    return !!window.PublicKeyCredential &&
-      typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function';
+    return !!window.PublicKeyCredential && location.protocol === 'https:';
   },
   async isPlatformAvailable() {
     if (!this.isAvailable()) return false;
-    return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    try {
+      if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      }
+      return true; // HTTPS + PublicKeyCredential exists — assume available
+    } catch (_) { return true; }
   },
   b64urlToBuffer(b64url) {
     const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
