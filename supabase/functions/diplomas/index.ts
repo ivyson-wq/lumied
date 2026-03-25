@@ -48,38 +48,81 @@ function randomToken(): string {
 // ── Session validators ──────────────────────────────────────
 async function getProfessora(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
+  // Tenta sessão legada (professora_sessoes)
   const { data: sessao } = await sb
     .from('professora_sessoes').select('professora_id, expira_em')
     .eq('token', token).maybeSingle()
-  if (!sessao || new Date(sessao.expira_em) < new Date()) return null
-  const { data } = await sb
-    .from('professoras').select('id, nome, email')
-    .eq('id', sessao.professora_id).maybeSingle()
-  return data ?? null
+  if (sessao && new Date(sessao.expira_em) >= new Date()) {
+    const { data } = await sb
+      .from('professoras').select('id, nome, email')
+      .eq('id', sessao.professora_id).maybeSingle()
+    if (data) return data
+  }
+  // Fallback: sessão unificada (tabela sessoes/usuarios)
+  const user = await getUsuario(sb, token)
+  if (user && (user.papel === 'professora' || user.papel === 'gerente')) {
+    // Busca dados da professora pelo mesmo ID ou email
+    const { data: prof } = await sb
+      .from('professoras').select('id, nome, email')
+      .eq('id', user.id).maybeSingle()
+    if (prof) return prof
+    // Fallback por email
+    const { data: profByEmail } = await sb
+      .from('professoras').select('id, nome, email')
+      .ilike('email', user.email).maybeSingle()
+    if (profByEmail) return profByEmail
+    // Se não existe na tabela professoras, retorna dados do usuario
+    return { id: user.id, nome: user.nome, email: user.email }
+  }
+  return null
 }
 
 async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
+  // Tenta sessão legada (gerente_sessoes)
   const { data: sessao } = await sb
     .from('gerente_sessoes').select('gerente_id, expira_em')
     .eq('token', token).maybeSingle()
-  if (!sessao || new Date(sessao.expira_em) < new Date()) return null
-  const { data } = await sb
-    .from('gerentes').select('id, nome, email')
-    .eq('id', sessao.gerente_id).maybeSingle()
-  return data ?? null
+  if (sessao && new Date(sessao.expira_em) >= new Date()) {
+    const { data } = await sb
+      .from('gerentes').select('id, nome, email')
+      .eq('id', sessao.gerente_id).maybeSingle()
+    if (data) return data
+  }
+  // Fallback: sessão unificada
+  const user = await getUsuario(sb, token)
+  if (user && user.papel === 'gerente') {
+    const { data: ger } = await sb
+      .from('gerentes').select('id, nome, email')
+      .ilike('email', user.email).maybeSingle()
+    if (ger) return ger
+    return { id: user.id, nome: user.nome, email: user.email }
+  }
+  return null
 }
 
 async function getSecretaria(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
+  // Tenta sessão legada (secretaria_sessoes)
   const { data: sessao } = await sb
     .from('secretaria_sessoes').select('secretaria_id, expira_em')
     .eq('token', token).maybeSingle()
-  if (!sessao || new Date(sessao.expira_em) < new Date()) return null
-  const { data } = await sb
-    .from('secretarias').select('id, nome, email')
-    .eq('id', sessao.secretaria_id).maybeSingle()
-  return data ?? null
+  if (sessao && new Date(sessao.expira_em) >= new Date()) {
+    const { data } = await sb
+      .from('secretarias').select('id, nome, email')
+      .eq('id', sessao.secretaria_id).maybeSingle()
+    if (data) return data
+  }
+  // Fallback: sessão unificada
+  const user = await getUsuario(sb, token)
+  if (user && user.papel === 'secretaria') {
+    const { data: sec } = await sb
+      .from('secretarias').select('id, nome, email')
+      .ilike('email', user.email).maybeSingle()
+    if (sec) return sec
+    return { id: user.id, nome: user.nome, email: user.email }
+  }
+  return null
 }
 
 // ── Unified session validator (new) ──────────────────────────
