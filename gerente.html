@@ -975,13 +975,18 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div class="ff"><label>E-mail</label><input type="email" id="eqEmail" placeholder="email@escola.com.br" autocomplete="off"></div>
               <div class="ff"><label>Senha</label><input type="password" id="eqSenha" placeholder="Mínimo 6 caracteres"></div>
               <div class="ff"><label>Papel</label>
-                <select id="eqPapel" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fdfbf8;">
+                <select id="eqPapel" onchange="toggleEqTurma()" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fdfbf8;">
                   <option value="">— selecione —</option>
                   <option value="gerente">Gerente</option>
                   <option value="professora">Professora</option>
                   <option value="professora_assistente">Professora Assistente</option>
                   <option value="secretaria">Secretaria</option>
                   <option value="manutencao">Manutenção</option>
+                </select>
+              </div>
+              <div class="ff" id="eqTurmaWrap" style="display:none;"><label>Turma / Série</label>
+                <select id="eqTurma" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fdfbf8;">
+                  <option value="">— sem turma —</option>
                 </select>
               </div>
               <button class="btn-create" onclick="createEquipeMember()">Cadastrar</button>
@@ -1553,14 +1558,24 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   // ── EQUIPE UNIFICADA ──────────────────────────────────
-  let equipeData = [], equipeFilter = 'todos';
+  let equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
   const PAPEIS = { gerente:'Gerente', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', manutencao:'Manutenção' };
   const PAPEL_COLORS = { gerente:'#C8102E', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', manutencao:'#d4830a' };
 
   async function loadEquipe() {
+    if (!equipeSeriesOpts) {
+      const s = await api({ action: 'series_list' });
+      const arr = Array.isArray(s) ? s : [];
+      equipeSeriesOpts = arr.map(x => `<option value="${esc(x.id)}">${esc(x.nome)}</option>`).join('');
+      document.getElementById('eqTurma').innerHTML = '<option value="">— sem turma —</option>' + equipeSeriesOpts;
+    }
     const data = await api({ action:'usuarios_list' });
     equipeData = Array.isArray(data) ? data : [];
     renderEquipe();
+  }
+  function toggleEqTurma() {
+    const papel = document.getElementById('eqPapel').value;
+    document.getElementById('eqTurmaWrap').style.display = (papel === 'professora' || papel === 'professora_assistente') ? 'block' : 'none';
   }
   function setEquipeFilter(f, btn) {
     equipeFilter = f;
@@ -1576,29 +1591,52 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     el.innerHTML = list.map(u => {
       const isMe = u.email === currentGerente?.email;
       const cor = PAPEL_COLORS[u.papel] || '#666';
+      const isProf = u.papel === 'professora' || u.papel === 'professora_assistente';
+      const turmaSelect = isProf ? `<select onchange="setEquipeSerie('${esc(u.email)}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;background:#fdfbf8;max-width:130px;">
+        <option value="">Sem turma</option>${equipeSeriesOpts}
+      </select>` : '';
       return `<div class="list-row">
         <div class="list-avatar" style="background:${cor}20;color:${cor};">${(u.nome||'?')[0].toUpperCase()}</div>
-        <div class="lr-main"><strong>${esc(u.nome||'—')}</strong><span>${esc(u.email)} · ${new Date(u.criado_em).toLocaleDateString('pt-BR')}</span></div>
+        <div class="lr-main"><strong>${esc(u.nome||'—')}</strong><span>${esc(u.email)} · ${new Date(u.criado_em).toLocaleDateString('pt-BR')}${u.serie_nome ? ' · ' + esc(u.serie_nome) : ''}</span></div>
+        ${turmaSelect}
         <span class="role-badge" style="background:${cor}15;color:${cor};border-color:${cor}30;">${PAPEIS[u.papel]||u.papel}</span>
         ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
       </div>`;
     }).join('');
+    // Seta valores dos selects de turma
+    list.forEach(u => {
+      if (u.serie_id) {
+        const sel = el.querySelector(`select[onchange*="${u.email}"]`);
+        if (sel) sel.value = u.serie_id;
+      }
+    });
   }
   async function createEquipeMember() {
     const nome = document.getElementById('eqNome').value.trim();
     const email = document.getElementById('eqEmail').value.trim();
     const senha = document.getElementById('eqSenha').value;
     const papel = document.getElementById('eqPapel').value;
+    const turma = document.getElementById('eqTurma').value;
     if (!nome || !email || !senha || !papel) return showAlert('eq','error','Preencha todos os campos.');
     if (senha.length < 6) return showAlert('eq','error','Senha mínima de 6 caracteres.');
     const d = await api({ action:'usuarios_create', nome, email, senha, papel });
     if (d.error) return showAlert('eq','error',d.error);
+    // Atribui turma se for professora
+    if (turma && (papel === 'professora' || papel === 'professora_assistente')) {
+      await api({ action:'usuarios_set_serie', email, serie_id: turma });
+    }
     showAlert('eq','success','Membro "'+nome+'" cadastrado com sucesso!');
     document.getElementById('eqNome').value = '';
     document.getElementById('eqEmail').value = '';
     document.getElementById('eqSenha').value = '';
     document.getElementById('eqPapel').value = '';
+    document.getElementById('eqTurma').value = '';
+    document.getElementById('eqTurmaWrap').style.display = 'none';
     loadEquipe();
+  }
+  async function setEquipeSerie(email, serie_id) {
+    const d = await api({ action:'usuarios_set_serie', email, serie_id: serie_id || null });
+    if (d.error) showToast('Erro: ' + d.error, 'error');
   }
   async function deleteEquipeMember(id, nome) {
     if (!confirm('Remover "'+nome+'" da equipe?')) return;
@@ -3992,7 +4030,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   async function almLoadTurmas() {
-    const d = await callDiplomas({ action: 'alm_turmas_list' });
+    const d = await callDiplomas({ action: 'alm_series_list' });
     const turmas = d.data || [];
     document.getElementById('almTurmasCount').textContent = turmas.length;
     document.getElementById('almTurmasList').innerHTML = turmas.map(t => `
