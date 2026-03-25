@@ -1446,6 +1446,37 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   // ── PICKUP (ESTOU A CAMINHO) ───────────────────────────
   let pickupAtivoId = null;
   let pickupPollTimer = null;
+  let pickupWatchId = null;
+  const SCHOOL_LAT = -28.8628, SCHOOL_LON = -51.5201, CHEGOU_RAIO_M = 200;
+
+  function haversineM(lat1,lon1,lat2,lon2) {
+    const R = 6371000, toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function startLocationWatch() {
+    stopLocationWatch();
+    if (!navigator.geolocation) return;
+    pickupWatchId = navigator.geolocation.watchPosition(async (pos) => {
+      const dist = haversineM(pos.coords.latitude, pos.coords.longitude, SCHOOL_LAT, SCHOOL_LON);
+      // Atualiza distância no card
+      const distEl = document.getElementById('pickupDistancia');
+      if (distEl) distEl.textContent = dist < 1000 ? Math.round(dist) + 'm da escola' : (dist/1000).toFixed(1) + 'km da escola';
+      // Chegou perto da escola
+      if (dist <= CHEGOU_RAIO_M && pickupAtivoId) {
+        await callDiplomas({ action: 'pickup_chegou', id: pickupAtivoId });
+        stopLocationWatch();
+        showToast('📍 Chegada detectada! A escola foi notificada.', 'success');
+        loadPickupCard();
+      }
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
+  }
+
+  function stopLocationWatch() {
+    if (pickupWatchId !== null) { navigator.geolocation.clearWatch(pickupWatchId); pickupWatchId = null; }
+  }
 
   async function callDiplomas(body) {
     const { data: { session } } = await sb.auth.getSession();
@@ -1485,6 +1516,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
         renderPickupHistorico(hist.data);
         loading.style.display = 'none';
         startPickupPoll();
+        startLocationWatch();
         return;
       }
       pickupAtivoId = null;
@@ -1557,6 +1589,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     }
     pickupAtivoId = res.id;
     showPickupAtivo({ ...res, nome_crianca: nomeCrianca });
+    startLocationWatch();
     loadPickupCard();
   }
 
@@ -1570,6 +1603,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     } else {
       txt += ' Tempo estimado não disponível.';
     }
+    txt += `<div id="pickupDistancia" style="margin-top:6px;font-size:12px;color:var(--muted);">📍 Rastreando localização...</div>`;
     info.innerHTML = txt;
     aviso.style.display = 'block';
     document.getElementById('pickupFilhos').style.display = 'none';
@@ -1583,6 +1617,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     if (res.error) { errEl.textContent = res.error; errEl.style.display = 'block'; return; }
     pickupAtivoId = null;
     stopPickupPoll();
+    stopLocationWatch();
     loadPickupCard();
   }
 
