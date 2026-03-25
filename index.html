@@ -1838,7 +1838,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
   // ── DADOS ─────────────────────────────────────────────
   async function call(body) {
-    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON}, body: JSON.stringify(body) });
+    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify(body) });
     return r.json();
   }
   async function loadSeries() {
