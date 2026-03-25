@@ -924,9 +924,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div id="almAprovInfo" style="display:none;margin-top:12px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#2d7a2d;">
               ✅ Ao aprovar, os itens com melhor preço encontrado serão automaticamente encaminhados para a fila de compras.
             </div>
-            <div style="display:flex;gap:10px;margin-top:14px;">
-              <button onclick="almAprovar()" class="btn-create" style="background:#2d7a2d;flex:1;">✅ Aprovar e Encaminhar Compras</button>
-              <button onclick="almRejeitar()" class="btn-create" style="background:#e53e3e;flex:1;">❌ Rejeitar</button>
+            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+              <button onclick="almAprovar()" class="btn-create" style="background:#2d7a2d;flex:1;min-width:180px;">✅ Aprovar e Encaminhar Compras</button>
+              <button onclick="almRejeitar()" class="btn-create" style="background:#e53e3e;flex:1;min-width:120px;">❌ Rejeitar</button>
             </div>
             <div class="f-alert error" id="almReviewErr" style="margin-top:8px;"></div>
           </div>
@@ -3801,13 +3801,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       ${almReviewItens.map((it, i) => `
         <div class="alm-insumo-row" id="alm-row-${i}" style="flex-direction:column;align-items:stretch;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:140px;">
+            <div style="flex:1;min-width:160px;">
               <div style="font-weight:600;">${it.nome}</div>
-              <div style="font-size:11px;color:var(--muted);">${almFmtBRL(it.preco_unit)} / ${it.unidade} · Cadastrado</div>
+              <div style="font-size:11px;color:var(--muted);">${almFmtBRL(it.preco_unit)} / ${it.unidade}</div>
             </div>
-            <div style="font-size:13px;color:var(--muted);">Pedido: <strong>${it.qty_solicitado}</strong></div>
-            <div style="font-size:12px;">Aprovar:
-              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id}" value="${it.qty_solicitado}" min="0" step="0.5">
+            <div style="font-size:12px;color:var(--muted);flex-shrink:0;">Pedido: <strong>${it.qty_solicitado}</strong></div>
+            <div style="font-size:12px;flex-shrink:0;display:flex;align-items:center;gap:4px;">Aprovar:
+              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id}" value="${it.qty_solicitado}" min="0" step="0.5" style="width:64px;">
             </div>
           </div>
           <div id="alm-price-${i}" class="alm-price-results" style="display:block;">
@@ -3844,15 +3844,15 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   function almRenderPriceResult(r, compact, qty) {
     const isBusca = r.tipo === 'busca';
     const cartUrl = almCartUrl(r, qty || 1);
-    return `<div style="display:flex;align-items:center;gap:8px;padding:${compact?'5px':'7px'} 0;border-bottom:1px solid #ede9e3;">
-      <span style="font-size:14px;">${platIcon[r.plataforma]||'🔗'}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;" title="${(r.nome||'').replace(/"/g,'&quot;')}">${r.nome||r.plataforma}</div>
-        <div style="font-size:10px;color:var(--muted);">${r.plataforma}${!isBusca && r.match > 0 ? ` · <span style="color:${matchColor(r.match)};font-weight:700;">${r.match}% — ${matchLabel(r.match)}</span>` : ''}</div>
+    return `<div style="display:flex;align-items:center;gap:8px;padding:${compact?'5px':'7px'} 0;border-bottom:1px solid #ede9e3;flex-wrap:wrap;">
+      <span style="font-size:14px;flex-shrink:0;">${platIcon[r.plataforma]||'🔗'}</span>
+      <div style="flex:1;min-width:120px;overflow:hidden;">
+        <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(r.nome||'').replace(/"/g,'&quot;')}">${r.nome||r.plataforma}</div>
+        <div style="font-size:10px;color:var(--muted);">${r.plataforma}${!isBusca && r.match > 0 ? ` · <span style="color:${matchColor(r.match)};font-weight:700;">${r.match}%</span>` : ''}</div>
       </div>
-      <div style="font-size:${compact?'13':'14'}px;font-weight:700;white-space:nowrap;color:${r.preco!=null?'#2d7a2d':'var(--muted)'};">${r.preco_fmt}</div>
+      <div style="font-size:${compact?'13':'14'}px;font-weight:700;white-space:nowrap;color:${r.preco!=null?'#2d7a2d':'var(--muted)'};;flex-shrink:0;">${r.preco_fmt}</div>
       <a href="${cartUrl}" target="_blank" rel="noopener"
-        style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;font-family:'DM Sans',sans-serif;">
+        style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;font-family:'DM Sans',sans-serif;flex-shrink:0;">
         ${almCartLabel(r)}
       </a>
     </div>`;

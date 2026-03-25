@@ -1097,6 +1097,17 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* graceful skip */ }
 
+    // Fallback: se ML não retornou produtos, adiciona link de busca
+    if (!results.some(r => r.plataforma === 'Mercado Livre')) {
+      results.push({
+        plataforma: 'Mercado Livre',
+        nome: `Buscar "${query}" no Mercado Livre`,
+        preco: null, preco_fmt: 'Ver no ML',
+        url_produto: `https://lista.mercadolivre.com.br/${encoded}`,
+        url_carrinho: null, item_id: null, match: 0, tipo: 'busca',
+      })
+    }
+
     // ── 2. Shopee Brasil (unofficial endpoint, real prices) ──
     try {
       const shopeeRes = await fetch(
@@ -1664,8 +1675,11 @@ Deno.serve(async (req) => {
   if (action === 'webauthn_register_verify') {
     const { credential, rp_id } = body as { credential: any; rp_id: string }
     if (!credential || !rp_id) return json({ error: 'Dados incompletos.' }, 400)
-    const { data: ch } = await sb.from('webauthn_challenges').select('*').eq('tipo', 'register')
-      .gt('expira_em', new Date().toISOString()).order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    // Clean expired first
+    await sb.from('webauthn_challenges').delete().lt('expira_em', new Date().toISOString())
+    const { data: chs } = await sb.from('webauthn_challenges').select('*').eq('tipo', 'register')
+      .gt('expira_em', new Date().toISOString()).order('criado_em', { ascending: false }).limit(1)
+    const ch = chs?.[0] ?? null
     if (!ch) return json({ error: 'Challenge expirado ou inválido.' }, 400)
     await sb.from('webauthn_challenges').delete().eq('id', ch.id)
     try {
