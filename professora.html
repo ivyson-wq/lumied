@@ -664,9 +664,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   async function callApi(body) {
     const token = getToken();
-    const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-    const r = await fetch(DIPLOMAS_API, { method: 'POST', headers, body: JSON.stringify(body) });
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
+    if (token) headers['X-Prof-Token'] = token;
+    const r = await fetch(DIPLOMAS_API, { method: 'POST', headers, body: JSON.stringify({ ...body, _prof_token: token }) });
     const d = await r.json();
     if (d.error === 'Sessão inválida ou expirada. Faça login novamente.') { doLogout(); }
     return d;
@@ -1253,7 +1253,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   });
 
   // ── PICKUP QUEUE ────────────────────────────────────────
-  let SERIES_DISPONIVEIS = ['Berçário','Maternal I','Maternal II','Jardim I','Jardim II','Pré-Escola','1º Ano','2º Ano','3º Ano','4º Ano','5º Ano'];
+  let SERIES_DISPONIVEIS = ['Bear Care','Toddler','Nursery','Junior Kindergarten (JK)','Senior Kindergarten (SK)','Year 1','Year 2','Year 3'];
   let pickupSeriesSelecionadas = [];
   let pickupPollInt = null;
   let pickupUltimaFila = [];

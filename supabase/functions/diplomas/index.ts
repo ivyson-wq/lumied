@@ -168,7 +168,10 @@ Deno.serve(async (req) => {
 
   const body = await req.json()
   const { action } = body
-  const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
+  // Token: usa _prof_token/_token do body se presente (para evitar conflito com JWT Verification do Supabase),
+  // senão extrai do Authorization header
+  const authHeader = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
+  const token = body._prof_token || body._token || authHeader
 
   // ━━ PUBLIC ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
