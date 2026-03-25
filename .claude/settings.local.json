@@ -12,7 +12,9 @@
       "Bash(grep -n calendar C:UsersIvy_lProjectsmaple-bear-rssupabasefunctions/*.ts)",
       "Bash(grep -o functions/v1/[a-z-]* C:UsersIvy_lProjectsmaple-bear-rs/*.html)",
       "Bash(grep:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(curl -s -X POST \"https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/boletos-list\" -H \"Content-Type: application/json\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE\" -d '{\"\"\"\"cpf\"\"\"\":\"\"\"\"00151732329\"\"\"\"}')",
+      "Bash(npx supabase:*)"
     ]
   }
 }
