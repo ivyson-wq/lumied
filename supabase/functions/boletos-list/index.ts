@@ -32,23 +32,34 @@ async function interFetch(
 }
 
 async function getInterToken(): Promise<string> {
-  const body = new URLSearchParams({
-    client_id: Deno.env.get('INTER_CLIENT_ID')!,
-    client_secret: Deno.env.get('INTER_CLIENT_SECRET')!,
-    scope: 'boleto-cobranca.read',
-    grant_type: 'client_credentials',
-  })
+  const clientId = Deno.env.get('INTER_CLIENT_ID')!
+  const clientSecret = Deno.env.get('INTER_CLIENT_SECRET')!
 
-  const res = await interFetch('/oauth/v2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  })
+  // Tenta múltiplos scopes (API do Inter varia o scope aceito)
+  const scopes = [
+    'boleto-cobranca.read',
+    'cobranca.boleto.read cobranca.boleto.pdf',
+    'boleto-cobranca.read boleto-cobranca.write',
+    'cobranca.read',
+  ]
 
-  const text = await res.text()
-  console.log('Inter OAuth status:', res.status, '| body:', text.slice(0, 200))
-  if (!res.ok) throw new Error(`Inter auth falhou: ${res.status} | ${text}`)
-  return (JSON.parse(text) as { access_token: string }).access_token
+  for (const scope of scopes) {
+    console.log('Tentando scope:', scope)
+    const body = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: 'client_credentials' })
+    const res = await interFetch('/oauth/v2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    const text = await res.text()
+    console.log('Inter OAuth status:', res.status, '| scope:', scope, '| body:', text.slice(0, 200))
+    if (res.ok) {
+      console.log('Scope aceito:', scope)
+      return (JSON.parse(text) as { access_token: string }).access_token
+    }
+  }
+
+  throw new Error('Nenhum scope aceito pelo Inter. Verifique client_id/client_secret e permissões do app no portal do Inter.')
 }
 
 async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> {
@@ -58,21 +69,27 @@ async function listarCobrancasInter(token: string, cpf: string): Promise<any[]> 
     .toISOString()
     .slice(0, 10)
 
-  const params = new URLSearchParams({
-    dataInicial,
-    dataFinal,
-    filtrarPor: 'VENCIMENTO',
-    cpfCnpjPagador: cpf,
-    itensPorPagina: '50',
-    paginaAtual: '0',
-  })
+  // Tenta com x-conta-corrente se disponível
+  const conta = Deno.env.get('INTER_CONTA')
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+  if (conta) headers['x-conta-corrente'] = conta
 
-  const res = await interFetch(`/cobranca/v3/cobrancas?${params}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'x-conta-corrente': Deno.env.get('INTER_CONTA')!,
-    },
-  })
+  // Tenta diferentes formatos de query (API Inter v3)
+  const queryVariants = [
+    `cpfCnpjPagador=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&filtrarPor=VENCIMENTO&itensPorPagina=50&paginaAtual=0`,
+    `cpfCnpj=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&itensPorPagina=100`,
+  ]
+
+  let res: Awaited<ReturnType<typeof interFetch>> | null = null
+  let lastText = ''
+  for (const q of queryVariants) {
+    console.log('Tentando query:', `/cobranca/v3/cobrancas?${q}`)
+    const attempt = await interFetch(`/cobranca/v3/cobrancas?${q}`, { headers })
+    lastText = await attempt.text()
+    if (attempt.ok) { res = { ...attempt, text: () => Promise.resolve(lastText), json: () => Promise.resolve(JSON.parse(lastText)) }; break }
+    console.log('Query falhou:', attempt.status, lastText.slice(0, 200))
+  }
+  if (!res) res = { ok: false, status: 400, text: () => Promise.resolve(lastText), json: () => Promise.resolve({}) }
 
   const text = await res.text()
   if (!res.ok) throw new Error(`Inter listagem falhou: ${res.status} | ${text}`)
