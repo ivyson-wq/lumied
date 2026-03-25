@@ -1183,7 +1183,7 @@ Deno.serve(async (req) => {
           }
         }
       }
-      fontes['Zoom'] = { status: 'ok', produtos: results.filter(r => r.plataforma === 'Zoom' && r.tipo === 'produto').length }
+        fontes['Zoom'] = { status: 'ok', produtos: results.filter(r => r.plataforma === 'Zoom' && r.tipo === 'produto').length }
       } else {
         fontes['Zoom'] = { status: 'erro', produtos: 0, erro: `HTTP ${zoomRes.status}` }
       }
