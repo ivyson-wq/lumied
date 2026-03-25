@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="/webauthn-client.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -302,6 +303,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="gerente@exemplo.com" autocomplete="email"></div>
     <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar no Painel</button>
+    <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;">🔐 Entrar com biometria</button>
     <div id="loginError">E-mail ou senha incorretos.</div>
   </div>
 </div>
@@ -325,14 +327,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
       <a class="nav-item" href="#" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
       <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> PDI</a>
-      <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Almox. Dashboard</a>
-      <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Almox. Pendentes</a>
-      <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Almox. Requisições</a>
-      <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Almox. Insumos</a>
-      <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Almox. Turmas</a>
-      <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Almox. Orçamentos</a>
-      <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Almox. Relatório</a>
-      <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Almox. Compras</a>
+      <div class="sb-label">Almoxarifado</div>
+      <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
+      <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
+      <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
+      <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
+      <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Turmas</a>
+      <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
+      <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
+      <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
+      <div class="sb-label">Infraestrutura</div>
       <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
@@ -346,6 +350,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Portal Secretaria</a>
     </nav>
     <div class="sb-footer">
+      <button id="bioRegBtn" onclick="registerBiometric()" style="display:none;width:100%;padding:6px;background:rgba(26,107,181,.1);border:1px solid rgba(26,107,181,.3);border-radius:7px;color:#1a6bb5;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;margin-bottom:8px;">🔐 Ativar biometria</button>
       <div class="user-info"><strong id="userNome">Gerente</strong><span id="userEmail"></span></div>
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
     </div>
@@ -1470,6 +1475,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     loadData();
     loadNotificacoes();
     loadSidebarLogo();
+    showBioRegisterButton();
     showExportButtons(true);
     // Poll a cada 15 segundos
     pollInterval = setInterval(()=>{
@@ -4833,6 +4839,55 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     await api({ action: 'notif_marcar_todas', portal: 'gerente', email: currentGerente.email });
     notifData.forEach(n => n.lida = true);
     renderNotif();
+  }
+
+  // ── WEBAUTHN / BIOMETRIA ─────────────────────────────
+  (async function() {
+    if (!await WebAuthnClient.isPlatformAvailable()) return;
+    const bioEmail = localStorage.getItem('mb_bio_email');
+    if (bioEmail) {
+      document.getElementById('bioLoginBtn').style.display = 'block';
+      document.getElementById('loginEmail').value = bioEmail;
+    }
+  })();
+  function showBioRegisterButton() {
+    WebAuthnClient.isPlatformAvailable().then(ok => {
+      if (!ok) return;
+      if (!localStorage.getItem('mb_bio_email')) document.getElementById('bioRegBtn').style.display = 'block';
+    });
+  }
+  async function registerBiometric() {
+    const btn = document.getElementById('bioRegBtn');
+    btn.disabled = true; btn.textContent = 'Aguarde…';
+    try {
+      const ch = await api({ action:'webauthn_register_challenge', rp_id: location.hostname });
+      if (ch.error) { showToast(ch.error,'error'); return; }
+      const credential = await WebAuthnClient.register(ch);
+      const r = await api({ action:'webauthn_register_verify', credential, rp_id: location.hostname });
+      if (r.error) { showToast(r.error,'error'); return; }
+      localStorage.setItem('mb_bio_email', currentGerente.email);
+      btn.style.display = 'none';
+      showToast('Biometria ativada!','success');
+    } catch(e) { if (e.name !== 'NotAllowedError') showToast('Erro.','error'); }
+    finally { btn.disabled = false; btn.textContent = '🔐 Ativar biometria'; }
+  }
+  async function doBioLogin() {
+    const btn = document.getElementById('bioLoginBtn');
+    const errEl = document.getElementById('loginError');
+    btn.disabled = true; btn.textContent = 'Verificando…'; errEl.style.display = 'none';
+    try {
+      const email = localStorage.getItem('mb_bio_email');
+      const ch = await api({ action:'webauthn_login_challenge', email, rp_id: location.hostname });
+      if (ch.error) { errEl.textContent = ch.error; errEl.style.display = 'block'; return; }
+      const assertion = await WebAuthnClient.authenticate(ch);
+      const d = await api({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname });
+      if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+      localStorage.setItem('mb_token', d.token);
+      localStorage.setItem('mb_nome', d.nome);
+      localStorage.setItem('mb_email', d.email);
+      showApp(d);
+    } catch(e) { if (e.name !== 'NotAllowedError') { errEl.textContent = 'Erro.'; errEl.style.display = 'block'; } }
+    finally { btn.disabled = false; btn.textContent = '🔐 Entrar com biometria'; }
   }
 
   checkSession();
