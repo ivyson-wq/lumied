@@ -652,6 +652,23 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
+  // ── TOAST NOTIFICATIONS ────────────────────────────────
+  function showToast(msg, type = 'info', duration = 4000) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;max-width:380px;';
+      document.body.appendChild(container);
+    }
+    const colors = { success:'#2d7a3a', error:'#C8102E', info:'#1a6bb5', warning:'#d4830a' };
+    const toast = document.createElement('div');
+    toast.style.cssText = `background:${colors[type]||colors.info};color:#fff;padding:12px 18px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:slideIn .3s ease;line-height:1.4;`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(() => toast.remove(), 300); }, duration);
+  }
+
   let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
   let resendCooldown = null;
 
@@ -1371,7 +1388,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
   async function confirmarAusencia() {
     if (!ausenciaPendente || !currentUser) return;
     if (!ausenciaPendente.nomeCrianca) {
-      alert('Não foi possível identificar o nome da criança. Certifique-se de ter feito ao menos uma solicitação.');
+      showToast('Não foi possível identificar o nome da criança. Certifique-se de ter feito ao menos uma solicitação.', 'warning', 5000);
       fecharAusenciaModal();
       return;
     }
@@ -1787,7 +1804,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     document.getElementById('assuntoSection').style.display = 'none';
     document.getElementById('reuniaoAssunto').value = '';
     await carregarMinhasReunioes();
-    alert('✅ Reunião agendada com sucesso! Você receberá um convite no e-mail.');
+    showToast('Reunião agendada com sucesso! Você receberá um convite no e-mail.', 'success', 5000);
   }
 
   async function cancelarReuniao(id) {
@@ -1843,7 +1860,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 
   document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    if (!currentUser) { alert('Faça login para enviar.'); return; }
+    if (!currentUser) { showToast('Faça login para enviar.', 'warning'); return; }
 
     if (!modoAtual) {
       document.getElementById('modoErr').classList.add('show');
@@ -1886,7 +1903,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
         for (const [id, sel] of atividadesSelecionadas) {
           if (!sel) {
             const a = todasAtividades.find(x=>x.id===id);
-            alert(`Escolha o horário para a atividade "${a?.nome||''}".`);
+            showToast(`Escolha o horário para a atividade "${a?.nome||''}".`, 'warning');
             btn.disabled=false; btn.textContent='Confirmar Inscrição nas Atividades'; return;
           }
         }
@@ -1908,7 +1925,7 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
       document.getElementById('successPanel').style.display='block';
       carregarAgenda();
     } catch(err) {
-      alert('Erro ao enviar. Tente novamente.\n'+err.message);
+      showToast('Erro ao enviar. Tente novamente.', 'error', 5000);
       btn.disabled=false;
       btn.textContent = modoAtual==='turno' ? 'Enviar Solicitação de Turno' : 'Confirmar Inscrição nas Atividades';
     }

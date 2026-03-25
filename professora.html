@@ -535,7 +535,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <!-- Tab: Buscar -->
     <div id="almTabBuscar">
       <div style="position:relative;margin-bottom:12px;">
-        <input type="text" id="almSearchInput" placeholder="Buscar insumo…" oninput="almFiltrarCatalogo()"
+        <input type="text" id="almSearchInput" placeholder="Buscar insumo…" oninput="debouncedAlmSearch()"
           style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
       </div>
       <div id="almCatalogList" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:4px;"></div>
@@ -604,6 +604,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   let selectedFile = null;
   let selectedAtestFile = null;
   let rankingData = [];
+
+  // ── TOAST NOTIFICATIONS ────────────────────────────────
+  function showToast(msg, type = 'info', duration = 4000) {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;max-width:380px;';
+      document.body.appendChild(container);
+    }
+    const colors = { success:'#2d7a3a', error:'#C8102E', info:'#1a6bb5', warning:'#d4830a' };
+    const toast = document.createElement('div');
+    toast.style.cssText = `background:${colors[type]||colors.info};color:#fff;padding:12px 18px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:popIn .3s ease;line-height:1.4;`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(() => toast.remove(), 300); }, duration);
+  }
+
+  // ── DEBOUNCE ───────────────────────────────────────────
+  function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+  const debouncedAlmSearch = debounce(() => { if (typeof almFiltrarCatalogo === 'function') almFiltrarCatalogo(); });
 
   function getToken() { return localStorage.getItem('prof_token'); }
 
@@ -745,7 +766,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   // ── UPLOAD ────────────────────────────────────────────────
   function onFileSelected(e) {
     const file = e.target.files[0]; if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert('Arquivo deve ter no máximo 10MB.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast('Arquivo deve ter no máximo 10MB.', 'warning'); return; }
     selectedFile = file;
     const el = document.getElementById('fileName');
     el.textContent = '📎 ' + file.name; el.style.display = 'block';
@@ -806,7 +827,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   // ── ATESTADOS ─────────────────────────────────────────────
   function onAtestFileSelected(e) {
     const file = e.target.files[0]; if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert('Arquivo deve ter no máximo 10MB.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast('Arquivo deve ter no máximo 10MB.', 'warning'); return; }
     selectedAtestFile = file;
     const el = document.getElementById('atestFileName');
     el.textContent = '📎 ' + file.name; el.style.display = 'block';
@@ -1145,7 +1166,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const sel = document.getElementById(`mst_${metaId}`);
     if (!rng || !sel) return;
     const d = await callApi({ action: 'pdi_meta_progresso', meta_id: metaId, progressao_pct: parseInt(rng.value), status: sel.value });
-    if (d.error) { alert('Erro: ' + d.error); return; }
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     const bar = document.getElementById(`bar_${metaId}`);
     if (bar) bar.style.width = rng.value + '%';
     await loadMeuPdi();
@@ -1533,7 +1554,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         .filter(it => it.qty > 0);
 
       if (!data.length) {
-        alert('Nenhum item encontrado na planilha. Verifique se a linha 1 é o cabeçalho e os dados estão a partir da linha 2.');
+        showToast('Nenhum item encontrado na planilha. Verifique se a linha 1 é o cabeçalho.', 'warning', 5000);
         return;
       }
 
@@ -1569,7 +1590,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       ).join('');
       resultEl.style.display = 'block';
     } catch(e) {
-      alert('Erro ao ler o arquivo. Verifique se é um arquivo Excel (.xlsx/.xls) ou CSV válido.');
+      showToast('Erro ao ler o arquivo. Verifique se é um arquivo Excel válido.', 'error');
     }
   }
 
