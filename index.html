@@ -1451,15 +1451,15 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
     const { data: { session } } = await sb.auth.getSession();
     const token = session?.access_token || SUPABASE_ANON;
     const email = session?.user?.email || currentUser?.email || null;
-    const r = await fetch(DIPLOMAS, {
+    const payload = JSON.stringify({ ...body, _email: email });
+    const makeReq = (tk) => fetch(DIPLOMAS, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON,
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({ ...body, _email: email })
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + tk },
+      body: payload
     });
+    let r = await makeReq(token);
+    // Fallback: se sessão expirou (401), tenta com anon key
+    if (r.status === 401 && token !== SUPABASE_ANON) r = await makeReq(SUPABASE_ANON);
     return r.json();
   }
 
