@@ -1065,6 +1065,67 @@ Deno.serve(async (req) => {
     }
     const results: PriceResult[] = []
 
+    // ── 0. Zoom.com.br (comparador de preços — scraping) ─────
+    try {
+      const zoomRes = await fetch(
+        `https://www.zoom.com.br/search?q=${encoded}`,
+        { headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
+      )
+      if (zoomRes.ok) {
+        const html = await zoomRes.text()
+        // Extract product cards via regex
+        const cardRegex = /data-testid="product-card"[\s\S]*?<\/a>/g
+        const titleRegex = /class="[^"]*ProductCard_ProductCard_Name[^"]*"[^>]*>([^<]+)/
+        const priceRegex = /R\$\s*([\d]+[.,][\d]{2})/
+        const hrefRegex = /href="(\/[^"]+)"/
+        let cm
+        let zoomCount = 0
+        while ((cm = cardRegex.exec(html)) !== null && zoomCount < 5) {
+          const block = cm[0]
+          const tMatch = titleRegex.exec(block)
+          const pMatch = priceRegex.exec(block)
+          const hMatch = hrefRegex.exec(block)
+          if (tMatch && pMatch) {
+            const nome = tMatch[1].trim()
+            const preco = parseFloat(pMatch[1].replace('.','').replace(',','.'))
+            const m = matchPct(query, nome)
+            results.push({
+              plataforma: 'Zoom',
+              nome,
+              preco: isNaN(preco) ? null : preco,
+              preco_fmt: !isNaN(preco) ? `R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—',
+              url_produto: hMatch ? `https://www.zoom.com.br${hMatch[1]}` : `https://www.zoom.com.br/search?q=${encoded}`,
+              url_carrinho: null,
+              item_id: null,
+              match: m,
+              tipo: 'produto',
+            })
+            zoomCount++
+          }
+        }
+        // Fallback: parse simple price pattern if product cards not found
+        if (zoomCount === 0) {
+          const simplePrices = html.match(/R\$\s*([\d]+[.,][\d]{2})/g)
+          if (simplePrices?.length) {
+            const p = parseFloat(simplePrices[0].replace('R$','').trim().replace('.','').replace(',','.'))
+            if (!isNaN(p) && p > 0) {
+              results.push({
+                plataforma: 'Zoom', nome: `${query} (melhor preço Zoom)`, preco: p,
+                preco_fmt: `R$ ${p.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                url_produto: `https://www.zoom.com.br/search?q=${encoded}`,
+                url_carrinho: null, item_id: null, match: 70, tipo: 'produto',
+              })
+            }
+          }
+        }
+      }
+    } catch (_) { /* graceful skip */ }
+
+    // Fallback Zoom
+    if (!results.some(r => r.plataforma === 'Zoom')) {
+      results.push({ plataforma: 'Zoom', nome: `Buscar "${query}" no Zoom`, preco: null, preco_fmt: 'Ver no Zoom', url_produto: `https://www.zoom.com.br/search?q=${encoded}`, url_carrinho: null, item_id: null, match: 0, tipo: 'busca' })
+    }
+
     // ── 1. Mercado Livre (free public API, real prices) ──────
     try {
       const mlRes = await fetch(
@@ -1230,7 +1291,7 @@ Deno.serve(async (req) => {
 
   // ── ATUALIZAÇÃO AUTOMÁTICA DE PREÇOS ────────────────────
   if (action === 'alm_atualizar_precos') {
-    // Busca todos os insumos ativos e atualiza preços
+    // Atualiza preços via Zoom.com.br (funciona server-side)
     const { data: insumos } = await sb.from('alm_insumos').select('id, nome, unidade, preco').eq('ativo', true)
     if (!insumos?.length) return json({ ok: true, atualizados: 0 })
 
@@ -1239,12 +1300,27 @@ Deno.serve(async (req) => {
       try {
         const query = insumo.nome.trim()
         const encoded = encodeURIComponent(query)
-
-        // Busca em ML, Reval
         let melhorPreco: number | null = null
-        let melhorFonte = ''
 
-        // ML
+        // Zoom.com.br (comparador de preços — funciona server-side)
+        try {
+          const zRes = await fetch(`https://www.zoom.com.br/search?q=${encoded}`, {
+            headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+          })
+          if (zRes.ok) {
+            const html = await zRes.text()
+            // Extract prices from Zoom HTML
+            const prices = html.match(/R\$\s*([\d]+[.,][\d]{2})/g) || []
+            for (const ps of prices.slice(0, 10)) {
+              const p = parseFloat(ps.replace('R$','').trim().replace('.','').replace(',','.'))
+              if (!isNaN(p) && p > 1 && p < 10000) {
+                if (melhorPreco === null || p < melhorPreco) melhorPreco = p
+              }
+            }
+          }
+        } catch (_) {}
+
+        // ML (tentativa — pode falhar com 403)
         try {
           const mlRes = await fetch(`https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&limit=3&sort=price_asc`, { headers: { 'Accept': 'application/json' } })
           if (mlRes.ok) {
@@ -1252,44 +1328,7 @@ Deno.serve(async (req) => {
             for (const item of (mlData.results ?? []).slice(0, 3)) {
               const m = matchPct(query, item.title ?? '')
               if (m >= 70 && item.price != null) {
-                if (melhorPreco === null || item.price < melhorPreco) {
-                  melhorPreco = item.price; melhorFonte = 'ML'
-                }
-              }
-            }
-          }
-        } catch (_) {}
-
-        // Reval
-        try {
-          const revRes = await fetch(`https://www.rfreval.com.br/busca?q=${encoded}`, { headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0' } })
-          if (revRes.ok) {
-            const html = await revRes.text()
-            const nameRx = /class="[^"]*product-name[^"]*"[^>]*>([^<]+)/g
-            const priceRx = /class="[^"]*product-price[^"]*"[^>]*>[^R]*R\$\s*([\d.,]+)/g
-            let nm, pr
-            while ((nm = nameRx.exec(html)) && (pr = priceRx.exec(html))) {
-              const m = matchPct(query, nm[1].trim())
-              const p = parseFloat(pr[1].replace('.','').replace(',','.'))
-              if (m >= 70 && !isNaN(p)) {
-                if (melhorPreco === null || p < melhorPreco) { melhorPreco = p; melhorFonte = 'Reval' }
-              }
-            }
-          }
-        } catch (_) {}
-
-        // Shopee
-        try {
-          const shRes = await fetch(`https://shopee.com.br/api/v4/search/search_items?keyword=${encoded}&limit=3&by=price&order=asc`, { headers: { 'Accept': 'application/json', 'Referer': 'https://shopee.com.br/', 'User-Agent': 'Mozilla/5.0' } })
-          if (shRes.ok) {
-            const shData = await shRes.json()
-            for (const raw of (shData?.items ?? []).slice(0, 3)) {
-              const it = raw.item_basic ?? raw
-              const p = (it.price_min ?? it.price ?? null)
-              const preco = p != null ? p / 100000 : null
-              const m = matchPct(query, it.name ?? '')
-              if (m >= 70 && preco != null) {
-                if (melhorPreco === null || preco < melhorPreco) { melhorPreco = preco; melhorFonte = 'Shopee' }
+                if (melhorPreco === null || item.price < melhorPreco) melhorPreco = item.price
               }
             }
           }
@@ -1300,9 +1339,8 @@ Deno.serve(async (req) => {
           atualizados++
         }
 
-        // Rate limiting — espera 500ms entre buscas
-        await new Promise(r => setTimeout(r, 500))
-      } catch (_) { /* skip item */ }
+        await new Promise(r => setTimeout(r, 300))
+      } catch (_) {}
     }
 
     return json({ ok: true, atualizados, total: insumos.length })
