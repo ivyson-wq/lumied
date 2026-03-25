@@ -118,9 +118,15 @@ async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<U
   }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
-  if (req.method !== 'POST') return new Response('Método não permitido', { status: 405 })
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
+  if (req.method !== 'POST') return new Response('Método não permitido', { status: 405, headers: corsHeaders })
 
   try {
     const body = await req.json()
@@ -146,7 +152,7 @@ Deno.serve(async (req) => {
 
     if (!cpfRaw || cpfRaw.length !== 11) {
       return new Response(JSON.stringify({ boletos: [] }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -162,9 +168,11 @@ Deno.serve(async (req) => {
       console.log('Total cobrancas retornadas:', cobrancas.length)
       if (cobrancas.length > 0) console.log('Estrutura cobranca[0]:', JSON.stringify(cobrancas[0]))
 
-      // Log primeiro boleto para entender a estrutura
+      // Log pagador para entender estrutura do CPF
       if (cobrancas.length > 0) {
-        console.log('Estrutura cobranca[0] COMPLETA:', JSON.stringify(cobrancas[0]).slice(0, 1000))
+        const sample = cobrancas[0].cobranca ?? cobrancas[0]
+        console.log('Pagador sample:', JSON.stringify(sample.pagador ?? {}).slice(0, 300))
+        console.log('Keys cobranca:', Object.keys(sample).join(','))
       }
 
       const insertErrors: string[] = []
@@ -172,6 +180,11 @@ Deno.serve(async (req) => {
         // API Inter v3 retorna { cobranca: {...}, boleto: {...}, pix: {...} }
         const cob = raw.cobranca ?? raw
         const bol = raw.boleto ?? {}
+
+        // Filtra apenas boletos do CPF solicitado
+        const pagadorCpf = (cob.pagador?.cpfCnpj ?? cob.cpfCnpjBeneficiario ?? '').replace(/\D/g, '')
+        if (pagadorCpf && pagadorCpf !== cpfRaw) continue
+
         const nossoNumero: string = cob.nossoNumero ?? bol.nossoNumero ?? cob.seuNumero ?? ''
         const codigoSolicitacao: string = cob.codigoSolicitacao ?? ''
         const situacao: string = cob.situacao ?? 'EMITIDO'
@@ -236,7 +249,7 @@ Deno.serve(async (req) => {
         .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfRaw}`)
         .order('vencimento', { ascending: false })
       return new Response(JSON.stringify({ boletos: cached ?? [] }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -249,13 +262,13 @@ Deno.serve(async (req) => {
     if (dbError) throw new Error(dbError.message)
 
     return new Response(JSON.stringify({ boletos: boletos ?? [] }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
     console.error('Erro em boletos-list:', err)
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
