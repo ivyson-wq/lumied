@@ -42,11 +42,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .logout-btn{padding:7px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:7px;color:rgba(255,255,255,.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;}
 .logout-btn:hover{background:rgba(255,255,255,.14);color:#fff;}
 
-.content{max-width:960px;margin:0 auto;padding:32px 24px 64px;}
+.content{max-width:1100px;margin:0 auto;padding:32px 24px 64px;}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
-.stat-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:22px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);position:relative;overflow:hidden;}
+.stat-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:22px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08);}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac,var(--red));border-radius:14px 14px 0 0;}
 .stat-card[data-c="pts"]{--ac:var(--gold);}
 .stat-card[data-c="rank"]{--ac:var(--blue);}
@@ -76,7 +77,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .me-badge{font-size:10px;font-weight:600;background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:100px;border:1px solid rgba(200,16,46,.2);}
 
 /* UPLOAD ZONE */
-.upload-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:32px;}
+.upload-card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:32px;transition:box-shadow .2s;}
+.upload-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);}
 .upload-card h3{font-family:'Lora',serif;font-size:15px;font-weight:600;margin-bottom:18px;}
 .ff{margin-bottom:14px;}
 .ff label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;}
@@ -247,6 +249,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .pickup-btn:disabled{opacity:.6;cursor:not-allowed;}
 .series-chip{display:inline-block;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:all .15s;}
 .series-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+/* DESKTOP SIDEBAR */
+.prof-sidebar{display:none;position:fixed;top:60px;left:0;width:220px;height:calc(100vh - 60px);background:#1c1712;overflow-y:auto;z-index:100;flex-direction:column;padding:16px 0;}
+.prof-sidebar .ps-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:rgba(255,255,255,.6);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:none;background:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif;}
+.prof-sidebar .ps-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+.prof-sidebar .ps-item.active{background:rgba(200,16,46,.9);color:#fff;}
+.prof-sidebar .ps-icon{font-size:16px;width:20px;text-align:center;}
+
 @media(max-width:640px){
   .stats-row{grid-template-columns:1fr 1fr;}
   .stat-card:first-child{grid-column:1 / -1;}
@@ -255,6 +264,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   .comp-item{grid-template-columns:1fr 22px 22px;}.comp-item .comp-label{grid-column:1/-1;}
   .pickup-card{flex-wrap:wrap;}
   #almModal > div > div[style*="grid-template-columns"]{grid-template-columns:1fr !important;}
+}
+@media(min-width:960px){
+  .prof-bnav{display:none !important;}
+  .has-prof-bnav{padding-bottom:0 !important;}
+  .prof-sidebar{display:flex !important;}
+  .content{margin-left:220px;max-width:none;padding:32px 40px 64px;}
 }
 </style>
 </head>
@@ -294,6 +309,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div class="notif-header">Notificações <button onclick="marcarTodasLidas()">Marcar todas como lidas</button></div>
       <div id="notifList"><div class="notif-empty">Nenhuma notificação.</div></div>
     </div>
+  </div>
+
+  <div class="prof-sidebar" id="profSidebar">
+    <button class="ps-item active" onclick="switchProfPage('fila',this)" data-page="fila"><span class="ps-icon">🚗</span> Fila de Retirada</button>
+    <button class="ps-item" onclick="switchProfPage('diplomas',this)" data-page="diplomas"><span class="ps-icon">🏆</span> Diplomas & Ranking</button>
+    <button class="ps-item" onclick="switchProfPage('pdi',this)" data-page="pdi"><span class="ps-icon">📈</span> Annual Growth Plan</button>
+    <button class="ps-item" onclick="switchProfPage('almox',this)" data-page="almox"><span class="ps-icon">📦</span> Materiais</button>
+    <button class="ps-item" onclick="switchProfPage('atestados',this)" data-page="atestados"><span class="ps-icon">🏥</span> Atestados</button>
+    <button class="ps-item" onclick="switchProfPage('manut',this)" data-page="manut"><span class="ps-icon">🔧</span> Manutenção</button>
+    <button class="ps-item" onclick="switchProfPage('achados',this)" data-page="achados"><span class="ps-icon">🔍</span> Achados & Perdidos</button>
   </div>
 
   <div class="greeting-bar" id="greetingBar">
@@ -877,6 +902,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (el) el.classList.add('active');
     document.querySelectorAll('.pbnav-item').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
+    document.querySelectorAll('.ps-item').forEach(b => b.classList.toggle('active', b.dataset.page === page));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
