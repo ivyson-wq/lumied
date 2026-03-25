@@ -1182,10 +1182,9 @@ Deno.serve(async (req) => {
             }
           }
         }
-      }
         fontes['Zoom'] = { status: 'ok', produtos: results.filter(r => r.plataforma === 'Zoom' && r.tipo === 'produto').length }
       } else {
-        fontes['Zoom'] = { status: 'erro', produtos: 0, erro: `HTTP ${zoomRes.status}` }
+        fontes['Zoom'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${zoomRes.status}` }
       }
     } catch (e) { fontes['Zoom'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
