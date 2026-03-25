@@ -112,8 +112,8 @@ serve(async (req: Request) => {
 
   // Logout
   if (action === "logout") {
-    const token = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (token) await admin.from("gerente_sessoes").delete().eq("token", token);
+    const logoutToken = (body._token as string) || req.headers.get("authorization")?.replace("Bearer ", "");
+    if (logoutToken) await admin.from("gerente_sessoes").delete().eq("token", logoutToken);
     return ok({ success: true });
   }
 
@@ -249,7 +249,10 @@ serve(async (req: Request) => {
   // ════════════════════════════════════════════════════════════
   //  AÇÕES AUTENTICADAS
   // ════════════════════════════════════════════════════════════
-  const token = req.headers.get("authorization")?.replace("Bearer ", "") ?? null;
+  // Token: prioriza _token do body (evita conflito com JWT Verification do Supabase),
+  // fallback para Authorization header
+  const authHeader = req.headers.get("authorization")?.replace("Bearer ", "") ?? null;
+  const token = (body._token as string) || authHeader;
   const gerente = await validarSessao(admin, token);
   if (!gerente) return err("Sessão inválida ou expirada. Faça login novamente.", 401);
 

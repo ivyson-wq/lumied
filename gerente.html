@@ -36,6 +36,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 /* APP */
 #appShell{display:none;min-height:100vh;}
 .sidebar{position:fixed;top:0;left:0;width:230px;height:100vh;background:var(--sb);display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
+.hamburger{display:none;align-items:center;justify-content:center;width:36px;height:36px;background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:18px;color:var(--text);margin-right:10px;flex-shrink:0;}
 .sb-brand{padding:26px 20px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
 .sb-logo-img{max-height:40px;max-width:160px;object-fit:contain;display:none;margin-bottom:6px;}
 .sb-leaf{font-size:20px;}.sb-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;margin-top:6px;line-height:1.2;}
@@ -205,7 +206,17 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   #printArea{position:fixed;top:0;left:0;width:100%;z-index:9999;}
 }
 @media(max-width:900px){.sidebar{width:200px;}.main{margin-left:200px;}.two-col{grid-template-columns:1fr;}}
-@media(max-width:640px){.sidebar{display:none;}.main{margin-left:0;}.content{padding:18px;}.topbar{padding:14px 18px;}.stats-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:640px){
+  .sidebar{transform:translateX(-100%);transition:transform .25s ease;width:260px;position:fixed;top:0;left:0;height:100vh;z-index:300;}
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:299;}
+  .sidebar-overlay.open{display:block;}
+  .main{margin-left:0;}
+  .content{padding:18px;}
+  .topbar{padding:14px 18px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .hamburger{display:flex!important;}
+}
 /* ALMOXARIFADO */
 .alm-tab{padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text);}
 .alm-tab:hover{border-color:var(--red);color:var(--red);}
@@ -322,8 +333,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     </div>
   </div>
 
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
   <div class="main">
     <div class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
       <h2 id="topbarTitle">Dashboard de Turnos</h2>
       <div style="display:flex;align-items:center;gap:10px;">
         <div class="live-badge" id="liveBadge"><div class="live-dot"></div>Atualizando…</div>
@@ -1280,11 +1293,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   document.addEventListener('keydown', e => { if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') doLogin(); });
 
   // ── PANELS ────────────────────────────────────────────
+  function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+  }
+  function closeSidebar() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+  }
+
   function showPanel(id, el) {
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('panel'+id[0].toUpperCase()+id.slice(1)).classList.add('active');
     if(el) el.classList.add('active');
+    closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
     const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',almoxarifado:'Almoxarifado — Gestão de Insumos',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',cadastro:'Cadastrar Família'};
