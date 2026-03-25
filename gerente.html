@@ -5121,7 +5121,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         const isSunday = dow === 0;
         let bg = 'transparent';
         if (evts.length) bg = evts[0].cor || '#FFD54F';
-        html += `<div style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:${isToday?'800':'500'};border-radius:4px;background:${bg};color:${bg!=='transparent'?'#333':isSunday?'#e53e3e':'#333'};${isToday?'outline:2px solid var(--red);':''}" title="${evts.map(e=>e.titulo).join(', ')}">${d}</div>`;
+        const clickEvt = evts.length ? `onclick="calDiaClick('${ds}')"` : '';
+        html += `<div ${clickEvt} style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:${isToday?'800':'500'};border-radius:4px;background:${bg};color:${bg!=='transparent'?'#333':isSunday?'#e53e3e':'#333'};${isToday?'outline:2px solid var(--red);':''}${evts.length?'cursor:pointer;':''}" title="${evts.map(e=>e.titulo).join(', ')}">${d}</div>`;
       }
       html += '</div>';
       // Events list for this month
@@ -5146,6 +5147,43 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       html += '</div>';
     }
     document.getElementById('calAnualGrid').innerHTML = html;
+  }
+
+  function calDiaClick(ds) {
+    const evts = calEventos.filter(e => e.data_inicio <= ds && (e.data_fim || e.data_inicio) >= ds);
+    if (!evts.length) return;
+    const dt = new Date(ds + 'T12:00:00');
+    const diaFmt = dt.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:480px;width:100%;padding:28px;max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">${ds.split('-')[2]}</div>
+          <div style="font-size:12px;color:var(--muted);text-transform:capitalize;">${diaFmt}</div>
+        </div>
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">x</button>
+      </div>
+      ${evts.map(e => {
+        const tipoLabel = CAL_TIPOS[e.tipo] || e.tipo;
+        return `<div style="border-left:4px solid ${e.cor||'#C8102E'};padding:12px 16px;margin-bottom:10px;background:#fdfbf8;border-radius:0 10px 10px 0;">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${esc(e.titulo)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">${tipoLabel}</div>
+          ${e.descricao ? `<div style="font-size:13px;color:#555;line-height:1.5;margin-bottom:8px;">${esc(e.descricao)}</div>` : ''}
+          <div style="font-size:11px;color:var(--muted);">
+            ${e.data_inicio === e.data_fim || !e.data_fim ? new Date(e.data_inicio+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}) : new Date(e.data_inicio+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) + ' a ' + new Date(e.data_fim+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}
+            ${e.visivel_pais ? ' · Pais' : ''}${e.visivel_professoras ? ' · Professoras' : ''}
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button onclick="this.closest('div[style*=fixed]').remove();editarEvento(${JSON.stringify(e).replace(/"/g,'&quot;')})" style="padding:4px 12px;background:none;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
+            <button onclick="this.closest('div[style*=fixed]').remove();excluirEvento('${e.id}')" style="padding:4px 12px;background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Excluir</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+    document.body.appendChild(overlay);
   }
 
   function editarEvento(e) {
