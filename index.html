@@ -475,9 +475,9 @@ body.has-bottomnav{padding-bottom:72px;}
     <div id="agendaConteudo"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div></div>
   </div>
 
-  <!-- ACHADOS E PERDIDOS -->
+  <!-- ACHADOS & PERDIDOS -->
   <div class="card" id="achadosCard" style="display:none;">
-    <div class="card-title" style="margin-bottom:12px;">🔍 Achados e Perdidos</div>
+    <div class="card-title" style="margin-bottom:12px;">🔍 Achados & Perdidos</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Itens encontrados na escola que ainda não foram retirados.</p>
     <div id="achadosPaisLista"></div>
   </div>
@@ -2030,8 +2030,8 @@ body.has-bottomnav{padding-bottom:72px;}
     const items = d.data || [];
     const card = document.getElementById('achadosCard');
     const el = document.getElementById('achadosPaisLista');
-    if (!items.length) { card.style.display = 'none'; return; }
     card.style.display = 'block';
+    if (!items.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhum item encontrado no momento.</div>'; return; }
     el.innerHTML = items.map(it => {
       const dt = new Date(it.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' });
       return `<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f0ece6;">
