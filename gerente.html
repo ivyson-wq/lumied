@@ -317,8 +317,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <h1>Maple Bear</h1><span>Painel do Gerente</span>
     </div>
     <nav class="sb-nav">
+      <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard Analytics</a>
       <div class="sb-label">Turnos 2026</div>
-      <a class="nav-item active" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
+      <a class="nav-item" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
       <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries</a>
       <div class="sb-label">Atividades Extraclasse</div>
       <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard Atividades</a>
@@ -341,7 +342,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
       <div class="sb-label">Escola</div>
       <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário Escolar</a>
-      <a class="nav-item" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard Analytics</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
@@ -364,7 +364,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <div class="topbar">
       <button class="hamburger" onclick="toggleSidebar()">☰</button>
       <span id="greetingTopbar" style="font-size:14px;font-weight:500;color:var(--muted);margin-right:auto;"></span>
-      <h2 id="topbarTitle">Dashboard de Turnos</h2>
+      <h2 id="topbarTitle">Dashboard Analytics</h2>
       <div style="display:flex;align-items:center;gap:10px;">
         <button style="position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()">🔔<span id="notifDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
         <div class="live-badge" id="liveBadge"><div class="live-dot"></div>Atualizando…</div>
@@ -389,7 +389,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </div>
 
       <!-- DASHBOARD -->
-      <div id="panelDashboard" class="panel active">
+      <div id="panelDashboard" class="panel">
         <div class="stats-grid">
           <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="sTotal">—</div><div class="stat-sub">solicitações</div></div>
           <div class="stat-card" data-g="integral"><div class="stat-label">Integral</div><div class="stat-value" id="sIntegral">—</div><div class="stat-sub">todas freq.</div></div>
@@ -1010,7 +1010,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </div>
 
       <!-- ANALYTICS DASHBOARD -->
-      <div id="panelAnalytics" class="panel">
+      <div id="panelAnalytics" class="panel active">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
           <div class="sec-title" style="margin:0;">Dashboard Analytics</div>
           <select id="analyticsAno" onchange="loadAnalytics()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
@@ -1580,11 +1580,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('userEmail').textContent = user.email || '';
     const firstName = (user.nome || 'Gerente').split(/\s/)[0];
     document.getElementById('greetingTopbar').textContent = 'Olá, ' + firstName;
-    loadData();
+    loadAnalytics();
     loadNotificacoes();
     loadSidebarLogo();
     showBioRegisterButton();
-    showExportButtons(true);
+    showExportButtons(false);
     // Poll a cada 15 segundos
     pollInterval = setInterval(()=>{
       if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
