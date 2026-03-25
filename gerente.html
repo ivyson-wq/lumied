@@ -724,15 +724,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <!-- TAB: Orçamentos -->
         <div class="alm-tab-panel" id="almTab-orcamentos">
           <!-- Orçamento padrão -->
-          <div style="background:#f0f7ff;border:1.5px solid rgba(26,107,181,.2);border-radius:12px;padding:16px 20px;margin-bottom:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-              <div style="font-size:14px;font-weight:600;color:#1a6bb5;">💰 Orçamento Padrão</div>
-              <div style="font-size:12px;color:var(--muted);">Aplica o mesmo valor para todas as turmas no mês selecionado.</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:#f0f7ff;border:1.5px solid rgba(26,107,181,.2);border-radius:12px;padding:16px 20px;margin-bottom:18px;">
+            <div style="font-size:14px;font-weight:600;color:#1a6bb5;margin-bottom:8px;">💰 Orçamento Padrão</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Aplica o mesmo valor para todas as turmas — no mês selecionado ou em todos os meses de um ano.</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span style="font-size:13px;font-weight:600;">R$</span>
               <input type="number" id="almOrcPadrao" value="500" min="0" step="50" style="width:110px;padding:8px 10px;border:1.5px solid rgba(26,107,181,.3);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;text-align:right;">
-              <button onclick="almAplicarOrcPadrao()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aplicar a Todas</button>
+              <button onclick="almAplicarOrcPadrao()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aplicar ao Mês</button>
+              <span style="color:var(--muted);font-size:12px;margin:0 4px;">ou</span>
+              <input type="number" id="almOrcAno" value="${new Date().getFullYear()}" min="2024" max="2030" style="width:80px;padding:8px 10px;border:1.5px solid rgba(26,107,181,.3);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;text-align:center;">
+              <button onclick="almAplicarOrcAnual()" style="padding:8px 16px;background:#0d5a9e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aplicar ao Ano Inteiro</button>
             </div>
           </div>
 
@@ -4378,6 +4379,26 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       await callDiplomas({ action: 'alm_orcamento_set', turma_id: t.id, mes, valor });
     }
     showToast('Orçamento padrão aplicado a ' + turmas.length + ' turmas!', 'success');
+    almLoadOrcamentos();
+  }
+
+  async function almAplicarOrcAnual() {
+    const valor = parseFloat(document.getElementById('almOrcPadrao').value) || 0;
+    const ano = document.getElementById('almOrcAno').value || new Date().getFullYear();
+    if (!confirm('Aplicar R$ ' + valor.toFixed(2).replace('.',',') + ' para TODAS as turmas em TODOS os 12 meses de ' + ano + '?')) return;
+    // Busca turmas usando qualquer mês (só precisa da lista)
+    const d = await callDiplomas({ action: 'alm_orcamentos_list', mes: ano + '-01' });
+    const turmas = d.data || [];
+    if (!turmas.length) { showToast('Nenhuma turma cadastrada.', 'warning'); return; }
+    let total = 0;
+    for (let m = 1; m <= 12; m++) {
+      const mes = ano + '-' + String(m).padStart(2, '0');
+      for (const t of turmas) {
+        await callDiplomas({ action: 'alm_orcamento_set', turma_id: t.id, mes, valor });
+        total++;
+      }
+    }
+    showToast('Orçamento aplicado: ' + turmas.length + ' turmas × 12 meses (' + total + ' registros)!', 'success');
     almLoadOrcamentos();
   }
 
