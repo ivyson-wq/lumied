@@ -1305,8 +1305,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
           <div class="pickup-serie">${esc(n.serie || 'Turma não informada')} · saiu às ${hora}</div>
           <div class="pickup-resp">Resp: ${esc(n.nome_resp)}</div>
         </div>
-        <button class="pickup-btn" onclick="entregarCrianca('${n.id}')" ${chegou ? '' : 'disabled'}>
-          ${chegou ? '✅ Entreguei' : '⏳ A caminho'}
+        <button class="pickup-btn" onclick="entregarCrianca('${n.id}')">
+          ${chegou ? '✅ Entreguei' : '🚗 Entreguei'}
         </button>
       </div>`;
     }).join('');
