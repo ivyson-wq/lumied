@@ -338,6 +338,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
       <div class="sb-label">Infraestrutura</div>
       <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
+      <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados e Perdidos</a>
       <div class="sb-label">Configurações</div>
       <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
       <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
@@ -931,6 +932,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </div>
         </div>
 
+      <!-- ACHADOS E PERDIDOS -->
+      <div id="panelAchados" class="panel">
+        <div class="sec-title">🔍 Achados e Perdidos <span class="count-badge" id="achadosCount">0</span></div>
+        <div id="achadosGerenteLista"><div class="empty-state">Carregando...</div></div>
+      </div>
+
       <!-- panelSecretarias kept hidden for backward compat -->
       <div id="panelSecretarias" class="panel" style="display:none;"></div>
 
@@ -1517,7 +1524,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'PDI — Plano de Desenvolvimento Individual',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados e Perdidos'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1542,6 +1549,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='acesso')      loadAcesso();
     if(id==='familias')   loadFamiliasPanel();
     if(id==='cadastro')    loadCadastroPanel();
+    if(id==='achados')     loadAchadosGerente();
     return false;
   }
 
@@ -4882,6 +4890,49 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     await api({ action: 'notif_marcar_todas', portal: 'gerente', email: currentGerente.email });
     notifData.forEach(n => n.lida = true);
     renderNotif();
+  }
+
+  // ── ACHADOS E PERDIDOS ───────────────────────────────
+  async function loadAchadosGerente() {
+    const d = await callDiplomas({ action: 'achados_lista_equipe' });
+    const items = d.data || [];
+    document.getElementById('achadosCount').textContent = items.length;
+    const el = document.getElementById('achadosGerenteLista');
+    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhum item registrado.</div>'; return; }
+    el.innerHTML = items.map(it => {
+      const dt = new Date(it.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      const isPublico = it.status === 'publico' || new Date(it.publicar_em) <= new Date();
+      return `<div style="display:flex;gap:14px;align-items:flex-start;padding:14px;background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;">
+        ${it.foto_url ? `<img src="${esc(it.foto_url)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);flex-shrink:0;">` : '<div style="width:72px;height:72px;background:#f0ece6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">📦</div>'}
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:14px;">${esc(it.descricao)}</div>
+          ${it.local_encontrado ? `<div style="font-size:12px;color:var(--muted);">📍 ${esc(it.local_encontrado)}</div>` : ''}
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">Por ${esc(it.postado_por_nome||'—')} · ${dt}</div>
+          <span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;${isPublico?'background:#edf7f0;color:#2d7a3a;':'background:#fff8e1;color:#b07d00;'}">${isPublico?'Visível para pais':'Apenas equipe — publica em '+new Date(it.publicar_em).toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+          ${!isPublico ? `<button onclick="achadoPublicar('${it.id}')" style="padding:5px 12px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Publicar Agora</button>` : ''}
+          <button onclick="achadoDevolver('${it.id}')" style="padding:5px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Devolvido</button>
+          <button onclick="achadoExcluir('${it.id}')" style="padding:5px 12px;background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Excluir</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  async function achadoPublicar(id) {
+    await callDiplomas({ action: 'achados_publicar', id });
+    showToast('Item publicado para os pais!', 'success');
+    loadAchadosGerente();
+  }
+  async function achadoDevolver(id) {
+    const para = prompt('Nome de quem retirou o item (opcional):');
+    await callDiplomas({ action: 'achados_devolver', id, devolvido_para: para || '' });
+    showToast('Item marcado como devolvido!', 'success');
+    loadAchadosGerente();
+  }
+  async function achadoExcluir(id) {
+    if (!confirm('Excluir este item?')) return;
+    await callDiplomas({ action: 'achados_excluir', id });
+    loadAchadosGerente();
   }
 
   // ── WEBAUTHN / BIOMETRIA ─────────────────────────────

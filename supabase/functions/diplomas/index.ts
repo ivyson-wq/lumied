@@ -1777,6 +1777,75 @@ Deno.serve(async (req) => {
     return json({ ok: true })
   }
 
+  // ━━ ACHADOS E PERDIDOS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'achados_postar') {
+    // Professora posta item achado
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessão inválida.' }, 401)
+    const descricao = (body.descricao as string || '').trim()
+    const local_encontrado = (body.local_encontrado as string || '').trim()
+    if (!descricao) return json({ error: 'Descrição obrigatória.' }, 400)
+    let foto_url: string | null = null
+    if (body.base64 && body.mime) {
+      const ext = (body.mime as string).includes('png') ? 'png' : 'jpg'
+      const path = `fotos/${Date.now()}-${crypto.randomUUID()}.${ext}`
+      const buf = Uint8Array.from(atob(body.base64 as string), c => c.charCodeAt(0))
+      await sb.storage.from('achados-perdidos').upload(path, buf, { contentType: body.mime as string })
+      const { data: pub } = sb.storage.from('achados-perdidos').getPublicUrl(path)
+      foto_url = pub.publicUrl
+    }
+    const { error } = await sb.from('achados_perdidos').insert({
+      descricao, local_encontrado: local_encontrado || null, foto_url,
+      postado_por_id: prof.id, postado_por_nome: prof.nome,
+    })
+    if (error) return json({ error: error.message }, 400)
+    return json({ ok: true })
+  }
+
+  if (action === 'achados_lista_equipe') {
+    // Equipe vê todos os itens (internos + públicos, exceto devolvidos antigos)
+    const { data } = await sb.from('achados_perdidos').select('*')
+      .neq('status', 'devolvido')
+      .order('criado_em', { ascending: false })
+    return json({ data: data ?? [] })
+  }
+
+  if (action === 'achados_lista_publica') {
+    // Pais veem apenas itens públicos (status = publico OU publicar_em já passou)
+    const agora = new Date().toISOString()
+    const { data } = await sb.from('achados_perdidos').select('id, descricao, local_encontrado, foto_url, criado_em, status, publicar_em')
+      .or(`status.eq.publico,publicar_em.lte.${agora}`)
+      .neq('status', 'devolvido')
+      .order('criado_em', { ascending: false })
+    return json({ data: data ?? [] })
+  }
+
+  if (action === 'achados_publicar') {
+    // Gerente autoriza publicação imediata
+    const { id } = body as { id: string }
+    if (!id) return json({ error: 'ID obrigatório.' }, 400)
+    await sb.from('achados_perdidos').update({ status: 'publico', publicar_em: new Date().toISOString() }).eq('id', id)
+    return json({ ok: true })
+  }
+
+  if (action === 'achados_devolver') {
+    // Marca como devolvido
+    const { id, devolvido_para } = body as { id: string; devolvido_para: string }
+    if (!id) return json({ error: 'ID obrigatório.' }, 400)
+    await sb.from('achados_perdidos').update({
+      status: 'devolvido', devolvido_para: devolvido_para || null, devolvido_em: new Date().toISOString()
+    }).eq('id', id)
+    return json({ ok: true })
+  }
+
+  if (action === 'achados_excluir') {
+    const { id } = body as { id: string }
+    if (!id) return json({ error: 'ID obrigatório.' }, 400)
+    await sb.from('achados_perdidos').delete().eq('id', id)
+    return json({ ok: true })
+  }
+
   // ━━ WEBAUTHN / BIOMETRIA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (action === 'webauthn_register_challenge') {
     // Requires authenticated session (professora or secretaria)
