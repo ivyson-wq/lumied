@@ -333,7 +333,18 @@ serve(async (req: Request) => {
   // ── Usuários Unificados ──────────────────────────────────────
   if (action === "usuarios_list") {
     const { data } = await admin.from("usuarios").select("id, nome, email, papel, ativo, criado_em").order("papel").order("nome");
-    return ok(data ?? []);
+    const users = data ?? [];
+    // Enriquece professoras com serie_id
+    const profEmails = users.filter(u => u.papel === 'professora' || u.papel === 'professora_assistente').map(u => u.email);
+    if (profEmails.length) {
+      const { data: profs } = await admin.from("professoras").select("email, serie_id, series(id, nome)").in("email", profEmails);
+      const profMap = new Map((profs ?? []).map((p: any) => [p.email, { serie_id: p.serie_id, serie_nome: p.series?.nome }]));
+      for (const u of users) {
+        const p = profMap.get(u.email);
+        if (p) { (u as any).serie_id = p.serie_id; (u as any).serie_nome = p.serie_nome; }
+      }
+    }
+    return ok(users);
   }
   if (action === "usuarios_create") {
     const { nome, email, senha, papel } = body as { nome: string; email: string; senha: string; papel: string };
@@ -627,6 +638,15 @@ serve(async (req: Request) => {
     const { cpf } = body as { cpf: string };
     if (!cpf) return err("CPF obrigatório.");
     await admin.from("familias").delete().eq("cpf", cpf);
+    return ok({ success: true });
+  }
+
+  // ── Atribuir turma/série a professora ───────────────────
+  if (action === "usuarios_set_serie") {
+    const { email, serie_id } = body as { email: string; serie_id: string | null };
+    if (!email) return err("E-mail obrigatório.");
+    const { error } = await admin.from("professoras").update({ serie_id: serie_id || null }).eq("email", email);
+    if (error) return err(error.message);
     return ok({ success: true });
   }
 

@@ -1174,8 +1174,8 @@ Deno.serve(async (req) => {
     if (!itens?.length)  return json({ error: 'Adicione pelo menos um item.' }, 400)
     const mes = new Date().toISOString().slice(0, 7)
     const { data: profData } = await sb
-      .from('professoras').select('alm_turma_id').eq('id', professora_id).maybeSingle()
-    const turma_id = (profData as any)?.alm_turma_id ?? null
+      .from('professoras').select('serie_id').eq('id', professora_id).maybeSingle()
+    const turma_id = (profData as any)?.serie_id ?? null
     const total = (itens as any[]).reduce((s: number, it: any) =>
       s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
     const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
@@ -1226,7 +1226,7 @@ Deno.serve(async (req) => {
     if (action === 'alm_compras_pendentes') {
       const { data } = await sb
         .from('alm_compras')
-        .select('*, alm_requisicoes(mes, professoras(nome), alm_turmas(nome,cor))')
+        .select('*, alm_requisicoes(mes, professoras(nome), series(nome,cor))')
         .eq('status', 'pendente')
         .order('encaminhado_em', { ascending: false })
       return json({ data: data ?? [] })
@@ -1235,7 +1235,7 @@ Deno.serve(async (req) => {
     if (action === 'alm_compras_todas') {
       const status: string = body.status || ''
       let q = sb.from('alm_compras')
-        .select('*, alm_requisicoes(mes, professoras(nome), alm_turmas(nome,cor))')
+        .select('*, alm_requisicoes(mes, professoras(nome), series(nome,cor))')
         .order('encaminhado_em', { ascending: false })
         .limit(200)
       if (status) q = q.eq('status', status)
@@ -1286,9 +1286,9 @@ Deno.serve(async (req) => {
     if (action === 'alm_minha_turma') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
       const { data: profData } = await sb
-        .from('professoras').select('alm_turma_id, alm_turmas(id, nome, cor)')
+        .from('professoras').select('serie_id, series(id, nome, cor)')
         .eq('id', prof.id).maybeSingle()
-      const turma = (profData as any)?.alm_turmas ?? null
+      const turma = (profData as any)?.series ?? null
       if (!turma) return json({ turma: null, orcamento: null })
       const { data: orc } = await sb
         .from('alm_orcamentos').select('valor')
@@ -1303,7 +1303,7 @@ Deno.serve(async (req) => {
 
     if (action === 'alm_minhas_reqs') {
       const { data } = await sb
-        .from('alm_requisicoes').select('*, alm_turmas(nome)')
+        .from('alm_requisicoes').select('*, series(nome)')
         .eq('professora_id', prof.id)
         .order('criado_em', { ascending: false })
       return json({ data: data ?? [] })
@@ -1316,8 +1316,8 @@ Deno.serve(async (req) => {
       const mes = new Date().toISOString().slice(0, 7)
       // Get teacher's turma
       const { data: profData } = await sb
-        .from('professoras').select('alm_turma_id').eq('id', prof.id).maybeSingle()
-      const turma_id = (profData as any)?.alm_turma_id ?? null
+        .from('professoras').select('serie_id').eq('id', prof.id).maybeSingle()
+      const turma_id = (profData as any)?.serie_id ?? null
       const total = itens.reduce((s: number, it: any) =>
         s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
       const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
@@ -1361,7 +1361,7 @@ Deno.serve(async (req) => {
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
     'alm_aprovar', 'alm_rejeitar',
     'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del',
-    'alm_turmas_list', 'alm_turma_save', 'alm_turma_del',
+    'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
   ].includes(action)
@@ -1376,7 +1376,7 @@ Deno.serve(async (req) => {
         await Promise.all([
           sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
           sb.from('alm_requisicoes').select('total, turma_id').eq('mes', mes).eq('status', 'aprovado'),
-          sb.from('alm_turmas').select('id, nome, cor').eq('ativo', true),
+          sb.from('series').select('id, nome, cor').eq('ativo', true),
           sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
         ])
       const totalAprovado = (aprovadas ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
@@ -1395,7 +1395,7 @@ Deno.serve(async (req) => {
     if (action === 'alm_pendentes') {
       const { data } = await sb
         .from('alm_requisicoes')
-        .select('*, professoras(nome, email), alm_turmas(nome, cor)')
+        .select('*, professoras(nome, email), series(nome, cor)')
         .eq('status', 'pendente').order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
     }
@@ -1404,7 +1404,7 @@ Deno.serve(async (req) => {
       const mes: string = body.mes || ''
       const status: string = body.status || ''
       let q = sb.from('alm_requisicoes')
-        .select('*, professoras(nome, email), alm_turmas(nome, cor)')
+        .select('*, professoras(nome, email), series(nome, cor)')
         .order('criado_em', { ascending: false })
       if (mes)    q = q.eq('mes', mes)
       if (status) q = q.eq('status', status)
@@ -1504,8 +1504,8 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
 
-    if (action === 'alm_turmas_list') {
-      const { data } = await sb.from('alm_turmas').select('*, professoras(id, nome, email)')
+    if (action === 'alm_series_list') {
+      const { data } = await sb.from('series').select('*, professoras(id, nome, email)')
         .eq('ativo', true).order('nome')
       return json({ data: data ?? [] })
     }
@@ -1514,11 +1514,11 @@ Deno.serve(async (req) => {
       const { id, nome, cor } = body
       if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
       if (id) {
-        const { error } = await sb.from('alm_turmas').update({ nome, cor: cor || '#3B82F6' }).eq('id', id)
+        const { error } = await sb.from('series').update({ nome, cor: cor || '#3B82F6' }).eq('id', id)
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true })
       } else {
-        const { data: nova, error } = await sb.from('alm_turmas').insert(
+        const { data: nova, error } = await sb.from('series').insert(
           { nome, cor: cor || '#3B82F6' }
         ).select('id').single()
         if (error) return json({ error: error.message }, 400)
@@ -1529,14 +1529,14 @@ Deno.serve(async (req) => {
     if (action === 'alm_turma_del') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('alm_turmas').update({ ativo: false }).eq('id', id)
+      const { error } = await sb.from('series').update({ ativo: false }).eq('id', id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
 
     if (action === 'alm_orcamentos_list') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
-      const { data: turmas } = await sb.from('alm_turmas').select('id, nome, cor').eq('ativo', true).order('nome')
+      const { data: turmas } = await sb.from('series').select('id, nome, cor').eq('ativo', true).order('nome')
       const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
       const map: Record<string, number> = {}
       for (const o of orcs ?? []) map[o.turma_id] = o.valor
@@ -1559,7 +1559,7 @@ Deno.serve(async (req) => {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
       const { data: reqs } = await sb
         .from('alm_requisicoes')
-        .select('turma_id, total, status, itens, professoras(nome), alm_turmas(nome, cor)')
+        .select('turma_id, total, status, itens, professoras(nome), series(nome, cor)')
         .eq('mes', mes)
       const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
       const orcMap: Record<string, number> = {}
@@ -1569,7 +1569,7 @@ Deno.serve(async (req) => {
       for (const r of reqs ?? []) {
         const tid = r.turma_id ?? 'sem_turma'
         if (!turmaMap[tid]) turmaMap[tid] = {
-          turma: (r as any).alm_turmas ?? { nome: 'Sem turma', cor: '#aaa' },
+          turma: (r as any).series ?? { nome: 'Sem turma', cor: '#aaa' },
           orcamento: orcMap[tid] ?? 0,
           gasto: 0, pendente: 0, rejeitado: 0, requisicoes: [],
         }
@@ -1585,7 +1585,7 @@ Deno.serve(async (req) => {
       const { professora_id, turma_id } = body
       if (!professora_id) return json({ error: 'professora_id obrigatório.' }, 400)
       const { error } = await sb.from('professoras')
-        .update({ alm_turma_id: turma_id || null }).eq('id', professora_id)
+        .update({ serie_id: turma_id || null }).eq('id', professora_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
