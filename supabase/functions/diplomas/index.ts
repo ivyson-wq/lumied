@@ -1127,6 +1127,7 @@ Deno.serve(async (req) => {
       tipo: 'produto' | 'busca'
     }
     const results: PriceResult[] = []
+    const fontes: Record<string, { status: string; produtos: number; erro?: string }> = {}
 
     // ── 0. Zoom.com.br (comparador de preços — scraping) ─────
     try {
@@ -1182,10 +1183,14 @@ Deno.serve(async (req) => {
           }
         }
       }
-    } catch (_) { /* graceful skip */ }
+      fontes['Zoom'] = { status: 'ok', produtos: results.filter(r => r.plataforma === 'Zoom' && r.tipo === 'produto').length }
+      } else {
+        fontes['Zoom'] = { status: 'erro', produtos: 0, erro: `HTTP ${zoomRes.status}` }
+      }
+    } catch (e) { fontes['Zoom'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
-    // Fallback Zoom
-    if (!results.some(r => r.plataforma === 'Zoom')) {
+    if (!results.some(r => r.plataforma === 'Zoom' && r.tipo === 'produto')) {
+      if (!fontes['Zoom']) fontes['Zoom'] = { status: 'sem resultados', produtos: 0 }
       results.push({ plataforma: 'Zoom', nome: `Buscar "${query}" no Zoom`, preco: null, preco_fmt: 'Ver no Zoom', url_produto: `https://www.zoom.com.br/search?q=${encoded}`, url_carrinho: null, item_id: null, match: 0, tipo: 'busca' })
     }
 
@@ -1203,6 +1208,7 @@ Deno.serve(async (req) => {
         const permalinkMatches = html.match(/"permalink":"(https:[^"]+)"/g) || []
         const idMatches = html.match(/"id":"(MLB\d+)"/g) || []
         const count = Math.min(priceMatches.length, titleMatches.length, 5)
+        let mlCount = 0
         for (let pi = 0; pi < count; pi++) {
           const price = parseFloat(priceMatches[pi].replace('"price":', ''))
           const title = titleMatches[pi].replace('"title":"', '').replace('"', '')
@@ -1222,13 +1228,16 @@ Deno.serve(async (req) => {
               match: m,
               tipo: 'produto',
             })
+            mlCount++
           }
         }
+        fontes['Mercado Livre'] = { status: mlCount > 0 ? 'ok' : 'sem resultados', produtos: mlCount }
+      } else {
+        fontes['Mercado Livre'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${mlRes.status}` }
       }
-    } catch (_) { /* graceful skip */ }
+    } catch (e) { fontes['Mercado Livre'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
-    // Fallback ML
-    if (!results.some(r => r.plataforma === 'Mercado Livre')) {
+    if (!results.some(r => r.plataforma === 'Mercado Livre' && r.tipo === 'produto')) {
       results.push({
         plataforma: 'Mercado Livre',
         nome: `Buscar "${query}" no Mercado Livre`,
@@ -1279,8 +1288,11 @@ Deno.serve(async (req) => {
             tipo: 'produto',
           })
         }
+        fontes['Shopee'] = { status: 'ok', produtos: results.filter(r => r.plataforma === 'Shopee' && r.tipo === 'produto').length }
+      } else {
+        fontes['Shopee'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${shopeeRes.status}` }
       }
-    } catch (_) { /* graceful skip */ }
+    } catch (e) { fontes['Shopee'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
     // ── 3. Reval (loja escolar — scraping da busca) ──────
     try {
@@ -1321,8 +1333,11 @@ Deno.serve(async (req) => {
             count++
           }
         }
+        fontes['Reval'] = { status: 'ok', produtos: count }
+      } else {
+        fontes['Reval'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${revalRes.status}` }
       }
-    } catch (_) { /* graceful skip */ }
+    } catch (e) { fontes['Reval'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
     // Fallback Reval: link de busca se não retornou produtos
     if (!results.some(r => r.plataforma === 'Reval')) {
@@ -1355,7 +1370,9 @@ Deno.serve(async (req) => {
     const semPreco = results.filter(r => r.tipo === 'produto' && r.preco == null)
     const links    = results.filter(r => r.tipo === 'busca')
 
-    return json({ data: [...produtos, ...semPreco, ...links], query })
+    fontes['Amazon'] = { status: 'apenas link', produtos: 0 }
+
+    return json({ data: [...produtos, ...semPreco, ...links], query, fontes })
   }
 
   // ── ATUALIZAÇÃO AUTOMÁTICA DE PREÇOS ────────────────────

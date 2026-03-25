@@ -4749,6 +4749,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     let atualizados = 0;
     const total = insumos.length;
+    const fontesResumo = {};
 
     for (let i = 0; i < total; i++) {
       const ins = insumos[i];
@@ -4756,15 +4757,29 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       try {
         const d = await callDiplomas({ action: 'alm_buscar_precos', nome: ins.nome, unidade: ins.unidade });
         const resultados = d.data || [];
+        // Acumula status das fontes
+        if (d.fontes) {
+          for (const [f, info] of Object.entries(d.fontes)) {
+            if (!fontesResumo[f]) fontesResumo[f] = { ok: 0, erro: 0, status: info.status };
+            if (info.produtos > 0) fontesResumo[f].ok++;
+            else fontesResumo[f].erro++;
+            fontesResumo[f].status = info.status;
+            if (info.erro) fontesResumo[f].ultimoErro = info.erro;
+          }
+        }
         const produtos = resultados.filter(r => r.tipo === 'produto' && r.preco != null && r.match >= 70);
         if (produtos.length) {
           produtos.sort((a, b) => a.preco - b.preco);
           const melhor = produtos[0];
+          // Inclui todas as fontes consultadas no historico
+          const fontesConsultadas = Object.entries(d.fontes || {}).map(([f,info]) =>
+            `${f}: ${info.status}${info.produtos > 0 ? ' ('+info.produtos+' resultados)' : ''}${info.erro ? ' — '+info.erro : ''}`
+          ).join(' | ');
           await callDiplomas({
             action: 'alm_insumo_atualizar_auto',
             id: ins.id,
             preco: melhor.preco,
-            produto_nome: melhor.nome,
+            produto_nome: melhor.nome + ' [Fontes: ' + fontesConsultadas + ']',
             fonte: melhor.plataforma,
             url: melhor.url_produto,
             match_pct: melhor.match,
@@ -4776,7 +4791,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     btn.disabled = false;
     btn.textContent = '🔄 Atualizar Precos';
-    showToast(`${atualizados} de ${total} insumos atualizados automaticamente.`, 'success', 5000);
+    // Mostra resumo das fontes
+    const fontesInfo = Object.entries(fontesResumo).map(([f, info]) => {
+      const icon = info.ok > 0 ? '✅' : info.status === 'apenas link' ? '🔗' : '❌';
+      return `${icon} ${f}: ${info.ok}/${total}`;
+    }).join(' · ');
+    showToast(`${atualizados}/${total} atualizados · ${fontesInfo}`, atualizados > 0 ? 'success' : 'warning', 8000);
     almLoadInsumos();
   }
 
