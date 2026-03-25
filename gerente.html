@@ -348,7 +348,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Controle de Acesso</a>
       <a class="nav-item" href="#" onclick="return showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
-      <a class="nav-item" href="#" onclick="showPanel('cadastro',this)"><span class="ic">👧</span> Cadastrar Família</a>
       <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
       <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Professoras</a>
       <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Portal Secretaria</a>
@@ -1279,67 +1278,58 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- ── CADASTRAR FAMÍLIA ── -->
       <div id="panelFamilias" class="panel">
-        <div class="sec-title" style="margin-bottom:16px;">Famílias Cadastradas <span class="count-badge" id="famCount">0</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div class="sec-title" style="margin:0;">Familias <span class="count-badge" id="famCount">0</span></div>
+          <button onclick="toggleCadastroForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Cadastrar Familia</button>
+        </div>
+
+        <!-- Formulario cadastro (colapsavel) -->
+        <div id="cadFormWrap" style="display:none;margin-bottom:18px;">
+          <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <h3 style="font-size:14px;font-weight:600;">Nova Solicitacao</h3>
+              <button onclick="toggleCadastroForm()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);">x</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="ff"><label>Nome do Responsavel</label><input type="text" id="cadNomeResp" placeholder="Nome completo" autocomplete="off"></div>
+              <div class="ff"><label>E-mail do Responsavel</label><input type="email" id="cadEmail" placeholder="email@exemplo.com" autocomplete="off"></div>
+              <div class="ff"><label>Nome da Crianca</label><input type="text" id="cadNomeCrianca" placeholder="Nome da crianca" autocomplete="off"></div>
+              <div class="ff"><label>Serie</label><select id="cadSerie"><option value="">-- selecione --</option></select></div>
+              <div class="ff" style="grid-column:1/-1;"><label>Turno</label>
+                <select id="cadTurno">
+                  <option value="">-- selecione --</option>
+                  <option value="integral_5x">Integral 5x/sem</option><option value="integral_4x">Integral 4x</option><option value="integral_3x">Integral 3x</option><option value="integral_2x">Integral 2x</option><option value="integral_1x">Integral 1x</option>
+                  <option value="semi_5x">Semi-Integral 5x</option><option value="semi_4x">Semi 4x</option><option value="semi_3x">Semi 3x</option><option value="semi_2x">Semi 2x</option><option value="semi_1x">Semi 1x</option>
+                  <option value="tarde">Apenas a Tarde</option><option value="diaria">Diaria</option>
+                </select>
+              </div>
+            </div>
+            <div class="f-alert error" id="cadErr" style="display:none;margin-top:12px;"></div>
+            <div class="f-alert success" id="cadOk" style="display:none;margin-top:12px;"></div>
+            <button class="btn-create" id="cadBtn" onclick="submitCadastro()" style="margin-top:12px;width:auto;padding:8px 20px;">Cadastrar</button>
+          </div>
+        </div>
+
+        <!-- Busca familias -->
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:18px;">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+            <input type="text" id="famSearch" placeholder="Buscar por nome, e-mail ou CPF..." oninput="debouncedFamilias()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <div id="famLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+        </div>
+
+        <!-- Solicitacoes -->
+        <div class="sec-title" style="margin-bottom:16px;">Solicitacoes <span class="count-badge" id="cadCount">0</span></div>
         <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
-            <input type="text" id="famSearch" placeholder="Buscar por nome, e-mail ou CPF…" oninput="debouncedFamilias()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <input type="text" id="cadSearch" placeholder="Buscar por nome ou e-mail..." oninput="debouncedCadastro()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           </div>
-          <div id="famLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div></div>
+          <div id="cadLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando...</div></div>
         </div>
       </div>
 
-      <div id="panelCadastro" class="panel">
-        <div class="sec-title" style="margin-bottom:16px;">Nova Solicitação</div>
-        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="ff">
-              <label>Nome do Responsável</label>
-              <input type="text" id="cadNomeResp" placeholder="Nome completo" autocomplete="off">
-            </div>
-            <div class="ff">
-              <label>E-mail do Responsável</label>
-              <input type="email" id="cadEmail" placeholder="email@exemplo.com" autocomplete="off">
-            </div>
-            <div class="ff">
-              <label>Nome da Criança</label>
-              <input type="text" id="cadNomeCrianca" placeholder="Nome da criança" autocomplete="off">
-            </div>
-            <div class="ff">
-              <label>Série</label>
-              <select id="cadSerie"><option value="">— selecione —</option></select>
-            </div>
-            <div class="ff" style="grid-column:1/-1;">
-              <label>Turno</label>
-              <select id="cadTurno">
-                <option value="">— selecione —</option>
-                <option value="integral_5x">Integral · 5× na semana</option>
-                <option value="integral_4x">Integral · 4× na semana</option>
-                <option value="integral_3x">Integral · 3× na semana</option>
-                <option value="integral_2x">Integral · 2× na semana</option>
-                <option value="integral_1x">Integral · 1× na semana</option>
-                <option value="semi_5x">Semi-Integral · 5× na semana</option>
-                <option value="semi_4x">Semi-Integral · 4× na semana</option>
-                <option value="semi_3x">Semi-Integral · 3× na semana</option>
-                <option value="semi_2x">Semi-Integral · 2× na semana</option>
-                <option value="semi_1x">Semi-Integral · 1× na semana</option>
-                <option value="tarde">Apenas a Tarde</option>
-                <option value="diaria">Diária</option>
-              </select>
-            </div>
-          </div>
-          <div class="f-alert error" id="cadErr" style="display:none;margin-top:12px;"></div>
-          <div class="f-alert success" id="cadOk" style="display:none;margin-top:12px;"></div>
-          <button class="btn-save" id="cadBtn" onclick="submitCadastro()" style="margin-top:16px;">Cadastrar</button>
-        </div>
-
-        <div class="sec-title" style="margin-bottom:16px;">Solicitações Cadastradas <span class="count-badge" id="cadCount">0</span></div>
-        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
-          <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
-            <input type="text" id="cadSearch" placeholder="Buscar por nome ou e-mail…" oninput="debouncedCadastro()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
-          </div>
-          <div id="cadLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;"><span class="spinner-sm"></span> Carregando…</div></div>
-        </div>
-      </div>
+      <!-- panelCadastro mantido hidden para compatibilidade -->
+      <div id="panelCadastro" class="panel" style="display:none;"></div>
 
     </div>
   </div>
@@ -4880,7 +4870,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   let famDados = [];
   let famSeriesOpts = '';
 
+  function toggleCadastroForm() {
+    const el = document.getElementById('cadFormWrap');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
   async function loadFamiliasPanel() {
+    loadCadastroPanel();
     if (!famSeriesOpts) {
       const s = await api({ action: 'series_list' });
       const arr = Array.isArray(s) ? s : [];
