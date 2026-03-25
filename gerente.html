@@ -674,8 +674,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div style="font-size:14px;font-weight:600;color:#1a6bb5;">💰 Atualização de Preços</div>
               <div style="font-size:12px;color:var(--muted);">Busca preços atualizados em Mercado Livre, Shopee, Reval e Amazon. Atualiza itens com compatibilidade > 70%.</div>
               <div style="font-size:11px;color:var(--muted);margin-top:2px;">Atualização automática: 1o dia de cada mês às 06h.</div>
+              <div id="mlStatus" style="font-size:11px;margin-top:4px;"></div>
             </div>
-            <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Atualizar Preços Agora</button>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+              <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Atualizar Preços Agora</button>
+              <button id="almBtnML" onclick="conectarML()" style="background:#ffe600;color:#333;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🛒 Conectar Mercado Livre</button>
+            </div>
           </div>
 
           <!-- Importar Excel -->
@@ -1538,7 +1542,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='almDash')     almInitPanel();
     if(id==='almPend')     almLoadPendentes();
     if(id==='almTodas')    { almInitMonths(); almLoadTodas(); }
-    if(id==='almInsumos')  { almLoadInsumos(); almLoadCategorias(); }
+    if(id==='almInsumos')  { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); }
     if(id==='almTurmas')   almLoadTurmas();
     if(id==='almOrc')      { almInitMonths(); almLoadOrcamentos(); }
     if(id==='almRel')      { almInitMonths(); almLoadRelatorio(); }
@@ -4584,6 +4588,25 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('almInsumoXlsxResult').style.display = 'none';
     almInsumoXlsxParsed = [];
     almLoadInsumos();
+  }
+
+  // ── MERCADO LIVRE ────────────────────────────────────
+  async function checkMLStatus() {
+    const d = await callDiplomas({ action: 'ml_status' });
+    const el = document.getElementById('mlStatus');
+    const btn = document.getElementById('almBtnML');
+    if (d.connected) {
+      el.innerHTML = '<span style="color:#2d7a3a;">✅ Mercado Livre conectado</span>';
+      btn.textContent = '🛒 ML Conectado';
+      btn.style.background = '#2d7a3a';
+      btn.style.color = '#fff';
+    } else {
+      el.innerHTML = '<span style="color:#b07d00;">⚠️ Mercado Livre não conectado — preços limitados</span>';
+    }
+  }
+  async function conectarML() {
+    const d = await callDiplomas({ action: 'ml_auth_url' });
+    if (d.url) window.open(d.url, '_blank');
   }
 
   // ── ATUALIZAR PREÇOS ─────────────────────────────────

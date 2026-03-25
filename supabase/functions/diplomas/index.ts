@@ -206,6 +206,38 @@ async function uploadArquivo(
   return { url: publicUrl }
 }
 
+const ML_CLIENT_ID = '1358685762306521'
+const ML_CLIENT_SECRET = 'jTYGWwi1V8XOxS7cpcfyrSNoI2bLiPFB'
+const ML_REDIRECT_URI = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas?action=ml_oauth_callback'
+
+async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string | null> {
+  const { data } = await sb.from('ml_tokens').select('*').order('atualizado_em', { ascending: false }).limit(1).maybeSingle()
+  if (!data) return null
+  // Check if expired (with 5 min margin)
+  if (new Date(data.expires_at) <= new Date(Date.now() + 5 * 60000)) {
+    // Refresh
+    try {
+      const res = await fetch('https://api.mercadolibre.com/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=refresh_token&client_id=${ML_CLIENT_ID}&client_secret=${ML_CLIENT_SECRET}&refresh_token=${data.refresh_token}`,
+      })
+      if (res.ok) {
+        const t = await res.json()
+        await sb.from('ml_tokens').update({
+          access_token: t.access_token,
+          refresh_token: t.refresh_token,
+          expires_at: new Date(Date.now() + t.expires_in * 1000).toISOString(),
+          atualizado_em: new Date().toISOString(),
+        }).eq('id', data.id)
+        return t.access_token
+      }
+    } catch (_) {}
+    return null
+  }
+  return data.access_token
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
 
@@ -214,7 +246,35 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  const body = await req.json()
+  // Handle OAuth callback (GET request from ML redirect)
+  const url = new URL(req.url)
+  if (url.searchParams.get('action') === 'ml_oauth_callback') {
+    const code = url.searchParams.get('code')
+    if (!code) return new Response('Codigo nao recebido.', { status: 400 })
+    try {
+      const res = await fetch('https://api.mercadolibre.com/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=authorization_code&client_id=${ML_CLIENT_ID}&client_secret=${ML_CLIENT_SECRET}&code=${code}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`,
+      })
+      const t = await res.json()
+      if (t.access_token) {
+        // Delete old tokens and save new
+        await sb.from('ml_tokens').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+        await sb.from('ml_tokens').insert({
+          access_token: t.access_token,
+          refresh_token: t.refresh_token,
+          expires_at: new Date(Date.now() + t.expires_in * 1000).toISOString(),
+          user_id: String(t.user_id || ''),
+        })
+        return new Response('<html><body style="font-family:sans-serif;text-align:center;padding:60px;"><h1>Mercado Livre conectado!</h1><p>Voce ja pode fechar esta janela e voltar ao painel.</p></body></html>', { status: 200, headers: { 'Content-Type': 'text/html' } })
+      }
+      return new Response('Erro ao obter token: ' + JSON.stringify(t), { status: 400 })
+    } catch (e) { return new Response('Erro: ' + (e as Error).message, { status: 500 }) }
+  }
+
+  let body: Record<string, unknown> = {}
+  try { body = await req.json() } catch (_) { body = {} }
   const { action } = body
   // Token: usa _prof_token/_token do body se presente (para evitar conflito com JWT Verification do Supabase),
   // senão extrai do Authorization header
@@ -1126,11 +1186,14 @@ Deno.serve(async (req) => {
       results.push({ plataforma: 'Zoom', nome: `Buscar "${query}" no Zoom`, preco: null, preco_fmt: 'Ver no Zoom', url_produto: `https://www.zoom.com.br/search?q=${encoded}`, url_carrinho: null, item_id: null, match: 0, tipo: 'busca' })
     }
 
-    // ── 1. Mercado Livre (free public API, real prices) ──────
+    // ── 1. Mercado Livre (OAuth API) ──────
     try {
+      const mlToken = await getMLToken(sb)
+      const mlHeaders: Record<string, string> = { 'Accept': 'application/json' }
+      if (mlToken) mlHeaders['Authorization'] = `Bearer ${mlToken}`
       const mlRes = await fetch(
         `https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&limit=6&sort=price_asc`,
-        { headers: { 'Accept': 'application/json' } }
+        { headers: mlHeaders }
       )
       if (mlRes.ok) {
         const mlData = await mlRes.json()
@@ -1813,6 +1876,16 @@ Deno.serve(async (req) => {
     if (!portal || !email) return json({ error: 'portal e email obrigatórios.' }, 400)
     await sb.from('notificacoes').update({ lida: true }).eq('portal', portal).eq('destinatario', email).eq('lida', false)
     return json({ ok: true })
+  }
+
+  // ━━ MERCADO LIVRE OAUTH ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'ml_auth_url') {
+    const authUrl = `https://auth.mercadolibre.com.br/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`
+    return json({ url: authUrl })
+  }
+  if (action === 'ml_status') {
+    const token = await getMLToken(sb)
+    return json({ connected: !!token })
   }
 
   // ━━ ACHADOS E PERDIDOS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
