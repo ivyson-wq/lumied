@@ -342,6 +342,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
       <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;"><span class="ic">🚨</span> Emergência</a>
       <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
+      <div class="sb-label">Financeiro</div>
+      <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard Financeiro</a>
+      <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
+      <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
+      <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> Plano de Contas</a>
       <div class="sb-label">Escola</div>
       <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário Escolar</a>
       <div class="sb-label">Configurações</div>
@@ -1017,6 +1022,103 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="analyticsContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- FINANCEIRO - DASHBOARD -->
+      <div id="panelFinDash" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+          <div class="sec-title" style="margin:0;">Dashboard Financeiro</div>
+          <select id="finDashAno" onchange="loadFinDashboard()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
+          </select>
+        </div>
+        <div id="finDashContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- FINANCEIRO - LANCAMENTOS -->
+      <div id="panelFinLanc" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <input type="hidden" id="finLancMes">
+          <div class="month-nav">
+            <div class="mn-group">
+              <button class="mn-btn" onclick="monthNavYear('finLancMes',-1,loadFinLancamentos)">&#8249;</button>
+              <span class="mn-val" id="finLancMesYear" onclick="monthNavToday('finLancMes',loadFinLancamentos)"></span>
+              <button class="mn-btn" onclick="monthNavYear('finLancMes',1,loadFinLancamentos)">&#8250;</button>
+            </div>
+            <div class="mn-group">
+              <button class="mn-btn" onclick="monthNavMonth('finLancMes',-1,loadFinLancamentos)">&#8249;</button>
+              <span class="mn-val month" id="finLancMesMonth" onclick="monthNavToday('finLancMes',loadFinLancamentos)"></span>
+              <button class="mn-btn" onclick="monthNavMonth('finLancMes',1,loadFinLancamentos)">&#8250;</button>
+            </div>
+          </div>
+          <button class="fb active" onclick="setFinTipo('todos',this)">Todos</button>
+          <button class="fb" onclick="setFinTipo('receita',this)">Receitas</button>
+          <button class="fb" onclick="setFinTipo('despesa',this)">Despesas</button>
+          <button onclick="toggleFinLancForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Novo Lançamento</button>
+        </div>
+        <div id="finLancForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Tipo *</label><select id="flTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div>
+              <div class="ff" style="margin:0;"><label>Valor (R$) *</label><input type="number" id="flValor" min="0" step="0.01" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Data *</label><input type="date" id="flData" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Conta</label><select id="flConta" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-top:10px;">
+              <div class="ff" style="margin:0;"><label>Descricao *</label><input type="text" id="flDesc" placeholder="Ex: Pagamento energia" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Fornecedor</label><input type="text" id="flForn" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Vencimento</label><input type="date" id="flVenc" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarFinLanc()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button>
+              <button onclick="toggleFinLancForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+          </div>
+        </div>
+        <div id="finLancList"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- FINANCEIRO - MENSALIDADES -->
+      <div id="panelFinMens" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <input type="hidden" id="finMensMes">
+          <div class="month-nav">
+            <div class="mn-group">
+              <button class="mn-btn" onclick="monthNavYear('finMensMes',-1,loadFinMensalidades)">&#8249;</button>
+              <span class="mn-val" id="finMensMesYear" onclick="monthNavToday('finMensMes',loadFinMensalidades)"></span>
+              <button class="mn-btn" onclick="monthNavYear('finMensMes',1,loadFinMensalidades)">&#8250;</button>
+            </div>
+            <div class="mn-group">
+              <button class="mn-btn" onclick="monthNavMonth('finMensMes',-1,loadFinMensalidades)">&#8249;</button>
+              <span class="mn-val month" id="finMensMesMonth" onclick="monthNavToday('finMensMes',loadFinMensalidades)"></span>
+              <button class="mn-btn" onclick="monthNavMonth('finMensMes',1,loadFinMensalidades)">&#8250;</button>
+            </div>
+          </div>
+          <button onclick="gerarMensalidades()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">Gerar Mensalidades</button>
+        </div>
+        <div id="finMensList"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- FINANCEIRO - PLANO DE CONTAS -->
+      <div id="panelFinContas" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">Plano de Contas</div>
+          <button onclick="toggleFinContaForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Nova Conta</button>
+        </div>
+        <div id="finContaForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:80px 1fr 120px;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Codigo</label><input type="text" id="fcCodigo" placeholder="2.12" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Nome *</label><input type="text" id="fcNome" placeholder="Ex: Transporte" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Tipo *</label><select id="fcTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarFinConta()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button>
+              <button onclick="toggleFinContaForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+          </div>
+        </div>
+        <div id="finContasList"><div class="empty-state">Carregando...</div></div>
+      </div>
+
       <!-- IMPRESSOES -->
       <div id="panelImpressoes" class="panel">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
@@ -1276,7 +1378,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div class="ff"><label>Papel</label>
                 <select id="eqPapel" onchange="toggleEqTurma()" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fdfbf8;">
                   <option value="">— selecione —</option>
+                  <option value="diretor">Diretor(a)</option>
                   <option value="gerente">Gerente</option>
+                  <option value="financeiro">Financeiro</option>
                   <option value="professora">Professora</option>
                   <option value="professora_assistente">Professora Assistente</option>
                   <option value="secretaria">Secretaria</option>
@@ -1672,7 +1776,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1700,6 +1804,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='achados')     loadAchadosGerente();
     if(id==='emergencia')  loadEmergencia();
     if(id==='impressoes')  loadImpressoesGerente();
+    if(id==='finDash')     loadFinDashboard();
+    if(id==='finLanc')     loadFinLancamentos();
+    if(id==='finMens')     loadFinMensalidades();
+    if(id==='finContas')   loadFinContas();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
     return false;
@@ -1908,8 +2016,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── EQUIPE UNIFICADA ──────────────────────────────────
   let equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
-  const PAPEIS = { gerente:'Gerente', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', manutencao:'Manutenção' };
-  const PAPEL_COLORS = { gerente:'#C8102E', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', manutencao:'#d4830a' };
+  const PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', manutencao:'Manutenção' };
+  const PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', manutencao:'#d4830a' };
 
   async function loadEquipe() {
     if (!equipeSeriesOpts) {
@@ -5578,6 +5686,132 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
     `;
+  }
+
+  // ── FINANCEIRO ─────────────────────────────────────
+  let finTipoFilter = 'todos';
+  function setFinTipo(t, btn) { finTipoFilter = t; document.querySelectorAll('#panelFinLanc .fb').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); loadFinLancamentos(); }
+  function toggleFinLancForm() { const el = document.getElementById('finLancForm'); el.style.display = el.style.display==='none'?'block':'none'; }
+  function toggleFinContaForm() { const el = document.getElementById('finContaForm'); el.style.display = el.style.display==='none'?'block':'none'; }
+
+  async function loadFinDashboard() {
+    const ano = document.getElementById('finDashAno').value;
+    const d = await api({ action: 'fin_dashboard', ano });
+    if (d.error) { document.getElementById('finDashContent').innerHTML = '<div class="empty-state">Erro.</div>'; return; }
+    const fmtR = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    const maxVal = Math.max(...d.receitas_mes, ...d.despesas_mes, 1);
+    document.getElementById('finDashContent').innerHTML = `
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+        <div class="stat-card" data-g="total"><div class="stat-label">Total Receitas</div><div class="stat-value" style="color:#2d7a3a;font-size:24px;">${fmtR(d.total_receitas)}</div></div>
+        <div class="stat-card" data-g="integral"><div class="stat-label">Total Despesas</div><div class="stat-value" style="color:#e53e3e;font-size:24px;">${fmtR(d.total_despesas)}</div></div>
+        <div class="stat-card" data-g="semi"><div class="stat-label">Saldo</div><div class="stat-value" style="color:${d.total_receitas-d.total_despesas>=0?'#2d7a3a':'#e53e3e'};font-size:24px;">${fmtR(d.total_receitas-d.total_despesas)}</div></div>
+        <div class="stat-card" data-g="diaria"><div class="stat-label">Pendente</div><div class="stat-value" style="color:#b07d00;font-size:24px;">${fmtR(d.pendente)}</div></div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Receitas x Despesas por Mes</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:140px;">
+          ${MESES_CURTOS.map((m,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            <div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center;height:110px;">
+              <div style="width:40%;background:#2d7a3a;border-radius:3px 3px 0 0;height:${Math.max(2,d.receitas_mes[i]/maxVal*100)}px;" title="Receita: ${fmtR(d.receitas_mes[i])}"></div>
+              <div style="width:40%;background:#e53e3e;border-radius:3px 3px 0 0;height:${Math.max(2,d.despesas_mes[i]/maxVal*100)}px;" title="Despesa: ${fmtR(d.despesas_mes[i])}"></div>
+            </div>
+            <div style="font-size:9px;color:var(--muted);">${m}</div>
+          </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;">
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#2d7a3a;border-radius:2px;"></span> Receitas</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:#e53e3e;border-radius:2px;"></span> Despesas</span>
+        </div>
+      </div>
+      ${d.mensalidades ? `<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px;">Mensalidades ${ano}</div>
+        <div style="display:flex;gap:20px;font-size:13px;">
+          <span>Total: <strong>${fmtR(d.mensalidades.total)}</strong></span>
+          <span style="color:#2d7a3a;">Pago: <strong>${fmtR(d.mensalidades.pago)}</strong></span>
+          <span style="color:#b07d00;">Pendente: <strong>${fmtR(d.mensalidades.pendente)}</strong></span>
+        </div>
+      </div>` : ''}`;
+  }
+
+  async function loadFinLancamentos() {
+    const mes = document.getElementById('finLancMes').value || new Date().toISOString().slice(0,7);
+    if (!document.getElementById('finLancMes').value) monthNavSet('finLancMes', mes);
+    const tipo = finTipoFilter === 'todos' ? undefined : finTipoFilter;
+    const d = await api({ action: 'fin_lancamentos_list', mes, tipo });
+    const items = Array.isArray(d) ? d : [];
+    const el = document.getElementById('finLancList');
+    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhum lancamento neste mes.</div>'; return; }
+    // Carregar contas para o select do form
+    const contas = await api({ action: 'fin_plano_contas_list' });
+    const sel = document.getElementById('flConta');
+    if (sel && sel.options.length <= 1) {
+      sel.innerHTML = '<option value="">-- conta --</option>' + (Array.isArray(contas)?contas:[]).map(c => `<option value="${c.id}">${esc(c.codigo||'')} ${esc(c.nome)}</option>`).join('');
+    }
+    const fmtR = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    el.innerHTML = items.map(l => `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${l.tipo==='receita'?'#2d7a3a':'#e53e3e'};border-radius:8px;margin-bottom:6px;">
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:13px;">${esc(l.descricao)}</div>
+        <div style="font-size:11px;color:var(--muted);">${l.fin_plano_contas?.nome||'—'} · ${l.fornecedor||'—'} · ${new Date(l.data_lancamento+'T12:00:00').toLocaleDateString('pt-BR')}</div>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:${l.tipo==='receita'?'#2d7a3a':'#e53e3e'};">${l.tipo==='receita'?'+':'−'} ${fmtR(l.valor)}</div>
+      <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${l.status==='pago'?'background:#edf7f0;color:#2d7a3a;':l.status==='atrasado'?'background:#fdf0f2;color:#a00d24;':'background:#fff8e1;color:#b07d00;'}">${l.status}</span>
+      ${l.status==='pendente'?`<button onclick="pagarFinLanc('${l.id}')" style="padding:3px 8px;background:#2d7a3a;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Pagar</button>`:''}
+    </div>`).join('');
+  }
+
+  async function salvarFinLanc() {
+    const d = await api({ action:'fin_lancamento_save', tipo:document.getElementById('flTipo').value, conta_id:document.getElementById('flConta').value||null, descricao:document.getElementById('flDesc').value.trim(), valor:document.getElementById('flValor').value, data_lancamento:document.getElementById('flData').value, data_vencimento:document.getElementById('flVenc').value||null, fornecedor:document.getElementById('flForn').value.trim()||null });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Lancamento salvo!','success'); toggleFinLancForm(); loadFinLancamentos();
+  }
+  async function pagarFinLanc(id) { await api({ action:'fin_lancamento_pagar', id }); showToast('Pago!','success'); loadFinLancamentos(); }
+
+  async function loadFinMensalidades() {
+    const mes = document.getElementById('finMensMes').value || new Date().toISOString().slice(0,7);
+    if (!document.getElementById('finMensMes').value) monthNavSet('finMensMes', mes);
+    const d = await api({ action:'fin_mensalidades_list', mes });
+    const items = Array.isArray(d) ? d : [];
+    const el = document.getElementById('finMensList');
+    const fmtR = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma mensalidade gerada para este mes. Clique "Gerar Mensalidades".</div>'; return; }
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;"><thead><tr>
+      <th style="text-align:left;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Familia</th>
+      <th style="text-align:left;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Crianca</th>
+      <th style="padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Turno</th>
+      <th style="text-align:right;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Valor</th>
+      <th style="padding:10px;border-bottom:1.5px solid var(--border);">Status</th>
+      <th style="padding:10px;border-bottom:1.5px solid var(--border);"></th>
+    </tr></thead><tbody>${items.map(m => `<tr>
+      <td style="padding:10px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(m.familia_nome||m.familia_email)}</td>
+      <td style="padding:10px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(m.crianca_nome||'—')}</td>
+      <td style="padding:10px;font-size:12px;border-bottom:1px solid #f5f0ea;">${esc((m.turno||'').replace(/_/g,' '))}</td>
+      <td style="padding:10px;font-size:13px;font-weight:700;text-align:right;border-bottom:1px solid #f5f0ea;">${fmtR(m.valor_total)}</td>
+      <td style="padding:10px;border-bottom:1px solid #f5f0ea;"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${m.status==='pago'?'background:#edf7f0;color:#2d7a3a;':'background:#fff8e1;color:#b07d00;'}">${m.status}</span></td>
+      <td style="padding:10px;border-bottom:1px solid #f5f0ea;">${m.status!=='pago'?`<button onclick="pagarMensalidade('${m.id}')" style="padding:3px 8px;background:#2d7a3a;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Pagar</button>`:''}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+  async function gerarMensalidades() {
+    const mes = document.getElementById('finMensMes').value || new Date().toISOString().slice(0,7);
+    if (!confirm('Gerar mensalidades para ' + mes + '?')) return;
+    const d = await api({ action:'fin_gerar_mensalidades', mes });
+    showToast(d.geradas + ' mensalidade(s) gerada(s)!','success'); loadFinMensalidades();
+  }
+  async function pagarMensalidade(id) { await api({ action:'fin_mensalidade_pagar', id }); showToast('Pago!','success'); loadFinMensalidades(); }
+
+  async function loadFinContas() {
+    const d = await api({ action:'fin_plano_contas_list' });
+    const items = Array.isArray(d) ? d : [];
+    document.getElementById('finContasList').innerHTML = items.length ? items.map(c => `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${c.tipo==='receita'?'#2d7a3a':'#e53e3e'};border-radius:8px;margin-bottom:4px;">
+      <span style="font-size:12px;font-weight:700;color:var(--muted);min-width:40px;">${esc(c.codigo||'')}</span>
+      <span style="font-size:13px;font-weight:600;flex:1;">${esc(c.nome)}</span>
+      <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${c.tipo==='receita'?'background:#edf7f0;color:#2d7a3a;':'background:#fdf0f2;color:#a00d24;'}">${c.tipo}</span>
+    </div>`).join('') : '<div class="empty-state">Nenhuma conta cadastrada.</div>';
+  }
+  async function salvarFinConta() {
+    const d = await api({ action:'fin_plano_contas_save', codigo:document.getElementById('fcCodigo').value.trim(), nome:document.getElementById('fcNome').value.trim(), tipo:document.getElementById('fcTipo').value });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Conta salva!','success'); toggleFinContaForm(); loadFinContas();
+    document.getElementById('fcCodigo').value=''; document.getElementById('fcNome').value='';
   }
 
   // ── IMPRESSOES (gerente) ────────────────────────────

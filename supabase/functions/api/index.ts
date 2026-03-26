@@ -822,6 +822,117 @@ serve(async (req: Request) => {
     });
   }
 
+  // ── Permissoes ─────────────────────────────────────────
+  if (action === "permissoes_usuario") {
+    const papel = gerente?.papel || (body as any).papel || 'gerente';
+    const { data } = await admin.from("permissoes_papel").select("modulo, pode_ver, pode_editar").eq("papel", papel);
+    return ok(data ?? []);
+  }
+
+  // ── Financeiro ────────────────────────────────────────
+  if (action === "fin_plano_contas_list") {
+    const { data } = await admin.from("fin_plano_contas").select("*").order("codigo");
+    return ok(data ?? []);
+  }
+  if (action === "fin_plano_contas_save") {
+    const { id, codigo, nome, tipo } = body as any;
+    if (!nome || !tipo) return err("Nome e tipo obrigatorios.");
+    if (id) {
+      await admin.from("fin_plano_contas").update({ codigo, nome, tipo }).eq("id", id);
+    } else {
+      await admin.from("fin_plano_contas").insert({ codigo, nome, tipo });
+    }
+    return ok({ success: true });
+  }
+  if (action === "fin_lancamento_save") {
+    const { id, tipo, conta_id, descricao, valor, data_lancamento, data_vencimento, status, fornecedor, familia_email, familia_nome, observacao } = body as any;
+    if (!descricao || !valor || !data_lancamento) return err("Descricao, valor e data obrigatorios.");
+    const data = { tipo, conta_id, descricao, valor: parseFloat(valor), data_lancamento, data_vencimento: data_vencimento || null, status: status || 'pendente', fornecedor: fornecedor || null, familia_email: familia_email || null, familia_nome: familia_nome || null, observacao: observacao || null, criado_por: gerente?.nome };
+    if (id) {
+      await admin.from("fin_lancamentos").update(data).eq("id", id);
+    } else {
+      await admin.from("fin_lancamentos").insert(data);
+    }
+    return ok({ success: true });
+  }
+  if (action === "fin_lancamentos_list") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const tipo = (body as any).tipo;
+    let query = admin.from("fin_lancamentos").select("*, fin_plano_contas(nome, codigo)")
+      .gte("data_lancamento", mes + "-01").lte("data_lancamento", mes + "-31").order("data_lancamento", { ascending: false });
+    if (tipo) query = query.eq("tipo", tipo);
+    const { data } = await query;
+    return ok(data ?? []);
+  }
+  if (action === "fin_lancamento_pagar") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatorio.");
+    await admin.from("fin_lancamentos").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "fin_lancamento_delete") {
+    const { id } = body as { id: string };
+    await admin.from("fin_lancamentos").delete().eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "fin_dashboard") {
+    const ano = (body as any).ano || new Date().getFullYear().toString();
+    const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor, status, data_lancamento")
+      .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
+    const receitasMes = Array(12).fill(0), despesasMes = Array(12).fill(0);
+    let totalReceitas = 0, totalDespesas = 0, pendente = 0;
+    for (const l of lancs ?? []) {
+      const m = parseInt(l.data_lancamento.split("-")[1]) - 1;
+      if (l.tipo === "receita") { receitasMes[m] += l.valor; totalReceitas += l.valor; }
+      else { despesasMes[m] += l.valor; totalDespesas += l.valor; }
+      if (l.status === "pendente" || l.status === "atrasado") pendente += l.valor;
+    }
+    // Mensalidades
+    const { data: mens } = await admin.from("fin_mensalidades").select("status, valor_total")
+      .like("mes", ano + "-%");
+    let mensPago = 0, mensPendente = 0, mensTotal = 0;
+    for (const m of mens ?? []) {
+      mensTotal += m.valor_total;
+      if (m.status === "pago") mensPago += m.valor_total;
+      else mensPendente += m.valor_total;
+    }
+    return ok({ receitas_mes: receitasMes, despesas_mes: despesasMes, total_receitas: totalReceitas, total_despesas: totalDespesas, pendente, mensalidades: { total: mensTotal, pago: mensPago, pendente: mensPendente }, ano });
+  }
+  if (action === "fin_gerar_mensalidades") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const vencimento = (body as any).vencimento || 10;
+    // Busca todas as solicitacoes ativas
+    const { data: sols } = await admin.from("solicitacoes").select("email, nome_resp, nome_crianca, serie, turno");
+    const TURNO_PRECOS: Record<string, number> = {
+      integral_5x: 4395, integral_4x: 4303.57, integral_3x: 4072.13, integral_2x: 3760.70, integral_1x: 3300,
+      semi_5x: 4030, semi_4x: 3991.57, semi_3x: 3773.13, semi_2x: 3534.70, semi_1x: 3196.27, tarde: 0, diaria: 150,
+    };
+    let geradas = 0;
+    for (const s of sols ?? []) {
+      const valorTurno = TURNO_PRECOS[s.turno] || 0;
+      if (valorTurno <= 0) continue;
+      const [y, m] = mes.split("-");
+      const dtVenc = `${y}-${m}-${String(vencimento).padStart(2, "0")}`;
+      const { error } = await admin.from("fin_mensalidades").upsert({
+        familia_email: s.email, familia_nome: s.nome_resp, crianca_nome: s.nome_crianca,
+        serie: s.serie, turno: s.turno, valor_turno: valorTurno, valor_atividades: 0,
+        valor_total: valorTurno, mes, data_vencimento: dtVenc,
+      }, { onConflict: "familia_email,crianca_nome,mes" });
+      if (!error) geradas++;
+    }
+    return ok({ success: true, geradas });
+  }
+  if (action === "fin_mensalidades_list") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const { data } = await admin.from("fin_mensalidades").select("*").eq("mes", mes).order("familia_nome");
+    return ok(data ?? []);
+  }
+  if (action === "fin_mensalidade_pagar") {
+    const { id } = body as { id: string };
+    await admin.from("fin_mensalidades").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id);
+    return ok({ success: true });
+  }
+
   // ── Impressoes (gerente) ────────────────────────────────
   if (action === "impressoes_pendentes") {
     const { data } = await admin.from("impressoes").select("*")
