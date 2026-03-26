@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
         })
         if (insErr) return new Response('Erro ao salvar token: ' + insErr.message, { status: 500 })
         // Redirect to static success page on Vercel
-        return Response.redirect('https://maple-bear-rs-ivyson-wqs-projects.vercel.app/ml-conectado.html', 302)
+        return Response.redirect('https://app.maplebearcaxiasdosul.com.br/ml-conectado.html', 302)
       }
       return new Response('Erro ao obter token do ML: ' + JSON.stringify(t), { status: 400, headers: { 'Content-Type': 'text/plain' } })
     } catch (e) { return new Response('Erro: ' + (e as Error).message, { status: 500 }) }
