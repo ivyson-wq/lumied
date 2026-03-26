@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="/webauthn-client.js"></script>
+<script src="/i18n.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -339,6 +340,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
       <div class="sb-label">Infraestrutura</div>
       <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
+      <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;"><span class="ic">🚨</span> Emergência</a>
       <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
       <div class="sb-label">Escola</div>
       <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário Escolar</a>
@@ -365,6 +367,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <span id="greetingTopbar" style="font-size:14px;font-weight:500;color:var(--muted);margin-right:auto;"></span>
       <h2 id="topbarTitle">Dashboard Analytics</h2>
       <div style="display:flex;align-items:center;gap:10px;">
+        <span id="langToggle"></span>
+        <script>renderLangToggle('langToggle');</script>
         <button style="position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()">🔔<span id="notifDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
         <div class="live-badge" id="liveBadge"><div class="live-dot"></div>Atualizando…</div>
         <button class="btn-export" id="btnExportPdf" onclick="exportarPDF()" style="display:none;">
@@ -1000,6 +1004,34 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="analyticsContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- EMERGENCIA -->
+      <div id="panelEmergencia" class="panel">
+        <div style="text-align:center;padding:20px 0 30px;">
+          <div style="font-size:16px;color:var(--muted);margin-bottom:20px;">Acione um alerta de emergência para notificar toda a equipe imediatamente.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;max-width:700px;margin:0 auto;">
+            <button onclick="acionarEmergencia('incendio')" style="padding:28px 16px;background:#fff;border:2px solid #e53e3e;border-radius:16px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;" onmouseover="this.style.background='#fdf0f0'" onmouseout="this.style.background='#fff'">
+              <div style="font-size:36px;margin-bottom:8px;">🔥</div>
+              <div style="font-size:14px;font-weight:700;color:#e53e3e;">Incêndio</div>
+            </button>
+            <button onclick="acionarEmergencia('intruso')" style="padding:28px 16px;background:#fff;border:2px solid #e53e3e;border-radius:16px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;" onmouseover="this.style.background='#fdf0f0'" onmouseout="this.style.background='#fff'">
+              <div style="font-size:36px;margin-bottom:8px;">🚷</div>
+              <div style="font-size:14px;font-weight:700;color:#e53e3e;">Intruso</div>
+            </button>
+            <button onclick="acionarEmergencia('emergencia_medica')" style="padding:28px 16px;background:#fff;border:2px solid #e53e3e;border-radius:16px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;" onmouseover="this.style.background='#fdf0f0'" onmouseout="this.style.background='#fff'">
+              <div style="font-size:36px;margin-bottom:8px;">🚑</div>
+              <div style="font-size:14px;font-weight:700;color:#e53e3e;">Emergência Médica</div>
+            </button>
+            <button onclick="acionarEmergencia('evacuacao')" style="padding:28px 16px;background:#fff;border:2px solid #e53e3e;border-radius:16px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;" onmouseover="this.style.background='#fdf0f0'" onmouseout="this.style.background='#fff'">
+              <div style="font-size:36px;margin-bottom:8px;">🏃</div>
+              <div style="font-size:14px;font-weight:700;color:#e53e3e;">Evacuação</div>
+            </button>
+          </div>
+        </div>
+        <div id="emergenciaAtivos" style="margin-bottom:20px;"></div>
+        <div class="sec-title">Histórico</div>
+        <div id="emergenciaHistorico"></div>
+      </div>
+
       <!-- ACHADOS E PERDIDOS -->
       <div id="panelAchados" class="panel">
         <div class="sec-title">🔍 Achados & Perdidos <span class="count-badge" id="achadosCount">0</span></div>
@@ -1583,7 +1615,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1609,6 +1641,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='familias')   loadFamiliasPanel();
     if(id==='cadastro')    loadCadastroPanel();
     if(id==='achados')     loadAchadosGerente();
+    if(id==='emergencia')  loadEmergencia();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
     return false;
@@ -5298,6 +5331,63 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
     `;
+  }
+
+  // ── EMERGENCIA ──────────────────────────────────────
+  const EMERG_TIPOS = { incendio:'🔥 Incêndio', intruso:'🚷 Intruso', emergencia_medica:'🚑 Emergência Médica', evacuacao:'🏃 Evacuação', outro:'⚠️ Outro' };
+
+  async function acionarEmergencia(tipo) {
+    const msg = prompt('Mensagem adicional (opcional):');
+    if (!confirm('ATENÇÃO: Isso vai notificar TODA a equipe da escola imediatamente. Confirma o alerta de ' + (EMERG_TIPOS[tipo]||tipo) + '?')) return;
+    const d = await api({ action: 'emergencia_acionar', tipo, mensagem: msg || null });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('ALERTA DE EMERGÊNCIA ACIONADO! Toda a equipe foi notificada.', 'error', 8000);
+    loadEmergencia();
+  }
+
+  async function loadEmergencia() {
+    const [ativos, hist] = await Promise.all([
+      api({ action: 'emergencia_ativos' }),
+      api({ action: 'emergencia_historico' }),
+    ]);
+    // Ativos
+    const ativosArr = Array.isArray(ativos) ? ativos : [];
+    const el = document.getElementById('emergenciaAtivos');
+    if (ativosArr.length) {
+      el.innerHTML = '<div class="sec-title" style="color:#e53e3e;">⚠️ ALERTAS ATIVOS</div>' +
+        ativosArr.map(a => `<div style="background:#fdf0f0;border:2px solid #e53e3e;border-radius:12px;padding:16px;margin-bottom:10px;animation:pulse 2s infinite;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:18px;font-weight:700;color:#e53e3e;">${EMERG_TIPOS[a.tipo]||a.tipo}</div>
+              ${a.mensagem ? `<div style="font-size:13px;margin-top:4px;">${esc(a.mensagem)}</div>` : ''}
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">Por ${esc(a.acionado_por)} · ${new Date(a.criado_em).toLocaleString('pt-BR')}</div>
+            </div>
+            <button onclick="resolverEmergencia('${a.id}')" style="padding:8px 20px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">✅ Resolver</button>
+          </div>
+        </div>`).join('');
+    } else {
+      el.innerHTML = '';
+    }
+    // Historico
+    const histArr = Array.isArray(hist) ? hist : [];
+    document.getElementById('emergenciaHistorico').innerHTML = histArr.length ? histArr.map(a => {
+      const dt = new Date(a.criado_em).toLocaleString('pt-BR');
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--white);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;">
+        <div style="font-size:20px;">${EMERG_TIPOS[a.tipo]?.charAt(0)||'⚠️'}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:13px;">${EMERG_TIPOS[a.tipo]||a.tipo}</div>
+          <div style="font-size:11px;color:var(--muted);">${dt} · ${esc(a.acionado_por)}${a.resolvido_por ? ' · Resolvido por '+esc(a.resolvido_por) : ''}</div>
+        </div>
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;${a.ativo?'background:#fdf0f0;color:#e53e3e;':'background:#edf7f0;color:#2d7a3a;'}">${a.ativo?'Ativo':'Resolvido'}</span>
+      </div>`;
+    }).join('') : '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhum alerta registrado.</div>';
+  }
+
+  async function resolverEmergencia(id) {
+    if (!confirm('Confirma que a emergência foi resolvida?')) return;
+    await api({ action: 'emergencia_resolver', id });
+    showToast('Emergência resolvida.', 'success');
+    loadEmergencia();
   }
 
   // ── ACHADOS E PERDIDOS ───────────────────────────────

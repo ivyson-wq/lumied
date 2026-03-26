@@ -822,6 +822,51 @@ serve(async (req: Request) => {
     });
   }
 
+  // ── Alertas de Emergencia ───────────────────────────────
+  if (action === "emergencia_acionar") {
+    const { tipo, mensagem } = body as { tipo: string; mensagem?: string };
+    if (!tipo) return err("Tipo obrigatorio.");
+    const { error } = await admin.from("alertas_emergencia").insert({
+      tipo, mensagem: mensagem || null,
+      acionado_por: gerente?.nome || "Gerente",
+      acionado_por_id: gerente?.id || null,
+    });
+    if (error) return err(error.message);
+    // Notifica todos os portais
+    const { data: users } = await admin.from("usuarios").select("email, papel");
+    const tipos: Record<string, string> = { incendio: "INCENDIO", intruso: "INTRUSO", emergencia_medica: "EMERGENCIA MEDICA", evacuacao: "EVACUACAO", outro: "ALERTA" };
+    const tipoLabel = tipos[tipo] || tipo.toUpperCase();
+    for (const u of users ?? []) {
+      const portal = u.papel === "gerente" ? "gerente" : u.papel === "secretaria" ? "secretaria" : "professora";
+      await admin.from("notificacoes").insert({
+        portal, destinatario: u.email,
+        titulo: "EMERGENCIA: " + tipoLabel,
+        mensagem: mensagem || "Alerta de emergencia acionado. Siga o protocolo de seguranca.",
+        tipo: "error",
+      });
+    }
+    return ok({ success: true });
+  }
+  if (action === "emergencia_resolver") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatorio.");
+    await admin.from("alertas_emergencia").update({
+      ativo: false, resolvido_em: new Date().toISOString(),
+      resolvido_por: gerente?.nome || "Gerente",
+    }).eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "emergencia_ativos") {
+    const { data } = await admin.from("alertas_emergencia").select("*")
+      .eq("ativo", true).order("criado_em", { ascending: false });
+    return ok(data ?? []);
+  }
+  if (action === "emergencia_historico") {
+    const { data } = await admin.from("alertas_emergencia").select("*")
+      .order("criado_em", { ascending: false }).limit(50);
+    return ok(data ?? []);
+  }
+
   // ── Atribuir turma/série a professora ───────────────────
   if (action === "usuarios_set_serie") {
     const { email, serie_id } = body as { email: string; serie_id: string | null };

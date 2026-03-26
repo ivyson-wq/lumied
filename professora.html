@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="/webauthn-client.js"></script>
+<script src="/i18n.js"></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;--primary:#C8102E;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -306,7 +307,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <div class="topbar-user">
       <button class="notif-bell" onclick="toggleNotifPanel()">🔔<span class="notif-dot" id="notifDot"></span></button>
       <span class="user-name" id="userNome"></span>
+      <span id="langToggle"></span>
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+      <script>renderLangToggle('langToggle');</script>
     </div>
     <div class="notif-panel" id="notifPanel">
       <div class="notif-header">Notificações <button onclick="marcarTodasLidas()">Marcar todas como lidas</button></div>
