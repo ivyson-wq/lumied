@@ -1257,12 +1257,13 @@ serve(async (req: Request) => {
   }
   // Matriculas
   if (action === "crm_matricula_criar") {
-    const { lead_id, nome_responsavel, nome_crianca, serie, ano, status, email, telefone, data_nascimento } = body as any;
+    const { lead_id, nome_responsavel, nome_crianca, serie, ano, status, email, telefone, data_nascimento, turma } = body as any;
     if (!nome_crianca || !serie || !ano) return err("Crianca, serie e ano obrigatorios.");
     const st = status || "reserva";
     const { error } = await admin.from("crm_matriculas").insert({
       lead_id, nome_responsavel, nome_crianca, serie, ano: parseInt(ano), status: st,
       email: email || null, telefone: telefone || null, data_nascimento: data_nascimento || null,
+      turma: turma || "A",
       data_reserva: st === "reserva" ? new Date().toISOString().split("T")[0] : null,
       data_matricula: st === "matriculado" ? new Date().toISOString().split("T")[0] : null,
     });
@@ -1285,9 +1286,15 @@ serve(async (req: Request) => {
     await admin.from("crm_matriculas").update(update).eq("id", id);
     return ok({ success: true });
   }
+  if (action === "crm_matricula_atualizar_turma") {
+    const { id, turma } = body as any;
+    if (!id || !turma) return err("id e turma obrigatorios.");
+    await admin.from("crm_matriculas").update({ turma }).eq("id", id);
+    return ok({ success: true });
+  }
   if (action === "crm_matriculas_list") {
     const ano = parseInt((body as any).ano) || new Date().getFullYear();
-    const { data } = await admin.from("crm_matriculas").select("*").eq("ano", ano).order("serie").order("criado_em");
+    const { data } = await admin.from("crm_matriculas").select("*").eq("ano", ano).order("serie").order("turma").order("criado_em");
     return ok(data ?? []);
   }
   if (action === "crm_dashboard") {

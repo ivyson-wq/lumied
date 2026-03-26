@@ -6687,8 +6687,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const el = document.getElementById('crmMatriculasContent');
     const statusLabels = { reserva:'🟡 Reserva', matriculado:'🟢 Matriculado', cancelado:'🔴 Cancelado' };
     const statusDot = { reserva:'#f6a623', matriculado:'#2d7a3a', cancelado:'#e53e3e' };
+    const letras = 'ABCDEFGHIJ';
 
-    // Agrupar matriculas por serie
+    // Agrupar por serie
     const porSerie = {};
     for (const v of vagas) { if (!porSerie[v.serie]) porSerie[v.serie] = { vagas: v, items: [] }; }
     for (const m of items) {
@@ -6704,63 +6705,98 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
     if (!series.length) { el.innerHTML = '<div class="empty-state">Nenhuma serie configurada para ' + ano + '.</div>'; return; }
 
-    el.innerHTML = series.map(serie => {
+    // Gerar cards — se qtd_turmas > 1, separar em turmas A, B, C...
+    let html = '';
+    for (const serie of series) {
       const g = porSerie[serie];
       const v = g.vagas;
-      const total = v ? v.vagas_total : '?';
-      const reservas = g.items.filter(m => m.status === 'reserva').length;
-      const matriculados = g.items.filter(m => m.status === 'matriculado').length;
-      const cancelados = g.items.filter(m => m.status === 'cancelado').length;
-      const ocupados = reservas + matriculados;
-      const disp = v ? v.vagas_total - ocupados : '?';
-      const pct = v && v.vagas_total > 0 ? Math.min(100, (ocupados / v.vagas_total) * 100) : 0;
-      const cor = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
-      const ativos = g.items.filter(m => m.status !== 'cancelado');
-      const inativos = g.items.filter(m => m.status === 'cancelado');
+      const qtdTurmas = v ? v.qtd_turmas : 1;
+      const vagasPorTurma = v ? v.vagas_por_turma : '?';
 
-      return `<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;">
-        <div style="padding:14px 18px;background:linear-gradient(135deg,${cor}15,${cor}05);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <div style="font-size:15px;font-weight:700;font-family:'Lora',serif;">${esc(serie)}</div>
-          <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);">
-            ${v?`<span>${v.qtd_turmas} turma${v.qtd_turmas>1?'s':''}</span><span>·</span>`:''}
-            <span style="color:#2d7a3a;font-weight:600;">${matriculados} matriculado${matriculados!==1?'s':''}</span>
-            <span>·</span>
-            <span style="color:#b07d00;font-weight:600;">${reservas} reserva${reservas!==1?'s':''}</span>
-            ${cancelados?`<span>·</span><span style="color:#e53e3e;">${cancelados} cancelado${cancelados!==1?'s':''}</span>`:''}
-          </div>
-          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;font-weight:600;color:${typeof disp==='number'&&disp<=2?'#e53e3e':typeof disp==='number'&&disp<=5?'#b07d00':'#2d7a3a'};">${disp} vaga${disp!==1?'s':''} disponive${disp!==1?'is':'l'}</span>
-            ${v?`<div style="background:#f0ece6;border-radius:4px;height:8px;width:80px;"><div style="height:100%;border-radius:4px;width:${pct}%;background:${cor};"></div></div>`:''}
-          </div>
+      if (qtdTurmas <= 1) {
+        // Turma unica — renderiza como antes
+        html += renderTurmaCard(serie, serie, g.items, v ? v.vagas_total : null, qtdTurmas, statusLabels, statusDot, letras, ano);
+      } else {
+        // Multiplas turmas — separar A, B, C...
+        for (let t = 0; t < qtdTurmas; t++) {
+          const letra = letras[t] || String(t+1);
+          const nomeTurma = serie + ' ' + letra;
+          const turmaItems = g.items.filter(m => (m.turma || 'A') === letra);
+          html += renderTurmaCard(serie, nomeTurma, turmaItems, vagasPorTurma, 1, statusLabels, statusDot, letras, ano);
+        }
+        // Alunos sem turma definida (turma diferente das esperadas)
+        const letrasValidas = Array.from({length: qtdTurmas}, (_, i) => letras[i] || String(i+1));
+        const semTurma = g.items.filter(m => m.turma && !letrasValidas.includes(m.turma));
+        if (semTurma.length) {
+          html += renderTurmaCard(serie, serie + ' (sem turma)', semTurma, null, 1, statusLabels, statusDot, letras, ano);
+        }
+      }
+    }
+    el.innerHTML = html;
+  }
+
+  function renderTurmaCard(serieBase, nomeTurma, items, vagasTotal, qtdTurmas, statusLabels, statusDot, letras, ano) {
+    const ativos = items.filter(m => m.status !== 'cancelado');
+    const inativos = items.filter(m => m.status === 'cancelado');
+    const reservas = items.filter(m => m.status === 'reserva').length;
+    const matriculados = items.filter(m => m.status === 'matriculado').length;
+    const cancelados = inativos.length;
+    const ocupados = reservas + matriculados;
+    const disp = vagasTotal != null ? vagasTotal - ocupados : '?';
+    const pct = vagasTotal && vagasTotal > 0 ? Math.min(100, (ocupados / vagasTotal) * 100) : 0;
+    const cor = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+
+    return `<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;">
+      <div style="padding:14px 18px;background:linear-gradient(135deg,${cor}15,${cor}05);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-size:15px;font-weight:700;font-family:'Lora',serif;">${esc(nomeTurma)}</div>
+        <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);">
+          <span style="color:#2d7a3a;font-weight:600;">${matriculados} matriculado${matriculados!==1?'s':''}</span>
+          <span>·</span>
+          <span style="color:#b07d00;font-weight:600;">${reservas} reserva${reservas!==1?'s':''}</span>
+          ${cancelados?`<span>·</span><span style="color:#e53e3e;">${cancelados} cancelado${cancelados!==1?'s':''}</span>`:''}
         </div>
-        <div style="padding:12px 18px;">
-          ${ativos.length ? ativos.map(m => {
-            const nascStr = m.data_nascimento ? new Date(m.data_nascimento+'T12:00:00').toLocaleDateString('pt-BR') : '';
-            const dataStr = m.data_matricula || m.data_reserva || '';
-            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f0ea;">
-              <div style="width:8px;height:8px;border-radius:50%;background:${statusDot[m.status]||'#999'};flex-shrink:0;"></div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;">${esc(m.nome_crianca)}</div>
-                <div style="font-size:11px;color:var(--muted);">Resp: ${esc(m.nome_responsavel)}${nascStr?' · Nasc: '+nascStr:''}${m.telefone?' · '+esc(m.telefone):''}${m.email?' · '+esc(m.email):''}</div>
-              </div>
-              <div style="font-size:11px;color:var(--muted);white-space:nowrap;">${statusLabels[m.status]||m.status}</div>
-              <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${dataStr?new Date(dataStr+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
-              <div style="display:flex;gap:4px;flex-shrink:0;">
-                ${m.status==='reserva'?`<button onclick="atualizarMatricula('${m.id}','matriculado')" style="padding:3px 8px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Matricular</button>`:''}
-                <button onclick="atualizarMatricula('${m.id}','cancelado')" style="padding:3px 8px;background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
-              </div>
-            </div>`;
-          }).join('') : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Nenhuma crianca matriculada/reservada nesta serie.</div>'}
-          ${inativos.length ? `<details style="margin-top:6px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">Cancelados (${inativos.length})</summary>
-            ${inativos.map(m => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:.5;">
-              <div style="width:8px;height:8px;border-radius:50%;background:#e53e3e;flex-shrink:0;"></div>
-              <div style="font-size:12px;text-decoration:line-through;">${esc(m.nome_crianca)}</div>
-              <div style="font-size:11px;color:var(--muted);">${esc(m.nome_responsavel)}</div>
-            </div>`).join('')}
-          </details>` : ''}
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+          ${vagasTotal!=null?`<span style="font-size:12px;font-weight:600;color:${typeof disp==='number'&&disp<=2?'#e53e3e':typeof disp==='number'&&disp<=5?'#b07d00':'#2d7a3a'};">${disp}/${vagasTotal} vagas</span>
+          <div style="background:#f0ece6;border-radius:4px;height:8px;width:80px;"><div style="height:100%;border-radius:4px;width:${pct}%;background:${cor};"></div></div>`:''}
         </div>
-      </div>`;
-    }).join('');
+      </div>
+      <div style="padding:12px 18px;">
+        ${ativos.length ? ativos.map(m => {
+          const nascStr = m.data_nascimento ? new Date(m.data_nascimento+'T12:00:00').toLocaleDateString('pt-BR') : '';
+          const dataStr = m.data_matricula || m.data_reserva || '';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f0ea;">
+            <div style="width:8px;height:8px;border-radius:50%;background:${statusDot[m.status]||'#999'};flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;">${esc(m.nome_crianca)}</div>
+              <div style="font-size:11px;color:var(--muted);">Resp: ${esc(m.nome_responsavel)}${nascStr?' · Nasc: '+nascStr:''}${m.telefone?' · '+esc(m.telefone):''}${m.email?' · '+esc(m.email):''}</div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;">${statusLabels[m.status]||m.status}</div>
+            <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${dataStr?new Date(dataStr+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
+            <select onchange="mudarTurmaMatricula('${m.id}',this.value)" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-size:10px;font-family:'DM Sans',sans-serif;background:#fff;cursor:pointer;" title="Mudar turma">
+              ${Array.from({length:10},(_, i)=>letras[i]).filter(l=>l).map(l=>`<option value="${l}" ${(m.turma||'A')===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:4px;flex-shrink:0;">
+              ${m.status==='reserva'?`<button onclick="atualizarMatricula('${m.id}','matriculado')" style="padding:3px 8px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Matricular</button>`:''}
+              <button onclick="atualizarMatricula('${m.id}','cancelado')" style="padding:3px 8px;background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Nenhuma crianca nesta turma.</div>'}
+        ${inativos.length ? `<details style="margin-top:6px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">Cancelados (${inativos.length})</summary>
+          ${inativos.map(m => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:.5;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#e53e3e;flex-shrink:0;"></div>
+            <div style="font-size:12px;text-decoration:line-through;">${esc(m.nome_crianca)}</div>
+            <div style="font-size:11px;color:var(--muted);">${esc(m.nome_responsavel)}</div>
+          </div>`).join('')}
+        </details>` : ''}
+      </div>
+    </div>`;
+  }
+
+  async function mudarTurmaMatricula(id, novaTurma) {
+    const d = await api({ action:'crm_matricula_atualizar_turma', id, turma: novaTurma });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Turma alterada para ' + novaTurma,'success');
+    loadCrmMatriculas();
   }
 
   async function atualizarMatricula(id, novoStatus) {
@@ -6783,6 +6819,17 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if (!lead) { showToast('Lead nao encontrado','error'); return; }
     const ano = prompt('Ano da matricula:', '2026');
     if (!ano) return;
+    // Buscar vagas para saber quantas turmas existem
+    const vagasD = await api({ action:'crm_vagas_list', ano: parseInt(ano) });
+    const vagasList = Array.isArray(vagasD) ? vagasD : [];
+    const serieVaga = vagasList.find(v => v.serie === lead.serie_interesse);
+    let turma = 'A';
+    if (serieVaga && serieVaga.qtd_turmas > 1) {
+      const letras = 'ABCDEFGHIJ'.slice(0, serieVaga.qtd_turmas).split('');
+      turma = prompt('Turma (' + letras.join(', ') + '):', 'A');
+      if (!turma) return;
+      turma = turma.toUpperCase();
+    }
     const status = confirm('Ja tem contrato assinado?\n\nOK = Matriculado\nCancelar = Reserva') ? 'matriculado' : 'reserva';
     const d = await api({
       action: 'crm_matricula_criar',
@@ -6791,7 +6838,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       nome_crianca: lead.nome_crianca || '',
       serie: lead.serie_interesse || '',
       ano: parseInt(ano),
-      status,
+      status, turma,
       email: lead.email || '',
       telefone: lead.telefone || '',
       data_nascimento: lead.data_nascimento || ''
