@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear — Área Restrita</title>
+<meta name="theme-color" content="#1c1712">
+<link rel="icon" href="/icon-apple.png">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C8102E;--cream:#f8f5f0;--sb:#1c1712;--border:#e6ddd3;--text:#1a1a1a;--muted:#7a7169;--white:#fff;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--sb);min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+
+.container{max-width:480px;width:90%;position:relative;z-index:1;}
+
+.brand{text-align:center;margin-bottom:32px;}
+.brand-leaf{width:56px;height:56px;background:rgba(255,255,255,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;border:1.5px solid rgba(255,255,255,.15);}
+.brand h1{font-family:'Lora',serif;font-size:20px;color:#fff;font-weight:700;}
+.brand p{font-size:12px;color:rgba(255,255,255,.5);margin-top:4px;}
+
+.portal-card{display:flex;align-items:center;gap:16px;background:var(--white);border-radius:14px;padding:20px 24px;margin-bottom:12px;text-decoration:none;color:var(--text);transition:all .2s;box-shadow:0 4px 16px rgba(0,0,0,.08);border:1px solid var(--border);}
+.portal-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12);}
+.portal-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.portal-info h3{font-family:'Lora',serif;font-size:15px;font-weight:700;margin-bottom:3px;}
+.portal-info p{font-size:12px;color:var(--muted);line-height:1.4;}
+.portal-arrow{margin-left:auto;color:var(--muted);font-size:18px;flex-shrink:0;}
+
+.back-link{display:block;text-align:center;margin-top:24px;color:rgba(255,255,255,.5);font-size:13px;text-decoration:none;transition:color .2s;}
+.back-link:hover{color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="brand">
+    <div class="brand-leaf">🍁</div>
+    <h1>Maple Bear</h1>
+    <p>Área Restrita — Equipe Escolar</p>
+  </div>
+
+  <a href="gerente.html" class="portal-card">
+    <div class="portal-icon" style="background:rgba(200,16,46,.1);color:var(--red);">👔</div>
+    <div class="portal-info">
+      <h3>Painel do Gerente</h3>
+      <p>Dashboard, almoxarifado, equipe, calendário, analytics e configurações gerais.</p>
+    </div>
+    <span class="portal-arrow">→</span>
+  </a>
+
+  <a href="professora.html" class="portal-card">
+    <div class="portal-icon" style="background:rgba(26,107,181,.1);color:#1a6bb5;">👩‍🏫</div>
+    <div class="portal-info">
+      <h3>Portal das Professoras</h3>
+      <p>Fila de retirada, diplomas, materiais, impressões, manutenção e mais.</p>
+    </div>
+    <span class="portal-arrow">→</span>
+  </a>
+
+  <a href="secretaria.html" class="portal-card">
+    <div class="portal-icon" style="background:rgba(45,122,58,.1);color:#2d7a3a;">📋</div>
+    <div class="portal-info">
+      <h3>Portal da Secretaria</h3>
+      <p>Validação de atestados médicos e gestão administrativa.</p>
+    </div>
+    <span class="portal-arrow">→</span>
+  </a>
+
+  <a href="index.html" class="back-link">← Voltar ao Portal dos Pais</a>
+</div>
+
+</body>
+</html>
