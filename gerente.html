@@ -1718,6 +1718,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <button onclick="toggleCadastroForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Cadastrar</button>
             <button onclick="gerarModeloFamilias()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📥 Modelo Excel</button>
             <button onclick="document.getElementById('famXlsxFile').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar</button>
+            <button onclick="exportarFamiliasCSV()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📤 Exportar CSV</button>
             <input type="file" id="famXlsxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarFamiliasXlsx(this)">
           </div>
         </div>
@@ -5609,6 +5610,28 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if (!confirm('Remover ' + nome + ' da lista de famílias?')) return;
     await api({ action: 'familias_delete', cpf });
     await loadFamiliasPanel();
+  }
+
+  function exportarFamiliasCSV() {
+    if (!famDados.length) { showToast('Nenhuma familia para exportar','error'); return; }
+    const headers = ['nome_aluno','nome_responsavel','cpf','email','serie','turno'];
+    const csvRows = [headers.join(';')];
+    for (const r of famDados) {
+      csvRows.push(headers.map(h => {
+        let val = (r[h] || '').toString().replace(/"/g, '""');
+        if (val.includes(';') || val.includes('"') || val.includes('\n')) val = '"' + val + '"';
+        return val;
+      }).join(';'));
+    }
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'familias_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV exportado!','success');
   }
 
   // ── CADASTRAR FAMÍLIA ─────────────────────────────────
