@@ -2005,6 +2005,67 @@ Deno.serve(async (req) => {
     return json({ ok: true })
   }
 
+  // ━━ IMPRESSOES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'impressao_enviar') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    const { copias, tipo_papel, para_dia, observacao, base64, mime, arquivo_nome } = body as any
+    if (!base64) return json({ error: 'Arquivo obrigatorio.' }, 400)
+    if (!copias || copias < 1) return json({ error: 'Informe a quantidade de copias.' }, 400)
+    // Upload arquivo
+    const ext = (mime || 'application/pdf').includes('pdf') ? 'pdf' : (mime || '').includes('png') ? 'png' : 'jpg'
+    const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`
+    const buf = Uint8Array.from(atob(base64 as string), c => c.charCodeAt(0))
+    await sb.storage.from('impressoes').upload(path, buf, { contentType: mime || 'application/pdf' })
+    const { data: pub } = sb.storage.from('impressoes').getPublicUrl(path)
+    // Buscar turma da professora
+    const { data: profData } = await sb.from('professoras').select('serie_id, series(id, nome)').eq('id', prof.id).maybeSingle()
+    const turma = (profData as any)?.series ?? null
+    // Verificar limite mensal
+    const mes = new Date().toISOString().slice(0, 7)
+    const { data: orc } = await sb.from('impressoes_orcamento').select('limite').eq('turma_id', turma?.id || '').eq('mes', mes).maybeSingle()
+    const limite = orc?.limite ?? 50
+    const { data: usadas } = await sb.from('impressoes').select('copias')
+      .eq('turma_id', turma?.id || '').gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
+    const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + (r.copias || 0), 0)
+    if (totalUsado + parseInt(copias) > limite) {
+      return json({ error: `Limite mensal de ${limite} copias excedido. Ja utilizado: ${totalUsado}. Disponivel: ${limite - totalUsado}.` }, 400)
+    }
+    const { error } = await sb.from('impressoes').insert({
+      professora_id: prof.id, professora_nome: prof.nome,
+      turma_id: turma?.id || null, turma_nome: turma?.nome || null,
+      arquivo_url: pub.publicUrl, arquivo_nome: arquivo_nome || path,
+      copias: parseInt(copias), tipo_papel: tipo_papel || 'sulfite',
+      para_dia: para_dia || null, observacao: observacao || null,
+    })
+    if (error) return json({ error: error.message }, 400)
+    // Notifica gerentes
+    const { data: gerentes } = await sb.from('gerentes').select('email')
+    for (const g of gerentes ?? []) {
+      await criarNotif(sb, 'gerente', g.email, 'Nova impressao', `${prof.nome} solicitou ${copias} copias (${tipo_papel}).`, 'info')
+    }
+    return json({ ok: true, usado: totalUsado + parseInt(copias), limite })
+  }
+
+  if (action === 'impressao_minhas') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    const { data } = await sb.from('impressoes').select('*')
+      .eq('professora_id', prof.id).order('criado_em', { ascending: false }).limit(30)
+    // Buscar uso mensal
+    const mes = new Date().toISOString().slice(0, 7)
+    const { data: profData } = await sb.from('professoras').select('serie_id').eq('id', prof.id).maybeSingle()
+    const turmaId = (profData as any)?.serie_id
+    const { data: orc } = await sb.from('impressoes_orcamento').select('limite').eq('turma_id', turmaId || '').eq('mes', mes).maybeSingle()
+    const limite = orc?.limite ?? 50
+    const { data: usadas } = await sb.from('impressoes').select('copias')
+      .eq('turma_id', turmaId || '').gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
+    const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + (r.copias || 0), 0)
+    return json({ data: data ?? [], usado: totalUsado, limite })
+  }
+
   // ━━ CALENDARIO PUBLICO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (action === 'calendario_publico') {
     const mes = (body.mes as string) || new Date().toISOString().slice(0, 7)

@@ -822,6 +822,77 @@ serve(async (req: Request) => {
     });
   }
 
+  // ── Impressoes (gerente) ────────────────────────────────
+  if (action === "impressoes_pendentes") {
+    const { data } = await admin.from("impressoes").select("*")
+      .in("status", ["pendente", "aprovado", "impresso"]).order("criado_em", { ascending: true });
+    return ok(data ?? []);
+  }
+  if (action === "impressoes_todas") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const { data } = await admin.from("impressoes").select("*")
+      .gte("criado_em", mes + "-01").order("criado_em", { ascending: false });
+    return ok(data ?? []);
+  }
+  if (action === "impressao_aprovar") {
+    const { id, nota } = body as { id: string; nota?: string };
+    if (!id) return err("ID obrigatorio.");
+    await admin.from("impressoes").update({
+      status: "aprovado", aprovado_por: gerente?.nome, aprovado_em: new Date().toISOString(),
+      nota_gerente: nota || null,
+    }).eq("id", id);
+    const { data: imp } = await admin.from("impressoes").select("professora_id, professoras(email)").eq("id", id).maybeSingle();
+    const profEmail = (imp as any)?.professoras?.email;
+    if (profEmail) {
+      await admin.from("notificacoes").insert({ portal: "professora", destinatario: profEmail, titulo: "Impressao aprovada", mensagem: "Sua solicitacao de impressao foi aprovada.", tipo: "success" });
+    }
+    return ok({ success: true });
+  }
+  if (action === "impressao_rejeitar") {
+    const { id, nota } = body as { id: string; nota?: string };
+    if (!id) return err("ID obrigatorio.");
+    await admin.from("impressoes").update({
+      status: "rejeitado", aprovado_por: gerente?.nome, aprovado_em: new Date().toISOString(),
+      nota_gerente: nota || null,
+    }).eq("id", id);
+    const { data: imp } = await admin.from("impressoes").select("professora_id, professoras(email)").eq("id", id).maybeSingle();
+    const profEmail = (imp as any)?.professoras?.email;
+    if (profEmail) {
+      await admin.from("notificacoes").insert({ portal: "professora", destinatario: profEmail, titulo: "Impressao rejeitada", mensagem: nota ? "Motivo: " + nota : "Sua solicitacao foi rejeitada.", tipo: "error" });
+    }
+    return ok({ success: true });
+  }
+  if (action === "impressao_marcar_impresso") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatorio.");
+    await admin.from("impressoes").update({ status: "impresso", impresso_em: new Date().toISOString() }).eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "impressao_marcar_entregue") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatorio.");
+    await admin.from("impressoes").update({ status: "entregue", entregue_em: new Date().toISOString(), entregue_por: gerente?.nome }).eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "impressoes_orcamento_list") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const { data: turmas } = await admin.from("series").select("id, nome").eq("ativo", true).order("nome");
+    const { data: orcs } = await admin.from("impressoes_orcamento").select("turma_id, limite").eq("mes", mes);
+    const { data: usadas } = await admin.from("impressoes").select("turma_id, copias").gte("criado_em", mes + "-01").in("status", ["pendente", "aprovado", "impresso", "entregue"]);
+    const orcMap: Record<string, number> = {};
+    for (const o of orcs ?? []) orcMap[o.turma_id] = o.limite;
+    const usadoMap: Record<string, number> = {};
+    for (const u of usadas ?? []) usadoMap[u.turma_id] = (usadoMap[u.turma_id] || 0) + u.copias;
+    const result = (turmas ?? []).map((t: any) => ({ ...t, limite: orcMap[t.id] ?? 50, usado: usadoMap[t.id] ?? 0 }));
+    return ok(result);
+  }
+  if (action === "impressoes_orcamento_set") {
+    const { turma_id, mes, limite } = body as any;
+    if (!turma_id || !mes) return err("turma_id e mes obrigatorios.");
+    await admin.from("impressoes_orcamento").upsert({ turma_id, mes, limite: parseInt(limite) || 50 }, { onConflict: "turma_id,mes" });
+    return ok({ success: true });
+  }
+
   // ── Alertas de Emergencia ───────────────────────────────
   if (action === "emergencia_acionar") {
     const { tipo, mensagem } = body as { tipo: string; mensagem?: string };

@@ -321,6 +321,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="ps-item" onclick="switchProfPage('almox',this)" data-page="almox"><span class="ps-icon">📦</span> Materiais</button>
     <button class="ps-item" onclick="switchProfPage('atestados',this)" data-page="atestados"><span class="ps-icon">🏥</span> Atestados</button>
     <button class="ps-item" onclick="switchProfPage('manut',this)" data-page="manut"><span class="ps-icon">🔧</span> Manutenção</button>
+    <button class="ps-item" onclick="switchProfPage('impressoes',this)" data-page="impressoes"><span class="ps-icon">🖨️</span> Impressões</button>
     <button class="ps-item" onclick="switchProfPage('achados',this)" data-page="achados"><span class="ps-icon">🔍</span> Achados & Perdidos</button>
   </div>
 
@@ -689,6 +690,63 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div id="achadosLista"><div class="empty-state">Carregando...</div></div>
     </div><!-- /pageAchados -->
 
+    <!-- ═══ PAGE: IMPRESSOES ═══ -->
+    <div class="prof-page" id="pageImpressoes">
+      <div class="sec-title">🖨️ Solicitação de Impressões</div>
+
+      <!-- Cota mensal -->
+      <div class="upload-card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:150px;">
+          <div style="font-size:13px;font-weight:600;">Cota Mensal</div>
+          <div style="font-size:12px;color:var(--muted);" id="impCotaInfo">Carregando...</div>
+        </div>
+        <div style="flex:2;min-width:200px;">
+          <div style="background:#f0ece6;border-radius:8px;overflow:hidden;height:10px;">
+            <div id="impCotaBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario -->
+      <div class="upload-card" style="margin-bottom:16px;">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;">Nova Solicitação</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="ff" style="margin:0;grid-column:1/-1;">
+            <label>Arquivo (PDF, imagem) *</label>
+            <input type="file" id="impArquivo" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="font-size:12px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <div class="ff" style="margin:0;">
+            <label>Quantidade de cópias *</label>
+            <input type="number" id="impCopias" value="1" min="1" max="200" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <div class="ff" style="margin:0;">
+            <label>Tipo de papel</label>
+            <select id="impPapel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="sulfite">Papel Sulfite A4</option>
+              <option value="desenho">Papel Desenho</option>
+              <option value="cartolina">Cartolina</option>
+              <option value="foto">Papel Fotográfico</option>
+              <option value="adesivo">Papel Adesivo</option>
+            </select>
+          </div>
+          <div class="ff" style="margin:0;">
+            <label>Para qual dia</label>
+            <input type="date" id="impDia" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <div class="ff" style="margin:0;">
+            <label>Observação</label>
+            <input type="text" id="impObs" placeholder="Ex: Colorido, frente e verso..." style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+        </div>
+        <button onclick="enviarImpressao()" id="impBtn" class="btn-submit" style="margin-top:12px;font-size:13px;">Enviar Solicitação</button>
+        <div class="f-alert error" id="impErr" style="margin-top:8px;display:none;"></div>
+      </div>
+
+      <!-- Lista -->
+      <div class="sec-title" style="margin-bottom:8px;">Minhas Solicitações</div>
+      <div id="impLista"><div class="empty-state">Carregando...</div></div>
+    </div><!-- /pageImpressoes -->
+
   </div><!-- /content -->
 
 <!-- BOTTOM NAV PROFESSORAS -->
@@ -716,6 +774,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   <button class="pbnav-item" onclick="switchProfPage('manut',this)" data-page="manut">
     <span class="pbnav-icon">🔧</span>
     <span class="pbnav-label">Manutenção</span>
+  </button>
+  <button class="pbnav-item" onclick="switchProfPage('impressoes',this)" data-page="impressoes">
+    <span class="pbnav-icon">🖨️</span>
+    <span class="pbnav-label">Impressões</span>
   </button>
   <button class="pbnav-item" onclick="switchProfPage('achados',this)" data-page="achados">
     <span class="pbnav-icon">🔍</span>
@@ -937,6 +999,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     loadMeusManut();
     loadNotificacoes();
     loadAchados();
+    loadImpressoes();
   }
 
   async function loadRanking() {
@@ -2209,6 +2272,67 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('achadoLocal').value = '';
     document.getElementById('achadoFoto').value = '';
     loadAchados();
+  }
+
+  // ── IMPRESSOES ──────────────────────────────────────
+  const IMP_STATUS = { pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado', impresso:'🖨️ Impresso', entregue:'📦 Entregue' };
+  const IMP_PAPEL = { sulfite:'Sulfite A4', desenho:'Papel Desenho', cartolina:'Cartolina', foto:'Fotográfico', adesivo:'Adesivo' };
+
+  async function loadImpressoes() {
+    const d = await callApi({ action: 'impressao_minhas' });
+    const items = d.data || [];
+    // Cota
+    const pct = d.limite > 0 ? Math.min(100, (d.usado / d.limite) * 100) : 0;
+    document.getElementById('impCotaInfo').textContent = d.usado + ' / ' + d.limite + ' copias usadas este mes';
+    document.getElementById('impCotaBar').style.width = pct + '%';
+    document.getElementById('impCotaBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+    // Lista
+    const el = document.getElementById('impLista');
+    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma solicitacao.</div>'; return; }
+    el.innerHTML = items.map(it => {
+      const dt = new Date(it.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' });
+      return `<div class="upload-card" style="margin-bottom:8px;padding:12px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <a href="${esc(it.arquivo_url)}" target="_blank" style="font-weight:600;font-size:13px;color:var(--blue);text-decoration:none;">📎 ${esc(it.arquivo_nome||'Arquivo')}</a>
+          <span style="font-size:12px;color:var(--muted);">${it.copias} copias · ${IMP_PAPEL[it.tipo_papel]||it.tipo_papel}</span>
+          ${it.para_dia ? `<span style="font-size:12px;color:var(--muted);">Para ${new Date(it.para_dia+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</span>` : ''}
+          <span style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;${it.status==='entregue'?'background:#edf7f0;color:#2d7a3a;':it.status==='rejeitado'?'background:#fdf0f2;color:#a00d24;':'background:#fff8e1;color:#b07d00;'}">${IMP_STATUS[it.status]||it.status}</span>
+        </div>
+        ${it.nota_gerente ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">💬 ${esc(it.nota_gerente)}</div>` : ''}
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">${dt}${it.turma_nome ? ' · ' + esc(it.turma_nome) : ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function enviarImpressao() {
+    const file = document.getElementById('impArquivo').files[0];
+    const copias = parseInt(document.getElementById('impCopias').value) || 1;
+    const tipo_papel = document.getElementById('impPapel').value;
+    const para_dia = document.getElementById('impDia').value;
+    const observacao = document.getElementById('impObs').value.trim();
+    const errEl = document.getElementById('impErr');
+    errEl.style.display = 'none';
+    if (!file) { errEl.textContent = 'Selecione um arquivo.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('impBtn');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+      const base64 = btoa(bin);
+      const d = await callApi({
+        action: 'impressao_enviar', copias, tipo_papel, para_dia: para_dia || null,
+        observacao: observacao || null, base64, mime: file.type, arquivo_nome: file.name,
+      });
+      if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+      showToast('Solicitacao enviada! ' + d.usado + '/' + d.limite + ' copias usadas.', 'success', 5000);
+      document.getElementById('impArquivo').value = '';
+      document.getElementById('impCopias').value = '1';
+      document.getElementById('impObs').value = '';
+      document.getElementById('impDia').value = '';
+      loadImpressoes();
+    } catch(e) { errEl.textContent = 'Erro ao enviar.'; errEl.style.display = 'block'; }
+    finally { btn.disabled = false; btn.textContent = 'Enviar Solicitação'; }
   }
 
   // ── WEBAUTHN / BIOMETRIA ─────────────────────────────

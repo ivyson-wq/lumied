@@ -337,6 +337,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
       <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
       <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
+      <a class="nav-item" href="#" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
       <div class="sb-label">Infraestrutura</div>
       <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
       <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;"><span class="ic">🚨</span> Emergência</a>
@@ -1001,6 +1002,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="analyticsContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- IMPRESSOES -->
+      <div id="panelImpressoes" class="panel">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="fb active" onclick="setImpFilter('pendentes',this)">⏳ Pendentes</button>
+          <button class="fb" onclick="setImpFilter('todas',this)">📋 Todas</button>
+          <button class="fb" onclick="setImpFilter('orcamento',this)">📊 Cotas por Turma</button>
+        </div>
+        <div id="impGerenteContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
       <!-- EMERGENCIA -->
       <div id="panelEmergencia" class="panel">
         <div style="text-align:center;padding:20px 0 30px;">
@@ -1632,7 +1643,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1659,6 +1670,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='cadastro')    loadCadastroPanel();
     if(id==='achados')     loadAchadosGerente();
     if(id==='emergencia')  loadEmergencia();
+    if(id==='impressoes')  loadImpressoesGerente();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
     return false;
@@ -5348,6 +5360,109 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
     `;
+  }
+
+  // ── IMPRESSOES (gerente) ────────────────────────────
+  let impGerenteFilter = 'pendentes';
+  const IMP_STATUS_G = { pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado', impresso:'🖨️ Impresso', entregue:'📦 Entregue' };
+  const IMP_PAPEL_G = { sulfite:'Sulfite A4', desenho:'Papel Desenho', cartolina:'Cartolina', foto:'Fotográfico', adesivo:'Adesivo' };
+
+  function setImpFilter(f, btn) {
+    impGerenteFilter = f;
+    document.querySelectorAll('#panelImpressoes .fb').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadImpressoesGerente();
+  }
+
+  async function loadImpressoesGerente() {
+    const el = document.getElementById('impGerenteContent');
+    if (impGerenteFilter === 'orcamento') {
+      const d = await api({ action: 'impressoes_orcamento_list', mes: new Date().toISOString().slice(0,7) });
+      const turmas = Array.isArray(d) ? d : [];
+      el.innerHTML = turmas.length ? `
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Turma</th>
+            <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Usado</th>
+            <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Limite</th>
+            <th style="padding:10px;border-bottom:1.5px solid var(--border);"></th>
+          </tr></thead>
+          <tbody>${turmas.map(t => {
+            const pct = t.limite > 0 ? Math.min(100, (t.usado / t.limite) * 100) : 0;
+            return `<tr>
+              <td style="padding:10px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;font-weight:600;">${esc(t.nome)}</td>
+              <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:13px;color:${pct>=90?'#e53e3e':pct>=70?'#b07d00':'#2d7a3a'};font-weight:600;">${t.usado}</td>
+              <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;">
+                <input type="number" value="${t.limite}" min="0" style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;text-align:center;font-size:13px;font-family:'DM Sans',sans-serif;" onchange="setImpLimite('${t.id}',this.value)">
+              </td>
+              <td style="padding:10px;border-bottom:1px solid #f5f0ea;">
+                <div style="background:#f0ece6;border-radius:4px;height:8px;width:80px;">
+                  <div style="height:100%;border-radius:4px;width:${pct}%;background:${pct>=90?'#e53e3e':pct>=70?'#f6a623':'#48bb78'};"></div>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>` : '<div class="empty-state">Nenhuma turma.</div>';
+      return;
+    }
+
+    const d = impGerenteFilter === 'pendentes'
+      ? await api({ action: 'impressoes_pendentes' })
+      : await api({ action: 'impressoes_todas', mes: new Date().toISOString().slice(0,7) });
+    const items = Array.isArray(d) ? d : [];
+    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma solicitacao.</div>'; return; }
+    el.innerHTML = items.map(it => {
+      const dt = new Date(it.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      const acoes = [];
+      if (it.status === 'pendente') {
+        acoes.push(`<button onclick="impAprovar('${it.id}')" style="padding:4px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aprovar</button>`);
+        acoes.push(`<button onclick="impRejeitar('${it.id}')" style="padding:4px 10px;background:#e53e3e;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Rejeitar</button>`);
+      }
+      if (it.status === 'aprovado') acoes.push(`<button onclick="impMarcarImpresso('${it.id}')" style="padding:4px 10px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Impresso</button>`);
+      if (it.status === 'impresso') acoes.push(`<button onclick="impMarcarEntregue('${it.id}')" style="padding:4px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Entregue</button>`);
+      return `<div style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <a href="${esc(it.arquivo_url)}" target="_blank" style="font-weight:600;font-size:13px;color:var(--blue);">📎 ${esc(it.arquivo_nome||'Arquivo')}</a>
+            <span style="font-size:12px;font-weight:700;">${it.copias} copias</span>
+            <span style="font-size:12px;color:var(--muted);">${IMP_PAPEL_G[it.tipo_papel]||it.tipo_papel}</span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;background:${it.status==='entregue'?'#edf7f0':it.status==='rejeitado'?'#fdf0f2':'#fff8e1'};color:${it.status==='entregue'?'#2d7a3a':it.status==='rejeitado'?'#a00d24':'#b07d00'};">${IMP_STATUS_G[it.status]}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+            ${esc(it.professora_nome||'?')} · ${esc(it.turma_nome||'?')} · ${dt}
+            ${it.para_dia ? ' · Para ' + new Date(it.para_dia+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) : ''}
+          </div>
+          ${it.observacao ? `<div style="font-size:11px;color:#555;margin-top:2px;">${esc(it.observacao)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">${acoes.join('')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function impAprovar(id) {
+    await api({ action: 'impressao_aprovar', id });
+    showToast('Impressao aprovada!', 'success');
+    loadImpressoesGerente();
+  }
+  async function impRejeitar(id) {
+    const nota = prompt('Motivo da rejeicao (opcional):');
+    await api({ action: 'impressao_rejeitar', id, nota: nota || '' });
+    loadImpressoesGerente();
+  }
+  async function impMarcarImpresso(id) {
+    await api({ action: 'impressao_marcar_impresso', id });
+    showToast('Marcado como impresso!', 'success');
+    loadImpressoesGerente();
+  }
+  async function impMarcarEntregue(id) {
+    await api({ action: 'impressao_marcar_entregue', id });
+    showToast('Marcado como entregue!', 'success');
+    loadImpressoesGerente();
+  }
+  async function setImpLimite(turmaId, limite) {
+    const mes = new Date().toISOString().slice(0,7);
+    await api({ action: 'impressoes_orcamento_set', turma_id: turmaId, mes, limite });
+    showToast('Limite atualizado!', 'success');
   }
 
   // ── EMERGENCIA ──────────────────────────────────────
