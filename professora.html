@@ -867,14 +867,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (bioEmail) document.getElementById('loginEmail').value = bioEmail;
   }
 
-  function checkSession() {
+  async function checkSession() {
     const token = getToken();
     if (!token) {
-      // Show bio login button if registered
       const bioEmail = localStorage.getItem('prof_bio_email');
-      if (bioEmail) {
-        document.getElementById('bioLoginBtn').style.display = 'block';
-        document.getElementById('loginEmail').value = bioEmail;
+      if (bioEmail && typeof WebAuthnClient !== 'undefined') {
+        const available = await WebAuthnClient.isPlatformAvailable();
+        if (available) {
+          // Mobile: auto-login biométrico
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            try {
+              const ch = await callApi({ action:'webauthn_login_challenge', email: bioEmail, portal:'professora', rp_id: location.hostname });
+              if (!ch.error) {
+                const assertion = await WebAuthnClient.authenticate(ch);
+                const d = await callApi({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname });
+                if (!d.error && d.token) {
+                  localStorage.setItem('prof_token', d.token);
+                  localStorage.setItem('prof_nome', d.nome);
+                  localStorage.setItem('prof_email', d.email);
+                  showApp(d);
+                  return;
+                }
+              }
+            } catch(_) {}
+          }
+          // Desktop ou fallback: mostra botão
+          document.getElementById('bioLoginBtn').style.display = 'block';
+          document.getElementById('loginEmail').value = bioEmail;
+        }
       }
       return;
     }

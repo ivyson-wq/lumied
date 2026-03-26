@@ -819,18 +819,23 @@ body.has-bottomnav{padding-bottom:0;}
       if (bioEmail && typeof WebAuthnClient !== 'undefined') {
         const available = await WebAuthnClient.isPlatformAvailable();
         if (available) {
-          try {
-            const ch = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_challenge', email: bioEmail, portal:'pais', rp_id: location.hostname }) }).then(r=>r.json());
-            if (!ch.error) {
-              const assertion = await WebAuthnClient.authenticate(ch);
-              const d = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname }) }).then(r=>r.json());
-              if (!d.error) {
-                currentUser = { email: bioEmail, user_metadata: { full_name: localStorage.getItem('pais_bio_nome')||'', avatar_url: localStorage.getItem('pais_bio_avatar')||'' } };
-                showForm(currentUser);
-                return;
+          // Mobile (iOS/Android): tenta automático
+          // Desktop: mostra login wall com botão bio visível
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            try {
+              const ch = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_challenge', email: bioEmail, portal:'pais', rp_id: location.hostname }) }).then(r=>r.json());
+              if (!ch.error) {
+                const assertion = await WebAuthnClient.authenticate(ch);
+                const d = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname }) }).then(r=>r.json());
+                if (!d.error) {
+                  currentUser = { email: bioEmail, user_metadata: { full_name: localStorage.getItem('pais_bio_nome')||'', avatar_url: localStorage.getItem('pais_bio_avatar')||'' } };
+                  showForm(currentUser);
+                  return;
+                }
               }
-            }
-          } catch(_) { /* usuário cancelou ou erro — mostra login normal */ }
+            } catch(_) { /* cancelou — mostra login normal */ }
+          }
         }
       }
       showLoginWall();
