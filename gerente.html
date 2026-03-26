@@ -367,6 +367,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline (Kanban)</a>
       <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
       <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates WhatsApp</a>
+      <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Config. Séries/Idade</a>
       <div class="sb-label">Escola</div>
       <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário Escolar</a>
       <div class="sb-label">Configurações</div>
@@ -1259,8 +1260,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <div class="ff" style="margin:0;"><label>Nome Crianca</label><input type="text" id="crmCrianca" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-top:10px;">
-              <div class="ff" style="margin:0;"><label>Idade</label><input type="text" id="crmIdade" placeholder="Ex: 3 anos" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Serie Interesse</label><input type="text" id="crmSerie" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Data Nascimento</label><input type="date" id="crmNasc" onchange="crmAutoSerie()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Serie <span id="crmSerieAuto" style="font-size:10px;color:#2d7a3a;"></span></label><input type="text" id="crmSerie" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
               <div class="ff" style="margin:0;"><label>Origem</label><select id="crmOrigem" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option><option value="indicacao">Indicacao</option><option value="site">Site</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="evento">Evento</option><option value="outro">Outro</option></select></div>
               <div class="ff" style="margin:0;"><label>Observacoes</label><input type="text" id="crmObs" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
             </div>
@@ -1293,6 +1294,24 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </div>
         </div>
         <div id="crmTemplatesList"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- CONFIG SERIES/IDADE -->
+      <div id="panelCrmConfigSeries" class="panel">
+        <div class="sec-title">Configuracao de Series por Idade</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Define automaticamente a serie da crianca com base na data de nascimento e na data de corte. A idade e calculada na data de corte (ex: 31/03 do ano de referencia).</p>
+        <div id="crmConfigSeriesContent"><div class="empty-state">Carregando...</div></div>
+        <div class="form-card" style="margin-top:16px;max-width:700px;">
+          <h3 style="font-size:14px;margin-bottom:10px;">Adicionar Serie</h3>
+          <div style="display:grid;grid-template-columns:1fr 80px 80px 100px 80px auto;gap:8px;align-items:end;">
+            <div class="ff" style="margin:0;"><label>Serie</label><input type="text" id="csNome" placeholder="Ex: Year 6" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Min (meses)</label><input type="number" id="csMin" placeholder="132" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Max (meses)</label><input type="number" id="csMax" placeholder="143" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Data Corte</label><input type="text" id="csCorte" value="03-31" placeholder="MM-DD" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Ano</label><input type="number" id="csAno" value="2026" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <button onclick="salvarCrmConfigSerie()" class="btn-create" style="width:auto;padding:8px 14px;font-size:12px;">Salvar</button>
+          </div>
+        </div>
       </div>
 
       <!-- IMPRESSOES -->
@@ -1952,7 +1971,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmConfigSeries:'Configuracao Series/Idade'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1992,6 +2011,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='crmKanban')   loadCrmKanban();
     if(id==='crmLeads')    loadCrmLeads();
     if(id==='crmTemplates') loadCrmTemplates();
+    if(id==='crmConfigSeries') loadCrmConfigSeries();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
     return false;
@@ -6244,7 +6264,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           ${leads.length ? leads.map(l => `<div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('text','${l.id}')">
             <div class="kc-name">${esc(l.nome_responsavel)}</div>
             <div class="kc-info">
-              ${l.nome_crianca ? '👶 ' + esc(l.nome_crianca) : ''}
+              ${l.nome_crianca ? '👶 ' + esc(l.nome_crianca) + (l.data_nascimento ? ' (' + crmIdadeTexto(l.data_nascimento) + ')' : '') : ''}
+              ${l.serie_interesse ? '<br>🎒 ' + esc(l.serie_interesse) : ''}
               ${l.telefone ? '<br>📱 ' + esc(l.telefone) : ''}
               ${l.origem ? '<br>📍 ' + esc(l.origem) : ''}
             </div>
@@ -6276,7 +6297,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       telefone: document.getElementById('crmTel').value.trim(),
       email: document.getElementById('crmEmail').value.trim(),
       nome_crianca: document.getElementById('crmCrianca').value.trim(),
-      idade_crianca: document.getElementById('crmIdade').value.trim(),
+      data_nascimento: document.getElementById('crmNasc').value || null,
       serie_interesse: document.getElementById('crmSerie').value.trim(),
       origem: document.getElementById('crmOrigem').value,
       observacoes: document.getElementById('crmObs').value.trim(),
@@ -6284,7 +6305,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     });
     if (d.error) { showToast(d.error,'error'); return; }
     showToast('Lead salvo!','success'); toggleCrmLeadForm();
-    ['crmNome','crmTel','crmEmail','crmCrianca','crmIdade','crmSerie','crmObs'].forEach(id=>document.getElementById(id).value='');
+    ['crmNome','crmTel','crmEmail','crmCrianca','crmNasc','crmSerie','crmObs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('crmSerieAuto').textContent = '';
     loadCrmKanban();
   }
 
@@ -6365,6 +6387,82 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${dtStart}/${dtEnd}&location=${encodeURIComponent('Maple Bear Caxias do Sul')}&details=${encodeURIComponent('Lead: '+nome)}`, '_blank');
       }
     });
+  }
+
+  function crmIdadeTexto(dataNasc) {
+    if (!dataNasc) return '';
+    const nasc = new Date(dataNasc + 'T12:00:00');
+    const hoje = new Date();
+    let anos = hoje.getFullYear() - nasc.getFullYear();
+    let meses = hoje.getMonth() - nasc.getMonth();
+    if (meses < 0) { anos--; meses += 12; }
+    if (hoje.getDate() < nasc.getDate()) meses--;
+    if (meses < 0) { anos--; meses += 12; }
+    if (anos < 1) return meses + ' meses';
+    if (anos === 1 && meses > 0) return '1 ano e ' + meses + 'm';
+    if (anos === 1) return '1 ano';
+    return anos + ' anos' + (meses > 0 ? ' e ' + meses + 'm' : '');
+  }
+
+  async function crmAutoSerie() {
+    const nasc = document.getElementById('crmNasc').value;
+    if (!nasc) return;
+    const d = await api({ action: 'crm_calcular_serie', data_nascimento: nasc });
+    const el = document.getElementById('crmSerieAuto');
+    if (d.serie) {
+      document.getElementById('crmSerie').value = d.serie;
+      el.textContent = '(auto: ' + d.serie + ')';
+    } else {
+      el.textContent = '(idade: ' + Math.floor(d.idade_meses / 12) + ' anos)';
+    }
+  }
+
+  async function loadCrmConfigSeries() {
+    const d = await api({ action: 'config_series_idade_list' });
+    const items = Array.isArray(d) ? d : [];
+    document.getElementById('crmConfigSeriesContent').innerHTML = items.length ? `
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+          <th style="text-align:left;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Serie</th>
+          <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Idade Min (meses)</th>
+          <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Idade Max (meses)</th>
+          <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Data Corte</th>
+          <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Faixa Etaria</th>
+          <th style="padding:8px;border-bottom:1.5px solid var(--border);"></th>
+        </tr></thead>
+        <tbody>${items.map(c => {
+          const minAnos = Math.floor(c.idade_min_meses / 12);
+          const maxAnos = Math.floor(c.idade_max_meses / 12);
+          return `<tr>
+            <td style="padding:8px;font-size:13px;font-weight:600;border-bottom:1px solid #f5f0ea;">${esc(c.serie)}</td>
+            <td style="padding:8px;text-align:center;font-size:13px;border-bottom:1px solid #f5f0ea;">${c.idade_min_meses}</td>
+            <td style="padding:8px;text-align:center;font-size:13px;border-bottom:1px solid #f5f0ea;">${c.idade_max_meses}</td>
+            <td style="padding:8px;text-align:center;font-size:12px;border-bottom:1px solid #f5f0ea;">${c.data_corte_ref}/${c.ano_ref}</td>
+            <td style="padding:8px;text-align:center;font-size:12px;color:var(--muted);border-bottom:1px solid #f5f0ea;">${minAnos} a ${maxAnos} anos</td>
+            <td style="padding:8px;border-bottom:1px solid #f5f0ea;"><button onclick="deleteCrmConfigSerie('${c.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;">X</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>` : '<div class="empty-state">Nenhuma configuracao.</div>';
+  }
+
+  async function salvarCrmConfigSerie() {
+    const d = await api({ action: 'config_series_idade_save',
+      serie: document.getElementById('csNome').value.trim(),
+      idade_min_meses: document.getElementById('csMin').value,
+      idade_max_meses: document.getElementById('csMax').value,
+      data_corte_ref: document.getElementById('csCorte').value || '03-31',
+      ano_ref: document.getElementById('csAno').value || new Date().getFullYear(),
+    });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Salvo!', 'success');
+    document.getElementById('csNome').value = '';
+    loadCrmConfigSeries();
+  }
+
+  async function deleteCrmConfigSerie(id) {
+    if (!confirm('Excluir?')) return;
+    await api({ action: 'config_series_idade_delete', id });
+    loadCrmConfigSeries();
   }
 
   async function loadCrmLeads() {

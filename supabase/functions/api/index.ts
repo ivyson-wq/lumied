@@ -1129,9 +1129,9 @@ serve(async (req: Request) => {
     return ok(data ?? []);
   }
   if (action === "crm_lead_save") {
-    const { id, nome_responsavel, email, telefone, nome_crianca, idade_crianca, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, responsavel_interno, data_proximo_contato, data_visita } = body as any;
+    const { id, nome_responsavel, email, telefone, nome_crianca, data_nascimento, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, responsavel_interno, data_proximo_contato, data_visita } = body as any;
     if (!nome_responsavel) return err("Nome obrigatorio.");
-    const data = { nome_responsavel, email, telefone, nome_crianca, idade_crianca, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString() };
+    const data = { nome_responsavel, email, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString() };
     if (id) {
       await admin.from("crm_leads").update(data).eq("id", id);
     } else {
@@ -1184,6 +1184,37 @@ serve(async (req: Request) => {
       await admin.from("crm_interacoes").insert({ lead_id, tipo: "reuniao", descricao: `Reunião agendada: ${titulo} em ${new Date(data_hora).toLocaleString("pt-BR")}`, criado_por: gerente?.nome });
     }
     return ok({ success: true, id: r.id });
+  }
+  if (action === "config_series_idade_list") {
+    const ano = (body as any).ano || new Date().getFullYear();
+    const { data } = await admin.from("config_series_idade").select("*").eq("ano_ref", ano).eq("ativo", true).order("ordem");
+    return ok(data ?? []);
+  }
+  if (action === "config_series_idade_save") {
+    const { id, serie, idade_min_meses, idade_max_meses, data_corte_ref, ano_ref } = body as any;
+    if (!serie) return err("Serie obrigatoria.");
+    const data = { serie, idade_min_meses: parseInt(idade_min_meses), idade_max_meses: parseInt(idade_max_meses), data_corte_ref: data_corte_ref || "03-31", ano_ref: parseInt(ano_ref) || new Date().getFullYear() };
+    if (id) { await admin.from("config_series_idade").update(data).eq("id", id); }
+    else { await admin.from("config_series_idade").insert({ ...data, ordem: 99 }); }
+    return ok({ success: true });
+  }
+  if (action === "config_series_idade_delete") {
+    const { id } = body as { id: string };
+    await admin.from("config_series_idade").delete().eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "crm_calcular_serie") {
+    const { data_nascimento } = body as any;
+    if (!data_nascimento) return err("data_nascimento obrigatoria.");
+    const ano = new Date().getFullYear();
+    const { data: config } = await admin.from("config_series_idade").select("*").eq("ano_ref", ano).eq("ativo", true).order("ordem");
+    if (!config?.length) return ok({ serie: null });
+    const dataCorte = new Date(ano + "-" + (config[0].data_corte_ref || "03-31"));
+    const nasc = new Date(data_nascimento);
+    const diffMs = dataCorte.getTime() - nasc.getTime();
+    const meses = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.44));
+    const match = config.find(c => meses >= c.idade_min_meses && meses <= c.idade_max_meses);
+    return ok({ serie: match?.serie || null, idade_meses: meses });
   }
   if (action === "crm_dashboard") {
     const { data: leads } = await admin.from("crm_leads").select("estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome)");
