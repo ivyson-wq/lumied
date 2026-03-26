@@ -1203,6 +1203,19 @@ serve(async (req: Request) => {
     await admin.from("config_series_idade").delete().eq("id", id);
     return ok({ success: true });
   }
+  if (action === "config_series_idade_atualizar_ano") {
+    const { ano_origem, ano_destino } = body as any;
+    if (!ano_origem || !ano_destino) return err("Ano de origem e destino obrigatorios.");
+    const { data: existentes } = await admin.from("config_series_idade").select("*").eq("ano_ref", parseInt(ano_origem)).eq("ativo", true);
+    if (!existentes?.length) return err("Nenhuma serie encontrada para o ano " + ano_origem);
+    for (const s of existentes) {
+      await admin.from("config_series_idade").upsert({
+        serie: s.serie, idade_min_meses: s.idade_min_meses, idade_max_meses: s.idade_max_meses,
+        data_corte_ref: s.data_corte_ref, ano_ref: parseInt(ano_destino), ordem: s.ordem, ativo: true
+      }, { onConflict: "serie,ano_ref" });
+    }
+    return ok({ success: true, total: existentes.length });
+  }
   if (action === "crm_calcular_serie") {
     const { data_nascimento } = body as any;
     if (!data_nascimento) return err("data_nascimento obrigatoria.");

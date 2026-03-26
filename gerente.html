@@ -1368,10 +1368,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- CONFIG SERIES/IDADE -->
       <div id="panelCrmConfigSeries" class="panel">
-        <div class="sec-title">Configuracao de Series por Idade</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;">Configuracao de Series por Idade</div>
+          <select id="csAnoFiltro" onchange="loadCrmConfigSeries()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
+          </select>
+        </div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Define automaticamente a serie da crianca com base na data de nascimento e na data de corte. A idade e calculada na data de corte (ex: 31/03 do ano de referencia).</p>
         <div id="crmConfigSeriesContent"><div class="empty-state">Carregando...</div></div>
         <div class="form-card" style="margin-top:16px;max-width:700px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+            <h3 style="font-size:14px;margin:0;">Replicar series para outro ano</h3>
+            <span style="font-size:12px;color:var(--muted);">Copia todas as series do ano selecionado acima para:</span>
+            <input type="number" id="csAnoDestino" value="2027" min="2025" max="2035" style="width:80px;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;">
+            <button onclick="replicarSeriesAno()" class="btn-create" style="width:auto;padding:8px 14px;font-size:12px;">Replicar</button>
+          </div>
           <h3 style="font-size:14px;margin-bottom:10px;">Adicionar Serie</h3>
           <div style="display:grid;grid-template-columns:1fr 80px 80px 100px 80px auto;gap:8px;align-items:end;">
             <div class="ff" style="margin:0;"><label>Serie</label><input type="text" id="csNome" placeholder="Ex: Year 6" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
@@ -6503,7 +6514,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   async function loadCrmConfigSeries() {
-    const d = await api({ action: 'config_series_idade_list' });
+    const anoFiltro = document.getElementById('csAnoFiltro')?.value || new Date().getFullYear();
+    const d = await api({ action: 'config_series_idade_list', ano: parseInt(anoFiltro) });
     const items = Array.isArray(d) ? d : [];
     document.getElementById('crmConfigSeriesContent').innerHTML = items.length ? `
       <table style="width:100%;border-collapse:collapse;">
@@ -6536,7 +6548,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       idade_min_meses: document.getElementById('csMin').value,
       idade_max_meses: document.getElementById('csMax').value,
       data_corte_ref: document.getElementById('csCorte').value || '03-31',
-      ano_ref: document.getElementById('csAno').value || new Date().getFullYear(),
+      ano_ref: document.getElementById('csAno').value || document.getElementById('csAnoFiltro').value || new Date().getFullYear(),
     });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Salvo!', 'success');
@@ -6547,6 +6559,18 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function deleteCrmConfigSerie(id) {
     if (!confirm('Excluir?')) return;
     await api({ action: 'config_series_idade_delete', id });
+    loadCrmConfigSeries();
+  }
+
+  async function replicarSeriesAno() {
+    const anoOrigem = document.getElementById('csAnoFiltro').value;
+    const anoDestino = document.getElementById('csAnoDestino').value;
+    if (anoOrigem === anoDestino) { showToast('Ano de origem e destino iguais','error'); return; }
+    if (!confirm('Replicar todas as series de ' + anoOrigem + ' para ' + anoDestino + '?\n\nSeries ja existentes no ano destino serao mantidas.')) return;
+    const d = await api({ action: 'config_series_idade_atualizar_ano', ano_origem: parseInt(anoOrigem), ano_destino: parseInt(anoDestino) });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast(d.total + ' series replicadas para ' + anoDestino + '!', 'success');
+    document.getElementById('csAnoFiltro').value = anoDestino;
     loadCrmConfigSeries();
   }
 
@@ -6652,40 +6676,89 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   // ── CRM MATRICULAS ────────────────────────────
   async function loadCrmMatriculas() {
     const ano = parseInt(document.getElementById('matrAno').value);
-    const d = await api({ action:'crm_matriculas_list', ano });
-    const items = Array.isArray(d) ? d : [];
+    const [matrData, vagasData] = await Promise.all([
+      api({ action:'crm_matriculas_list', ano }),
+      api({ action:'crm_vagas_list', ano })
+    ]);
+    const items = Array.isArray(matrData) ? matrData : [];
+    const vagas = Array.isArray(vagasData) ? vagasData : [];
     const el = document.getElementById('crmMatriculasContent');
     const statusLabels = { reserva:'🟡 Reserva', matriculado:'🟢 Matriculado', cancelado:'🔴 Cancelado' };
-    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma matricula/reserva para ' + ano + '.</div>'; return; }
-    el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
-      <thead><tr>
-        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Responsavel</th>
-        <th style="text-align:left;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Crianca</th>
-        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Serie</th>
-        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Status</th>
-        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Nasc.</th>
-        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Contato</th>
-        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Data</th>
-        <th style="padding:10px;border-bottom:1.5px solid var(--border);"></th>
-      </tr></thead>
-      <tbody>${items.map(m => {
-        const dataStr = m.data_matricula || m.data_reserva || '';
-        const nascStr = m.data_nascimento ? new Date(m.data_nascimento+'T12:00:00').toLocaleDateString('pt-BR') : '-';
-        return `<tr>
-          <td style="padding:10px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;font-weight:600;">${esc(m.nome_responsavel)}</td>
-          <td style="padding:10px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(m.nome_crianca)}</td>
-          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:12px;">${esc(m.serie)}</td>
-          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:12px;">${statusLabels[m.status]||m.status}</td>
-          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:11px;">${nascStr}</td>
-          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:11px;">${m.telefone?esc(m.telefone):''}${m.telefone&&m.email?'<br>':''}${m.email?esc(m.email):''}</td>
-          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:12px;">${dataStr?new Date(dataStr+'T12:00:00').toLocaleDateString('pt-BR'):'-'}</td>
-          <td style="padding:10px;border-bottom:1px solid #f5f0ea;">
-            ${m.status==='reserva'?`<button onclick="atualizarMatricula('${m.id}','matriculado')" style="padding:4px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">Matricular</button>`:''}
-            ${m.status!=='cancelado'?`<button onclick="atualizarMatricula('${m.id}','cancelado')" style="padding:4px 10px;background:#e53e3e;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>`:''}
-          </td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
+    const statusDot = { reserva:'#f6a623', matriculado:'#2d7a3a', cancelado:'#e53e3e' };
+
+    // Agrupar matriculas por serie
+    const porSerie = {};
+    for (const v of vagas) { if (!porSerie[v.serie]) porSerie[v.serie] = { vagas: v, items: [] }; }
+    for (const m of items) {
+      if (!porSerie[m.serie]) porSerie[m.serie] = { vagas: null, items: [] };
+      porSerie[m.serie].items.push(m);
+    }
+
+    const series = Object.keys(porSerie).sort((a,b) => {
+      const oa = porSerie[a].vagas?.ordem ?? 99;
+      const ob = porSerie[b].vagas?.ordem ?? 99;
+      return oa - ob;
+    });
+
+    if (!series.length) { el.innerHTML = '<div class="empty-state">Nenhuma serie configurada para ' + ano + '.</div>'; return; }
+
+    el.innerHTML = series.map(serie => {
+      const g = porSerie[serie];
+      const v = g.vagas;
+      const total = v ? v.vagas_total : '?';
+      const reservas = g.items.filter(m => m.status === 'reserva').length;
+      const matriculados = g.items.filter(m => m.status === 'matriculado').length;
+      const cancelados = g.items.filter(m => m.status === 'cancelado').length;
+      const ocupados = reservas + matriculados;
+      const disp = v ? v.vagas_total - ocupados : '?';
+      const pct = v && v.vagas_total > 0 ? Math.min(100, (ocupados / v.vagas_total) * 100) : 0;
+      const cor = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+      const ativos = g.items.filter(m => m.status !== 'cancelado');
+      const inativos = g.items.filter(m => m.status === 'cancelado');
+
+      return `<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;">
+        <div style="padding:14px 18px;background:linear-gradient(135deg,${cor}15,${cor}05);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="font-size:15px;font-weight:700;font-family:'Lora',serif;">${esc(serie)}</div>
+          <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);">
+            ${v?`<span>${v.qtd_turmas} turma${v.qtd_turmas>1?'s':''}</span><span>·</span>`:''}
+            <span style="color:#2d7a3a;font-weight:600;">${matriculados} matriculado${matriculados!==1?'s':''}</span>
+            <span>·</span>
+            <span style="color:#b07d00;font-weight:600;">${reservas} reserva${reservas!==1?'s':''}</span>
+            ${cancelados?`<span>·</span><span style="color:#e53e3e;">${cancelados} cancelado${cancelados!==1?'s':''}</span>`:''}
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:12px;font-weight:600;color:${typeof disp==='number'&&disp<=2?'#e53e3e':typeof disp==='number'&&disp<=5?'#b07d00':'#2d7a3a'};">${disp} vaga${disp!==1?'s':''} disponive${disp!==1?'is':'l'}</span>
+            ${v?`<div style="background:#f0ece6;border-radius:4px;height:8px;width:80px;"><div style="height:100%;border-radius:4px;width:${pct}%;background:${cor};"></div></div>`:''}
+          </div>
+        </div>
+        <div style="padding:12px 18px;">
+          ${ativos.length ? ativos.map(m => {
+            const nascStr = m.data_nascimento ? new Date(m.data_nascimento+'T12:00:00').toLocaleDateString('pt-BR') : '';
+            const dataStr = m.data_matricula || m.data_reserva || '';
+            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f0ea;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${statusDot[m.status]||'#999'};flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;">${esc(m.nome_crianca)}</div>
+                <div style="font-size:11px;color:var(--muted);">Resp: ${esc(m.nome_responsavel)}${nascStr?' · Nasc: '+nascStr:''}${m.telefone?' · '+esc(m.telefone):''}${m.email?' · '+esc(m.email):''}</div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);white-space:nowrap;">${statusLabels[m.status]||m.status}</div>
+              <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${dataStr?new Date(dataStr+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
+              <div style="display:flex;gap:4px;flex-shrink:0;">
+                ${m.status==='reserva'?`<button onclick="atualizarMatricula('${m.id}','matriculado')" style="padding:3px 8px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Matricular</button>`:''}
+                <button onclick="atualizarMatricula('${m.id}','cancelado')" style="padding:3px 8px;background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+              </div>
+            </div>`;
+          }).join('') : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Nenhuma crianca matriculada/reservada nesta serie.</div>'}
+          ${inativos.length ? `<details style="margin-top:6px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">Cancelados (${inativos.length})</summary>
+            ${inativos.map(m => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;opacity:.5;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#e53e3e;flex-shrink:0;"></div>
+              <div style="font-size:12px;text-decoration:line-through;">${esc(m.nome_crianca)}</div>
+              <div style="font-size:11px;color:var(--muted);">${esc(m.nome_responsavel)}</div>
+            </div>`).join('')}
+          </details>` : ''}
+        </div>
+      </div>`;
+    }).join('');
   }
 
   async function atualizarMatricula(id, novoStatus) {
