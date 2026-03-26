@@ -498,6 +498,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <!-- ATIVIDADES -->
       <div id="panelAtividades" class="panel">
 
+        <!-- Importar inscricoes -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+          <button onclick="gerarModeloAtividades()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📥 Modelo Inscricoes Excel</button>
+          <button onclick="document.getElementById('ativXlsxFile').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar Inscricoes</button>
+          <input type="file" id="ativXlsxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarAtividadesXlsx(this)">
+        </div>
+        <div id="ativImportResult" style="display:none;margin-bottom:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <div id="ativImportSummary" style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:8px;"></div>
+          <div id="ativImportRows" style="max-height:300px;overflow-y:auto;margin-bottom:12px;font-size:12px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button id="ativImportBtn" onclick="confirmarImportAtividades()" class="btn-create" style="width:auto;padding:8px 20px;">Confirmar</button>
+            <button onclick="document.getElementById('ativImportResult').style.display='none'" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+          </div>
+        </div>
+
         <!-- Stats por dia -->
         <div class="sec-title" style="margin-bottom:16px;">📅 Inscrições por Dia da Semana</div>
         <div class="dia-count-grid">
@@ -1320,11 +1335,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button onclick="toggleCadastroForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Cadastrar</button>
             <button onclick="gerarModeloFamilias()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📥 Modelo Excel</button>
-            <button onclick="document.getElementById('famXlsxFile').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar Familias</button>
+            <button onclick="document.getElementById('famXlsxFile').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar</button>
             <input type="file" id="famXlsxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarFamiliasXlsx(this)">
-            <button onclick="gerarModeloAtividades()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📥 Modelo Atividades</button>
-            <button onclick="document.getElementById('ativXlsxFile').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar Atividades</button>
-            <input type="file" id="ativXlsxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarAtividadesXlsx(this)">
           </div>
         </div>
         <!-- Resultado importacao -->
@@ -4958,21 +4970,42 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const ws = XLSX.utils.aoa_to_sheet([
       ['Nome do Responsavel *', 'E-mail *', 'Nome da Crianca *', 'CPF', 'Serie', 'Turno'],
       ['Maria Silva', 'maria@email.com', 'Pedro Silva', '000.000.000-00', 'Toddler', 'integral_5x'],
-      ['Ana Costa', 'ana@email.com', 'Julia Costa', '', 'Year 1', 'semi_3x'],
-      ['','','','','',''],['','','','','',''],
+      ['Maria Silva', 'maria@email.com', 'Ana Silva', '', 'Nursery', 'semi_4x'],
+      ['Ana Costa', 'ana@email.com', 'Julia Costa', '', 'Year 1', 'tarde'],
+      ['Carlos Souza', 'carlos@email.com', 'Lucas Souza', '', 'Year 2', 'integral_3x'],
+      ['','','','','',''],['','','','','',''],['','','','','',''],
     ]);
-    ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 24 }, { wch: 16 }, { wch: 14 }, { wch: 16 }];
+    ws['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 24 }, { wch: 16 }, { wch: 14 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Familias');
+    // Aba de turnos para referencia
+    const wsTurnos = XLSX.utils.aoa_to_sheet([
+      ['Codigo do Turno', 'Descricao', 'Valor Mensal'],
+      ['integral_5x', 'Integral · 5x na semana (todos os dias)', 'R$ 4.395,00'],
+      ['integral_4x', 'Integral · 4x na semana', 'R$ 4.303,57'],
+      ['integral_3x', 'Integral · 3x na semana', 'R$ 4.072,13'],
+      ['integral_2x', 'Integral · 2x na semana', 'R$ 3.760,70'],
+      ['integral_1x', 'Integral · 1x na semana', 'R$ 3.300,00'],
+      ['semi_5x', 'Semi-Integral · 5x na semana', 'R$ 4.030,00'],
+      ['semi_4x', 'Semi-Integral · 4x na semana', 'R$ 3.991,57'],
+      ['semi_3x', 'Semi-Integral · 3x na semana', 'R$ 3.773,13'],
+      ['semi_2x', 'Semi-Integral · 2x na semana', 'R$ 3.534,70'],
+      ['semi_1x', 'Semi-Integral · 1x na semana', 'R$ 3.196,27'],
+      ['tarde', 'Apenas a Tarde (inicio 13:30h)', '—'],
+      ['diaria', 'Diaria avulsa', 'R$ 150,00'],
+    ]);
+    wsTurnos['!cols'] = [{ wch: 16 }, { wch: 40 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsTurnos, 'Turnos Referencia');
     const wsInst = XLSX.utils.aoa_to_sheet([
-      ['INSTRUCOES — Importacao de Familias'],
+      ['INSTRUCOES — Importacao de Familias e Turnos'],
       [''],
       ['Colunas obrigatorias: Nome do Responsavel, E-mail, Nome da Crianca'],
-      ['CPF, Serie e Turno sao opcionais'],
+      ['CPF e Serie sao opcionais. Turno e IMPORTANTE para controle.'],
       [''],
-      ['Turnos validos: integral_5x, integral_4x, integral_3x, integral_2x, integral_1x'],
-      ['  semi_5x, semi_4x, semi_3x, semi_2x, semi_1x, tarde, diaria'],
+      ['TURNO: use o codigo exato da aba "Turnos Referencia"'],
+      ['  Ex: integral_5x, semi_3x, tarde, diaria'],
       [''],
       ['Cada linha = uma crianca. Se um responsavel tem 2 filhos, use 2 linhas com o mesmo email.'],
+      ['O email sera usado para liberar o acesso ao portal dos pais.'],
     ]);
     wsInst['!cols'] = [{ wch: 72 }];
     XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucoes');
@@ -5053,13 +5086,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         turma: String(r[5]||'').trim(),
       }));
       if (!famImportData.length) { showToast('Nenhum registro encontrado.','warning'); return; }
-      document.getElementById('famImportSummary').textContent = famImportData.length + ' inscricao(oes) encontrada(s)';
-      document.getElementById('famImportRows').innerHTML = famImportData.map(f =>
+      document.getElementById('ativImportSummary').textContent = famImportData.length + ' inscricao(oes) encontrada(s)';
+      document.getElementById('ativImportRows').innerHTML = famImportData.map(f =>
         `<div style="padding:5px 8px;border-bottom:1px solid #f0ece6;">${esc(f.nome_crianca)} · ${esc(f.email)} · ${esc(f.atividade)} · ${esc(f.turma||'—')}</div>`
       ).join('');
-      document.getElementById('famImportBtn').textContent = 'Importar ' + famImportData.length + ' inscricoes';
-      document.getElementById('famImportBtn').onclick = confirmarImportAtividades;
-      document.getElementById('famImportResult').style.display = 'block';
+      document.getElementById('ativImportBtn').textContent = 'Importar ' + famImportData.length + ' inscricoes';
+      document.getElementById('ativImportResult').style.display = 'block';
     } catch(e) { showToast('Erro ao ler arquivo.','error'); }
   }
 
@@ -5089,7 +5121,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   async function confirmarImportAtividades() {
-    const btn = document.getElementById('famImportBtn');
+    const btn = document.getElementById('ativImportBtn');
     btn.disabled = true; btn.textContent = 'Importando...';
     let ok = 0, erros = 0;
     for (const f of famImportData) {
@@ -5099,7 +5131,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       } catch(_) { erros++; }
     }
     showToast(ok + ' inscricao(oes) importada(s)' + (erros ? ', ' + erros + ' erro(s)' : ''), erros ? 'warning' : 'success');
-    document.getElementById('famImportResult').style.display = 'none';
+    document.getElementById('ativImportResult').style.display = 'none';
     famImportData = [];
     btn.disabled = false;
   }
