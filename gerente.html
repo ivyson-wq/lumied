@@ -252,16 +252,16 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .mn-group .mn-val.month{min-width:90px;}
 
 /* KANBAN */
-.kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;min-height:400px;}
-.kanban-col{min-width:240px;max-width:280px;flex:1;background:#f5f0ea;border-radius:12px;display:flex;flex-direction:column;}
-.kanban-col-header{padding:12px 14px;font-weight:700;font-size:13px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;}
-.kanban-col-body{padding:8px;flex:1;overflow-y:auto;max-height:500px;}
-.kanban-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;transition:box-shadow .15s;font-size:12px;}
+.kanban-board{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;min-height:350px;}
+.kanban-col{min-width:150px;width:0;flex:1;background:#f5f0ea;border-radius:10px;display:flex;flex-direction:column;}
+.kanban-col-header{padding:8px 10px;font-weight:700;font-size:11px;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:space-between;}
+.kanban-col-body{padding:4px;flex:1;overflow-y:auto;max-height:450px;}
+.kanban-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:4px;cursor:grab;transition:box-shadow .15s;font-size:11px;}
 .kanban-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);}
-.kanban-card .kc-name{font-weight:700;font-size:13px;margin-bottom:4px;}
-.kanban-card .kc-info{color:var(--muted);font-size:11px;line-height:1.4;}
-.kanban-card .kc-actions{display:flex;gap:4px;margin-top:8px;}
-.kanban-card .kc-btn{padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:none;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.kanban-card .kc-name{font-weight:700;font-size:12px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.kanban-card .kc-info{color:var(--muted);font-size:10px;line-height:1.3;}
+.kanban-card .kc-actions{display:flex;gap:3px;margin-top:6px;}
+.kanban-card .kc-btn{padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;font-size:9px;cursor:pointer;font-family:'DM Sans',sans-serif;}
 
 .alm-modal-tab{padding:6px 12px;border:1.5px solid var(--border);border-radius:7px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text);}
 .alm-modal-tab.active{background:var(--red);color:#fff;border-color:var(--red);}
@@ -1252,7 +1252,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <button onclick="toggleCrmLeadForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Novo Lead</button>
         </div>
         <div id="crmLeadForm" style="display:none;margin-bottom:16px;">
-          <div class="form-card">
+          <div class="form-card" style="max-width:800px;">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
               <div class="ff" style="margin:0;"><label>Nome Responsavel *</label><input type="text" id="crmNome" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
               <div class="ff" style="margin:0;"><label>Telefone</label><input type="text" id="crmTel" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
