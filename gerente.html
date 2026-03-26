@@ -13,7 +13,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="/webauthn-client.js"></script>
-<script src="/i18n.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -367,8 +366,6 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <span id="greetingTopbar" style="font-size:14px;font-weight:500;color:var(--muted);margin-right:auto;"></span>
       <h2 id="topbarTitle">Dashboard Analytics</h2>
       <div style="display:flex;align-items:center;gap:10px;">
-        <span id="langToggle"></span>
-        <script>renderLangToggle('langToggle');</script>
         <button style="position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()">🔔<span id="notifDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
         <div class="live-badge" id="liveBadge"><div class="live-dot"></div>Atualizando…</div>
         <button class="btn-export" id="btnExportPdf" onclick="exportarPDF()" style="display:none;">
