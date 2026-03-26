@@ -814,6 +814,25 @@ body.has-bottomnav{padding-bottom:0;}
     if (session?.user) {
       currentUser = session.user; showForm(session.user);
     } else {
+      // Tenta auto-login biométrico se tem credencial salva
+      const bioEmail = localStorage.getItem('pais_bio_email');
+      if (bioEmail && typeof WebAuthnClient !== 'undefined') {
+        const available = await WebAuthnClient.isPlatformAvailable();
+        if (available) {
+          try {
+            const ch = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_challenge', email: bioEmail, portal:'pais', rp_id: location.hostname }) }).then(r=>r.json());
+            if (!ch.error) {
+              const assertion = await WebAuthnClient.authenticate(ch);
+              const d = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname }) }).then(r=>r.json());
+              if (!d.error) {
+                currentUser = { email: bioEmail, user_metadata: { full_name: localStorage.getItem('pais_bio_nome')||'', avatar_url: localStorage.getItem('pais_bio_avatar')||'' } };
+                showForm(currentUser);
+                return;
+              }
+            }
+          } catch(_) { /* usuário cancelou ou erro — mostra login normal */ }
+        }
+      }
       showLoginWall();
     }
 
@@ -2198,9 +2217,10 @@ body.has-bottomnav{padding-bottom:0;}
       const r = await callDiplomas({ action:'webauthn_register_verify', credential, rp_id: location.hostname });
       if (r.error) { showToast(r.error,'error'); return; }
       localStorage.setItem('pais_bio_email', email);
-      // Save current Supabase session for biometric restore
-      const { data: { session: curSession } } = await sb.auth.getSession();
-      if (curSession?.refresh_token) localStorage.setItem('pais_bio_refresh', curSession.refresh_token);
+      // Save user info for biometric login (no Supabase Auth needed)
+      const meta = currentUser?.user_metadata || {};
+      localStorage.setItem('pais_bio_nome', meta.full_name || meta.name || '');
+      localStorage.setItem('pais_bio_avatar', meta.avatar_url || meta.picture || '');
       document.getElementById('bioRegBanner').style.display = 'none';
       showToast('Biometria ativada com sucesso! Na próxima vez, use Face ID / Digital para entrar.','success', 5000);
     } catch(e) {
@@ -2213,27 +2233,20 @@ body.has-bottomnav{padding-bottom:0;}
     btn.disabled = true; btn.textContent = 'Verificando…';
     try {
       const email = localStorage.getItem('pais_bio_email');
-      const refreshToken = localStorage.getItem('pais_bio_refresh');
-      // 1. Verify biometric identity
+      const nome = localStorage.getItem('pais_bio_nome') || '';
+      const avatar = localStorage.getItem('pais_bio_avatar') || '';
+      if (!email) { showToast('Nenhuma biometria cadastrada.','warning'); return; }
+
+      // 1. Verify biometric identity via WebAuthn
       const ch = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_challenge', email, portal:'pais', rp_id: location.hostname }) }).then(r=>r.json());
       if (ch.error) { showToast(ch.error,'error'); return; }
       const assertion = await WebAuthnClient.authenticate(ch);
       const d = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname }) }).then(r=>r.json());
       if (d.error) { showToast(d.error,'error'); return; }
-      // 2. Restore Supabase session using saved refresh token
-      if (refreshToken) {
-        const { data, error } = await sb.auth.refreshSession({ refresh_token: refreshToken });
-        if (!error && data?.session) {
-          // Save new refresh token for next time
-          localStorage.setItem('pais_bio_refresh', data.session.refresh_token);
-          currentUser = data.session.user;
-          showForm(data.session.user);
-          return;
-        }
-      }
-      // Fallback: if refresh token expired, try signInWithOtp
-      await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-      showToast('Sessão expirada. Verifique seu e-mail para o link de acesso.','info', 5000);
+
+      // 2. Biometria verificada — acesso direto sem Supabase Auth
+      currentUser = { email, user_metadata: { full_name: nome, avatar_url: avatar } };
+      showForm(currentUser);
     } catch(e) {
       if (e.name !== 'NotAllowedError') showToast('Erro na autenticação.','error');
     } finally { btn.disabled = false; btn.textContent = '🔐 Entrar com biometria'; }
