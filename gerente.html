@@ -65,7 +65,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
 .spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(200,16,46,.25);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.content{padding:26px 32px 48px;flex:1;}
+.content{padding:26px 32px 48px;flex:1;max-width:1600px;}
 .panel{display:none;}.panel.active{display:block;}
 /* STATS */
 .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px;}
@@ -114,7 +114,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 .modal-overlay.show{display:flex;}
-.modal{background:var(--white);border-radius:16px;padding:30px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;}
+.modal{background:var(--white);border-radius:16px;padding:30px;width:100%;max-width:725px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;}
 .modal h3{font-family:'Lora',serif;font-size:17px;margin-bottom:6px;}.modal .msub{font-size:13px;color:var(--muted);margin-bottom:20px;}
 .modal-turnos{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:20px;max-height:320px;overflow-y:auto;}
 .mt-opt{position:relative;}.mt-opt input{position:absolute;opacity:0;}
@@ -287,7 +287,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .btn-revisar:hover{opacity:.85;}
 #pdiReviewModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:300;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
 #pdiReviewModal.open{display:flex;}
-.pdi-modal{background:var(--white);border-radius:16px;width:100%;max-width:700px;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.25);position:relative;}
+.pdi-modal{background:var(--white);border-radius:16px;width:100%;max-width:875px;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.25);position:relative;}
 .pdi-modal-close{position:absolute;top:18px;right:18px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;}
 .pdi-modal-title{font-family:'Lora',serif;font-size:18px;font-weight:700;margin-bottom:4px;}
 .pdi-modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
@@ -791,7 +791,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <div class="sec-title">Catalogo de Insumos <span class="count-badge" id="almInsumosCount">0</span></div>
           <div id="almInsumosList" style="margin-bottom:20px;display:flex;flex-direction:column;"></div>
 
-          <div class="form-card" id="almInsumoFormCard" style="max-width:700px;">
+          <div class="form-card" id="almInsumoFormCard" style="max-width:875px;">
               <h3 id="almInsumoFormTitle">➕ Novo Insumo</h3>
               <input type="hidden" id="almInsumoId">
               <div class="ff"><label>Nome *</label><input type="text" id="almInsumoNome" placeholder="Ex: Caneta Esferografica Azul"></div>
@@ -925,7 +925,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <!-- Modais do Almoxarifado (fora dos painéis) -->
       <!-- Modal: Criar Requisição (gerente em nome de professora) -->
         <div id="almNovaReqModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;overflow-y:auto;padding:24px;">
-          <div style="background:#fff;border-radius:16px;max-width:660px;margin:0 auto;padding:28px;">
+          <div style="background:#fff;border-radius:16px;max-width:825px;margin:0 auto;padding:28px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
               <h3 style="font-family:'Lora',serif;font-size:17px;">📝 Criar Requisição de Insumos</h3>
               <button onclick="almFecharNovaReq()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
@@ -997,7 +997,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
         <!-- Review Modal -->
         <div id="almReviewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;overflow-y:auto;padding:24px;">
-          <div style="background:#fff;border-radius:16px;max-width:820px;margin:0 auto;padding:28px;">
+          <div style="background:#fff;border-radius:16px;max-width:1025px;margin:0 auto;padding:28px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
               <h3 style="font-family:'Lora',serif;font-size:17px;">Analisar Requisição</h3>
               <button onclick="almFecharReview()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
@@ -1291,7 +1291,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <button onclick="toggleCrmLeadForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Novo Lead</button>
         </div>
         <div id="crmLeadForm" style="display:none;margin-bottom:16px;">
-          <div class="form-card" style="max-width:800px;">
+          <div class="form-card" style="max-width:1000px;">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
               <div class="ff" style="margin:0;"><label>Nome Responsavel *</label><input type="text" id="crmNome" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
               <div class="ff" style="margin:0;"><label>Telefone</label><input type="text" id="crmTel" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
@@ -1345,7 +1345,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </select>
         </div>
         <div id="crmVagasContent"><div class="empty-state">Carregando...</div></div>
-        <div class="form-card" style="margin-top:16px;max-width:600px;">
+        <div class="form-card" style="margin-top:16px;max-width:750px;">
           <h3 style="font-size:13px;margin-bottom:8px;">Adicionar/Editar Serie</h3>
           <div style="display:grid;grid-template-columns:1fr 80px 80px 60px auto;gap:8px;align-items:end;">
             <div class="ff" style="margin:0;"><label>Serie</label><input type="text" id="vagSerie" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
@@ -1487,7 +1487,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- Modal Relatório Manutenção -->
       <div class="modal-overlay" id="manutRelatorioOverlay" onclick="if(event.target===this)closeManutRelatorio()">
-        <div class="modal" style="max-width:800px;">
+        <div class="modal" style="max-width:1000px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
             <h3>Relatório de Pendências por Equipe</h3>
             <div style="display:flex;gap:8px;">
@@ -1506,7 +1506,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- Modal Manutenção -->
       <div class="modal-overlay" id="manutModalOverlay" onclick="if(event.target===this)closeManutModal()">
-        <div class="modal" style="max-width:520px;">
+        <div class="modal" style="max-width:650px;">
           <h3 id="manutModalTitle">Gerenciar Chamado</h3>
           <div id="manutModalContent"></div>
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
@@ -1608,7 +1608,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- LOGOTIPO -->
       <div id="panelLogo" class="panel">
-        <div style="max-width:520px;">
+        <div style="max-width:650px;">
           <div class="sec-title">Logotipo</div>
           <div class="logo-preview-area" id="logoPreviewArea">
             <img id="logoPreviewImg" alt="Logo atual">
@@ -1810,7 +1810,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
 <!-- ATIVIDADE EDIT MODAL -->
 <div class="modal-overlay" id="ativModal" onclick="if(event.target===this)closeAtivModal()" style="align-items:flex-start;padding:20px 16px;overflow-y:auto;">
-  <div class="modal" style="max-width:580px;margin:auto;">
+  <div class="modal" style="max-width:725px;margin:auto;">
     <h3>Editar Atividade</h3>
     <div class="ff" style="margin-top:16px;"><label>Nome</label><input type="text" id="editAtivNome"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -5280,7 +5280,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
     overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
-    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:24px;max-height:80vh;overflow-y:auto;">
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:650px;width:100%;padding:24px;max-height:80vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <h3 style="font-family:'Lora',serif;font-size:16px;">Historico de Precos — ${esc(nome)}</h3>
         <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">×</button>
@@ -6423,7 +6423,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
     overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
-    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:600px;width:100%;padding:28px;max-height:85vh;overflow-y:auto;">
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:750px;width:100%;padding:28px;max-height:85vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <h3 style="font-family:'Lora',serif;font-size:18px;">${esc(lead.nome_responsavel)}</h3>
         <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">x</button>
