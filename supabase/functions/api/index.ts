@@ -1244,11 +1244,12 @@ serve(async (req: Request) => {
   }
   // Matriculas
   if (action === "crm_matricula_criar") {
-    const { lead_id, nome_responsavel, nome_crianca, serie, ano, status } = body as any;
+    const { lead_id, nome_responsavel, nome_crianca, serie, ano, status, email, telefone, data_nascimento } = body as any;
     if (!nome_crianca || !serie || !ano) return err("Crianca, serie e ano obrigatorios.");
     const st = status || "reserva";
     const { error } = await admin.from("crm_matriculas").insert({
       lead_id, nome_responsavel, nome_crianca, serie, ano: parseInt(ano), status: st,
+      email: email || null, telefone: telefone || null, data_nascimento: data_nascimento || null,
       data_reserva: st === "reserva" ? new Date().toISOString().split("T")[0] : null,
       data_matricula: st === "matriculado" ? new Date().toISOString().split("T")[0] : null,
     });
