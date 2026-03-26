@@ -1031,6 +1031,94 @@ serve(async (req: Request) => {
     return ok({ conciliados });
   }
 
+  // ── Emissao de Boletos (Inter) ──────────────────────────
+  if (action === "fin_emitir_boleto") {
+    const { mensalidade_id, cpf_pagador, valor, vencimento, descricao, nome_pagador } = body as any;
+    if (!cpf_pagador || !valor || !vencimento) return err("CPF, valor e vencimento obrigatorios.");
+    const RELAY_URL = Deno.env.get("INTER_RELAY_URL") || "";
+    const RELAY_SECRET = Deno.env.get("RELAY_SECRET") || "";
+    try {
+      // Criar cobranca via API Inter v3
+      const cobrancaBody = {
+        seuNumero: `MB-${Date.now()}`,
+        valorNominal: parseFloat(valor),
+        dataVencimento: vencimento,
+        numDiasAgenda: 30,
+        pagador: {
+          cpfCnpj: cpf_pagador.replace(/\D/g, ""),
+          tipoPessoa: cpf_pagador.replace(/\D/g, "").length > 11 ? "JURIDICA" : "FISICA",
+          nome: nome_pagador || "Responsavel",
+        },
+        mensagem: { linha1: descricao || "Mensalidade Maple Bear" },
+      };
+      const res = await fetch(`${RELAY_URL}/inter-proxy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` },
+        body: JSON.stringify({ path: "/cobranca/v3/cobrancas", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cobrancaBody) }),
+      });
+      const relayResp = await res.json() as any;
+      const interData = typeof relayResp.body === "string" ? JSON.parse(relayResp.body) : relayResp.body;
+      // Salvar boleto emitido
+      const { error: insErr } = await admin.from("fin_boletos_emitidos").insert({
+        mensalidade_id: mensalidade_id || null,
+        familia_email: (body as any).familia_email || null,
+        familia_nome: nome_pagador || null,
+        crianca_nome: (body as any).crianca_nome || null,
+        cpf_pagador, valor: parseFloat(valor), vencimento, descricao,
+        nosso_numero: interData?.cobranca?.nossoNumero || interData?.nossoNumero || null,
+        codigo_barras: interData?.boleto?.codigoBarras || null,
+        linha_digitavel: interData?.boleto?.linhaDigitavel || null,
+        pix_copia_cola: interData?.pix?.pixCopiaECola || null,
+        inter_response: interData,
+      });
+      if (insErr) return err("Boleto criado no Inter mas erro ao salvar: " + insErr.message);
+      // Atualizar mensalidade se vinculada
+      if (mensalidade_id) {
+        await admin.from("fin_mensalidades").update({ status: "pendente" }).eq("id", mensalidade_id);
+      }
+      return ok({ success: true, nosso_numero: interData?.cobranca?.nossoNumero, pix: interData?.pix?.pixCopiaECola });
+    } catch (e) { return err("Erro ao emitir boleto: " + (e as Error).message); }
+  }
+  if (action === "fin_boletos_emitidos_list") {
+    const mes = (body as any).mes;
+    let query = admin.from("fin_boletos_emitidos").select("*").order("criado_em", { ascending: false });
+    if (mes) query = query.gte("vencimento", mes + "-01").lte("vencimento", mes + "-31");
+    const { data } = await query.limit(100);
+    return ok(data ?? []);
+  }
+  if (action === "fin_boleto_cancelar") {
+    const { id } = body as { id: string };
+    await admin.from("fin_boletos_emitidos").update({ status: "cancelado" }).eq("id", id);
+    return ok({ success: true });
+  }
+
+  // ── Notas Fiscais ─────────────────────────────────────
+  if (action === "fin_nf_emitir") {
+    const { mensalidade_id, boleto_id, familia_email, familia_nome, cpf_cnpj_tomador, valor, descricao_servico } = body as any;
+    if (!valor || !descricao_servico) return err("Valor e descricao obrigatorios.");
+    // Salvar NF como pendente (emissao real sera integrada com sistema da prefeitura)
+    const { data: nf, error: insErr } = await admin.from("fin_notas_fiscais").insert({
+      boleto_id: boleto_id || null, mensalidade_id: mensalidade_id || null,
+      familia_email, familia_nome, cpf_cnpj_tomador: cpf_cnpj_tomador || null,
+      valor: parseFloat(valor), descricao_servico,
+      status: "pendente",
+    }).select("id").single();
+    if (insErr) return err(insErr.message);
+    return ok({ success: true, nf_id: nf.id });
+  }
+  if (action === "fin_nf_list") {
+    const mes = (body as any).mes;
+    let query = admin.from("fin_notas_fiscais").select("*").order("criado_em", { ascending: false });
+    if (mes) query = query.gte("criado_em", mes + "-01").lte("criado_em", mes + "-31T23:59:59");
+    const { data } = await query.limit(100);
+    return ok(data ?? []);
+  }
+  if (action === "fin_nf_marcar_emitida") {
+    const { id, numero_nf, codigo_verificacao } = body as any;
+    await admin.from("fin_notas_fiscais").update({ status: "emitida", numero_nf, codigo_verificacao }).eq("id", id);
+    return ok({ success: true });
+  }
+
   // ── Impressoes (gerente) ────────────────────────────────
   if (action === "impressoes_pendentes") {
     const { data } = await admin.from("impressoes").select("*")

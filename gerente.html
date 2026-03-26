@@ -350,6 +350,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> DRE</a>
       <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço Patrimonial</a>
       <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🏦</span> Conciliação Bancária</a>
+      <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos (Inter)</a>
+      <a class="nav-item" href="#" onclick="showPanel('finNfs',this)"><span class="ic">📄</span> Notas Fiscais</a>
       <div class="sb-label">Escola</div>
       <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário Escolar</a>
       <div class="sb-label">Configurações</div>
@@ -1179,6 +1181,54 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="concContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- BOLETOS INTER -->
+      <div id="panelFinBoletos" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;">Boletos Emitidos</div>
+          <button onclick="toggleEmitirBoleto()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Emitir Boleto</button>
+        </div>
+        <div id="emitirBoletoForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>CPF do Pagador *</label><input type="text" id="bolCpf" placeholder="000.000.000-00" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Nome do Pagador</label><input type="text" id="bolNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Valor (R$) *</label><input type="number" id="bolValor" min="0" step="0.01" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Vencimento *</label><input type="date" id="bolVenc" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            </div>
+            <div class="ff" style="margin-top:10px;"><label>Descricao</label><input type="text" id="bolDesc" placeholder="Mensalidade Marco/2026 - Pedro Silva" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="emitirBoleto()" id="bolBtn" class="btn-create" style="width:auto;padding:8px 20px;">Emitir Boleto no Inter</button>
+              <button onclick="toggleEmitirBoleto()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+            <div id="bolErr" class="f-alert error" style="margin-top:8px;"></div>
+          </div>
+        </div>
+        <div id="finBoletosContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- NOTAS FISCAIS -->
+      <div id="panelFinNfs" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;">Notas Fiscais</div>
+          <button onclick="toggleEmitirNf()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Emitir NF</button>
+        </div>
+        <div id="emitirNfForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>CPF/CNPJ Tomador</label><input type="text" id="nfCpf" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Nome</label><input type="text" id="nfNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Valor (R$) *</label><input type="number" id="nfValor" min="0" step="0.01" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            </div>
+            <div class="ff" style="margin-top:10px;"><label>Descricao do Servico *</label><input type="text" id="nfDesc" placeholder="Servicos educacionais - Mensalidade Marco/2026" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="emitirNf()" id="nfBtn" class="btn-create" style="width:auto;padding:8px 20px;">Registrar NF</button>
+              <button onclick="toggleEmitirNf()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+          </div>
+        </div>
+        <div id="finNfsContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
       <!-- IMPRESSOES -->
       <div id="panelImpressoes" class="panel">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
@@ -1836,7 +1886,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1871,6 +1921,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='finDre')      loadFinDre();
     if(id==='finBalanco')  loadFinBalanco();
     if(id==='finConciliacao') loadFinConciliacao();
+    if(id==='finBoletos')  loadFinBoletos();
+    if(id==='finNfs')      loadFinNfs();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
     return false;
@@ -6010,6 +6062,92 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const d = await api({ action:'fin_extrato_auto_conciliar', mes });
     showToast(d.conciliados + ' transacoes conciliadas automaticamente!','success');
     loadFinConciliacao();
+  }
+
+  // ── BOLETOS INTER ──────────────────────────────────
+  function toggleEmitirBoleto() { const el=document.getElementById('emitirBoletoForm'); el.style.display=el.style.display==='none'?'block':'none'; }
+
+  async function emitirBoleto() {
+    const cpf = document.getElementById('bolCpf').value.trim();
+    const nome = document.getElementById('bolNome').value.trim();
+    const valor = document.getElementById('bolValor').value;
+    const venc = document.getElementById('bolVenc').value;
+    const desc = document.getElementById('bolDesc').value.trim();
+    const errEl = document.getElementById('bolErr');
+    errEl.classList.remove('show');
+    if (!cpf || !valor || !venc) { errEl.textContent='CPF, valor e vencimento obrigatorios.'; errEl.classList.add('show'); return; }
+    const btn = document.getElementById('bolBtn');
+    btn.disabled=true; btn.textContent='Emitindo...';
+    const d = await api({ action:'fin_emitir_boleto', cpf_pagador:cpf, nome_pagador:nome, valor, vencimento:venc, descricao:desc||'Mensalidade Maple Bear' });
+    btn.disabled=false; btn.textContent='Emitir Boleto no Inter';
+    if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
+    showToast('Boleto emitido! N° ' + (d.nosso_numero||'—'),'success',5000);
+    toggleEmitirBoleto();
+    loadFinBoletos();
+  }
+
+  async function loadFinBoletos() {
+    const d = await api({ action:'fin_boletos_emitidos_list' });
+    const items = Array.isArray(d) ? d : [];
+    const el = document.getElementById('finBoletosContent');
+    const fmtR = v => 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    if (!items.length) { el.innerHTML='<div class="empty-state">Nenhum boleto emitido.</div>'; return; }
+    el.innerHTML = items.map(b => `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:600;font-size:13px;">${esc(b.familia_nome||b.cpf_pagador)}</div>
+        <div style="font-size:11px;color:var(--muted);">${esc(b.descricao||'—')} · Venc: ${new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR')}</div>
+        ${b.linha_digitavel?`<div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace;">${esc(b.linha_digitavel)}</div>`:''}
+        ${b.pix_copia_cola?`<div style="font-size:10px;color:#1a6bb5;margin-top:2px;cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(b.pix_copia_cola)}');showToast('PIX copiado!','success')">📋 Copiar PIX</div>`:''}
+      </div>
+      <div style="font-size:16px;font-weight:700;">${fmtR(b.valor)}</div>
+      <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${b.status==='pago'?'background:#edf7f0;color:#2d7a3a;':b.status==='cancelado'?'background:#f5f0ea;color:var(--muted);':'background:#fff8e1;color:#b07d00;'}">${b.status}</span>
+    </div>`).join('');
+  }
+
+  // ── NOTAS FISCAIS ─────────────────────────────────
+  function toggleEmitirNf() { const el=document.getElementById('emitirNfForm'); el.style.display=el.style.display==='none'?'block':'none'; }
+
+  async function emitirNf() {
+    const cpf = document.getElementById('nfCpf').value.trim();
+    const nome = document.getElementById('nfNome').value.trim();
+    const valor = document.getElementById('nfValor').value;
+    const desc = document.getElementById('nfDesc').value.trim();
+    if (!valor || !desc) { showToast('Valor e descricao obrigatorios.','warning'); return; }
+    const btn = document.getElementById('nfBtn');
+    btn.disabled=true; btn.textContent='Registrando...';
+    const d = await api({ action:'fin_nf_emitir', cpf_cnpj_tomador:cpf, familia_nome:nome, valor, descricao_servico:desc });
+    btn.disabled=false; btn.textContent='Registrar NF';
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('NF registrada!','success');
+    toggleEmitirNf();
+    loadFinNfs();
+  }
+
+  async function loadFinNfs() {
+    const d = await api({ action:'fin_nf_list' });
+    const items = Array.isArray(d) ? d : [];
+    const el = document.getElementById('finNfsContent');
+    const fmtR = v => 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    if (!items.length) { el.innerHTML='<div class="empty-state">Nenhuma NF registrada.</div>'; return; }
+    el.innerHTML = items.map(n => `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${n.status==='emitida'?'#2d7a3a':n.status==='erro'?'#e53e3e':'#f6a623'};border-radius:8px;margin-bottom:6px;">
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:13px;">${esc(n.familia_nome||n.cpf_cnpj_tomador||'—')}</div>
+        <div style="font-size:11px;color:var(--muted);">${esc(n.descricao_servico||'—')} · ${new Date(n.criado_em).toLocaleDateString('pt-BR')}</div>
+        ${n.numero_nf?`<div style="font-size:11px;color:#2d7a3a;margin-top:2px;">NF n° ${esc(n.numero_nf)}</div>`:''}
+      </div>
+      <div style="font-size:15px;font-weight:700;">${fmtR(n.valor)}</div>
+      <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${n.status==='emitida'?'background:#edf7f0;color:#2d7a3a;':n.status==='erro'?'background:#fdf0f2;color:#a00d24;':'background:#fff8e1;color:#b07d00;'}">${n.status}</span>
+      ${n.status==='pendente'?`<button onclick="marcarNfEmitida('${n.id}')" style="padding:3px 8px;background:#2d7a3a;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar Emitida</button>`:''}
+    </div>`).join('');
+  }
+
+  async function marcarNfEmitida(id) {
+    const num = prompt('Numero da NF:');
+    if (!num) return;
+    const cod = prompt('Codigo de verificacao (opcional):');
+    await api({ action:'fin_nf_marcar_emitida', id, numero_nf:num, codigo_verificacao:cod||'' });
+    showToast('NF marcada como emitida!','success');
+    loadFinNfs();
   }
 
   // ── IMPRESSOES (gerente) ────────────────────────────
