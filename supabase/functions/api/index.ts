@@ -933,6 +933,104 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── DRE ────────────────────────────────────────────────
+  if (action === "fin_dre") {
+    const ano = (body as any).ano || new Date().getFullYear().toString();
+    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").in("tipo", ["receita", "despesa"]).order("codigo");
+    const { data: lancs } = await admin.from("fin_lancamentos").select("conta_id, valor, tipo, status, data_lancamento")
+      .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
+    // Agrupa por conta e mes
+    const contaMap: Record<string, { nome: string; codigo: string; tipo: string; meses: number[]; total: number }> = {};
+    for (const c of contas ?? []) {
+      contaMap[c.id] = { nome: c.nome, codigo: c.codigo, tipo: c.tipo, meses: Array(12).fill(0), total: 0 };
+    }
+    for (const l of lancs ?? []) {
+      if (l.conta_id && contaMap[l.conta_id]) {
+        const m = parseInt(l.data_lancamento.split("-")[1]) - 1;
+        contaMap[l.conta_id].meses[m] += l.valor;
+        contaMap[l.conta_id].total += l.valor;
+      }
+    }
+    const receitas = Object.values(contaMap).filter(c => c.tipo === "receita");
+    const despesas = Object.values(contaMap).filter(c => c.tipo === "despesa");
+    const totalReceitasMes = Array(12).fill(0), totalDespesasMes = Array(12).fill(0);
+    for (const r of receitas) r.meses.forEach((v, i) => totalReceitasMes[i] += v);
+    for (const d of despesas) d.meses.forEach((v, i) => totalDespesasMes[i] += v);
+    const resultadoMes = totalReceitasMes.map((r, i) => r - totalDespesasMes[i]);
+    return ok({ receitas, despesas, total_receitas_mes: totalReceitasMes, total_despesas_mes: totalDespesasMes, resultado_mes: resultadoMes, ano });
+  }
+
+  // ── Balanco Patrimonial ───────────────────────────────
+  if (action === "fin_balanco") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
+    const { data: saldos } = await admin.from("fin_saldos_patrimoniais").select("conta_id, saldo").eq("mes", mes);
+    const saldoMap: Record<string, number> = {};
+    for (const s of saldos ?? []) saldoMap[s.conta_id] = s.saldo;
+    // Calcula receitas - despesas acumulado ate o mes para lucro/prejuizo
+    const [y, m] = mes.split("-");
+    const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor")
+      .gte("data_lancamento", y + "-01-01").lte("data_lancamento", mes + "-31");
+    let lucro = 0;
+    for (const l of lancs ?? []) { lucro += l.tipo === "receita" ? l.valor : -l.valor; }
+    const ativos = (contas ?? []).filter(c => c.tipo === "ativo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+    const passivos = (contas ?? []).filter(c => c.tipo === "passivo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+    const patrimonio = (contas ?? []).filter(c => c.tipo === "patrimonio").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+    const totalAtivo = ativos.reduce((s, c) => s + c.saldo, 0);
+    const totalPassivo = passivos.reduce((s, c) => s + c.saldo, 0);
+    const totalPL = patrimonio.reduce((s, c) => s + c.saldo, 0) + lucro;
+    return ok({ ativos, passivos, patrimonio, total_ativo: totalAtivo, total_passivo: totalPassivo, total_pl: totalPL, lucro_periodo: lucro, mes });
+  }
+  if (action === "fin_saldo_patrimonial_set") {
+    const { conta_id, mes, saldo } = body as any;
+    if (!conta_id || !mes) return err("conta_id e mes obrigatorios.");
+    await admin.from("fin_saldos_patrimoniais").upsert({ conta_id, mes, saldo: parseFloat(saldo) || 0 }, { onConflict: "conta_id,mes" });
+    return ok({ success: true });
+  }
+
+  // ── Conciliacao Bancaria ──────────────────────────────
+  if (action === "fin_extrato_importar") {
+    const itens = (body as any).itens || [];
+    if (!itens.length) return err("Nenhum item para importar.");
+    let ok2 = 0;
+    for (const it of itens) {
+      const { error } = await admin.from("fin_extrato_bancario").insert({
+        data_transacao: it.data, descricao: it.descricao, valor: Math.abs(parseFloat(it.valor)),
+        tipo: parseFloat(it.valor) >= 0 ? "credito" : "debito", saldo: it.saldo || null, banco: it.banco || null,
+      });
+      if (!error) ok2++;
+    }
+    return ok({ importados: ok2 });
+  }
+  if (action === "fin_extrato_list") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const { data } = await admin.from("fin_extrato_bancario").select("*, fin_lancamentos(descricao, valor)")
+      .gte("data_transacao", mes + "-01").lte("data_transacao", mes + "-31").order("data_transacao");
+    return ok(data ?? []);
+  }
+  if (action === "fin_extrato_conciliar") {
+    const { extrato_id, lancamento_id } = body as any;
+    if (!extrato_id) return err("extrato_id obrigatorio.");
+    await admin.from("fin_extrato_bancario").update({ lancamento_id: lancamento_id || null, conciliado: !!lancamento_id }).eq("id", extrato_id);
+    return ok({ success: true });
+  }
+  if (action === "fin_extrato_auto_conciliar") {
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const { data: extratos } = await admin.from("fin_extrato_bancario").select("*").eq("conciliado", false)
+      .gte("data_transacao", mes + "-01").lte("data_transacao", mes + "-31");
+    const { data: lancs } = await admin.from("fin_lancamentos").select("id, descricao, valor, data_lancamento")
+      .gte("data_lancamento", mes + "-01").lte("data_lancamento", mes + "-31");
+    let conciliados = 0;
+    for (const ext of extratos ?? []) {
+      const match = (lancs ?? []).find(l => Math.abs(l.valor - ext.valor) < 0.01 && l.data_lancamento === ext.data_transacao);
+      if (match) {
+        await admin.from("fin_extrato_bancario").update({ lancamento_id: match.id, conciliado: true }).eq("id", ext.id);
+        conciliados++;
+      }
+    }
+    return ok({ conciliados });
+  }
+
   // ── Impressoes (gerente) ────────────────────────────────
   if (action === "impressoes_pendentes") {
     const { data } = await admin.from("impressoes").select("*")
