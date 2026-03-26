@@ -251,6 +251,18 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .mn-group .mn-val:hover{background:#faf8f5;}
 .mn-group .mn-val.month{min-width:90px;}
 
+/* KANBAN */
+.kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;min-height:400px;}
+.kanban-col{min-width:240px;max-width:280px;flex:1;background:#f5f0ea;border-radius:12px;display:flex;flex-direction:column;}
+.kanban-col-header{padding:12px 14px;font-weight:700;font-size:13px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;}
+.kanban-col-body{padding:8px;flex:1;overflow-y:auto;max-height:500px;}
+.kanban-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:grab;transition:box-shadow .15s;font-size:12px;}
+.kanban-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);}
+.kanban-card .kc-name{font-weight:700;font-size:13px;margin-bottom:4px;}
+.kanban-card .kc-info{color:var(--muted);font-size:11px;line-height:1.4;}
+.kanban-card .kc-actions{display:flex;gap:4px;margin-top:8px;}
+.kanban-card .kc-btn{padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:none;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+
 .alm-modal-tab{padding:6px 12px;border:1.5px solid var(--border);border-radius:7px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text);}
 .alm-modal-tab.active{background:var(--red);color:#fff;border-color:var(--red);}
 .alm-item-qty{width:70px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-family:'DM Sans',sans-serif;}
@@ -351,6 +363,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço Patrimonial</a>
       <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🏦</span> Conciliação Bancária</a>
       <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos (Inter)</a>
+      <div class="sb-label">CRM</div>
+      <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline (Kanban)</a>
+      <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
+      <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates WhatsApp</a>
       <div class="sb-label">Escola</div>
       <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário Escolar</a>
       <div class="sb-label">Configurações</div>
@@ -1228,6 +1244,57 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="finNfsContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- CRM KANBAN -->
+      <div id="panelCrmKanban" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;">Pipeline de Leads</div>
+          <button onclick="toggleCrmLeadForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Novo Lead</button>
+        </div>
+        <div id="crmLeadForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card" style="max-width:100%;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Nome Responsavel *</label><input type="text" id="crmNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Telefone</label><input type="text" id="crmTel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Email</label><input type="email" id="crmEmail" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Nome Crianca</label><input type="text" id="crmCrianca" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-top:10px;">
+              <div class="ff" style="margin:0;"><label>Idade</label><input type="text" id="crmIdade" placeholder="Ex: 3 anos" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Serie Interesse</label><input type="text" id="crmSerie" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Origem</label><select id="crmOrigem" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option><option value="indicacao">Indicacao</option><option value="site">Site</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="evento">Evento</option><option value="outro">Outro</option></select></div>
+              <div class="ff" style="margin:0;"><label>Observacoes</label><input type="text" id="crmObs" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;"><button onclick="salvarCrmLead()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button><button onclick="toggleCrmLeadForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button></div>
+          </div>
+        </div>
+        <div id="crmKanbanBoard" class="kanban-board"><div class="empty-state" style="width:100%;">Carregando...</div></div>
+      </div>
+
+      <!-- CRM LEADS -->
+      <div id="panelCrmLeads" class="panel">
+        <div class="sec-title">Todos os Leads</div>
+        <div id="crmLeadsList"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- CRM TEMPLATES -->
+      <div id="panelCrmTemplates" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">Templates de Mensagem</div>
+          <button onclick="toggleCrmTemplateForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Novo Template</button>
+        </div>
+        <div id="crmTemplateForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Nome *</label><input type="text" id="tplNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Categoria</label><select id="tplCat" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="boas_vindas">Boas-vindas</option><option value="follow_up">Follow-up</option><option value="visita">Visita</option><option value="pos_visita">Pos-Visita</option><option value="proposta">Proposta</option><option value="matricula">Matricula</option><option value="geral">Geral</option></select></div>
+            </div>
+            <div class="ff" style="margin-top:10px;"><label>Conteudo * (use {{nome}}, {{crianca}}, {{serie}}, {{valor}})</label><textarea id="tplConteudo" rows="3" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;"></textarea></div>
+            <div style="display:flex;gap:8px;margin-top:10px;"><button onclick="salvarCrmTemplate()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button><button onclick="toggleCrmTemplateForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button></div>
+          </div>
+        </div>
+        <div id="crmTemplatesList"><div class="empty-state">Carregando...</div></div>
+      </div>
+
       <!-- IMPRESSOES -->
       <div id="panelImpressoes" class="panel">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
@@ -1885,7 +1952,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -1922,6 +1989,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='finConciliacao') loadFinConciliacao();
     if(id==='finBoletos')  loadFinBoletos();
     if(id==='finNfs')      loadFinNfs();
+    if(id==='crmKanban')   loadCrmKanban();
+    if(id==='crmLeads')    loadCrmLeads();
+    if(id==='crmTemplates') loadCrmTemplates();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
     return false;
@@ -6147,6 +6217,196 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     await api({ action:'fin_nf_marcar_emitida', id, numero_nf:num, codigo_verificacao:cod||'' });
     showToast('NF marcada como emitida!','success');
     loadFinNfs();
+  }
+
+  // ── CRM ────────────────────────────────────────────
+  let crmEstagios = [], crmLeads = [];
+  function toggleCrmLeadForm() { const el=document.getElementById('crmLeadForm'); el.style.display=el.style.display==='none'?'block':'none'; }
+  function toggleCrmTemplateForm() { const el=document.getElementById('crmTemplateForm'); el.style.display=el.style.display==='none'?'block':'none'; }
+
+  async function loadCrmKanban() {
+    const [estData, leadData] = await Promise.all([api({action:'crm_estagios_list'}), api({action:'crm_leads_list'})]);
+    crmEstagios = Array.isArray(estData) ? estData : [];
+    crmLeads = Array.isArray(leadData) ? leadData : [];
+    renderKanban();
+  }
+
+  function renderKanban() {
+    const board = document.getElementById('crmKanbanBoard');
+    if (!crmEstagios.length) { board.innerHTML = '<div class="empty-state">Nenhum estagio.</div>'; return; }
+    board.innerHTML = crmEstagios.map(est => {
+      const leads = crmLeads.filter(l => l.estagio_id === est.id);
+      return `<div class="kanban-col">
+        <div class="kanban-col-header" style="background:${est.cor}20;color:${est.cor};">
+          ${esc(est.nome)} <span style="background:${est.cor};color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;">${leads.length}</span>
+        </div>
+        <div class="kanban-col-body" ondragover="event.preventDefault()" ondrop="dropLead(event,'${est.id}')">
+          ${leads.length ? leads.map(l => `<div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('text','${l.id}')">
+            <div class="kc-name">${esc(l.nome_responsavel)}</div>
+            <div class="kc-info">
+              ${l.nome_crianca ? '👶 ' + esc(l.nome_crianca) : ''}
+              ${l.telefone ? '<br>📱 ' + esc(l.telefone) : ''}
+              ${l.origem ? '<br>📍 ' + esc(l.origem) : ''}
+            </div>
+            <div class="kc-actions">
+              <button class="kc-btn" onclick="abrirLeadDetalhe('${l.id}')">Detalhes</button>
+              ${l.telefone ? `<button class="kc-btn" style="color:#2d7a3a;" onclick="abrirWhatsApp('${esc(l.telefone)}','${esc(l.nome_responsavel)}')">WhatsApp</button>` : ''}
+            </div>
+          </div>`).join('') : '<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px;">Arraste leads aqui</div>'}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function dropLead(e, estagioId) {
+    e.preventDefault();
+    const leadId = e.dataTransfer.getData('text');
+    if (!leadId) return;
+    await api({ action:'crm_lead_mover', id: leadId, estagio_id: estagioId });
+    const lead = crmLeads.find(l => l.id === leadId);
+    if (lead) lead.estagio_id = estagioId;
+    renderKanban();
+  }
+
+  async function salvarCrmLead() {
+    const estagios = crmEstagios.length ? crmEstagios : await api({action:'crm_estagios_list'});
+    const primeiroEstagio = (Array.isArray(estagios)?estagios:crmEstagios)[0]?.id;
+    const d = await api({ action:'crm_lead_save',
+      nome_responsavel: document.getElementById('crmNome').value.trim(),
+      telefone: document.getElementById('crmTel').value.trim(),
+      email: document.getElementById('crmEmail').value.trim(),
+      nome_crianca: document.getElementById('crmCrianca').value.trim(),
+      idade_crianca: document.getElementById('crmIdade').value.trim(),
+      serie_interesse: document.getElementById('crmSerie').value.trim(),
+      origem: document.getElementById('crmOrigem').value,
+      observacoes: document.getElementById('crmObs').value.trim(),
+      estagio_id: primeiroEstagio,
+    });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Lead salvo!','success'); toggleCrmLeadForm();
+    ['crmNome','crmTel','crmEmail','crmCrianca','crmIdade','crmSerie','crmObs'].forEach(id=>document.getElementById(id).value='');
+    loadCrmKanban();
+  }
+
+  function abrirWhatsApp(tel, nome) {
+    const num = tel.replace(/\D/g,'');
+    const fullNum = num.length <= 11 ? '55' + num : num;
+    window.open('https://wa.me/' + fullNum, '_blank');
+  }
+
+  async function abrirLeadDetalhe(id) {
+    const lead = crmLeads.find(l => l.id === id);
+    if (!lead) return;
+    const intData = await api({ action:'crm_interacoes_list', lead_id: id });
+    const interacoes = Array.isArray(intData) ? intData : [];
+    const tipoIcons = { ligacao:'📞', email:'📧', whatsapp:'💬', visita:'🏫', reuniao:'📅', nota:'📝', outro:'📌' };
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:600px;width:100%;padding:28px;max-height:85vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="font-family:'Lora',serif;font-size:18px;">${esc(lead.nome_responsavel)}</h3>
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">x</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:16px;">
+        ${lead.telefone?`<div>📱 ${esc(lead.telefone)}</div>`:''}
+        ${lead.email?`<div>📧 ${esc(lead.email)}</div>`:''}
+        ${lead.nome_crianca?`<div>👶 ${esc(lead.nome_crianca)} ${lead.idade_crianca?'('+esc(lead.idade_crianca)+')':''}</div>`:''}
+        ${lead.serie_interesse?`<div>🎒 ${esc(lead.serie_interesse)}</div>`:''}
+        ${lead.origem?`<div>📍 ${esc(lead.origem)}</div>`:''}
+        ${lead.valor_mensalidade?`<div>💰 R$ ${lead.valor_mensalidade}</div>`:''}
+      </div>
+      ${lead.observacoes?`<div style="font-size:12px;color:#555;margin-bottom:12px;padding:8px;background:#f5f0ea;border-radius:8px;">${esc(lead.observacoes)}</div>`:''}
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        ${lead.telefone?`<button onclick="abrirWhatsApp('${esc(lead.telefone)}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💬 WhatsApp</button>`:''}
+        <button onclick="this.closest('div[style*=fixed]').remove();agendarReuniaoCrm('${id}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📅 Agendar Reuniao</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Nova interacao:</div>
+        <div style="display:flex;gap:6px;">
+          <select id="crmIntTipo" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;">
+            <option value="nota">Nota</option><option value="ligacao">Ligacao</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="visita">Visita</option>
+          </select>
+          <input type="text" id="crmIntDesc" placeholder="Descreva..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;">
+          <button onclick="salvarCrmInteracao('${id}')" style="padding:6px 12px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Salvar</button>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Historico (${interacoes.length})</div>
+      ${interacoes.map(i => `<div style="padding:8px 0;border-bottom:1px solid #f5f0ea;font-size:12px;">
+        <span>${tipoIcons[i.tipo]||'📌'}</span> ${esc(i.descricao)}
+        <div style="font-size:10px;color:var(--muted);">${new Date(i.criado_em).toLocaleString('pt-BR')} · ${esc(i.criado_por||'')}</div>
+      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;">Nenhuma interacao.</div>'}
+    </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  async function salvarCrmInteracao(leadId) {
+    const tipo = document.getElementById('crmIntTipo').value;
+    const desc = document.getElementById('crmIntDesc').value.trim();
+    if (!desc) return;
+    await api({ action:'crm_interacao_save', lead_id: leadId, tipo, descricao: desc });
+    document.querySelector('div[style*=fixed]')?.remove();
+    abrirLeadDetalhe(leadId);
+  }
+
+  function agendarReuniaoCrm(leadId, nome) {
+    const titulo = prompt('Titulo da reuniao:', 'Visita ' + nome);
+    if (!titulo) return;
+    const data = prompt('Data e hora (AAAA-MM-DD HH:MM):', new Date().toISOString().slice(0,16).replace('T',' '));
+    if (!data) return;
+    api({ action:'crm_reuniao_save', lead_id: leadId, titulo, data_hora: data.replace(' ','T') + ':00', local: 'Maple Bear Caxias do Sul' }).then(d => {
+      if (d.error) showToast(d.error,'error');
+      else {
+        showToast('Reuniao agendada!','success');
+        // Abrir Google Calendar
+        const dtStart = data.replace(/[-: ]/g,'').slice(0,15) + '00';
+        const dtEnd = new Date(new Date(data.replace(' ','T')).getTime()+30*60000).toISOString().replace(/[-:]/g,'').slice(0,15) + '00';
+        window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${dtStart}/${dtEnd}&location=${encodeURIComponent('Maple Bear Caxias do Sul')}&details=${encodeURIComponent('Lead: '+nome)}`, '_blank');
+      }
+    });
+  }
+
+  async function loadCrmLeads() {
+    const d = await api({ action:'crm_leads_list' });
+    const items = Array.isArray(d) ? d : [];
+    document.getElementById('crmLeadsList').innerHTML = items.length ? items.map(l => `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${l.crm_estagios?.cor||'#999'};border-radius:8px;margin-bottom:6px;">
+      <div style="flex:1;"><div style="font-weight:600;font-size:13px;">${esc(l.nome_responsavel)}</div>
+        <div style="font-size:11px;color:var(--muted);">${esc(l.nome_crianca||'')} · ${esc(l.telefone||'')} · ${esc(l.crm_estagios?.nome||'?')} · ${esc(l.origem||'')}</div></div>
+      <button onclick="abrirLeadDetalhe('${l.id}')" style="padding:4px 10px;background:none;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Detalhes</button>
+    </div>`).join('') : '<div class="empty-state">Nenhum lead.</div>';
+  }
+
+  async function loadCrmTemplates() {
+    const d = await api({ action:'crm_templates_list' });
+    const items = Array.isArray(d) ? d : [];
+    const catLabels = { boas_vindas:'Boas-vindas', follow_up:'Follow-up', visita:'Visita', pos_visita:'Pos-Visita', proposta:'Proposta', matricula:'Matricula', geral:'Geral' };
+    document.getElementById('crmTemplatesList').innerHTML = items.length ? items.map(t => `<div style="padding:14px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <strong style="font-size:13px;">${esc(t.nome)}</strong>
+        <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#f5f0ea;color:var(--muted);">${catLabels[t.categoria]||t.categoria}</span>
+        <button onclick="copiarTemplate('${t.id}')" style="margin-left:auto;padding:3px 10px;background:#25D366;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copiar</button>
+      </div>
+      <div style="font-size:12px;color:#555;line-height:1.5;white-space:pre-wrap;">${esc(t.conteudo)}</div>
+    </div>`).join('') : '<div class="empty-state">Nenhum template.</div>';
+  }
+
+  function copiarTemplate(id) {
+    const tpl = document.querySelector(`#crmTemplatesList div`);
+    // Buscar do API de novo para ter o conteudo
+    api({ action:'crm_templates_list' }).then(d => {
+      const items = Array.isArray(d) ? d : [];
+      const t = items.find(x => x.id === id);
+      if (t) { navigator.clipboard.writeText(t.conteudo); showToast('Template copiado!','success'); }
+    });
+  }
+
+  async function salvarCrmTemplate() {
+    const d = await api({ action:'crm_template_save', nome: document.getElementById('tplNome').value.trim(), categoria: document.getElementById('tplCat').value, conteudo: document.getElementById('tplConteudo').value.trim() });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Template salvo!','success'); toggleCrmTemplateForm();
+    document.getElementById('tplNome').value=''; document.getElementById('tplConteudo').value='';
+    loadCrmTemplates();
   }
 
   // ── IMPRESSOES (gerente) ────────────────────────────

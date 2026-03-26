@@ -1,0 +1,79 @@
+#mb-crm-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 300px;
+  height: 100vh;
+  background: #fff;
+  border-left: 2px solid #C8102E;
+  z-index: 99999;
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0,0,0,.1);
+  transition: transform .3s;
+}
+#mb-crm-panel.hidden { transform: translateX(100%); }
+#mb-crm-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 48px;
+  height: 48px;
+  background: #C8102E;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 99998;
+  box-shadow: 0 4px 16px rgba(200,16,46,.4);
+}
+.mb-panel-header {
+  background: #C8102E;
+  color: #fff;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.mb-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+.mb-tpl-card {
+  background: #f8f5f0;
+  border: 1px solid #e6ddd3;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background .15s;
+  font-size: 12px;
+}
+.mb-tpl-card:hover { background: #f0ece6; }
+.mb-tpl-card .tpl-name { font-weight: 700; margin-bottom: 4px; font-size: 13px; }
+.mb-tpl-card .tpl-cat { font-size: 10px; color: #999; margin-bottom: 4px; }
+.mb-tpl-card .tpl-preview { color: #555; line-height: 1.4; }
+.mb-tpl-card .tpl-send {
+  margin-top: 6px;
+  padding: 4px 12px;
+  background: #25D366;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mb-search {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}

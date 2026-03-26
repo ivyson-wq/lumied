@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{width:320px;font-family:'Segoe UI',sans-serif;background:#f8f5f0;}
+.header{background:#C8102E;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:8px;}
+.header h1{font-size:14px;font-weight:600;}
+.config{padding:12px;}
+.config label{font-size:11px;font-weight:600;color:#666;display:block;margin-bottom:4px;}
+.config input{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;margin-bottom:8px;}
+.btn{width:100%;padding:10px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn:hover{background:#a00d24;}
+.status{padding:8px 16px;font-size:11px;color:#666;text-align:center;}
+</style>
+</head>
+<body>
+<div class="header">
+  <span style="font-size:20px;">🍁</span>
+  <h1>Maple Bear CRM</h1>
+</div>
+<div class="config">
+  <label>URL do Sistema</label>
+  <input type="text" id="apiUrl" placeholder="https://app.maplebearcaxiasdosul.com.br" value="https://brgorknbrjlfwvrrlwxj.supabase.co">
+  <label>API Key</label>
+  <input type="text" id="apiKey" placeholder="Supabase Anon Key">
+  <label>Token do Gerente</label>
+  <input type="text" id="token" placeholder="Copie do localStorage: mb_token">
+  <button class="btn" onclick="salvar()">Salvar Configuracao</button>
+</div>
+<div class="status" id="status">Configure para conectar ao CRM</div>
+<script>
+chrome.storage.local.get(['apiUrl','apiKey','token'], d => {
+  if(d.apiUrl) document.getElementById('apiUrl').value = d.apiUrl;
+  if(d.apiKey) document.getElementById('apiKey').value = d.apiKey;
+  if(d.token) document.getElementById('token').value = d.token;
+  if(d.apiUrl && d.token) document.getElementById('status').textContent = 'Conectado ao CRM';
+});
+function salvar() {
+  chrome.storage.local.set({
+    apiUrl: document.getElementById('apiUrl').value.trim(),
+    apiKey: document.getElementById('apiKey').value.trim(),
+    token: document.getElementById('token').value.trim(),
+  }, () => { document.getElementById('status').textContent = 'Salvo!'; });
+}
+</script>
+</body>
+</html>

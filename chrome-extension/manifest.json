@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Maple Bear CRM - WhatsApp",
+  "version": "1.0.0",
+  "description": "Envie templates de mensagens do CRM Maple Bear diretamente no WhatsApp Web",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://web.whatsapp.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon48.png"
+  },
+  "content_scripts": [{
+    "matches": ["https://web.whatsapp.com/*"],
+    "js": ["content.js"],
+    "css": ["content.css"]
+  }],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

@@ -1119,6 +1119,87 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── CRM ────────────────────────────────────────────────
+  if (action === "crm_estagios_list") {
+    const { data } = await admin.from("crm_estagios").select("*").eq("ativo", true).order("ordem");
+    return ok(data ?? []);
+  }
+  if (action === "crm_leads_list") {
+    const { data } = await admin.from("crm_leads").select("*, crm_estagios(nome, cor, ordem)").order("atualizado_em", { ascending: false });
+    return ok(data ?? []);
+  }
+  if (action === "crm_lead_save") {
+    const { id, nome_responsavel, email, telefone, nome_crianca, idade_crianca, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, responsavel_interno, data_proximo_contato, data_visita } = body as any;
+    if (!nome_responsavel) return err("Nome obrigatorio.");
+    const data = { nome_responsavel, email, telefone, nome_crianca, idade_crianca, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString() };
+    if (id) {
+      await admin.from("crm_leads").update(data).eq("id", id);
+    } else {
+      await admin.from("crm_leads").insert(data);
+    }
+    return ok({ success: true });
+  }
+  if (action === "crm_lead_mover") {
+    const { id, estagio_id } = body as any;
+    if (!id || !estagio_id) return err("id e estagio_id obrigatorios.");
+    await admin.from("crm_leads").update({ estagio_id, atualizado_em: new Date().toISOString() }).eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "crm_lead_delete") {
+    const { id } = body as { id: string };
+    await admin.from("crm_leads").delete().eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "crm_interacoes_list") {
+    const { lead_id } = body as any;
+    if (!lead_id) return err("lead_id obrigatorio.");
+    const { data } = await admin.from("crm_interacoes").select("*").eq("lead_id", lead_id).order("criado_em", { ascending: false });
+    return ok(data ?? []);
+  }
+  if (action === "crm_interacao_save") {
+    const { lead_id, tipo, descricao } = body as any;
+    if (!lead_id || !descricao) return err("lead_id e descricao obrigatorios.");
+    await admin.from("crm_interacoes").insert({ lead_id, tipo: tipo || "nota", descricao, criado_por: gerente?.nome });
+    await admin.from("crm_leads").update({ atualizado_em: new Date().toISOString() }).eq("id", lead_id);
+    return ok({ success: true });
+  }
+  if (action === "crm_templates_list") {
+    const { data } = await admin.from("crm_templates").select("*").eq("ativo", true).order("categoria");
+    return ok(data ?? []);
+  }
+  if (action === "crm_template_save") {
+    const { id, nome, categoria, conteudo, variaveis } = body as any;
+    if (!nome || !conteudo) return err("Nome e conteudo obrigatorios.");
+    if (id) { await admin.from("crm_templates").update({ nome, categoria, conteudo, variaveis }).eq("id", id); }
+    else { await admin.from("crm_templates").insert({ nome, categoria: categoria || "geral", conteudo, variaveis: variaveis || [] }); }
+    return ok({ success: true });
+  }
+  if (action === "crm_reuniao_save") {
+    const { lead_id, titulo, data_hora, duracao_min, local, descricao } = body as any;
+    if (!titulo || !data_hora) return err("Titulo e data obrigatorios.");
+    const { data: r, error: e } = await admin.from("crm_reunioes").insert({ lead_id, titulo, data_hora, duracao_min: duracao_min || 30, local, descricao, criado_por: gerente?.nome }).select("id").single();
+    if (e) return err(e.message);
+    // Registra interacao
+    if (lead_id) {
+      await admin.from("crm_interacoes").insert({ lead_id, tipo: "reuniao", descricao: `Reunião agendada: ${titulo} em ${new Date(data_hora).toLocaleString("pt-BR")}`, criado_por: gerente?.nome });
+    }
+    return ok({ success: true, id: r.id });
+  }
+  if (action === "crm_dashboard") {
+    const { data: leads } = await admin.from("crm_leads").select("estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome)");
+    const { data: estagios } = await admin.from("crm_estagios").select("id, nome, cor, ordem").eq("ativo", true).order("ordem");
+    const porEstagio: Record<string, number> = {};
+    const porOrigem: Record<string, number> = {};
+    let valorPipeline = 0;
+    for (const l of leads ?? []) {
+      const est = (l as any).crm_estagios?.nome || "?";
+      porEstagio[est] = (porEstagio[est] || 0) + 1;
+      if (l.origem) porOrigem[l.origem] = (porOrigem[l.origem] || 0) + 1;
+      if (l.valor_mensalidade) valorPipeline += l.valor_mensalidade;
+    }
+    return ok({ total: (leads ?? []).length, por_estagio: porEstagio, por_origem: porOrigem, valor_pipeline: valorPipeline, estagios: estagios ?? [] });
+  }
+
   // ── Impressoes (gerente) ────────────────────────────────
   if (action === "impressoes_pendentes") {
     const { data } = await admin.from("impressoes").select("*")
