@@ -396,25 +396,57 @@ body.has-bottomnav{padding-bottom:0;}
       <button onclick="backToEmailFromDenied()" style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Voltar ao início</button>
     </div>
 
-    <!-- Estado inicial: formulário de e-mail -->
+    <!-- Estado inicial: login -->
     <div id="emailState">
+
+      <!-- 1. Email + Senha (principal) -->
       <div class="ml-field">
-        <label>Seu e-mail</label>
-        <input type="email" id="mlEmail" placeholder="seuemail@exemplo.com" autocomplete="email">
-        <div class="err-msg" id="mlEmailErr">Informe um e-mail válido.</div>
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" autocomplete="email">
       </div>
-      <button class="btn-magic" id="btnMagic" onclick="sendMagicLink()">
-        ✉️ Enviar link de acesso
-      </button>
-      <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">Enviaremos um link de acesso para o seu e-mail. Sem senha necessária.</p>
+      <div class="ml-field">
+        <label>Senha</label>
+        <input type="password" id="loginSenha" placeholder="Sua senha" autocomplete="current-password">
+      </div>
+      <div id="loginErr" style="display:none;font-size:13px;color:#a00d24;padding:8px 12px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);margin-bottom:8px;"></div>
+      <button class="btn-magic" id="btnLogin" onclick="loginEmailSenha()">Entrar</button>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;">
+        <a href="#" onclick="toggleCadastro();return false" style="font-size:12px;color:var(--muted);text-decoration:none;">Criar conta</a>
+        <a href="#" onclick="toggleMagicLink();return false" style="font-size:12px;color:var(--muted);text-decoration:none;">Esqueci minha senha</a>
+      </div>
+
+      <!-- Cadastro (colapsavel) -->
+      <div id="cadastroWrap" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px;">Criar Conta</div>
+        <div class="ml-field"><label>Nome completo</label><input type="text" id="cadNomeCompleto" placeholder="Seu nome" autocomplete="name"></div>
+        <div class="ml-field"><label>E-mail</label><input type="email" id="cadEmailNovo" placeholder="seuemail@exemplo.com" autocomplete="email"></div>
+        <div class="ml-field"><label>Senha (mínimo 6 caracteres)</label><input type="password" id="cadSenhaNova" placeholder="Crie uma senha" autocomplete="new-password"></div>
+        <div class="ml-field"><label>Confirmar senha</label><input type="password" id="cadSenhaConf" placeholder="Repita a senha"></div>
+        <div id="cadNovoErr" style="display:none;font-size:13px;color:#a00d24;padding:8px 12px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);margin-bottom:8px;"></div>
+        <button class="btn-magic" id="btnCadastrar" onclick="cadastrarConta()">Criar Conta</button>
+      </div>
+
+      <!-- Magic Link (colapsavel) -->
+      <div id="magicLinkWrap" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px;">Recuperar acesso por e-mail</div>
+        <div class="ml-field">
+          <label>Seu e-mail</label>
+          <input type="email" id="mlEmail" placeholder="seuemail@exemplo.com" autocomplete="email">
+          <div class="err-msg" id="mlEmailErr">Informe um e-mail válido.</div>
+        </div>
+        <button class="btn-magic" id="btnMagic" onclick="sendMagicLink()">✉️ Enviar link de acesso</button>
+        <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">Enviaremos um link para o seu e-mail.</p>
+      </div>
 
       <div class="divider">ou</div>
 
+      <!-- 2. Google -->
       <button class="oauth-btn" id="btnGoogle" onclick="loginGoogle()">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.32-8.16 2.32-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Continuar com Google
       </button>
 
+      <!-- 3. Biometria -->
       <button id="bioLoginBtn" onclick="doBioLogin()" style="display:none;width:100%;padding:13px;background:#1a6bb5;color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px;box-shadow:0 4px 14px rgba(26,107,181,.3);">🔐 Entrar com biometria</button>
 
       <p class="lw-note">🔒 Seus dados são usados apenas para identificação.<br>Não compartilhamos informações com terceiros.</p>
@@ -1017,6 +1049,68 @@ body.has-bottomnav{padding-bottom:0;}
     const btn = document.getElementById('btnMagic');
     btn.disabled = false; btn.innerHTML = '✉️ Enviar link de acesso';
   }
+
+  function toggleCadastro() {
+    const el = document.getElementById('cadastroWrap');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('magicLinkWrap').style.display = 'none';
+  }
+  function toggleMagicLink() {
+    const el = document.getElementById('magicLinkWrap');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('cadastroWrap').style.display = 'none';
+  }
+
+  async function loginEmailSenha() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    const errEl = document.getElementById('loginErr');
+    errEl.style.display = 'none';
+    if (!email || !senha) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('btnLogin');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+    btn.disabled = false; btn.textContent = 'Entrar';
+    if (error) {
+      errEl.textContent = error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+    currentUser = data.user;
+    showForm(data.user);
+  }
+
+  async function cadastrarConta() {
+    const nome = document.getElementById('cadNomeCompleto').value.trim();
+    const email = document.getElementById('cadEmailNovo').value.trim();
+    const senha = document.getElementById('cadSenhaNova').value;
+    const conf = document.getElementById('cadSenhaConf').value;
+    const errEl = document.getElementById('cadNovoErr');
+    errEl.style.display = 'none';
+    if (!nome || !email || !senha) { errEl.textContent = 'Preencha todos os campos.'; errEl.style.display = 'block'; return; }
+    if (senha.length < 6) { errEl.textContent = 'Senha deve ter no minimo 6 caracteres.'; errEl.style.display = 'block'; return; }
+    if (senha !== conf) { errEl.textContent = 'As senhas nao coincidem.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('btnCadastrar');
+    btn.disabled = true; btn.textContent = 'Criando conta...';
+    const { data, error } = await sb.auth.signUp({
+      email, password: senha,
+      options: { data: { full_name: nome } }
+    });
+    btn.disabled = false; btn.textContent = 'Criar Conta';
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+    if (data.user && !data.user.email_confirmed_at) {
+      showToast('Conta criada! Verifique seu e-mail para confirmar.', 'success', 6000);
+      document.getElementById('cadastroWrap').style.display = 'none';
+    } else if (data.user) {
+      currentUser = data.user;
+      showForm(data.user);
+    }
+  }
+
+  // Enter key para login
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('loginSenha') === document.activeElement) loginEmailSenha();
+  });
 
   async function loginGoogle() {
     document.getElementById('btnGoogle').disabled = true;
