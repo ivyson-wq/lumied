@@ -392,6 +392,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
         <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
         <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> Vagas</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> Matrículas</a>
         <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries/Idade</a>
       </div>
 
@@ -1332,6 +1334,38 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="crmTemplatesList"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- CRM VAGAS -->
+      <div id="panelCrmVagas" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;">Vagas Disponíveis</div>
+          <select id="vagasAno" onchange="loadCrmVagas()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <option value="2026">2026</option><option value="2027">2027</option>
+          </select>
+        </div>
+        <div id="crmVagasContent"><div class="empty-state">Carregando...</div></div>
+        <div class="form-card" style="margin-top:16px;max-width:600px;">
+          <h3 style="font-size:13px;margin-bottom:8px;">Adicionar/Editar Serie</h3>
+          <div style="display:grid;grid-template-columns:1fr 80px 80px 60px auto;gap:8px;align-items:end;">
+            <div class="ff" style="margin:0;"><label>Serie</label><input type="text" id="vagSerie" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Turmas</label><input type="number" id="vagQtd" value="1" min="1" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Vagas/T</label><input type="number" id="vagCap" value="18" min="1" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Ano</label><input type="number" id="vagAno" value="2026" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+            <button onclick="salvarCrmVaga()" class="btn-create" style="width:auto;padding:6px 12px;font-size:11px;">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRM MATRICULAS -->
+      <div id="panelCrmMatriculas" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;">Matriculas e Reservas</div>
+          <select id="matrAno" onchange="loadCrmMatriculas()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <option value="2026">2026</option><option value="2027">2027</option>
+          </select>
+        </div>
+        <div id="crmMatriculasContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
       <!-- CONFIG SERIES/IDADE -->
       <div id="panelCrmConfigSeries" class="panel">
         <div class="sec-title">Configuracao de Series por Idade</div>
@@ -2014,7 +2048,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmConfigSeries:'Configuracao Series/Idade'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -2054,6 +2088,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='crmKanban')   loadCrmKanban();
     if(id==='crmLeads')    loadCrmLeads();
     if(id==='crmTemplates') loadCrmTemplates();
+    if(id==='crmVagas')     loadCrmVagas();
+    if(id==='crmMatriculas') loadCrmMatriculas();
     if(id==='crmConfigSeries') loadCrmConfigSeries();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
@@ -6360,7 +6396,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   async function abrirLeadDetalhe(id) {
-    const lead = crmLeads.find(l => l.id === id);
+    let lead = crmLeads.find(l => l.id === id);
+    if (!lead) {
+      const all = await api({ action:'crm_leads_list' });
+      crmLeads = Array.isArray(all) ? all : [];
+      lead = crmLeads.find(l => l.id === id);
+    }
     if (!lead) return;
     const intData = await api({ action:'crm_interacoes_list', lead_id: id });
     const interacoes = Array.isArray(intData) ? intData : [];
@@ -6386,6 +6427,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
         ${lead.telefone?`<button onclick="abrirWhatsApp('${esc(lead.telefone)}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💬 WhatsApp</button>`:''}
         <button onclick="this.closest('div[style*=fixed]').remove();agendarReuniaoCrm('${id}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📅 Agendar Reuniao</button>
+        <button onclick="criarMatriculaDoLead('${id}')" style="padding:6px 12px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📝 Registrar Reserva/Matricula</button>
       </div>
       <div style="margin-bottom:12px;">
         <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Nova interacao:</div>
@@ -6548,6 +6590,140 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     showToast('Template salvo!','success'); toggleCrmTemplateForm();
     document.getElementById('tplNome').value=''; document.getElementById('tplConteudo').value='';
     loadCrmTemplates();
+  }
+
+  // ── CRM VAGAS ────────────────────────────
+  async function loadCrmVagas() {
+    const ano = parseInt(document.getElementById('vagasAno').value);
+    document.getElementById('vagAno').value = ano;
+    const d = await api({ action:'crm_vagas_list', ano });
+    const items = Array.isArray(d) ? d : [];
+    const el = document.getElementById('crmVagasContent');
+    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma serie configurada para ' + ano + '.</div>'; return; }
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Serie</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Turmas</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Vagas/T</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Total</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Reservas</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Matriculados</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Disponiveis</th>
+        <th style="padding:10px;font-size:11px;border-bottom:1.5px solid var(--border);min-width:120px;"></th>
+      </tr></thead>
+      <tbody>${items.map(v => {
+        const ocupadas = (v.reservas||0) + (v.matriculados||0);
+        const disp = v.vagas_total - ocupadas;
+        const pct = v.vagas_total > 0 ? Math.min(100, (ocupadas / v.vagas_total) * 100) : 0;
+        const cor = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+        return `<tr>
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #f5f0ea;">${esc(v.serie)}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:13px;">${v.qtd_turmas}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:13px;">${v.vagas_por_turma}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:13px;font-weight:700;">${v.vagas_total}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:13px;color:#b07d00;font-weight:600;">${v.reservas||0}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:13px;color:#2d7a3a;font-weight:600;">${v.matriculados||0}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:13px;font-weight:700;color:${disp<=2?'#e53e3e':disp<=5?'#b07d00':'#2d7a3a'};">${disp}</td>
+          <td style="padding:10px;border-bottom:1px solid #f5f0ea;">
+            <div style="background:#f0ece6;border-radius:4px;height:8px;width:100%;">
+              <div style="height:100%;border-radius:4px;width:${pct}%;background:${cor};transition:width .3s;"></div>
+            </div>
+            <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:2px;">${Math.round(pct)}% ocupado</div>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  async function salvarCrmVaga() {
+    const serie = document.getElementById('vagSerie').value.trim();
+    const qtd_turmas = parseInt(document.getElementById('vagQtd').value) || 1;
+    const vagas_por_turma = parseInt(document.getElementById('vagCap').value) || 18;
+    const ano = parseInt(document.getElementById('vagAno').value) || 2026;
+    if (!serie) { showToast('Informe a serie','error'); return; }
+    const d = await api({ action:'crm_vagas_save', serie, ano, qtd_turmas, vagas_por_turma });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Vaga salva!','success');
+    document.getElementById('vagSerie').value = '';
+    document.getElementById('vagasAno').value = String(ano);
+    loadCrmVagas();
+  }
+
+  // ── CRM MATRICULAS ────────────────────────────
+  async function loadCrmMatriculas() {
+    const ano = parseInt(document.getElementById('matrAno').value);
+    const d = await api({ action:'crm_matriculas_list', ano });
+    const items = Array.isArray(d) ? d : [];
+    const el = document.getElementById('crmMatriculasContent');
+    const statusLabels = { reserva:'🟡 Reserva', matriculado:'🟢 Matriculado', cancelado:'🔴 Cancelado' };
+    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma matricula/reserva para ' + ano + '.</div>'; return; }
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="text-align:left;padding:10px 14px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Responsavel</th>
+        <th style="text-align:left;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Crianca</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Serie</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Status</th>
+        <th style="text-align:center;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Data</th>
+        <th style="padding:10px;border-bottom:1.5px solid var(--border);"></th>
+      </tr></thead>
+      <tbody>${items.map(m => {
+        const dataStr = m.data_matricula || m.data_reserva || '';
+        return `<tr>
+          <td style="padding:10px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;font-weight:600;">${esc(m.nome_responsavel)}</td>
+          <td style="padding:10px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(m.nome_crianca)}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:12px;">${esc(m.serie)}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:12px;">${statusLabels[m.status]||m.status}</td>
+          <td style="padding:10px;text-align:center;border-bottom:1px solid #f5f0ea;font-size:12px;">${dataStr?new Date(dataStr+'T12:00:00').toLocaleDateString('pt-BR'):'-'}</td>
+          <td style="padding:10px;border-bottom:1px solid #f5f0ea;">
+            ${m.status==='reserva'?`<button onclick="atualizarMatricula('${m.id}','matriculado')" style="padding:4px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">Matricular</button>`:''}
+            ${m.status!=='cancelado'?`<button onclick="atualizarMatricula('${m.id}','cancelado')" style="padding:4px 10px;background:#e53e3e;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>`:''}
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  async function atualizarMatricula(id, novoStatus) {
+    const labels = { matriculado:'matricular', cancelado:'cancelar' };
+    if (!confirm('Deseja ' + (labels[novoStatus]||novoStatus) + ' este registro?')) return;
+    const d = await api({ action:'crm_matricula_atualizar_status', id, status: novoStatus });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Status atualizado!','success');
+    loadCrmMatriculas();
+    // Refresh vagas if that panel was loaded
+    if (document.getElementById('panelCrmVagas').style.display !== 'none') loadCrmVagas();
+  }
+
+  async function criarMatriculaDoLead(leadId) {
+    let lead = crmLeads.find(l => l.id === leadId);
+    if (!lead) {
+      const all = await api({ action:'crm_leads_list' });
+      lead = (Array.isArray(all) ? all : []).find(l => l.id === leadId);
+    }
+    if (!lead) { showToast('Lead nao encontrado','error'); return; }
+    const ano = prompt('Ano da matricula:', '2026');
+    if (!ano) return;
+    const status = confirm('Ja tem contrato assinado?\n\nOK = Matriculado\nCancelar = Reserva') ? 'matriculado' : 'reserva';
+    const d = await api({
+      action: 'crm_matricula_criar',
+      lead_id: leadId,
+      nome_responsavel: lead.nome_responsavel,
+      nome_crianca: lead.nome_crianca || '',
+      serie: lead.serie_interesse || '',
+      ano: parseInt(ano),
+      status
+    });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast(status === 'matriculado' ? 'Matricula registrada!' : 'Reserva registrada!', 'success');
+    // Move lead to 'fechado' stage if exists
+    const estagios = await api({ action:'crm_estagios_list' });
+    const stgFechado = Array.isArray(estagios) ? estagios.find(e => e.nome.toLowerCase().includes('fechado') || e.nome.toLowerCase().includes('ganho') || e.nome.toLowerCase().includes('won')) : null;
+    if (stgFechado) {
+      await api({ action:'crm_lead_save', id: leadId, estagio_id: stgFechado.id });
+    }
+    // Close modal and reload
+    document.querySelector('div[style*=fixed]')?.remove();
+    loadCrmKanban();
   }
 
   // ── IMPRESSOES (gerente) ────────────────────────────

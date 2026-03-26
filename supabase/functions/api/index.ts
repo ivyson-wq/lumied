@@ -1216,6 +1216,66 @@ serve(async (req: Request) => {
     const match = config.find(c => meses >= c.idade_min_meses && meses <= c.idade_max_meses);
     return ok({ serie: match?.serie || null, idade_meses: meses });
   }
+  // Vagas
+  if (action === "crm_vagas_list") {
+    const ano = parseInt((body as any).ano) || new Date().getFullYear();
+    const { data: turmas } = await admin.from("crm_turmas_vagas").select("*").eq("ano", ano).order("ordem");
+    // Contar matriculas/reservas por serie
+    const { data: matrs } = await admin.from("crm_matriculas").select("serie, status").eq("ano", ano).in("status", ["reserva", "matriculado"]);
+    const ocupMap: Record<string, { reservas: number; matriculados: number }> = {};
+    for (const m of matrs ?? []) {
+      if (!ocupMap[m.serie]) ocupMap[m.serie] = { reservas: 0, matriculados: 0 };
+      if (m.status === "reserva") ocupMap[m.serie].reservas++;
+      else ocupMap[m.serie].matriculados++;
+    }
+    const result = (turmas ?? []).map((t: any) => {
+      const o = ocupMap[t.serie] || { reservas: 0, matriculados: 0 };
+      return { ...t, reservas: o.reservas, matriculados: o.matriculados, ocupados: o.reservas + o.matriculados, disponiveis: t.vagas_total - o.reservas - o.matriculados };
+    });
+    return ok(result);
+  }
+  if (action === "crm_vagas_save") {
+    const { id, serie, ano, qtd_turmas, vagas_por_turma, ordem } = body as any;
+    if (!serie || !ano) return err("Serie e ano obrigatorios.");
+    const data = { serie, ano: parseInt(ano), qtd_turmas: parseInt(qtd_turmas) || 1, vagas_por_turma: parseInt(vagas_por_turma) || 18, ordem: parseInt(ordem) || 0 };
+    if (id) { await admin.from("crm_turmas_vagas").update(data).eq("id", id); }
+    else { await admin.from("crm_turmas_vagas").upsert(data, { onConflict: "serie,ano" }); }
+    return ok({ success: true });
+  }
+  // Matriculas
+  if (action === "crm_matricula_criar") {
+    const { lead_id, nome_responsavel, nome_crianca, serie, ano, status } = body as any;
+    if (!nome_crianca || !serie || !ano) return err("Crianca, serie e ano obrigatorios.");
+    const st = status || "reserva";
+    const { error } = await admin.from("crm_matriculas").insert({
+      lead_id, nome_responsavel, nome_crianca, serie, ano: parseInt(ano), status: st,
+      data_reserva: st === "reserva" ? new Date().toISOString().split("T")[0] : null,
+      data_matricula: st === "matriculado" ? new Date().toISOString().split("T")[0] : null,
+    });
+    if (error) return err(error.message);
+    // Mover lead para estagio correto
+    if (lead_id) {
+      const estagioNome = st === "matriculado" ? "Matrícula Fechada" : "Negociação";
+      const { data: est } = await admin.from("crm_estagios").select("id").ilike("nome", `%${estagioNome}%`).maybeSingle();
+      if (est) await admin.from("crm_leads").update({ estagio_id: est.id, ano_matricula: parseInt(ano), atualizado_em: new Date().toISOString() }).eq("id", lead_id);
+      await admin.from("crm_interacoes").insert({ lead_id, tipo: "nota", descricao: `${st === "matriculado" ? "Matrícula" : "Reserva"} registrada para ${serie} ${ano}`, criado_por: gerente?.nome });
+    }
+    return ok({ success: true });
+  }
+  if (action === "crm_matricula_atualizar_status") {
+    const { id, status } = body as any;
+    if (!id || !status) return err("id e status obrigatorios.");
+    const update: Record<string, any> = { status };
+    if (status === "matriculado") update.data_matricula = new Date().toISOString().split("T")[0];
+    if (status === "cancelado") update.data_cancelamento = new Date().toISOString().split("T")[0];
+    await admin.from("crm_matriculas").update(update).eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "crm_matriculas_list") {
+    const ano = parseInt((body as any).ano) || new Date().getFullYear();
+    const { data } = await admin.from("crm_matriculas").select("*").eq("ano", ano).order("serie").order("criado_em");
+    return ok(data ?? []);
+  }
   if (action === "crm_dashboard") {
     const { data: leads } = await admin.from("crm_leads").select("estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome)");
     const { data: estagios } = await admin.from("crm_estagios").select("id, nome, cor, ordem").eq("ativo", true).order("ordem");
