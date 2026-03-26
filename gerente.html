@@ -43,7 +43,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .sb-leaf{font-size:20px;}.sb-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;margin-top:6px;line-height:1.2;}
 .sb-brand span{font-size:11px;color:rgba(255,255,255,.4);}
 .sb-nav{flex:1;padding:14px 12px;}
-.sb-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.25);padding:14px 10px 7px;}
+.sb-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.25);padding:14px 10px 7px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;}
+.sb-label:hover{color:rgba(255,255,255,.5);}
+.sb-label .sb-arrow{transition:transform .2s;font-size:8px;}
+.sb-label .sb-arrow.collapsed{transform:rotate(-90deg);}
+.sb-section{overflow:hidden;transition:max-height .25s ease;max-height:500px;}
+.sb-section.collapsed{max-height:0;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.7);font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,color .15s;margin-bottom:2px;text-decoration:none;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}.nav-item.active{background:rgba(200,16,46,.9);color:#fff;}
 .nav-item .ic{width:18px;text-align:center;font-size:15px;}
@@ -329,56 +334,86 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <h1>Maple Bear</h1><span>Painel do Gerente</span>
     </div>
     <nav class="sb-nav">
-      <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard Analytics</a>
-      <div class="sb-label">Turnos 2026</div>
-      <a class="nav-item" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
-      <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries</a>
-      <div class="sb-label">Atividades Extraclasse</div>
-      <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard Atividades</a>
-      <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
-      <div class="sb-label">Professoras</div>
-      <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas & Ranking</a>
-      <a class="nav-item" href="#" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
-      <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Annual Growth Plan</a>
-      <div class="sb-label">Almoxarifado</div>
-      <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
-      <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
-      <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
-      <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
-      <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Turmas</a>
-      <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
-      <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
-      <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
-      <a class="nav-item" href="#" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
-      <div class="sb-label">Infraestrutura</div>
-      <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
-      <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;"><span class="ic">🚨</span> Emergência</a>
-      <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
-      <div class="sb-label">Financeiro</div>
-      <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard Financeiro</a>
-      <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
-      <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
-      <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> Plano de Contas</a>
-      <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> DRE</a>
-      <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço Patrimonial</a>
-      <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🏦</span> Conciliação Bancária</a>
-      <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos (Inter)</a>
-      <div class="sb-label">CRM</div>
-      <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline (Kanban)</a>
-      <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
-      <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates WhatsApp</a>
-      <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Config. Séries/Idade</a>
-      <div class="sb-label">Escola</div>
-      <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário Escolar</a>
-      <div class="sb-label">Configurações</div>
-      <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
-      <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
-      <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
-      <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Controle de Acesso</a>
-      <a class="nav-item" href="#" onclick="return showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
-      <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Ver Formulário</a>
-      <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Professoras</a>
-      <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Portal Secretaria</a>
+      <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Turnos <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
+        <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Atividades <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard</a>
+        <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Professoras <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
+        <a class="nav-item" href="#" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
+        <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
+        <a class="nav-item" href="#" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
+        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
+        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
+        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
+        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Turmas</a>
+        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
+        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
+        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
+        <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;"><span class="ic">🚨</span> Emergência</a>
+        <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard</a>
+        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
+        <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
+        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> Plano de Contas</a>
+        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> DRE</a>
+        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço</a>
+        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🏦</span> Conciliação</a>
+        <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">CRM <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries/Idade</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Escola <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário</a>
+      </div>
+
+      <div class="sb-label" onclick="toggleSbSection(this)">Configurações <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
+        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
+        <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
+        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Acesso</a>
+        <a class="nav-item" href="#" onclick="return showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
+        <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Portal Pais</a>
+        <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Profs</a>
+        <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Secretaria</a>
+      </div>
     </nav>
     <div class="sb-footer">
       <div class="user-info"><strong id="userNome">Gerente</strong><span id="userEmail"></span></div>
@@ -1955,6 +1990,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   document.addEventListener('keydown', e => { if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') doLogin(); });
 
   // ── PANELS ────────────────────────────────────────────
+  function toggleSbSection(label) {
+    const section = label.nextElementSibling;
+    const arrow = label.querySelector('.sb-arrow');
+    section.classList.toggle('collapsed');
+    arrow.classList.toggle('collapsed');
+  }
+
   function toggleSidebar() {
     document.querySelector('.sidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('open');
