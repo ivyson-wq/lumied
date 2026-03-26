@@ -5051,7 +5051,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(r.nome_resp||'—')}</td>
             <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc(r.email||'—')}</td>
             <td style="padding:11px 14px;font-size:13px;border-bottom:1px solid #f5f0ea;">${esc((r.turno||'').replace(/_/g,' ').replace(/(\d)x/,'$1×'))}</td>
-            <td style="padding:11px 14px;border-bottom:1px solid #f5f0ea;text-align:right;">
+            <td style="padding:11px 14px;border-bottom:1px solid #f5f0ea;text-align:right;white-space:nowrap;">
+              <button onclick="aprovarSolicitacao('${r.id}')" style="padding:4px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">✅ Aprovar</button>
               <button class="action-btn del" onclick="deleteCadastro('${r.id}','${esc(r.nome_crianca)}')">🗑</button>
             </td>
           </tr>`).join('')}
@@ -5090,6 +5091,22 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.getElementById('cadSerie').value = '';
     document.getElementById('cadTurno').value = '';
     await loadCadastroPanel();
+  }
+
+  async function aprovarSolicitacao(id) {
+    const sol = cadDados.find(r => r.id === id);
+    if (!sol) return;
+    if (!confirm('Aprovar acesso de ' + (sol.nome_resp||sol.email) + ' (' + (sol.nome_crianca||'') + ')?')) return;
+    // Insere na tabela familias para liberar acesso
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/familias', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ nome_responsavel: sol.nome_resp, nome_aluno: sol.nome_crianca, email: sol.email, cpf: sol.cpf || null }),
+      });
+      showToast('Acesso aprovado para ' + (sol.nome_resp||sol.email) + '!', 'success');
+      await loadFamiliasPanel();
+    } catch(e) { showToast('Erro ao aprovar.', 'error'); }
   }
 
   async function deleteCadastro(id, nome) {
