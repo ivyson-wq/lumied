@@ -1252,20 +1252,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <button onclick="toggleCrmLeadForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Novo Lead</button>
         </div>
         <div id="crmLeadForm" style="display:none;margin-bottom:16px;">
-          <div class="form-card" style="max-width:100%;">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
-              <div class="ff" style="margin:0;"><label>Nome Responsavel *</label><input type="text" id="crmNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Telefone</label><input type="text" id="crmTel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Email</label><input type="email" id="crmEmail" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Nome Crianca</label><input type="text" id="crmCrianca" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Nome Responsavel *</label><input type="text" id="crmNome" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Telefone</label><input type="text" id="crmTel" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Email</label><input type="email" id="crmEmail" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Nome Crianca</label><input type="text" id="crmCrianca" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Data Nascimento</label><input type="date" id="crmNasc" onchange="crmAutoSerie()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Serie <span id="crmSerieAuto" style="font-size:10px;color:#2d7a3a;"></span></label><input type="text" id="crmSerie" readonly style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#f5f0ea;color:var(--muted);"></div>
+              <div class="ff" style="margin:0;"><label>Origem</label><select id="crmOrigem" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option><option value="indicacao">Indicacao</option><option value="site">Site</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="evento">Evento</option><option value="outro">Outro</option></select></div>
+              <div class="ff" style="margin:0;grid-column:span 2;"><label>Observacoes</label><input type="text" id="crmObs" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-top:10px;">
-              <div class="ff" style="margin:0;"><label>Data Nascimento</label><input type="date" id="crmNasc" onchange="crmAutoSerie()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Serie <span id="crmSerieAuto" style="font-size:10px;color:#2d7a3a;"></span></label><input type="text" id="crmSerie" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Origem</label><select id="crmOrigem" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option><option value="indicacao">Indicacao</option><option value="site">Site</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="evento">Evento</option><option value="outro">Outro</option></select></div>
-              <div class="ff" style="margin:0;"><label>Observacoes</label><input type="text" id="crmObs" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarCrmLead()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button>
+              <button onclick="toggleCrmLeadForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
             </div>
-            <div style="display:flex;gap:8px;margin-top:10px;"><button onclick="salvarCrmLead()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button><button onclick="toggleCrmLeadForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button></div>
           </div>
         </div>
         <div id="crmKanbanBoard" class="kanban-board"><div class="empty-state" style="width:100%;">Carregando...</div></div>
