@@ -338,6 +338,7 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → d
 | `deploy-novo-cliente.sh` | Script automatizado de deploy (migrations + Edge Functions) |
 | `build.sh` | Build script Vercel (gera config.js a partir de env vars) |
 | `config.js` | Credenciais Supabase (fallback — sobrescrito no build por env vars) |
+| `site/index.html` | Landing page comercial "EduFlow" (vendas, planos, módulos, FAQ) |
 
 ---
 
@@ -370,3 +371,30 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → d
 - Deploy em 15 minutos
 
 > Apresentação completa: `COMERCIAL.md`
+
+---
+
+## Site Comercial (Landing Page)
+
+Landing page interativa em `site/index.html` — marca **"EduFlow"** (editável).
+
+**URL**: `https://app.maplebearcaxiasdosul.com.br/site/` (ou domínio próprio para vendas)
+
+### Seções
+- **Hero**: título gradiente, mockup animado, stats (14 módulos, 4 portais, 6 integrações)
+- **Portais**: 4 cards com hover (pais, professoras, secretaria, gerente)
+- **Módulos**: 6 tabs interativas (almoxarifado, CRM, financeiro, pickup, emergência, manutenção) com features e visual
+- **Diferenciais**: 6 cards animados (white-label, biometria, NF-e, WhatsApp, pickup GPS, setup 15min)
+- **Números**: barra com métricas do sistema
+- **Preços**: 3 planos (Essencial, Profissional, Completo) com badge "Mais popular", exemplos de valor
+- **FAQ**: 6 perguntas colapsáveis
+- **CTA**: botões WhatsApp + email
+- **Footer**: links, contato, copyright
+
+### Técnico
+- HTML/CSS/JS puro (zero dependências)
+- Google Fonts (Inter + Playfair Display)
+- Scroll reveal animations (IntersectionObserver)
+- 100% responsivo (mobile, tablet, desktop)
+- CTAs apontam para WhatsApp (número editável no HTML)
+- Marca "EduFlow" editável em ~10 ocorrências no arquivo
