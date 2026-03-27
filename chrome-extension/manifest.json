@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Maple Bear CRM - WhatsApp",
-  "version": "1.0.0",
-  "description": "Envie templates de mensagens do CRM Maple Bear diretamente no WhatsApp Web",
+  "name": "Escola CRM - WhatsApp",
+  "version": "1.1.0",
+  "description": "Envie templates de mensagens do CRM escolar diretamente no WhatsApp Web",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://web.whatsapp.com/*"],
   "action": {

@@ -2,26 +2,32 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maple Bear — Configuração Inicial</title>
+<title>Configuração Inicial</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:#1c1712;min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
-body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
-.card{background:#fff;border-radius:16px;padding:48px 44px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:pop .4s cubic-bezier(.22,.8,.44,1);}
+body{font-family:'DM Sans',sans-serif;background:#1c1712;min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow-y:auto;padding:24px;}
+body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+.card{background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:560px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:pop .4s cubic-bezier(.22,.8,.44,1);}
 @keyframes pop{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
-.logo{text-align:center;margin-bottom:28px;}.logo .leaf{font-size:36px;}
+.logo{text-align:center;margin-bottom:20px;}.logo .leaf{font-size:36px;}
 .logo h1{font-family:'Lora',serif;font-size:18px;margin-top:8px;color:var(--text);}
 .logo span{font-size:12px;color:var(--muted);}
-.badge{display:inline-flex;align-items:center;gap:6px;background:rgba(200,16,46,.08);color:var(--red);font-size:12px;font-weight:600;padding:5px 12px;border-radius:100px;border:1px solid rgba(200,16,46,.15);margin-bottom:14px;}
-h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:6px;}
-.sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px;}
+h2{font-family:'Lora',serif;font-size:18px;color:var(--text);margin-bottom:6px;}
+.sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
 .f{margin-bottom:14px;}.f label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px;}
-.f input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
-.f input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.f input,.f select,.f textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.f textarea{resize:vertical;min-height:60px;}
+.f .hint{font-size:11px;color:var(--muted);margin-top:3px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .btn{width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .2s;box-shadow:0 4px 16px rgba(200,16,46,.3);}
 .btn:hover{background:var(--red-dark);}.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-secondary{background:none;border:1.5px solid var(--border);color:var(--text);box-shadow:none;}
+.btn-secondary:hover{background:#f5f5f5;}
+.btns{display:flex;gap:10px;margin-top:16px;}
+.btns .btn{flex:1;}
 .alert{padding:10px 14px;border-radius:7px;font-size:13px;margin-top:14px;display:none;text-align:center;}
 .alert.error{background:#fdf0f2;color:#a00d24;border:1px solid rgba(200,16,46,.2);}
 .alert.success{background:#edf7f0;color:#1a5c2a;border:1px solid rgba(45,122,58,.2);}
@@ -33,6 +39,19 @@ h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:6px;}
 .already h3{font-family:'Lora',serif;font-size:18px;margin-bottom:8px;}
 .already p{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
 .link-btn{display:inline-block;padding:11px 24px;background:var(--red);color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;}
+.step{display:none;}.step.active{display:block;}
+.steps-bar{display:flex;gap:4px;margin-bottom:24px;}
+.step-dot{flex:1;height:4px;border-radius:4px;background:#e5e7eb;transition:background .3s;}
+.step-dot.done{background:var(--red);}
+.step-dot.current{background:var(--red);opacity:.6;}
+.color-preview{width:32px;height:32px;border-radius:8px;border:2px solid var(--border);cursor:pointer;vertical-align:middle;margin-left:8px;}
+.module-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.module-opt{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;font-size:13px;}
+.module-opt:hover{border-color:#bbb;}
+.module-opt.selected{border-color:var(--red);background:rgba(200,16,46,.05);}
+.module-opt input{display:none;}
+.module-opt .check{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;transition:all .15s;}
+.module-opt.selected .check{background:var(--red);border-color:var(--red);color:#fff;}
 </style>
 </head>
 <body>
@@ -40,8 +59,9 @@ h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:6px;}
   <div id="stateChecking">
     <div class="checking"><div class="spinner"></div>Verificando configuração…</div>
   </div>
+
   <div id="stateAlready" style="display:none;">
-    <div class="logo"><div class="leaf">🍁</div><h1>Maple Bear</h1></div>
+    <div class="logo"><div class="leaf">🍁</div><h1>Configuração</h1></div>
     <div class="already">
       <div class="ai">🔒</div>
       <h3>Sistema já configurado</h3>
@@ -49,63 +69,240 @@ h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:6px;}
       <a href="gerente.html" class="link-btn">Ir para o Painel →</a>
     </div>
   </div>
+
   <div id="stateSetup" style="display:none;">
-    <div class="logo"><div class="leaf">🍁</div><h1>Maple Bear</h1></div>
-    <div class="badge">⚙️ Configuração Inicial</div>
-    <h2>Criar primeiro gerente</h2>
-    <p class="sub">Nenhum gerente foi cadastrado ainda. Crie a conta para liberar o acesso ao painel.</p>
-    <div class="f"><label>Nome completo</label><input type="text" id="nome" placeholder="Ex: Ivyson Gasparin" autocomplete="name"></div>
-    <div class="f"><label>E-mail</label><input type="email" id="email" placeholder="seuemail@exemplo.com" autocomplete="email"></div>
-    <div class="f"><label>Senha</label><input type="password" id="senha" placeholder="Mínimo 6 caracteres"></div>
-    <div class="f"><label>Confirmar senha</label><input type="password" id="senhaConf" placeholder="Repita a senha"></div>
-    <button class="btn" id="btn" onclick="criar()">Criar conta e acessar o painel</button>
-    <div class="alert error"   id="alertErr"></div>
+    <div class="logo"><div class="leaf">🍁</div><h1>Configuração Inicial</h1><span>Wizard de setup da escola</span></div>
+    <div class="steps-bar" id="stepsBar"></div>
+
+    <!-- STEP 1: Dados da Escola -->
+    <div class="step" id="step1">
+      <h2>1. Dados da Escola</h2>
+      <p class="sub">Informações básicas que aparecerão em todos os portais.</p>
+      <div class="f"><label>Nome da escola *</label><input type="text" id="cfgNome" placeholder="Ex: Maple Bear Caxias do Sul"></div>
+      <div class="grid-2">
+        <div class="f"><label>Subtítulo / Cidade</label><input type="text" id="cfgSub" placeholder="Ex: Rio Grande do Sul"></div>
+        <div class="f"><label>CNPJ</label><input type="text" id="cfgCnpj" placeholder="00.000.000/0000-00"></div>
+      </div>
+      <div class="grid-2">
+        <div class="f"><label>Domínio de e-mail</label><input type="text" id="cfgEmailDomain" placeholder="Ex: escola.com.br"><div class="hint">Domínio verificado no Resend para envio</div></div>
+        <div class="f"><label>E-mail de notificações</label><input type="email" id="cfgEmailNotif" placeholder="secretaria@escola.com.br"><div class="hint">Recebe avisos de ausência, turnos, etc.</div></div>
+      </div>
+      <div class="f"><label>URL pública do portal</label><input type="text" id="cfgUrl" placeholder="https://app.escola.com.br"></div>
+      <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:12px 14px;margin-top:8px;font-size:12px;color:#1e40af;line-height:1.6;">
+        <strong>Configuração do Resend (obrigatório para envio de emails):</strong><br>
+        1. Crie uma conta em <a href="https://resend.com" target="_blank" style="color:#1e40af;font-weight:600;">resend.com</a><br>
+        2. Verifique o domínio acima no painel do Resend (DNS)<br>
+        3. Copie a API Key e configure como secret no Supabase:<br>
+        <code style="background:#dbeafe;padding:2px 6px;border-radius:3px;font-size:11px;">Supabase > Edge Functions > Secrets > RESEND_API_KEY</code>
+      </div>
+      <div class="grid-2">
+        <div class="f"><label>Latitude</label><input type="text" id="cfgLat" placeholder="-28.8628"></div>
+        <div class="f"><label>Longitude</label><input type="text" id="cfgLon" placeholder="-51.5201"></div>
+      </div>
+      <div class="f"><label>Emoji/ícone da escola</label><input type="text" id="cfgIcone" placeholder="🍁" value="🍁" style="width:60px;text-align:center;font-size:20px;"></div>
+    </div>
+
+    <!-- STEP 2: Branding -->
+    <div class="step" id="step2">
+      <h2>2. Cores e Branding</h2>
+      <p class="sub">Personalize a aparência de todos os portais da escola.</p>
+      <div class="grid-2">
+        <div class="f"><label>Cor primária <input type="color" id="cfgCorPrimaria" value="#C8102E" class="color-preview" oninput="document.documentElement.style.setProperty('--red',this.value)"></label>
+          <input type="text" id="cfgCorPrimariaText" value="#C8102E" oninput="document.getElementById('cfgCorPrimaria').value=this.value;document.documentElement.style.setProperty('--red',this.value)">
+        </div>
+        <div class="f"><label>Cor escura (hover) <input type="color" id="cfgCorEscura" value="#a00d24" class="color-preview"></label>
+          <input type="text" id="cfgCorEscuraText" value="#a00d24">
+        </div>
+      </div>
+      <div class="f"><label>Cor de fundo do body</label><input type="text" id="cfgCorCream" value="#f8f5f0" placeholder="#f8f5f0"></div>
+      <div class="f"><label>URL do logotipo (opcional)</label><input type="text" id="cfgLogo" placeholder="https://...logo.png"><div class="hint">Deixe vazio para usar o emoji como ícone.</div></div>
+      <div style="margin-top:12px;padding:16px;border-radius:10px;background:var(--red);text-align:center;">
+        <div style="font-size:28px;" id="previewIcone">🍁</div>
+        <div style="font-family:'Lora',serif;font-size:16px;color:#fff;margin-top:4px;" id="previewNome">Nome da Escola</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.6);">Preview do header</div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Módulos -->
+    <div class="step" id="step3">
+      <h2>3. Módulos Ativos</h2>
+      <p class="sub">Selecione quais funcionalidades estarão disponíveis para esta escola.</p>
+      <div class="module-grid" id="moduleGrid"></div>
+    </div>
+
+    <!-- STEP 4: Gerente -->
+    <div class="step" id="step4">
+      <h2>4. Primeiro Gerente</h2>
+      <p class="sub">Crie a conta de administrador da escola.</p>
+      <div class="f"><label>Nome completo *</label><input type="text" id="cfgGerenteNome" placeholder="Ex: João Silva" autocomplete="name"></div>
+      <div class="f"><label>E-mail *</label><input type="email" id="cfgGerenteEmail" placeholder="gerente@escola.com" autocomplete="email"></div>
+      <div class="grid-2">
+        <div class="f"><label>Senha *</label><input type="password" id="cfgGerenteSenha" placeholder="Mínimo 6 caracteres"></div>
+        <div class="f"><label>Confirmar senha *</label><input type="password" id="cfgGerenteSenhaConf" placeholder="Repita"></div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="btn btn-secondary" id="btnBack" onclick="prevStep()" style="display:none;">← Voltar</button>
+      <button class="btn" id="btnNext" onclick="nextStep()">Próximo →</button>
+    </div>
+    <div class="alert error" id="alertErr"></div>
     <div class="alert success" id="alertOk"></div>
   </div>
 </div>
+
+<script src="/config.js"></script>
 <script>
-  const API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
-  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  const API = CONFIG.SUPABASE_URL + '/functions/v1/api';
+  const ANON = CONFIG.SUPABASE_ANON;
+
+  const TOTAL_STEPS = 4;
+  let currentStep = 1;
+
+  const MODULOS = [
+    { id: 'turnos', nome: 'Turnos', icon: '🕐' },
+    { id: 'atividades', nome: 'Atividades Extracurriculares', icon: '🎯' },
+    { id: 'boletos', nome: 'Boletos', icon: '💰' },
+    { id: 'achados_perdidos', nome: 'Achados & Perdidos', icon: '🔍' },
+    { id: 'pickup', nome: 'Pickup (Estou a Caminho)', icon: '🚗' },
+    { id: 'almoxarifado', nome: 'Almoxarifado', icon: '📦' },
+    { id: 'crm', nome: 'CRM', icon: '📋' },
+    { id: 'financeiro', nome: 'Financeiro', icon: '💰' },
+    { id: 'manutencao', nome: 'Manutenção', icon: '🔧' },
+    { id: 'calendario', nome: 'Calendário Escolar', icon: '📅' },
+    { id: 'emergencia', nome: 'Emergência', icon: '🚨' },
+    { id: 'impressoes', nome: 'Impressões', icon: '🖨️' },
+    { id: 'growth_plan', nome: 'Growth Plan (PDI)', icon: '📈' },
+    { id: 'professoras', nome: 'Portal Professoras', icon: '👩‍🏫' },
+  ];
+  let selectedModules = MODULOS.map(m => m.id); // all on by default
 
   async function call(body) {
-    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON}, body: JSON.stringify(body) });
+    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body: JSON.stringify(body) });
     return r.json();
   }
+
+  function renderStepsBar() {
+    document.getElementById('stepsBar').innerHTML = Array.from({ length: TOTAL_STEPS }, (_, i) => {
+      const cls = i + 1 < currentStep ? 'done' : i + 1 === currentStep ? 'current' : '';
+      return `<div class="step-dot ${cls}"></div>`;
+    }).join('');
+  }
+
+  function showStep(n) {
+    currentStep = n;
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+    document.getElementById('btnBack').style.display = n > 1 ? '' : 'none';
+    document.getElementById('btnNext').textContent = n === TOTAL_STEPS ? 'Finalizar Setup' : 'Próximo →';
+    renderStepsBar();
+    hide();
+  }
+
+  function prevStep() { if (currentStep > 1) showStep(currentStep - 1); }
+
+  async function nextStep() {
+    hide();
+    if (currentStep === 1) {
+      if (!document.getElementById('cfgNome').value.trim()) return show('error', 'Nome da escola é obrigatório.');
+      // Update preview
+      document.getElementById('previewNome').textContent = document.getElementById('cfgNome').value.trim();
+      document.getElementById('previewIcone').textContent = document.getElementById('cfgIcone').value || '🍁';
+      showStep(2);
+    } else if (currentStep === 2) {
+      showStep(3);
+    } else if (currentStep === 3) {
+      showStep(4);
+    } else if (currentStep === 4) {
+      await finalizar();
+    }
+  }
+
+  function renderModules() {
+    document.getElementById('moduleGrid').innerHTML = MODULOS.map(m => {
+      const sel = selectedModules.includes(m.id) ? 'selected' : '';
+      return `<div class="module-opt ${sel}" onclick="toggleModule('${m.id}',this)">
+        <div class="check">${sel ? '✓' : ''}</div>
+        <span>${m.icon} ${m.nome}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleModule(id, el) {
+    const idx = selectedModules.indexOf(id);
+    if (idx >= 0) selectedModules.splice(idx, 1);
+    else selectedModules.push(id);
+    renderModules();
+  }
+
+  async function finalizar() {
+    const nome = document.getElementById('cfgGerenteNome').value.trim();
+    const email = document.getElementById('cfgGerenteEmail').value.trim();
+    const senha = document.getElementById('cfgGerenteSenha').value;
+    const senhaConf = document.getElementById('cfgGerenteSenhaConf').value;
+    if (!nome || !email || !senha) return show('error', 'Preencha nome, e-mail e senha.');
+    if (senha !== senhaConf) return show('error', 'As senhas não coincidem.');
+    if (senha.length < 6) return show('error', 'Senha mínima de 6 caracteres.');
+
+    const btn = document.getElementById('btnNext');
+    btn.disabled = true; btn.textContent = 'Configurando…';
+
+    // 1. Salvar configs da escola
+    const emailDomain = document.getElementById('cfgEmailDomain').value.trim();
+    const configs = [
+      { chave: 'escola_nome', valor: document.getElementById('cfgNome').value.trim(), categoria: 'escola' },
+      { chave: 'escola_subtitulo', valor: document.getElementById('cfgSub').value.trim(), categoria: 'escola' },
+      { chave: 'escola_cnpj', valor: document.getElementById('cfgCnpj').value.trim(), categoria: 'escola' },
+      { chave: 'escola_email_domain', valor: emailDomain, categoria: 'escola' },
+      { chave: 'escola_email_sender', valor: emailDomain ? 'noreply@' + emailDomain : '', categoria: 'escola' },
+      { chave: 'escola_email_notif', valor: document.getElementById('cfgEmailNotif').value.trim(), categoria: 'escola' },
+      { chave: 'escola_url', valor: document.getElementById('cfgUrl').value.trim(), categoria: 'escola' },
+      { chave: 'escola_lat', valor: parseFloat(document.getElementById('cfgLat').value) || -28.8628, categoria: 'escola' },
+      { chave: 'escola_lon', valor: parseFloat(document.getElementById('cfgLon').value) || -51.5201, categoria: 'escola' },
+      { chave: 'escola_icone', valor: document.getElementById('cfgIcone').value || '🍁', categoria: 'branding' },
+      { chave: 'cor_primaria', valor: document.getElementById('cfgCorPrimariaText').value || '#C8102E', categoria: 'branding' },
+      { chave: 'cor_escura', valor: document.getElementById('cfgCorEscuraText').value || '#a00d24', categoria: 'branding' },
+      { chave: 'cor_cream', valor: document.getElementById('cfgCorCream').value || '#f8f5f0', categoria: 'branding' },
+      { chave: 'escola_logo_url', valor: document.getElementById('cfgLogo').value.trim() || null, categoria: 'branding' },
+      { chave: 'modulos_ativos', valor: selectedModules, categoria: 'modulos' },
+    ];
+
+    try {
+      const cfgResult = await call({ action: 'config_escola_setup', configs });
+      if (cfgResult.error) { show('error', cfgResult.error); btn.disabled = false; btn.textContent = 'Finalizar Setup'; return; }
+    } catch (e) { show('error', 'Erro ao salvar configs: ' + e.message); btn.disabled = false; btn.textContent = 'Finalizar Setup'; return; }
+
+    // 2. Criar gerente
+    const d = await call({ action: 'setup', nome, email, senha });
+    if (d.error) { show('error', d.error); btn.disabled = false; btn.textContent = 'Finalizar Setup'; return; }
+
+    localStorage.setItem('mb_token', d.token);
+    localStorage.setItem('mb_nome', d.nome);
+    localStorage.setItem('mb_email', d.email);
+    show('success', '✅ Escola configurada! Redirecionando…');
+    setTimeout(() => window.location.href = 'gerente.html', 1500);
+  }
+
+  function show(t, m) { const e = document.getElementById(t === 'error' ? 'alertErr' : 'alertOk'); e.textContent = m; e.classList.add('show'); }
+  function hide() { document.getElementById('alertErr').classList.remove('show'); document.getElementById('alertOk').classList.remove('show'); }
 
   async function init() {
     try {
       const d = await call({ action: 'setup_check' });
       document.getElementById('stateChecking').style.display = 'none';
-      if (d.needs_setup) document.getElementById('stateSetup').style.display = 'block';
-      else               document.getElementById('stateAlready').style.display = 'block';
-    } catch(e) {
+      if (d.needs_setup) {
+        document.getElementById('stateSetup').style.display = 'block';
+        renderModules();
+        showStep(1);
+      } else {
+        document.getElementById('stateAlready').style.display = 'block';
+      }
+    } catch (e) {
       document.getElementById('stateChecking').innerHTML = '<p style="color:#a00d24;text-align:center;font-size:13px;">Erro ao conectar.<br>Verifique a URL e a chave do Supabase.</p>';
     }
   }
 
-  async function criar() {
-    const nome     = document.getElementById('nome').value.trim();
-    const email    = document.getElementById('email').value.trim();
-    const senha    = document.getElementById('senha').value;
-    const senhaConf = document.getElementById('senhaConf').value;
-    hide();
-    if (!nome||!email||!senha||!senhaConf) return show('error','Preencha todos os campos.');
-    if (senha !== senhaConf) return show('error','As senhas não coincidem.');
-    if (senha.length < 6)   return show('error','Senha mínima de 6 caracteres.');
-    const btn = document.getElementById('btn');
-    btn.disabled = true; btn.textContent = 'Criando…';
-    const d = await call({ action:'setup', nome, email, senha });
-    if (d.error) { show('error', d.error); btn.disabled=false; btn.textContent='Criar conta e acessar o painel'; return; }
-    localStorage.setItem('mb_token', d.token);
-    localStorage.setItem('mb_nome',  d.nome);
-    localStorage.setItem('mb_email', d.email);
-    show('success','✅ Conta criada! Redirecionando…');
-    setTimeout(() => window.location.href = 'gerente.html', 1500);
-  }
-
-  function show(t, m){ const e=document.getElementById(t==='error'?'alertErr':'alertOk'); e.textContent=m; e.classList.add('show'); }
-  function hide(){ document.getElementById('alertErr').classList.remove('show'); document.getElementById('alertOk').classList.remove('show'); }
-  document.addEventListener('keydown', e => { if(e.key==='Enter') criar(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && currentStep === TOTAL_STEPS) finalizar(); });
   init();
 </script>
 </body>

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maple Bear — Área Restrita</title>
+<title id="pageTitle">Área Restrita</title>
 <meta name="theme-color" content="#1c1712">
 <link rel="icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -34,8 +34,8 @@ body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-6
 
 <div class="container">
   <div class="brand">
-    <div class="brand-leaf">🍁</div>
-    <h1>Maple Bear</h1>
+    <div class="brand-leaf" id="brandLeaf">🍁</div>
+    <h1 id="brandName"></h1>
     <p>Área Restrita — Equipe Escolar</p>
   </div>
 
@@ -69,5 +69,26 @@ body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-6
   <a href="index.html" class="back-link">← Voltar ao Portal dos Pais</a>
 </div>
 
+<script src="/config.js"></script>
+<script>
+  (async function() {
+    try {
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
+        body: JSON.stringify({ action: 'config_publica' })
+      });
+      const cfg = await res.json();
+      const nome = cfg.escola_nome || 'Escola';
+      const icone = cfg.escola_icone || '🍁';
+      document.getElementById('pageTitle').textContent = nome + ' — Área Restrita';
+      document.getElementById('brandName').textContent = nome;
+      document.getElementById('brandLeaf').textContent = icone;
+      if (cfg.cor_primaria) document.documentElement.style.setProperty('--red', cfg.cor_primaria);
+    } catch(_) {
+      document.getElementById('brandName').textContent = 'Escola';
+    }
+  })();
+</script>
 </body>
 </html>

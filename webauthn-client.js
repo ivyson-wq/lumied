@@ -27,7 +27,7 @@ const WebAuthnClient = {
   async register(data) {
     const cred = await navigator.credentials.create({
       publicKey: {
-        rp: { name: 'Maple Bear', id: data.rp_id },
+        rp: { name: data.rp_name || 'Escola', id: data.rp_id },
         user: {
           id: this.b64urlToBuffer(data.user_id),
           name: data.user_name,

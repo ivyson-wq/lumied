@@ -10,7 +10,17 @@ function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
 }
 
-async function sendEmail(to: string[], subject: string, html: string) {
+// Helper: carrega configs da escola do banco
+async function getEscolaConfig(sb: ReturnType<typeof createClient>): Promise<Record<string, any>> {
+  const { data: rows } = await sb.from('escola_config').select('chave, valor')
+  const cfg: Record<string, any> = {}
+  for (const r of rows ?? []) cfg[r.chave] = r.valor
+  return cfg
+}
+
+async function sendEmail(to: string[], subject: string, html: string, cfg?: Record<string, any>) {
+  const escolaNome = cfg?.escola_nome || 'Escola'
+  const sender = cfg?.escola_email_sender || Deno.env.get('EMAIL_SENDER') || 'noreply@escola.com.br'
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -19,7 +29,7 @@ async function sendEmail(to: string[], subject: string, html: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Maple Bear <noreply@maplebearcaxiasdosul.com.br>',
+        from: `${escolaNome} <${sender}>`,
         to,
         subject,
         html,
@@ -42,6 +52,12 @@ Deno.serve(async (req) => {
 
   const body = await req.json()
   const { action } = body
+
+  // Carrega config da escola para emails dinâmicos
+  const cfg = await getEscolaConfig(sb)
+  const escolaNome = cfg.escola_nome || 'Escola'
+  const appUrl = cfg.escola_url || Deno.env.get('APP_URL') || 'https://escola.app'
+  const corPrimaria = cfg.cor_primaria || '#C8102E'
 
   // ── PÚBLICO: verifica se e-mail tem acesso ──────────────
   if (action === 'check') {
@@ -93,8 +109,8 @@ Deno.serve(async (req) => {
         `Nova solicitação de acesso — ${nome}`,
         `
         <div style="font-family:sans-serif;max-width:560px;margin:auto;">
-          <h2 style="color:#C8102E;">Nova Solicitação de Acesso</h2>
-          <p>Um responsável solicitou acesso ao formulário público da Maple Bear.</p>
+          <h2 style="color:${corPrimaria};">Nova Solicitação de Acesso</h2>
+          <p>Um responsável solicitou acesso ao formulário público da ${escolaNome}.</p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
             <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;border-radius:4px 0 0 4px;width:40%;">Nome</td><td style="padding:8px;border-bottom:1px solid #eee;">${nome}</td></tr>
             <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;">CPF</td><td style="padding:8px;border-bottom:1px solid #eee;">${cpfFmt}</td></tr>
@@ -102,9 +118,10 @@ Deno.serve(async (req) => {
             <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;">Telefone</td><td style="padding:8px;border-bottom:1px solid #eee;">${telefone}</td></tr>
             <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;">Criança</td><td style="padding:8px;">${nome_crianca}</td></tr>
           </table>
-          <a href="https://maple-bear-rs.vercel.app/acesso.html" style="display:inline-block;padding:12px 24px;background:#C8102E;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Revisar no Painel</a>
+          <a href="${appUrl}/gerente.html" style="display:inline-block;padding:12px 24px;background:${corPrimaria};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Revisar no Painel</a>
         </div>
-        `
+        `,
+        cfg
       )
     }
 
@@ -175,17 +192,18 @@ Deno.serve(async (req) => {
     // envia e-mail ao responsável
     await sendEmail(
       [sol.email],
-      'Acesso aprovado — Maple Bear Bento Gonçalves',
+      `Acesso aprovado — ${escolaNome}`,
       `
       <div style="font-family:sans-serif;max-width:560px;margin:auto;">
-        <h2 style="color:#C8102E;">Acesso Aprovado! 🎉</h2>
+        <h2 style="color:${corPrimaria};">Acesso Aprovado! 🎉</h2>
         <p>Olá, <strong>${sol.nome}</strong>!</p>
-        <p>Sua solicitação de acesso ao formulário da Maple Bear Bento Gonçalves foi <strong>aprovada</strong>.</p>
+        <p>Sua solicitação de acesso ao formulário da ${escolaNome} foi <strong>aprovada</strong>.</p>
         <p style="margin:20px 0;">Agora você pode acessar o formulário usando o seu e-mail <strong>${sol.email}</strong> via Magic Link ou Google.</p>
-        <a href="https://maple-bear-rs.vercel.app" style="display:inline-block;padding:12px 24px;background:#C8102E;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Acessar Formulário</a>
-        <p style="margin-top:24px;font-size:12px;color:#999;">Maple Bear Bento Gonçalves — sistema de solicitações online.</p>
+        <a href="${appUrl}" style="display:inline-block;padding:12px 24px;background:${corPrimaria};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Acessar Formulário</a>
+        <p style="margin-top:24px;font-size:12px;color:#999;">${escolaNome} — sistema de solicitações online.</p>
       </div>
-      `
+      `,
+      cfg
     )
 
     return json({ ok: true })
@@ -205,16 +223,17 @@ Deno.serve(async (req) => {
 
     await sendEmail(
       [sol.email],
-      'Solicitação de acesso — Maple Bear Bento Gonçalves',
+      `Solicitação de acesso — ${escolaNome}`,
       `
       <div style="font-family:sans-serif;max-width:560px;margin:auto;">
-        <h2 style="color:#C8102E;">Maple Bear Bento Gonçalves</h2>
+        <h2 style="color:${corPrimaria};">${escolaNome}</h2>
         <p>Olá, <strong>${sol.nome}</strong>.</p>
         <p>Analisamos sua solicitação de acesso ao formulário online e, no momento, não foi possível aprová-la.</p>
         <p>Em caso de dúvidas, entre em contato diretamente com a escola.</p>
-        <p style="margin-top:24px;font-size:12px;color:#999;">Maple Bear Bento Gonçalves — sistema de solicitações online.</p>
+        <p style="margin-top:24px;font-size:12px;color:#999;">${escolaNome} — sistema de solicitações online.</p>
       </div>
-      `
+      `,
+      cfg
     )
 
     return json({ ok: true })

@@ -77,6 +77,95 @@ serve(async (req: Request) => {
   //  AÇÕES PÚBLICAS (sem autenticação)
   // ════════════════════════════════════════════════════════════
 
+  // ── Validar superusuário (admin.html) ──
+  if (action === "admin_check") {
+    const authHeader = req.headers.get("authorization") ?? ""
+    const userToken = authHeader.replace("Bearer ", "")
+    if (!userToken) return err("Token não fornecido.", 401)
+    // Valida o JWT do Supabase Auth para pegar o email do usuário
+    const { data: { user }, error: authErr } = await admin.auth.getUser(userToken)
+    if (authErr || !user) return err("Sessão inválida.", 401)
+    const userEmail = (user.email || "").toLowerCase().trim()
+    // Busca email do superusuário no banco
+    const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").maybeSingle()
+    const superEmail = (cfgRow?.valor || "ivyson@gmail.com").toLowerCase().trim()
+    if (userEmail !== superEmail) return err("Acesso negado. Apenas o superusuário pode acessar esta página.", 403)
+    return ok({ ok: true, email: userEmail })
+  }
+
+  // ── Salvar config (superusuário autenticado via Supabase Auth) ──
+  if (action === "config_escola_admin") {
+    const authHeader = req.headers.get("authorization") ?? ""
+    const userToken = authHeader.replace("Bearer ", "")
+    const { data: { user }, error: authErr } = await admin.auth.getUser(userToken)
+    if (authErr || !user) return err("Sessão inválida.", 401)
+    const userEmail = (user.email || "").toLowerCase().trim()
+    const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").maybeSingle()
+    const superEmail = (cfgRow?.valor || "ivyson@gmail.com").toLowerCase().trim()
+    if (userEmail !== superEmail) return err("Acesso negado.", 403)
+    const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
+    if (!configs?.length) return err("Nenhuma config fornecida.")
+    for (const c of configs) {
+      await admin.from("escola_config").upsert({
+        chave: c.chave,
+        valor: typeof c.valor === 'string' ? JSON.stringify(c.valor) : c.valor,
+        descricao: c.descricao || null,
+        categoria: c.categoria || 'geral',
+      }, { onConflict: 'chave' })
+    }
+    return ok({ ok: true, saved: configs.length })
+  }
+
+  // ── Config pública da escola (carregada por todos os portais) ──
+  if (action === "config_publica") {
+    const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria")
+    const cfg: Record<string, unknown> = {}
+    for (const r of rows ?? []) {
+      cfg[r.chave] = r.valor
+    }
+    return ok(cfg)
+  }
+
+  // ── Salvar config (gerente autenticado) ──
+  if (action === "config_escola_save") {
+    const token = (req.headers.get("authorization") ?? "").replace("Bearer ", "")
+    const gerente = await validarSessao(admin, token)
+    if (!gerente) return err("Sessão inválida.", 401)
+    const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
+    if (!configs?.length) return err("Nenhuma config fornecida.")
+    for (const c of configs) {
+      await admin.from("escola_config").upsert({
+        chave: c.chave,
+        valor: typeof c.valor === 'string' ? JSON.stringify(c.valor) : c.valor,
+        descricao: c.descricao || null,
+        categoria: c.categoria || 'geral',
+      }, { onConflict: 'chave' })
+    }
+    return ok({ ok: true, saved: configs.length })
+  }
+
+  // ── Config para setup inicial (sem auth — só funciona se não tem gerente) ──
+  if (action === "config_escola_setup") {
+    const { count } = await admin.from("gerentes").select("*", { count: "exact", head: true })
+    if ((count ?? 0) > 0) {
+      // Se já tem gerente, exige auth
+      const token = (req.headers.get("authorization") ?? "").replace("Bearer ", "")
+      const gerente = await validarSessao(admin, token)
+      if (!gerente) return err("Sessão inválida.", 401)
+    }
+    const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
+    if (!configs?.length) return err("Nenhuma config fornecida.")
+    for (const c of configs) {
+      await admin.from("escola_config").upsert({
+        chave: c.chave,
+        valor: typeof c.valor === 'string' ? JSON.stringify(c.valor) : c.valor,
+        descricao: c.descricao || null,
+        categoria: c.categoria || 'geral',
+      }, { onConflict: 'chave' })
+    }
+    return ok({ ok: true, saved: configs.length })
+  }
+
   // Verifica se é o primeiro acesso (nenhum gerente cadastrado)
   if (action === "setup_check") {
     const { count } = await admin.from("gerentes").select("*", { count: "exact", head: true });
@@ -1049,7 +1138,7 @@ serve(async (req: Request) => {
           tipoPessoa: cpf_pagador.replace(/\D/g, "").length > 11 ? "JURIDICA" : "FISICA",
           nome: nome_pagador || "Responsavel",
         },
-        mensagem: { linha1: descricao || "Mensalidade Maple Bear" },
+        mensagem: { linha1: descricao || "Mensalidade Escolar" },
       };
       const res = await fetch(`${RELAY_URL}/inter-proxy`, {
         method: "POST",

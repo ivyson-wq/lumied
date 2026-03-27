@@ -23,9 +23,17 @@ p{font-size:14px;color:#7a7169;line-height:1.6;margin-bottom:24px;}
   <div class="icon">&#x1F6D2;</div>
   <div class="badge">&#x2705; Conexao realizada</div>
   <h1>Mercado Livre Conectado!</h1>
-  <p>Sua conta do Mercado Livre foi vinculada com sucesso ao sistema Maple Bear. Os precos dos insumos serao atualizados automaticamente.</p>
+  <p>Sua conta do Mercado Livre foi vinculada com sucesso ao sistema. Os precos dos insumos serao atualizados automaticamente.</p>
   <a href="/gerente.html" class="btn">Voltar ao Painel</a>
-  <div class="footer">Maple Bear Caxias do Sul</div>
+  <div class="footer" id="mlFooter"></div>
+  <script>
+    fetch('/manifest.json').then(()=>{
+      const s=document.createElement('script');s.src='/config.js';s.onload=function(){
+      fetch(CONFIG.SUPABASE_URL+'/functions/v1/api',{method:'POST',headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON,'Authorization':'Bearer '+CONFIG.SUPABASE_ANON},body:JSON.stringify({action:'config_publica'})}).then(r=>r.json()).then(c=>{
+        document.getElementById('mlFooter').textContent=c.escola_nome||'';
+      }).catch(()=>{});
+    };document.head.appendChild(s);
+  </script>
 </div>
 </body>
 </html>

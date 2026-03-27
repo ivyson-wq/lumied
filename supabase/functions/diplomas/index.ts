@@ -206,9 +206,9 @@ async function uploadArquivo(
   return { url: publicUrl }
 }
 
-const ML_CLIENT_ID = '1358685762306521'
-const ML_CLIENT_SECRET = 'jTYGWwi1V8XOxS7cpcfyrSNoI2bLiPFB'
-const ML_REDIRECT_URI = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas?action=ml_oauth_callback'
+const ML_CLIENT_ID = Deno.env.get('ML_CLIENT_ID') || '1358685762306521'
+const ML_CLIENT_SECRET = Deno.env.get('ML_CLIENT_SECRET') || 'jTYGWwi1V8XOxS7cpcfyrSNoI2bLiPFB'
+const ML_REDIRECT_URI = Deno.env.get('ML_REDIRECT_URI') || `${Deno.env.get('SUPABASE_URL')}/functions/v1/diplomas?action=ml_oauth_callback`
 
 async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string | null> {
   const { data } = await sb.from('ml_tokens').select('*').order('atualizado_em', { ascending: false }).limit(1).maybeSingle()
@@ -270,7 +270,8 @@ Deno.serve(async (req) => {
         })
         if (insErr) return new Response('Erro ao salvar token: ' + insErr.message, { status: 500 })
         // Redirect to static success page on Vercel
-        return Response.redirect('https://app.maplebearcaxiasdosul.com.br/ml-conectado.html', 302)
+        const appUrl = Deno.env.get('APP_URL') || 'https://app.maplebearcaxiasdosul.com.br'
+        return Response.redirect(appUrl + '/ml-conectado.html', 302)
       }
       return new Response('Erro ao obter token do ML: ' + JSON.stringify(t), { status: 400, headers: { 'Content-Type': 'text/plain' } })
     } catch (e) { return new Response('Erro: ' + (e as Error).message, { status: 500 }) }
@@ -1640,7 +1641,7 @@ Deno.serve(async (req) => {
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
     'alm_aprovar', 'alm_rejeitar',
     'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del', 'alm_insumo_set_referencia',
-    'alm_insumo_atualizar_auto', 'alm_insumo_historico',
+    'alm_insumo_atualizar_auto', 'alm_insumo_historico', 'alm_entrada_estoque',
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
@@ -1892,6 +1893,45 @@ Deno.serve(async (req) => {
       const { data } = await sb.from('alm_insumo_historico').select('*')
         .eq('insumo_id', id).order('criado_em', { ascending: false }).limit(20)
       return json({ data: data ?? [] })
+    }
+
+    // ── Entrada de estoque via XML/NF-e ──────────────────
+    if (action === 'alm_entrada_estoque') {
+      const { id, qty, preco, fonte, nNF, produto_nome } = body
+      if (!id || qty == null) return json({ error: 'id e qty obrigatorios.' }, 400)
+
+      const { data: ins } = await sb.from('alm_insumos').select('*').eq('id', id).maybeSingle()
+      if (!ins) return json({ error: 'Insumo nao encontrado.' }, 404)
+
+      const novoEstoque = (ins.estoque_qty || 0) + parseFloat(qty)
+      const updateData: Record<string, any> = { estoque_qty: novoEstoque }
+
+      // Atualiza preco se fornecido e diferente
+      if (preco != null && preco > 0 && preco !== ins.preco) {
+        // Salva historico de preco
+        await sb.from('alm_insumo_historico').insert({
+          insumo_id: id,
+          preco_anterior: ins.preco,
+          preco_novo: preco,
+          unidade_compra_anterior: ins.unidade_compra,
+          unidade_compra_nova: ins.unidade_compra,
+          qtd_emb_anterior: ins.qtd_por_embalagem,
+          qtd_emb_nova: ins.qtd_por_embalagem,
+          produto_encontrado: produto_nome || `NF-e ${nNF || ''}`.trim(),
+          fonte: fonte || 'NF-e',
+          url: null,
+          match_pct: 100,
+        })
+        updateData.preco = preco
+        updateData.preco_referencia = preco
+        updateData.referencia_nome = produto_nome || null
+        updateData.referencia_fonte = fonte || 'NF-e'
+        updateData.preco_atualizado_em = new Date().toISOString()
+      }
+
+      const { error } = await sb.from('alm_insumos').update(updateData).eq('id', id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true, estoque_anterior: ins.estoque_qty, estoque_novo: novoEstoque })
     }
 
     if (action === 'alm_series_list') {

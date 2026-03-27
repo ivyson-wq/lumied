@@ -18,11 +18,11 @@ body{width:320px;font-family:'Segoe UI',sans-serif;background:#f8f5f0;}
 <body>
 <div class="header">
   <span style="font-size:20px;">🍁</span>
-  <h1>Maple Bear CRM</h1>
+  <h1 id="extTitle">CRM WhatsApp</h1>
 </div>
 <div class="config">
   <label>URL do Sistema</label>
-  <input type="text" id="apiUrl" placeholder="https://app.maplebearcaxiasdosul.com.br" value="https://brgorknbrjlfwvrrlwxj.supabase.co">
+  <input type="text" id="apiUrl" placeholder="https://xxxxx.supabase.co">
   <label>API Key</label>
   <input type="text" id="apiKey" placeholder="Supabase Anon Key">
   <label>Token do Gerente</label>
@@ -35,7 +35,17 @@ chrome.storage.local.get(['apiUrl','apiKey','token'], d => {
   if(d.apiUrl) document.getElementById('apiUrl').value = d.apiUrl;
   if(d.apiKey) document.getElementById('apiKey').value = d.apiKey;
   if(d.token) document.getElementById('token').value = d.token;
-  if(d.apiUrl && d.token) document.getElementById('status').textContent = 'Conectado ao CRM';
+  if(d.apiUrl && d.token) {
+    document.getElementById('status').textContent = 'Conectado ao CRM';
+    // Tenta carregar nome da escola
+    fetch(d.apiUrl + '/functions/v1/api', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':d.apiKey||'','Authorization':'Bearer '+(d.apiKey||'')},
+      body:JSON.stringify({action:'config_publica'})
+    }).then(r=>r.json()).then(cfg=>{
+      if(cfg.escola_nome) document.getElementById('extTitle').textContent = cfg.escola_nome + ' CRM';
+    }).catch(()=>{});
+  }
 });
 function salvar() {
   chrome.storage.local.set({

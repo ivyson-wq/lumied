@@ -14,34 +14,34 @@ const CORS = {
 const ok  = (data: unknown)        => new Response(JSON.stringify(data), { headers: CORS })
 const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: CORS })
 
-// ── Templates de e-mail ──────────────────────────────────────
-function emailAusencia(body: Record<string, unknown>): { subject: string; html: string } {
+// ── Templates de e-mail (com branding dinâmico) ─────────────
+function emailAusencia(body: Record<string, unknown>, escolaNome: string, cor: string, icone: string): { subject: string; html: string } {
   const { nomeResp, nomeCrianca, dataAusencia } = body
   const dataFmt = String(dataAusencia || '').split('-').reverse().join('/')
   return {
     subject: `Aviso de Ausência — ${nomeCrianca}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#C8102E;">🍁 Maple Bear — Aviso de Ausência</h2>
+        <h2 style="color:${cor};">${icone} ${escolaNome} — Aviso de Ausência</h2>
         <p>O responsável <strong>${nomeResp}</strong> registrou uma ausência:</p>
         <table style="border-collapse:collapse;margin:16px 0;">
           <tr><td style="padding:6px 12px;font-weight:bold;">Criança:</td><td style="padding:6px 12px;">${nomeCrianca}</td></tr>
           <tr><td style="padding:6px 12px;font-weight:bold;">Data:</td><td style="padding:6px 12px;">${dataFmt}</td></tr>
         </table>
-        <p style="color:#666;font-size:13px;">Este é um e-mail automático do Portal Maple Bear.</p>
+        <p style="color:#666;font-size:13px;">Este é um e-mail automático do Portal ${escolaNome}.</p>
       </div>
     `,
   }
 }
 
-function emailTurno(body: Record<string, unknown>): { subject: string; html: string } {
+function emailTurno(body: Record<string, unknown>, escolaNome: string, cor: string, icone: string): { subject: string; html: string } {
   const { nomeResp, nomeCrianca, turno, serie, diasSemana } = body
   const dias = Array.isArray(diasSemana) ? (diasSemana as string[]).join(', ') : 'Todos os dias'
   return {
     subject: `Nova Solicitação de Turno — ${nomeCrianca}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#C8102E;">🍁 Maple Bear — Solicitação de Turno</h2>
+        <h2 style="color:${cor};">${icone} ${escolaNome} — Solicitação de Turno</h2>
         <p>Nova solicitação recebida:</p>
         <table style="border-collapse:collapse;margin:16px 0;">
           <tr><td style="padding:6px 12px;font-weight:bold;">Responsável:</td><td style="padding:6px 12px;">${nomeResp}</td></tr>
@@ -50,13 +50,13 @@ function emailTurno(body: Record<string, unknown>): { subject: string; html: str
           <tr><td style="padding:6px 12px;font-weight:bold;">Turno:</td><td style="padding:6px 12px;">${turno}</td></tr>
           <tr><td style="padding:6px 12px;font-weight:bold;">Dias:</td><td style="padding:6px 12px;">${dias}</td></tr>
         </table>
-        <p style="color:#666;font-size:13px;">Este é um e-mail automático do Portal Maple Bear.</p>
+        <p style="color:#666;font-size:13px;">Este é um e-mail automático do Portal ${escolaNome}.</p>
       </div>
     `,
   }
 }
 
-function emailAtividade(body: Record<string, unknown>): { subject: string; html: string } {
+function emailAtividade(body: Record<string, unknown>, escolaNome: string, cor: string, icone: string): { subject: string; html: string } {
   const { nomeResp, nomeCrianca, serie, atividades } = body
   const lista = Array.isArray(atividades)
     ? (atividades as Array<{ nome: string; turma_selecionada: string }>)
@@ -66,7 +66,7 @@ function emailAtividade(body: Record<string, unknown>): { subject: string; html:
     subject: `Inscrição em Atividades — ${nomeCrianca}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-        <h2 style="color:#C8102E;">🍁 Maple Bear — Inscrição em Atividades</h2>
+        <h2 style="color:${cor};">${icone} ${escolaNome} — Inscrição em Atividades</h2>
         <p>Nova inscrição recebida:</p>
         <table style="border-collapse:collapse;margin:16px 0;">
           <tr><td style="padding:6px 12px;font-weight:bold;">Responsável:</td><td style="padding:6px 12px;">${nomeResp}</td></tr>
@@ -75,7 +75,7 @@ function emailAtividade(body: Record<string, unknown>): { subject: string; html:
         </table>
         <p><strong>Atividades:</strong></p>
         <ul>${lista}</ul>
-        <p style="color:#666;font-size:13px;">Este é um e-mail automático do Portal Maple Bear.</p>
+        <p style="color:#666;font-size:13px;">Este é um e-mail automático do Portal ${escolaNome}.</p>
       </div>
     `,
   }
@@ -89,18 +89,29 @@ Deno.serve(async (req) => {
   try { body = await req.json() } catch { return err('Body inválido') }
 
   const { tipo } = body
+
+  // Carrega config da escola para branding
+  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  const { data: cfgRows } = await sb.from('escola_config').select('chave, valor')
+  const cfg: Record<string, any> = {}
+  for (const r of cfgRows ?? []) cfg[r.chave] = r.valor
+  const escolaNome = cfg.escola_nome || 'Escola'
+  const cor = cfg.cor_primaria || '#C8102E'
+  const icone = cfg.escola_icone || '🍁'
+  const emailSender = cfg.escola_email_sender || Deno.env.get('EMAIL_SENDER') || 'noreply@escola.com.br'
+
   let email: { subject: string; html: string }
 
   switch (tipo) {
-    case 'ausencia':  email = emailAusencia(body); break
-    case 'turno':     email = emailTurno(body); break
-    case 'atividade': email = emailAtividade(body); break
+    case 'ausencia':  email = emailAusencia(body, escolaNome, cor, icone); break
+    case 'turno':     email = emailTurno(body, escolaNome, cor, icone); break
+    case 'atividade': email = emailAtividade(body, escolaNome, cor, icone); break
     default: return err('Tipo de e-mail não reconhecido: ' + tipo)
   }
 
   // Busca o e-mail da escola para enviar a notificação
   const RESEND_KEY = Deno.env.get('RESEND_API_KEY')
-  const ESCOLA_EMAIL = Deno.env.get('ESCOLA_EMAIL') || 'secretaria@maplebear-cs.com.br'
+  const ESCOLA_EMAIL = cfg.escola_email_notif || Deno.env.get('ESCOLA_EMAIL') || cfg.escola_email_sender || 'secretaria@escola.com.br'
 
   if (!RESEND_KEY) {
     // Se Resend não está configurado, loga e retorna sucesso silencioso
@@ -113,7 +124,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
       body: JSON.stringify({
-        from: 'Maple Bear Portal <noreply@maplebear-cs.com.br>',
+        from: `${escolaNome} <${emailSender}>`,
         to: [ESCOLA_EMAIL],
         subject: email.subject,
         html: email.html,

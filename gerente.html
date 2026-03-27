@@ -2,14 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maple Bear — Painel do Gerente</title>
+<title id="pageTitle">Painel do Gerente</title>
 <meta name="theme-color" content="#1c1712">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Maple Bear Gerente">
+<meta name="apple-mobile-web-app-title" id="metaAppTitle" content="Gerente">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon-apple.png">
 <link rel="apple-touch-icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="/webauthn-client.js"></script>
@@ -315,7 +316,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-logo"><div class="leaf">🍁</div><h1>Maple Bear</h1><span>Painel do Gerente</span></div>
+    <div class="login-logo"><div class="leaf" id="loginLeaf">🍁</div><h1 id="loginBrand"></h1><span>Painel do Gerente</span></div>
     <h2>Entrar</h2>
     <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="gerente@exemplo.com" autocomplete="email"></div>
     <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
@@ -330,34 +331,34 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   <div class="sidebar">
     <div class="sb-brand">
       <img class="sb-logo-img" id="sidebarLogo" alt="">
-      <div class="sb-leaf" id="sidebarLeaf">🍁</div>
-      <h1>Maple Bear</h1><span>Painel do Gerente</span>
+      <div class="sb-leaf" id="sbLeafIcon">🍁</div>
+      <h1 id="sbBrandName"></h1><span>Painel do Gerente</span>
     </div>
     <nav class="sb-nav">
       <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">Turnos Alunos <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="turnos" onclick="toggleSbSection(this)">Turnos Alunos <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="turnos">
         <a class="nav-item" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
         <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries</a>
       </div>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">Atv. Extracurriculares <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="atividades" onclick="toggleSbSection(this)">Atv. Extracurriculares <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="atividades">
         <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard</a>
         <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar</a>
       </div>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">Professoras <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="professoras" onclick="toggleSbSection(this)">Professoras <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="professoras">
         <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
         <a class="nav-item" href="#" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
         <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
         <a class="nav-item" href="#" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
       </div>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="almoxarifado" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="almoxarifado">
         <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
         <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
         <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
@@ -368,14 +369,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
       </div>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="manutencao" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="manutencao">
         <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
         <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
       </div>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="financeiro" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="financeiro">
         <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard</a>
         <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
         <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
@@ -386,8 +387,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos</a>
       </div>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">CRM <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="crm" onclick="toggleSbSection(this)">CRM <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="crm">
         <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
         <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
         <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates</a>
@@ -396,8 +397,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries/Idade</a>
       </div>
 
-      <div class="sb-label" onclick="toggleSbSection(this)">Agenda Escolar <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
+      <div class="sb-label" data-module="calendario" onclick="toggleSbSection(this)">Agenda Escolar <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed" data-module="calendario">
         <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário</a>
       </div>
 
@@ -416,7 +417,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Secretaria</a>
       </div>
       <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
-        <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
+        <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" data-module="emergencia" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
       </div>
     </nav>
     <div class="sb-footer">
@@ -759,8 +760,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <span id="mlStatus" style="font-size:11px;"></span>
             <div style="margin-left:auto;display:flex;gap:8px;">
               <button onclick="almGerarModeloInsumos()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📥 Modelo Excel</button>
-              <button onclick="document.getElementById('almInsumoXlsx').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar</button>
+              <button onclick="document.getElementById('almInsumoXlsx').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar Excel</button>
               <input type="file" id="almInsumoXlsx" accept=".xlsx,.xls,.csv" style="display:none" onchange="almImportarInsumosXlsx(this)">
+              <button onclick="document.getElementById('almEntradaXml').click()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📄 Entrada via XML/NF-e</button>
+              <input type="file" id="almEntradaXml" accept=".xml" multiple style="display:none" onchange="almImportarXmlNFe(this)">
             </div>
           </div>
           <div id="almInsumoXlsxResult" style="display:none;margin-bottom:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;">
@@ -769,6 +772,24 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div style="display:flex;gap:8px;">
               <button onclick="almConfirmarImportInsumos()" class="btn-create">Cadastrar todos os insumos</button>
               <button onclick="document.getElementById('almInsumoXlsxResult').style.display='none'" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+          </div>
+
+          <!-- Preview de entrada XML/NF-e -->
+          <div id="almXmlResult" style="display:none;margin-bottom:16px;background:var(--white);border:1px solid #93c5fd;border-radius:12px;padding:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-size:13px;font-weight:600;color:#1a6bb5;">📄 Entrada de Materiais via NF-e</div>
+              <div style="font-size:11px;color:var(--muted);" id="almXmlFonte"></div>
+            </div>
+            <div id="almXmlInfo" style="font-size:12px;color:var(--muted);margin-bottom:10px;padding:8px 12px;background:#eff6ff;border-radius:8px;"></div>
+            <div style="display:flex;gap:6px;margin-bottom:10px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;padding:0 6px;">
+              <span style="flex:2;">Produto</span><span style="width:60px;text-align:center;">Qtd</span><span style="width:70px;text-align:center;">Unidade</span><span style="width:80px;text-align:right;">Valor Unit.</span><span style="width:80px;text-align:right;">Total</span><span style="width:70px;text-align:center;">Match</span>
+            </div>
+            <div id="almXmlRows" style="max-height:400px;overflow-y:auto;margin-bottom:12px;"></div>
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:12px;font-size:13px;font-weight:600;color:#166534;" id="almXmlResumo"></div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="almConfirmarEntradaXml()" class="btn-create">Dar entrada no estoque</button>
+              <button onclick="document.getElementById('almXmlResult').style.display='none'" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
             </div>
           </div>
 
@@ -789,7 +810,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </div>
 
           <div class="sec-title">Catalogo de Insumos <span class="count-badge" id="almInsumosCount">0</span></div>
-          <div id="almInsumosList" style="margin-bottom:20px;display:flex;flex-direction:column;"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+            <input type="text" id="almInsumosBusca" placeholder="Buscar insumo..." oninput="almInsumosFiltro=this.value;almLoadInsumos()" style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;">
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap;">
+              <input type="checkbox" id="almShowInativos" onchange="almInsumosShowInativos=this.checked;almLoadInsumos()"> Mostrar inativos
+            </label>
+          </div>
+          <div id="almInsumosList" style="margin-bottom:20px;display:flex;flex-direction:column;max-height:600px;overflow-y:auto;"></div>
 
           <div class="form-card" id="almInsumoFormCard" style="max-width:875px;">
               <h3 id="almInsumoFormTitle">➕ Novo Insumo</h3>
@@ -1777,6 +1804,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- Config Escola movido para admin.html -->
+
       <!-- panelCadastro mantido hidden para compatibilidade -->
       <div id="panelCadastro" class="panel" style="display:none;"></div>
 
@@ -1894,12 +1923,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 </div>
 
 <script>
-  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-  const API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
-  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  const SUPABASE_URL  = CONFIG.SUPABASE_URL;
+  const SUPABASE_ANON = CONFIG.SUPABASE_ANON;
+  const API  = SUPABASE_URL + '/functions/v1/api';
+  const ANON = SUPABASE_ANON;
 
-  const DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
+  const DIPLOMAS_API = SUPABASE_URL + '/functions/v1/diplomas';
 
   let allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
   let currentGerente=null, pollInterval=null;
@@ -1921,6 +1950,72 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(() => toast.remove(), 300); }, duration);
   }
   let dipFilter='todos', dipPendingAction=null, editingSenhaId=null;
+  let escolaConfig = {};
+
+  // ── CARREGAR CONFIG DA ESCOLA ──────────────────────────
+  async function loadEscolaConfig() {
+    try {
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({ action: 'config_publica' })
+      });
+      escolaConfig = await res.json();
+    } catch (_) { escolaConfig = {}; }
+
+    const cfg = escolaConfig;
+    const nome = cfg.escola_nome || 'Escola';
+    const icone = cfg.escola_icone || '🍁';
+    const corPrimaria = cfg.cor_primaria || '#C8102E';
+    const corEscura = cfg.cor_escura || '#a00d24';
+    const corLight = cfg.cor_light || 'rgba(200,16,46,.08)';
+
+    // Atualiza CSS vars
+    document.documentElement.style.setProperty('--red', corPrimaria);
+    document.documentElement.style.setProperty('--red-dark', corEscura);
+    document.documentElement.style.setProperty('--red-light', corLight);
+
+    // Atualiza meta/title
+    document.getElementById('pageTitle').textContent = nome + ' — Painel do Gerente';
+    document.getElementById('metaAppTitle').content = nome + ' Gerente';
+
+    // Login screen
+    const loginBrand = document.getElementById('loginBrand');
+    if (loginBrand) loginBrand.textContent = nome;
+    const loginLeaf = document.getElementById('loginLeaf');
+    if (loginLeaf) loginLeaf.textContent = icone;
+
+    // Sidebar
+    const sbBrand = document.getElementById('sbBrandName');
+    if (sbBrand) sbBrand.textContent = nome;
+    const sbLeaf = document.getElementById('sbLeafIcon');
+    if (sbLeaf) sbLeaf.textContent = icone;
+
+    // Logo
+    const sidebarLogo = document.getElementById('sidebarLogo');
+    if (sidebarLogo && cfg.escola_logo_url) {
+      sidebarLogo.src = cfg.escola_logo_url;
+      sidebarLogo.style.display = 'block';
+      if (sbLeaf) sbLeaf.style.display = 'none';
+    }
+
+    // Toggle de módulos — oculta seções desativadas
+    const modulos = cfg.modulos_ativos || [];
+    if (modulos.length) {
+      document.querySelectorAll('[data-module]').forEach(el => {
+        const mod = el.dataset.module;
+        if (!modulos.includes(mod)) el.style.display = 'none';
+      });
+    }
+  }
+
+  // Helper para obter nome da escola em JS
+  function escolaNome() { return escolaConfig.escola_nome || 'Escola'; }
+  function escolaLocal() { return escolaConfig.escola_subtitulo || ''; }
+
+  loadEscolaConfig();
+
+  // Config Escola movido para admin.html
 
   const TURNO_INFO = {
     integral_5x:{label:'Integral · 5×/sem',  price:'R$ 4.395,00',g:'integral'},
@@ -2945,12 +3040,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </tr>`;
     }).join('');
 
-    ultimoRelatorioTexto = `🍁 *Maple Bear — Dashboard de Turnos*\n📅 ${data}\n\n*Resumo:*\nTotal: ${total} | Integral: ${integral} | Semi-Int.: ${semi} | Tarde: ${tarde} | Diária: ${diaria}\n\nRelatório completo disponível em PDF.`;
+    ultimoRelatorioTexto = `🍁 *${escolaNome()} — Dashboard de Turnos*\n📅 ${data}\n\n*Resumo:*\nTotal: ${total} | Integral: ${integral} | Semi-Int.: ${semi} | Tarde: ${tarde} | Diária: ${diaria}\n\nRelatório completo disponível em PDF.`;
 
     return `
     <div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:0;">
       <div style="background:#C8102E;padding:28px 36px;border-radius:10px 10px 0 0;">
-        <img src="https://raw.githubusercontent.com/ivyson-wq/Escolha-de-turno/main/Design%20sem%20nome.png" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="Maple Bear">
+        <img src="${escolaConfig.escola_logo_url || '/icon-apple.png'}" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="${escolaNome()}">
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;"></p>
         <h1 style="color:#fff;text-align:center;font-size:20px;margin:10px 0 4px;font-family:Georgia,serif;">Dashboard de Turnos 2026</h1>
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;">Gerado em ${data}</p>
@@ -2989,7 +3084,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </table>
       </div>
       <div style="background:#f5f0ea;padding:14px 36px;border-radius:0 0 10px 10px;text-align:center;font-size:11px;color:#aaa;">
-        Maple Bear · Relatório gerado automaticamente
+        ${escolaNome()} · Relatório gerado automaticamente
       </div>
     </div>`;
   }
@@ -3041,12 +3136,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </tr>`;
     }).join('');
 
-    ultimoRelatorioTexto = `🍁 *Maple Bear — Dashboard de Atividades*\n📅 ${data}\n\n*Resumo:*\nInscrições: ${total} | Atividades ativas: ${ativas} | Turmas lotadas: ${lotadas} | Vagas disponíveis: ${vagas}\n\nRelatório completo disponível em PDF.`;
+    ultimoRelatorioTexto = `🍁 *${escolaNome()} — Dashboard de Atividades*\n📅 ${data}\n\n*Resumo:*\nInscrições: ${total} | Atividades ativas: ${ativas} | Turmas lotadas: ${lotadas} | Vagas disponíveis: ${vagas}\n\nRelatório completo disponível em PDF.`;
 
     return `
     <div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:0;">
       <div style="background:#C8102E;padding:28px 36px;border-radius:10px 10px 0 0;">
-        <img src="https://raw.githubusercontent.com/ivyson-wq/Escolha-de-turno/main/Design%20sem%20nome.png" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="Maple Bear">
+        <img src="${escolaConfig.escola_logo_url || '/icon-apple.png'}" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="${escolaNome()}">
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;"></p>
         <h1 style="color:#fff;text-align:center;font-size:20px;margin:10px 0 4px;font-family:Georgia,serif;">Dashboard de Atividades Extraclasse</h1>
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;">Gerado em ${data}</p>
@@ -3094,7 +3189,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </table>
       </div>
       <div style="background:#f5f0ea;padding:14px 36px;border-radius:0 0 10px 10px;text-align:center;font-size:11px;color:#aaa;">
-        Maple Bear · Relatório gerado automaticamente
+        ${escolaNome()} · Relatório gerado automaticamente
       </div>
     </div>`;
   }
@@ -3196,7 +3291,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       // 3. Abre WhatsApp com o link
       const data = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
       const tipo  = isDashAtiv ? 'Atividades Extraclasse' : 'Turnos 2026';
-      const msg = `🍁 *Maple Bear*\n\n📊 *Relatório — Dashboard de ${tipo}*\n📅 ${data}\n\n📄 Clique para abrir o PDF:\n${d.url}`;
+      const msg = `🍁 *${escolaNome()}*\n\n📊 *Relatório — Dashboard de ${tipo}*\n📅 ${data}\n\n📄 Clique para abrir o PDF:\n${d.url}`;
       window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 
     } catch(e) {
@@ -3463,14 +3558,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   function printManutRelatorio() {
     const conteudo = document.getElementById('relatorioConteudo').innerHTML;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Relatório Manutenção — Maple Bear</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>Relatório Manutenção — ${escolaNome()}</title>
       <style>body{font-family:'DM Sans',Helvetica,sans-serif;padding:32px;color:#1a1a1a;}
       h1{font-size:18px;margin-bottom:4px;} .sub{font-size:12px;color:#999;margin-bottom:24px;}
       table{width:100%;border-collapse:collapse;} th,td{text-align:left;padding:6px 8px;font-size:12px;}
       th{border-bottom:2px solid #ccc;text-transform:uppercase;font-size:10px;color:#888;}
       tr{border-bottom:1px solid #eee;} @media print{body{padding:16px;}}</style></head>
       <body><h1>Relatório de Pendências — Manutenção</h1>
-      <div class="sub">Maple Bear Caxias do Sul · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+      <div class="sub">${escolaNome()} · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
       ${conteudo}</body></html>`);
     win.document.close();
     setTimeout(() => win.print(), 300);
@@ -3479,7 +3574,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   function shareManutWhatsApp() {
     const equipes = [...relatorioEquipesSel];
     const pendentes = manutData.filter(m => m.status !== 'concluida' && m.status !== 'rejeitada');
-    let texto = '*RELATÓRIO DE MANUTENÇÃO — Maple Bear*\n' + new Date().toLocaleDateString('pt-BR') + '\n\n';
+    let texto = '*RELATÓRIO DE MANUTENÇÃO — ${escolaNome()}*\n' + new Date().toLocaleDateString('pt-BR') + '\n\n';
     for (const eq of equipes) {
       const items = pendentes.filter(m => (m.equipe_responsavel || 'Sem equipe') === eq);
       if (!items.length) continue;
@@ -4662,7 +4757,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     wsReq['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 14 }, { wch: 36 }];
     XLSX.utils.book_append_sheet(wb, wsReq, 'Requisição');
     const wsInst = XLSX.utils.aoa_to_sheet([
-      ['INSTRUÇÕES — Modelo de Requisição de Insumos · Maple Bear'],
+      ['INSTRUÇÕES — Modelo de Requisição de Insumos · ' + escolaNome() + ''],
       [''],
       ['1. Preencha a aba "Requisição" a partir da linha 2 (linha 1 é o cabeçalho).'],
       ['2. Não altere nem remova as colunas existentes.'],
@@ -4880,28 +4975,37 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     almLoadCompras();
   }
 
+  let almInsumosFiltro = '';
+  let almInsumosShowInativos = false;
+
   async function almLoadInsumos() {
     const d = await callDiplomas({ action: 'alm_insumos_list' });
-    const insumos = d.data || [];
-    document.getElementById('almInsumosCount').textContent = insumos.filter((i)=>i.ativo).length;
+    const todosInsumos = d.data || [];
+    const ativos = todosInsumos.filter(i => i.ativo);
+    document.getElementById('almInsumosCount').textContent = ativos.length;
+    // Filtra por busca e estado ativo/inativo
+    let insumos = almInsumosShowInativos ? todosInsumos : ativos;
+    if (almInsumosFiltro) {
+      const q = almInsumosFiltro.toLowerCase();
+      insumos = insumos.filter(i => i.nome.toLowerCase().includes(q) || (i.categoria||'').toLowerCase().includes(q));
+    }
     document.getElementById('almInsumosList').innerHTML = insumos.map((it) => {
       return `<div class="alm-insumo-row" style="${!it.ativo ? 'opacity:.5;' : ''}">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:13px;">${it.nome}</div>
-            <div style="font-size:11px;color:var(--muted);">
-              ${it.categoria||'Geral'} · Estoque: ${it.estoque_qty} ${it.unidade}
-              ${it.qtd_por_embalagem > 1 ? ` · Embalagem: ${it.unidade_compra||'cx'} c/ ${it.qtd_por_embalagem} ${it.unidade}` : ''}
-            </div>
-            <div style="font-size:11px;">
-              <strong>${almFmtBRL(it.preco)}</strong>${it.qtd_por_embalagem > 1 ? `/${it.unidade_compra||'emb'} <span style="color:#2d7a3a;font-weight:600;">(${almFmtBRL(it.preco/it.qtd_por_embalagem)}/${it.unidade})</span>` : `/${it.unidade}`}
-            </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;">${esc(it.nome)}</div>
+          <div style="font-size:11px;color:var(--muted);">
+            ${esc(it.categoria||'Geral')} · Estoque: ${it.estoque_qty} ${esc(it.unidade)}
+            ${it.qtd_por_embalagem > 1 ? ` · Embalagem: ${esc(it.unidade_compra||'cx')} c/ ${it.qtd_por_embalagem} ${esc(it.unidade)}` : ''}
           </div>
-          <button onclick="almEditarInsumoById('${it.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
-          <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;${it.preco_atualizado_em?'color:#1a6bb5;':''}">📊${it.preco_atualizado_em?' '+new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):''}</button>
-          ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
+          <div style="font-size:11px;">
+            <strong>${almFmtBRL(it.preco)}</strong>${it.qtd_por_embalagem > 1 ? `/${esc(it.unidade_compra||'emb')} <span style="color:#2d7a3a;font-weight:600;">(${almFmtBRL(it.preco/it.qtd_por_embalagem)}/${esc(it.unidade)})</span>` : `/${esc(it.unidade)}`}
+          </div>
+        </div>
+        <button onclick="almEditarInsumoById('${it.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
+        <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;${it.preco_atualizado_em?'color:#1a6bb5;':''}">📊${it.preco_atualizado_em?' '+new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):''}</button>
+        ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
       </div>`;
-    }).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
+    }).join('') || '<div class="empty-state">Nenhum insumo encontrado.</div>';
   }
 
   async function almEditarInsumoById(id) {
@@ -5123,7 +5227,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     ws['!cols'] = [{ wch: 36 }, { wch: 24 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Insumos');
     const wsInst = XLSX.utils.aoa_to_sheet([
-      ['INSTRUÇÕES — Modelo de Cadastro de Insumos · Maple Bear'],
+      ['INSTRUÇÕES — Modelo de Cadastro de Insumos · ' + escolaNome() + ''],
       [''],
       ['1. Preencha a aba "Insumos" a partir da linha 2 (linha 1 é o cabeçalho).'],
       ['2. Apenas o Nome é obrigatório. Os demais campos são opcionais.'],
@@ -5175,6 +5279,165 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     showToast(ok + ' insumo(s) cadastrado(s)' + (erros ? ', ' + erros + ' erro(s)' : ''), erros ? 'warning' : 'success');
     document.getElementById('almInsumoXlsxResult').style.display = 'none';
     almInsumoXlsxParsed = [];
+    almLoadInsumos();
+  }
+
+  // ── IMPORTAR XML NF-e (Entrada de Materiais) ────────
+  let almXmlParsed = [];
+
+  async function almImportarXmlNFe(input) {
+    const files = input.files;
+    if (!files.length) return;
+    input.value = '';
+    almXmlParsed = [];
+    let nfeInfo = null;
+
+    for (const file of files) {
+      try {
+        const text = await file.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'text/xml');
+        const parseErr = xml.querySelector('parsererror');
+        if (parseErr) { showToast('Erro no XML: ' + file.name, 'error'); continue; }
+
+        // Detecta formato: NF-e (nfeProc/NFe), CT-e, ou XML genérico
+        const nfe = xml.querySelector('nfeProc') || xml.querySelector('NFe') || xml.querySelector('infNFe');
+        if (nfe) {
+          // NF-e padrão SEFAZ
+          const infNFe = xml.querySelector('infNFe');
+          const emit = xml.querySelector('emit');
+          const emitNome = emit?.querySelector('xNome')?.textContent || '';
+          const emitCNPJ = emit?.querySelector('CNPJ')?.textContent || '';
+          const nNF = xml.querySelector('ide > nNF')?.textContent || '';
+          const dhEmi = xml.querySelector('ide > dhEmi')?.textContent || xml.querySelector('ide > dEmi')?.textContent || '';
+          const serie = xml.querySelector('ide > serie')?.textContent || '';
+
+          // Detecta se é do Mercado Livre
+          const isML = emitNome.toLowerCase().includes('mercado') || emitNome.toLowerCase().includes('meli') || emitCNPJ === '03007331000181';
+          nfeInfo = { nNF, serie, emitNome, emitCNPJ, dhEmi, fonte: isML ? 'Mercado Livre' : emitNome, arquivo: file.name };
+
+          // Itens da nota
+          const dets = xml.querySelectorAll('det');
+          dets.forEach(det => {
+            const prod = det.querySelector('prod');
+            if (!prod) return;
+            const nome = prod.querySelector('xProd')?.textContent || '';
+            const ncm = prod.querySelector('NCM')?.textContent || '';
+            const cfop = prod.querySelector('CFOP')?.textContent || '';
+            const unidade = prod.querySelector('uCom')?.textContent || prod.querySelector('uTrib')?.textContent || 'UN';
+            const qty = parseFloat(prod.querySelector('qCom')?.textContent || prod.querySelector('qTrib')?.textContent || '0');
+            const valorUnit = parseFloat(prod.querySelector('vUnCom')?.textContent || prod.querySelector('vUnTrib')?.textContent || '0');
+            const valorTotal = parseFloat(prod.querySelector('vProd')?.textContent || '0');
+            const cEAN = prod.querySelector('cEAN')?.textContent || '';
+            const cProd = prod.querySelector('cProd')?.textContent || '';
+
+            almXmlParsed.push({
+              nome, ncm, cfop, unidade: unidade.toLowerCase(), qty, valorUnit, valorTotal,
+              cEAN, cProd, fonte: nfeInfo.fonte, nNF: nfeInfo.nNF,
+              matchInsumo: null, matchPct: 0, matchId: null,
+            });
+          });
+        } else {
+          // XML genérico — tenta encontrar itens em estruturas comuns
+          const items = xml.querySelectorAll('item, produto, product, row');
+          if (items.length) {
+            nfeInfo = { nNF: '', serie: '', emitNome: 'Importação manual', emitCNPJ: '', dhEmi: '', fonte: 'XML genérico', arquivo: file.name };
+            items.forEach(item => {
+              const nome = item.querySelector('nome, name, descricao, description, xProd')?.textContent || item.getAttribute('nome') || '';
+              const qty = parseFloat(item.querySelector('quantidade, qty, qCom')?.textContent || item.getAttribute('qty') || '1');
+              const valorUnit = parseFloat(item.querySelector('preco, price, valor, vUnCom')?.textContent || item.getAttribute('preco') || '0');
+              const unidade = item.querySelector('unidade, unit, uCom')?.textContent || item.getAttribute('unidade') || 'unidade';
+              if (nome) almXmlParsed.push({
+                nome, ncm: '', cfop: '', unidade: unidade.toLowerCase(), qty, valorUnit, valorTotal: qty * valorUnit,
+                cEAN: '', cProd: '', fonte: 'XML genérico', nNF: '',
+                matchInsumo: null, matchPct: 0, matchId: null,
+              });
+            });
+          } else {
+            showToast('Formato XML não reconhecido: ' + file.name, 'warning');
+          }
+        }
+      } catch (e) { showToast('Erro ao ler ' + file.name + ': ' + e.message, 'error'); }
+    }
+
+    if (!almXmlParsed.length) { showToast('Nenhum item encontrado nos XMLs.', 'warning'); return; }
+
+    // Tenta match com catálogo existente
+    const catData = await callDiplomas({ action: 'alm_insumos_list' });
+    const catalogo = (catData.data || []).filter(i => i.ativo);
+    for (const item of almXmlParsed) {
+      const nomeNorm = item.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const palavras = nomeNorm.split(/\s+/).filter(w => w.length > 2);
+      let bestMatch = null, bestPct = 0;
+      for (const ins of catalogo) {
+        const insNorm = ins.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const insPalavras = insNorm.split(/\s+/).filter(w => w.length > 2);
+        if (!palavras.length || !insPalavras.length) continue;
+        const found = palavras.filter(w => insPalavras.some(iw => iw.includes(w) || w.includes(iw)));
+        const pct = Math.round((found.length / Math.max(palavras.length, 1)) * 100);
+        if (pct > bestPct) { bestPct = pct; bestMatch = ins; }
+      }
+      if (bestPct >= 40 && bestMatch) {
+        item.matchInsumo = bestMatch.nome;
+        item.matchPct = bestPct;
+        item.matchId = bestMatch.id;
+      }
+    }
+
+    // Renderiza preview
+    const infoHtml = nfeInfo ? `<strong>NF ${nfeInfo.nNF || '—'}</strong> · ${esc(nfeInfo.emitNome)} · ${nfeInfo.dhEmi ? new Date(nfeInfo.dhEmi).toLocaleDateString('pt-BR') : '—'} · <em>${nfeInfo.arquivo}</em>` : '';
+    document.getElementById('almXmlInfo').innerHTML = infoHtml;
+    document.getElementById('almXmlFonte').textContent = nfeInfo?.fonte || '';
+
+    const totalNFe = almXmlParsed.reduce((s, i) => s + i.valorTotal, 0);
+    const matched = almXmlParsed.filter(i => i.matchId).length;
+    document.getElementById('almXmlResumo').innerHTML =
+      `${almXmlParsed.length} itens · ${matched} com match no catálogo · Total: ${almFmtBRL(totalNFe)}`;
+
+    document.getElementById('almXmlRows').innerHTML = almXmlParsed.map((it, i) => {
+      const matchColor = it.matchPct >= 70 ? '#166534' : it.matchPct >= 40 ? '#92400e' : '#6b7280';
+      const matchBg = it.matchPct >= 70 ? '#f0fdf4' : it.matchPct >= 40 ? '#fffbeb' : '#f9fafb';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:8px 6px;border-radius:7px;margin-bottom:3px;background:${matchBg};border:1px solid ${it.matchPct >= 70 ? '#bbf7d0' : it.matchPct >= 40 ? '#fde68a' : '#e5e7eb'};font-size:12px;">
+        <div style="flex:2;min-width:0;">
+          <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(it.nome)}">${esc(it.nome)}</div>
+          ${it.matchInsumo ? `<div style="font-size:10px;color:${matchColor};">→ ${esc(it.matchInsumo)}</div>` : '<div style="font-size:10px;color:#9ca3af;">Novo insumo (será cadastrado)</div>'}
+        </div>
+        <div style="width:60px;text-align:center;"><input type="number" value="${it.qty}" min="0" step="0.5" onchange="almXmlParsed[${i}].qty=parseFloat(this.value)||0" style="width:50px;padding:3px 4px;border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:center;font-family:'DM Sans',sans-serif;"></div>
+        <div style="width:70px;text-align:center;font-size:11px;color:var(--muted);">${esc(it.unidade)}</div>
+        <div style="width:80px;text-align:right;font-size:11px;">${almFmtBRL(it.valorUnit)}</div>
+        <div style="width:80px;text-align:right;font-size:11px;font-weight:600;">${almFmtBRL(it.valorTotal)}</div>
+        <div style="width:70px;text-align:center;">
+          ${it.matchPct > 0 ? `<span style="padding:2px 6px;border-radius:10px;font-size:10px;font-weight:600;color:${matchColor};background:${matchBg};">${it.matchPct}%</span>` : '<span style="font-size:10px;color:#9ca3af;">—</span>'}
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('almXmlResult').style.display = 'block';
+    document.getElementById('almXmlResult').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function almConfirmarEntradaXml() {
+    if (!almXmlParsed.length) return;
+    let atualizados = 0, novos = 0, erros = 0;
+
+    for (const item of almXmlParsed) {
+      if (item.qty <= 0) continue;
+      try {
+        if (item.matchId) {
+          // Atualiza estoque do insumo existente
+          const d = await callDiplomas({ action: 'alm_entrada_estoque', id: item.matchId, qty: item.qty, preco: item.valorUnit, fonte: item.fonte, nNF: item.nNF, produto_nome: item.nome });
+          if (d.error) erros++; else atualizados++;
+        } else {
+          // Cria novo insumo com o estoque da NF-e
+          const d = await callDiplomas({ action: 'alm_insumo_save', nome: item.nome, unidade: item.unidade || 'unidade', estoque_qty: item.qty, preco: item.valorUnit });
+          if (d.error) erros++; else novos++;
+        }
+      } catch (_) { erros++; }
+    }
+
+    showToast(`Entrada concluída: ${atualizados} atualizado(s), ${novos} novo(s)${erros ? ', ' + erros + ' erro(s)' : ''}`, erros ? 'warning' : 'success');
+    document.getElementById('almXmlResult').style.display = 'none';
+    almXmlParsed = [];
     almLoadInsumos();
   }
 
@@ -6282,7 +6545,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if (!cpf || !valor || !venc) { errEl.textContent='CPF, valor e vencimento obrigatorios.'; errEl.classList.add('show'); return; }
     const btn = document.getElementById('bolBtn');
     btn.disabled=true; btn.textContent='Emitindo...';
-    const d = await api({ action:'fin_emitir_boleto', cpf_pagador:cpf, nome_pagador:nome, valor, vencimento:venc, descricao:desc||'Mensalidade Maple Bear' });
+    const d = await api({ action:'fin_emitir_boleto', cpf_pagador:cpf, nome_pagador:nome, valor, vencimento:venc, descricao:desc||'Mensalidade ' + escolaNome() + '' });
     btn.disabled=false; btn.textContent='Emitir Boleto no Inter';
     if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
     showToast('Boleto emitido! N° ' + (d.nosso_numero||'—'),'success',5000);
@@ -6498,14 +6761,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if (!titulo) return;
     const data = prompt('Data e hora (AAAA-MM-DD HH:MM):', new Date().toISOString().slice(0,16).replace('T',' '));
     if (!data) return;
-    api({ action:'crm_reuniao_save', lead_id: leadId, titulo, data_hora: data.replace(' ','T') + ':00', local: 'Maple Bear Caxias do Sul' }).then(d => {
+    api({ action:'crm_reuniao_save', lead_id: leadId, titulo, data_hora: data.replace(' ','T') + ':00', local: escolaNome() + (escolaLocal() ? ' ' + escolaLocal() : '') }).then(d => {
       if (d.error) showToast(d.error,'error');
       else {
         showToast('Reuniao agendada!','success');
         // Abrir Google Calendar
         const dtStart = data.replace(/[-: ]/g,'').slice(0,15) + '00';
         const dtEnd = new Date(new Date(data.replace(' ','T')).getTime()+30*60000).toISOString().replace(/[-:]/g,'').slice(0,15) + '00';
-        window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${dtStart}/${dtEnd}&location=${encodeURIComponent('Maple Bear Caxias do Sul')}&details=${encodeURIComponent('Lead: '+nome)}`, '_blank');
+        window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${dtStart}/${dtEnd}&location=${encodeURIComponent(escolaNome() + (escolaLocal() ? ' ' + escolaLocal() : ''))}&details=${encodeURIComponent('Lead: '+nome)}`, '_blank');
       }
     });
   }

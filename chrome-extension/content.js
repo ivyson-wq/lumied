@@ -1,13 +1,14 @@
-// Maple Bear CRM - WhatsApp Web Extension
+// School CRM - WhatsApp Web Extension
 (function() {
   let templates = [];
   let panelOpen = false;
+  let escolaNome = 'CRM';
 
   // Create toggle button
   const toggle = document.createElement('button');
   toggle.id = 'mb-crm-toggle';
   toggle.textContent = '🍁';
-  toggle.title = 'Maple Bear CRM';
+  toggle.title = 'CRM WhatsApp';
   toggle.onclick = () => {
     panelOpen = !panelOpen;
     panel.classList.toggle('hidden', !panelOpen);
@@ -21,7 +22,7 @@
   panel.classList.add('hidden');
   panel.innerHTML = `
     <div class="mb-panel-header">
-      <span>🍁</span> Maple Bear CRM
+      <span>🍁</span> <span id="mb-brand-name">CRM</span>
       <button onclick="document.getElementById('mb-crm-panel').classList.add('hidden')" style="margin-left:auto;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">×</button>
     </div>
     <div class="mb-panel-body" id="mb-panel-body">
