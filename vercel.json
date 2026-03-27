@@ -1,5 +1,5 @@
 {
-  "buildCommand": null,
+  "buildCommand": "bash build.sh",
   "outputDirectory": ".",
   "headers": [
     {

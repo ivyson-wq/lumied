@@ -1,6 +1,8 @@
 // ══════════════════════════════════════════════════════
-//  config.js — ÚNICO ARQUIVO a alterar por escola
-//  Para um cliente novo: copie o repo e edite APENAS este arquivo
+//  config.js — Credenciais Supabase da escola
+//  Este arquivo é SOBRESCRITO automaticamente no build do Vercel
+//  se as env vars NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON
+//  estiverem definidas. Caso contrário, usa os valores abaixo (fallback).
 // ══════════════════════════════════════════════════════
 const CONFIG = {
   SUPABASE_URL:  'https://brgorknbrjlfwvrrlwxj.supabase.co',
