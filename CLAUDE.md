@@ -271,39 +271,102 @@ Migrations em `supabase/migrations/` seguem padrão `NNN_nome.sql` (009 a 048):
 ## Comandos Úteis
 
 ```bash
-# Deploy de Edge Functions (Supabase CLI)
-supabase functions deploy api --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
-supabase functions deploy diplomas --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
-supabase functions deploy acesso --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
-supabase functions deploy send-email --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
+# ── Deploy de novo cliente (automatizado) ──────────
+bash deploy-novo-cliente.sh <PROJECT_REF> <SUPABASE_ACCESS_TOKEN>
+# Roda 41 migrations + deploya 7 Edge Functions com um comando
 
-# Deploy via Management API (alternativa sem CLI local)
-# Usar SUPABASE_ACCESS_TOKEN + /tmp/supabase.exe no sandbox
+# ── Atualizar TODOS os clientes (código) ───────────
+git push origin main
+# Todos os projetos Vercel conectados fazem auto-deploy
 
-# Executar SQL remoto via Management API
-curl --ssl-no-revoke -s -X POST "https://api.supabase.com/v1/projects/brgorknbrjlfwvrrlwxj/database/query" \
+# ── Deploy manual de Edge Functions ────────────────
+supabase functions deploy api --no-verify-jwt --project-ref <REF>
+supabase functions deploy diplomas --no-verify-jwt --project-ref <REF>
+supabase functions deploy acesso --no-verify-jwt --project-ref <REF>
+supabase functions deploy send-email --no-verify-jwt --project-ref <REF>
+
+# ── SQL remoto via Management API ──────────────────
+curl --ssl-no-revoke -s -X POST "https://api.supabase.com/v1/projects/<REF>/database/query" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query":"SELECT * FROM escola_config"}'
 
-# Push para main (auto-deploy Vercel)
-git push origin main
-
-# Deploy Vercel manual (se auto-deploy não estiver ativo)
+# ── Deploy Vercel manual (se auto-deploy não estiver ativo) ──
 npx vercel --yes --prod --name maple-bear-rs
 ```
 
 ---
 
-## Configuração para Escola Nova (Checklist)
+## Deploy Multi-Tenant
 
-1. **Supabase**: criar projeto → anotar URL + Anon Key
-2. **Migrations**: rodar 009 a 048 no SQL Editor
-3. **Edge Functions**: deploy das 7 funções
-4. **Secrets Supabase**: `RESEND_API_KEY` (obrigatório), `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `INTER_*`, `GOOGLE_*` (opcionais)
-5. **Repo**: clone → editar `config.js` com URL + Anon Key
-6. **Vercel**: deploy + configurar domínio customizado
-7. **Supabase Auth**: Site URL + Redirect URLs para o domínio
-8. **Google Cloud**: adicionar redirect URI do domínio
-9. **setup.html**: wizard configura escola, cores, módulos, gerente
-10. **admin.html**: superusuário configura APIs, emails, módulos
+### Arquitetura
+```
+GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → domínio escola A
+                     └──> Vercel Projeto B (env: SUPABASE_URL=yyy) → domínio escola B
+                     └──> Vercel Projeto C (env: SUPABASE_URL=zzz) → domínio escola C
+```
+
+### Build Script
+- `build.sh` gera `config.js` a partir de env vars do Vercel (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON`)
+- Se env vars não existem, mantém `config.js` do repo (fallback para escola atual)
+- `vercel.json` → `buildCommand: "bash build.sh"`
+
+### Novo Cliente (9 passos, ~15 min)
+1. **Supabase**: criar projeto → anotar REF + Anon Key
+2. **Script**: `bash deploy-novo-cliente.sh <REF> <TOKEN>` (migrations + Edge Functions)
+3. **Supabase Auth**: Site URL + Redirect URLs + Google Provider
+4. **Vercel**: import repo + env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON`)
+5. **DNS**: CNAME `app` → `cname.vercel-dns.com`
+6. **Google OAuth**: adicionar redirect URI do novo Supabase
+7. **setup.html**: wizard (nome, cores, módulos, primeiro gerente)
+8. **admin.html**: configurar secrets (RESEND obrigatório, ML/Inter/Google opcionais)
+9. **Testar** todos os portais
+
+> Guia detalhado: `NOVO-CLIENTE.md`
+
+---
+
+## Documentação do Projeto
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `CLAUDE.md` | Documentação técnica completa (este arquivo) |
+| `NOVO-CLIENTE.md` | Guia passo a passo para deploy de novo cliente |
+| `COMERCIAL.md` | Apresentação comercial: módulos, funcionalidades, planos, diferenciais |
+| `CONTEXTO.md` | Contexto histórico do projeto (legado) |
+| `MANIFEST.md` | Manifest de desenvolvimento (legado) |
+| `deploy-novo-cliente.sh` | Script automatizado de deploy (migrations + Edge Functions) |
+| `build.sh` | Build script Vercel (gera config.js a partir de env vars) |
+| `config.js` | Credenciais Supabase (fallback — sobrescrito no build por env vars) |
+
+---
+
+## Modelo Comercial (SaaS por Assinatura)
+
+### Planos sugeridos (base + por aluno/mês)
+
+| Plano | Base/mês | Por aluno | Exemplo 300 alunos | Módulos |
+|-------|----------|-----------|---------------------|---------|
+| **Essencial** | R$ 199 | R$ 2,90 | R$ 1.069 | Pais + Gerente, turnos, atividades, calendário |
+| **Profissional** | R$ 399 | R$ 4,90 | R$ 1.869 | + Almoxarifado, CRM, Professoras, Secretaria, Pickup, Emergência |
+| **Completo** | R$ 699 | R$ 6,90 | R$ 2.769 | Todos os 14 módulos + todas as integrações |
+
+### Concorrência (referência de preço para 300 alunos)
+- WPensar: ~R$ 600 (básico)
+- Sistema Quality: ~R$ 1.500-2.200
+- Proesc: ~R$ 1.500-2.100
+- Sponte: ~R$ 2.000-2.500
+- ClassApp: ~R$ 1.200 (só comunicação)
+- TOTVS: R$ 5.000+ (enterprise)
+
+### Diferenciais competitivos
+- Almoxarifado com NF-e XML + busca de preços em 5 plataformas
+- CRM com extensão Chrome para WhatsApp
+- Pickup GPS em tempo real
+- Sistema de emergência (lockdown)
+- Login biométrico (Face ID/fingerprint)
+- White-label completo (cores, logo, módulos)
+- Zero taxa de implantação
+- Deploy em 15 minutos
+
+> Apresentação completa: `COMERCIAL.md`
