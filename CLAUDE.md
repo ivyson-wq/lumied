@@ -1,34 +1,38 @@
-# CLAUDE.md — Maple Bear RS Portal
+# CLAUDE.md — Portal Escolar SaaS
 
 ## Visão Geral do Projeto
 
-Portal web para pais/responsáveis, professoras, secretaria e gerência da escola Maple Bear Caxias do Sul (CNPJ 44.034.235/0001-70).
-Domínio: `app.maplebearcaxiasdosul.com.br`
+Portal web **multi-tenant SaaS** para gestão escolar — pais/responsáveis, professoras, secretaria e gerência.
+Toda a configuração (nome, cores, turnos, módulos) é dinâmica via tabela `escola_config`.
+Domínio atual: `app.maplebearcaxiasdosul.com.br`
 
 **Stack:**
-- Frontend: HTML/CSS/JS puro (sem framework), hospedado no **Vercel** (deploy via `npx vercel --yes --prod --name maple-bear-rs`)
+- Frontend: HTML/CSS/JS puro (sem framework), hospedado no **Vercel** (auto-deploy via push para `main`)
 - Backend: **Supabase** (PostgreSQL + Auth + Edge Functions em Deno/TypeScript)
-- Relay mTLS: Node.js no **Render** (para chamadas à API do Banco Inter) — `https://inter-relay-maple-bear-rs.onrender.com`
+- Relay mTLS: Node.js no **Render** (para chamadas à API do Banco Inter)
 - Chrome Extension: Manifest V3 para WhatsApp Web (templates CRM)
 - Git: GitHub (`ivyson-wq/maple-bear-rs`)
 
 **Arquivos principais:**
-- `index.html` — Portal do pai/responsável
-- `gerente.html` — Painel da gerência (~6500+ linhas)
+- `config.js` — **ÚNICO arquivo a editar por escola nova** (SUPABASE_URL + SUPABASE_ANON)
+- `index.html` — Portal do pai/responsável (sidebar desktop ≥900px, bottom nav mobile)
+- `gerente.html` — Painel da gerência (~7000+ linhas)
 - `professora.html` — Portal das professoras
 - `secretaria.html` — Portal da secretaria
 - `area-restrita.html` — Hub de acesso aos portais staff
+- `admin.html` — Painel de administração (superusuário, acesso direto por URL)
+- `setup.html` — Wizard de configuração inicial (4 steps: escola, branding, módulos, gerente)
 - `webauthn-client.js` — Helper WebAuthn/Passkeys para biometria
 - `ml-conectado.html` — Página de sucesso OAuth do Mercado Livre
 - `api/boletos-sync.js` — Vercel API Route (delega para Edge Function `boletos-list`)
 - `sw.js` — Service Worker para PWA
 - `chrome-extension/` — Extensão WhatsApp Web (manifest.json, popup.html, content.js, content.css)
-- `.github/workflows/auto-merge-claude.yml` — Auto-merge de branches Claude
 
 **Edge Functions Supabase** (deploy via `supabase functions deploy <nome> --no-verify-jwt`):
-- `diplomas` — Função principal: pickup, almoxarifado, PDI (Annual Growth Plan), diplomas, professoras, secretaria, achados e perdidos, WebAuthn, Mercado Livre OAuth, busca de preços, impressões
-- `api` — Gerência: login, solicitações, séries, atividades, usuários, equipes manutenção, categorias insumos, notificações, WebAuthn, financeiro (DRE, balanço, conciliação, boletos Inter), CRM (leads, kanban, templates, vagas, matrículas), calendário, analytics, emergências, impressões
-- `acesso` — Controle de acesso e solicitações de famílias
+- `api` — Gerência: login, config_publica, config_escola_save, admin_check, config_escola_admin, solicitações, séries, atividades, usuários, equipes manutenção, categorias insumos, notificações, WebAuthn, financeiro, CRM, calendário, analytics, emergências, impressões
+- `diplomas` — Pickup, almoxarifado (insumos, entrada estoque XML/NF-e, busca preços), PDI, diplomas, professoras, secretaria, achados e perdidos, WebAuthn, Mercado Livre OAuth, impressões
+- `acesso` — Controle de acesso e solicitações de famílias (emails dinâmicos)
+- `send-email` — Envio de notificações por email (branding dinâmico via escola_config)
 - `boletos-list` — Integração mTLS com Banco Inter
 - `calendar` — Agenda/calendário do responsável
 - `inter-webhook` — Webhook de boletos do Banco Inter
@@ -38,19 +42,51 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 
 ---
 
+## Arquitetura Multi-Tenant (SaaS)
+
+### Configuração Dinâmica
+- Tabela `escola_config` (chave TEXT → valor JSONB) armazena **toda** a configuração da escola
+- Todos os portais carregam `config_publica` ao iniciar e aplicam: nome, cores CSS, turnos/preços, módulos ativos, coordenadas
+- **Nenhum nome de escola, cor, preço ou credencial está hardcoded** nos HTMLs — tudo vem do banco ou do `config.js`
+
+### config.js (único arquivo por escola)
+```js
+const CONFIG = {
+  SUPABASE_URL:  'https://xxxxx.supabase.co',
+  SUPABASE_ANON: 'eyJ...',
+};
+```
+Todos os HTMLs importam `<script src="/config.js">` e usam `CONFIG.SUPABASE_URL` / `CONFIG.SUPABASE_ANON`.
+
+### Módulos Toggle
+- Config `modulos_ativos` (array JSON) controla quais módulos aparecem
+- Elementos HTML com `data-module="xxx"` são ocultados se o módulo não está na lista
+- Funciona no sidebar do gerente e nas tabs do portal dos pais
+
+### Fluxo para escola nova
+1. Criar projeto Supabase → anotar URL + Anon Key
+2. Rodar migrations (009 a 048) no SQL Editor
+3. Deploy Edge Functions (`supabase functions deploy`)
+4. Clone do repo → editar **apenas** `config.js`
+5. Deploy no Vercel → configurar domínio customizado
+6. Acessar `setup.html` → wizard configura escola, cores, módulos, primeiro gerente
+7. Configurar secrets no Supabase (RESEND_API_KEY, etc.) via `admin.html`
+
+---
+
 ## Decisões Arquiteturais
 
 ### Git / Deploy
-- **Claude só pode fazer push para `claude/**`** — o proxy Git bloqueia push direto para `main` com 403. Porém pushes diretos para `main` funcionam fora do sandbox do Claude Code.
-- **Auto-merge via GitHub Actions** elimina a necessidade de merge manual de PRs.
-- **Vercel** NÃO faz auto-deploy — precisa rodar `npx vercel --yes --prod --name maple-bear-rs` manualmente (fora do sandbox Claude Code).
-- **Edge Functions Supabase** NÃO são deployadas pelo Vercel — precisam de deploy manual (`supabase functions deploy <nome> --no-verify-jwt`).
+- Push direto para `main` → Vercel faz auto-deploy
+- **Edge Functions Supabase** precisam de deploy manual (`supabase functions deploy <nome> --no-verify-jwt`)
+- Supabase CLI disponível em `/tmp/supabase.exe` (baixado via curl no sandbox)
 
 ### Autenticação
 - **Portal (`index.html`)**: Supabase Auth (Google OAuth + Magic Link + email/senha). Controle de acesso via tabela `familias`/`solicitacoes`.
 - **Gerente (`gerente.html`)**: sistema próprio com senha (PBKDF2) + sessões na tabela `gerente_sessoes`.
 - **Professoras**: sistema próprio (`professora_sessoes`).
 - **Secretaria**: sistema próprio (`secretaria_sessoes`).
+- **Admin (`admin.html`)**: Supabase Auth (Google OAuth) restrito ao superusuário (`ivyson@gmail.com` por padrão, configurável via `superusuario_email` na tabela `escola_config`). **Nenhum link** aponta para `admin.html` — acesso apenas por URL direta. Gerentes NÃO têm acesso.
 - **WebAuthn/Passkeys**: login biométrico (Face ID, fingerprint) em todos os portais. Tabelas: `webauthn_credentials`, `webauthn_challenges`. Módulo: `_shared/webauthn.ts`. Auto-login em mobile.
 
 ### Almoxarifado
@@ -58,23 +94,32 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 - Coluna `professoras.serie_id` referencia `series(id)`.
 - Tabela `series` NÃO tem coluna `cor` — usar fallback `#3B82F6`.
 - **Fracionamento**: `alm_insumos` tem `unidade_compra`, `qtd_por_embalagem`. Preço no catálogo é por embalagem; para professoras, mostra preço unitário (preco / qtd_por_embalagem).
-- **Busca de preços**: Zoom.com.br (scraping, funciona server-side), Mercado Livre (scraping do site), Shopee, Reval, Amazon.
-- **ML API de busca está bloqueada (403)** mesmo com OAuth. Usa scraping de `lista.mercadolivre.com.br`.
+- **Busca de preços**: Zoom.com.br (scraping), Mercado Livre (scraping), Shopee, Reval, Amazon.
+- **Importação XML/NF-e**: parser de NF-e padrão SEFAZ + XML genérico para entrada de materiais. Detecta ML automaticamente pelo CNPJ. Match com catálogo existente. Endpoint `alm_entrada_estoque` incrementa estoque e atualiza preço.
+- **Lista de insumos**: busca por texto, filtro de inativos, max-height com scroll.
 - **Histórico de preços**: tabela `alm_insumo_historico` com log de todas as mudanças.
 - **Categorias configuráveis**: tabela `alm_categorias`.
 - **Equipes de manutenção**: tabela `manut_equipes`.
-- Painéis do almoxarifado são páginas separadas na sidebar do gerente (não tabs internas).
+
+### Credenciais e Secrets
+Todas as credenciais de APIs externas são configuradas como **env vars / secrets do Supabase Edge Functions**, nunca hardcoded:
+- `RESEND_API_KEY` — API do Resend para envio de emails
+- `ML_CLIENT_ID`, `ML_CLIENT_SECRET` — Mercado Livre OAuth
+- `ML_REDIRECT_URI` — auto-gerado: `{SUPABASE_URL}/functions/v1/diplomas?action=ml_oauth_callback`
+- `INTER_CLIENT_ID`, `INTER_CLIENT_SECRET`, `INTER_CONTA` — Banco Inter
+- `INTER_RELAY_URL`, `RELAY_SECRET` — Relay mTLS no Render
+- `GOOGLE_MAPS_KEY`, `GOOGLE_SERVICE_ACCOUNT` — Google Maps/Calendar
+- `APP_URL` — URL pública do portal (redirect OAuth)
 
 ### Mercado Livre OAuth
-- Client ID: `1358685762306521`
-- Redirect URI: `https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas?action=ml_oauth_callback`
+- Client ID/Secret via env vars (fallback para valores antigos se não configurado)
+- Redirect URI gerado dinamicamente: `{SUPABASE_URL}/functions/v1/diplomas?action=ml_oauth_callback`
 - Auth URL: `https://auth.mercadolivre.com.br/authorization` (com V, não B)
 - API: `api.mercadolibre.com` (com B — domínio espanhol)
 - Tokens em `ml_tokens` com auto-refresh.
-- Página de sucesso: `ml-conectado.html` (redirect após callback).
 
 ### mTLS / Banco Inter
-- Relay mTLS no **Render** (`inter-relay-maple-bear-rs`).
+- Relay mTLS no **Render**.
 - Host Inter: `cdpj.partners.bancointer.com.br` (API v3).
 - Status Inter: `RECEBIDO` = pago, `A_RECEBER` = em aberto, `EXPIRADO` = vencido.
 
@@ -83,16 +128,15 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 - IDs e variáveis JS mantêm o prefixo `pdi` por compatibilidade.
 
 ### CRM
-- **Kanban**: drag-and-drop entre estágios configuráveis (`crm_estagios`). Estágios padrão: Novo Lead, Primeiro Contato, Visita Agendada, Visita Realizada, Proposta, Negociação, Matrícula Fechada, Perdido.
-- **Leads**: formulário com data de nascimento → cálculo automático de série via `config_series_idade` (campo série bloqueado, preenchido pelo sistema).
+- **Kanban**: drag-and-drop entre estágios configuráveis (`crm_estagios`).
+- **Leads**: formulário com data de nascimento → cálculo automático de série via `config_series_idade`.
 - **Interações**: histórico de ligações, WhatsApp, emails, visitas por lead.
-- **Templates WhatsApp**: categorias (boas-vindas, follow-up, visita, pós-visita, proposta, matrícula, geral) com variáveis `{{nome}}`, `{{crianca}}`, etc.
-- **Chrome Extension**: botão flutuante 🍁 no WhatsApp Web, painel lateral com templates, substituição de variáveis, inserção no chat.
-- **Reuniões**: agendamento com integração Google Calendar (abre evento no navegador).
-- **Vagas**: tabela `crm_turmas_vagas` com `vagas_total` GENERATED ALWAYS AS (`qtd_turmas * vagas_por_turma`). Barras de progresso de ocupação.
-- **Matrículas/Reservas**: tabela `crm_matriculas` com status (reserva → matriculado → cancelado). Página agrupada por série com cards visuais. Dados transferidos automaticamente do lead (nome, criança, série, nascimento, email, telefone).
-- **Config séries/idade**: `config_series_idade` com faixas etárias em meses, data de corte (MM-DD), ano de referência. Botão para replicar todas as séries de um ano para outro.
-- **Vagas por ano**: dados seed para 2026 e 2027 com séries Bear Care até Year 4.
+- **Templates WhatsApp**: categorias com variáveis `{{nome}}`, `{{crianca}}`, etc.
+- **Chrome Extension**: branding configurável via config API. Botão flutuante + painel lateral no WhatsApp Web.
+- **Reuniões**: agendamento com integração Google Calendar.
+- **Vagas**: tabela `crm_turmas_vagas` com `vagas_total` GENERATED ALWAYS AS (`qtd_turmas * vagas_por_turma`).
+- **Matrículas/Reservas**: tabela `crm_matriculas` com status (reserva → matriculado → cancelado). Dados transferidos do lead.
+- **Config séries/idade**: `config_series_idade` com faixas etárias em meses, data de corte, ano de referência.
 
 ### Módulo Financeiro
 - **Dashboard**: receitas vs despesas (gráfico), saldo mensal.
@@ -101,7 +145,12 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 - **Balanço Patrimonial**: Ativo, Passivo, Patrimônio Líquido.
 - **Conciliação Bancária**: auto-matching de extratos com lançamentos.
 - **Boletos**: emissão via Banco Inter (relay mTLS no Render).
-- **NFS-e**: módulo desativado (complexidade SOAP/XML com certificado A1).
+
+### Email Templates Dinâmicos
+- Todas as Edge Functions (`acesso`, `send-email`) leem `escola_config` para branding
+- Remetente: `{escola_nome} <{escola_email_sender}>` (ex: "Maple Bear <noreply@escola.com.br>")
+- Cor do header, nome da escola, URL — tudo dinâmico
+- Destinatário de notificações: `escola_email_notif` (configurável no admin)
 
 ---
 
@@ -110,66 +159,55 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 ### Portal dos Pais (`index.html`)
 - Login: email/senha, Google OAuth, Magic Link, Face ID biometrics
 - Controle de acesso: verifica email em `familias`/`solicitacoes`
+- Sidebar fixa à esquerda em desktop (≥900px), bottom nav em mobile
 - Tabs: Início, Mudança de Turno, Atividades Extracurriculares, Boletos, Achados & Perdidos
-- Pickup "Estou a Caminho" com fallback para tabela `familias`
-- Boletos lazy-load (só carrega ao clicar na aba)
-- WebAuthn/biometria (Face ID) com auto-login em mobile
-- Banner biometria aparece 1x por sessão (sessionStorage)
+- Turnos e preços carregados dinamicamente do `escola_config`
+- Tabs ocultáveis via `modulos_ativos`
+- Pickup "Estou a Caminho" com coordenadas configuráveis
+- Boletos lazy-load
+- WebAuthn/biometria com auto-login em mobile
 
 ### Portal das Professoras (`professora.html`)
-- Páginas via bottom nav (mobile) / sidebar (desktop): Fila, Diplomas, Growth Plan, Materiais, Atestados, Manutenção, Impressões, Achados & Perdidos
-- Saudação "Olá, [nome]" + data
-- Notificações (sino) para diplomas, atestados, PDI
-- Almoxarifado: navegador mês/ano, requisição com layout 2 colunas + itens não cadastrados
-- Impressões: solicitação com cota mensal por turma
-- Achados & Perdidos: formulário com foto
+- Branding dinâmico (nome, cores, ícone)
+- Páginas: Fila, Diplomas, Growth Plan, Materiais, Atestados, Manutenção, Impressões, Achados & Perdidos
+- Almoxarifado: navegador mês/ano, requisição com layout 2 colunas
 - WebAuthn/biometria
 
 ### Portal da Secretaria (`secretaria.html`)
-- Saudação + notificações
+- Branding dinâmico
 - Validação de atestados
 - WebAuthn/biometria
 
 ### Painel do Gerente (`gerente.html`)
-- Sidebar colapsável com seções: Turnos, Atividades, Professoras, Almoxarifado, Infraestrutura, Financeiro, CRM, Escola, Configurações
-- **Analytics**: dashboard com métricas, gráficos
-- **Almoxarifado** em páginas separadas: Dashboard, Pendentes, Requisições, Insumos, Turmas, Orçamentos, Relatório, Compras
-- Navegador mês/ano com setas separadas
-- Orçamento padrão: aplicar a todas as turmas + ano inteiro
-- Insumos: importação Excel, categorias configuráveis, fracionamento (embalagem vs consumo)
-- Busca de preços: Zoom, ML (scraping), Shopee, Reval, Amazon
-- Atualização automática de preços com detecção de embalagem e histórico
-- ML OAuth integrado
-- Review de requisições com seleção de fornecedor
-- **Equipe**: atribuição de turma/série para professoras
-- **Famílias**: tabela com edição de série, importação Excel
-- **Manutenção**: equipes configuráveis, relatório por equipe com WhatsApp
-- **Achados & Perdidos**: publicar, devolver, excluir
-- **Calendário escolar**: CRUD de eventos
-- **Impressões**: aprovação/rejeição, cotas por turma
-- **Emergência**: alertas (incêndio, lockdown, etc.)
-- **Financeiro**: Dashboard, Lançamentos, Mensalidades, Plano de Contas, DRE, Balanço Patrimonial, Conciliação Bancária, Boletos Inter
-- **CRM**: Pipeline Kanban, Leads, Templates WhatsApp, Vagas, Matrículas/Reservas, Config Séries/Idade
-- Notificações unificadas
-- WebAuthn/biometria
-- Annual Growth Plan (antigo PDI)
+- Branding dinâmico (sidebar, login, relatórios PDF/WhatsApp)
+- Sidebar colapsável com seções toggle por `data-module`
+- **Almoxarifado**: importação XML/NF-e, busca/filtro de insumos, entrada de estoque
+- Todos os relatórios PDF/WhatsApp usam nome dinâmico da escola
+- Link "Admin / Setup" removido — sem acesso ao admin
+
+### Admin (`admin.html`)
+- **Acesso**: Google OAuth exclusivo para superusuário (endpoint `admin_check`)
+- **Sem links** — acessível apenas por URL direta
+- **Seções**: Status do Sistema, Dados da Escola, Cores/Branding (preview ao vivo), Email/Resend (com instruções), ML OAuth, Banco Inter, Google Maps/Calendar, Supabase/Deploy, Módulos Ativos
+- Salva via endpoint `config_escola_admin` (validação de superusuário)
+
+### Setup Wizard (`setup.html`)
+- 4 steps: Dados da Escola, Cores/Branding, Módulos, Primeiro Gerente
+- Funciona apenas quando não existe gerente cadastrado
+- Salva configs via `config_escola_setup`
 
 ### Chrome Extension (`chrome-extension/`)
 - Manifest V3 para WhatsApp Web
-- Botão flutuante 🍁 + painel lateral
+- Branding configurável via config API
 - Templates CRM com variáveis `{{nome}}`, busca/filtro
 - Inserção automática no chat ou fallback clipboard
 
 ### Sistema de Notificações
 - Tabela `notificacoes` unificada para todos os portais
-- Eventos: diploma aprovado/rejeitado, atestado aprovado/rejeitado, PDI aprovado/devolvido, novo diploma (→gerente), novo atestado (→secretaria)
 - Almoxarifado tem sistema próprio em `alm_notificacoes`
 
 ### Achados & Perdidos
 - Tabela `achados_perdidos` com auto-publicação após 12h
-- Professora posta item com descrição, local, foto
-- Gerente pode publicar imediatamente ou aguardar 12h
-- Pais veem apenas itens publicados (tab dedicada)
 
 ---
 
@@ -177,6 +215,7 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 
 | Tabela | Uso |
 |--------|-----|
+| `escola_config` | **Config dinâmica da escola** (chave/valor JSONB) — nome, cores, turnos, módulos, etc. |
 | `solicitacoes` | Matrículas/solicitações de turno |
 | `familias` | Dados de famílias (cpf, nome_responsavel, nome_aluno, email, serie) |
 | `series` | Séries/turmas da escola (usada também pelo almoxarifado) |
@@ -212,7 +251,7 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 | `crm_templates` | Templates WhatsApp |
 | `crm_reunioes` | Reuniões agendadas |
 | `crm_turmas_vagas` | Vagas por série/ano (GENERATED vagas_total) |
-| `crm_matriculas` | Matrículas/reservas (nome, criança, série, nascimento, email, telefone) |
+| `crm_matriculas` | Matrículas/reservas |
 | `config_series_idade` | Faixas etárias por série (meses, data corte, ano ref) |
 | `impressoes` | Solicitações de impressão |
 
@@ -220,29 +259,51 @@ Domínio: `app.maplebearcaxiasdosul.com.br`
 
 ## Migrations
 
-Migrations em `supabase/migrations/` seguem padrão `NNN_nome.sql` (009 a 046):
+Migrations em `supabase/migrations/` seguem padrão `NNN_nome.sql` (009 a 048):
 - `044_crm_nascimento.sql` — `data_nascimento` em leads, tabela `config_series_idade`
 - `045_crm_vagas.sql` — `crm_turmas_vagas`, `crm_matriculas`, seed 2026/2027
 - `046_matriculas_dados_completos.sql` — Adiciona email, telefone, data_nascimento em `crm_matriculas`
+- `047_matriculas_turma.sql` — Separação de matrículas por turma
+- `048_escola_config.sql` — **Tabela `escola_config`** (configuração dinâmica multi-tenant) + seed completo
 
 ---
 
 ## Comandos Úteis
 
 ```bash
-# Deploy de Edge Functions
-supabase functions deploy diplomas --no-verify-jwt
-supabase functions deploy api --no-verify-jwt
+# Deploy de Edge Functions (Supabase CLI)
+supabase functions deploy api --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
+supabase functions deploy diplomas --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
+supabase functions deploy acesso --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
+supabase functions deploy send-email --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj
 
-# Push migrations
-supabase db push
+# Deploy via Management API (alternativa sem CLI local)
+# Usar SUPABASE_ACCESS_TOKEN + /tmp/supabase.exe no sandbox
 
-# Deploy Vercel (FORA do sandbox Claude Code)
-npx vercel --yes --prod --name maple-bear-rs
+# Executar SQL remoto via Management API
+curl --ssl-no-revoke -s -X POST "https://api.supabase.com/v1/projects/brgorknbrjlfwvrrlwxj/database/query" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT * FROM escola_config"}'
 
-# Push para branch Claude (auto-merge)
-git push origin HEAD:claude/<nome>
-
-# Push direto para main
+# Push para main (auto-deploy Vercel)
 git push origin main
+
+# Deploy Vercel manual (se auto-deploy não estiver ativo)
+npx vercel --yes --prod --name maple-bear-rs
 ```
+
+---
+
+## Configuração para Escola Nova (Checklist)
+
+1. **Supabase**: criar projeto → anotar URL + Anon Key
+2. **Migrations**: rodar 009 a 048 no SQL Editor
+3. **Edge Functions**: deploy das 7 funções
+4. **Secrets Supabase**: `RESEND_API_KEY` (obrigatório), `ML_CLIENT_ID`, `ML_CLIENT_SECRET`, `INTER_*`, `GOOGLE_*` (opcionais)
+5. **Repo**: clone → editar `config.js` com URL + Anon Key
+6. **Vercel**: deploy + configurar domínio customizado
+7. **Supabase Auth**: Site URL + Redirect URLs para o domínio
+8. **Google Cloud**: adicionar redirect URI do domínio
+9. **setup.html**: wizard configura escola, cores, módulos, gerente
+10. **admin.html**: superusuário configura APIs, emails, módulos
