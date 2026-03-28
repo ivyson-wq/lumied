@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Lumied — Logo Concepts</title>
+<title>Lumied — Logo Final</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,54 +13,50 @@
   .section-title { font-size: 18px; color: #1e293b; margin-bottom: 6px; font-weight: 700; }
   .section-desc { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
   .row { display: flex; gap: 20px; flex-wrap: wrap; }
-  .card { flex: 1; min-width: 280px; background: white; border-radius: 16px; padding: 40px 32px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
+  .card { flex: 1; min-width: 280px; background: white; border-radius: 16px; padding: 44px 32px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
   .card.dark { background: #0F172A; }
-  .card svg { max-width: 100%; height: auto; }
+  .badge { display: inline-block; background: #DCFCE7; color: #166534; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: 8px; }
   .divider { border: 0; border-top: 1px solid #e2e8f0; margin: 0 auto 60px; max-width: 900px; }
+  .sizes { display: flex; gap: 30px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+  .size-label { font-size: 11px; color: #94a3b8; text-align: center; margin-top: 8px; }
 </style>
 </head>
 <body>
 
-<h1>Lumied — 3 Conceitos Diferentes</h1>
-<p class="subtitle">Conceito A: Nodes / Rede &nbsp;&bull;&nbsp; Conceito B: Nascer do Sol &nbsp;&bull;&nbsp; Conceito C: Badge / App Icon</p>
+<h1>Lumied — Logo Final</h1>
+<p class="subtitle">Badge C + Tipografia V3 com "Lumied" (L maiusculo)</p>
 
-<!-- ========== CONCEITO A — NODES ========== -->
+<!-- ========== FINAL ========== -->
 <div class="section">
-  <h2 class="section-title">Conceito A — Nodes / Rede Conectada</h2>
-  <p class="section-desc">L formado por pontos conectados. Transmite: rede, conexão entre portais, tecnologia. Paleta: indigo + ciano.</p>
+  <h2 class="section-title">Logo Final <span class="badge">ESCOLHIDA</span></h2>
+  <p class="section-desc">Badge arredondado com L + "Lumi" bold + "ed" gradiente + ponto luminoso no i</p>
   <div class="row">
     <div class="card">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 50" width="280" height="58">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 50" width="276" height="60">
         <defs>
-          <linearGradient id="a1g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#6366F1"/><stop offset="100%" style="stop-color:#06B6D4"/></linearGradient>
+          <linearGradient id="fg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient>
+          <radialGradient id="fgl1" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient>
+          <filter id="ff1"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <circle cx="12" cy="10" r="4" fill="url(#a1g)" opacity="0.4"/>
-        <circle cx="12" cy="22" r="4" fill="url(#a1g)" opacity="0.6"/>
-        <circle cx="12" cy="34" r="5" fill="url(#a1g)"/>
-        <circle cx="24" cy="34" r="4" fill="url(#a1g)" opacity="0.8"/>
-        <circle cx="36" cy="34" r="3.5" fill="url(#a1g)" opacity="0.5"/>
-        <line x1="12" y1="14" x2="12" y2="18" stroke="url(#a1g)" stroke-width="1.5" opacity="0.4"/>
-        <line x1="12" y1="26" x2="12" y2="29" stroke="url(#a1g)" stroke-width="1.5" opacity="0.6"/>
-        <line x1="17" y1="34" x2="20" y2="34" stroke="url(#a1g)" stroke-width="1.5" opacity="0.7"/>
-        <line x1="28" y1="34" x2="32.5" y2="34" stroke="url(#a1g)" stroke-width="1.5" opacity="0.5"/>
-        <text x="48" y="36" font-family="'Inter',system-ui,sans-serif" font-size="32" font-weight="600" fill="#1E293B" letter-spacing="-1">lumied</text>
+        <rect x="4" y="6" width="36" height="36" rx="9" fill="url(#fg1)"/>
+        <path d="M14 13 L14 30 L27 30 L27 26 L18 26 L18 13Z" fill="white"/>
+        <text x="48" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#1E293B" letter-spacing="-1">Lumi</text>
+        <text x="130" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#fg1)" letter-spacing="-1">ed</text>
+        <circle cx="119" cy="14" r="3" fill="url(#fgl1)" filter="url(#ff1)"/>
       </svg>
     </div>
     <div class="card dark">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 50" width="280" height="58">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 50" width="276" height="60">
         <defs>
-          <linearGradient id="a2g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#818CF8"/><stop offset="100%" style="stop-color:#22D3EE"/></linearGradient>
+          <linearGradient id="fg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient>
+          <radialGradient id="fgl2" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient>
+          <filter id="ff2"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <circle cx="12" cy="10" r="4" fill="url(#a2g)" opacity="0.4"/>
-        <circle cx="12" cy="22" r="4" fill="url(#a2g)" opacity="0.6"/>
-        <circle cx="12" cy="34" r="5" fill="url(#a2g)"/>
-        <circle cx="24" cy="34" r="4" fill="url(#a2g)" opacity="0.8"/>
-        <circle cx="36" cy="34" r="3.5" fill="url(#a2g)" opacity="0.5"/>
-        <line x1="12" y1="14" x2="12" y2="18" stroke="url(#a2g)" stroke-width="1.5" opacity="0.4"/>
-        <line x1="12" y1="26" x2="12" y2="29" stroke="url(#a2g)" stroke-width="1.5" opacity="0.6"/>
-        <line x1="17" y1="34" x2="20" y2="34" stroke="url(#a2g)" stroke-width="1.5" opacity="0.7"/>
-        <line x1="28" y1="34" x2="32.5" y2="34" stroke="url(#a2g)" stroke-width="1.5" opacity="0.5"/>
-        <text x="48" y="36" font-family="'Inter',system-ui,sans-serif" font-size="32" font-weight="600" fill="#E2E8F0" letter-spacing="-1">lumied</text>
+        <rect x="4" y="6" width="36" height="36" rx="9" fill="url(#fg2)"/>
+        <path d="M14 13 L14 30 L27 30 L27 26 L18 26 L18 13Z" fill="#0F172A"/>
+        <text x="48" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#F1F5F9" letter-spacing="-1">Lumi</text>
+        <text x="130" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#fg2)" letter-spacing="-1">ed</text>
+        <circle cx="119" cy="14" r="3" fill="url(#fgl2)" filter="url(#ff2)"/>
       </svg>
     </div>
   </div>
@@ -68,124 +64,117 @@
 
 <hr class="divider">
 
-<!-- ========== CONCEITO B — NASCER DO SOL ========== -->
+<!-- ========== TAMANHOS ========== -->
 <div class="section">
-  <h2 class="section-title">Conceito B — Nascer do Sol / Horizonte</h2>
-  <p class="section-desc">Sol nascendo sobre horizonte com livro sutil. Transmite: novo dia, iluminação, crescimento. Paleta: âmbar + coral + violeta.</p>
+  <h2 class="section-title">Tamanhos</h2>
+  <p class="section-desc">A logo escala bem em diferentes tamanhos</p>
   <div class="row">
-    <div class="card">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 50" width="280" height="58">
-        <defs>
-          <linearGradient id="b1g" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#F59E0B"/><stop offset="50%" style="stop-color:#EF4444"/><stop offset="100%" style="stop-color:#8B5CF6"/></linearGradient>
-        </defs>
-        <line x1="4" y1="32" x2="42" y2="32" stroke="#CBD5E1" stroke-width="1.5"/>
-        <path d="M10 32 A13 13 0 0 1 36 32" fill="url(#b1g)" opacity="0.9"/>
-        <line x1="23" y1="14" x2="23" y2="8" stroke="url(#b1g)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-        <line x1="12" y1="17" x2="8" y2="13" stroke="url(#b1g)" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-        <line x1="34" y1="17" x2="38" y2="13" stroke="url(#b1g)" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-        <path d="M18 34 L14 37 L14 44 L18 41Z" fill="#1E293B" opacity="0.12"/>
-        <path d="M18 34 L22 37 L22 44 L18 41Z" fill="#1E293B" opacity="0.08"/>
-        <text x="52" y="36" font-family="'Inter',system-ui,sans-serif" font-size="32" font-weight="600" fill="#1E293B" letter-spacing="-1">lumied</text>
-      </svg>
-    </div>
-    <div class="card dark">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 50" width="280" height="58">
-        <defs>
-          <linearGradient id="b2g" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#FBBF24"/><stop offset="50%" style="stop-color:#FB7185"/><stop offset="100%" style="stop-color:#A78BFA"/></linearGradient>
-        </defs>
-        <line x1="4" y1="32" x2="42" y2="32" stroke="#334155" stroke-width="1.5"/>
-        <path d="M10 32 A13 13 0 0 1 36 32" fill="url(#b2g)" opacity="0.9"/>
-        <line x1="23" y1="14" x2="23" y2="8" stroke="url(#b2g)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-        <line x1="12" y1="17" x2="8" y2="13" stroke="url(#b2g)" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-        <line x1="34" y1="17" x2="38" y2="13" stroke="url(#b2g)" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-        <path d="M18 34 L14 37 L14 44 L18 41Z" fill="white" opacity="0.08"/>
-        <path d="M18 34 L22 37 L22 44 L18 41Z" fill="white" opacity="0.05"/>
-        <text x="52" y="36" font-family="'Inter',system-ui,sans-serif" font-size="32" font-weight="600" fill="#E2E8F0" letter-spacing="-1">lumied</text>
-      </svg>
-    </div>
-  </div>
-</div>
-
-<hr class="divider">
-
-<!-- ========== CONCEITO C — BADGE ========== -->
-<div class="section">
-  <h2 class="section-title">Conceito C — Badge / App Icon</h2>
-  <p class="section-desc">Quadrado arredondado com "L" recortado. Funciona como app icon. Transmite: solidez, confiança, profissional. Paleta: verde + azul.</p>
-  <div class="row">
-    <div class="card">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 50" width="280" height="58">
-        <defs>
-          <linearGradient id="c1g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#10B981"/><stop offset="100%" style="stop-color:#3B82F6"/></linearGradient>
-        </defs>
-        <rect x="4" y="4" width="38" height="38" rx="10" fill="url(#c1g)"/>
-        <path d="M15 12 L15 32 L30 32 L30 27 L20 27 L20 12Z" fill="white"/>
-        <text x="52" y="35" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="url(#c1g)" letter-spacing="-1">lumied</text>
-        <line x1="52" y1="40" x2="105" y2="40" stroke="url(#c1g)" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
-      </svg>
-    </div>
-    <div class="card dark">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 50" width="280" height="58">
-        <defs>
-          <linearGradient id="c2g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#34D399"/><stop offset="100%" style="stop-color:#60A5FA"/></linearGradient>
-        </defs>
-        <rect x="4" y="4" width="38" height="38" rx="10" fill="url(#c2g)"/>
-        <path d="M15 12 L15 32 L30 32 L30 27 L20 27 L20 12Z" fill="#0F172A"/>
-        <text x="52" y="35" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="url(#c2g)" letter-spacing="-1">lumied</text>
-        <line x1="52" y1="40" x2="105" y2="40" stroke="url(#c2g)" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
-      </svg>
-    </div>
-  </div>
-</div>
-
-<hr class="divider">
-
-<!-- ========== REFERÊNCIA — V3 e V4 ANTERIORES ========== -->
-<div class="section">
-  <h2 class="section-title" style="color:#94a3b8">Referência — Versões anteriores</h2>
-  <div class="row">
-    <div class="card">
-      <div style="text-align:center">
-        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">V3 Ultra Compacta</div>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 50" width="220" height="50">
-          <defs>
-            <linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient>
-            <radialGradient id="rgl1" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient>
-            <filter id="rf1"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          </defs>
-          <g transform="translate(6, 5)">
-            <path d="M16 6 C10 6, 4 13, 4 19 C4 24, 7 27, 11 29 L11 34 L21 34 L21 29 C25 27, 28 24, 28 19 C28 13, 22 6, 16 6Z" fill="url(#rg1)" opacity="0.9"/>
-            <line x1="16" y1="1" x2="16" y2="3.5" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round" filter="url(#rf1)"/>
-            <line x1="6" y1="8" x2="8" y2="10" stroke="#FCD34D" stroke-width="1.2" stroke-linecap="round" filter="url(#rf1)"/>
-            <line x1="26" y1="8" x2="24" y2="10" stroke="#FCD34D" stroke-width="1.2" stroke-linecap="round" filter="url(#rf1)"/>
-            <path d="M16 15 L10 18 L10 26 L16 23Z" fill="white" opacity="0.9"/>
-            <path d="M16 15 L22 18 L22 26 L16 23Z" fill="white" opacity="0.7"/>
-            <rect x="12" y="34" width="8" height="2" rx="0.8" fill="#64748B"/>
-            <rect x="13" y="36" width="6" height="2" rx="0.8" fill="#64748B"/>
-          </g>
-          <text x="42" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#1E293B" letter-spacing="-1">lumi</text>
-          <text x="124" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#rg1)" letter-spacing="-1">ed</text>
-          <circle cx="113" cy="14" r="3" fill="url(#rgl1)" filter="url(#rf1)"/>
-        </svg>
+    <div class="card" style="flex-direction:column; gap:30px; padding:40px;">
+      <div class="sizes">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 50" width="345" height="75">
+            <defs><linearGradient id="s1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient><radialGradient id="s1g" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient><filter id="s1f"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <rect x="4" y="6" width="36" height="36" rx="9" fill="url(#s1)"/><path d="M14 13 L14 30 L27 30 L27 26 L18 26 L18 13Z" fill="white"/>
+            <text x="48" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#1E293B" letter-spacing="-1">Lumi</text><text x="130" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#s1)" letter-spacing="-1">ed</text>
+            <circle cx="119" cy="14" r="3" fill="url(#s1g)" filter="url(#s1f)"/>
+          </svg>
+          <div class="size-label">Grande (345px)</div>
+        </div>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 50" width="230" height="50">
+            <defs><linearGradient id="s2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient><radialGradient id="s2g" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient><filter id="s2f"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <rect x="4" y="6" width="36" height="36" rx="9" fill="url(#s2)"/><path d="M14 13 L14 30 L27 30 L27 26 L18 26 L18 13Z" fill="white"/>
+            <text x="48" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#1E293B" letter-spacing="-1">Lumi</text><text x="130" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#s2)" letter-spacing="-1">ed</text>
+            <circle cx="119" cy="14" r="3" fill="url(#s2g)" filter="url(#s2f)"/>
+          </svg>
+          <div class="size-label">Normal (230px)</div>
+        </div>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 50" width="150" height="33">
+            <defs><linearGradient id="s3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient><radialGradient id="s3g" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient><filter id="s3f"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <rect x="4" y="6" width="36" height="36" rx="9" fill="url(#s3)"/><path d="M14 13 L14 30 L27 30 L27 26 L18 26 L18 13Z" fill="white"/>
+            <text x="48" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#1E293B" letter-spacing="-1">Lumi</text><text x="130" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#s3)" letter-spacing="-1">ed</text>
+            <circle cx="119" cy="14" r="3" fill="url(#s3g)" filter="url(#s3f)"/>
+          </svg>
+          <div class="size-label">Pequena (150px)</div>
+        </div>
       </div>
     </div>
-    <div class="card">
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ========== ICON SOLO ========== -->
+<div class="section">
+  <h2 class="section-title">Icone Solo (Favicon / App Icon)</h2>
+  <div class="row">
+    <div class="card" style="gap: 30px; flex-direction: row; justify-content: center;">
       <div style="text-align:center">
-        <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">V4 Tipografia Pura</div>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" width="240" height="53">
-          <defs>
-            <linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient>
-            <radialGradient id="rd2" cx="50%" cy="40%" r="50%"><stop offset="0%" style="stop-color:#FCD34D"/><stop offset="70%" style="stop-color:#F59E0B"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.3"/></radialGradient>
-            <filter id="rf2"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          </defs>
-          <text x="8" y="33" font-family="'Inter',system-ui,sans-serif" font-size="34" font-weight="800" fill="#1E293B" letter-spacing="-1.5">lumi</text>
-          <text x="112" y="33" font-family="'Inter',system-ui,sans-serif" font-size="34" font-weight="200" fill="url(#rg2)" letter-spacing="-1.5">ed</text>
-          <circle cx="95" cy="10" r="5" fill="#FCD34D" opacity="0.15" filter="url(#rf2)"/>
-          <circle cx="95" cy="10" r="3.5" fill="url(#rd2)" filter="url(#rf2)"/>
-          <line x1="89" y1="7" x2="86" y2="4" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
-          <line x1="95" y1="4" x2="95" y2="1" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
-          <line x1="101" y1="7" x2="104" y2="4" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="64" height="64">
+          <defs><linearGradient id="i1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i1)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="white"/>
         </svg>
+        <div class="size-label">64px</div>
+      </div>
+      <div style="text-align:center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="44" height="44">
+          <defs><linearGradient id="i2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i2)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="white"/>
+        </svg>
+        <div class="size-label">44px</div>
+      </div>
+      <div style="text-align:center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="32" height="32">
+          <defs><linearGradient id="i3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i3)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="white"/>
+        </svg>
+        <div class="size-label">32px</div>
+      </div>
+      <div style="text-align:center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="16" height="16">
+          <defs><linearGradient id="i4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i4)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="white"/>
+        </svg>
+        <div class="size-label">16px</div>
+      </div>
+    </div>
+    <div class="card dark" style="gap: 30px; flex-direction: row; justify-content: center;">
+      <div style="text-align:center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="64" height="64">
+          <defs><linearGradient id="i5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i5)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="#0F172A"/>
+        </svg>
+        <div class="size-label" style="color:#475569">64px</div>
+      </div>
+      <div style="text-align:center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="44" height="44">
+          <defs><linearGradient id="i6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i6)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="#0F172A"/>
+        </svg>
+        <div class="size-label" style="color:#475569">44px</div>
+      </div>
+      <div style="text-align:center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="32" height="32">
+          <defs><linearGradient id="i7" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i7)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="#0F172A"/>
+        </svg>
+        <div class="size-label" style="color:#475569">32px</div>
+      </div>
+      <div style="text-align:center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="16" height="16">
+          <defs><linearGradient id="i8" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient></defs>
+          <rect x="0" y="0" width="44" height="44" rx="11" fill="url(#i8)"/>
+          <path d="M12 10 L12 32 L30 32 L30 27 L17 27 L17 10Z" fill="#0F172A"/>
+        </svg>
+        <div class="size-label" style="color:#475569">16px</div>
       </div>
     </div>
   </div>
