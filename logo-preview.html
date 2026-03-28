@@ -3,257 +3,219 @@
 <head>
 <meta charset="UTF-8">
 <title>Lumied — Logo Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;700;800&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; min-height: 100vh; padding: 40px 20px; }
   h1 { text-align: center; color: #1e293b; margin-bottom: 10px; font-size: 28px; }
-  h2 { text-align: center; color: #64748b; margin-bottom: 30px; font-size: 16px; font-weight: 400; }
-  .section { max-width: 1000px; margin: 0 auto 50px; }
-  .section-title { font-size: 18px; color: #475569; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 30px; }
-  .card { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .subtitle { text-align: center; color: #64748b; margin-bottom: 40px; font-size: 15px; }
+  .section { max-width: 1100px; margin: 0 auto 50px; }
+  .section-title { font-size: 16px; color: #475569; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; }
+  .section-title span { color: #94a3b8; font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+  .card { background: white; border-radius: 16px; padding: 36px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 140px; }
   .card.dark { background: #1e293b; }
-  .card h3 { font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
-  .card.dark h3 { color: #64748b; }
-  .card svg { max-width: 100%; height: auto; }
+  .card h3 { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; font-weight: 500; }
+  .card.dark h3 { color: #475569; }
+  .badge { display: inline-block; background: #DBEAFE; color: #1E40AF; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-left: 8px; }
 </style>
 </head>
 <body>
 
-<h1>Lumied — Logo Preview</h1>
-<h2>Versão Original vs Compacta</h2>
+<h1>Lumied — Logo Comparison</h1>
+<p class="subtitle">4 versões: V1 Original — V2 Compacta — V3 Ultra Compacta — V4 Tipografia Pura</p>
 
-<!-- ========== VERSÃO COMPACTA (NOVA) ========== -->
+<!-- ========== V3 ULTRA COMPACTA ========== -->
 <div class="section">
-  <h2 class="section-title">V2 — Compacta (tudo mais junto)</h2>
+  <h2 class="section-title">V3 — Ultra Compacta <span>220x50px</span> <span class="badge">NOVA</span></h2>
   <div class="grid">
-
-    <!-- Compact - Light -->
     <div class="card">
-      <h3>Compacta — Light</h3>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100" width="320" height="100">
+      <h3>Light</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 50" width="220" height="50">
         <defs>
-          <linearGradient id="cg1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#3B82F6"/>
-            <stop offset="50%" style="stop-color:#06B6D4"/>
-            <stop offset="100%" style="stop-color:#10B981"/>
-          </linearGradient>
-          <radialGradient id="clg1" cx="50%" cy="30%" r="50%">
-            <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/>
-            <stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.8"/>
-            <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/>
-          </radialGradient>
-          <filter id="cglow1"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="v3g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient>
+          <radialGradient id="v3gl1" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient>
+          <filter id="v3f1"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <g transform="translate(6, 5)">
+          <path d="M16 6 C10 6, 4 13, 4 19 C4 24, 7 27, 11 29 L11 34 L21 34 L21 29 C25 27, 28 24, 28 19 C28 13, 22 6, 16 6Z" fill="url(#v3g1)" opacity="0.9"/>
+          <line x1="16" y1="1" x2="16" y2="3.5" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round" filter="url(#v3f1)"/>
+          <line x1="6" y1="8" x2="8" y2="10" stroke="#FCD34D" stroke-width="1.2" stroke-linecap="round" filter="url(#v3f1)"/>
+          <line x1="26" y1="8" x2="24" y2="10" stroke="#FCD34D" stroke-width="1.2" stroke-linecap="round" filter="url(#v3f1)"/>
+          <path d="M16 15 L10 18 L10 26 L16 23Z" fill="white" opacity="0.9"/>
+          <path d="M16 15 L22 18 L22 26 L16 23Z" fill="white" opacity="0.7"/>
+          <rect x="12" y="34" width="8" height="2" rx="0.8" fill="#64748B"/>
+          <rect x="13" y="36" width="6" height="2" rx="0.8" fill="#64748B"/>
+        </g>
+        <text x="42" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#1E293B" letter-spacing="-1">lumi</text>
+        <text x="124" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#v3g1)" letter-spacing="-1">ed</text>
+        <circle cx="113" cy="14" r="3" fill="url(#v3gl1)" filter="url(#v3f1)"/>
+      </svg>
+    </div>
+    <div class="card dark">
+      <h3>Dark</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 50" width="220" height="50">
+        <defs>
+          <linearGradient id="v3g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient>
+          <radialGradient id="v3gl2" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient>
+          <filter id="v3f2"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <g transform="translate(6, 5)">
+          <path d="M16 6 C10 6, 4 13, 4 19 C4 24, 7 27, 11 29 L11 34 L21 34 L21 29 C25 27, 28 24, 28 19 C28 13, 22 6, 16 6Z" fill="url(#v3g2)" opacity="0.9"/>
+          <line x1="16" y1="1" x2="16" y2="3.5" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round" filter="url(#v3f2)"/>
+          <line x1="6" y1="8" x2="8" y2="10" stroke="#FCD34D" stroke-width="1.2" stroke-linecap="round" filter="url(#v3f2)"/>
+          <line x1="26" y1="8" x2="24" y2="10" stroke="#FCD34D" stroke-width="1.2" stroke-linecap="round" filter="url(#v3f2)"/>
+          <path d="M16 15 L10 18 L10 26 L16 23Z" fill="white" opacity="0.9"/>
+          <path d="M16 15 L22 18 L22 26 L16 23Z" fill="white" opacity="0.7"/>
+          <rect x="12" y="34" width="8" height="2" rx="0.8" fill="#94A3B8"/>
+          <rect x="13" y="36" width="6" height="2" rx="0.8" fill="#94A3B8"/>
+        </g>
+        <text x="42" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="700" fill="#F1F5F9" letter-spacing="-1">lumi</text>
+        <text x="124" y="33" font-family="'Inter',system-ui,sans-serif" font-size="30" font-weight="300" fill="url(#v3g2)" letter-spacing="-1">ed</text>
+        <circle cx="113" cy="14" r="3" fill="url(#v3gl2)" filter="url(#v3f2)"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ========== V4 TIPOGRAFIA PURA ========== -->
+<div class="section">
+  <h2 class="section-title">V4 — Tipografia Pura <span>200x44px — sem ícone separado</span> <span class="badge">NOVA</span></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Light</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" width="240" height="53">
+        <defs>
+          <linearGradient id="v4g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient>
+          <radialGradient id="v4d1" cx="50%" cy="40%" r="50%"><stop offset="0%" style="stop-color:#FCD34D"/><stop offset="70%" style="stop-color:#F59E0B"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.3"/></radialGradient>
+          <filter id="v4f1"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <text x="8" y="33" font-family="'Inter',system-ui,sans-serif" font-size="34" font-weight="800" fill="#1E293B" letter-spacing="-1.5">lumi</text>
+        <text x="112" y="33" font-family="'Inter',system-ui,sans-serif" font-size="34" font-weight="200" fill="url(#v4g1)" letter-spacing="-1.5">ed</text>
+        <circle cx="95" cy="10" r="5" fill="#FCD34D" opacity="0.15" filter="url(#v4f1)"/>
+        <circle cx="95" cy="10" r="3.5" fill="url(#v4d1)" filter="url(#v4f1)"/>
+        <line x1="89" y1="7" x2="86" y2="4" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+        <line x1="95" y1="4" x2="95" y2="1" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+        <line x1="101" y1="7" x2="104" y2="4" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="card dark">
+      <h3>Dark</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 44" width="240" height="53">
+        <defs>
+          <linearGradient id="v4g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient>
+          <radialGradient id="v4d2" cx="50%" cy="40%" r="50%"><stop offset="0%" style="stop-color:#FCD34D"/><stop offset="70%" style="stop-color:#FBBF24"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.3"/></radialGradient>
+          <filter id="v4f2"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <text x="8" y="33" font-family="'Inter',system-ui,sans-serif" font-size="34" font-weight="800" fill="#F1F5F9" letter-spacing="-1.5">lumi</text>
+        <text x="112" y="33" font-family="'Inter',system-ui,sans-serif" font-size="34" font-weight="200" fill="url(#v4g2)" letter-spacing="-1.5">ed</text>
+        <circle cx="95" cy="10" r="5" fill="#FCD34D" opacity="0.1" filter="url(#v4f2)"/>
+        <circle cx="95" cy="10" r="3.5" fill="url(#v4d2)" filter="url(#v4f2)"/>
+        <line x1="89" y1="7" x2="86" y2="4" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+        <line x1="95" y1="4" x2="95" y2="1" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+        <line x1="101" y1="7" x2="104" y2="4" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" opacity="0.4"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ========== V2 COMPACTA ========== -->
+<div class="section">
+  <h2 class="section-title">V2 — Compacta <span>320x100px</span></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Light</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100" width="280" height="88">
+        <defs>
+          <linearGradient id="v2g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient>
+          <radialGradient id="v2gl1" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.8"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient>
+          <filter id="v2f1"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
         <g transform="translate(16, 10)">
-          <path d="M28 14 C17 14, 8 24, 8 34 C8 42, 13 48, 20 51 L20 60 L36 60 L36 51 C43 48, 48 42, 48 34 C48 24, 39 14, 28 14Z" fill="url(#cg1)" opacity="0.9"/>
-          <line x1="28" y1="4" x2="28" y2="9" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#cglow1)"/>
-          <line x1="10" y1="16" x2="13" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow1)"/>
-          <line x1="46" y1="16" x2="43" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow1)"/>
-          <line x1="3" y1="34" x2="6" y2="34" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow1)"/>
-          <line x1="50" y1="34" x2="53" y2="34" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow1)"/>
+          <path d="M28 14 C17 14, 8 24, 8 34 C8 42, 13 48, 20 51 L20 60 L36 60 L36 51 C43 48, 48 42, 48 34 C48 24, 39 14, 28 14Z" fill="url(#v2g1)" opacity="0.9"/>
+          <line x1="28" y1="4" x2="28" y2="9" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#v2f1)"/>
+          <line x1="10" y1="16" x2="13" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#v2f1)"/>
+          <line x1="46" y1="16" x2="43" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#v2f1)"/>
           <path d="M28 27 L18 32 L18 45 L28 40Z" fill="white" opacity="0.9"/>
           <path d="M28 27 L38 32 L38 45 L28 40Z" fill="white" opacity="0.7"/>
-          <line x1="28" y1="27" x2="28" y2="40" stroke="white" stroke-width="1.2" opacity="0.5"/>
           <rect x="21" y="60" width="14" height="3" rx="1" fill="#64748B"/>
           <rect x="23" y="63" width="10" height="3" rx="1" fill="#64748B"/>
-          <rect x="25" y="66" width="6" height="3" rx="1.5" fill="#64748B"/>
         </g>
         <text x="75" y="58" font-family="'Inter',system-ui,sans-serif" font-size="46" font-weight="700" fill="#1E293B" letter-spacing="-1.5">lumi</text>
-        <text x="200" y="58" font-family="'Inter',system-ui,sans-serif" font-size="46" font-weight="300" fill="url(#cg1)" letter-spacing="-1.5">ed</text>
-        <circle cx="189" cy="28" r="4.5" fill="url(#clg1)" filter="url(#cglow1)"/>
+        <text x="200" y="58" font-family="'Inter',system-ui,sans-serif" font-size="46" font-weight="300" fill="url(#v2g1)" letter-spacing="-1.5">ed</text>
+        <circle cx="189" cy="28" r="4.5" fill="url(#v2gl1)" filter="url(#v2f1)"/>
       </svg>
     </div>
-
-    <!-- Compact - Dark -->
     <div class="card dark">
-      <h3>Compacta — Dark</h3>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100" width="320" height="100">
+      <h3>Dark</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100" width="280" height="88">
         <defs>
-          <linearGradient id="cg2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#60A5FA"/>
-            <stop offset="50%" style="stop-color:#22D3EE"/>
-            <stop offset="100%" style="stop-color:#34D399"/>
-          </linearGradient>
-          <radialGradient id="clg2" cx="50%" cy="30%" r="50%">
-            <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/>
-            <stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.8"/>
-            <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/>
-          </radialGradient>
-          <filter id="cglow2"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="v2g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient>
+          <radialGradient id="v2gl2" cx="50%" cy="30%" r="50%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/><stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/></radialGradient>
+          <filter id="v2f2"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
         <g transform="translate(16, 10)">
-          <path d="M28 14 C17 14, 8 24, 8 34 C8 42, 13 48, 20 51 L20 60 L36 60 L36 51 C43 48, 48 42, 48 34 C48 24, 39 14, 28 14Z" fill="url(#cg2)" opacity="0.9"/>
-          <line x1="28" y1="4" x2="28" y2="9" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#cglow2)"/>
-          <line x1="10" y1="16" x2="13" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow2)"/>
-          <line x1="46" y1="16" x2="43" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow2)"/>
-          <line x1="3" y1="34" x2="6" y2="34" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow2)"/>
-          <line x1="50" y1="34" x2="53" y2="34" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#cglow2)"/>
+          <path d="M28 14 C17 14, 8 24, 8 34 C8 42, 13 48, 20 51 L20 60 L36 60 L36 51 C43 48, 48 42, 48 34 C48 24, 39 14, 28 14Z" fill="url(#v2g2)" opacity="0.9"/>
+          <line x1="28" y1="4" x2="28" y2="9" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#v2f2)"/>
+          <line x1="10" y1="16" x2="13" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#v2f2)"/>
+          <line x1="46" y1="16" x2="43" y2="19" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" filter="url(#v2f2)"/>
           <path d="M28 27 L18 32 L18 45 L28 40Z" fill="white" opacity="0.9"/>
           <path d="M28 27 L38 32 L38 45 L28 40Z" fill="white" opacity="0.7"/>
-          <line x1="28" y1="27" x2="28" y2="40" stroke="white" stroke-width="1.2" opacity="0.5"/>
           <rect x="21" y="60" width="14" height="3" rx="1" fill="#94A3B8"/>
           <rect x="23" y="63" width="10" height="3" rx="1" fill="#94A3B8"/>
-          <rect x="25" y="66" width="6" height="3" rx="1.5" fill="#94A3B8"/>
         </g>
         <text x="75" y="58" font-family="'Inter',system-ui,sans-serif" font-size="46" font-weight="700" fill="#F1F5F9" letter-spacing="-1.5">lumi</text>
-        <text x="200" y="58" font-family="'Inter',system-ui,sans-serif" font-size="46" font-weight="300" fill="url(#cg2)" letter-spacing="-1.5">ed</text>
-        <circle cx="189" cy="28" r="4.5" fill="url(#clg2)" filter="url(#cglow2)"/>
+        <text x="200" y="58" font-family="'Inter',system-ui,sans-serif" font-size="46" font-weight="300" fill="url(#v2g2)" letter-spacing="-1.5">ed</text>
+        <circle cx="189" cy="28" r="4.5" fill="url(#v2gl2)" filter="url(#v2f2)"/>
       </svg>
     </div>
-
   </div>
 </div>
 
-<!-- ========== VERSÃO ORIGINAL ========== -->
-<div class="section">
-  <h2 class="section-title">V1 — Original (mais espaçada)</h2>
-  <div class="grid">
-
-    <!-- Logo completa - fundo claro -->
-    <div class="card">
-      <h3>Original — Light</h3>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="360" height="108">
-        <defs>
-          <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#3B82F6"/>
-            <stop offset="50%" style="stop-color:#06B6D4"/>
-            <stop offset="100%" style="stop-color:#10B981"/>
-          </linearGradient>
-          <radialGradient id="lg1" cx="50%" cy="30%" r="50%">
-            <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/>
-            <stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.8"/>
-            <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/>
-          </radialGradient>
-          <filter id="glow1"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <g transform="translate(28, 8)">
-          <path d="M35 18 C20 18, 10 30, 10 42 C10 52, 16 60, 25 64 L25 75 L45 75 L45 64 C54 60, 60 52, 60 42 C60 30, 50 18, 35 18Z" fill="url(#g1)" opacity="0.9"/>
-          <line x1="35" y1="6" x2="35" y2="12" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow1)"/>
-          <line x1="12" y1="20" x2="16" y2="24" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow1)"/>
-          <line x1="58" y1="20" x2="54" y2="24" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow1)"/>
-          <line x1="4" y1="42" x2="8" y2="42" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow1)"/>
-          <line x1="62" y1="42" x2="66" y2="42" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow1)"/>
-          <path d="M35 34 L22 40 L22 56 L35 50Z" fill="white" opacity="0.9"/>
-          <path d="M35 34 L48 40 L48 56 L35 50Z" fill="white" opacity="0.7"/>
-          <line x1="35" y1="34" x2="35" y2="50" stroke="white" stroke-width="1.5" opacity="0.5"/>
-          <rect x="26" y="75" width="18" height="4" rx="1" fill="#64748B"/>
-          <rect x="28" y="79" width="14" height="3" rx="1" fill="#64748B"/>
-          <rect x="30" y="82" width="10" height="3" rx="2" fill="#64748B"/>
-        </g>
-        <text x="105" y="72" font-family="'Inter',system-ui,sans-serif" font-size="52" font-weight="700" fill="#1E293B" letter-spacing="-1.5">lumi</text>
-        <text x="248" y="72" font-family="'Inter',system-ui,sans-serif" font-size="52" font-weight="300" fill="url(#g1)" letter-spacing="-1.5">ed</text>
-        <circle cx="218" cy="38" r="5" fill="url(#lg1)" filter="url(#glow1)"/>
-      </svg>
-    </div>
-
-    <!-- Logo completa - fundo escuro -->
-    <div class="card dark">
-      <h3>Original — Dark</h3>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="360" height="108">
-        <defs>
-          <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#60A5FA"/>
-            <stop offset="50%" style="stop-color:#22D3EE"/>
-            <stop offset="100%" style="stop-color:#34D399"/>
-          </linearGradient>
-          <radialGradient id="lg2" cx="50%" cy="30%" r="50%">
-            <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:1"/>
-            <stop offset="60%" style="stop-color:#F59E0B;stop-opacity:0.8"/>
-            <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0"/>
-          </radialGradient>
-          <filter id="glow2"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <g transform="translate(28, 8)">
-          <path d="M35 18 C20 18, 10 30, 10 42 C10 52, 16 60, 25 64 L25 75 L45 75 L45 64 C54 60, 60 52, 60 42 C60 30, 50 18, 35 18Z" fill="url(#g2)" opacity="0.9"/>
-          <line x1="35" y1="6" x2="35" y2="12" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow2)"/>
-          <line x1="12" y1="20" x2="16" y2="24" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow2)"/>
-          <line x1="58" y1="20" x2="54" y2="24" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow2)"/>
-          <line x1="4" y1="42" x2="8" y2="42" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow2)"/>
-          <line x1="62" y1="42" x2="66" y2="42" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" filter="url(#glow2)"/>
-          <path d="M35 34 L22 40 L22 56 L35 50Z" fill="white" opacity="0.9"/>
-          <path d="M35 34 L48 40 L48 56 L35 50Z" fill="white" opacity="0.7"/>
-          <line x1="35" y1="34" x2="35" y2="50" stroke="white" stroke-width="1.5" opacity="0.5"/>
-          <rect x="26" y="75" width="18" height="4" rx="1" fill="#94A3B8"/>
-          <rect x="28" y="79" width="14" height="3" rx="1" fill="#94A3B8"/>
-          <rect x="30" y="82" width="10" height="3" rx="2" fill="#94A3B8"/>
-        </g>
-        <text x="105" y="72" font-family="'Inter',system-ui,sans-serif" font-size="52" font-weight="700" fill="#F1F5F9" letter-spacing="-1.5">lumi</text>
-        <text x="248" y="72" font-family="'Inter',system-ui,sans-serif" font-size="52" font-weight="300" fill="url(#g2)" letter-spacing="-1.5">ed</text>
-        <circle cx="218" cy="38" r="5" fill="url(#lg2)" filter="url(#glow2)"/>
-      </svg>
-    </div>
-
-  </div>
-</div>
-
-<!-- ========== ÍCONES ========== -->
+<!-- ========== ÍCONE ========== -->
 <div class="section">
   <h2 class="section-title">Ícone / Favicon</h2>
   <div class="grid">
-
     <div class="card">
-      <h3>Ícone — Light</h3>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" width="120" height="150">
+      <h3>Light</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" width="80" height="100">
         <defs>
-          <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#3B82F6"/>
-            <stop offset="50%" style="stop-color:#06B6D4"/>
-            <stop offset="100%" style="stop-color:#10B981"/>
-          </linearGradient>
-          <radialGradient id="lg3" cx="50%" cy="20%" r="60%">
-            <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:0.6"/>
-            <stop offset="100%" style="stop-color:#FCD34D;stop-opacity:0"/>
-          </radialGradient>
-          <filter id="glow3"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="ig1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3B82F6"/><stop offset="50%" style="stop-color:#06B6D4"/><stop offset="100%" style="stop-color:#10B981"/></linearGradient>
+          <radialGradient id="igl1" cx="50%" cy="20%" r="60%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:0.6"/><stop offset="100%" style="stop-color:#FCD34D;stop-opacity:0"/></radialGradient>
+          <filter id="if1"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <circle cx="40" cy="40" r="35" fill="url(#lg3)"/>
-        <path d="M40 12 C22 12, 8 28, 8 44 C8 56, 16 66, 28 70 L28 82 L52 82 L52 70 C64 66, 72 56, 72 44 C72 28, 58 12, 40 12Z" fill="url(#g3)" opacity="0.95"/>
-        <line x1="40" y1="1" x2="40" y2="7" stroke="#FCD34D" stroke-width="3" stroke-linecap="round" filter="url(#glow3)"/>
-        <line x1="14" y1="16" x2="18" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow3)"/>
-        <line x1="66" y1="16" x2="62" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow3)"/>
-        <line x1="2" y1="44" x2="6" y2="44" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow3)"/>
-        <line x1="74" y1="44" x2="78" y2="44" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow3)"/>
+        <circle cx="40" cy="40" r="35" fill="url(#igl1)"/>
+        <path d="M40 12 C22 12, 8 28, 8 44 C8 56, 16 66, 28 70 L28 82 L52 82 L52 70 C64 66, 72 56, 72 44 C72 28, 58 12, 40 12Z" fill="url(#ig1)" opacity="0.95"/>
+        <line x1="40" y1="1" x2="40" y2="7" stroke="#FCD34D" stroke-width="3" stroke-linecap="round" filter="url(#if1)"/>
+        <line x1="14" y1="16" x2="18" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#if1)"/>
+        <line x1="66" y1="16" x2="62" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#if1)"/>
         <path d="M40 32 L24 40 L24 60 L40 52Z" fill="white" opacity="0.9"/>
         <path d="M40 32 L56 40 L56 60 L40 52Z" fill="white" opacity="0.7"/>
-        <line x1="40" y1="32" x2="40" y2="52" stroke="white" stroke-width="2" opacity="0.5"/>
         <rect x="30" y="82" width="20" height="4" rx="1.5" fill="#475569"/>
         <rect x="32" y="86" width="16" height="4" rx="1.5" fill="#475569"/>
         <rect x="34" y="90" width="12" height="4" rx="2.5" fill="#475569"/>
       </svg>
     </div>
-
     <div class="card dark">
-      <h3>Ícone — Dark</h3>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" width="120" height="150">
+      <h3>Dark</h3>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" width="80" height="100">
         <defs>
-          <linearGradient id="g4" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#60A5FA"/>
-            <stop offset="50%" style="stop-color:#22D3EE"/>
-            <stop offset="100%" style="stop-color:#34D399"/>
-          </linearGradient>
-          <radialGradient id="lg4" cx="50%" cy="20%" r="60%">
-            <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:0.4"/>
-            <stop offset="100%" style="stop-color:#FCD34D;stop-opacity:0"/>
-          </radialGradient>
-          <filter id="glow4"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="ig2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#60A5FA"/><stop offset="50%" style="stop-color:#22D3EE"/><stop offset="100%" style="stop-color:#34D399"/></linearGradient>
+          <radialGradient id="igl2" cx="50%" cy="20%" r="60%"><stop offset="0%" style="stop-color:#FCD34D;stop-opacity:0.4"/><stop offset="100%" style="stop-color:#FCD34D;stop-opacity:0"/></radialGradient>
+          <filter id="if2"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         </defs>
-        <circle cx="40" cy="40" r="35" fill="url(#lg4)"/>
-        <path d="M40 12 C22 12, 8 28, 8 44 C8 56, 16 66, 28 70 L28 82 L52 82 L52 70 C64 66, 72 56, 72 44 C72 28, 58 12, 40 12Z" fill="url(#g4)" opacity="0.95"/>
-        <line x1="40" y1="1" x2="40" y2="7" stroke="#FCD34D" stroke-width="3" stroke-linecap="round" filter="url(#glow4)"/>
-        <line x1="14" y1="16" x2="18" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow4)"/>
-        <line x1="66" y1="16" x2="62" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow4)"/>
-        <line x1="2" y1="44" x2="6" y2="44" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow4)"/>
-        <line x1="74" y1="44" x2="78" y2="44" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#glow4)"/>
+        <circle cx="40" cy="40" r="35" fill="url(#igl2)"/>
+        <path d="M40 12 C22 12, 8 28, 8 44 C8 56, 16 66, 28 70 L28 82 L52 82 L52 70 C64 66, 72 56, 72 44 C72 28, 58 12, 40 12Z" fill="url(#ig2)" opacity="0.95"/>
+        <line x1="40" y1="1" x2="40" y2="7" stroke="#FCD34D" stroke-width="3" stroke-linecap="round" filter="url(#if2)"/>
+        <line x1="14" y1="16" x2="18" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#if2)"/>
+        <line x1="66" y1="16" x2="62" y2="21" stroke="#FCD34D" stroke-width="2.5" stroke-linecap="round" filter="url(#if2)"/>
         <path d="M40 32 L24 40 L24 60 L40 52Z" fill="white" opacity="0.9"/>
         <path d="M40 32 L56 40 L56 60 L40 52Z" fill="white" opacity="0.7"/>
-        <line x1="40" y1="32" x2="40" y2="52" stroke="white" stroke-width="2" opacity="0.5"/>
         <rect x="30" y="82" width="20" height="4" rx="1.5" fill="#94A3B8"/>
         <rect x="32" y="86" width="16" height="4" rx="1.5" fill="#94A3B8"/>
         <rect x="34" y="90" width="12" height="4" rx="2.5" fill="#94A3B8"/>
       </svg>
     </div>
-
   </div>
 </div>
 
