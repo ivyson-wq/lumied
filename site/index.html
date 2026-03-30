@@ -33,7 +33,8 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; }
+html { overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; width: 100%; position: relative; }
 
 /* ═══ HEADER ═══ */
 .header {
@@ -83,7 +84,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(99,102,241,.4); }
 .btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: rgba(255,255,255,.06); color: #fff; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 500; cursor: pointer; transition: all .2s; text-decoration: none; }
 .btn-secondary:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
-.hero-visual { position: relative; }
+.hero-visual { position: relative; overflow: hidden; }
 .hero-screenshot { width: 100%; border-radius: 16px; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 32px 80px rgba(0,0,0,.5); background: var(--dark-2); padding: 8px; }
 .hero-screenshot img { width: 100%; border-radius: 12px; display: block; }
 .hero-float { position: absolute; background: var(--dark-2); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px 18px; box-shadow: 0 16px 48px rgba(0,0,0,.3); }
@@ -99,7 +100,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 .logos-grid span { font-size: 18px; font-weight: 700; color: #fff; font-family: 'Playfair Display', serif; }
 
 /* ═══ SECTIONS ═══ */
-.section { padding: 100px 24px; }
+.section { padding: 100px 24px; overflow: hidden; }
 .section-dark { background: var(--dark); color: #fff; }
 .section-light { background: var(--bg-light); }
 .section-white { background: #fff; }
@@ -259,6 +260,11 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
   .cta-form { flex-direction: column; }
   .cta-form input { min-width: 100%; }
+  .hero-inner { gap: 24px; }
+  .hero { padding: 100px 16px 60px; }
+  .section { padding: 60px 16px; }
+  .container { padding: 0; }
+  img, video { max-width: 100%; height: auto; }
 }
 </style>
 </head>
