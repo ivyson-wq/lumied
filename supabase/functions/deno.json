@@ -1,5 +1,6 @@
 {
   "imports": {
-    "@std/testing/asserts": "https://deno.land/std@0.168.0/testing/asserts.ts"
+    "@std/testing/asserts": "jsr:@std/testing/asserts",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
   }
 }

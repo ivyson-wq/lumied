@@ -2,7 +2,7 @@
 //  Shared: Authentication helpers — hashing, tokens, sessions
 // ═══════════════════════════════════════════════════════════════
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 // ── Password hashing (PBKDF2 hex:hex, 100k iterations) ──
 export async function hashSenha(senha: string, iterations = 100000): Promise<string> {
@@ -45,7 +45,7 @@ export async function verificarSenhaV1(senha: string, stored: string): Promise<b
 }
 
 // ── Auto-detect password format and verify ──
-export async function verificarSenhaAuto(senha: string, stored: string): Promise<boolean> {
+export function verificarSenhaAuto(senha: string, stored: string): Promise<boolean> {
   if (stored.startsWith("v1:")) return verificarSenhaV1(senha, stored);
   return verificarSenha(senha, stored);
 }
@@ -89,6 +89,7 @@ export async function validarSessao(
     .single();
   if (!data) return null;
   if (new Date(data.expira_em) < new Date()) return null;
+  // deno-lint-ignore no-explicit-any
   return (data as any)[userTable] as { id: string; nome: string; email: string };
 }
 

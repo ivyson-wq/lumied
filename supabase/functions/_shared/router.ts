@@ -3,12 +3,12 @@
 //  Replaces the giant if/else action dispatch pattern
 // ═══════════════════════════════════════════════════════════════
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { errorResponse, successResponse, corsResponse, AppError } from "./errors.ts";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { errorResponse, corsResponse, AppError } from "./errors.ts";
 import { checkRateLimit, getClientIP, RateLimitConfig } from "./ratelimit.ts";
 import { validate, sanitizeBody, Schema } from "./validation.ts";
 import { createLogger } from "./logger.ts";
-import { requireModulo, getModulosHabilitados, getEscolaPadrao } from "./modulos.ts";
+import { getModulosHabilitados, getEscolaPadrao } from "./modulos.ts";
 
 export type Context = {
   req: Request;
@@ -76,6 +76,7 @@ export class Router {
     const allMiddlewares = [...this.globalMiddlewares, ...route.middlewares];
     let index = 0;
 
+    // deno-lint-ignore require-await
     const next = async (): Promise<Response> => {
       if (index < allMiddlewares.length) {
         return allMiddlewares[index++](ctx, next);
@@ -106,6 +107,7 @@ export class Router {
 
 /** Rate limiting middleware */
 export function rateLimit(config?: RateLimitConfig): Middleware {
+  // deno-lint-ignore require-await
   return async (ctx, next) => {
     const category = ctx.action.startsWith('login') ? 'login' : 'api';
     const result = checkRateLimit(ctx.ip, config ? ctx.action : category, config);
@@ -131,6 +133,7 @@ export function auth(sessionTable: string, userTable: string, userFields: string
     if (!data) throw new AppError("AUTH_INVALID", "Sessão inválida.");
     if (new Date(data.expira_em) < new Date()) throw new AppError("AUTH_EXPIRED", "Sessão expirada.");
 
+    // deno-lint-ignore no-explicit-any
     const user = (data as any)[userTable];
     ctx.user = { ...user, tipo: sessionTable.replace('_sessoes', '') };
     return next();
@@ -160,6 +163,7 @@ export function requireFeature(slug: string): Middleware {
 
 /** Input validation middleware */
 export function validateInput(schema: Schema): Middleware {
+  // deno-lint-ignore require-await
   return async (ctx, next) => {
     const errors = validate(ctx.body as Record<string, unknown>, schema);
     if (errors.length > 0) {

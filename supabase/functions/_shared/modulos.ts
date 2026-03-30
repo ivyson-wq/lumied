@@ -3,7 +3,7 @@
 //  Lógica: plano_modulos (template) + escola_modulos (override)
 // ═══════════════════════════════════════════════════════════════
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Retorna o Set de slugs de módulos habilitados para uma escola.

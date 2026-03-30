@@ -42,6 +42,7 @@ Deno.test("successResponse - returns 200 with data", async () => {
   assertEquals(body.nome, "Ana");
 });
 
+// deno-lint-ignore require-await
 Deno.test("successResponse - custom status", async () => {
   const res = successResponse({ created: true }, 201);
   assertEquals(res.status, 201);
