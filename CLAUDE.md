@@ -4,8 +4,8 @@
 
 Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feature gating por escola, 4 temas visuais, e LGPD compliance. Originalmente desenvolvida para Maple Bear Caxias do Sul, agora vendável como produto para qualquer escola bilíngue.
 
-**Domínio:** `app.maplebearcaxiasdosul.com.br`
-**Site comercial:** `app.maplebearcaxiasdosul.com.br/site/`
+**Domínio:** `maplebearcaxias.lumied.com.br` (padrão: `escola.lumied.com.br`)
+**Site comercial:** `maplebearcaxias.lumied.com.br/site/`
 
 **Stack:**
 - Frontend: HTML/CSS/JS + ES Modules, bundled com **esbuild** (32ms build), hospedado no **Vercel**
@@ -315,3 +315,103 @@ Total: **18 Edge Functions ativas** no Supabase.
   }
 }
 ```
+<<<<<<< HEAD
+=======
+GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → domínio escola A
+                     └──> Vercel Projeto B (env: SUPABASE_URL=yyy) → domínio escola B
+                     └──> Vercel Projeto C (env: SUPABASE_URL=zzz) → domínio escola C
+```
+
+### Build Script
+- `build.sh` gera `config.js` a partir de env vars do Vercel (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON`)
+- Se env vars não existem, mantém `config.js` do repo (fallback para escola atual)
+- `vercel.json` → `buildCommand: "bash build.sh"`
+
+### Novo Cliente (9 passos, ~15 min)
+1. **Supabase**: criar projeto → anotar REF + Anon Key
+2. **Script**: `bash deploy-novo-cliente.sh <REF> <TOKEN>` (migrations + Edge Functions)
+3. **Supabase Auth**: Site URL + Redirect URLs + Google Provider
+4. **Vercel**: import repo + env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON`)
+5. **DNS**: CNAME `app` → `cname.vercel-dns.com`
+6. **Google OAuth**: adicionar redirect URI do novo Supabase
+7. **setup.html**: wizard (nome, cores, módulos, primeiro gerente)
+8. **admin.html**: configurar secrets (RESEND obrigatório, ML/Inter/Google opcionais)
+9. **Testar** todos os portais
+
+> Guia detalhado: `NOVO-CLIENTE.md`
+
+---
+
+## Documentação do Projeto
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `CLAUDE.md` | Documentação técnica completa (este arquivo) |
+| `NOVO-CLIENTE.md` | Guia passo a passo para deploy de novo cliente |
+| `COMERCIAL.md` | Apresentação comercial: módulos, funcionalidades, planos, diferenciais |
+| `CONTEXTO.md` | Contexto histórico do projeto (legado) |
+| `MANIFEST.md` | Manifest de desenvolvimento (legado) |
+| `deploy-novo-cliente.sh` | Script automatizado de deploy (migrations + Edge Functions) |
+| `build.sh` | Build script Vercel (gera config.js a partir de env vars) |
+| `config.js` | Credenciais Supabase (fallback — sobrescrito no build por env vars) |
+| `site/index.html` | Landing page comercial "EduFlow" (vendas, planos, módulos, FAQ) |
+
+---
+
+## Modelo Comercial (SaaS por Assinatura)
+
+### Planos sugeridos (base + por aluno/mês)
+
+| Plano | Base/mês | Por aluno | Exemplo 300 alunos | Módulos |
+|-------|----------|-----------|---------------------|---------|
+| **Essencial** | R$ 199 | R$ 2,90 | R$ 1.069 | Pais + Gerente, turnos, atividades, calendário |
+| **Profissional** | R$ 399 | R$ 4,90 | R$ 1.869 | + Almoxarifado, CRM, Professoras, Secretaria, Pickup, Emergência |
+| **Completo** | R$ 699 | R$ 6,90 | R$ 2.769 | Todos os 14 módulos + todas as integrações |
+
+### Concorrência (referência de preço para 300 alunos)
+- WPensar: ~R$ 600 (básico)
+- Sistema Quality: ~R$ 1.500-2.200
+- Proesc: ~R$ 1.500-2.100
+- Sponte: ~R$ 2.000-2.500
+- ClassApp: ~R$ 1.200 (só comunicação)
+- TOTVS: R$ 5.000+ (enterprise)
+
+### Diferenciais competitivos
+- Almoxarifado com NF-e XML + busca de preços em 5 plataformas
+- CRM com extensão Chrome para WhatsApp
+- Pickup GPS em tempo real
+- Sistema de emergência (lockdown)
+- Login biométrico (Face ID/fingerprint)
+- White-label completo (cores, logo, módulos)
+- Zero taxa de implantação
+- Deploy em 15 minutos
+
+> Apresentação completa: `COMERCIAL.md`
+
+---
+
+## Site Comercial (Landing Page)
+
+Landing page interativa em `site/index.html` — marca **"EduFlow"** (editável).
+
+**URL**: `https://maplebearcaxias.lumied.com.br/site/` (ou domínio próprio para vendas)
+
+### Seções
+- **Hero**: título gradiente, mockup animado, stats (14 módulos, 4 portais, 6 integrações)
+- **Portais**: 4 cards com hover (pais, professoras, secretaria, gerente)
+- **Módulos**: 6 tabs interativas (almoxarifado, CRM, financeiro, pickup, emergência, manutenção) com features e visual
+- **Diferenciais**: 6 cards animados (white-label, biometria, NF-e, WhatsApp, pickup GPS, setup 15min)
+- **Números**: barra com métricas do sistema
+- **Preços**: 3 planos (Essencial, Profissional, Completo) com badge "Mais popular", exemplos de valor
+- **FAQ**: 6 perguntas colapsáveis
+- **CTA**: botões WhatsApp + email
+- **Footer**: links, contato, copyright
+
+### Técnico
+- HTML/CSS/JS puro (zero dependências)
+- Google Fonts (Inter + Playfair Display)
+- Scroll reveal animations (IntersectionObserver)
+- 100% responsivo (mobile, tablet, desktop)
+- CTAs apontam para WhatsApp (número editável no HTML)
+- Marca "EduFlow" editável em ~10 ocorrências no arquivo
+>>>>>>> 28bad58 (feat: migrar domínio para escola.lumied.com.br)

@@ -36,13 +36,13 @@ INSERT INTO escola_config (chave, valor, descricao, categoria) VALUES
 ('escola_nome',        '"Maple Bear Caxias do Sul"',   'Nome da escola',           'escola'),
 ('escola_subtitulo',   '"Rio Grande do Sul"',           'Subtítulo / cidade',       'escola'),
 ('escola_cnpj',        '"44.034.235/0001-70"',          'CNPJ da escola',           'escola'),
-('escola_email_domain','"maplebearcaxiasdosul.com.br"', 'Domínio de e-mail',        'escola'),
-('escola_email_sender','"noreply@maplebearcaxiasdosul.com.br"', 'E-mail remetente', 'escola'),
-('escola_url',         '"https://app.maplebearcaxiasdosul.com.br"', 'URL pública',  'escola'),
+('escola_email_domain','"lumied.com.br"', 'Domínio de e-mail',        'escola'),
+('escola_email_sender','"noreply@lumied.com.br"', 'E-mail remetente', 'escola'),
+('escola_url',         '"https://maplebearcaxias.lumied.com.br"', 'URL pública',  'escola'),
 ('escola_lat',         '-28.8628',                      'Latitude da escola',       'escola'),
 ('escola_lon',         '-51.5201',                      'Longitude da escola',      'escola'),
 ('escola_pickup_raio', '200',                           'Raio (metros) para pickup','escola'),
-('escola_email_notif', '"secretaria@maplebearcaxiasdosul.com.br"', 'E-mail que recebe notificações (ausências, turnos, etc.)', 'escola'),
+('escola_email_notif', '"secretaria@lumied.com.br"', 'E-mail que recebe notificações (ausências, turnos, etc.)', 'escola'),
 ('escola_resend_info', '"Configure RESEND_API_KEY nos secrets do Supabase Edge Functions"', 'Instrução de config do Resend', 'escola'),
 ('superusuario_email', '"ivyson@gmail.com"', 'E-mail do superusuário (único com acesso ao admin.html)', 'sistema')
 ON CONFLICT (chave) DO NOTHING;

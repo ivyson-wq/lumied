@@ -18,7 +18,7 @@ Sistema web para a escola **Maple Bear Bento Gonçalves, RS** (franquia canadens
 | Backend | Supabase (banco PostgreSQL + Edge Functions Deno) |
 | Auth pública | Supabase Auth (Magic Link + Google OAuth) |
 | Auth gerentes | Sistema próprio (tabela `gerentes` + senhas PBKDF2) |
-| E-mail | Resend HTTP API (domínio: maplebearcaxiasdosul.com.br) |
+| E-mail | Resend HTTP API (domínio: lumied.com.br) |
 | PDF | jsPDF + html2canvas (gerado no navegador) |
 | PWA | manifest.json + service worker (sw.js) |
 
@@ -38,8 +38,8 @@ Sistema web para a escola **Maple Bear Bento Gonçalves, RS** (franquia canadens
 - `GOOGLE_SERVICE_ACCOUNT` — JSON da service account Google (opcional, para Google Calendar)
 
 ### Resend
-- **Domínio verificado:** `maplebearcaxiasdosul.com.br`
-- **Sender:** `noreply@maplebearcaxiasdosul.com.br`
+- **Domínio verificado:** `lumied.com.br`
+- **Sender:** `noreply@lumied.com.br`
 - **Uso:** API HTTP direta (NÃO usar biblioteca SMTP — quebra com Deno runtime atual)
 
 ### Google OAuth (para login público)

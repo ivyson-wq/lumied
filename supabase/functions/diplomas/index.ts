@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
         })
         if (insErr) return new Response('Erro ao salvar token: ' + insErr.message, { status: 500 })
         // Redirect to static success page on Vercel
-        const appUrl = Deno.env.get('APP_URL') || 'https://app.maplebearcaxiasdosul.com.br'
+        const appUrl = Deno.env.get('APP_URL') || 'https://maplebearcaxias.lumied.com.br'
         return Response.redirect(appUrl + '/ml-conectado.html', 302)
       }
       return new Response('Erro ao obter token do ML: ' + JSON.stringify(t), { status: 400, headers: { 'Content-Type': 'text/plain' } })
