@@ -7,6 +7,9 @@ import { appStore } from '../../shared/state.js';
 import { showToast } from '../../shared/components/toast.js';
 import { renderTable, fmt } from '../../shared/components/data-table.js';
 import { createModal } from '../../shared/components/modal.js';
+import { initSentry, setSentryUser } from '../../shared/sentry.js';
+
+initSentry();
 
 // ═══ CONFIG ═══
 const SUPABASE_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
@@ -22,6 +25,10 @@ const api = createClient(SUPABASE_ANON, {
     setTimeout(() => location.reload(), 1500);
   },
 });
+
+// Update Sentry user context when user changes
+appStore.subscribe('user', (user) => setSentryUser(user, appStore.get('escola_id')));
+appStore.subscribe('escola_id', (id) => setSentryUser(appStore.get('user'), id));
 
 // Expose for inline scripts (backward compat during migration)
 window.__api = api;

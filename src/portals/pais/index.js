@@ -4,6 +4,9 @@
 import { createClient } from '../../shared/api-client.js';
 import { appStore } from '../../shared/state.js';
 import { showToast } from '../../shared/components/toast.js';
+import { initSentry, setSentryUser } from '../../shared/sentry.js';
+
+initSentry();
 
 const SUPABASE_ANON = window.__SUPABASE_ANON || '';
 
@@ -26,6 +29,10 @@ async function loadModulosHabilitadosPais() {
     }
   } catch {}
 }
+
+// Update Sentry user context when user changes
+appStore.subscribe('user', (user) => setSentryUser(user, appStore.get('escola_id')));
+appStore.subscribe('escola_id', (id) => setSentryUser(appStore.get('user'), id));
 
 window.__api = api;
 window.__store = appStore;
