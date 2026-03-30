@@ -1,0 +1,11 @@
+node_modules
+capture-screenshots.js
+capture-internal.js
+capture-videos.js
+supabase
+.claude
+seed_*.py
+*.p7b
+*.rar
+manual_*.pdf
+package-lock.json

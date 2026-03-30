@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tema Lúdico — Preview Completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#FFF5ED;color:#2D1B69;display:flex;min-height:100vh}
+
+/* ═══ SIDEBAR ═══ */
+.sb{width:240px;background:linear-gradient(180deg,#2D1B69 0%,#5B3CA1 50%,#7C5CBF 100%);padding:16px 12px;flex-shrink:0;overflow-y:auto;position:relative;}
+.sb::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,rgba(45,27,105,.4));pointer-events:none;}
+.sb{padding-bottom:70px;}
+.sb-brand{padding:12px;margin-bottom:16px;text-align:center;}
+.sb-mascot{font-size:48px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.2));animation:mascotBounce 3s ease infinite;}
+@keyframes mascotBounce{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-8px) rotate(-3deg)}75%{transform:translateY(-4px) rotate(3deg)}}
+.sb-brand h1{font-family:'Baloo 2',cursive;font-size:20px;color:#FFB347;margin-top:4px;text-shadow:0 2px 4px rgba(0,0,0,.2);}
+.sb-brand small{font-size:11px;color:rgba(255,255,255,.5);}
+.sb-section{margin-bottom:4px;}
+.sb-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,179,71,.5);padding:14px 12px 6px;display:flex;align-items:center;gap:6px;}
+.sb-lbl::before{content:'';flex:1;height:1px;background:rgba(255,255,255,.08);}
+.sb-lbl::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08);}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;color:rgba(255,255,255,.75);font-size:14px;font-weight:600;margin-bottom:3px;cursor:pointer;transition:all .25s;}
+.ni:hover{background:rgba(255,255,255,.08);transform:translateX(4px);}
+.ni.active{background:linear-gradient(135deg,#FF6B35,#FFB347);color:#fff;box-shadow:0 4px 16px rgba(255,107,53,.4);transform:scale(1.02);}
+.ni .icon{font-size:20px;width:28px;text-align:center;}
+.ni .label{flex:1;}
+.ni .badge{background:rgba(255,255,255,.25);font-size:10px;padding:2px 8px;border-radius:100px;font-weight:700;}
+
+/* ═══ MAIN ═══ */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{background:linear-gradient(90deg,#FFF5ED,#FFE4CC);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #FFB347;}
+.topbar h2{font-family:'Baloo 2',cursive;font-size:22px;color:#2D1B69;display:flex;align-items:center;gap:8px;}
+.topbar .greeting{font-size:13px;color:#9B8EC4;}
+.topbar .greeting strong{color:#2D1B69;}
+.live{display:flex;align-items:center;gap:6px;font-size:12px;color:#4CAF50;font-weight:600;background:rgba(76,175,80,.1);padding:4px 12px;border-radius:100px;}
+.live .dot{width:8px;height:8px;background:#4CAF50;border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+.content{padding:24px 28px;flex:1;overflow-y:auto;}
+
+/* ═══ STATS com ilustrações ═══ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat{background:#fff;border:2.5px solid #FFD4B8;border-radius:24px;padding:20px 16px;text-align:center;position:relative;overflow:hidden;transition:all .3s;}
+.stat:hover{transform:translateY(-6px) rotate(-1deg);box-shadow:0 12px 32px rgba(255,107,53,.15);border-color:#FF6B35;}
+.stat .illust{font-size:36px;margin-bottom:4px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.1));}
+.stat .value{font-family:'Baloo 2',cursive;font-size:36px;font-weight:800;color:#2D1B69;line-height:1;}
+.stat .label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9B8EC4;margin-top:2px;}
+.stat .sub{font-size:10px;color:#C4B8E0;}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:24px 24px 0 0;}
+.stat:nth-child(1)::after{background:linear-gradient(90deg,#FF6B35,#FFB347);}
+.stat:nth-child(2)::after{background:linear-gradient(90deg,#4CAF50,#81C784);}
+.stat:nth-child(3)::after{background:linear-gradient(90deg,#42A5F5,#90CAF9);}
+.stat:nth-child(4)::after{background:linear-gradient(90deg,#AB47BC,#CE93D8);}
+
+/* ═══ CARDS ═══ */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.card{background:#fff;border:2.5px solid #FFD4B8;border-radius:20px;padding:20px;position:relative;overflow:hidden;}
+.card:hover{border-color:#FF6B35;}
+.card-title{font-family:'Baloo 2',cursive;font-size:16px;color:#2D1B69;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.card-title .card-icon{font-size:22px;}
+
+/* Gráfico estilizado */
+.chart{display:flex;align-items:flex-end;gap:8px;height:130px;padding:8px 0;}
+.bar-group{flex:1;display:flex;gap:3px;align-items:flex-end;}
+.bar{border-radius:8px 8px 4px 4px;transition:height .5s ease;}
+.bar.receita{background:linear-gradient(180deg,#FF6B35,#FFB347);}
+.bar.despesa{background:linear-gradient(180deg,#E0E0E0,#BDBDBD);}
+.chart-labels{display:flex;justify-content:space-between;font-size:10px;color:#9B8EC4;margin-top:6px;padding:0 4px;}
+
+/* Notificações estilizadas */
+.notif{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:2px dashed #FFE4CC;}
+.notif:last-child{border:none;}
+.notif-icon{font-size:24px;width:36px;height:36px;background:#FFF5ED;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.notif-text{font-size:12px;color:#2D1B69;line-height:1.4;flex:1;}
+.notif-text b{color:#FF6B35;}
+.notif-time{font-size:10px;color:#C4B8E0;flex-shrink:0;}
+
+/* Tabela estilizada */
+.table-wrap{background:#fff;border:2.5px solid #FFD4B8;border-radius:20px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{padding:12px 16px;text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#FF6B35;background:#FFF5ED;}
+tbody td{padding:12px 16px;border-bottom:2px dashed #FFE4CC;}
+tbody tr:last-child td{border:none;}
+tbody tr:hover{background:#FFFAF5;}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:700;}
+.pill-g{background:rgba(76,175,80,.12);color:#2E7D32;}.pill-r{background:rgba(255,107,53,.12);color:#E64A19;}
+.pill-g::before{content:'🌟';font-size:12px;}.pill-r::before{content:'📚';font-size:12px;}
+.aluno-name{display:flex;align-items:center;gap:8px;}
+.aluno-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.av1{background:#FFE0B2;}.av2{background:#C8E6C9;}.av3{background:#BBDEFB;}.av4{background:#E1BEE7;}.av5{background:#FFCCBC;}.av6{background:#B2DFDB;}
+
+/* Pickup card lúdico */
+.pickup-banner{background:linear-gradient(135deg,#4CAF50,#81C784);border-radius:20px;padding:20px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden;}
+.pickup-banner::before{content:'🌈';position:absolute;top:8px;right:16px;font-size:40px;opacity:.3;}
+.pickup-banner h3{font-family:'Baloo 2',cursive;font-size:18px;margin-bottom:4px;}
+.pickup-banner p{font-size:12px;opacity:.85;}
+.pickup-road-fun{height:60px;background:linear-gradient(180deg,#87CEEB 0%,#87CEEB 50%,#A5D6A7 50%,#66BB6A 100%);border-radius:14px;margin-top:12px;position:relative;overflow:hidden;}
+.pickup-road-fun .road{position:absolute;bottom:16px;left:0;right:0;height:14px;background:#795548;border-radius:4px;}
+.pickup-road-fun .dash{position:absolute;top:50%;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg,#FFF9C4 0,#FFF9C4 12px,transparent 12px,transparent 24px);transform:translateY(-50%);animation:dashMove .8s linear infinite;}
+@keyframes dashMove{to{transform:translateY(-50%) translateX(-24px)}}
+.pickup-road-fun .house{position:absolute;bottom:26px;left:8px;font-size:24px;}
+.pickup-road-fun .school{position:absolute;bottom:26px;right:8px;font-size:24px;}
+.pickup-road-fun .car{position:absolute;bottom:24px;left:40%;font-size:28px;transform:scaleX(-1);animation:carWiggle .4s ease infinite;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
+@keyframes carWiggle{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-4px)}}
+.pickup-road-fun .family{position:absolute;bottom:42px;left:calc(40% + 4px);font-size:14px;}
+.pickup-road-fun .cloud{position:absolute;top:4px;font-size:14px;opacity:.5;animation:cloudDrift 15s linear infinite;}
+.pickup-road-fun .cloud:nth-child(2){left:60%;animation-delay:5s;font-size:12px;}
+@keyframes cloudDrift{0%{transform:translateX(0)}100%{transform:translateX(-300px)}}
+
+/* Floating elements */
+.float-star{position:fixed;pointer-events:none;animation:starFloat 4s ease infinite;}
+@keyframes starFloat{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-20px) rotate(180deg)}}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sb">
+  <div class="sb-brand">
+    <div class="sb-mascot">🦉</div>
+    <h1>Escola Feliz!</h1>
+    <small>Painel da Direção</small>
+  </div>
+
+  <div class="ni active"><span class="icon">🏠</span><span class="label">Início</span></div>
+
+  <div class="sb-lbl">Aprendizado</div>
+  <div class="ni"><span class="icon">📝</span><span class="label">Notinhas</span><span class="badge">24</span></div>
+  <div class="ni"><span class="icon">✋</span><span class="label">Chamadinha</span></div>
+  <div class="ni"><span class="icon">📖</span><span class="label">Diário da Turma</span></div>
+  <div class="ni"><span class="icon">🌟</span><span class="label">Conquistas</span><span class="badge">3</span></div>
+
+  <div class="sb-lbl">Professoras</div>
+  <div class="ni"><span class="icon">🏆</span><span class="label">Diplominha</span></div>
+  <div class="ni"><span class="icon">🌱</span><span class="label">Crescimento</span></div>
+  <div class="ni"><span class="icon">🎨</span><span class="label">Materiais</span></div>
+
+  <div class="sb-lbl">Famílias</div>
+  <div class="ni"><span class="icon">🚗</span><span class="label">Vai buscar!</span><span class="badge" style="background:rgba(76,175,80,.5);">2</span></div>
+  <div class="ni"><span class="icon">💬</span><span class="label">Conversinha</span></div>
+  <div class="ni"><span class="icon">📅</span><span class="label">Dia a Dia</span></div>
+  <div class="ni"><span class="icon">📊</span><span class="label">Enquetes</span></div>
+
+  <div class="sb-lbl">Organização</div>
+  <div class="ni"><span class="icon">💰</span><span class="label">Cofrinho</span></div>
+  <div class="ni"><span class="icon">📦</span><span class="label">Armário</span></div>
+  <div class="ni"><span class="icon">🔧</span><span class="label">Ajudinha</span></div>
+  <div class="ni"><span class="icon">🔍</span><span class="label">Achados</span></div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <div class="topbar">
+    <h2>🏠 Painel da Escola</h2>
+    <div class="greeting">Bom dia, <strong>Diretora Ana!</strong> 🌞</div>
+    <div class="live"><div class="dot"></div>Tudo atualizado!</div>
+  </div>
+
+  <div class="content">
+    <!-- Pickup Banner -->
+    <div class="pickup-banner">
+      <h3>🚗 Alguém vem buscar!</h3>
+      <p>2 famílias estão a caminho da escola agora</p>
+      <div class="pickup-road-fun">
+        <div class="cloud" style="left:20%;">☁️</div>
+        <div class="cloud" style="left:60%;">☁️</div>
+        <div class="road"><div class="dash"></div></div>
+        <span class="house">🏡</span>
+        <span class="school">🏫</span>
+        <span class="car">🚗</span>
+        <span class="family">👨‍👩‍👧</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="illust">👧👦</div>
+        <div class="value">247</div>
+        <div class="label">Crianças</div>
+        <div class="sub">+12 esse mês 🎉</div>
+      </div>
+      <div class="stat">
+        <div class="illust">🌈</div>
+        <div class="value">96%</div>
+        <div class="label">Presença</div>
+        <div class="sub">Turma animada! 💪</div>
+      </div>
+      <div class="stat">
+        <div class="illust">🐷</div>
+        <div class="value">R$82k</div>
+        <div class="label">Cofrinho</div>
+        <div class="sub">Receita do mês</div>
+      </div>
+      <div class="stat">
+        <div class="illust">🎯</div>
+        <div class="value">15</div>
+        <div class="label">Novos amigos</div>
+        <div class="sub">Leads no CRM</div>
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-title"><span class="card-icon">📊</span> Como foi o mês</div>
+        <div class="chart">
+          <div class="bar-group"><div class="bar receita" style="height:50px"></div><div class="bar despesa" style="height:30px"></div></div>
+          <div class="bar-group"><div class="bar receita" style="height:60px"></div><div class="bar despesa" style="height:35px"></div></div>
+          <div class="bar-group"><div class="bar receita" style="height:75px"></div><div class="bar despesa" style="height:38px"></div></div>
+          <div class="bar-group"><div class="bar receita" style="height:85px"></div><div class="bar despesa" style="height:40px"></div></div>
+          <div class="bar-group"><div class="bar receita" style="height:95px"></div><div class="bar despesa" style="height:42px"></div></div>
+          <div class="bar-group"><div class="bar receita" style="height:110px"></div><div class="bar despesa" style="height:38px"></div></div>
+        </div>
+        <div class="chart-labels"><span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-icon">🔔</span> Novidades!</div>
+        <div class="notif"><div class="notif-icon">🎉</div><div class="notif-text"><b>Sophia</b> acabou de se matricular no Bear Care!</div><div class="notif-time">agora</div></div>
+        <div class="notif"><div class="notif-icon">🏆</div><div class="notif-text"><b>Prof. Ana</b> enviou um diplominha para Year 2</div><div class="notif-time">10:30</div></div>
+        <div class="notif"><div class="notif-icon">📦</div><div class="notif-text"><b>Armário:</b> 12 itens pedidos pela Year 3</div><div class="notif-time">09:15</div></div>
+        <div class="notif"><div class="notif-icon">💰</div><div class="notif-text"><b>Fam. Oliveira</b> pagou a mensalidade! 🎊</div><div class="notif-time">08:45</div></div>
+        <div class="notif"><div class="notif-icon">🌱</div><div class="notif-text"><b>3 Crescimentos</b> prontos para revisão</div><div class="notif-time">ontem</div></div>
+      </div>
+    </div>
+
+    <!-- Tabela de Notas -->
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Criança</th><th>Turma</th><th>Prova 1</th><th>Prova 2</th><th>Trabalhinho</th><th>Média ⭐</th><th>Como foi?</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div class="aluno-name"><div class="aluno-avatar av1">🦊</div><b>Ana Beatriz</b></div></td>
+            <td>Year 2</td><td>8.5</td><td>9.0</td><td>8.0</td>
+            <td style="font-weight:800;color:#2E7D32;font-size:16px;">8.7 ⭐</td>
+            <td><span class="pill pill-g">Arrasou!</span></td>
+          </tr>
+          <tr>
+            <td><div class="aluno-name"><div class="aluno-avatar av2">🐻</div><b>Bruno Costa</b></div></td>
+            <td>Year 2</td><td>7.0</td><td>6.5</td><td>8.5</td>
+            <td style="font-weight:800;color:#2E7D32;font-size:16px;">7.2 ✨</td>
+            <td><span class="pill pill-g">Muito bem!</span></td>
+          </tr>
+          <tr>
+            <td><div class="aluno-name"><div class="aluno-avatar av3">🦋</div><b>Carolina Mendes</b></div></td>
+            <td>Year 2</td><td>5.5</td><td>6.0</td><td>7.0</td>
+            <td style="font-weight:800;color:#E64A19;font-size:16px;">6.2</td>
+            <td><span class="pill pill-r">Vamos estudar!</span></td>
+          </tr>
+          <tr>
+            <td><div class="aluno-name"><div class="aluno-avatar av4">🦄</div><b>Daniel Oliveira</b></div></td>
+            <td>Year 2</td><td>9.5</td><td>9.0</td><td>10.0</td>
+            <td style="font-weight:800;color:#2E7D32;font-size:16px;">9.4 🏆</td>
+            <td><span class="pill pill-g">Incrível!</span></td>
+          </tr>
+          <tr>
+            <td><div class="aluno-name"><div class="aluno-avatar av5">🐰</div><b>Eduarda Santos</b></div></td>
+            <td>Year 2</td><td>8.0</td><td>7.5</td><td>9.0</td>
+            <td style="font-weight:800;color:#2E7D32;font-size:16px;">8.1 ⭐</td>
+            <td><span class="pill pill-g">Arrasou!</span></td>
+          </tr>
+          <tr>
+            <td><div class="aluno-name"><div class="aluno-avatar av6">🐸</div><b>Felipe Rocha</b></div></td>
+            <td>Year 2</td><td>7.5</td><td>8.0</td><td>7.0</td>
+            <td style="font-weight:800;color:#2E7D32;font-size:16px;">7.7 ✨</td>
+            <td><span class="pill pill-g">Muito bem!</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,11 +1,18 @@
 // ═══════════════════════════════════════════════════════════════
-//  Maple Bear BG — Edge Function: api
-//  Gerencia TUDO: login, sessões, solicitações, séries, gerentes
-//  SEM Supabase Auth — sistema próprio de senhas e sessões
+//  Maple Bear RS — Edge Function: api (v2 — Hybrid Router + Legacy)
+//  Router para actions migradas, fallback para actions legadas
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode } from "../_shared/webauthn.ts";
+import { getModulosHabilitados, getEscolaPadrao } from "../_shared/modulos.ts";
+import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
+import { sanitizeBody } from "../_shared/validation.ts";
+import { errorResponse } from "../_shared/errors.ts";
+import { corsResponse } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/logger.ts";
+
+const log = createLogger("api");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +68,7 @@ async function validarSessao(admin: ReturnType<typeof createClient>, token: stri
 }
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method === "OPTIONS") return corsResponse();
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -69,8 +76,22 @@ serve(async (req: Request) => {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
+  // Parse body once
+  const bodyText = await req.text();
   let body: Record<string, unknown> = {};
-  try { body = await req.json(); } catch { return err("Body inválido"); }
+  try { body = JSON.parse(bodyText); } catch { return err("Body inválido"); }
+
+  // Apply rate limiting
+  const reqAction = (body.action as string) || '';
+  const ip = getClientIP(req);
+  const rl = checkRateLimit(ip, reqAction.startsWith("login") ? "login" : "api");
+  if (!rl.allowed) return errorResponse("RATE_LIMITED", `Tente novamente em ${rl.retryAfterSeconds}s.`);
+
+  // Sanitize body
+  body = sanitizeBody(body) as Record<string, unknown>;
+
+  // Log request
+  const startTime = Date.now();
   const { action } = body;
 
   // ════════════════════════════════════════════════════════════
@@ -1568,6 +1589,99 @@ serve(async (req: Request) => {
       await admin.from("webauthn_credentials").insert({ usuario_tipo: "gerente", usuario_id: gerente.id, credential_id: result.credentialId, public_key: result.publicKey, sign_count: result.signCount, transports: credential.transports || ["internal"], rp_id });
       return ok({ success: true });
     } catch (e) { return err("Verificação falhou: " + (e as Error).message, 400); }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  MATRÍCULA / REMATRÍCULA ONLINE
+  // ═══════════════════════════════════════════════════════════
+
+  if (action === "matricula_formulario_get") {
+    const { ano, tipo } = body as any;
+    const { data } = await admin.from("matricula_formularios").select("*").eq("ano", ano || new Date().getFullYear()).eq("tipo", tipo || "nova").eq("ativo", true).single();
+    return ok(data || { campos: [] });
+  }
+
+  if (action === "matricula_formulario_create") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { ano, tipo, titulo, campos } = body as any;
+    if (!ano || !tipo) return err("Ano e tipo obrigatórios.");
+    const { data, error } = await admin.from("matricula_formularios").upsert({ ano, tipo, titulo, campos: campos || [] }, { onConflict: "ano,tipo" }).select().single();
+    if (error) return err(error.message);
+    return ok(data);
+  }
+
+  if (action === "matricula_submit") {
+    const { ano, dados, documentos_base64 } = body as any;
+    if (!dados || !dados.nome_crianca || !dados.email) return err("Dados incompletos.");
+    // Criar matrícula no CRM
+    const { data: mat, error } = await admin.from("crm_matriculas").insert({
+      nome_crianca: dados.nome_crianca,
+      serie: dados.serie_pretendida || dados.serie_proxima || null,
+      ano: ano || new Date().getFullYear(),
+      status: "reserva",
+      nome_responsavel: dados.nome_responsavel || null,
+      email: dados.email,
+      telefone: dados.telefone || null,
+      data_nascimento: dados.data_nascimento || null,
+      observacoes: dados.observacoes || null
+    }).select().single();
+    if (error) return err(error.message);
+    return ok(mat);
+  }
+
+  if (action === "matricula_documentos_upload") {
+    const { matricula_id, tipo, base64, mime, nome_arquivo } = body as any;
+    if (!matricula_id || !tipo || !base64) return err("matricula_id, tipo e base64 obrigatórios.");
+    const bytes = Uint8Array.from(atob(base64), (c: string) => c.charCodeAt(0));
+    const ext = (mime || "application/pdf").split("/")[1] || "pdf";
+    const fileName = `matriculas/${matricula_id}/${Date.now()}_${tipo}.${ext}`;
+    const { error: upErr } = await admin.storage.from("documentos").upload(fileName, bytes, { contentType: mime || "application/pdf", upsert: false });
+    if (upErr) return err(upErr.message);
+    const { data: { publicUrl } } = admin.storage.from("documentos").getPublicUrl(fileName);
+    const { data, error } = await admin.from("matricula_documentos").insert({ matricula_id, tipo, nome_arquivo, arquivo_url: publicUrl }).select().single();
+    if (error) return err(error.message);
+    return ok(data);
+  }
+
+  if (action === "rematricula_gerar_lote") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { ano } = body as any;
+    const anoAlvo = ano || new Date().getFullYear() + 1;
+    // Buscar famílias ativas
+    const { data: familias } = await admin.from("familias").select("email, nome_aluno, nome_responsavel, serie");
+    if (!familias || familias.length === 0) return ok({ count: 0 });
+    let count = 0;
+    for (const f of familias) {
+      const { error } = await admin.from("crm_matriculas").upsert({
+        nome_crianca: f.nome_aluno, serie: f.serie, ano: anoAlvo, status: "reserva",
+        nome_responsavel: f.nome_responsavel, email: f.email
+      }, { onConflict: "email,ano" }).select();
+      if (!error) count++;
+    }
+    return ok({ success: true, count });
+  }
+
+  if (action === "matricula_status_list") {
+    const { ano, status } = body as any;
+    let q = admin.from("crm_matriculas").select("*, matricula_documentos(tipo, validado)").order("criado_em", { ascending: false });
+    if (ano) q = q.eq("ano", ano);
+    if (status) q = q.eq("status", status);
+    const { data } = await q;
+    return ok(data ?? []);
+  }
+
+  // ── Módulos habilitados (feature gating) ──
+  if (action === "modulos_habilitados") {
+    try {
+      const escolaId = await getEscolaPadrao(admin);
+      if (!escolaId) return ok({ modulos: [], tema: 'corporativo' });
+      const modulos = await getModulosHabilitados(admin, escolaId);
+      // Buscar tema da escola
+      const { data: escola } = await admin.from("escolas").select("tema").eq("id", escolaId).single();
+      return ok({ modulos: [...modulos], tema: escola?.tema || 'corporativo' });
+    } catch { return ok({ modulos: [], tema: 'corporativo' }); }
   }
 
   // WebAuthn login (public — before session validation)

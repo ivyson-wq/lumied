@@ -10,7 +10,8 @@
 :root{--red:#C8102E;--cream:#f8f5f0;--sb:#1c1712;--border:#e6ddd3;--text:#1a1a1a;--muted:#7a7169;--white:#fff;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--sb);min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
-body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+body{overflow-x:hidden;}
+body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
 
 .container{max-width:480px;width:90%;position:relative;z-index:1;}
 
@@ -62,6 +63,24 @@ body::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-6
     <div class="portal-info">
       <h3>Portal da Secretaria</h3>
       <p>Destinado às atividades administrativas da secretaria escolar.</p>
+    </div>
+    <span class="portal-arrow">→</span>
+  </a>
+
+  <a href="aluno.html" class="portal-card">
+    <div class="portal-icon" style="background:rgba(26,107,181,.1);color:#1a6bb5;">🎓</div>
+    <div class="portal-info">
+      <h3>Portal do Aluno</h3>
+      <p>Acesso do aluno a notas, frequência, provas e calendário.</p>
+    </div>
+    <span class="portal-arrow">→</span>
+  </a>
+
+  <a href="admin.html" class="portal-card">
+    <div class="portal-icon" style="background:rgba(107,63,160,.1);color:#6b3fa0;">🔧</div>
+    <div class="portal-info">
+      <h3>Painel Admin</h3>
+      <p>Gestão de escolas, planos e módulos. Acesso restrito a superadmins.</p>
     </div>
     <span class="portal-arrow">→</span>
   </a>

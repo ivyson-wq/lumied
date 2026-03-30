@@ -2,17 +2,17 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title id="pageTitle">Carregando...</title>
-<meta name="description" id="metaDesc" content="">
-<meta name="theme-color" id="metaTheme" content="#C8102E">
+<title>Maple Bear RS</title>
+<meta name="description" content="Sistema de solicitações, atividades e agenda da Maple Bear Rio Grande do Sul">
+<meta name="theme-color" content="#C8102E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" id="metaAppTitle" content="">
+<meta name="apple-mobile-web-app-title" content="Maple Bear">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon-apple.png">
 <link rel="apple-touch-icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="/config.js"></script>
+<script src="/dist/pais/index.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/webauthn-client.js"></script>
 <style>
@@ -186,6 +186,9 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .success-tag{display:inline-block;margin-top:20px;background:var(--red-light);color:var(--red);border:1px solid rgba(200,16,46,.2);padding:8px 18px;border-radius:100px;font-size:13px;font-weight:500;}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
 .spinner.dark{border-color:rgba(200,16,46,.2);border-top-color:var(--red);}
+@keyframes cloudMove{0%{transform:translateX(0)}100%{transform:translateX(-400px)}}
+@keyframes roadMove{0%{transform:translateY(-50%) translateX(0)}100%{transform:translateY(-50%) translateX(-40px)}}
+@keyframes carBounce{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-3px)}}
 @keyframes spin{to{transform:rotate(360deg);}}
 /* AGENDA */
 .agenda-semana{display:flex;flex-direction:column;gap:10px;}
@@ -243,9 +246,11 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .bnav-item.active{color:var(--red);}
 .bnav-icon{font-size:20px;line-height:1;}
 .bnav-label{font-size:9px;font-weight:600;letter-spacing:.3px;}
+.bnav-more-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;border:none;background:#faf8f5;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text);cursor:pointer;}
+.bnav-more-item:hover{background:var(--red-light);color:var(--red);}
+.bnav-more-item span{font-size:22px;}
 .bnav-badge{position:absolute;top:2px;right:calc(50% - 16px);width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid #fff;}
 .bnav-item{position:relative;}
-.bnav-sidebar-brand{display:none;}
 body.has-bottomnav{padding-bottom:72px;}
 
 /* HEADER COMPACT */
@@ -273,23 +278,15 @@ body.has-bottomnav{padding-bottom:72px;}
 /* DESKTOP: login card wider */
 @media(min-width:768px){#loginWall{max-width:520px;}.login-card{padding:48px 44px;}}
 
-/* DESKTOP: bottom nav becomes sidebar */
+/* DESKTOP: bottom nav becomes top nav bar */
 @media(min-width:900px){
-.bottom-nav{position:fixed;top:0;left:0;bottom:0;width:220px;flex-direction:column;justify-content:flex-start;border-top:none;box-shadow:2px 0 16px rgba(0,0,0,.06);border-right:1px solid var(--border);padding:0;z-index:200;background:#fff;overflow-y:auto;}
+.bottom-nav{position:static;border-top:none;box-shadow:none;border-bottom:1px solid var(--border);padding:0;justify-content:center;gap:0;}
 .bottom-nav.visible{display:flex;}
-.bnav-sidebar-brand{display:flex;flex-direction:column;align-items:center;gap:6px;padding:24px 16px 18px;border-bottom:1px solid var(--border);background:var(--red);color:#fff;}
-.bnav-sidebar-brand .sb-leaf{font-size:28px;}
-.bnav-sidebar-brand .sb-title{font-family:'Lora',serif;font-size:14px;font-weight:700;color:#fff;}
-.bnav-sidebar-brand .sb-sub{font-size:10px;color:rgba(255,255,255,.65);}
-.bnav-item{flex:none;flex-direction:row;gap:10px;padding:13px 20px;border-bottom:none;border-left:3px solid transparent;border-radius:0;transition:all .15s;}
-.bnav-item:hover{background:var(--red-light);}
-.bnav-item.active{border-left-color:var(--red);color:var(--red);background:var(--red-light);font-weight:600;}
-.bnav-label{font-size:13px;letter-spacing:0;}
-.bnav-icon{font-size:18px;}
-body.has-bottomnav{padding-bottom:0;padding-left:220px;}
-.site-header{margin-left:0;}
-#userBar .ub-inner{max-width:100%;}
-.form-wrap{max-width:860px;}
+.bnav-item{flex:none;flex-direction:row;gap:6px;padding:12px 20px;border-bottom:2.5px solid transparent;}
+.bnav-item.active{border-bottom-color:var(--red);color:var(--red);}
+.bnav-label{font-size:12px;}
+.bnav-icon{font-size:16px;}
+body.has-bottomnav{padding-bottom:0;}
 }
 </style>
 </head>
@@ -299,10 +296,10 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
   <a href="area-restrita.html" class="top-link">Área Restrita →</a>
   <div class="header-inner">
     <div class="brand">
-      <img id="logoImg" alt="">
-      <div id="logoFallback"><div class="brand-leaf" id="brandLeaf">🍁</div><div class="brand-name"><h1 id="brandName"></h1></div></div>
+      <img id="logoImg" alt="Maple Bear">
+      <div id="logoFallback"><div class="brand-leaf">🍁</div><div class="brand-name"><h1>Maple Bear</h1></div></div>
     </div>
-    <div class="header-title" id="headerTitle"></div>
+    <div class="header-title">Sistema Maple Bear Rio Grande do Sul</div>
     <div class="header-sub">Solicitações de turno, inscrições em atividades extraclasse e mais.<br>Identifique-se para acessar o formulário.</div>
   </div>
 </div>
@@ -312,7 +309,7 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
 <div id="iosBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1c1712;padding:16px 20px 24px;box-shadow:0 -4px 20px rgba(0,0,0,.3);">
   <button onclick="document.getElementById('iosBanner').style.display='none';localStorage.setItem('iosBannerDismissed','1')" style="position:absolute;top:10px;right:14px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;">×</button>
   <div style="max-width:500px;margin:auto;text-align:center;">
-    <p style="color:#fff;font-size:14px;font-weight:600;margin:0 0 8px;font-family:'DM Sans',sans-serif;" id="iosBannerTitle">Instale o app</p>
+    <p style="color:#fff;font-size:14px;font-weight:600;margin:0 0 8px;font-family:'DM Sans',sans-serif;">Instale o app Maple Bear</p>
     <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0;font-family:'DM Sans',sans-serif;line-height:1.5;">
       Toque em <span style="display:inline-block;background:rgba(255,255,255,.15);border-radius:4px;padding:1px 6px;">
         <svg style="vertical-align:middle;margin-bottom:2px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
@@ -325,7 +322,7 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
 <!-- BANNER INSTALAR APP -->
 <div id="installBanner" style="display:none;background:#1c1712;padding:12px 20px;text-align:center;">
   <div style="max-width:700px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-    <span style="font-size:13px;color:rgba(255,255,255,.85);" id="installBannerText">📲 Instale o app no seu celular para acesso rápido</span>
+    <span style="font-size:13px;color:rgba(255,255,255,.85);">📲 Instale o app Maple Bear no seu celular para acesso rápido</span>
     <div style="display:flex;gap:8px;flex-shrink:0;">
       <button id="btnInstall" onclick="instalarApp()" style="padding:7px 16px;background:#C8102E;color:#fff;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Instalar</button>
       <button onclick="document.getElementById('installBanner').style.display='none'" style="padding:7px 12px;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Agora não</button>
@@ -421,8 +418,8 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
       <div id="loginErr" style="display:none;font-size:13px;color:#a00d24;padding:8px 12px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);margin-bottom:8px;"></div>
       <button class="btn-magic" id="btnLogin" onclick="loginEmailSenha()">Entrar</button>
       <div style="display:flex;justify-content:space-between;margin-top:8px;">
-        <a href="#" onclick="toggleCadastro();return false" style="font-size:12px;color:var(--muted);text-decoration:none;">Criar conta</a>
-        <a href="#" onclick="toggleMagicLink();return false" style="font-size:12px;color:var(--muted);text-decoration:none;">Esqueci minha senha</a>
+        <a href="#" onclick="toggleCadastro();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;">Criar conta</a>
+        <a href="#" onclick="toggleMagicLink();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;">Esqueci minha senha</a>
       </div>
 
       <!-- Cadastro (colapsavel) -->
@@ -484,7 +481,7 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
 <div id="accessPending" style="display:none;max-width:500px;margin:48px auto;padding:0 24px;">
   <div style="background:#fff;border-radius:16px;border:1px solid #e6ddd3;padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,.07);text-align:center;">
     <div style="font-size:48px;margin-bottom:16px;">🏫</div>
-    <h2 style="font-family:'Lora',serif;font-size:20px;margin-bottom:8px;" id="accessWelcome">Bem-vindo!</h2>
+    <h2 style="font-family:'Lora',serif;font-size:20px;margin-bottom:8px;">Bem-vindo ao Maple Bear!</h2>
     <p style="font-size:13px;color:#7a7169;line-height:1.7;margin-bottom:24px;">Seu e-mail ainda não está vinculado a uma família da escola. Preencha os dados abaixo para solicitar acesso.</p>
     <div style="text-align:left;">
       <div style="margin-bottom:12px;">
@@ -539,9 +536,38 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
       <div id="pickupFilhosList"></div>
     </div>
     <div id="pickupAviso" style="display:none;">
-      <div style="background:#f0f9f0;border:1px solid #b6deb6;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:600;color:#2d7a2d;margin-bottom:4px;">✅ Aviso enviado!</div>
-        <div id="pickupAvisoInfo" style="font-size:13px;color:#2d7a2d;"></div>
+      <!-- Animação lúdica do carro -->
+      <div id="pickupAnimacao" style="background:linear-gradient(180deg,#87CEEB 0%,#87CEEB 60%,#90EE90 60%,#4CAF50 100%);border-radius:14px;padding:16px 20px 12px;margin-bottom:14px;position:relative;overflow:hidden;min-height:140px;">
+        <!-- Nuvens -->
+        <div style="position:absolute;top:8px;left:15%;font-size:20px;opacity:.6;animation:cloudMove 12s linear infinite;">☁️</div>
+        <div style="position:absolute;top:16px;right:20%;font-size:14px;opacity:.4;animation:cloudMove 18s linear infinite 3s;">☁️</div>
+        <!-- Estrada -->
+        <div style="position:absolute;bottom:28px;left:0;right:0;height:22px;background:#555;border-radius:0;">
+          <div style="position:absolute;top:50%;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg,#fff 0,#fff 20px,transparent 20px,transparent 40px);transform:translateY(-50%);animation:roadMove 1s linear infinite;"></div>
+        </div>
+        <!-- Casa (ponto de partida) -->
+        <div style="position:absolute;bottom:46px;left:12px;font-size:28px;">🏠</div>
+        <!-- Escola (destino) -->
+        <div style="position:absolute;bottom:46px;right:12px;font-size:28px;">🏫</div>
+        <!-- Carro animado -->
+        <div id="pickupCarro" style="position:absolute;bottom:44px;left:50px;transition:left 2s ease-out;z-index:2;">
+          <div style="font-size:32px;transform:scaleX(-1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));">🚗</div>
+          <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;">
+            <span style="font-size:16px;">👨‍👩‍👧</span>
+          </div>
+        </div>
+        <!-- ETA display -->
+        <div style="text-align:center;position:relative;z-index:3;margin-bottom:4px;">
+          <div style="display:inline-block;background:rgba(255,255,255,.92);border-radius:20px;padding:6px 18px;box-shadow:0 2px 8px rgba(0,0,0,.15);">
+            <span style="font-size:11px;color:#555;font-weight:500;">Tempo estimado: </span>
+            <strong id="pickupETADisplay" style="font-size:16px;color:#C8102E;">-- min</strong>
+          </div>
+        </div>
+        <div id="pickupDistanciaAnim" style="text-align:center;font-size:11px;color:rgba(255,255,255,.9);margin-top:4px;position:relative;z-index:3;">📍 Rastreando localização...</div>
+      </div>
+      <div style="background:#f0f9f0;border:1px solid #b6deb6;border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:600;color:#2d7a2d;margin-bottom:2px;">✅ Aviso enviado!</div>
+        <div id="pickupAvisoInfo" style="font-size:12px;color:#2d7a2d;"></div>
       </div>
       <button onclick="cancelarAviso()" class="btn-submit" style="background:#e53e3e;font-size:13px;padding:8px 16px;width:auto;">Cancelar aviso</button>
     </div>
@@ -611,11 +637,29 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
         <div class="field">
           <label for="turnoSelect">Selecione o turno <span class="req">*</span></label>
           <select id="turnoSelect" onchange="onTurnoChange()">
-            <option value="">Carregando turnos...</option>
+            <option value="">Selecione…</option>
+            <optgroup label="── Integral — início às 07:30h">
+              <option value="integral_5x">Integral · 5× na semana — R$ 4.395,00</option>
+              <option value="integral_4x">Integral · 4× na semana — R$ 4.303,57</option>
+              <option value="integral_3x">Integral · 3× na semana — R$ 4.072,13</option>
+              <option value="integral_2x">Integral · 2× na semana — R$ 3.760,70</option>
+              <option value="integral_1x">Integral · 1× na semana — R$ 3.300,00</option>
+            </optgroup>
+            <optgroup label="── Semi-Integral — início às 09:45h">
+              <option value="semi_5x">Semi-Integral · 5× na semana — R$ 4.030,00</option>
+              <option value="semi_4x">Semi-Integral · 4× na semana — R$ 3.991,57</option>
+              <option value="semi_3x">Semi-Integral · 3× na semana — R$ 3.773,13</option>
+              <option value="semi_2x">Semi-Integral · 2× na semana — R$ 3.534,70</option>
+              <option value="semi_1x">Semi-Integral · 1× na semana — R$ 3.196,27</option>
+            </optgroup>
+            <optgroup label="── Outros">
+              <option value="tarde">Apenas a Tarde — início às 13:30h</option>
+              <option value="diaria">Diária — R$ 150,00</option>
+            </optgroup>
           </select>
           <div class="err-msg" id="turnoErr">Selecione um turno.</div>
           <div class="turno-preview" id="turnoPreview"></div>
-          <p class="turno-note" id="turnoNote"></p>
+          <p class="turno-note">* Para Ensino Fundamental o turno Tarde inicia às 13:10h.</p>
         </div>
       </div>
     </div>
@@ -695,6 +739,29 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
   </div><!-- /tabBoletos -->
 
   <!-- TAB: ACHADOS & PERDIDOS -->
+  <!-- TAB: DIA A DIA (Agenda Digital) -->
+  <div class="tab-panel" id="tabDiaadia">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">
+        📅 Dia a Dia
+        <button onclick="carregarDiaADia()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Veja o que seu filho fez hoje na escola — atividades, refeições, humor e fotos.</p>
+      <div id="diaAdiaContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: BOLETIM -->
+  <div class="tab-panel" id="tabBoletim">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">
+        📝 Boletim Digital
+        <button onclick="carregarBoletim()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <div id="boletimContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando boletim...</div></div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="tabAchados">
     <div class="card">
       <div class="card-title" style="margin-bottom:12px;">
@@ -710,32 +777,34 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav" id="bottomNav">
-  <div class="bnav-sidebar-brand">
-    <span class="sb-leaf" id="sidebarLeaf">🍁</span>
-    <span class="sb-title" id="sidebarTitle"></span>
-    <span class="sb-sub">Portal do Responsável</span>
-  </div>
   <button class="bnav-item active" onclick="switchTab('inicio')" data-tab="inicio">
     <span class="bnav-icon">🏠</span>
     <span class="bnav-label">Início</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('solicitar')" data-tab="solicitar" data-module="turnos">
-    <span class="bnav-icon">🕐</span>
-    <span class="bnav-label">Mudança de Turno</span>
+  <button class="bnav-item" onclick="switchTab('diaadia')" data-tab="diaadia" data-modulo="agenda_digital">
+    <span class="bnav-icon">📅</span>
+    <span class="bnav-label">Dia a Dia</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('atividades')" data-tab="atividades" data-module="atividades">
-    <span class="bnav-icon">🎯</span>
-    <span class="bnav-label">Atividades Extracurriculares</span>
+  <button class="bnav-item" onclick="switchTab('boletim')" data-tab="boletim" data-modulo="notas">
+    <span class="bnav-icon">📝</span>
+    <span class="bnav-label">Boletim</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos" data-module="boletos">
+  <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos" data-modulo="financeiro">
     <span class="bnav-icon">💰</span>
     <span class="bnav-label">Boletos</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('achados')" data-tab="achados" data-module="achados_perdidos">
-    <span class="bnav-icon">🔍</span>
-    <span class="bnav-label">Achados & Perdidos</span>
+  <button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn">
+    <span class="bnav-icon">☰</span>
+    <span class="bnav-label">Mais</span>
   </button>
 </nav>
+<div id="paisMoreMenu" style="display:none;position:fixed;bottom:56px;left:0;right:0;background:#fff;border-top:1px solid var(--border);box-shadow:0 -8px 24px rgba(0,0,0,.12);z-index:60;padding:12px 16px;border-radius:16px 16px 0 0;">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+    <button class="bnav-more-item" onclick="switchTab('solicitar');closePaisMore()" data-modulo="turno"><span>🕐</span>Turno</button>
+    <button class="bnav-more-item" onclick="switchTab('atividades');closePaisMore()" data-modulo="atividades"><span>🎯</span>Atividades</button>
+    <button class="bnav-more-item" onclick="switchTab('achados');closePaisMore()" data-modulo="achados"><span>🔍</span>Achados</button>
+  </div>
+</div>
 
 <!-- SUCESSO -->
 <div class="success-panel" id="successPanel">
@@ -792,8 +861,8 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
 </div>
 
 <script>
-  const SUPABASE_URL  = CONFIG.SUPABASE_URL;
-  const SUPABASE_ANON = CONFIG.SUPABASE_ANON;
+  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
   const API      = SUPABASE_URL + '/functions/v1/api';
   const SEND     = SUPABASE_URL + '/functions/v1/send-email';
   const ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
@@ -814,6 +883,9 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
     if (tab === 'solicitar') setModo('turno');
     if (tab === 'atividades') initAtividadesTab();
     if (tab === 'boletos') carregarBoletos();
+    closePaisMore();
+    if (tab === 'diaadia') carregarDiaADia();
+    if (tab === 'boletim') carregarBoletim();
     if (tab === 'achados') carregarAchados();
   }
 
@@ -836,113 +908,6 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
 
   let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
   let resendCooldown = null;
-  let escolaConfig = {};
-
-  // ── CARREGAR CONFIG DA ESCOLA ──────────────────────────
-  async function loadEscolaConfig() {
-    try {
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
-        body: JSON.stringify({ action: 'config_publica' })
-      });
-      escolaConfig = await res.json();
-    } catch (_) { escolaConfig = {}; }
-
-    const cfg = escolaConfig;
-    const nome = cfg.escola_nome || 'Escola';
-    const icone = cfg.escola_icone || '🍁';
-    const corPrimaria = cfg.cor_primaria || '#C8102E';
-    const corEscura = cfg.cor_escura || '#a00d24';
-    const corLight = cfg.cor_light || 'rgba(200,16,46,.07)';
-
-    // Atualiza CSS vars
-    document.documentElement.style.setProperty('--red', corPrimaria);
-    document.documentElement.style.setProperty('--red-dark', corEscura);
-    document.documentElement.style.setProperty('--red-light', corLight);
-    if (cfg.cor_cream) document.documentElement.style.setProperty('--cream', cfg.cor_cream);
-
-    // Atualiza meta tags
-    document.getElementById('pageTitle').textContent = nome;
-    document.getElementById('metaDesc').content = 'Portal de famílias — ' + nome;
-    document.getElementById('metaTheme').content = corPrimaria;
-    document.getElementById('metaAppTitle').content = nome;
-
-    // Atualiza branding
-    const brandName = document.getElementById('brandName');
-    if (brandName) brandName.textContent = nome;
-    const brandLeaf = document.getElementById('brandLeaf');
-    if (brandLeaf) brandLeaf.textContent = icone;
-    const headerTitle = document.getElementById('headerTitle');
-    if (headerTitle) headerTitle.textContent = 'Sistema ' + nome;
-    const sidebarTitle = document.getElementById('sidebarTitle');
-    if (sidebarTitle) sidebarTitle.textContent = nome;
-    const sidebarLeaf = document.getElementById('sidebarLeaf');
-    if (sidebarLeaf) sidebarLeaf.textContent = icone;
-
-    // Logo
-    if (cfg.escola_logo_url) {
-      const logoImg = document.getElementById('logoImg');
-      if (logoImg) { logoImg.src = cfg.escola_logo_url; logoImg.style.display = 'block'; document.getElementById('logoFallback').style.display = 'none'; }
-    }
-
-    // Banners
-    const iosBannerTitle = document.getElementById('iosBannerTitle');
-    if (iosBannerTitle) iosBannerTitle.textContent = 'Instale o app ' + nome;
-    const installBannerText = document.getElementById('installBannerText');
-    if (installBannerText) installBannerText.textContent = '📲 Instale o app ' + nome + ' no seu celular para acesso rápido';
-    const accessWelcome = document.getElementById('accessWelcome');
-    if (accessWelcome) accessWelcome.textContent = 'Bem-vindo ao ' + nome + '!';
-
-    // Coordenadas da escola (pickup)
-    if (cfg.escola_lat != null) SCHOOL_LAT = parseFloat(cfg.escola_lat);
-    if (cfg.escola_lon != null) SCHOOL_LON = parseFloat(cfg.escola_lon);
-    if (cfg.escola_pickup_raio != null) CHEGOU_RAIO_M = parseFloat(cfg.escola_pickup_raio);
-
-    // Turnos e preços (dinâmico)
-    const turnos = cfg.turnos_config || [];
-    if (turnos.length) {
-      TURNO_INFO = {};
-      const sel = document.getElementById('turnoSelect');
-      sel.innerHTML = '<option value="">Selecione…</option>';
-      const grupos = {};
-      for (const t of turnos) {
-        const g = t.grupo || 'Outros';
-        if (!grupos[g]) grupos[g] = [];
-        grupos[g].push(t);
-        const freq = t.id.includes('_') ? parseInt(t.id.split('_')[1]?.replace('x','')) : null;
-        const priceLabel = t.preco != null ? 'R$ ' + t.preco.toFixed(2).replace('.', ',') : null;
-        TURNO_INFO[t.id] = { label: t.nome, price: priceLabel, inicio: t.inicio ? t.inicio + 'h' : null, freq: freq || null };
-      }
-      for (const [gNome, gTurnos] of Object.entries(grupos)) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = '── ' + gNome + (gTurnos[0]?.inicio ? ' — início às ' + gTurnos[0].inicio + 'h' : '');
-        for (const t of gTurnos) {
-          const opt = document.createElement('option');
-          opt.value = t.id;
-          const priceStr = t.preco != null ? ' — R$ ' + t.preco.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
-          opt.textContent = t.nome + priceStr;
-          optgroup.appendChild(opt);
-        }
-        sel.appendChild(optgroup);
-      }
-    }
-
-    // Nota sobre turno fundamental
-    const turnoNote = document.getElementById('turnoNote');
-    if (turnoNote && cfg.nota_turno_fundamental) turnoNote.textContent = '* ' + cfg.nota_turno_fundamental;
-
-    // Toggle de módulos — oculta tabs desativadas
-    const modulos = cfg.modulos_ativos || [];
-    if (modulos.length) {
-      document.querySelectorAll('[data-module]').forEach(el => {
-        if (!modulos.includes(el.dataset.module)) el.style.display = 'none';
-      });
-    }
-  }
-
-  // Carrega config antes de tudo
-  loadEscolaConfig();
 
   // ── AUTH ──────────────────────────────────────────────
   async function initAuth() {
@@ -1331,10 +1296,38 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
     carregarAgenda();
     carregarAchados();
     showBioRegisterButton();
+    loadModulosHabilitadosPais();
   }
 
-  // ── TURNO (preenchido dinamicamente pela config) ─────
-  let TURNO_INFO = {};
+  // ── Módulos habilitados (feature gating) ──
+  window._enabledModules = null;
+  async function loadModulosHabilitadosPais() {
+    try {
+      const d = await call({ action: 'modulos_habilitados' });
+      if (d && Array.isArray(d.modulos)) {
+        window._enabledModules = new Set(d.modulos);
+        document.querySelectorAll('[data-modulo]').forEach(el => {
+          el.style.display = window._enabledModules.has(el.dataset.modulo) ? '' : 'none';
+        });
+      }
+    } catch(e) { console.warn('Feature gating não disponível:', e); }
+  }
+
+  // ── TURNO ─────────────────────────────────────────────
+  const TURNO_INFO = {
+    integral_5x:{label:'Integral · 5× na semana',price:'R$ 4.395,00',inicio:'07:30h',freq:5},
+    integral_4x:{label:'Integral · 4× na semana',price:'R$ 4.303,57',inicio:'07:30h',freq:4},
+    integral_3x:{label:'Integral · 3× na semana',price:'R$ 4.072,13',inicio:'07:30h',freq:3},
+    integral_2x:{label:'Integral · 2× na semana',price:'R$ 3.760,70',inicio:'07:30h',freq:2},
+    integral_1x:{label:'Integral · 1× na semana',price:'R$ 3.300,00',inicio:'07:30h',freq:1},
+    semi_5x:{label:'Semi-Integral · 5× na semana',price:'R$ 4.030,00',inicio:'09:45h',freq:5},
+    semi_4x:{label:'Semi-Integral · 4× na semana',price:'R$ 3.991,57',inicio:'09:45h',freq:4},
+    semi_3x:{label:'Semi-Integral · 3× na semana',price:'R$ 3.773,13',inicio:'09:45h',freq:3},
+    semi_2x:{label:'Semi-Integral · 2× na semana',price:'R$ 3.534,70',inicio:'09:45h',freq:2},
+    semi_1x:{label:'Semi-Integral · 1× na semana',price:'R$ 3.196,27',inicio:'09:45h',freq:1},
+    tarde:{label:'Apenas a Tarde',price:null,inicio:'13:30h (13:10h Ens. Fund.)',freq:null},
+    diaria:{label:'Diária',price:'R$ 150,00',inicio:null,freq:null},
+  };
   const PRECISA_DIAS = v => TURNO_INFO[v]?.freq != null && TURNO_INFO[v].freq < 5;
 
   function onTurnoChange() {
@@ -1838,7 +1831,7 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
   let pickupAtivoId = null;
   let pickupPollTimer = null;
   let pickupWatchId = null;
-  let SCHOOL_LAT = -28.8628, SCHOOL_LON = -51.5201, CHEGOU_RAIO_M = 200; // defaults, overridden by config
+  const SCHOOL_LAT = -28.8628, SCHOOL_LON = -51.5201, CHEGOU_RAIO_M = 200;
 
   function haversineM(lat1,lon1,lat2,lon2) {
     const R = 6371000, toRad = d => d * Math.PI / 180;
@@ -1855,6 +1848,7 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
       // Atualiza distância no card
       const distEl = document.getElementById('pickupDistancia');
       if (distEl) distEl.textContent = dist < 1000 ? Math.round(dist) + 'm da escola' : (dist/1000).toFixed(1) + 'km da escola';
+      updatePickupDistanciaAnimada(dist);
       // Chegou perto da escola
       if (dist <= CHEGOU_RAIO_M && pickupAtivoId) {
         await callDiplomas({ action: 'pickup_chegou', id: pickupAtivoId });
@@ -1984,6 +1978,8 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
     loadPickupCard();
   }
 
+  let pickupDistanciaInicial = null;
+
   function showPickupAtivo(n) {
     const aviso = document.getElementById('pickupAviso');
     const info  = document.getElementById('pickupAvisoInfo');
@@ -1991,13 +1987,54 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
     if (n.eta_minutos) {
       const modo = n.eta_modo === 'google_maps' ? '📍 Google Maps' : n.eta_modo === 'calculo_local' ? '📐 Estimativa' : '⏱ Manual';
       txt += ` ETA: <strong>${n.eta_minutos} min</strong> (${modo})`;
-    } else {
-      txt += ' Tempo estimado não disponível.';
     }
-    txt += `<div id="pickupDistancia" style="margin-top:6px;font-size:12px;color:var(--muted);">📍 Rastreando localização...</div>`;
     info.innerHTML = txt;
     aviso.style.display = 'block';
     document.getElementById('pickupFilhos').style.display = 'none';
+
+    // Iniciar animação do carro
+    const etaDisplay = document.getElementById('pickupETADisplay');
+    if (etaDisplay && n.eta_minutos) etaDisplay.textContent = n.eta_minutos + ' min';
+
+    // Animar carro baseado no ETA
+    updateCarroPosition(n.eta_minutos || 10);
+
+    // Iniciar bounce do carro
+    const carro = document.getElementById('pickupCarro');
+    if (carro) carro.querySelector('div').style.animation = 'carBounce .6s ease infinite';
+  }
+
+  function updateCarroPosition(etaMinutos) {
+    const carro = document.getElementById('pickupCarro');
+    if (!carro) return;
+    // Posição do carro: de 50px (casa) até calc(100% - 80px) (escola)
+    // Se ETA alto → perto da casa; Se ETA baixo → perto da escola
+    const maxEta = pickupDistanciaInicial ? Math.max(etaMinutos, 1) : 15;
+    const progress = Math.max(0, Math.min(1, 1 - (etaMinutos / maxEta)));
+    const maxLeft = 280; // pixels de range
+    const left = 50 + (progress * maxLeft);
+    carro.style.left = left + 'px';
+
+    // Atualizar ETA display
+    const etaEl = document.getElementById('pickupETADisplay');
+    if (etaEl) {
+      if (etaMinutos <= 1) etaEl.textContent = 'Chegando!';
+      else etaEl.textContent = Math.round(etaMinutos) + ' min';
+    }
+    if (etaMinutos <= 1 && etaEl) etaEl.style.color = '#2d7a3a';
+  }
+
+  function updatePickupDistanciaAnimada(dist) {
+    const el = document.getElementById('pickupDistanciaAnim');
+    if (!el) return;
+    if (dist < 200) el.textContent = '🏫 Quase lá! ' + Math.round(dist) + 'm';
+    else if (dist < 1000) el.textContent = '📍 ' + Math.round(dist) + 'm da escola';
+    else el.textContent = '📍 ' + (dist/1000).toFixed(1) + 'km da escola';
+
+    // Estimar ETA baseado na distância (velocidade média 30km/h em zona urbana)
+    const etaMinutos = Math.max(1, Math.round((dist / 1000) / 30 * 60));
+    if (!pickupDistanciaInicial) pickupDistanciaInicial = etaMinutos + 2;
+    updateCarroPosition(etaMinutos);
   }
 
   async function cancelarAviso() {
@@ -2131,7 +2168,13 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
   async function loadLogo() {
     try {
       const d = await call({ action:'config_get', chave:'logo_url' });
-      if (d.valor) { document.getElementById('logoImg').src=d.valor; document.getElementById('logoImg').style.display='block'; document.getElementById('logoFallback').style.display='none'; }
+      if (d.valor) {
+        const img = document.getElementById('logoImg');
+        img.onerror = () => { img.style.display='none'; document.getElementById('logoFallback').style.display=''; };
+        img.src = d.valor;
+        img.style.display = 'block';
+        document.getElementById('logoFallback').style.display = 'none';
+      }
     } catch(_) {}
   }
 
@@ -2364,6 +2407,114 @@ body.has-bottomnav{padding-bottom:0;padding-left:220px;}
   }
 
   // ── ACHADOS E PERDIDOS ─────────────────────────────────
+  // ── BOTTOM NAV "MAIS" MENU ────────────────────────────
+  function togglePaisMore() {
+    const menu = document.getElementById('paisMoreMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('paisMoreBtn')?.classList.toggle('active', menu.style.display !== 'none');
+  }
+  function closePaisMore() {
+    const m = document.getElementById('paisMoreMenu');
+    if (m) m.style.display = 'none';
+    document.getElementById('paisMoreBtn')?.classList.remove('active');
+  }
+
+  // ── DIA A DIA (Agenda Digital) ─────────────────────────
+  const COMUNICACAO_API = SUPABASE_URL + '/functions/v1/comunicacao';
+  async function callCom(body) {
+    const r = await fetch(COMUNICACAO_API, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify(body) });
+    return r.json();
+  }
+
+  async function carregarDiaADia() {
+    const el = document.getElementById('diaAdiaContent');
+    if (!currentUser) { el.innerHTML = '<p style="color:var(--muted);">Faça login.</p>'; return; }
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
+    const d = await callCom({ action:'agenda_pais_get', aluno_email: currentUser.email });
+    const registros = Array.isArray(d) ? d : [];
+    if (!registros.length) { el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Nenhum registro encontrado.</p>'; return; }
+    const tipoIcons = { atividade:'📚', refeicao:'🍽️', sono:'😴', humor:'😊', foto:'📷', observacao:'📝' };
+    let html = '';
+    for (const reg of registros) {
+      const dt = new Date(reg.data + 'T12:00:00');
+      html += `<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+        <div style="font-family:'Lora',serif;font-size:14px;font-weight:600;margin-bottom:8px;">${dt.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Prof. ${reg.professoras?.nome || '—'}</div>`;
+      for (const item of reg.agenda_itens || []) {
+        const icon = tipoIcons[item.tipo] || '📌';
+        html += `<div style="display:flex;gap:10px;padding:8px 0;">
+          <span style="font-size:18px;">${icon}</span>
+          <div><strong style="font-size:13px;">${item.titulo || item.tipo}</strong>
+          ${item.descricao ? `<p style="font-size:12px;color:var(--muted);margin-top:2px;">${item.descricao}</p>` : ''}
+          ${item.valor ? `<span style="font-size:12px;color:var(--blue);">${item.valor}</span>` : ''}
+          </div></div>`;
+        // Fotos
+        for (const foto of item.agenda_fotos || []) {
+          html += `<img src="${foto.url}" style="max-width:100%;border-radius:10px;margin:8px 0;" loading="lazy">`;
+        }
+      }
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  // ── BOLETIM DIGITAL ────────────────────────────────────
+  const ACADEMICO_API = SUPABASE_URL + '/functions/v1/academico';
+  async function callAcademico(body) {
+    const r = await fetch(ACADEMICO_API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  async function carregarBoletim() {
+    const el = document.getElementById('boletimContent');
+    if (!currentUser) { el.innerHTML = '<p style="color:var(--muted);">Faça login para ver o boletim.</p>'; return; }
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
+
+    const d = await callAcademico({ action:'boletim_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
+    const boletins = Array.isArray(d) ? d : [];
+
+    if (!boletins.length) {
+      el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Nenhum boletim disponível para este ano.</p>';
+      return;
+    }
+
+    let html = '';
+    for (const bol of boletins) {
+      const periodo = bol.notas_periodos?.nome || 'Período';
+      html += `<div style="margin-bottom:20px;">
+        <h4 style="font-family:'Lora',serif;font-size:15px;margin-bottom:10px;">${periodo}</h4>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="background:#faf8f5;">
+            <th style="padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Disciplina</th>
+            <th style="padding:8px 12px;text-align:center;font-size:11px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Média</th>
+          </tr></thead><tbody>`;
+
+      const disciplinas = bol.dados?.disciplinas || [];
+      for (const disc of disciplinas) {
+        const media = disc.media !== null ? disc.media.toFixed(1) : '—';
+        const cor = disc.media !== null && disc.media >= 7 ? 'color:var(--green);font-weight:700;' : disc.media !== null ? 'color:var(--red);font-weight:700;' : '';
+        html += `<tr style="border-bottom:1px solid #f0ece6;">
+          <td style="padding:10px 12px;">${disc.nome}</td>
+          <td style="padding:10px 12px;text-align:center;${cor}">${media}</td>
+        </tr>`;
+      }
+
+      const mg = bol.media_geral !== null ? bol.media_geral.toFixed(1) : '—';
+      const mgCor = bol.media_geral >= 7 ? 'color:var(--green);' : 'color:var(--red);';
+      html += `<tr style="background:#faf8f5;">
+        <td style="padding:10px 12px;font-weight:700;">Média Geral</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:700;${mgCor}">${mg}</td>
+      </tr></tbody></table></div></div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
   async function carregarAchados() {
     const d = await callDiplomas({ action: 'achados_lista_publica' });
     const items = d.data || [];

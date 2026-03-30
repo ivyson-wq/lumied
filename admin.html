@@ -2,453 +2,763 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Administração do Sistema</title>
+<title>Maple Bear RS — Painel Admin</title>
+<meta name="theme-color" content="#1c1712">
+<link rel="icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.07);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;}
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;--purple:#6b3fa0;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
 /* LOGIN */
 #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sb);position:relative;overflow:hidden;}
-#loginScreen::before{content:'⚙️';position:absolute;font-size:280px;opacity:.03;top:-40px;right:-40px;line-height:1;pointer-events:none;}
-.login-card{background:var(--white);border-radius:16px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:popIn .4s cubic-bezier(.22,.8,.44,1);}
+#loginScreen::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
+.login-card{background:var(--white);border-radius:16px;padding:48px 44px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:popIn .4s cubic-bezier(.22,.8,.44,1);}
 @keyframes popIn{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
-.login-logo{text-align:center;margin-bottom:24px;}
-.login-logo .leaf{font-size:40px;}
-.login-logo h1{font-family:'Lora',serif;font-size:18px;margin-top:6px;color:var(--text);}
+.login-logo{text-align:center;margin-bottom:28px;}.login-logo .leaf{font-size:40px;}
+.login-logo h1{font-family:'Lora',serif;font-size:18px;margin-top:8px;color:var(--text);}
 .login-logo span{font-size:12px;color:var(--muted);}
-.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 20px;border-radius:9px;border:1.5px solid var(--border);background:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:all .2s;}
-.google-btn:hover{border-color:#aaa;background:#fafafa;box-shadow:0 2px 8px rgba(0,0,0,.07);}
-.google-btn:disabled{opacity:.5;cursor:not-allowed;}
-.login-note{font-size:11px;color:var(--muted);margin-top:16px;line-height:1.6;text-align:center;}
-#loginError{display:none;margin-top:14px;padding:10px;background:#fdf0f2;color:#a00d24;border-radius:6px;font-size:12px;text-align:center;}
-#loginError.show{display:block;}
-.spinner-wrap{text-align:center;padding:24px 0;display:none;}
-.spinner-wrap.show{display:block;}
-.spinner{width:28px;height:28px;border:3px solid #eee;border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;}
-@keyframes spin{to{transform:rotate(360deg);}}
+.login-card h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:22px;text-align:center;}
+.lf{margin-bottom:16px;}.lf label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px;}
+.lf input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
+.lf input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
+.login-btn{width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s;box-shadow:0 4px 16px rgba(200,16,46,.3);}
+.login-btn:hover{background:var(--red-dark);}.login-btn:disabled{opacity:.55;cursor:not-allowed;}
+#loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
 
 /* APP */
-#appShell{display:none;}
-.topbar{background:var(--sb);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.topbar h1{color:#fff;font-family:'Lora',serif;font-size:16px;display:flex;align-items:center;gap:8px;}
-.topbar-actions{display:flex;gap:10px;align-items:center;}
-.topbar .user-name{color:rgba(255,255,255,.7);font-size:12px;}
-.topbar .logout-btn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;}
-.topbar .logout-btn:hover{color:#fff;border-color:rgba(255,255,255,.4);}
+#appShell{display:none;min-height:100vh;}
+.sidebar{position:fixed;top:0;left:0;width:230px;height:100vh;background:var(--sb);display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
+.sb-brand{padding:26px 20px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
+.sb-leaf{font-size:20px;}.sb-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;margin-top:6px;line-height:1.2;}
+.sb-brand span{font-size:11px;color:rgba(255,255,255,.4);}
+.sb-nav{flex:1;padding:14px 12px;}
+.sb-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:14px 12px 7px;font-weight:700;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.85);font-size:13.5px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;margin-bottom:2px;text-decoration:none;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}.nav-item.active{background:rgba(200,16,46,.9);color:#fff;}
+.nav-item .ic{width:18px;text-align:center;font-size:15px;}
+.sb-footer{padding:16px 12px;border-top:1px solid rgba(255,255,255,.07);}
+.user-info{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px;padding:0 10px;}
+.user-info strong{color:rgba(255,255,255,.8);display:block;font-size:13px;}
+.logout-btn{width:100%;padding:9px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;color:rgba(255,255,255,.55);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:background .15s;}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);}
+.main{margin-left:230px;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar h2{font-family:'Lora',serif;font-size:17px;font-weight:600;}
+.content{padding:26px 32px 48px;flex:1;max-width:1400px;}
+.panel{display:none;}.panel.active{display:block;}
+.sec-title{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:12px;}
+.count-badge{background:var(--red-light);color:var(--red);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:2px 10px;border-radius:100px;}
+.table-wrap{background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:11px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#faf8f5;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid #f0ece6;transition:background .15s;}tbody tr:last-child{border-bottom:none;}tbody tr:hover{background:#faf8f5;}
+tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
+.action-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all .15s;margin-left:4px;}
+.action-btn:hover{background:#f5f0ea;color:var(--text);}.action-btn.del:hover{background:#fdf0f2;color:var(--red);border-color:rgba(200,16,46,.3);}
+.empty-state{text-align:center;padding:40px 24px;color:var(--muted);}
+.status-pill{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;}
+.status-pill.ativo{background:rgba(45,122,58,.1);color:var(--green);}.status-pill.inativo{background:rgba(200,16,46,.1);color:var(--red);}
 
-.main{max-width:900px;margin:0 auto;padding:24px;}
-.section{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:24px 28px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.04);}
-.section h2{font-family:'Lora',serif;font-size:17px;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
-.section .desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-@media(max-width:640px){.grid-2,.grid-3{grid-template-columns:1fr;}}
-.ff{margin-bottom:14px;}
-.ff label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px;}
-.ff input,.ff select,.ff textarea{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;background:#fdfbf8;}
-.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
-.ff .hint{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4;}
-.ff .hint code{background:#f0ece6;padding:1px 5px;border-radius:3px;font-size:10px;}
-.ff input[readonly]{background:#f0ece6;color:var(--muted);cursor:default;}
-.info-box{background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:12px 16px;font-size:12px;color:#1e40af;line-height:1.7;margin-bottom:16px;}
-.info-box a{color:#1e40af;font-weight:600;}
-.info-box code{background:#dbeafe;padding:2px 6px;border-radius:3px;font-size:11px;}
-.warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:12px;color:#92400e;line-height:1.7;margin-bottom:16px;}
-.btn{padding:12px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
-.btn:hover{background:var(--red-dark);}
-.btn:disabled{opacity:.5;cursor:not-allowed;}
-.btn-outline{background:none;border:1.5px solid var(--border);color:var(--text);box-shadow:none;}
-.btn-outline:hover{background:#f5f2ed;}
-.btns{display:flex;gap:10px;margin-top:8px;}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
-.status-dot.ok{background:#22c55e;}.status-dot.warn{background:#f59e0b;}.status-dot.off{background:#ef4444;}
-.module-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-@media(max-width:640px){.module-grid{grid-template-columns:1fr 1fr;}}
-.module-opt{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;background:var(--white);transition:all .15s;}
-.module-opt:hover{border-color:#bbb;}
-.module-opt.selected{border-color:var(--red);background:var(--red-light);}
-.f-alert{padding:10px 14px;border-radius:7px;font-size:13px;display:none;}
-.f-alert.show{display:block;}
-.f-alert.error{background:#fdf0f2;color:#a00d24;border:1px solid rgba(200,16,46,.2);}
-.f-alert.success{background:#edf7f0;color:#1a5c2a;border:1px solid rgba(45,122,58,.2);}
-.sep{border-top:1px solid var(--border);margin:20px 0;}
+/* FORM */
+.form-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:20px;}
+.ff{margin-bottom:16px;}.ff label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px;}
+.ff input,.ff select,.ff textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;background:#fdfbf8;transition:border-color .2s;}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--red);}
+.ff-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.btn-primary{padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-primary:hover{background:var(--red-dark);}.btn-primary:disabled{opacity:.55;cursor:not-allowed;}
+.btn-secondary{padding:10px 24px;background:var(--white);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;}
+.btn-secondary:hover{background:#f5f0ea;}
+.btn-bar{display:flex;gap:10px;margin-top:20px;}
+
+/* MÓDULOS GRID */
+.modulos-section{margin-bottom:24px;}
+.modulos-section h4{font-family:'Lora',serif;font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.modulo-toggle{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--white);border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .15s;user-select:none;}
+.modulo-toggle:hover{border-color:var(--red);background:#fdfbf8;}
+.modulo-toggle.active{border-color:var(--green);background:rgba(45,122,58,.04);}
+.modulo-toggle input[type="checkbox"]{width:18px;height:18px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+.modulo-toggle .m-icon{font-size:18px;flex-shrink:0;}
+.modulo-toggle .m-info{flex:1;min-width:0;}
+.modulo-toggle .m-name{font-size:13px;font-weight:600;color:var(--text);}
+.modulo-toggle .m-portais{font-size:10px;color:var(--muted);margin-top:2px;}
+.modulo-toggle .m-plano-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:100px;flex-shrink:0;}
+.tag-essencial{background:rgba(45,122,58,.1);color:var(--green);}
+.tag-profissional{background:rgba(26,107,181,.1);color:var(--blue);}
+.tag-premium{background:rgba(212,131,10,.1);color:#c27800;}
+.tag-enterprise{background:rgba(107,63,160,.1);color:var(--purple);}
+.tag-existente{background:rgba(122,113,105,.1);color:var(--muted);}
+
+/* PLAN CARDS */
+.plans-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.plan-card{background:var(--white);border-radius:12px;border:2px solid var(--border);padding:20px;text-align:center;cursor:pointer;transition:all .2s;}
+.plan-card:hover{border-color:var(--red);transform:translateY(-2px);}
+.plan-card.selected{border-color:var(--red);background:var(--red-light);}
+.plan-card h3{font-family:'Lora',serif;font-size:16px;margin-bottom:4px;}
+.plan-card .plan-count{font-size:12px;color:var(--muted);}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--sb);color:#fff;padding:14px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:999;animation:slideUp .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.toast.success{border-left:4px solid var(--green);}.toast.error{border-left:4px solid var(--red);}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+/* SPINNER */
+.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(200,16,46,.25);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--white);border-radius:16px;padding:30px;width:100%;max-width:600px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;max-height:90vh;overflow-y:auto;}
+.modal h3{font-family:'Lora',serif;font-size:17px;margin-bottom:6px;}.modal .msub{font-size:13px;color:var(--muted);margin-bottom:20px;}
+
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:relative;}.main{margin-left:0;}
+  .plans-grid{grid-template-columns:1fr 1fr;}.ff-row{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ═══ LOGIN ═══ -->
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
-      <div class="leaf">⚙️</div>
-      <h1>Administração</h1>
-      <span>Acesso restrito ao superusuário</span>
+      <div class="leaf">🍁</div>
+      <h1>Maple Bear RS</h1>
+      <span>Painel Administrativo</span>
     </div>
-    <div class="spinner-wrap" id="spinnerWrap"><div class="spinner"></div><div style="font-size:12px;color:var(--muted);">Verificando acesso…</div></div>
-    <button class="google-btn" id="googleBtn" onclick="loginGoogle()">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      Entrar com Google
-    </button>
-    <p class="login-note">Apenas o e-mail do superusuário tem permissão de acesso.</p>
+    <div id="setupForm" style="display:none;">
+      <h2>Configuração Inicial</h2>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Este é o primeiro acesso. Crie a conta de administrador da plataforma.</p>
+      <div class="lf"><label>Código de Ativação</label><input id="setupCodigo" type="text" placeholder="Insira o código recebido por email"></div>
+      <div class="lf"><label>Nome</label><input id="setupNome" type="text" placeholder="Seu nome"></div>
+      <div class="lf"><label>Email</label><input id="setupEmail" type="email" placeholder="admin@escola.com"></div>
+      <div class="lf"><label>Senha</label><input id="setupSenha" type="password" placeholder="Mínimo 6 caracteres"></div>
+      <button class="login-btn" onclick="doSetup()">Criar & Entrar</button>
+      <p style="text-align:center;margin-top:12px;"><a href="#" onclick="document.getElementById('setupForm').style.display='none';document.getElementById('loginForm').style.display='block';return false" style="font-size:13px;color:var(--primary);text-decoration:none;padding:8px;">Já tenho conta? Fazer login</a></p>
+    </div>
+    <div id="loginForm">
+      <h2>Acesso Admin</h2>
+      <div class="lf"><label>Email</label><input id="loginEmail" type="email" placeholder="admin@escola.com"></div>
+      <div class="lf"><label>Senha</label><input id="loginSenha" type="password" placeholder="Sua senha"></div>
+      <button class="login-btn" onclick="doLogin()">Entrar</button>
+    </div>
     <div id="loginError"></div>
   </div>
 </div>
 
-<!-- APP -->
+<!-- ═══ APP ═══ -->
 <div id="appShell">
-  <div class="topbar">
-    <h1>⚙️ Administração do Sistema</h1>
-    <div class="topbar-actions">
-      <span class="user-name" id="userName"></span>
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-leaf">🍁</div>
+      <h1>Maple Bear RS</h1>
+      <span>Admin</span>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-label">Gestão</div>
+      <a class="nav-item active" onclick="showPanel('escolas',this)"><span class="ic">🏫</span> Escolas</a>
+      <a class="nav-item" onclick="showPanel('planos',this)"><span class="ic">📋</span> Planos</a>
+      <a class="nav-item" onclick="showPanel('modulos',this)"><span class="ic">🧩</span> Módulos</a>
+      <div class="sb-label">Sistema</div>
+      <a class="nav-item" onclick="showPanel('admins',this)"><span class="ic">👤</span> Admins</a>
+    </div>
+    <div class="sb-footer">
+      <div class="user-info"><strong id="adminNome">Admin</strong><span id="adminEmail">admin@escola.com</span></div>
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
     </div>
-  </div>
+  </nav>
 
   <div class="main">
-
-    <!-- STATUS -->
-    <div class="section" id="secStatus">
-      <h2>📊 Status do Sistema</h2>
-      <div id="statusGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;"></div>
+    <div class="topbar">
+      <h2 id="panelTitle">Escolas</h2>
     </div>
+    <div class="content">
 
-    <!-- 1. DADOS DA ESCOLA -->
-    <div class="section">
-      <h2>🏫 Dados da Escola</h2>
-      <p class="desc">Informações básicas visíveis em todos os portais.</p>
-      <div class="grid-2">
-        <div class="ff"><label>Nome da escola *</label><input type="text" id="ecNome"></div>
-        <div class="ff"><label>Subtítulo / Cidade</label><input type="text" id="ecSub"></div>
-      </div>
-      <div class="grid-2">
-        <div class="ff"><label>CNPJ</label><input type="text" id="ecCnpj" placeholder="00.000.000/0000-00"></div>
-        <div class="ff"><label>URL pública do portal</label><input type="text" id="ecUrl" placeholder="https://app.escola.com.br"></div>
-      </div>
-      <div class="grid-3">
-        <div class="ff"><label>Latitude</label><input type="text" id="ecLat"></div>
-        <div class="ff"><label>Longitude</label><input type="text" id="ecLon"></div>
-        <div class="ff"><label>Raio pickup (m)</label><input type="number" id="ecRaio" value="200"></div>
-      </div>
-      <div class="ff" style="max-width:100px;"><label>Emoji/ícone</label><input type="text" id="ecIcone" style="text-align:center;font-size:22px;" value="🍁"></div>
-    </div>
-
-    <!-- 2. BRANDING -->
-    <div class="section">
-      <h2>🎨 Cores e Branding</h2>
-      <p class="desc">Aparência de todos os portais.</p>
-      <div class="grid-3">
-        <div class="ff"><label>Cor primária</label>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <input type="color" id="ecCorPick" value="#C8102E" style="width:40px;height:38px;border:1px solid var(--border);border-radius:6px;padding:2px;cursor:pointer;" oninput="document.getElementById('ecCor').value=this.value;atualizarPreview()">
-            <input type="text" id="ecCor" value="#C8102E" oninput="document.getElementById('ecCorPick').value=this.value;atualizarPreview()">
+      <!-- ═══ PAINEL: ESCOLAS ═══ -->
+      <div id="panelEscolas" class="panel active">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="sec-title" style="margin-bottom:0;">Escolas <span class="count-badge" id="escolasCount">0</span></div>
+          <button class="btn-primary" onclick="showEscolaForm()">+ Nova Escola</button>
+        </div>
+        <div id="escolaFormWrap" style="display:none;">
+          <div class="form-card">
+            <input type="hidden" id="escolaId">
+            <div class="ff-row">
+              <div class="ff"><label>Nome</label><input id="escolaNome" placeholder="Nome da escola"></div>
+              <div class="ff"><label>CNPJ</label><input id="escolaCnpj" placeholder="00.000.000/0000-00"></div>
+            </div>
+            <div class="ff-row">
+              <div class="ff"><label>Slug</label><input id="escolaSlug" placeholder="maple-bear-caxias"></div>
+              <div class="ff"><label>Plano</label><select id="escolaPlano"><option value="">Sem plano</option></select></div>
+            </div>
+            <div class="ff-row">
+              <div class="ff"><label>Contato Nome</label><input id="escolaContatoNome" placeholder="Nome do contato"></div>
+              <div class="ff"><label>Contato Email</label><input id="escolaContatoEmail" placeholder="contato@escola.com"></div>
+            </div>
+            <div class="ff-row">
+              <div class="ff"><label>Contato Telefone</label><input id="escolaContatoTel" placeholder="(54) 99999-9999"></div>
+              <div class="ff"><label>Tema Visual</label>
+                <select id="escolaTema">
+                  <option value="corporativo">👔 Corporativo (Padrão)</option>
+                  <option value="ludico">🎨 Lúdico (Infantil/Fundamental)</option>
+                  <option value="serio">🎓 Sério (Ensino Médio)</option>
+                  <option value="interativo">✨ Interativo (Idiomas/Geral)</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-top:8px;"><a href="/temas-preview.html" target="_blank" style="font-size:12px;color:var(--primary);text-decoration:none;">🎨 Ver preview dos temas →</a></div>
+            <div class="btn-bar">
+              <button class="btn-primary" onclick="salvarEscola()">Salvar</button>
+              <button class="btn-secondary" onclick="cancelarEscola()">Cancelar</button>
+            </div>
           </div>
         </div>
-        <div class="ff"><label>Cor escura (hover)</label><input type="text" id="ecCorEscura" value="#a00d24"></div>
-        <div class="ff"><label>Cor de fundo</label><input type="text" id="ecCorCream" value="#f8f5f0"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Escola</th><th>CNPJ</th><th>Plano</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="escolasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="ff"><label>URL do logotipo (opcional)</label><input type="text" id="ecLogo" placeholder="https://...logo.png"><div class="hint">Deixe vazio para usar o emoji.</div></div>
-      <div style="margin-top:12px;padding:16px;border-radius:10px;text-align:center;transition:background .3s;" id="brandPreview">
-        <div style="font-size:32px;" id="previewIcone">🍁</div>
-        <div style="font-family:'Lora',serif;font-size:16px;color:#fff;margin-top:4px;" id="previewNome"></div>
-        <div style="font-size:11px;color:rgba(255,255,255,.6);">Preview do header</div>
-      </div>
-    </div>
 
-    <!-- 3. EMAIL / RESEND -->
-    <div class="section">
-      <h2>📧 E-mail (Resend)</h2>
-      <p class="desc">Envio de e-mails de ausências, turnos, atividades e acesso.</p>
-      <div class="grid-2">
-        <div class="ff"><label>Domínio de e-mail</label><input type="text" id="ecEmailDomain" placeholder="escola.com.br"><div class="hint">Domínio verificado no Resend. Remetente: <code>noreply@domínio</code></div></div>
-        <div class="ff"><label>E-mail de notificações</label><input type="email" id="ecEmailNotif" placeholder="secretaria@escola.com.br"><div class="hint">Recebe avisos de ausência, turnos, inscrições</div></div>
+      <!-- ═══ PAINEL: PLANOS ═══ -->
+      <div id="panelPlanos" class="panel">
+        <div class="sec-title">Planos de Assinatura</div>
+        <div id="planosGrid" class="plans-grid"></div>
+        <div id="planoDetail" style="display:none;">
+          <div class="form-card">
+            <div class="sec-title" id="planoDetailTitle">Plano</div>
+            <div class="ff-row">
+              <div class="ff"><label>Nome</label><input id="planoNome"></div>
+              <div class="ff"><label>Slug</label><input id="planoSlug" readonly style="opacity:.6;"></div>
+            </div>
+            <div class="ff"><label>Descrição</label><input id="planoDesc"></div>
+            <div class="ff-row">
+              <div class="ff"><label>Preço Mensal (R$)</label><input id="planoMensal" type="number" step="0.01"></div>
+              <div class="ff"><label>Preço Anual (R$)</label><input id="planoAnual" type="number" step="0.01"></div>
+            </div>
+            <div class="btn-bar">
+              <button class="btn-primary" onclick="salvarPlano()">Salvar Plano</button>
+            </div>
+          </div>
+          <div class="form-card">
+            <div class="sec-title">Módulos incluídos neste plano</div>
+            <div id="planoModulosGrid"></div>
+            <div class="btn-bar">
+              <button class="btn-primary" onclick="salvarPlanoModulos()">Salvar Módulos do Plano</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="sep"></div>
-      <div class="info-box">
-        <strong>Configurar Resend:</strong><br>
-        1. Crie conta em <a href="https://resend.com" target="_blank">resend.com</a><br>
-        2. Verifique o domínio acima (DNS)<br>
-        3. Gere uma API Key e configure no Supabase:
-      </div>
-      <div class="ff"><label>RESEND_API_KEY</label><input type="text" id="refResendKey" placeholder="re_xxxxxxxxxxxx"><div class="hint">Copie para: <code>Supabase > Edge Functions > Secrets > RESEND_API_KEY</code></div></div>
-    </div>
 
-    <!-- 4. MERCADO LIVRE -->
-    <div class="section">
-      <h2>🛒 Mercado Livre (Almoxarifado)</h2>
-      <p class="desc">OAuth para busca de preços. Opcional — almoxarifado funciona sem ML.</p>
-      <div class="grid-2">
-        <div class="ff"><label>ML_CLIENT_ID</label><input type="text" id="refMlClientId"><div class="hint"><a href="https://developers.mercadolivre.com.br" target="_blank">developers.mercadolivre.com.br</a> > Criar app</div></div>
-        <div class="ff"><label>ML_CLIENT_SECRET</label><input type="text" id="refMlClientSecret"></div>
+      <!-- ═══ PAINEL: MÓDULOS (visão geral) ═══ -->
+      <div id="panelModulos" class="panel">
+        <div class="sec-title">Todos os Módulos <span class="count-badge" id="modulosCount">0</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Ícone</th><th>Nome</th><th>Slug</th><th>Grupo</th><th>Portais</th></tr></thead>
+            <tbody id="modulosBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="ff"><label>ML_REDIRECT_URI (auto-gerado)</label><input type="text" id="refMlRedirect" readonly><div class="hint">Cadastre esta URL como redirect no app do ML</div></div>
-      <div class="info-box">Secrets no Supabase: <code>ML_CLIENT_ID</code>, <code>ML_CLIENT_SECRET</code></div>
-    </div>
 
-    <!-- 5. BANCO INTER -->
-    <div class="section">
-      <h2>🏦 Banco Inter (Boletos)</h2>
-      <p class="desc">mTLS para boletos e consulta de pagamentos. Requer relay no Render.</p>
-      <div class="grid-2">
-        <div class="ff"><label>INTER_CLIENT_ID</label><input type="text" id="refInterClientId"></div>
-        <div class="ff"><label>INTER_CLIENT_SECRET</label><input type="text" id="refInterClientSecret"></div>
+      <!-- ═══ PAINEL: ADMINS ═══ -->
+      <div id="panelAdmins" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="sec-title" style="margin-bottom:0;">Administradores</div>
+          <button class="btn-primary" onclick="showAdminModal()">+ Novo Admin</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Email</th><th>Status</th><th>Criado em</th></tr></thead>
+            <tbody id="adminsBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="grid-2">
-        <div class="ff"><label>INTER_CONTA</label><input type="text" id="refInterConta" placeholder="Conta corrente"></div>
-        <div class="ff"><label>INTER_RELAY_URL</label><input type="text" id="refInterRelay" placeholder="https://seu-relay.onrender.com"><div class="hint">URL do relay mTLS no Render</div></div>
-      </div>
-      <div class="ff"><label>RELAY_SECRET</label><input type="text" id="refRelaySecret" placeholder="Segredo compartilhado Supabase ↔ Relay"></div>
-      <div class="info-box">
-        <strong>Supabase secrets:</strong> <code>INTER_CLIENT_ID</code>, <code>INTER_CLIENT_SECRET</code>, <code>INTER_CONTA</code>, <code>INTER_RELAY_URL</code>, <code>RELAY_SECRET</code><br>
-        <strong>Render env vars:</strong> <code>RELAY_SECRET</code>, <code>INTER_CERT</code> (PEM), <code>INTER_KEY</code> (PEM)
-      </div>
-    </div>
 
-    <!-- 6. GOOGLE -->
-    <div class="section">
-      <h2>🔑 Google (Maps + Calendar)</h2>
-      <p class="desc">Opcional. Maps para ETA no pickup, Calendar para reuniões CRM.</p>
-      <div class="grid-2">
-        <div class="ff"><label>GOOGLE_MAPS_KEY</label><input type="text" id="refGoogleMaps" placeholder="AIza..."><div class="hint">Google Cloud Console > APIs & Services</div></div>
-        <div class="ff"><label>GOOGLE_SERVICE_ACCOUNT</label><input type="text" id="refGoogleSA" placeholder="JSON da service account"><div class="hint">Para Google Calendar</div></div>
-      </div>
-      <div class="info-box">Secrets: <code>GOOGLE_MAPS_KEY</code>, <code>GOOGLE_SERVICE_ACCOUNT</code></div>
     </div>
+  </div>
+</div>
 
-    <!-- 7. SUPABASE -->
-    <div class="section">
-      <h2>🔧 Supabase e Deploy</h2>
-      <p class="desc">Valores do <code>config.js</code> (somente leitura aqui).</p>
-      <div class="grid-2">
-        <div class="ff"><label>SUPABASE_URL</label><input type="text" id="refSupaUrl" readonly></div>
-        <div class="ff"><label>SUPABASE_ANON_KEY</label><input type="text" id="refSupaAnon" readonly style="font-size:10px;"></div>
-      </div>
-      <div class="ff"><label>APP_URL</label><input type="text" id="refAppUrl" placeholder="https://app.escola.com.br"><div class="hint">Secret no Supabase: <code>APP_URL</code>. Redirect após OAuth ML.</div></div>
-      <div class="warn-box">Para alterar SUPABASE_URL ou ANON_KEY, edite o arquivo <code>config.js</code> e faça redeploy.</div>
+<!-- ═══ MODAL: ESCOLA MÓDULOS ═══ -->
+<div class="modal-overlay" id="modalEscolaModulos">
+  <div class="modal" style="max-width:800px;">
+    <h3 id="emNomeEscola">Módulos da Escola</h3>
+    <p class="msub">Selecione quais módulos esta escola pode acessar. Módulos do plano vêm pré-selecionados.</p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="btn-secondary" style="font-size:11px;" onclick="emSelectAll(true)">Selecionar Todos</button>
+      <button class="btn-secondary" style="font-size:11px;" onclick="emSelectAll(false)">Desmarcar Todos</button>
+      <button class="btn-secondary" style="font-size:11px;" onclick="emResetToPlano()">Resetar ao Plano</button>
     </div>
-
-    <!-- 8. MÓDULOS -->
-    <div class="section">
-      <h2>📦 Módulos Ativos</h2>
-      <p class="desc">Módulos desativados ficam ocultos em todos os portais.</p>
-      <div class="module-grid" id="ecModulosGrid"></div>
+    <div id="emModulosGrid"></div>
+    <div class="btn-bar" style="margin-top:16px;">
+      <button class="btn-primary" onclick="salvarEscolaModulos()">Salvar</button>
+      <button class="btn-secondary" onclick="fecharModal('modalEscolaModulos')">Cancelar</button>
     </div>
+  </div>
+</div>
 
-    <!-- SALVAR -->
-    <div class="btns" style="margin-bottom:40px;">
-      <button class="btn" onclick="salvarTudo()" id="btnSalvar">Salvar Todas as Configurações</button>
-      <button class="btn btn-outline" onclick="carregarConfig()">Recarregar do Banco</button>
+<!-- ═══ MODAL: NOVO ADMIN ═══ -->
+<div class="modal-overlay" id="modalNovoAdmin">
+  <div class="modal" style="max-width:450px;">
+    <h3>Novo Administrador</h3>
+    <p class="msub">Adicione um novo superadmin ao sistema.</p>
+    <div class="ff"><label>Nome</label><input id="newAdminNome" placeholder="Nome"></div>
+    <div class="ff"><label>Email</label><input id="newAdminEmail" type="email" placeholder="email@exemplo.com"></div>
+    <div class="ff"><label>Senha</label><input id="newAdminSenha" type="password" placeholder="Mínimo 6 caracteres"></div>
+    <div class="btn-bar">
+      <button class="btn-primary" onclick="criarAdmin()">Criar</button>
+      <button class="btn-secondary" onclick="fecharModal('modalNovoAdmin')">Cancelar</button>
     </div>
-    <div class="f-alert error" id="alertErr" style="margin-bottom:20px;"></div>
-    <div class="f-alert success" id="alertOk" style="margin-bottom:20px;"></div>
-
   </div>
 </div>
 
 <script>
-  const SUPABASE_URL = CONFIG.SUPABASE_URL;
-  const SUPABASE_ANON = CONFIG.SUPABASE_ANON;
-  const API = SUPABASE_URL + '/functions/v1/api';
-  const { createClient } = supabase;
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+// ═══════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgyNTQ5NzcsImV4cCI6MjA1MzgzMDk3N30.aTnePC91K_6MIAMCeDvGSIb3x4gPMCjpWx36_Bg6Bzg';
+const ADMIN_API = SUPABASE_URL + '/functions/v1/admin';
 
-  let accessToken = null;
-  let escolaConfig = {};
+function getToken() { return localStorage.getItem('mb_admin_token'); }
 
-  async function apiCall(body) {
-    const headers = { 'Content-Type':'application/json', 'apikey':SUPABASE_ANON };
-    if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
-    const r = await fetch(API, { method:'POST', headers, body:JSON.stringify(body) });
-    return r.json();
-  }
-
-  // ── AUTH VIA GOOGLE OAUTH (Supabase Auth) ─────────
-  async function loginGoogle() {
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/admin.html' }
-    });
-    if (error) showLoginErr(error.message);
-  }
-
-  async function doLogout() {
-    await sb.auth.signOut();
-    location.reload();
-  }
-
-  function showLoginErr(msg) {
-    const el = document.getElementById('loginError');
-    el.textContent = msg; el.classList.add('show');
-    document.getElementById('spinnerWrap').classList.remove('show');
-    document.getElementById('googleBtn').style.display = '';
-  }
-
-  async function checkAuth() {
-    document.getElementById('spinnerWrap').classList.add('show');
-    document.getElementById('googleBtn').style.display = 'none';
-
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
-      document.getElementById('spinnerWrap').classList.remove('show');
-      document.getElementById('googleBtn').style.display = '';
-      return;
-    }
-
-    accessToken = session.access_token;
-
-    // Valida se é o superusuário
-    const d = await apiCall({ action: 'admin_check' });
-    if (d.error) {
-      showLoginErr(d.error);
-      await sb.auth.signOut();
-      accessToken = null;
-      return;
-    }
-
-    document.getElementById('userName').textContent = session.user.email;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appShell').style.display = 'block';
-    carregarConfig();
-  }
-
-  // ── CONFIG ────────────────────────────────────────
-  async function carregarConfig() {
-    const d = await apiCall({ action:'config_publica' });
-    escolaConfig = d || {};
-    preencherForm();
-    atualizarStatus();
-    atualizarPreview();
-  }
-
-  function preencherForm() {
-    const c = escolaConfig;
-    document.getElementById('ecNome').value = c.escola_nome || '';
-    document.getElementById('ecSub').value = c.escola_subtitulo || '';
-    document.getElementById('ecCnpj').value = c.escola_cnpj || '';
-    document.getElementById('ecUrl').value = c.escola_url || '';
-    document.getElementById('ecLat').value = c.escola_lat ?? '';
-    document.getElementById('ecLon').value = c.escola_lon ?? '';
-    document.getElementById('ecRaio').value = c.escola_pickup_raio ?? 200;
-    document.getElementById('ecIcone').value = c.escola_icone || '🍁';
-    document.getElementById('ecCor').value = c.cor_primaria || '#C8102E';
-    document.getElementById('ecCorPick').value = c.cor_primaria || '#C8102E';
-    document.getElementById('ecCorEscura').value = c.cor_escura || '#a00d24';
-    document.getElementById('ecCorCream').value = c.cor_cream || '#f8f5f0';
-    document.getElementById('ecLogo').value = c.escola_logo_url || '';
-    document.getElementById('ecEmailDomain').value = c.escola_email_domain || '';
-    document.getElementById('ecEmailNotif').value = c.escola_email_notif || '';
-    document.getElementById('refSupaUrl').value = CONFIG.SUPABASE_URL;
-    document.getElementById('refSupaAnon').value = CONFIG.SUPABASE_ANON;
-    document.getElementById('refMlRedirect').value = CONFIG.SUPABASE_URL + '/functions/v1/diplomas?action=ml_oauth_callback';
-    document.getElementById('refAppUrl').value = c.escola_url || '';
-    ecModulosSel = Array.isArray(c.modulos_ativos) ? [...c.modulos_ativos] : MODULOS.map(m=>m.id);
-    renderModulos();
-  }
-
-  function atualizarStatus() {
-    const c = escolaConfig;
-    const checks = [
-      {label:'Nome da escola', ok:!!c.escola_nome},
-      {label:'Domínio e-mail', ok:!!c.escola_email_domain},
-      {label:'E-mail notificações', ok:!!c.escola_email_notif},
-      {label:'URL pública', ok:!!c.escola_url},
-      {label:'Coordenadas', ok:c.escola_lat!=null && c.escola_lon!=null},
-      {label:'Cor primária', ok:!!c.cor_primaria},
-    ];
-    document.getElementById('statusGrid').innerHTML = checks.map(ch =>
-      `<div style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:${ch.ok?'#f0fdf4':'#fef3c7'};border:1px solid ${ch.ok?'#bbf7d0':'#fde68a'};border-radius:8px;font-size:12px;">
-        <span class="status-dot ${ch.ok?'ok':'warn'}"></span>${ch.label}
-      </div>`
-    ).join('');
-  }
-
-  function atualizarPreview() {
-    const cor = document.getElementById('ecCor').value || '#C8102E';
-    document.getElementById('brandPreview').style.background = cor;
-    document.getElementById('previewIcone').textContent = document.getElementById('ecIcone').value || '🍁';
-    document.getElementById('previewNome').textContent = document.getElementById('ecNome').value || 'Nome da Escola';
-  }
-  document.addEventListener('input', e => {
-    if (['ecNome','ecIcone','ecCor','ecCorPick'].includes(e.target.id)) atualizarPreview();
+async function api(body) {
+  const token = getToken();
+  const r = await fetch(ADMIN_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+    body: JSON.stringify({ ...body, _token: token })
   });
+  return r.json();
+}
 
-  // ── MÓDULOS ───────────────────────────────────────
-  const MODULOS = [
-    {id:'turnos',nome:'Turnos',icon:'🕐'},{id:'atividades',nome:'Atividades Extracurriculares',icon:'🎯'},
-    {id:'boletos',nome:'Boletos',icon:'💰'},{id:'achados_perdidos',nome:'Achados & Perdidos',icon:'🔍'},
-    {id:'pickup',nome:'Pickup',icon:'🚗'},{id:'almoxarifado',nome:'Almoxarifado',icon:'📦'},
-    {id:'crm',nome:'CRM',icon:'📋'},{id:'financeiro',nome:'Financeiro',icon:'💰'},
-    {id:'manutencao',nome:'Manutenção',icon:'🔧'},{id:'calendario',nome:'Calendário',icon:'📅'},
-    {id:'emergencia',nome:'Emergência',icon:'🚨'},{id:'impressoes',nome:'Impressões',icon:'🖨️'},
-    {id:'growth_plan',nome:'Growth Plan',icon:'📈'},{id:'professoras',nome:'Portal Professoras',icon:'👩‍🏫'},
-  ];
-  let ecModulosSel = [];
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-  function renderModulos() {
-    document.getElementById('ecModulosGrid').innerHTML = MODULOS.map(m => {
-      const sel = ecModulosSel.includes(m.id);
-      return `<div class="module-opt ${sel?'selected':''}" onclick="toggleMod('${m.id}')">
-        <input type="checkbox" ${sel?'checked':''} style="accent-color:var(--red);pointer-events:none;">
-        ${m.icon} ${m.nome}
-      </div>`;
-    }).join('');
-  }
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
 
-  function toggleMod(id) {
-    const idx = ecModulosSel.indexOf(id);
-    if (idx>=0) ecModulosSel.splice(idx,1); else ecModulosSel.push(id);
-    renderModulos();
-  }
+function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
 
-  // ── SALVAR ────────────────────────────────────────
-  async function salvarTudo() {
-    const btn = document.getElementById('btnSalvar');
-    const errEl = document.getElementById('alertErr');
-    const okEl = document.getElementById('alertOk');
-    errEl.classList.remove('show'); okEl.classList.remove('show');
-
-    const nome = document.getElementById('ecNome').value.trim();
-    if (!nome) { errEl.textContent='Nome da escola é obrigatório.'; errEl.classList.add('show'); return; }
-
-    btn.disabled = true; btn.textContent = 'Salvando…';
-    const emailDomain = document.getElementById('ecEmailDomain').value.trim();
-    const configs = [
-      {chave:'escola_nome',valor:nome,categoria:'escola'},
-      {chave:'escola_subtitulo',valor:document.getElementById('ecSub').value.trim(),categoria:'escola'},
-      {chave:'escola_cnpj',valor:document.getElementById('ecCnpj').value.trim(),categoria:'escola'},
-      {chave:'escola_url',valor:document.getElementById('ecUrl').value.trim(),categoria:'escola'},
-      {chave:'escola_lat',valor:parseFloat(document.getElementById('ecLat').value)||null,categoria:'escola'},
-      {chave:'escola_lon',valor:parseFloat(document.getElementById('ecLon').value)||null,categoria:'escola'},
-      {chave:'escola_pickup_raio',valor:parseInt(document.getElementById('ecRaio').value)||200,categoria:'escola'},
-      {chave:'escola_icone',valor:document.getElementById('ecIcone').value||'🍁',categoria:'branding'},
-      {chave:'cor_primaria',valor:document.getElementById('ecCor').value.trim()||'#C8102E',categoria:'branding'},
-      {chave:'cor_escura',valor:document.getElementById('ecCorEscura').value.trim()||'#a00d24',categoria:'branding'},
-      {chave:'cor_cream',valor:document.getElementById('ecCorCream').value.trim()||'#f8f5f0',categoria:'branding'},
-      {chave:'escola_logo_url',valor:document.getElementById('ecLogo').value.trim()||null,categoria:'branding'},
-      {chave:'escola_email_domain',valor:emailDomain,categoria:'escola'},
-      {chave:'escola_email_sender',valor:emailDomain?'noreply@'+emailDomain:'',categoria:'escola'},
-      {chave:'escola_email_notif',valor:document.getElementById('ecEmailNotif').value.trim(),categoria:'escola'},
-      {chave:'modulos_ativos',valor:ecModulosSel,categoria:'modulos'},
-    ];
-
-    const d = await apiCall({ action:'config_escola_admin', configs });
-    btn.disabled = false; btn.textContent = 'Salvar Todas as Configurações';
-    if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
-    okEl.textContent='✅ Configurações salvas! Recarregue os portais para aplicar.';
-    okEl.classList.add('show');
-    await carregarConfig();
-  }
-
-  // ── INIT ──────────────────────────────────────────
-  checkAuth();
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session && !document.getElementById('appShell').style.display) {
-      checkAuth();
+// ═══════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════
+async function checkSession() {
+  const token = getToken();
+  if (!token) {
+    const d = await api({ action: 'admin_setup_check' });
+    if (d.needs_setup) {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('setupForm').style.display = 'block';
     }
+    return;
+  }
+  const d = await api({ action: 'admin_perfil' });
+  if (d.error) { localStorage.removeItem('mb_admin_token'); location.reload(); return; }
+  showApp(d.nome, d.email);
+}
+
+async function doSetup() {
+  const nome = document.getElementById('setupNome').value.trim();
+  const email = document.getElementById('setupEmail').value.trim();
+  const senha = document.getElementById('setupSenha').value;
+  if (!nome || !email || !senha) return showError('Preencha todos os campos.');
+  if (senha.length < 6) return showError('Senha deve ter no mínimo 6 caracteres.');
+  const d = await api({ action: 'admin_setup', nome, email, senha });
+  if (d.error) return showError(d.error);
+  localStorage.setItem('mb_admin_token', d.token);
+  showApp(d.nome, d.email);
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  if (!email || !senha) return showError('Preencha email e senha.');
+  const d = await api({ action: 'admin_login', email, senha });
+  if (d.error) return showError(d.error);
+  localStorage.setItem('mb_admin_token', d.token);
+  showApp(d.nome, d.email);
+}
+
+async function doLogout() {
+  await api({ action: 'admin_logout' });
+  localStorage.removeItem('mb_admin_token');
+  location.reload();
+}
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+function showApp(nome, email) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+  document.getElementById('adminNome').textContent = nome;
+  document.getElementById('adminEmail').textContent = email;
+  loadEscolas();
+}
+
+// Enter no login
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') {
+    if (document.getElementById('setupForm').style.display !== 'none') doSetup();
+    else doLogin();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════
+const titles = { escolas: 'Escolas', planos: 'Planos de Assinatura', modulos: 'Módulos', admins: 'Administradores' };
+
+function showPanel(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel' + id.charAt(0).toUpperCase() + id.slice(1)).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('panelTitle').textContent = titles[id] || id;
+  if (id === 'escolas') loadEscolas();
+  if (id === 'planos') loadPlanos();
+  if (id === 'modulos') loadModulos();
+  if (id === 'admins') loadAdmins();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ESCOLAS
+// ═══════════════════════════════════════════════════════════
+let _escolas = [], _planos = [], _modulos = [];
+
+async function loadEscolas() {
+  const [eRes, pRes] = await Promise.all([api({ action: 'escolas_list' }), api({ action: 'planos_list' })]);
+  _escolas = Array.isArray(eRes) ? eRes : [];
+  _planos = Array.isArray(pRes) ? pRes : [];
+  document.getElementById('escolasCount').textContent = _escolas.length;
+
+  // Populate plano select
+  const sel = document.getElementById('escolaPlano');
+  sel.innerHTML = '<option value="">Sem plano</option>' + _planos.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+
+  const tbody = document.getElementById('escolasBody');
+  if (_escolas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhuma escola cadastrada</td></tr>'; return; }
+  tbody.innerHTML = _escolas.map(e => `<tr>
+    <td><strong>${esc(e.nome)}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(e.slug || '')}</span></td>
+    <td>${esc(e.cnpj || '—')}</td>
+    <td>${e.planos ? `<span class="status-pill ativo">${esc(e.planos.nome)}</span>` : '<span style="color:var(--muted);">—</span>'}</td>
+    <td>${e.ativo ? '<span class="status-pill ativo">Ativo</span>' : '<span class="status-pill inativo">Inativo</span>'}</td>
+    <td>
+      <button class="action-btn" onclick="abrirModulosEscola('${e.id}','${esc(e.nome)}')">🧩 Módulos</button>
+      <button class="action-btn" onclick="editarEscola('${e.id}')">✏️</button>
+      <button class="action-btn del" onclick="desativarEscola('${e.id}')">🗑️</button>
+    </td>
+  </tr>`).join('');
+}
+
+function showEscolaForm() {
+  document.getElementById('escolaId').value = '';
+  document.getElementById('escolaNome').value = '';
+  document.getElementById('escolaCnpj').value = '';
+  document.getElementById('escolaSlug').value = '';
+  document.getElementById('escolaPlano').value = '';
+  document.getElementById('escolaContatoNome').value = '';
+  document.getElementById('escolaContatoEmail').value = '';
+  document.getElementById('escolaContatoTel').value = '';
+  document.getElementById('escolaTema').value = 'corporativo';
+  document.getElementById('escolaFormWrap').style.display = 'block';
+  document.getElementById('escolaNome').focus();
+}
+
+function cancelarEscola() { document.getElementById('escolaFormWrap').style.display = 'none'; }
+
+function editarEscola(id) {
+  const e = _escolas.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('escolaId').value = e.id;
+  document.getElementById('escolaNome').value = e.nome || '';
+  document.getElementById('escolaCnpj').value = e.cnpj || '';
+  document.getElementById('escolaSlug').value = e.slug || '';
+  document.getElementById('escolaPlano').value = e.plano_id || '';
+  document.getElementById('escolaContatoNome').value = e.contato_nome || '';
+  document.getElementById('escolaContatoEmail').value = e.contato_email || '';
+  document.getElementById('escolaContatoTel').value = e.contato_telefone || '';
+  document.getElementById('escolaTema').value = e.tema || 'corporativo';
+  document.getElementById('escolaFormWrap').style.display = 'block';
+}
+
+async function salvarEscola() {
+  const id = document.getElementById('escolaId').value;
+  const data = {
+    nome: document.getElementById('escolaNome').value.trim(),
+    cnpj: document.getElementById('escolaCnpj').value.trim() || null,
+    slug: document.getElementById('escolaSlug').value.trim() || null,
+    plano_id: document.getElementById('escolaPlano').value || null,
+    contato_nome: document.getElementById('escolaContatoNome').value.trim() || null,
+    contato_email: document.getElementById('escolaContatoEmail').value.trim() || null,
+    contato_telefone: document.getElementById('escolaContatoTel').value.trim() || null,
+    tema: document.getElementById('escolaTema').value || 'corporativo',
+  };
+  if (!data.nome) return showToast('Nome obrigatório', 'error');
+
+  let d;
+  if (id) { d = await api({ action: 'escolas_update', id, ...data }); }
+  else { d = await api({ action: 'escolas_create', ...data }); }
+  if (d.error) return showToast(d.error, 'error');
+  showToast(id ? 'Escola atualizada!' : 'Escola criada!');
+  cancelarEscola();
+  loadEscolas();
+}
+
+async function desativarEscola(id) {
+  if (!confirm('Desativar esta escola?')) return;
+  const d = await api({ action: 'escolas_delete', id });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Escola desativada');
+  loadEscolas();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ESCOLA MÓDULOS (toggle granular)
+// ═══════════════════════════════════════════════════════════
+let _emEscolaId = null;
+
+async function abrirModulosEscola(escolaId, nome) {
+  _emEscolaId = escolaId;
+  document.getElementById('emNomeEscola').textContent = 'Módulos — ' + nome;
+
+  const resolvidos = await api({ action: 'escola_modulos_get', escola_id: escolaId });
+  if (!Array.isArray(resolvidos)) { showToast('Erro ao carregar módulos', 'error'); return; }
+
+  const grupos = {};
+  const grupoNomes = {
+    existente: 'Módulos Existentes',
+    academico: 'Acadêmico',
+    comunicacao: 'Comunicação',
+    administrativo: 'Administrativo',
+    financeiro: 'Financeiro',
+    operacional: 'Operacional',
+    avancado: 'Avançado'
+  };
+
+  for (const m of resolvidos) {
+    if (!grupos[m.grupo]) grupos[m.grupo] = [];
+    grupos[m.grupo].push(m);
+  }
+
+  let html = '';
+  for (const [grupo, mods] of Object.entries(grupos)) {
+    html += `<div class="modulos-section"><h4>${grupoNomes[grupo] || grupo}</h4>`;
+    for (const m of mods) {
+      const checked = m.habilitado ? 'checked' : '';
+      const activeClass = m.habilitado ? 'active' : '';
+      html += `<label class="modulo-toggle ${activeClass}" id="mt-${m.slug}">
+        <input type="checkbox" data-slug="${esc(m.slug)}" ${checked} onchange="this.parentElement.classList.toggle('active',this.checked)">
+        <span class="m-icon">${m.icone}</span>
+        <div class="m-info">
+          <div class="m-name">${esc(m.nome)}</div>
+          <div class="m-portais">${(m.portais || []).join(', ')}</div>
+        </div>
+      </label>`;
+    }
+    html += '</div>';
+  }
+
+  document.getElementById('emModulosGrid').innerHTML = html;
+  document.getElementById('modalEscolaModulos').classList.add('show');
+}
+
+function emSelectAll(val) {
+  document.querySelectorAll('#emModulosGrid input[type="checkbox"]').forEach(cb => {
+    cb.checked = val;
+    cb.parentElement.classList.toggle('active', val);
   });
+}
+
+async function emResetToPlano() {
+  if (!_emEscolaId) return;
+  await api({ action: 'escola_modulos_reset', escola_id: _emEscolaId });
+  showToast('Resetado ao plano base');
+  abrirModulosEscola(_emEscolaId, document.getElementById('emNomeEscola').textContent.replace('Módulos — ', ''));
+}
+
+async function salvarEscolaModulos() {
+  if (!_emEscolaId) return;
+  const modulos = {};
+  document.querySelectorAll('#emModulosGrid input[type="checkbox"]').forEach(cb => {
+    modulos[cb.dataset.slug] = cb.checked;
+  });
+  const d = await api({ action: 'escola_modulos_set', escola_id: _emEscolaId, modulos });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Módulos salvos! (' + (d.overrides || 0) + ' overrides)');
+  fecharModal('modalEscolaModulos');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLANOS
+// ═══════════════════════════════════════════════════════════
+let _selectedPlano = null;
+
+async function loadPlanos() {
+  const d = await api({ action: 'planos_list' });
+  _planos = Array.isArray(d) ? d : [];
+
+  // Also load modules for plan config
+  const m = await api({ action: 'modulos_list' });
+  _modulos = Array.isArray(m) ? m : [];
+
+  const grid = document.getElementById('planosGrid');
+  grid.innerHTML = _planos.map(p => `<div class="plan-card ${_selectedPlano === p.id ? 'selected' : ''}" onclick="selectPlano('${p.id}')">
+    <h3>${esc(p.nome)}</h3>
+    <div style="font-size:11px;color:var(--muted);">${esc(p.slug)}</div>
+    <div style="font-size:20px;font-weight:700;margin:8px 0;font-family:'Lora',serif;">R$ ${(p.preco_mensal || 0).toFixed(2)}<span style="font-size:11px;font-weight:400;color:var(--muted);">/mês</span></div>
+    <div style="font-size:12px;color:var(--muted);">${esc(p.descricao || '')}</div>
+  </div>`).join('');
+
+  if (_selectedPlano) renderPlanoDetail(_selectedPlano);
+}
+
+async function selectPlano(id) {
+  _selectedPlano = id;
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  renderPlanoDetail(id);
+}
+
+async function renderPlanoDetail(planoId) {
+  const plano = _planos.find(p => p.id === planoId);
+  if (!plano) return;
+
+  document.getElementById('planoDetailTitle').textContent = 'Editar: ' + plano.nome;
+  document.getElementById('planoNome').value = plano.nome;
+  document.getElementById('planoSlug').value = plano.slug;
+  document.getElementById('planoDesc').value = plano.descricao || '';
+  document.getElementById('planoMensal').value = plano.preco_mensal || 0;
+  document.getElementById('planoAnual').value = plano.preco_anual || 0;
+
+  // Load plan modules
+  const pm = await api({ action: 'plano_modulos_list', plano_id: planoId });
+  const planModSlugs = new Set((Array.isArray(pm) ? pm : []).map(r => r.modulos?.slug).filter(Boolean));
+
+  const grupos = {};
+  const grupoNomes = { existente:'Existentes', academico:'Acadêmico', comunicacao:'Comunicação', administrativo:'Administrativo', financeiro:'Financeiro', operacional:'Operacional', avancado:'Avançado' };
+  for (const m of _modulos) {
+    if (!grupos[m.grupo]) grupos[m.grupo] = [];
+    grupos[m.grupo].push(m);
+  }
+
+  let html = '';
+  for (const [grupo, mods] of Object.entries(grupos)) {
+    html += `<div class="modulos-section"><h4>${grupoNomes[grupo] || grupo}</h4>`;
+    for (const m of mods) {
+      const checked = planModSlugs.has(m.slug) ? 'checked' : '';
+      const activeClass = planModSlugs.has(m.slug) ? 'active' : '';
+      html += `<label class="modulo-toggle ${activeClass}">
+        <input type="checkbox" data-id="${m.id}" ${checked} onchange="this.parentElement.classList.toggle('active',this.checked)">
+        <span class="m-icon">${m.icone}</span>
+        <div class="m-info"><div class="m-name">${esc(m.nome)}</div></div>
+      </label>`;
+    }
+    html += '</div>';
+  }
+  document.getElementById('planoModulosGrid').innerHTML = html;
+  document.getElementById('planoDetail').style.display = 'block';
+}
+
+async function salvarPlano() {
+  if (!_selectedPlano) return;
+  const d = await api({
+    action: 'planos_update',
+    id: _selectedPlano,
+    nome: document.getElementById('planoNome').value.trim(),
+    descricao: document.getElementById('planoDesc').value.trim(),
+    preco_mensal: parseFloat(document.getElementById('planoMensal').value) || 0,
+    preco_anual: parseFloat(document.getElementById('planoAnual').value) || 0,
+  });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Plano atualizado!');
+  loadPlanos();
+}
+
+async function salvarPlanoModulos() {
+  if (!_selectedPlano) return;
+  const modulo_ids = [];
+  document.querySelectorAll('#planoModulosGrid input[type="checkbox"]:checked').forEach(cb => {
+    modulo_ids.push(cb.dataset.id);
+  });
+  const d = await api({ action: 'plano_modulos_set', plano_id: _selectedPlano, modulo_ids });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Módulos do plano salvos!');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MÓDULOS (visão geral)
+// ═══════════════════════════════════════════════════════════
+async function loadModulos() {
+  const d = await api({ action: 'modulos_list' });
+  _modulos = Array.isArray(d) ? d : [];
+  document.getElementById('modulosCount').textContent = _modulos.length;
+
+  const grupoColors = { existente:'var(--muted)', academico:'var(--green)', comunicacao:'var(--blue)', administrativo:'#c27800', financeiro:'var(--red)', operacional:'var(--purple)', avancado:'#555' };
+  const tbody = document.getElementById('modulosBody');
+  tbody.innerHTML = _modulos.map(m => `<tr>
+    <td style="font-size:20px;">${m.icone}</td>
+    <td><strong>${esc(m.nome)}</strong></td>
+    <td><code style="font-size:11px;background:#f5f0ea;padding:2px 8px;border-radius:4px;">${esc(m.slug)}</code></td>
+    <td><span style="color:${grupoColors[m.grupo] || 'var(--muted)'};font-weight:600;font-size:12px;text-transform:uppercase;">${esc(m.grupo)}</span></td>
+    <td style="font-size:11px;color:var(--muted);">${(m.portais || []).join(', ')}</td>
+  </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADMINS
+// ═══════════════════════════════════════════════════════════
+async function loadAdmins() {
+  const d = await api({ action: 'admins_list' });
+  const admins = Array.isArray(d) ? d : [];
+  const tbody = document.getElementById('adminsBody');
+  if (admins.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum admin</td></tr>'; return; }
+  tbody.innerHTML = admins.map(a => `<tr>
+    <td><strong>${esc(a.nome)}</strong></td>
+    <td>${esc(a.email)}</td>
+    <td>${a.ativo ? '<span class="status-pill ativo">Ativo</span>' : '<span class="status-pill inativo">Inativo</span>'}</td>
+    <td style="font-size:12px;color:var(--muted);">${new Date(a.criado_em).toLocaleDateString('pt-BR')}</td>
+  </tr>`).join('');
+}
+
+function showAdminModal() {
+  document.getElementById('newAdminNome').value = '';
+  document.getElementById('newAdminEmail').value = '';
+  document.getElementById('newAdminSenha').value = '';
+  document.getElementById('modalNovoAdmin').classList.add('show');
+}
+
+async function criarAdmin() {
+  const nome = document.getElementById('newAdminNome').value.trim();
+  const email = document.getElementById('newAdminEmail').value.trim();
+  const senha = document.getElementById('newAdminSenha').value;
+  if (!nome || !email || !senha) return showToast('Preencha todos os campos', 'error');
+  if (senha.length < 6) return showToast('Senha deve ter no mínimo 6 caracteres', 'error');
+  const d = await api({ action: 'admins_create', nome, email, senha });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Admin criado!');
+  fecharModal('modalNovoAdmin');
+  loadAdmins();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+checkSession();
 </script>
 </body>
 </html>

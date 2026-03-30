@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════════
+   LUMIED — Skeleton Loading + Auto-save Indicator
+   ═══════════════════════════════════════════════════════════ */
+.skeleton{background:linear-gradient(90deg,#f0ece6 25%,#e8e2d8 50%,#f0ece6 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-text{height:14px;margin-bottom:8px;width:80%;}.skeleton-text.short{width:40%;}.skeleton-text.medium{width:60%;}
+.skeleton-card{height:120px;margin-bottom:12px;}
+.skeleton-stat{height:80px;}
+
+/* Auto-save indicator */
+.autosave-indicator{position:fixed;bottom:80px;right:16px;background:rgba(45,122,58,.9);color:#fff;font-size:11px;font-weight:600;padding:6px 14px;border-radius:100px;z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;}
+.autosave-indicator.show{opacity:1;}
+
+/* Quick action buttons */
+.quick-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.quick-action{display:flex;align-items:center;gap:8px;padding:12px 18px;background:#fff;border:1.5px solid var(--border,#e2dbd1);border-radius:12px;font-family:inherit;font-size:13px;font-weight:600;color:var(--text,#1a1a1a);cursor:pointer;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.quick-action:hover{border-color:var(--red,#C8102E);background:var(--red-light,rgba(200,16,46,.04));transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.quick-action .qa-icon{font-size:18px;}
+
+/* Search modal (Ctrl+K) */
+.search-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-start;justify-content:center;padding-top:20vh;backdrop-filter:blur(4px);}
+.search-overlay.show{display:flex;}
+.search-box{background:#fff;border-radius:14px;width:100%;max-width:540px;box-shadow:0 24px 60px rgba(0,0,0,.25);overflow:hidden;}
+.search-input-wrap{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border,#e2dbd1);}
+.search-input-wrap input{flex:1;border:none;outline:none;font-family:inherit;font-size:16px;background:transparent;}
+.search-input-wrap .search-icon{font-size:18px;color:var(--muted,#999);margin-right:10px;}
+.search-results{max-height:320px;overflow-y:auto;}
+.search-result{display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer;transition:background .1s;}
+.search-result:hover,.search-result.selected{background:var(--red-light,rgba(200,16,46,.04));}
+.search-result .sr-icon{font-size:16px;width:24px;text-align:center;}
+.search-result .sr-text{font-size:14px;color:var(--text,#1a1a1a);}.search-result .sr-hint{font-size:11px;color:var(--muted,#999);}
+
+/* Camera FAB (floating action button) */
+.camera-fab{position:fixed;bottom:80px;right:20px;width:56px;height:56px;background:var(--red,#C8102E);color:#fff;border:none;border-radius:50%;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(200,16,46,.4);z-index:60;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.camera-fab:hover{transform:scale(1.1);box-shadow:0 8px 24px rgba(200,16,46,.5);}
+
+/* Morning briefing card */
+.briefing-card{background:linear-gradient(135deg,var(--red,#C8102E),#a00d24);border-radius:16px;padding:20px 24px;color:#fff;margin-bottom:20px;position:relative;overflow:hidden;}
+.briefing-card::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.08);border-radius:50%;}
+.briefing-card h3{font-family:'Lora',serif;font-size:18px;margin-bottom:4px;}
+.briefing-card p{font-size:13px;opacity:.85;}
+.briefing-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;}
+.briefing-metric{background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center;}
+.briefing-metric .bm-value{font-size:22px;font-weight:700;}
+.briefing-metric .bm-label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;opacity:.7;}
+
+/* ═══════════════════════════════════════════════════════════
+   LUMIED — Sistema de Temas Visuais
+   Cada tema sobrescreve as CSS variables do :root
+   Aplicar classe no <body>: body.theme-ludico, body.theme-serio, etc.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── TEMA 1: LÚDICO (Infantil / Fundamental) ─────────────
+   Cores vibrantes, bordas arredondadas, emojis, fontes playful
+   ──────────────────────────────────────────────────────── */
+body.theme-ludico {
+  --red: #FF6B35;
+  --red-dark: #E55A2B;
+  --red-light: rgba(255,107,53,.08);
+  --bg: #FFF8F0;
+  --sb: #2D1B69;
+  --white: #FFFFFF;
+  --border: #FFD4B8;
+  --text: #2D1B69;
+  --muted: #9B8EC4;
+  --green: #4CAF50;
+  --blue: #42A5F5;
+  font-family: 'Nunito', 'DM Sans', sans-serif;
+}
+body.theme-ludico .sidebar { background: linear-gradient(180deg, #2D1B69 0%, #4A2D8F 100%); }
+body.theme-ludico .sb-brand h1 { font-family: 'Nunito', sans-serif; }
+body.theme-ludico .nav-item { border-radius: 14px; font-size: 14px; }
+body.theme-ludico .nav-item.active { background: linear-gradient(135deg, #FF6B35, #FFB347); }
+body.theme-ludico .nav-item .ic { font-size: 18px; }
+body.theme-ludico .topbar { background: linear-gradient(90deg, #FFF8F0, #FFE8D6); border-bottom: 3px solid #FFB347; }
+body.theme-ludico .topbar h2 { font-family: 'Nunito', sans-serif; color: #2D1B69; }
+body.theme-ludico .stat-card { border-radius: 20px; border: 2px solid #FFD4B8; }
+body.theme-ludico .stat-card:hover { transform: translateY(-4px) rotate(-1deg); }
+body.theme-ludico .stat-value { color: #2D1B69; }
+body.theme-ludico .content { background: #FFF8F0; }
+body.theme-ludico .table-wrap { border-radius: 18px; border: 2px solid #FFD4B8; }
+body.theme-ludico table thead th { background: #FFF0E0; color: #FF6B35; }
+body.theme-ludico .form-card { border-radius: 18px; border: 2px solid #FFD4B8; background: #FFFAF5; }
+body.theme-ludico .btn-primary, body.theme-ludico .login-btn { background: linear-gradient(135deg, #FF6B35, #FFB347); border-radius: 14px; box-shadow: 0 4px 16px rgba(255,107,53,.3); }
+body.theme-ludico .modal { border-radius: 24px; }
+body.theme-ludico .login-card { border-radius: 24px; border: 3px solid #FFD4B8; }
+body.theme-ludico #loginScreen { background: linear-gradient(135deg, #2D1B69 0%, #6B4BA3 100%); }
+body.theme-ludico .sec-title { font-family: 'Nunito', sans-serif; }
+body.theme-ludico .count-badge { background: linear-gradient(135deg, #FF6B35, #FFB347); color: #fff; }
+body.theme-ludico .fb.active { border-color: #FF6B35; background: rgba(255,107,53,.08); color: #FF6B35; }
+
+/* ── TEMA 2: SÉRIO (Ensino Médio) ────────────────────────
+   Dark mode elegante, tons escuros, tipografia serif, minimalista
+   ──────────────────────────────────────────────────────── */
+body.theme-serio {
+  --red: #1A73E8;
+  --red-dark: #1557B0;
+  --red-light: rgba(26,115,232,.06);
+  --bg: #0F1419;
+  --sb: #0A0E14;
+  --white: #1C2128;
+  --border: #2D333B;
+  --text: #E6EDF3;
+  --muted: #8B949E;
+  --green: #3FB950;
+  --blue: #58A6FF;
+}
+body.theme-serio .sidebar { background: #0A0E14; border-right: 1px solid #2D333B; }
+body.theme-serio .sb-brand h1 { font-family: 'Lora', serif; }
+body.theme-serio .nav-item { color: rgba(230,237,243,.7); }
+body.theme-serio .nav-item.active { background: rgba(26,115,232,.15); color: #58A6FF; border-left: 3px solid #58A6FF; border-radius: 0 8px 8px 0; }
+body.theme-serio .topbar { background: #161B22; border-bottom: 1px solid #2D333B; }
+body.theme-serio .topbar h2 { font-family: 'Lora', serif; color: #E6EDF3; }
+body.theme-serio .content { background: #0F1419; }
+body.theme-serio .stat-card { background: #161B22; border: 1px solid #2D333B; border-radius: 8px; }
+body.theme-serio .stat-card:hover { border-color: #58A6FF; }
+body.theme-serio .stat-label { color: #8B949E; }
+body.theme-serio .stat-value { color: #E6EDF3; }
+body.theme-serio .table-wrap { background: #161B22; border: 1px solid #2D333B; }
+body.theme-serio table thead th { background: #1C2128; color: #8B949E; border-bottom: 1px solid #2D333B; }
+body.theme-serio table tbody td { color: #C9D1D9; border-bottom: 1px solid #21262D; }
+body.theme-serio table tbody tr:hover { background: #1C2128; }
+body.theme-serio .form-card { background: #161B22; border: 1px solid #2D333B; }
+body.theme-serio .ff input, body.theme-serio .ff select, body.theme-serio .ff textarea { background: #0D1117; border-color: #2D333B; color: #E6EDF3; }
+body.theme-serio .btn-primary, body.theme-serio .login-btn { background: #1A73E8; border-radius: 6px; box-shadow: none; }
+body.theme-serio .btn-primary:hover { background: #1557B0; }
+body.theme-serio .modal { background: #161B22; border: 1px solid #2D333B; }
+body.theme-serio .modal h3, body.theme-serio .sec-title { color: #E6EDF3; }
+body.theme-serio .login-card { background: #161B22; border: 1px solid #2D333B; }
+body.theme-serio .lf input { background: #0D1117; border-color: #2D333B; color: #E6EDF3; }
+body.theme-serio #loginScreen { background: #0A0E14; }
+body.theme-serio .count-badge { background: rgba(26,115,232,.15); color: #58A6FF; }
+body.theme-serio .fb.active { border-color: #58A6FF; background: rgba(88,166,255,.08); color: #58A6FF; }
+body.theme-serio .logout-btn { color: #8B949E; border-color: #2D333B; }
+
+/* ── TEMA 3: INTERATIVO (Idiomas / Geral) ────────────────
+   Gradientes modernos, glassmorphism, animações, vibrante
+   ──────────────────────────────────────────────────────── */
+body.theme-interativo {
+  --red: #7C3AED;
+  --red-dark: #6D28D9;
+  --red-light: rgba(124,58,237,.06);
+  --bg: #FAF5FF;
+  --sb: #1E1146;
+  --white: #FFFFFF;
+  --border: #DDD6FE;
+  --text: #1E1146;
+  --muted: #7C6FA0;
+  --green: #10B981;
+  --blue: #06B6D4;
+}
+body.theme-interativo .sidebar { background: linear-gradient(180deg, #1E1146 0%, #312E81 50%, #1E1146 100%); }
+body.theme-interativo .nav-item.active { background: linear-gradient(135deg, #7C3AED, #06B6D4); }
+body.theme-interativo .topbar { background: rgba(255,255,255,.8); backdrop-filter: blur(20px) saturate(1.8); border-bottom: 1px solid rgba(124,58,237,.1); }
+body.theme-interativo .topbar h2 { background: linear-gradient(135deg, #7C3AED, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+body.theme-interativo .stat-card { border-radius: 16px; border: 1px solid #DDD6FE; background: rgba(255,255,255,.7); backdrop-filter: blur(12px); }
+body.theme-interativo .stat-card::before { background: linear-gradient(135deg, #7C3AED, #06B6D4) !important; }
+body.theme-interativo .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(124,58,237,.15); }
+body.theme-interativo .table-wrap { border: 1px solid #DDD6FE; border-radius: 16px; overflow: hidden; }
+body.theme-interativo table thead th { background: #F5F3FF; color: #7C3AED; }
+body.theme-interativo .form-card { border: 1px solid #DDD6FE; border-radius: 16px; background: rgba(255,255,255,.8); backdrop-filter: blur(12px); }
+body.theme-interativo .btn-primary, body.theme-interativo .login-btn { background: linear-gradient(135deg, #7C3AED, #06B6D4); border-radius: 12px; box-shadow: 0 4px 20px rgba(124,58,237,.3); }
+body.theme-interativo .btn-primary:hover { box-shadow: 0 8px 30px rgba(124,58,237,.4); transform: translateY(-2px); }
+body.theme-interativo .modal { border-radius: 20px; border: 1px solid #DDD6FE; }
+body.theme-interativo .login-card { border-radius: 20px; border: 2px solid #DDD6FE; background: rgba(255,255,255,.9); backdrop-filter: blur(20px); }
+body.theme-interativo #loginScreen { background: linear-gradient(135deg, #1E1146 0%, #312E81 50%, #4C1D95 100%); }
+body.theme-interativo .sec-title { color: #1E1146; }
+body.theme-interativo .count-badge { background: linear-gradient(135deg, #7C3AED, #06B6D4); color: #fff; }
+body.theme-interativo .fb.active { border-color: #7C3AED; background: rgba(124,58,237,.06); color: #7C3AED; }
+body.theme-interativo .content { background: linear-gradient(180deg, #FAF5FF 0%, #F0EBFF 100%); }
+body.theme-interativo .sb-brand span { color: rgba(6,182,212,.6); }
+
+/* ── TEMA 4: CORPORATIVO (Atual — padrão) ────────────────
+   O tema atual do Maple Bear. Nenhuma sobrescrita necessária.
+   Mantém as variáveis originais do :root.
+   ──────────────────────────────────────────────────────── */
+body.theme-corporativo {
+  /* Sem alterações — usa o CSS padrão do app */
+}

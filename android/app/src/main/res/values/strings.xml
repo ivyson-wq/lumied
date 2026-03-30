@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Lumied</string>
+    <string name="title_activity_main">Lumied</string>
+    <string name="package_name">com.lumied.app</string>
+    <string name="custom_url_scheme">com.lumied.app</string>
+</resources>
