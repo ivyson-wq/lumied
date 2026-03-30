@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { getCorsHeaders } from "./cors.ts";
+import { captureException } from "./sentry.ts";
 
 // Default headers (for responses without request context)
 const CORS_HEADERS = getCorsHeaders();
@@ -95,6 +96,11 @@ export function withErrorHandler(handler: (req: Request) => Promise<Response>): 
         return errorResponse(error.code, error.message, error.details);
       }
       console.error("[UNHANDLED]", error);
+      // Report unhandled errors to Sentry (fire-and-forget)
+      captureException(
+        error instanceof Error ? error : new Error(String(error)),
+        { handler: req.url, method: req.method },
+      ).catch(() => {});
       return errorResponse("INTERNAL_ERROR", "Erro interno do servidor.");
     }
   };

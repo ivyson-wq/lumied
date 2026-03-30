@@ -89,3 +89,45 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # ═══ 4. SENTRY RELEASE & SOURCE MAPS ═══
+  sentry-release:
+    name: Sentry Release & Source Maps
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install sentry-cli
+        run: npm install -g @sentry/cli
+
+      - name: Create Sentry release & upload source maps
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: lumied
+          SENTRY_PROJECT: javascript
+        run: |
+          VERSION="maple-bear-rs@$(git rev-parse --short HEAD)"
+          echo "Creating Sentry release: $VERSION"
+
+          sentry-cli releases new "$VERSION"
+          sentry-cli releases set-commits "$VERSION" --auto
+
+          # Upload JS source maps from dist/
+          if [ -d "dist" ]; then
+            sentry-cli sourcemaps upload --release="$VERSION" dist/ --url-prefix "~/dist"
+          fi
+
+          # Upload root-level JS files
+          sentry-cli sourcemaps upload --release="$VERSION" \
+            --url-prefix "~/" \
+            sentry-init.js config.js sw.js webauthn-client.js 2>/dev/null || true
+
+          sentry-cli releases finalize "$VERSION"
+          sentry-cli releases deploys "$VERSION" new -e production
+          echo "Sentry release $VERSION finalized."

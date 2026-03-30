@@ -2,10 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script
-  src="https://js.sentry-cdn.com/1af517a6f172fe6b386630dc285498fb.min.js"
-  crossorigin="anonymous"
-></script>
+<script src="/sentry-init.js"></script>
 <title>Maple Bear — Painel do Gerente</title>
 <meta name="theme-color" content="#1c1712">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3437,6 +3434,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     document.body.appendChild(iframe);
     iframe.contentDocument.open();
     iframe.contentDocument.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#f8f5f0;padding:20px;}</style></head><body>' + htmlContent + '</body></html>');
+<script src="/sentry-init.js"></script>
     iframe.contentDocument.close();
 
     await new Promise(r => setTimeout(r, 800)); // aguarda renderização
@@ -3489,6 +3487,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       document.body.appendChild(iframe);
       iframe.contentDocument.open();
       iframe.contentDocument.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#f8f5f0;padding:20px;}</style></head><body>' + htmlContent + '</body></html>');
+<script src="/sentry-init.js"></script>
       iframe.contentDocument.close();
       await new Promise(r => setTimeout(r, 800));
 
