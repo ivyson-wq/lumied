@@ -91,7 +91,7 @@ export function parseAuthData(buf: Uint8Array): AuthData {
 }
 
 // ── COSE key to CryptoKey (ES256 / P-256) ─────────────
-export async function coseToKey(coseBytes: Uint8Array): Promise<CryptoKey> {
+export function coseToKey(coseBytes: Uint8Array): Promise<CryptoKey> {
   const cose = decodeCbor(coseBytes) as Record<string, unknown>;
   // COSE key map: 1=kty, 3=alg, -1=crv, -2=x, -3=y
   const x = cose['-2'] as Uint8Array;

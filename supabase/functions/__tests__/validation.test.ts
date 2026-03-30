@@ -1,5 +1,5 @@
 // deno test supabase/functions/__tests__/validation.test.ts
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals } from "@std/testing/asserts";
 import { validate, sanitize, sanitizeBody, loginSchema } from "../_shared/validation.ts";
 
 Deno.test("validate - required field missing", () => {

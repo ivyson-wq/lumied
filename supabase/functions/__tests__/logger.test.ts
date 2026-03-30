@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals, assertStringIncludes } from "@std/testing/asserts";
 import { createLogger } from "../_shared/logger.ts";
 
 Deno.test("logger - creates with function name", () => {

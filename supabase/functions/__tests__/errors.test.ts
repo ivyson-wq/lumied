@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals } from "@std/testing/asserts";
 import { AppError, errorResponse, successResponse, withErrorHandler } from "../_shared/errors.ts";
 
 Deno.test("AppError - creates with correct status", () => {
@@ -48,6 +48,7 @@ Deno.test("successResponse - custom status", async () => {
 });
 
 Deno.test("withErrorHandler - catches AppError", async () => {
+  // deno-lint-ignore require-await
   const handler = withErrorHandler(async () => {
     throw new AppError("NOT_FOUND", "Não encontrado");
   });
@@ -58,6 +59,7 @@ Deno.test("withErrorHandler - catches AppError", async () => {
 });
 
 Deno.test("withErrorHandler - catches unknown error", async () => {
+  // deno-lint-ignore require-await
   const handler = withErrorHandler(async () => {
     throw new Error("unexpected");
   });
@@ -68,6 +70,7 @@ Deno.test("withErrorHandler - catches unknown error", async () => {
 });
 
 Deno.test("withErrorHandler - handles OPTIONS", async () => {
+  // deno-lint-ignore require-await
   const handler = withErrorHandler(async () => successResponse({}));
   const res = await handler(new Request("http://localhost", { method: "OPTIONS" }));
   assertEquals(res.status, 200);

@@ -36,6 +36,7 @@ export async function getModulosHabilitados(
       .eq("plano_id", escola.plano_id);
 
     for (const pm of planoModulos || []) {
+      // deno-lint-ignore no-explicit-any
       const slug = (pm as any).modulos?.slug;
       if (slug) result.add(slug);
     }
@@ -48,6 +49,7 @@ export async function getModulosHabilitados(
     .eq("escola_id", escolaId);
 
   for (const ov of overrides || []) {
+    // deno-lint-ignore no-explicit-any
     const slug = (ov as any).modulos?.slug;
     if (!slug) continue;
     if (ov.habilitado) result.add(slug);
@@ -111,6 +113,7 @@ export async function getModulosResolvidos(
     .eq("ativo", true)
     .order("ordem", { ascending: true });
 
+  // deno-lint-ignore no-explicit-any
   return (todosModulos || []).map((m: any) => ({
     slug: m.slug,
     nome: m.nome,

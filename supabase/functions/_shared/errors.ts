@@ -2,7 +2,7 @@
 //  Shared: Standardized Error Handling
 // ═══════════════════════════════════════════════════════════════
 
-import { getCorsHeaders, corsResponse as corsPreflight } from "./cors.ts";
+import { getCorsHeaders } from "./cors.ts";
 
 // Default headers (for responses without request context)
 const CORS_HEADERS = getCorsHeaders();

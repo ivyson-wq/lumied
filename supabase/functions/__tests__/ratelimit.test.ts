@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals } from "@std/testing/asserts";
 import { checkRateLimit } from "../_shared/ratelimit.ts";
 
 Deno.test("rateLimit - allows requests under limit", () => {
