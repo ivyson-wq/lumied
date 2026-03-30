@@ -87,13 +87,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
 .blog-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: all .3s; display: flex; flex-direction: column; }
 .blog-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(99,102,241,.1); }
-.blog-card-img { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; font-size: 64px; position: relative; }
-.blog-card-img-1 { background: linear-gradient(135deg, #10B981 0%, #059669 100%); }
-.blog-card-img-2 { background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); }
-.blog-card-img-3 { background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%); }
-.blog-card-img-4 { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); }
-.blog-card-img-5 { background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%); }
-.blog-card-img-6 { background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); }
+.blog-card-img { width: 100%; height: 200px; position: relative; overflow: hidden; background: var(--dark-2); }
+.blog-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s; }
+.blog-card:hover .blog-card-img img { transform: scale(1.06); }
 .blog-card-body { padding: 24px; flex: 1; display: flex; flex-direction: column; }
 .blog-card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .blog-tag { display: inline-block; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
@@ -187,7 +183,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 1 — Comunicacao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-1">📱</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=600&h=400&fit=crop" alt="Comunicacao escolar digital" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-comunicacao">Comunicacao</span>
@@ -201,7 +197,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 2 — EdTech -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-3">🚀</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop" alt="Deploy de software escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-edtech">EdTech</span>
@@ -215,7 +211,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 3 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">🔍</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=400&fit=crop" alt="Gestao escolar integrada" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -229,7 +225,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 4 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">💰</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&h=400&fit=crop" alt="Financeiro escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -243,7 +239,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 5 — EdTech -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-3">🌍</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop" alt="Educacao bilingue" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-edtech">EdTech</span>
@@ -257,7 +253,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 6 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">📊</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop" alt="Dashboard analytics escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -271,7 +267,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 7 — Operacional -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-4">📦</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600&h=400&fit=crop" alt="Almoxarifado escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-operacional">Operacional</span>
@@ -285,7 +281,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 8 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">💳</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop" alt="Cobranca automatica" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -299,7 +295,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 9 — LGPD -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-5">🔒</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=600&h=400&fit=crop" alt="LGPD protecao de dados" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-lgpd">LGPD</span>
@@ -313,7 +309,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 10 — Seguranca -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-6">📍</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&h=400&fit=crop" alt="Pickup escolar seguro" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-seguranca">Seguranca</span>
@@ -327,7 +323,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 11 — Seguranca -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-6">🔐</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1558002038-1055907df827?w=600&h=400&fit=crop" alt="Login biometrico" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-seguranca">Seguranca</span>
@@ -341,7 +337,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 12 — Comunicacao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-1">📒</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=600&h=400&fit=crop" alt="Agenda digital escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-comunicacao">Comunicacao</span>
@@ -355,7 +351,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 13 — Operacional -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-4">🔧</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=600&h=400&fit=crop" alt="Manutencao escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-operacional">Operacional</span>
@@ -369,7 +365,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 14 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">📋</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&h=400&fit=crop" alt="Relatorios pedagogicos BNCC" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -383,7 +379,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 15 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">✅</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600&h=400&fit=crop" alt="Chamada digital em sala" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -397,7 +393,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 16 — Seguranca -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-6">🚨</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1582139329536-e7284fece509?w=600&h=400&fit=crop" alt="Sistema de emergencia escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-seguranca">Seguranca</span>
@@ -411,7 +407,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 17 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">🎯</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=400&fit=crop" alt="CRM escolar matriculas" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -425,7 +421,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 18 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">📝</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1554224154-22dec7ec8818?w=600&h=400&fit=crop" alt="Matricula online digital" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -439,7 +435,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 19 — EdTech -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-3">🏷️</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1561070791-2526d30994b5?w=600&h=400&fit=crop" alt="White-label plataforma escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-edtech">EdTech</span>
@@ -453,7 +449,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 20 — Gestao -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-2">🌱</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1529390079861-591de354faf5?w=600&h=400&fit=crop" alt="Desenvolvimento profissional professores" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-gestao">Gestao</span>
@@ -467,7 +463,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 
       <!-- 21 — Operacional -->
       <article class="blog-card">
-        <div class="blog-card-img blog-card-img-4">🧥</div>
+        <div class="blog-card-img"><img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=400&fit=crop" alt="Achados e perdidos escolar" loading="lazy"></div>
         <div class="blog-card-body">
           <div class="blog-card-meta">
             <span class="blog-tag tag-operacional">Operacional</span>
