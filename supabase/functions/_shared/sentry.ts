@@ -155,29 +155,17 @@ export async function captureMessage(
  */
 function parseStack(stack: string): Array<Record<string, unknown>> {
   const lines = stack.split("\n").slice(1);
-  return lines
-    .map((line) => {
-      const match = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/);
-      if (match) {
-        return {
-          function: match[1],
-          filename: match[2],
-          lineno: parseInt(match[3]),
-          colno: parseInt(match[4]),
-          in_app: !match[2].includes("node_modules") && !match[2].includes("deno"),
-        };
-      }
-      const match2 = line.match(/at\s+(.+?):(\d+):(\d+)/);
-      if (match2) {
-        return {
-          filename: match2[1],
-          lineno: parseInt(match2[2]),
-          colno: parseInt(match2[3]),
-          in_app: true,
-        };
-      }
-      return null;
-    })
-    .filter(Boolean)
-    .reverse(); // Sentry expects most recent frame last
+  const frames: Array<Record<string, unknown>> = [];
+  for (const line of lines) {
+    const match = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/);
+    if (match) {
+      frames.push({ function: match[1], filename: match[2], lineno: parseInt(match[3]), colno: parseInt(match[4]), in_app: !match[2].includes("node_modules") && !match[2].includes("deno") });
+      continue;
+    }
+    const match2 = line.match(/at\s+(.+?):(\d+):(\d+)/);
+    if (match2) {
+      frames.push({ filename: match2[1], lineno: parseInt(match2[2]), colno: parseInt(match2[3]), in_app: true });
+    }
+  }
+  return frames.reverse(); // Sentry expects most recent frame last
 }

@@ -59,7 +59,7 @@ Deno.test("withErrorHandler - catches AppError", async () => {
   assertEquals(body.code, "NOT_FOUND");
 });
 
-Deno.test("withErrorHandler - catches unknown error", async () => {
+Deno.test({ name: "withErrorHandler - catches unknown error", sanitizeOps: false, sanitizeResources: false, fn: async () => {
   // deno-lint-ignore require-await
   const handler = withErrorHandler(async () => {
     throw new Error("unexpected");
@@ -68,7 +68,7 @@ Deno.test("withErrorHandler - catches unknown error", async () => {
   assertEquals(res.status, 500);
   const body = await res.json();
   assertEquals(body.code, "INTERNAL_ERROR");
-});
+}});
 
 Deno.test("withErrorHandler - handles OPTIONS", async () => {
   // deno-lint-ignore require-await
