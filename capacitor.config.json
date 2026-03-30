@@ -1,0 +1,29 @@
+{
+  "appId": "com.lumied.app",
+  "appName": "Lumied",
+  "webDir": "www",
+  "server": {
+    "url": "https://app.maplebearcaxiasdosul.com.br",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#C8102E",
+      "showSpinner": false,
+      "androidSplashResourceName": "splash",
+      "iosSplashResourceName": "splash"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#C8102E"
+    },
+    "Camera": {
+      "presentationStyle": "fullscreen"
+    }
+  }
+}
