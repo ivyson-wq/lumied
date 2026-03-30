@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maple Bear — Portal do Aluno</title>
+<meta name="theme-color" content="#C8102E">
+<link rel="icon" href="/icon-apple.png">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);padding-bottom:80px;}
+.site-header{background:var(--red);padding:20px 24px;text-align:center;color:#fff;}
+.site-header h1{font-family:'Lora',serif;font-size:18px;}.site-header span{font-size:12px;opacity:.7;}
+.greeting{padding:16px 20px;font-size:14px;color:var(--text);}
+.greeting strong{display:block;font-family:'Lora',serif;font-size:17px;margin-bottom:2px;}
+.tab-panel{display:none;padding:0 16px;}.tab-panel.active{display:block;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.card{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.card-title{font-family:'Lora',serif;font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.stat-box{background:var(--bg);border-radius:10px;padding:14px;text-align:center;}
+.stat-box .val{font-family:'Lora',serif;font-size:28px;font-weight:700;}.stat-box .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);display:flex;z-index:50;padding:6px 0 env(safe-area-inset-bottom,6px);}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:10px;color:var(--muted);cursor:pointer;transition:color .15s;}
+.bnav-item.active{color:var(--red);font-weight:600;}
+.bnav-icon{font-size:20px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{padding:8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
+.empty{text-align:center;padding:30px;color:var(--muted);font-size:13px;}
+/* LOGIN */
+#loginWall{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+.login-card{background:var(--white);border-radius:16px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,.12);text-align:center;}
+.login-card .leaf{font-size:40px;margin-bottom:8px;}.login-card h2{font-family:'Lora',serif;font-size:18px;margin-bottom:20px;}
+.lf{margin-bottom:14px;text-align:left;}.lf label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.lf input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:#fdfbf8;}
+.lf input:focus{border-color:var(--red);}
+.login-btn{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;}
+#loginError{display:none;font-size:12px;color:var(--red);margin-top:10px;padding:8px;background:#fdf0f2;border-radius:6px;}
+.logout-btn{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div id="loginWall">
+  <div class="login-card">
+    <div class="leaf">🍁</div>
+    <h2>Portal do Aluno</h2>
+    <div class="lf"><label>Email</label><input id="loginEmail" type="email" placeholder="seu.email@escola.com"></div>
+    <div class="lf"><label>Senha</label><input id="loginSenha" type="password" placeholder="Sua senha"></div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<div id="appWrap" style="display:none;">
+  <div class="site-header" style="position:relative;">
+    <h1>🍁 Portal do Aluno</h1>
+    <span id="alunoNome"></span>
+    <button class="logout-btn" onclick="doLogout()">Sair</button>
+  </div>
+  <div class="greeting" id="greetingBar"></div>
+
+  <!-- TAB: NOTAS -->
+  <div class="tab-panel active" id="tabNotas">
+    <div class="card">
+      <div class="card-title">📝 Minhas Notas</div>
+      <div id="notasContent"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: FREQUÊNCIA -->
+  <div class="tab-panel" id="tabFrequencia">
+    <div class="card">
+      <div class="card-title">✅ Frequência</div>
+      <div id="freqContent"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: PROVAS -->
+  <div class="tab-panel" id="tabProvas">
+    <div class="card">
+      <div class="card-title">📝 Provas Disponíveis</div>
+      <div id="provasContent"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: CALENDÁRIO -->
+  <div class="tab-panel" id="tabCalendario">
+    <div class="card">
+      <div class="card-title">📅 Calendário</div>
+      <div id="calContent"><div class="empty">Em breve</div></div>
+    </div>
+  </div>
+
+  <nav class="bnav">
+    <button class="bnav-item active" onclick="switchTab('notas',this)"><span class="bnav-icon">📝</span>Notas</button>
+    <button class="bnav-item" onclick="switchTab('frequencia',this)"><span class="bnav-icon">✅</span>Frequência</button>
+    <button class="bnav-item" onclick="switchTab('provas',this)"><span class="bnav-icon">📋</span>Provas</button>
+    <button class="bnav-item" onclick="switchTab('calendario',this)"><span class="bnav-icon">📅</span>Calendário</button>
+  </nav>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgyNTQ5NzcsImV4cCI6MjA1MzgzMDk3N30.aTnePC91K_6MIAMCeDvGSIb3x4gPMCjpWx36_Bg6Bzg';
+const ACADEMICO = SUPABASE_URL + '/functions/v1/academico';
+
+let currentAluno = null;
+
+async function api(body) {
+  const r = await fetch(ACADEMICO, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'notas') loadNotas();
+  if (tab === 'frequencia') loadFrequencia();
+  if (tab === 'provas') loadProvas();
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  if (!email || !senha) return showError('Preencha email e senha.');
+  const d = await api({ action:'aluno_login', email, senha });
+  if (d.error) return showError(d.error);
+  localStorage.setItem('mb_aluno_token', d.token);
+  currentAluno = d;
+  showApp();
+}
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+async function doLogout() {
+  await api({ action:'aluno_logout', _aluno_token: localStorage.getItem('mb_aluno_token') });
+  localStorage.removeItem('mb_aluno_token');
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('loginWall').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'block';
+  document.getElementById('alunoNome').textContent = currentAluno.nome + ' — ' + (currentAluno.serie || '');
+  const firstName = (currentAluno.nome || '').split(/\s/)[0];
+  const hoje = new Date();
+  document.getElementById('greetingBar').innerHTML = `<strong>Olá, ${firstName}!</strong>${hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}`;
+  loadNotas();
+}
+
+async function loadNotas() {
+  if (!currentAluno) return;
+  const el = document.getElementById('notasContent');
+  const d = await api({ action:'aluno_notas_get', aluno_email: currentAluno.email, ano: new Date().getFullYear() });
+  const boletins = Array.isArray(d) ? d : [];
+  if (!boletins.length) { el.innerHTML = '<div class="empty">Nenhuma nota disponível.</div>'; return; }
+  let html = '';
+  for (const bol of boletins) {
+    const periodo = bol.notas_periodos?.nome || 'Período';
+    html += `<h4 style="font-family:'Lora',serif;font-size:14px;margin:16px 0 8px;">${periodo}</h4><table><tr><th>Disciplina</th><th style="text-align:center;">Média</th></tr>`;
+    for (const disc of bol.dados?.disciplinas || []) {
+      const m = disc.media !== null ? disc.media.toFixed(1) : '—';
+      const cor = disc.media >= 7 ? 'color:var(--green);font-weight:700;' : disc.media !== null ? 'color:var(--red);font-weight:700;' : '';
+      html += `<tr><td>${disc.nome}</td><td style="text-align:center;${cor}">${m}</td></tr>`;
+    }
+    html += '</table>';
+  }
+  el.innerHTML = html;
+}
+
+async function loadFrequencia() {
+  if (!currentAluno) return;
+  const el = document.getElementById('freqContent');
+  const d = await api({ action:'aluno_frequencia_get', aluno_email: currentAluno.email, ano: new Date().getFullYear() });
+  if (d.error) { el.innerHTML = '<div class="empty">Não disponível.</div>'; return; }
+  el.innerHTML = `<div class="stat-row">
+    <div class="stat-box"><div class="val" style="color:var(--green);">${d.percent_presenca}%</div><div class="lbl">Presença</div></div>
+    <div class="stat-box"><div class="val">${d.total_aulas}</div><div class="lbl">Aulas</div></div>
+    <div class="stat-box"><div class="val" style="color:var(--red);">${d.total_faltas}</div><div class="lbl">Faltas</div></div>
+    <div class="stat-box"><div class="val">${d.total_aulas - d.total_faltas}</div><div class="lbl">Presenças</div></div>
+  </div>`;
+}
+
+async function loadProvas() {
+  if (!currentAluno) return;
+  const el = document.getElementById('provasContent');
+  const d = await api({ action:'provas_disponiveis_aluno', aluno_email: currentAluno.email });
+  const provas = Array.isArray(d) ? d : [];
+  if (!provas.length) { el.innerHTML = '<div class="empty">Nenhuma prova disponível.</div>'; return; }
+  el.innerHTML = provas.map(p => `<div style="padding:12px 0;border-bottom:1px solid #f0ece6;display:flex;align-items:center;justify-content:space-between;">
+    <div><strong style="font-size:14px;">${p.titulo}</strong><br><span style="font-size:11px;color:var(--muted);">${p.notas_disciplinas?.nome || ''} · ${p.tempo_limite ? p.tempo_limite+'min' : 'Sem limite'}</span></div>
+    ${p.respondida ? `<span style="color:var(--green);font-weight:700;font-size:14px;">${p.pontuacao !== null ? p.pontuacao.toFixed(1) : '—'}</span>` : `<button style="background:var(--red);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;" onclick="alert('Abrir prova — em breve')">Iniciar</button>`}
+  </div>`).join('');
+}
+
+// Check session
+(async function() {
+  const token = localStorage.getItem('mb_aluno_token');
+  if (!token) return;
+  // Simple validation: try to get notas
+  const d = await api({ action:'aluno_notas_get', aluno_email: '', ano: 2026, _aluno_token: token });
+  // If no error about session, we're ok — but we need the aluno data
+  // For now, just redirect to login if no stored data
+  // TODO: add aluno_perfil action
+})();
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginWall').style.display !== 'none') doLogin();
+});
+</script>
+</body>
+</html>

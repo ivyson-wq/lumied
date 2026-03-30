@@ -12,6 +12,7 @@
 <link rel="icon" href="/icon-apple.png">
 <link rel="apple-touch-icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="/dist/pais/index.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/webauthn-client.js"></script>
 <style>
@@ -185,6 +186,9 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .success-tag{display:inline-block;margin-top:20px;background:var(--red-light);color:var(--red);border:1px solid rgba(200,16,46,.2);padding:8px 18px;border-radius:100px;font-size:13px;font-weight:500;}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
 .spinner.dark{border-color:rgba(200,16,46,.2);border-top-color:var(--red);}
+@keyframes cloudMove{0%{transform:translateX(0)}100%{transform:translateX(-400px)}}
+@keyframes roadMove{0%{transform:translateY(-50%) translateX(0)}100%{transform:translateY(-50%) translateX(-40px)}}
+@keyframes carBounce{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-3px)}}
 @keyframes spin{to{transform:rotate(360deg);}}
 /* AGENDA */
 .agenda-semana{display:flex;flex-direction:column;gap:10px;}
@@ -242,6 +246,9 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .bnav-item.active{color:var(--red);}
 .bnav-icon{font-size:20px;line-height:1;}
 .bnav-label{font-size:9px;font-weight:600;letter-spacing:.3px;}
+.bnav-more-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px;border:none;background:#faf8f5;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text);cursor:pointer;}
+.bnav-more-item:hover{background:var(--red-light);color:var(--red);}
+.bnav-more-item span{font-size:22px;}
 .bnav-badge{position:absolute;top:2px;right:calc(50% - 16px);width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid #fff;}
 .bnav-item{position:relative;}
 body.has-bottomnav{padding-bottom:72px;}
@@ -411,8 +418,8 @@ body.has-bottomnav{padding-bottom:0;}
       <div id="loginErr" style="display:none;font-size:13px;color:#a00d24;padding:8px 12px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);margin-bottom:8px;"></div>
       <button class="btn-magic" id="btnLogin" onclick="loginEmailSenha()">Entrar</button>
       <div style="display:flex;justify-content:space-between;margin-top:8px;">
-        <a href="#" onclick="toggleCadastro();return false" style="font-size:12px;color:var(--muted);text-decoration:none;">Criar conta</a>
-        <a href="#" onclick="toggleMagicLink();return false" style="font-size:12px;color:var(--muted);text-decoration:none;">Esqueci minha senha</a>
+        <a href="#" onclick="toggleCadastro();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;">Criar conta</a>
+        <a href="#" onclick="toggleMagicLink();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;">Esqueci minha senha</a>
       </div>
 
       <!-- Cadastro (colapsavel) -->
@@ -529,9 +536,38 @@ body.has-bottomnav{padding-bottom:0;}
       <div id="pickupFilhosList"></div>
     </div>
     <div id="pickupAviso" style="display:none;">
-      <div style="background:#f0f9f0;border:1px solid #b6deb6;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:600;color:#2d7a2d;margin-bottom:4px;">✅ Aviso enviado!</div>
-        <div id="pickupAvisoInfo" style="font-size:13px;color:#2d7a2d;"></div>
+      <!-- Animação lúdica do carro -->
+      <div id="pickupAnimacao" style="background:linear-gradient(180deg,#87CEEB 0%,#87CEEB 60%,#90EE90 60%,#4CAF50 100%);border-radius:14px;padding:16px 20px 12px;margin-bottom:14px;position:relative;overflow:hidden;min-height:140px;">
+        <!-- Nuvens -->
+        <div style="position:absolute;top:8px;left:15%;font-size:20px;opacity:.6;animation:cloudMove 12s linear infinite;">☁️</div>
+        <div style="position:absolute;top:16px;right:20%;font-size:14px;opacity:.4;animation:cloudMove 18s linear infinite 3s;">☁️</div>
+        <!-- Estrada -->
+        <div style="position:absolute;bottom:28px;left:0;right:0;height:22px;background:#555;border-radius:0;">
+          <div style="position:absolute;top:50%;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg,#fff 0,#fff 20px,transparent 20px,transparent 40px);transform:translateY(-50%);animation:roadMove 1s linear infinite;"></div>
+        </div>
+        <!-- Casa (ponto de partida) -->
+        <div style="position:absolute;bottom:46px;left:12px;font-size:28px;">🏠</div>
+        <!-- Escola (destino) -->
+        <div style="position:absolute;bottom:46px;right:12px;font-size:28px;">🏫</div>
+        <!-- Carro animado -->
+        <div id="pickupCarro" style="position:absolute;bottom:44px;left:50px;transition:left 2s ease-out;z-index:2;">
+          <div style="font-size:32px;transform:scaleX(-1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));">🚗</div>
+          <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;">
+            <span style="font-size:16px;">👨‍👩‍👧</span>
+          </div>
+        </div>
+        <!-- ETA display -->
+        <div style="text-align:center;position:relative;z-index:3;margin-bottom:4px;">
+          <div style="display:inline-block;background:rgba(255,255,255,.92);border-radius:20px;padding:6px 18px;box-shadow:0 2px 8px rgba(0,0,0,.15);">
+            <span style="font-size:11px;color:#555;font-weight:500;">Tempo estimado: </span>
+            <strong id="pickupETADisplay" style="font-size:16px;color:#C8102E;">-- min</strong>
+          </div>
+        </div>
+        <div id="pickupDistanciaAnim" style="text-align:center;font-size:11px;color:rgba(255,255,255,.9);margin-top:4px;position:relative;z-index:3;">📍 Rastreando localização...</div>
+      </div>
+      <div style="background:#f0f9f0;border:1px solid #b6deb6;border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:600;color:#2d7a2d;margin-bottom:2px;">✅ Aviso enviado!</div>
+        <div id="pickupAvisoInfo" style="font-size:12px;color:#2d7a2d;"></div>
       </div>
       <button onclick="cancelarAviso()" class="btn-submit" style="background:#e53e3e;font-size:13px;padding:8px 16px;width:auto;">Cancelar aviso</button>
     </div>
@@ -703,6 +739,29 @@ body.has-bottomnav{padding-bottom:0;}
   </div><!-- /tabBoletos -->
 
   <!-- TAB: ACHADOS & PERDIDOS -->
+  <!-- TAB: DIA A DIA (Agenda Digital) -->
+  <div class="tab-panel" id="tabDiaadia">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">
+        📅 Dia a Dia
+        <button onclick="carregarDiaADia()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Veja o que seu filho fez hoje na escola — atividades, refeições, humor e fotos.</p>
+      <div id="diaAdiaContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: BOLETIM -->
+  <div class="tab-panel" id="tabBoletim">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">
+        📝 Boletim Digital
+        <button onclick="carregarBoletim()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <div id="boletimContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando boletim...</div></div>
+    </div>
+  </div>
+
   <div class="tab-panel" id="tabAchados">
     <div class="card">
       <div class="card-title" style="margin-bottom:12px;">
@@ -722,23 +781,30 @@ body.has-bottomnav{padding-bottom:0;}
     <span class="bnav-icon">🏠</span>
     <span class="bnav-label">Início</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('solicitar')" data-tab="solicitar">
-    <span class="bnav-icon">🕐</span>
-    <span class="bnav-label">Mudança de Turno</span>
+  <button class="bnav-item" onclick="switchTab('diaadia')" data-tab="diaadia" data-modulo="agenda_digital">
+    <span class="bnav-icon">📅</span>
+    <span class="bnav-label">Dia a Dia</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('atividades')" data-tab="atividades">
-    <span class="bnav-icon">🎯</span>
-    <span class="bnav-label">Atividades Extracurriculares</span>
+  <button class="bnav-item" onclick="switchTab('boletim')" data-tab="boletim" data-modulo="notas">
+    <span class="bnav-icon">📝</span>
+    <span class="bnav-label">Boletim</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos">
+  <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos" data-modulo="financeiro">
     <span class="bnav-icon">💰</span>
     <span class="bnav-label">Boletos</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('achados')" data-tab="achados">
-    <span class="bnav-icon">🔍</span>
-    <span class="bnav-label">Achados & Perdidos</span>
+  <button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn">
+    <span class="bnav-icon">☰</span>
+    <span class="bnav-label">Mais</span>
   </button>
 </nav>
+<div id="paisMoreMenu" style="display:none;position:fixed;bottom:56px;left:0;right:0;background:#fff;border-top:1px solid var(--border);box-shadow:0 -8px 24px rgba(0,0,0,.12);z-index:60;padding:12px 16px;border-radius:16px 16px 0 0;">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+    <button class="bnav-more-item" onclick="switchTab('solicitar');closePaisMore()" data-modulo="turno"><span>🕐</span>Turno</button>
+    <button class="bnav-more-item" onclick="switchTab('atividades');closePaisMore()" data-modulo="atividades"><span>🎯</span>Atividades</button>
+    <button class="bnav-more-item" onclick="switchTab('achados');closePaisMore()" data-modulo="achados"><span>🔍</span>Achados</button>
+  </div>
+</div>
 
 <!-- SUCESSO -->
 <div class="success-panel" id="successPanel">
@@ -817,6 +883,9 @@ body.has-bottomnav{padding-bottom:0;}
     if (tab === 'solicitar') setModo('turno');
     if (tab === 'atividades') initAtividadesTab();
     if (tab === 'boletos') carregarBoletos();
+    closePaisMore();
+    if (tab === 'diaadia') carregarDiaADia();
+    if (tab === 'boletim') carregarBoletim();
     if (tab === 'achados') carregarAchados();
   }
 
@@ -1227,6 +1296,21 @@ body.has-bottomnav{padding-bottom:0;}
     carregarAgenda();
     carregarAchados();
     showBioRegisterButton();
+    loadModulosHabilitadosPais();
+  }
+
+  // ── Módulos habilitados (feature gating) ──
+  window._enabledModules = null;
+  async function loadModulosHabilitadosPais() {
+    try {
+      const d = await call({ action: 'modulos_habilitados' });
+      if (d && Array.isArray(d.modulos)) {
+        window._enabledModules = new Set(d.modulos);
+        document.querySelectorAll('[data-modulo]').forEach(el => {
+          el.style.display = window._enabledModules.has(el.dataset.modulo) ? '' : 'none';
+        });
+      }
+    } catch(e) { console.warn('Feature gating não disponível:', e); }
   }
 
   // ── TURNO ─────────────────────────────────────────────
@@ -1764,6 +1848,7 @@ body.has-bottomnav{padding-bottom:0;}
       // Atualiza distância no card
       const distEl = document.getElementById('pickupDistancia');
       if (distEl) distEl.textContent = dist < 1000 ? Math.round(dist) + 'm da escola' : (dist/1000).toFixed(1) + 'km da escola';
+      updatePickupDistanciaAnimada(dist);
       // Chegou perto da escola
       if (dist <= CHEGOU_RAIO_M && pickupAtivoId) {
         await callDiplomas({ action: 'pickup_chegou', id: pickupAtivoId });
@@ -1893,6 +1978,8 @@ body.has-bottomnav{padding-bottom:0;}
     loadPickupCard();
   }
 
+  let pickupDistanciaInicial = null;
+
   function showPickupAtivo(n) {
     const aviso = document.getElementById('pickupAviso');
     const info  = document.getElementById('pickupAvisoInfo');
@@ -1900,13 +1987,54 @@ body.has-bottomnav{padding-bottom:0;}
     if (n.eta_minutos) {
       const modo = n.eta_modo === 'google_maps' ? '📍 Google Maps' : n.eta_modo === 'calculo_local' ? '📐 Estimativa' : '⏱ Manual';
       txt += ` ETA: <strong>${n.eta_minutos} min</strong> (${modo})`;
-    } else {
-      txt += ' Tempo estimado não disponível.';
     }
-    txt += `<div id="pickupDistancia" style="margin-top:6px;font-size:12px;color:var(--muted);">📍 Rastreando localização...</div>`;
     info.innerHTML = txt;
     aviso.style.display = 'block';
     document.getElementById('pickupFilhos').style.display = 'none';
+
+    // Iniciar animação do carro
+    const etaDisplay = document.getElementById('pickupETADisplay');
+    if (etaDisplay && n.eta_minutos) etaDisplay.textContent = n.eta_minutos + ' min';
+
+    // Animar carro baseado no ETA
+    updateCarroPosition(n.eta_minutos || 10);
+
+    // Iniciar bounce do carro
+    const carro = document.getElementById('pickupCarro');
+    if (carro) carro.querySelector('div').style.animation = 'carBounce .6s ease infinite';
+  }
+
+  function updateCarroPosition(etaMinutos) {
+    const carro = document.getElementById('pickupCarro');
+    if (!carro) return;
+    // Posição do carro: de 50px (casa) até calc(100% - 80px) (escola)
+    // Se ETA alto → perto da casa; Se ETA baixo → perto da escola
+    const maxEta = pickupDistanciaInicial ? Math.max(etaMinutos, 1) : 15;
+    const progress = Math.max(0, Math.min(1, 1 - (etaMinutos / maxEta)));
+    const maxLeft = 280; // pixels de range
+    const left = 50 + (progress * maxLeft);
+    carro.style.left = left + 'px';
+
+    // Atualizar ETA display
+    const etaEl = document.getElementById('pickupETADisplay');
+    if (etaEl) {
+      if (etaMinutos <= 1) etaEl.textContent = 'Chegando!';
+      else etaEl.textContent = Math.round(etaMinutos) + ' min';
+    }
+    if (etaMinutos <= 1 && etaEl) etaEl.style.color = '#2d7a3a';
+  }
+
+  function updatePickupDistanciaAnimada(dist) {
+    const el = document.getElementById('pickupDistanciaAnim');
+    if (!el) return;
+    if (dist < 200) el.textContent = '🏫 Quase lá! ' + Math.round(dist) + 'm';
+    else if (dist < 1000) el.textContent = '📍 ' + Math.round(dist) + 'm da escola';
+    else el.textContent = '📍 ' + (dist/1000).toFixed(1) + 'km da escola';
+
+    // Estimar ETA baseado na distância (velocidade média 30km/h em zona urbana)
+    const etaMinutos = Math.max(1, Math.round((dist / 1000) / 30 * 60));
+    if (!pickupDistanciaInicial) pickupDistanciaInicial = etaMinutos + 2;
+    updateCarroPosition(etaMinutos);
   }
 
   async function cancelarAviso() {
@@ -2040,7 +2168,13 @@ body.has-bottomnav{padding-bottom:0;}
   async function loadLogo() {
     try {
       const d = await call({ action:'config_get', chave:'logo_url' });
-      if (d.valor) { document.getElementById('logoImg').src=d.valor; document.getElementById('logoImg').style.display='block'; document.getElementById('logoFallback').style.display='none'; }
+      if (d.valor) {
+        const img = document.getElementById('logoImg');
+        img.onerror = () => { img.style.display='none'; document.getElementById('logoFallback').style.display=''; };
+        img.src = d.valor;
+        img.style.display = 'block';
+        document.getElementById('logoFallback').style.display = 'none';
+      }
     } catch(_) {}
   }
 
@@ -2273,6 +2407,114 @@ body.has-bottomnav{padding-bottom:0;}
   }
 
   // ── ACHADOS E PERDIDOS ─────────────────────────────────
+  // ── BOTTOM NAV "MAIS" MENU ────────────────────────────
+  function togglePaisMore() {
+    const menu = document.getElementById('paisMoreMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('paisMoreBtn')?.classList.toggle('active', menu.style.display !== 'none');
+  }
+  function closePaisMore() {
+    const m = document.getElementById('paisMoreMenu');
+    if (m) m.style.display = 'none';
+    document.getElementById('paisMoreBtn')?.classList.remove('active');
+  }
+
+  // ── DIA A DIA (Agenda Digital) ─────────────────────────
+  const COMUNICACAO_API = SUPABASE_URL + '/functions/v1/comunicacao';
+  async function callCom(body) {
+    const r = await fetch(COMUNICACAO_API, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify(body) });
+    return r.json();
+  }
+
+  async function carregarDiaADia() {
+    const el = document.getElementById('diaAdiaContent');
+    if (!currentUser) { el.innerHTML = '<p style="color:var(--muted);">Faça login.</p>'; return; }
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
+    const d = await callCom({ action:'agenda_pais_get', aluno_email: currentUser.email });
+    const registros = Array.isArray(d) ? d : [];
+    if (!registros.length) { el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Nenhum registro encontrado.</p>'; return; }
+    const tipoIcons = { atividade:'📚', refeicao:'🍽️', sono:'😴', humor:'😊', foto:'📷', observacao:'📝' };
+    let html = '';
+    for (const reg of registros) {
+      const dt = new Date(reg.data + 'T12:00:00');
+      html += `<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+        <div style="font-family:'Lora',serif;font-size:14px;font-weight:600;margin-bottom:8px;">${dt.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Prof. ${reg.professoras?.nome || '—'}</div>`;
+      for (const item of reg.agenda_itens || []) {
+        const icon = tipoIcons[item.tipo] || '📌';
+        html += `<div style="display:flex;gap:10px;padding:8px 0;">
+          <span style="font-size:18px;">${icon}</span>
+          <div><strong style="font-size:13px;">${item.titulo || item.tipo}</strong>
+          ${item.descricao ? `<p style="font-size:12px;color:var(--muted);margin-top:2px;">${item.descricao}</p>` : ''}
+          ${item.valor ? `<span style="font-size:12px;color:var(--blue);">${item.valor}</span>` : ''}
+          </div></div>`;
+        // Fotos
+        for (const foto of item.agenda_fotos || []) {
+          html += `<img src="${foto.url}" style="max-width:100%;border-radius:10px;margin:8px 0;" loading="lazy">`;
+        }
+      }
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  // ── BOLETIM DIGITAL ────────────────────────────────────
+  const ACADEMICO_API = SUPABASE_URL + '/functions/v1/academico';
+  async function callAcademico(body) {
+    const r = await fetch(ACADEMICO_API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  async function carregarBoletim() {
+    const el = document.getElementById('boletimContent');
+    if (!currentUser) { el.innerHTML = '<p style="color:var(--muted);">Faça login para ver o boletim.</p>'; return; }
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
+
+    const d = await callAcademico({ action:'boletim_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
+    const boletins = Array.isArray(d) ? d : [];
+
+    if (!boletins.length) {
+      el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Nenhum boletim disponível para este ano.</p>';
+      return;
+    }
+
+    let html = '';
+    for (const bol of boletins) {
+      const periodo = bol.notas_periodos?.nome || 'Período';
+      html += `<div style="margin-bottom:20px;">
+        <h4 style="font-family:'Lora',serif;font-size:15px;margin-bottom:10px;">${periodo}</h4>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="background:#faf8f5;">
+            <th style="padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Disciplina</th>
+            <th style="padding:8px 12px;text-align:center;font-size:11px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Média</th>
+          </tr></thead><tbody>`;
+
+      const disciplinas = bol.dados?.disciplinas || [];
+      for (const disc of disciplinas) {
+        const media = disc.media !== null ? disc.media.toFixed(1) : '—';
+        const cor = disc.media !== null && disc.media >= 7 ? 'color:var(--green);font-weight:700;' : disc.media !== null ? 'color:var(--red);font-weight:700;' : '';
+        html += `<tr style="border-bottom:1px solid #f0ece6;">
+          <td style="padding:10px 12px;">${disc.nome}</td>
+          <td style="padding:10px 12px;text-align:center;${cor}">${media}</td>
+        </tr>`;
+      }
+
+      const mg = bol.media_geral !== null ? bol.media_geral.toFixed(1) : '—';
+      const mgCor = bol.media_geral >= 7 ? 'color:var(--green);' : 'color:var(--red);';
+      html += `<tr style="background:#faf8f5;">
+        <td style="padding:10px 12px;font-weight:700;">Média Geral</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:700;${mgCor}">${mg}</td>
+      </tr></tbody></table></div></div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
   async function carregarAchados() {
     const d = await callDiplomas({ action: 'achados_lista_publica' });
     const items = d.data || [];

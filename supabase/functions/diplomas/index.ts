@@ -1,5 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode, b64urlDecode } from '../_shared/webauthn.ts'
+import { getModulosHabilitados, getEscolaPadrao } from '../_shared/modulos.ts'
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
+import { sanitizeBody } from '../_shared/validation.ts'
+import { createLogger } from '../_shared/logger.ts'
+
+const log = createLogger('diplomas')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -240,6 +247,11 @@ async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string |
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+
+  // Rate limiting
+  const clientIp = getClientIP(req)
+  const rl = checkRateLimit(clientIp, 'api')
+  if (!rl.allowed) return json({ error: `Muitas requisições. Tente em ${rl.retryAfterSeconds}s.`, code: 'RATE_LIMITED' }, 429)
 
   const sb = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -2270,6 +2282,118 @@ Deno.serve(async (req) => {
       }
       return json({ token, nome, email })
     } catch (e) { return json({ error: 'Verificação falhou: ' + (e as Error).message }, 400) }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  PESQUISAS / ENQUETES / AUTORIZAÇÕES
+  // ═══════════════════════════════════════════════════════════
+
+  if (action === 'pesquisa_list') {
+    const { ativo } = body as any
+    let q = sb.from('pesquisas').select('*, pesquisa_perguntas(count)').order('criado_em', { ascending: false })
+    if (ativo !== undefined) q = q.eq('ativo', ativo)
+    const { data } = await q
+    return json(data ?? [])
+  }
+
+  if (action === 'pesquisa_create') {
+    const { titulo, descricao, tipo, publico_alvo, data_limite } = body as any
+    if (!titulo) return json({ error: 'Título obrigatório' }, 400)
+    const { data, error } = await sb.from('pesquisas').insert({
+      titulo, descricao, tipo: tipo || 'enquete', publico_alvo: publico_alvo || 'todos',
+      data_limite: data_limite || null, criado_por: 'gerente'
+    }).select().single()
+    if (error) return json({ error: error.message }, 400)
+    return json(data)
+  }
+
+  if (action === 'pesquisa_update') {
+    const { id, ...fields } = body as any
+    if (!id) return json({ error: 'ID obrigatório' }, 400)
+    delete fields.action; delete fields._token; delete fields._prof_token
+    const { error } = await sb.from('pesquisas').update(fields).eq('id', id)
+    if (error) return json({ error: error.message }, 400)
+    return json({ success: true })
+  }
+
+  if (action === 'pesquisa_delete') {
+    const { id } = body as any
+    if (!id) return json({ error: 'ID obrigatório' }, 400)
+    const { error } = await sb.from('pesquisas').delete().eq('id', id)
+    if (error) return json({ error: error.message }, 400)
+    return json({ success: true })
+  }
+
+  if (action === 'pesquisa_perguntas_list') {
+    const { pesquisa_id } = body as any
+    if (!pesquisa_id) return json({ error: 'pesquisa_id obrigatório' }, 400)
+    const { data } = await sb.from('pesquisa_perguntas').select('*').eq('pesquisa_id', pesquisa_id).order('ordem')
+    return json(data ?? [])
+  }
+
+  if (action === 'pesquisa_perguntas_upsert') {
+    const { pesquisa_id, perguntas } = body as any
+    if (!pesquisa_id || !Array.isArray(perguntas)) return json({ error: 'pesquisa_id e perguntas[] obrigatórios' }, 400)
+    // Delete existing and re-insert
+    await sb.from('pesquisa_perguntas').delete().eq('pesquisa_id', pesquisa_id)
+    if (perguntas.length > 0) {
+      const rows = perguntas.map((p: any, i: number) => ({
+        pesquisa_id, texto: p.texto, tipo: p.tipo || 'texto',
+        opcoes: p.opcoes || [], obrigatoria: p.obrigatoria !== false, ordem: i
+      }))
+      const { error } = await sb.from('pesquisa_perguntas').insert(rows)
+      if (error) return json({ error: error.message }, 400)
+    }
+    return json({ success: true })
+  }
+
+  if (action === 'pesquisa_responder') {
+    const { pesquisa_id, respostas, respondido_por } = body as any
+    if (!pesquisa_id || !Array.isArray(respostas) || !respondido_por) return json({ error: 'pesquisa_id, respostas[] e respondido_por obrigatórios' }, 400)
+    const rows = respostas.map((r: any) => ({
+      pesquisa_id, pergunta_id: r.pergunta_id, respondido_por, valor: r.valor || ''
+    }))
+    const { error } = await sb.from('pesquisa_respostas').upsert(rows, { onConflict: 'pergunta_id,respondido_por' })
+    if (error) return json({ error: error.message }, 400)
+    return json({ success: true })
+  }
+
+  if (action === 'pesquisa_resultados') {
+    const { pesquisa_id } = body as any
+    if (!pesquisa_id) return json({ error: 'pesquisa_id obrigatório' }, 400)
+    const { data: perguntas } = await sb.from('pesquisa_perguntas').select('*').eq('pesquisa_id', pesquisa_id).order('ordem')
+    const { data: respostas } = await sb.from('pesquisa_respostas').select('*').eq('pesquisa_id', pesquisa_id)
+    // Count unique respondents
+    const respondentes = new Set((respostas || []).map((r: any) => r.respondido_por))
+    return json({ perguntas: perguntas ?? [], respostas: respostas ?? [], total_respondentes: respondentes.size })
+  }
+
+  if (action === 'autorizacao_assinar') {
+    const { pesquisa_id, familia_email, aluno_nome, autorizado } = body as any
+    if (!pesquisa_id || !familia_email) return json({ error: 'pesquisa_id e familia_email obrigatórios' }, 400)
+    const { error } = await sb.from('autorizacoes').upsert({
+      pesquisa_id, familia_email, aluno_nome: aluno_nome || null,
+      autorizado: autorizado !== false, assinatura_data: new Date().toISOString()
+    }, { onConflict: 'pesquisa_id,familia_email' })
+    if (error) return json({ error: error.message }, 400)
+    return json({ success: true })
+  }
+
+  if (action === 'autorizacao_list') {
+    const { pesquisa_id } = body as any
+    if (!pesquisa_id) return json({ error: 'pesquisa_id obrigatório' }, 400)
+    const { data } = await sb.from('autorizacoes').select('*').eq('pesquisa_id', pesquisa_id).order('assinatura_data', { ascending: false })
+    return json(data ?? [])
+  }
+
+  // ── Módulos habilitados (feature gating) ──
+  if (action === 'modulos_habilitados') {
+    try {
+      const escolaId = await getEscolaPadrao(sb)
+      if (!escolaId) return json({ modulos: [] })
+      const modulos = await getModulosHabilitados(sb, escolaId)
+      return json({ modulos: [...modulos] })
+    } catch { return json({ modulos: [] }) }
   }
 
   return json({ error: 'Ação desconhecida' }, 400)

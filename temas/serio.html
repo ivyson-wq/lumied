@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tema Sério — Preview Completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0D1117;color:#E6EDF3;display:flex;min-height:100vh}
+
+/* ═══ SIDEBAR ═══ */
+.sb{width:240px;background:#010409;border-right:1px solid #21262D;padding:0;flex-shrink:0;display:flex;flex-direction:column;}
+.sb-brand{padding:20px 16px;border-bottom:1px solid #21262D;}
+.sb-logo{display:flex;align-items:center;gap:10px;}
+.sb-logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#1A73E8,#4FC3F7);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.sb-logo h1{font-family:'Playfair Display',serif;font-size:16px;color:#E6EDF3;letter-spacing:-.3px;}
+.sb-logo small{font-size:10px;color:#484F58;display:block;margin-top:1px;font-family:'JetBrains Mono',monospace;}
+.sb-nav{flex:1;padding:8px;overflow-y:auto;}
+.sb-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#484F58;padding:16px 12px 6px;font-family:'JetBrains Mono',monospace;}
+.ni{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;color:#8B949E;font-size:13px;font-weight:500;margin-bottom:1px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;}
+.ni:hover{background:#161B22;color:#C9D1D9;}
+.ni.active{background:rgba(26,115,232,.1);color:#58A6FF;border-left-color:#58A6FF;}
+.ni .icon{font-size:14px;width:20px;text-align:center;opacity:.7;}
+.ni.active .icon{opacity:1;}
+.ni .label{flex:1;}
+.ni .badge{font-family:'JetBrains Mono',monospace;font-size:10px;color:#58A6FF;background:rgba(26,115,232,.1);padding:1px 6px;border-radius:4px;}
+.sb-footer{padding:12px 16px;border-top:1px solid #21262D;}
+.sb-user{font-size:11px;color:#484F58;}.sb-user strong{color:#8B949E;display:block;font-size:12px;}
+
+/* ═══ MAIN ═══ */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;background:#0D1117;}
+.topbar{background:#161B22;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #21262D;}
+.topbar h2{font-family:'Playfair Display',serif;font-size:18px;color:#E6EDF3;font-weight:600;}
+.topbar .breadcrumb{font-size:11px;color:#484F58;font-family:'JetBrains Mono',monospace;}
+.topbar .breadcrumb span{color:#8B949E;}
+.status{display:flex;align-items:center;gap:6px;font-size:11px;color:#3FB950;font-family:'JetBrains Mono',monospace;}
+.status .dot{width:6px;height:6px;background:#3FB950;border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.content{padding:24px 28px;flex:1;overflow-y:auto;}
+
+/* ═══ STATS ═══ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.stat{background:#161B22;border:1px solid #21262D;border-radius:8px;padding:16px;position:relative;}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:8px 8px 0 0;}
+.stat:nth-child(1)::before{background:#3FB950;}.stat:nth-child(2)::before{background:#1A73E8;}.stat:nth-child(3)::before{background:#F0883E;}.stat:nth-child(4)::before{background:#A371F7;}
+.stat:hover{border-color:#30363D;}
+.stat .label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#484F58;font-family:'JetBrains Mono',monospace;margin-bottom:4px;}
+.stat .value{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:#E6EDF3;line-height:1;}
+.stat .change{font-size:11px;margin-top:4px;font-family:'JetBrains Mono',monospace;}
+.stat .change.up{color:#3FB950;}.stat .change.down{color:#F85149;}
+
+/* ═══ CARDS ═══ */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.card{background:#161B22;border:1px solid #21262D;border-radius:8px;padding:16px;}
+.card:hover{border-color:#30363D;}
+.card-title{font-size:13px;font-weight:600;color:#E6EDF3;margin-bottom:14px;display:flex;align-items:center;gap:8px;justify-content:space-between;}
+.card-title .tag{font-family:'JetBrains Mono',monospace;font-size:9px;color:#484F58;background:#0D1117;padding:2px 8px;border-radius:4px;border:1px solid #21262D;}
+
+/* Chart */
+.chart{display:flex;align-items:flex-end;gap:6px;height:130px;}
+.bar-group{flex:1;display:flex;gap:2px;align-items:flex-end;}
+.bar{border-radius:3px 3px 0 0;}.bar.rev{background:#1A73E8;}.bar.exp{background:#21262D;}
+.chart-labels{display:flex;justify-content:space-between;font-size:9px;color:#484F58;margin-top:6px;font-family:'JetBrains Mono',monospace;}
+
+/* Activity Feed */
+.feed-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #21262D;}
+.feed-item:last-child{border:none;}
+.feed-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.feed-content{flex:1;font-size:12px;color:#8B949E;line-height:1.5;}
+.feed-content strong{color:#C9D1D9;}
+.feed-time{font-size:10px;color:#484F58;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+
+/* Table */
+.table-wrap{background:#161B22;border:1px solid #21262D;border-radius:8px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{padding:10px 16px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#484F58;background:#0D1117;border-bottom:1px solid #21262D;font-family:'JetBrains Mono',monospace;}
+tbody td{padding:10px 16px;border-bottom:1px solid #21262D;color:#C9D1D9;}
+tbody tr:last-child td{border:none;}
+tbody tr:hover{background:#1C2128;}
+.pill{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+.pill-g{background:rgba(63,185,80,.12);color:#3FB950;}.pill-r{background:rgba(248,81,73,.12);color:#F85149;}
+.grade{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;}
+.grade.pass{color:#3FB950;}.grade.fail{color:#F85149;}
+</style>
+</head>
+<body>
+
+<div class="sb">
+  <div class="sb-brand">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">📐</div>
+      <div><h1>Academia</h1><small>v2.1 · gestão</small></div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <div class="ni active"><span class="icon">◈</span><span class="label">Dashboard</span></div>
+    <div class="sb-lbl">Acadêmico</div>
+    <div class="ni"><span class="icon">▦</span><span class="label">Notas</span><span class="badge">24</span></div>
+    <div class="ni"><span class="icon">◉</span><span class="label">Frequência</span></div>
+    <div class="ni"><span class="icon">▤</span><span class="label">Diário de Classe</span></div>
+    <div class="ni"><span class="icon">◫</span><span class="label">Avaliações</span></div>
+    <div class="ni"><span class="icon">▥</span><span class="label">Relatórios BNCC</span></div>
+    <div class="sb-lbl">Docentes</div>
+    <div class="ni"><span class="icon">◎</span><span class="label">Certificados</span></div>
+    <div class="ni"><span class="icon">△</span><span class="label">Desenvolvimento</span></div>
+    <div class="ni"><span class="icon">◧</span><span class="label">Impressões</span></div>
+    <div class="sb-lbl">Financeiro</div>
+    <div class="ni"><span class="icon">◇</span><span class="label">Painel Financeiro</span></div>
+    <div class="ni"><span class="icon">▭</span><span class="label">Lançamentos</span></div>
+    <div class="ni"><span class="icon">◈</span><span class="label">DRE</span></div>
+    <div class="ni"><span class="icon">◻</span><span class="label">Boletos</span></div>
+    <div class="sb-lbl">Comercial</div>
+    <div class="ni"><span class="icon">▷</span><span class="label">Pipeline</span></div>
+    <div class="ni"><span class="icon">◐</span><span class="label">Prospects</span></div>
+    <div class="sb-lbl">Comunicação</div>
+    <div class="ni"><span class="icon">◫</span><span class="label">Mensagens</span></div>
+    <div class="ni"><span class="icon">▢</span><span class="label">Formulários</span></div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user"><strong>Prof. Carlos M.</strong>carlos@escola.com</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="breadcrumb">sistema <span>/ dashboard</span></div>
+      <h2>Painel Analítico</h2>
+    </div>
+    <div class="status"><div class="dot"></div>sistema operacional · uptime 99.9%</div>
+  </div>
+
+  <div class="content">
+    <div class="stats">
+      <div class="stat">
+        <div class="label">Matrículas Ativas</div>
+        <div class="value">247</div>
+        <div class="change up">↑ 12 vs mês anterior</div>
+      </div>
+      <div class="stat">
+        <div class="label">Taxa de Presença</div>
+        <div class="value">96.2%</div>
+        <div class="change up">↑ 1.3% vs média</div>
+      </div>
+      <div class="stat">
+        <div class="label">Receita Líquida</div>
+        <div class="value">R$89.2k</div>
+        <div class="change up">↑ 8.4% MoM</div>
+      </div>
+      <div class="stat">
+        <div class="label">Inadimplência</div>
+        <div class="value">3.2%</div>
+        <div class="change down">↑ 0.4% vs meta 2.5%</div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">Receita × Despesa <span class="tag">FY 2026</span></div>
+        <div class="chart">
+          <div class="bar-group"><div class="bar rev" style="height:50px"></div><div class="bar exp" style="height:30px"></div></div>
+          <div class="bar-group"><div class="bar rev" style="height:62px"></div><div class="bar exp" style="height:33px"></div></div>
+          <div class="bar-group"><div class="bar rev" style="height:75px"></div><div class="bar exp" style="height:36px"></div></div>
+          <div class="bar-group"><div class="bar rev" style="height:82px"></div><div class="bar exp" style="height:38px"></div></div>
+          <div class="bar-group"><div class="bar rev" style="height:90px"></div><div class="bar exp" style="height:40px"></div></div>
+          <div class="bar-group"><div class="bar rev" style="height:105px"></div><div class="bar exp" style="height:42px"></div></div>
+        </div>
+        <div class="chart-labels"><span>jan</span><span>fev</span><span>mar</span><span>abr</span><span>mai</span><span>jun</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Atividade Recente <span class="tag">últimas 24h</span></div>
+        <div class="feed-item"><div class="feed-dot" style="background:#3FB950"></div><div class="feed-content"><strong>Matrícula confirmada</strong> — Sophia M., Ensino Médio 1ª série</div><div class="feed-time">10:42</div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:#1A73E8"></div><div class="feed-content"><strong>Certificado emitido</strong> — Prof. Ana, Departamento de Línguas</div><div class="feed-time">10:30</div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:#F0883E"></div><div class="feed-content"><strong>Requisição pendente</strong> — 12 itens, Lab. de Ciências</div><div class="feed-time">09:15</div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:#A371F7"></div><div class="feed-content"><strong>Prospect qualificado</strong> — Ricardo S., via formulário web</div><div class="feed-time">09:00</div></div>
+        <div class="feed-item"><div class="feed-dot" style="background:#3FB950"></div><div class="feed-content"><strong>Pagamento recebido</strong> — Fam. Oliveira, R$ 4.395,00</div><div class="feed-time">08:45</div></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Aluno</th><th>Série</th><th>AV1</th><th>AV2</th><th>Trabalho</th><th>Média Final</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ana B. Silva</strong></td><td>2ª EM</td><td>8.5</td><td>9.0</td><td>8.0</td><td><span class="grade pass">8.7</span></td><td><span class="pill pill-g">Aprovada</span></td></tr>
+          <tr><td><strong>Bruno Costa</strong></td><td>2ª EM</td><td>7.0</td><td>6.5</td><td>8.5</td><td><span class="grade pass">7.2</span></td><td><span class="pill pill-g">Aprovado</span></td></tr>
+          <tr><td><strong>Carolina Mendes</strong></td><td>2ª EM</td><td>5.5</td><td>6.0</td><td>7.0</td><td><span class="grade fail">6.2</span></td><td><span class="pill pill-r">Recuperação</span></td></tr>
+          <tr><td><strong>Daniel Oliveira</strong></td><td>2ª EM</td><td>9.5</td><td>9.0</td><td>10.0</td><td><span class="grade pass">9.4</span></td><td><span class="pill pill-g">Aprovado</span></td></tr>
+          <tr><td><strong>Eduarda Santos</strong></td><td>2ª EM</td><td>8.0</td><td>7.5</td><td>9.0</td><td><span class="grade pass">8.1</span></td><td><span class="pill pill-g">Aprovada</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

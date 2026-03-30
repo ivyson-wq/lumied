@@ -10,6 +10,9 @@
 <link rel="icon" href="/icon-apple.png">
 <link rel="apple-touch-icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/themes.css">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="/dist/gerente/index.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="/webauthn-client.js"></script>
@@ -336,26 +339,33 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <nav class="sb-nav">
       <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
 
+      <div data-modulo="turno">
       <div class="sb-label" onclick="toggleSbSection(this)">Turnos Alunos <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
         <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries</a>
       </div>
+      </div>
 
+      <div data-modulo="atividades">
       <div class="sb-label" onclick="toggleSbSection(this)">Atv. Extracurriculares <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard</a>
         <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar</a>
       </div>
+      </div>
 
+      <div data-modulo="diplomas">
       <div class="sb-label" onclick="toggleSbSection(this)">Professoras <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
-        <a class="nav-item" href="#" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
-        <a class="nav-item" href="#" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
-        <a class="nav-item" href="#" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
+        <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
+        <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
+        <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
+      </div>
       </div>
 
+      <div data-modulo="almoxarifado">
       <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
@@ -367,13 +377,17 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
         <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
       </div>
+      </div>
 
+      <div data-modulo="manutencao">
       <div class="sb-label" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
-        <a class="nav-item" href="#" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
+        <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
+      </div>
       </div>
 
+      <div data-modulo="financeiro">
       <div class="sb-label" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard</a>
@@ -385,7 +399,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🏦</span> Conciliação</a>
         <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos</a>
       </div>
+      </div>
 
+      <div data-modulo="crm">
       <div class="sb-label" onclick="toggleSbSection(this)">CRM <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
@@ -395,10 +411,41 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> Matrículas</a>
         <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries/Idade</a>
       </div>
+      </div>
 
+      <div data-modulo="notas">
+      <div class="sb-label" onclick="toggleSbSection(this)">Acadêmico <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('notasConfig',this)"><span class="ic">⚙️</span> Config Notas</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasDisciplinas',this)"><span class="ic">📚</span> Disciplinas</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasPeriodos',this)"><span class="ic">📅</span> Períodos</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> Visão Geral</a>
+        <a class="nav-item" href="#" data-modulo="frequencia" onclick="showPanel('frequencia',this)"><span class="ic">✅</span> Frequência</a>
+        <a class="nav-item" href="#" data-modulo="diario_classe" onclick="showPanel('diarioClasse',this)"><span class="ic">📖</span> Diário de Classe</a>
+      </div>
+      </div>
+
+      <div data-modulo="calendario">
       <div class="sb-label" onclick="toggleSbSection(this)">Agenda Escolar <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário</a>
+      </div>
+      </div>
+
+      <div data-modulo="chat">
+      <div class="sb-label" onclick="toggleSbSection(this)">Comunicação <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('chatConversas',this)"><span class="ic">💬</span> Conversas</a>
+        <a class="nav-item" href="#" data-modulo="pesquisas" onclick="showPanel('pesquisas',this)"><span class="ic">📊</span> Pesquisas</a>
+      </div>
+      </div>
+
+      <div data-modulo="matricula">
+      <div class="sb-label" onclick="toggleSbSection(this)">Matrícula Online <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> Formulários</a>
+        <a class="nav-item" href="#" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> Status</a>
+      </div>
       </div>
 
       <div class="sb-label" onclick="toggleSbSection(this)">Configurações <span class="sb-arrow collapsed">▼</span></div>
@@ -415,7 +462,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Profs</a>
         <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Secretaria</a>
       </div>
-      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
+      <div data-modulo="emergencias" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
         <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
       </div>
     </nav>
@@ -1893,6 +1940,170 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- ═══ PAINÉIS: ACADÊMICO / NOTAS ═══ -->
+<div id="panelNotasConfig" class="panel">
+  <div class="sec-title">Configuração de Notas</div>
+  <div class="form-card" id="notasConfigForm">
+    <div class="ff-row">
+      <div class="ff"><label>Tipo de Avaliação</label>
+        <select id="ncTipo"><option value="numerico">Numérico (0-10)</option><option value="conceito">Conceito (A-E)</option></select>
+      </div>
+      <div class="ff"><label>Fórmula da Média</label>
+        <select id="ncFormula"><option value="aritmetica">Aritmética</option><option value="ponderada">Ponderada (por peso)</option></select>
+      </div>
+    </div>
+    <div class="ff-row">
+      <div class="ff"><label>Média para Aprovação</label><input id="ncMedia" type="number" step="0.1" value="7.0"></div>
+      <div class="ff"><label>Tipo de Período</label>
+        <select id="ncPeriodos"><option value="bimestral">Bimestral</option><option value="trimestral">Trimestral</option><option value="semestral">Semestral</option></select>
+      </div>
+    </div>
+    <div class="ff-row">
+      <div class="ff"><label>Permite Recuperação</label>
+        <select id="ncRecup"><option value="true">Sim</option><option value="false">Não</option></select>
+      </div>
+      <div class="ff"><label>Peso da Recuperação (%)</label><input id="ncPesoRecup" type="number" step="0.1" value="40"></div>
+    </div>
+    <div style="margin-top:16px;"><button class="btn-primary" onclick="salvarNotasConfig()">Salvar Configuração</button></div>
+  </div>
+</div>
+
+<div id="panelNotasDisciplinas" class="panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="sec-title" style="margin-bottom:0;">Disciplinas <span class="count-badge" id="discCount">0</span></div>
+    <button class="btn-primary" onclick="showDiscForm()">+ Nova Disciplina</button>
+  </div>
+  <div id="discFormWrap" style="display:none;">
+    <div class="form-card">
+      <input type="hidden" id="discId">
+      <div class="ff-row">
+        <div class="ff"><label>Nome</label><input id="discNome" placeholder="Mathematics"></div>
+        <div class="ff"><label>Série</label><select id="discSerie"></select></div>
+      </div>
+      <div class="ff-row">
+        <div class="ff"><label>Professor(a)</label><select id="discProf"></select></div>
+        <div class="ff"><label>Carga Horária (h/semana)</label><input id="discCarga" type="number" value="4"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn-primary" onclick="salvarDisc()">Salvar</button>
+        <button class="btn-secondary" onclick="cancelarDisc()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th>Disciplina</th><th>Série</th><th>Professor(a)</th><th>Carga (h)</th><th>Ações</th></tr></thead>
+    <tbody id="discBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="panelNotasPeriodos" class="panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="sec-title" style="margin-bottom:0;">Períodos Letivos <span class="count-badge" id="periodoCount">0</span></div>
+    <button class="btn-primary" onclick="showPeriodoForm()">+ Novo Período</button>
+  </div>
+  <div id="periodoFormWrap" style="display:none;">
+    <div class="form-card">
+      <input type="hidden" id="periodoEditId">
+      <div class="ff-row">
+        <div class="ff"><label>Nome</label><input id="periodoNome" placeholder="1º Bimestre"></div>
+        <div class="ff"><label>Número</label><input id="periodoNum" type="number" value="1"></div>
+      </div>
+      <div class="ff-row">
+        <div class="ff"><label>Ano</label><input id="periodoAno" type="number"></div>
+        <div class="ff"><label>Data Início</label><input id="periodoInicio" type="date"></div>
+      </div>
+      <div class="ff"><label>Data Fim</label><input id="periodoFim" type="date" style="max-width:300px;"></div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn-primary" onclick="salvarPeriodo()">Salvar</button>
+        <button class="btn-secondary" onclick="cancelarPeriodo()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th>Período</th><th>#</th><th>Ano</th><th>Início</th><th>Fim</th><th>Ações</th></tr></thead>
+    <tbody id="periodosBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="panelNotasVisao" class="panel">
+  <div class="sec-title">Visão Geral de Notas</div>
+  <div class="filter-bar">
+    <select id="nvSerie" class="fb" style="min-width:150px;" onchange="loadNotasVisao()"><option value="">Série...</option></select>
+    <select id="nvPeriodo" class="fb" style="min-width:150px;" onchange="loadNotasVisao()"><option value="">Período...</option></select>
+    <select id="nvDisc" class="fb" style="min-width:150px;" onchange="loadNotasVisao()"><option value="">Disciplina...</option></select>
+  </div>
+  <div id="notasVisaoContent" class="empty-state">Selecione série, período e disciplina para visualizar as notas.</div>
+</div>
+
+<div id="panelFrequencia" class="panel">
+  <div class="sec-title">Controle de Frequência</div>
+  <div class="filter-bar">
+    <select id="freqSerie" class="fb" style="min-width:150px;" onchange="loadFreqGerente()"><option value="">Série...</option></select>
+    <input type="date" id="freqDataIni" class="fb" onchange="loadFreqGerente()">
+    <input type="date" id="freqDataFim" class="fb" onchange="loadFreqGerente()">
+  </div>
+  <div id="freqGerenteContent" class="empty-state">Selecione uma série para ver as chamadas.</div>
+</div>
+
+<div id="panelDiarioClasse" class="panel">
+  <div class="sec-title">Diário de Classe Digital</div>
+  <div class="filter-bar">
+    <select id="diarioSerie" class="fb" style="min-width:150px;" onchange="loadDiarioGerente()"><option value="">Série...</option></select>
+    <select id="diarioDisc" class="fb" style="min-width:150px;" onchange="loadDiarioGerente()"><option value="">Disciplina...</option></select>
+  </div>
+  <div id="diarioGerenteContent" class="empty-state">Selecione série e disciplina para visualizar o diário.</div>
+</div>
+
+<!-- FASE 2: Comunicação -->
+<div id="panelChatConversas" class="panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="sec-title" style="margin-bottom:0;">Conversas</div>
+    <button class="btn-primary" onclick="novoChatAviso()">+ Enviar Aviso</button>
+  </div>
+  <div id="chatConversasContent" class="empty-state">Carregando conversas...</div>
+</div>
+
+<div id="panelPesquisas" class="panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="sec-title" style="margin-bottom:0;">Pesquisas & Enquetes <span class="count-badge" id="pesquisasCount">0</span></div>
+    <button class="btn-primary" onclick="showPesquisaForm()">+ Nova Pesquisa</button>
+  </div>
+  <div id="pesquisaFormWrap" style="display:none;">
+    <div class="form-card">
+      <input type="hidden" id="pesquisaId">
+      <div class="ff"><label>Título</label><input id="pesquisaTitulo" placeholder="Título da pesquisa"></div>
+      <div class="ff-row">
+        <div class="ff"><label>Tipo</label><select id="pesquisaTipo"><option value="enquete">Enquete</option><option value="satisfacao">Satisfação</option><option value="autorizacao">Autorização</option></select></div>
+        <div class="ff"><label>Data Limite</label><input id="pesquisaLimite" type="date"></div>
+      </div>
+      <div class="ff"><label>Descrição</label><textarea id="pesquisaDesc" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn-primary" onclick="salvarPesquisa()">Salvar</button>
+        <button class="btn-secondary" onclick="cancelarPesquisa()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <div id="pesquisasContent" class="empty-state">Carregando...</div>
+</div>
+
+<!-- FASE 2: Matrícula Online -->
+<div id="panelMatriculaForm" class="panel">
+  <div class="sec-title">Formulários de Matrícula</div>
+  <div id="matriculaFormContent" class="empty-state">Carregando...</div>
+</div>
+
+<div id="panelMatriculaStatus" class="panel">
+  <div class="sec-title">Status de Matrículas <span class="count-badge" id="matStatusCount">0</span></div>
+  <div class="filter-bar">
+    <select id="matStatusFiltro" class="fb" onchange="loadMatriculaStatus()">
+      <option value="">Todos</option><option value="reserva">Reserva</option><option value="matriculado">Matriculado</option><option value="cancelado">Cancelado</option>
+    </select>
+  </div>
+  <div id="matStatusContent" class="empty-state">Carregando...</div>
+</div>
+
 <script>
   const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
@@ -2027,6 +2238,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     loadNotificacoes();
     loadSidebarLogo();
     showBioRegisterButton();
+    loadModulosHabilitados();
+    loadTemaEscola();
     showExportButtons(false);
     // Poll a cada 15 segundos
     pollInterval = setInterval(()=>{
@@ -2062,7 +2275,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade'};
+    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -2107,6 +2320,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='crmConfigSeries') loadCrmConfigSeries();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
+    if(id==='chatConversas') loadChatConversas();
+    if(id==='pesquisas') loadPesquisasPanel();
+    if(id==='matriculaForm') loadMatriculaForms();
+    if(id==='matriculaStatus') loadMatriculaStatus();
+    if(id==='notasConfig') loadNotasConfig();
+    if(id==='notasDisciplinas') loadNotasDisciplinas();
+    if(id==='notasPeriodos') loadNotasPeriodos();
+    if(id==='notasVisao') initNotasVisao();
     return false;
   }
 
@@ -2263,6 +2484,41 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function deleteSerie(id,nome){ if(!confirm('Remover "'+nome+'"?')) return; await api({ action:'series_delete', id }); loadSeries(); }
 
   // ── LOGO ──────────────────────────────────────────────
+  // ── Módulos habilitados (feature gating) ──
+  window._enabledModules = null;
+  async function loadModulosHabilitados() {
+    try {
+      const d = await api({ action: 'modulos_habilitados' });
+      if (d && Array.isArray(d.modulos)) {
+        window._enabledModules = new Set(d.modulos);
+        applyModuleGating();
+      }
+    } catch(e) { console.warn('Feature gating não disponível:', e); }
+  }
+  function applyModuleGating() {
+    if (!window._enabledModules) return;
+    document.querySelectorAll('[data-modulo]').forEach(el => {
+      const mod = el.dataset.modulo;
+      el.style.display = window._enabledModules.has(mod) ? '' : 'none';
+    });
+  }
+
+  // ── Tema visual da escola ──
+  async function loadTemaEscola() {
+    try {
+      const d = await api({ action: 'modulos_habilitados' });
+      if (d && d.tema) {
+        document.body.className = document.body.className.replace(/theme-\w+/g, '');
+        document.body.classList.add('theme-' + d.tema);
+        localStorage.setItem('mb_tema', d.tema);
+      }
+    } catch(e) {
+      // Fallback: usar tema salvo localmente
+      const tema = localStorage.getItem('mb_tema');
+      if (tema) document.body.classList.add('theme-' + tema);
+    }
+  }
+
   async function loadSidebarLogo() {
     const d = await api({ action:'config_get', chave:'logo_url' });
     if(d.valor){ document.getElementById('sidebarLogo').src=d.valor; document.getElementById('sidebarLogo').style.display='block'; document.getElementById('sidebarLeaf').style.display='none'; }
@@ -7134,6 +7390,374 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   }
 
   checkSession();
+
+  // ═══════════════════════════════════════════════════════════
+  //  COMUNICAÇÃO — CHAT
+  // ═══════════════════════════════════════════════════════════
+  const COMUNICACAO = SUPABASE_URL + '/functions/v1/comunicacao';
+  async function apiCom(body) {
+    const token = getToken();
+    const r = await fetch(COMUNICACAO, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body: JSON.stringify({...body, _token: token}) });
+    return r.json();
+  }
+
+  async function loadChatConversas() {
+    const el = document.getElementById('chatConversasContent');
+    el.innerHTML = '<div class="spinner-sm"></div> Carregando...';
+    const d = await apiCom({ action:'chat_conversas_list', usuario_tipo:'gerente', usuario_id: currentGerente?.email });
+    const convs = Array.isArray(d) ? d : [];
+    if (!convs.length) { el.innerHTML = '<div class="empty-state">Nenhuma conversa. Envie um aviso para começar.</div>'; return; }
+    el.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Conversa</th><th>Última Mensagem</th><th>Não Lidas</th></tr></thead><tbody>' +
+      convs.map(c => `<tr>
+        <td><strong>${esc(c.titulo || c.tipo)}</strong><br><span style="font-size:11px;color:var(--muted);">${c.chat_participantes?.map(p=>p.usuario_nome).join(', ') || ''}</span></td>
+        <td style="font-size:12px;">${c.ultima_mensagem ? esc(c.ultima_mensagem.conteudo?.substring(0,60)) : '—'}</td>
+        <td>${c.nao_lidas > 0 ? '<span class="count-badge">'+c.nao_lidas+'</span>' : '—'}</td>
+      </tr>`).join('') + '</tbody></table></div>';
+  }
+
+  async function novoChatAviso() {
+    const conteudo = prompt('Mensagem do aviso:');
+    if (!conteudo) return;
+    const d = await apiCom({ action:'chat_avisos_turma', conteudo, titulo:'Aviso Geral' });
+    if (d.error) return showToast(d.error,'error');
+    showToast('Aviso enviado!');
+    loadChatConversas();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  PESQUISAS / ENQUETES
+  // ═══════════════════════════════════════════════════════════
+  const DIPLOMAS_FN = SUPABASE_URL + '/functions/v1/diplomas';
+  async function apiDiplomas(body) {
+    const token = getToken();
+    const r = await fetch(DIPLOMAS_FN, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body: JSON.stringify({...body, _token: token}) });
+    return r.json();
+  }
+
+  async function loadPesquisasPanel() {
+    const d = await apiDiplomas({ action:'pesquisa_list' });
+    const pesquisas = Array.isArray(d) ? d : [];
+    document.getElementById('pesquisasCount').textContent = pesquisas.length;
+    const el = document.getElementById('pesquisasContent');
+    if (!pesquisas.length) { el.innerHTML = '<div class="empty-state">Nenhuma pesquisa criada.</div>'; return; }
+    el.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Título</th><th>Tipo</th><th>Status</th><th>Limite</th><th>Ações</th></tr></thead><tbody>' +
+      pesquisas.map(p => `<tr>
+        <td><strong>${esc(p.titulo)}</strong></td>
+        <td><span style="font-size:12px;text-transform:capitalize;">${esc(p.tipo)}</span></td>
+        <td>${p.ativo ? '<span class="status-pill" style="background:rgba(45,122,58,.1);color:var(--green);">Ativa</span>' : '<span class="status-pill" style="background:rgba(200,16,46,.1);color:var(--red);">Inativa</span>'}</td>
+        <td style="font-size:12px;color:var(--muted);">${p.data_limite ? new Date(p.data_limite+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+        <td><button class="action-btn" onclick="verResultadosPesquisa('${p.id}')">📊</button>
+        <button class="action-btn del" onclick="deletarPesquisa('${p.id}')">🗑️</button></td>
+      </tr>`).join('') + '</tbody></table></div>';
+  }
+
+  function showPesquisaForm() { document.getElementById('pesquisaFormWrap').style.display='block'; document.getElementById('pesquisaId').value=''; document.getElementById('pesquisaTitulo').value=''; document.getElementById('pesquisaDesc').value=''; }
+  function cancelarPesquisa() { document.getElementById('pesquisaFormWrap').style.display='none'; }
+
+  async function salvarPesquisa() {
+    const titulo = document.getElementById('pesquisaTitulo').value.trim();
+    if (!titulo) return showToast('Título obrigatório','error');
+    const d = await apiDiplomas({ action:'pesquisa_create', titulo, tipo: document.getElementById('pesquisaTipo').value, descricao: document.getElementById('pesquisaDesc').value, data_limite: document.getElementById('pesquisaLimite').value || null });
+    if (d.error) return showToast(d.error,'error');
+    showToast('Pesquisa criada!');
+    cancelarPesquisa();
+    loadPesquisasPanel();
+  }
+
+  async function deletarPesquisa(id) { if (!confirm('Excluir?')) return; await apiDiplomas({ action:'pesquisa_delete', id }); loadPesquisasPanel(); }
+
+  async function verResultadosPesquisa(id) {
+    const d = await apiDiplomas({ action:'pesquisa_resultados', pesquisa_id: id });
+    alert('Total de respondentes: ' + (d.total_respondentes || 0) + '\nPerguntas: ' + (d.perguntas?.length || 0) + '\nRespostas: ' + (d.respostas?.length || 0));
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  MATRÍCULA ONLINE
+  // ═══════════════════════════════════════════════════════════
+  async function loadMatriculaForms() {
+    const d = await api({ action:'matricula_formulario_get', ano: new Date().getFullYear(), tipo:'nova' });
+    const el = document.getElementById('matriculaFormContent');
+    if (!d || !d.campos?.length) { el.innerHTML = '<div class="empty-state">Nenhum formulário configurado para este ano.</div>'; return; }
+    el.innerHTML = `<div class="form-card"><div class="sec-title">${esc(d.titulo || 'Formulário')}</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">${d.campos.length} campos configurados</p>
+      <div style="overflow-x:auto;"><table><thead><tr><th>Campo</th><th>Tipo</th><th>Obrigatório</th></tr></thead><tbody>
+      ${d.campos.map(c => `<tr><td>${esc(c.label || c.nome)}</td><td>${esc(c.tipo)}</td><td>${c.obrigatorio ? '✅' : '—'}</td></tr>`).join('')}
+      </tbody></table></div></div>`;
+  }
+
+  async function loadMatriculaStatus() {
+    const status = document.getElementById('matStatusFiltro')?.value || '';
+    const d = await api({ action:'matricula_status_list', ano: new Date().getFullYear(), status: status || undefined });
+    const mats = Array.isArray(d) ? d : [];
+    document.getElementById('matStatusCount').textContent = mats.length;
+    const el = document.getElementById('matStatusContent');
+    if (!mats.length) { el.innerHTML = '<div class="empty-state">Nenhuma matrícula encontrada.</div>'; return; }
+    const statusColors = { reserva:'background:rgba(212,131,10,.1);color:#c27800;', matriculado:'background:rgba(45,122,58,.1);color:var(--green);', cancelado:'background:rgba(200,16,46,.1);color:var(--red);' };
+    el.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Criança</th><th>Série</th><th>Responsável</th><th>Status</th><th>Docs</th></tr></thead><tbody>' +
+      mats.map(m => `<tr>
+        <td><strong>${esc(m.nome_crianca)}</strong></td>
+        <td>${esc(m.serie || '—')}</td>
+        <td>${esc(m.nome_responsavel || '—')}<br><span style="font-size:11px;color:var(--muted);">${esc(m.email || '')}</span></td>
+        <td><span class="status-pill" style="${statusColors[m.status] || ''}">${esc(m.status)}</span></td>
+        <td>${(m.matricula_documentos || []).length > 0 ? '📎 '+m.matricula_documentos.length : '—'}</td>
+      </tr>`).join('') + '</tbody></table></div>';
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  ACADÊMICO — NOTAS / BOLETIM
+  // ═══════════════════════════════════════════════════════════
+  const ACADEMICO = SUPABASE_URL + '/functions/v1/academico';
+  async function apiAcademico(body) {
+    const token = getToken();
+    const r = await fetch(ACADEMICO, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+      body: JSON.stringify({...body, _token: token})
+    });
+    return r.json();
+  }
+
+  // ── Config Notas ──
+  async function loadNotasConfig() {
+    const d = await apiAcademico({ action:'notas_config_get' });
+    if (d.error) return;
+    document.getElementById('ncTipo').value = d.tipo_avaliacao || 'numerico';
+    document.getElementById('ncFormula').value = d.formula_media || 'aritmetica';
+    document.getElementById('ncMedia').value = d.media_aprovacao || 7;
+    document.getElementById('ncPeriodos').value = d.periodos_tipo || 'bimestral';
+    document.getElementById('ncRecup').value = d.permite_recuperacao !== false ? 'true' : 'false';
+    document.getElementById('ncPesoRecup').value = (d.peso_recuperacao || 0.4) * 100;
+  }
+
+  async function salvarNotasConfig() {
+    const d = await apiAcademico({
+      action:'notas_config_update',
+      tipo_avaliacao: document.getElementById('ncTipo').value,
+      formula_media: document.getElementById('ncFormula').value,
+      media_aprovacao: parseFloat(document.getElementById('ncMedia').value) || 7,
+      periodos_tipo: document.getElementById('ncPeriodos').value,
+      permite_recuperacao: document.getElementById('ncRecup').value === 'true',
+      peso_recuperacao: (parseFloat(document.getElementById('ncPesoRecup').value) || 40) / 100
+    });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Configuração salva!', 'success');
+  }
+
+  // ── Períodos ──
+  async function loadNotasPeriodos() {
+    const ano = new Date().getFullYear();
+    const d = await apiAcademico({ action:'notas_periodos_list', ano });
+    const periodos = Array.isArray(d) ? d : [];
+    document.getElementById('periodoCount').textContent = periodos.length;
+    const tbody = document.getElementById('periodosBody');
+    if (!periodos.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum período cadastrado</td></tr>'; return; }
+    tbody.innerHTML = periodos.map(p => `<tr>
+      <td><strong>${esc(p.nome)}</strong></td>
+      <td>${p.numero}</td>
+      <td>${p.ano}</td>
+      <td>${p.data_inicio ? new Date(p.data_inicio+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${p.data_fim ? new Date(p.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+      <td><button class="action-btn" onclick="editarPeriodo('${p.id}')">✏️</button>
+      <button class="action-btn del" onclick="deletarPeriodo('${p.id}')">🗑️</button></td>
+    </tr>`).join('');
+  }
+
+  let _periodos = [];
+  function showPeriodoForm() {
+    document.getElementById('periodoEditId').value = '';
+    document.getElementById('periodoNome').value = '';
+    document.getElementById('periodoNum').value = '';
+    document.getElementById('periodoAno').value = new Date().getFullYear();
+    document.getElementById('periodoInicio').value = '';
+    document.getElementById('periodoFim').value = '';
+    document.getElementById('periodoFormWrap').style.display = 'block';
+  }
+  function cancelarPeriodo() { document.getElementById('periodoFormWrap').style.display = 'none'; }
+
+  async function editarPeriodo(id) {
+    const d = await apiAcademico({ action:'notas_periodos_list', ano: new Date().getFullYear() });
+    const p = (Array.isArray(d) ? d : []).find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('periodoEditId').value = p.id;
+    document.getElementById('periodoNome').value = p.nome;
+    document.getElementById('periodoNum').value = p.numero;
+    document.getElementById('periodoAno').value = p.ano;
+    document.getElementById('periodoInicio').value = p.data_inicio || '';
+    document.getElementById('periodoFim').value = p.data_fim || '';
+    document.getElementById('periodoFormWrap').style.display = 'block';
+  }
+
+  async function salvarPeriodo() {
+    const id = document.getElementById('periodoEditId').value;
+    const data = {
+      nome: document.getElementById('periodoNome').value.trim(),
+      numero: parseInt(document.getElementById('periodoNum').value) || 1,
+      ano: parseInt(document.getElementById('periodoAno').value) || new Date().getFullYear(),
+      data_inicio: document.getElementById('periodoInicio').value || null,
+      data_fim: document.getElementById('periodoFim').value || null
+    };
+    if (!data.nome) return showToast('Nome obrigatório', 'error');
+    const d = id
+      ? await apiAcademico({ action:'notas_periodos_update', id, ...data })
+      : await apiAcademico({ action:'notas_periodos_create', ...data });
+    if (d.error) return showToast(d.error, 'error');
+    showToast(id ? 'Período atualizado!' : 'Período criado!');
+    cancelarPeriodo();
+    loadNotasPeriodos();
+  }
+
+  async function deletarPeriodo(id) {
+    if (!confirm('Excluir este período?')) return;
+    const d = await apiAcademico({ action:'notas_periodos_delete', id });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Período excluído');
+    loadNotasPeriodos();
+  }
+
+  // ── Disciplinas ──
+  async function loadNotasDisciplinas() {
+    const [dRes, sRes, pRes] = await Promise.all([
+      apiAcademico({ action:'notas_disciplinas_list' }),
+      api({ action:'series_list' }),
+      api({ action:'professoras_list' })
+    ]);
+    const discs = Array.isArray(dRes) ? dRes : [];
+    const series = Array.isArray(sRes) ? sRes : (sRes.data || []);
+    const profs = Array.isArray(pRes) ? pRes : (pRes.data || []);
+    document.getElementById('discCount').textContent = discs.length;
+
+    // Populate selects
+    document.getElementById('discSerie').innerHTML = '<option value="">—</option>' + series.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('');
+    document.getElementById('discProf').innerHTML = '<option value="">—</option>' + profs.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+
+    const tbody = document.getElementById('discBody');
+    if (!discs.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhuma disciplina</td></tr>'; return; }
+    tbody.innerHTML = discs.map(d => `<tr>
+      <td><strong>${esc(d.nome)}</strong></td>
+      <td>${d.series?.nome || '—'}</td>
+      <td>${d.professoras?.nome || '—'}</td>
+      <td>${d.carga_horaria || 0}h</td>
+      <td><button class="action-btn" onclick="editarDisc('${d.id}')">✏️</button>
+      <button class="action-btn del" onclick="deletarDisc('${d.id}')">🗑️</button></td>
+    </tr>`).join('');
+  }
+
+  let _discs = [];
+  function showDiscForm() {
+    document.getElementById('discId').value = '';
+    document.getElementById('discNome').value = '';
+    document.getElementById('discSerie').value = '';
+    document.getElementById('discProf').value = '';
+    document.getElementById('discCarga').value = 4;
+    document.getElementById('discFormWrap').style.display = 'block';
+  }
+  function cancelarDisc() { document.getElementById('discFormWrap').style.display = 'none'; }
+
+  async function editarDisc(id) {
+    const d = await apiAcademico({ action:'notas_disciplinas_list' });
+    const disc = (Array.isArray(d) ? d : []).find(x => x.id === id);
+    if (!disc) return;
+    document.getElementById('discId').value = disc.id;
+    document.getElementById('discNome').value = disc.nome;
+    document.getElementById('discSerie').value = disc.serie_id || '';
+    document.getElementById('discProf').value = disc.professor_id || '';
+    document.getElementById('discCarga').value = disc.carga_horaria || 0;
+    document.getElementById('discFormWrap').style.display = 'block';
+  }
+
+  async function salvarDisc() {
+    const id = document.getElementById('discId').value;
+    const data = {
+      nome: document.getElementById('discNome').value.trim(),
+      serie_id: document.getElementById('discSerie').value || null,
+      professor_id: document.getElementById('discProf').value || null,
+      carga_horaria: parseInt(document.getElementById('discCarga').value) || 0
+    };
+    if (!data.nome) return showToast('Nome obrigatório', 'error');
+    const d = id
+      ? await apiAcademico({ action:'notas_disciplinas_update', id, ...data })
+      : await apiAcademico({ action:'notas_disciplinas_create', ...data });
+    if (d.error) return showToast(d.error, 'error');
+    showToast(id ? 'Disciplina atualizada!' : 'Disciplina criada!');
+    cancelarDisc();
+    loadNotasDisciplinas();
+  }
+
+  async function deletarDisc(id) {
+    if (!confirm('Desativar esta disciplina?')) return;
+    const d = await apiAcademico({ action:'notas_disciplinas_delete', id });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Disciplina desativada');
+    loadNotasDisciplinas();
+  }
+
+  // ── Visão Geral de Notas ──
+  async function initNotasVisao() {
+    const [sRes, pRes, dRes] = await Promise.all([
+      api({ action:'series_list' }),
+      apiAcademico({ action:'notas_periodos_list', ano: new Date().getFullYear() }),
+      apiAcademico({ action:'notas_disciplinas_list' })
+    ]);
+    const series = Array.isArray(sRes) ? sRes : (sRes.data || []);
+    const periodos = Array.isArray(pRes) ? pRes : [];
+    const discs = Array.isArray(dRes) ? dRes : [];
+
+    document.getElementById('nvSerie').innerHTML = '<option value="">Série...</option>' + series.map(s => `<option value="${s.id}">${esc(s.nome)}</option>`).join('');
+    document.getElementById('nvPeriodo').innerHTML = '<option value="">Período...</option>' + periodos.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+    document.getElementById('nvDisc').innerHTML = '<option value="">Disciplina...</option>' + discs.map(d => `<option value="${d.id}">${esc(d.nome)}</option>`).join('');
+  }
+
+  async function loadNotasVisao() {
+    const serieId = document.getElementById('nvSerie').value;
+    const periodoId = document.getElementById('nvPeriodo').value;
+    const discId = document.getElementById('nvDisc').value;
+    if (!serieId || !periodoId || !discId) return;
+
+    const content = document.getElementById('notasVisaoContent');
+    content.innerHTML = '<div class="spinner-sm"></div> Carregando...';
+
+    // Buscar avaliações desta disciplina/período
+    const [avRes, alRes] = await Promise.all([
+      apiAcademico({ action:'notas_avaliacoes_list', disciplina_id: discId, periodo_id: periodoId }),
+      apiAcademico({ action:'notas_alunos_serie', serie_id: serieId })
+    ]);
+    const avaliacoes = Array.isArray(avRes) ? avRes : [];
+    const alunos = Array.isArray(alRes) ? alRes : [];
+
+    if (!avaliacoes.length) { content.innerHTML = '<div class="empty-state">Nenhuma avaliação cadastrada para esta disciplina/período.</div>'; return; }
+    if (!alunos.length) { content.innerHTML = '<div class="empty-state">Nenhum aluno encontrado nesta série.</div>'; return; }
+
+    // Buscar notas de todas as avaliações
+    const notasMap = {};
+    for (const av of avaliacoes) {
+      const nRes = await apiAcademico({ action:'notas_lancamentos_list', avaliacao_id: av.id });
+      for (const n of (Array.isArray(nRes) ? nRes : [])) {
+        if (!notasMap[n.aluno_email]) notasMap[n.aluno_email] = {};
+        notasMap[n.aluno_email][av.id] = n;
+      }
+    }
+
+    // Renderizar tabela
+    let html = '<div class="table-wrap"><table><thead><tr><th>Aluno</th>';
+    for (const av of avaliacoes) html += `<th title="${esc(av.nome)}">${esc(av.nome)} (${av.peso}x)</th>`;
+    html += '<th>Média</th></tr></thead><tbody>';
+
+    for (const al of alunos) {
+      html += `<tr><td><strong>${esc(al.nome_aluno)}</strong></td>`;
+      let soma = 0, count = 0;
+      for (const av of avaliacoes) {
+        const nota = notasMap[al.email]?.[av.id];
+        const val = nota?.valor ?? nota?.conceito ?? '—';
+        html += `<td>${val}</td>`;
+        if (nota?.valor !== null && nota?.valor !== undefined && av.tipo !== 'recuperacao') { soma += nota.valor; count++; }
+      }
+      const media = count > 0 ? (soma / count).toFixed(1) : '—';
+      const mediaClass = count > 0 && parseFloat(media) >= 7 ? 'color:var(--green);font-weight:700;' : count > 0 ? 'color:var(--red);font-weight:700;' : '';
+      html += `<td style="${mediaClass}">${media}</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+    content.innerHTML = html;
+  }
 
   // ── OFFLINE DETECTION ──────────────────────────────────
   function showOfflineBanner(show) {

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tema Interativo — Preview Completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#FAF5FF;color:#1E1146;display:flex;min-height:100vh}
+
+/* ═══ SIDEBAR ═══ */
+.sb{width:250px;background:linear-gradient(180deg,#0F0A2A 0%,#1E1146 40%,#312E81 100%);padding:0;flex-shrink:0;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+.sb::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 20% 80%,rgba(124,58,237,.15) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(6,182,212,.1) 0%,transparent 50%);pointer-events:none;}
+.sb-brand{padding:24px 20px;position:relative;z-index:1;border-bottom:1px solid rgba(255,255,255,.06);}
+.sb-logo{display:flex;align-items:center;gap:12px;}
+.sb-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#7C3AED,#06B6D4);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(124,58,237,.4);}
+.sb-logo h1{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px;}
+.sb-logo h1 span{background:linear-gradient(135deg,#A78BFA,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sb-logo small{font-size:10px;color:rgba(255,255,255,.35);display:block;margin-top:1px;}
+.sb-nav{flex:1;padding:12px;position:relative;z-index:1;overflow-y:auto;}
+.sb-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(167,139,250,.4);padding:14px 10px 6px;}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;color:rgba(255,255,255,.6);font-size:13px;font-weight:600;margin-bottom:2px;cursor:pointer;transition:all .25s;position:relative;}
+.ni:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9);transform:translateX(4px);}
+.ni.active{background:linear-gradient(135deg,#7C3AED,#06B6D4);color:#fff;box-shadow:0 4px 20px rgba(124,58,237,.4);}
+.ni .icon{font-size:16px;width:24px;text-align:center;}
+.ni .badge{background:rgba(255,255,255,.2);font-size:10px;padding:2px 8px;border-radius:100px;font-weight:700;margin-left:auto;}
+.ni .new-dot{position:absolute;top:8px;right:8px;width:6px;height:6px;background:#06B6D4;border-radius:50%;animation:dotPulse 2s infinite;}
+@keyframes dotPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(6,182,212,.4)}50%{opacity:.6;box-shadow:0 0 0 6px rgba(6,182,212,0)}}
+
+/* ═══ MAIN ═══ */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{background:rgba(255,255,255,.75);backdrop-filter:blur(24px) saturate(1.8);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(124,58,237,.08);position:sticky;top:0;z-index:10;}
+.topbar h2{font-size:20px;font-weight:800;background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.topbar .greeting{font-size:13px;color:#7C6FA0;}.topbar .greeting strong{color:#1E1146;}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:#10B981;font-weight:600;background:rgba(16,185,129,.08);padding:5px 14px;border-radius:100px;border:1px solid rgba(16,185,129,.15);}
+.status-pill .dot{width:7px;height:7px;background:#10B981;border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.content{padding:24px 28px;flex:1;overflow-y:auto;background:linear-gradient(180deg,#FAF5FF 0%,#F0EBFF 100%);}
+
+/* ═══ STATS ═══ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat{background:rgba(255,255,255,.7);backdrop-filter:blur(12px);border:1px solid #DDD6FE;border-radius:18px;padding:20px;text-align:center;position:relative;overflow:hidden;transition:all .3s;}
+.stat:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(124,58,237,.12);border-color:#A78BFA;}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7C3AED,#06B6D4);}
+.stat .icon-bg{width:48px;height:48px;border-radius:14px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.stat:nth-child(1) .icon-bg{background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(6,182,212,.1));}
+.stat:nth-child(2) .icon-bg{background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.1));}
+.stat:nth-child(3) .icon-bg{background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(251,191,36,.1));}
+.stat:nth-child(4) .icon-bg{background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(248,113,113,.1));}
+.stat .value{font-size:32px;font-weight:800;color:#1E1146;line-height:1;}
+.stat .label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#7C6FA0;margin-top:4px;}
+.stat .trend{font-size:11px;font-weight:600;margin-top:2px;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:100px;}
+.stat .trend.up{color:#10B981;background:rgba(16,185,129,.08);}.stat .trend.down{color:#EF4444;background:rgba(239,68,68,.08);}
+
+/* ═══ CARDS ═══ */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.card{background:rgba(255,255,255,.7);backdrop-filter:blur(12px);border:1px solid #DDD6FE;border-radius:18px;padding:20px;transition:all .3s;}
+.card:hover{border-color:#A78BFA;box-shadow:0 8px 24px rgba(124,58,237,.08);}
+.card-title{font-size:14px;font-weight:700;color:#1E1146;margin-bottom:14px;display:flex;align-items:center;gap:8px;justify-content:space-between;}
+.card-tag{font-size:9px;font-weight:700;color:#7C3AED;background:rgba(124,58,237,.08);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px;}
+
+/* Chart */
+.chart{display:flex;align-items:flex-end;gap:8px;height:130px;}
+.bar-group{flex:1;display:flex;gap:3px;align-items:flex-end;}
+.bar{border-radius:6px 6px 2px 2px;}.bar.primary{background:linear-gradient(180deg,#7C3AED,#A78BFA);}.bar.secondary{background:linear-gradient(180deg,#DDD6FE,#EDE9FE);}
+.chart-labels{display:flex;justify-content:space-between;font-size:10px;color:#7C6FA0;margin-top:6px;font-weight:500;}
+
+/* Feed */
+.feed-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EDE9FE;}
+.feed-item:last-child{border:none;}
+.feed-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.feed-text{flex:1;font-size:12px;color:#4C4270;line-height:1.4;}.feed-text strong{color:#1E1146;}
+.feed-time{font-size:10px;color:#A29BBE;flex-shrink:0;font-weight:500;}
+
+/* Language Banner */
+.lang-banner{background:linear-gradient(135deg,#7C3AED,#06B6D4);border-radius:18px;padding:20px 24px;margin-bottom:20px;color:#fff;display:flex;align-items:center;gap:20px;position:relative;overflow:hidden;}
+.lang-banner::before{content:'';position:absolute;top:-20px;right:-20px;width:120px;height:120px;background:rgba(255,255,255,.08);border-radius:50%;}
+.lang-banner::after{content:'';position:absolute;bottom:-30px;left:40%;width:160px;height:160px;background:rgba(255,255,255,.05);border-radius:50%;}
+.lang-flags{font-size:32px;display:flex;gap:8px;position:relative;z-index:1;}
+.lang-info{flex:1;position:relative;z-index:1;}
+.lang-info h3{font-size:16px;font-weight:800;margin-bottom:4px;}
+.lang-info p{font-size:12px;opacity:.8;}
+.lang-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 20px;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;position:relative;z-index:1;backdrop-filter:blur(4px);}
+
+/* Table */
+.table-wrap{background:rgba(255,255,255,.7);backdrop-filter:blur(12px);border:1px solid #DDD6FE;border-radius:18px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{padding:12px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7C3AED;background:rgba(124,58,237,.04);border-bottom:1px solid #EDE9FE;}
+tbody td{padding:12px 16px;border-bottom:1px solid #EDE9FE;color:#4C4270;}
+tbody tr:last-child td{border:none;}
+tbody tr:hover{background:rgba(124,58,237,.02);}
+.pill{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;}
+.pill-g{background:rgba(16,185,129,.08);color:#059669;}.pill-r{background:rgba(124,58,237,.08);color:#7C3AED;}
+.grade{font-weight:800;font-size:15px;}.grade.pass{color:#059669;}.grade.fail{color:#DC2626;}
+.student{display:flex;align-items:center;gap:10px;}
+.student-av{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.student-av.a{background:linear-gradient(135deg,#DDD6FE,#C4B5FD);}.student-av.b{background:linear-gradient(135deg,#A7F3D0,#6EE7B7);}.student-av.c{background:linear-gradient(135deg,#BAE6FD,#7DD3FC);}.student-av.d{background:linear-gradient(135deg,#FDE68A,#FCD34D);}
+</style>
+</head>
+<body>
+
+<div class="sb">
+  <div class="sb-brand">
+    <div class="sb-logo">
+      <div class="sb-logo-icon">🌐</div>
+      <div><h1>Escola <span>Global</span></h1><small>plataforma de gestão</small></div>
+    </div>
+  </div>
+  <div class="sb-nav">
+    <div class="ni active"><span class="icon">⬡</span><span class="label">Dashboard</span></div>
+    <div class="sb-lbl">Learning</div>
+    <div class="ni"><span class="icon">📝</span><span class="label">Grades</span><span class="badge">24</span></div>
+    <div class="ni"><span class="icon">✅</span><span class="label">Attendance</span></div>
+    <div class="ni"><span class="icon">📖</span><span class="label">Class Journal</span></div>
+    <div class="ni"><span class="icon">📊</span><span class="label">BNCC Reports</span><span class="new-dot"></span></div>
+    <div class="ni"><span class="icon">📋</span><span class="label">Online Tests</span></div>
+    <div class="sb-lbl">Teachers</div>
+    <div class="ni"><span class="icon">🏆</span><span class="label">Certificates</span></div>
+    <div class="ni"><span class="icon">🌱</span><span class="label">Growth Plan</span></div>
+    <div class="sb-lbl">Engagement</div>
+    <div class="ni"><span class="icon">💬</span><span class="label">Messages</span><span class="badge">3</span></div>
+    <div class="ni"><span class="icon">📅</span><span class="label">Daily Diary</span></div>
+    <div class="ni"><span class="icon">📊</span><span class="label">Surveys</span></div>
+    <div class="sb-lbl">Operations</div>
+    <div class="ni"><span class="icon">💰</span><span class="label">Finance</span></div>
+    <div class="ni"><span class="icon">🎯</span><span class="label">CRM Pipeline</span></div>
+    <div class="ni"><span class="icon">📦</span><span class="label">Inventory</span></div>
+    <div class="ni"><span class="icon">📚</span><span class="label">Library</span></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <h2>Dashboard</h2>
+      <div class="greeting">Welcome back, <strong>Ana!</strong> Here's your school overview.</div>
+    </div>
+    <div class="status-pill"><div class="dot"></div>All systems operational</div>
+  </div>
+
+  <div class="content">
+    <!-- Language Banner -->
+    <div class="lang-banner">
+      <div class="lang-flags">🇧🇷 🇺🇸 🇪🇸</div>
+      <div class="lang-info">
+        <h3>Multilingual Dashboard</h3>
+        <p>Switch between Portuguese, English, and Spanish. All labels adapt automatically.</p>
+      </div>
+      <button class="lang-btn">🌐 Change Language</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="icon-bg">👥</div>
+        <div class="value">247</div>
+        <div class="label">Students</div>
+        <div class="trend up">↑ 12 this month</div>
+      </div>
+      <div class="stat">
+        <div class="icon-bg">📊</div>
+        <div class="value">96.2%</div>
+        <div class="label">Attendance</div>
+        <div class="trend up">↑ 1.3% vs avg</div>
+      </div>
+      <div class="stat">
+        <div class="icon-bg">💰</div>
+        <div class="value">R$89.2k</div>
+        <div class="label">Net Revenue</div>
+        <div class="trend up">↑ 8.4% MoM</div>
+      </div>
+      <div class="stat">
+        <div class="icon-bg">🎯</div>
+        <div class="value">20%</div>
+        <div class="label">Conversion Rate</div>
+        <div class="trend down">↓ 2% vs target</div>
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">Revenue Trend <span class="card-tag">FY 2026</span></div>
+        <div class="chart">
+          <div class="bar-group"><div class="bar primary" style="height:50px"></div><div class="bar secondary" style="height:28px"></div></div>
+          <div class="bar-group"><div class="bar primary" style="height:62px"></div><div class="bar secondary" style="height:32px"></div></div>
+          <div class="bar-group"><div class="bar primary" style="height:78px"></div><div class="bar secondary" style="height:36px"></div></div>
+          <div class="bar-group"><div class="bar primary" style="height:85px"></div><div class="bar secondary" style="height:38px"></div></div>
+          <div class="bar-group"><div class="bar primary" style="height:95px"></div><div class="bar secondary" style="height:40px"></div></div>
+          <div class="bar-group"><div class="bar primary" style="height:110px"></div><div class="bar secondary" style="height:36px"></div></div>
+        </div>
+        <div class="chart-labels"><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Activity Feed <span class="card-tag">Today</span></div>
+        <div class="feed-item"><div class="feed-avatar" style="background:linear-gradient(135deg,#D1FAE5,#A7F3D0);">🎉</div><div class="feed-text"><strong>New enrollment:</strong> Sophia M. joined Year 2!</div><div class="feed-time">now</div></div>
+        <div class="feed-item"><div class="feed-avatar" style="background:linear-gradient(135deg,#EDE9FE,#DDD6FE);">🏆</div><div class="feed-text"><strong>Certificate issued</strong> by Teacher Ana — Year 2</div><div class="feed-time">10:30</div></div>
+        <div class="feed-item"><div class="feed-avatar" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);">📦</div><div class="feed-text"><strong>Supply request:</strong> 12 items from Year 3</div><div class="feed-time">09:15</div></div>
+        <div class="feed-item"><div class="feed-avatar" style="background:linear-gradient(135deg,#CFFAFE,#A5F3FC);">🎯</div><div class="feed-text"><strong>New lead:</strong> Ricardo S. via website form</div><div class="feed-time">09:00</div></div>
+        <div class="feed-item"><div class="feed-avatar" style="background:linear-gradient(135deg,#D1FAE5,#A7F3D0);">💳</div><div class="feed-text"><strong>Payment received:</strong> Oliveira Family, R$4,395</div><div class="feed-time">08:45</div></div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Student</th><th>Class</th><th>Test 1</th><th>Test 2</th><th>Project</th><th>Average</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><div class="student"><div class="student-av a">AB</div><strong>Ana Beatriz S.</strong></div></td><td>Year 2</td><td>8.5</td><td>9.0</td><td>8.0</td><td><span class="grade pass">8.7</span></td><td><span class="pill pill-g">Passed</span></td></tr>
+          <tr><td><div class="student"><div class="student-av b">BC</div><strong>Bruno Costa</strong></div></td><td>Year 2</td><td>7.0</td><td>6.5</td><td>8.5</td><td><span class="grade pass">7.2</span></td><td><span class="pill pill-g">Passed</span></td></tr>
+          <tr><td><div class="student"><div class="student-av c">CM</div><strong>Carolina Mendes</strong></div></td><td>Year 2</td><td>5.5</td><td>6.0</td><td>7.0</td><td><span class="grade fail">6.2</span></td><td><span class="pill pill-r">Recovery</span></td></tr>
+          <tr><td><div class="student"><div class="student-av d">DO</div><strong>Daniel Oliveira</strong></div></td><td>Year 2</td><td>9.5</td><td>9.0</td><td>10.0</td><td><span class="grade pass">9.4</span></td><td><span class="pill pill-g">Passed</span></td></tr>
+          <tr><td><div class="student"><div class="student-av a">ES</div><strong>Eduarda Santos</strong></div></td><td>Year 2</td><td>8.0</td><td>7.5</td><td>9.0</td><td><span class="grade pass">8.1</span></td><td><span class="pill pill-g">Passed</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
