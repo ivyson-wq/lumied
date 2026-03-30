@@ -1,42 +1,49 @@
-# CLAUDE.md — Lumied (Maple Bear RS Portal)
+# CLAUDE.md — Lumied
 
-## Visão Geral do Projeto
+## Visão Geral
 
-Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feature gating por escola, 4 temas visuais, e LGPD compliance. Originalmente desenvolvida para Maple Bear Caxias do Sul, agora vendável como produto para qualquer escola bilíngue.
+Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feature gating por escola, 4 temas visuais, e LGPD compliance. Marca: **Lumied**.
 
-**Domínio:** `maplebearcaxias.lumied.com.br` (padrão: `escola.lumied.com.br`)
-**Site comercial:** `maplebearcaxias.lumied.com.br/site/`
+**Domínios:**
+- `lumied.com.br` — Landing page comercial (redirect para `/site/`)
+- `escola.lumied.com.br` — Padrão SaaS (ex: `maplebearcaxias.lumied.com.br`)
+- DNS gerido pelo **Cloudflare** (nameservers: `aleena.ns.cloudflare.com`, `yichun.ns.cloudflare.com`)
 
 **Stack:**
-- Frontend: HTML/CSS/JS + ES Modules, bundled com **esbuild** (32ms build), hospedado no **Vercel**
+- Frontend: HTML/CSS/JS + ES Modules, bundled com **esbuild**, hospedado no **Vercel**
 - Backend: **Supabase** (PostgreSQL + Auth + Edge Functions em Deno/TypeScript)
 - Relay mTLS: Node.js no **Render** (API Banco Inter)
 - Chrome Extension: Manifest V3 para WhatsApp Web (templates CRM)
 - CI/CD: **GitHub Actions** (lint → test → deploy)
 - Testes: **Deno test** (44 unit) + **Playwright** (56 e2e) = 100 testes
+- Monitoramento: **Sentry** (`lumied.sentry.io`) + **Better Stack** (API REST)
 - Git: GitHub (`ivyson-wq/maple-bear-rs`)
+
+**Supabase Project:** `https://brgorknbrjlfwvrrlwxj.supabase.co`
 
 ---
 
-## Arquitetura
+## Portais (7 HTML files)
 
-### Portais (7 HTML files)
 | Portal | Arquivo | Público | Descrição |
 |--------|---------|---------|-----------|
 | Pais | `index.html` | Famílias | Login Google/Magic Link/biometria. Pickup, boletim, agenda digital, boletos |
 | Gerente | `gerente.html` | Direção | ~45 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação |
 | Professora | `professora.html` | Docentes | Chamada, notas, agenda digital, diplomas, materiais, growth plan |
 | Secretaria | `secretaria.html` | Secretaria | Validação de atestados |
-| Admin | `admin.html` | Superadmin (SaaS) | Gestão de escolas, planos, módulos, temas |
+| Admin | `admin.html` | Superadmin (SaaS) | Dashboard, escolas, planos, módulos, status, LGPD, tickets, admins |
 | Aluno | `aluno.html` | Alunos | Notas, frequência, provas, calendário |
 | Hub | `area-restrita.html` | Staff | Seletor de portais |
 
-### Edge Functions (17 + 1 health)
+---
+
+## Edge Functions (19 ativas)
+
 | Function | Padrão | Descrição |
 |----------|--------|-----------|
-| `admin` | **Router v2** | Escolas, planos, módulos. Auth + rate limit + validation |
-| `api` | **Hybrid** (Router parcial + legado) | Gerente: 139 actions. Rate limit + sanitização |
-| `diplomas` | **Hybrid** (legado + rate limit) | Professora/pais: 108 actions |
+| `admin` | **Router v2** | SaaS admin: escolas, planos, módulos, dashboard stats, tickets, LGPD, system health |
+| `api` | **Hybrid** | Gerente: 139+ actions. Rate limit + sanitização + ticket_create |
+| `diplomas` | **Hybrid** | Professora/pais: 108 actions |
 | `academico` | Legado | Notas, frequência, diário, documentos, relatórios BNCC, portal aluno, provas |
 | `comunicacao` | **Router v2** | Agenda digital, chat escola-família |
 | `cobranca` | **Router v2** | Régua de cobrança automática |
@@ -45,146 +52,198 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 | `rh` | **Router v2** | RH, folha de pagamento, ponto, férias |
 | `loja` | **Router v2** | E-commerce / loja virtual |
 | `health` | Standalone | Health check (DB + Storage latency) |
+| `ticket-resolver` | Standalone | Auto-resposta de tickets via FAQ (pg_cron cada 15min) |
 | `acesso` | Legado | Controle de acesso famílias |
 | `boletos-list` | Legado | Integração mTLS Banco Inter |
+| `boletos-sync` | Legado | Sync de boletos do Banco Inter |
 | `calendar` | Legado | Agenda do responsável |
 | `inter-webhook` | Legado | Webhook boletos Inter |
-| `send-email` | Legado | Envio de emails |
+| `send-email` | Legado | Envio de emails (branding dinâmico) |
+| `daily-digest` | Standalone | Resumo diário por aluno |
 
-### Shared Modules (`_shared/`)
-| Módulo | Função |
-|--------|--------|
-| `router.ts` | Router com middleware chain (auth, rateLimit, validate, feature gate) |
-| `auth.ts` | Hash PBKDF2, verify, tokens, sessões, upload |
-| `validation.ts` | Schemas tipados, sanitização XSS |
-| `errors.ts` | AppError com códigos (AUTH_INVALID, RATE_LIMITED, etc.) |
-| `ratelimit.ts` | Rate limiting por IP/action (5/min login, 120/min API) |
-| `logger.ts` | Logging JSON estruturado |
-| `cache.ts` | Cache in-memory com TTL |
-| `cors.ts` | CORS whitelist por domínio |
-| `modulos.ts` | Feature gating por escola/plano |
-| `webauthn.ts` | Verificação biométrica |
-
-### Frontend Modules (`src/`)
-| Módulo | Função |
-|--------|--------|
-| `shared/api-client.js` | Fetch wrapper com auto-auth, retry, cache |
-| `shared/state.js` | Store reativo (subscribe, persist, online detection) |
-| `shared/components/toast.js` | Notificações toast |
-| `shared/components/modal.js` | Modal reutilizável |
-| `shared/components/data-table.js` | Tabela sortable com formatters |
+**Deploy:** `supabase functions deploy <nome> --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj --import-map supabase/functions/deno.json`
 
 ---
 
-## 23 Módulos (Features)
+## Painel Admin (`admin.html`)
 
-### Tier Essencial
-1. Notas / Boletim / Conceitos
-2. Controle de Frequência / Chamada
-3. Diário de Classe Digital
-7. Documentos do Aluno
-22. Pesquisas / Enquetes / Autorizações
+Painel de gestão SaaS completo com 8 seções:
 
-### Tier Profissional (+ Essencial)
-4. Agenda Digital / Diário do Aluno
-5. Comunicação / Chat escola-família
-6. Matrícula / Rematrícula Online
-10. Relatórios Pedagógicos / BNCC
-13. Portal do Aluno
-19. Banco de Provas / Avaliações Online
+| Seção | Descrição |
+|-------|-----------|
+| **Dashboard** | KPIs (escolas ativas, total alunos, MRR, tickets abertos), alertas, top módulos, tabela uso por escola |
+| **Escolas** | CRUD de escolas com subdomínio, Supabase URL/Key, barras de uso, status (ativo/expirando/limite) |
+| **Planos** | Gestão de planos de assinatura com preços e módulos incluídos |
+| **Módulos** | Visão geral dos 38 módulos disponíveis |
+| **Status** | Health check de cada escola (latência DB/Storage) |
+| **LGPD** | Solicitações de dados (exportar/excluir/retificar) com aprovação/recusa |
+| **Tickets** | Gestão de tickets de suporte com resposta e fechamento |
+| **Admins** | CRUD de superadmins da plataforma |
 
-### Tier Premium (+ Profissional)
-8. Contratos Digitais + Assinatura Eletrônica
-11. Régua de Cobrança Automática
-12. PIX Integrado
-15. Gestão de Biblioteca
-18. BI / Analytics Avançado
-20. Gestão de Cantina / Refeitório
-21. Transporte Escolar
-
-### Tier Enterprise (+ Premium)
-9. App Nativo (iOS/Android)
-14. EAD / Aulas Online
-16. Integração Contábil
-17. Gestão de RH / Folha
-23. E-commerce / Loja Virtual
+**Endpoints admin:** `dashboard_stats`, `escola_uso_list`, `lgpd_solicitacoes_list`, `lgpd_solicitacoes_process`, `system_health`, `tickets_list`, `ticket_respond`, `ticket_close` + todos os CRUD originais.
 
 ---
 
-## Segurança
+## Sistema de Tickets de Suporte
 
-- **RLS** habilitado em 20+ tabelas com policies restritivas reais
-- **Rate Limiting** em todas as 17 edge functions
-- **Input Validation** com schemas + sanitização XSS
-- **PBKDF2** 100k-120k iterações para senhas
-- **WebAuthn/Face ID** nos portais principais
-- **HSTS** + X-Frame DENY + Permissions-Policy + nosniff
-- **LGPD**: tabelas de consentimento, export de dados (`lgpd_exportar_dados()`), anonimização (`lgpd_anonimizar()`)
-- **Audit log**: `lgpd_audit_log` para rastrear acessos a dados pessoais
+### 3 Camadas de Atendimento
+
+| Camada | Frequência | Mecanismo |
+|--------|-----------|-----------|
+| **Email imediato** | Instantâneo | `ticket_create` em `api/index.ts` envia email via Resend para `ivyson@gmail.com` |
+| **Auto-resposta FAQ** | A cada 15 min | `ticket-resolver` Edge Function via pg_cron. 9 categorias: login, lento, boleto, turno, pickup, biometria, erro, impressão, almoxarifado |
+| **Claude AI Agent** | A cada 1 hora | Remote Trigger no Claude Code. Lê código, diagnostica bugs, corrige e faz deploy |
+
+### Widget (`ticket-widget.js`)
+- Botão "?" flutuante no canto inferior direito de todos os portais
+- Captura automática: URL, portal, email, user-agent, resolução
+- Usuário escolhe tipo (bug/dúvida/sugestão/urgente) + descrição
+- Link para Central de Ajuda filtrada por portal
+- Não aparece no admin.html
+
+### Tabela `tickets`
+```sql
+id, escola_id, email, nome, portal, tipo, descricao, url_pagina,
+user_agent, resolucao_tela, screenshot_url, status, resposta,
+respondido_por, criado_em, atualizado_em
+```
+
+### pg_cron Job
+- Nome: `ticket-resolver-15min`
+- Schedule: `*/15 * * * *`
+- Chama: `POST /functions/v1/ticket-resolver` com service_role key
+
+### Remote Trigger (Claude Code)
+- ID: `trig_01PTaCsfDfdNrUGwfUeZJZ96`
+- Schedule: a cada 1 hora
+- Repo: `ivyson-wq/maple-bear-rs`
+- Gerenciar: `https://claude.ai/code/scheduled/trig_01PTaCsfDfdNrUGwfUeZJZ96`
+
+---
+
+## Central de Ajuda (`/ajuda/`)
+
+Help Center in-app completo em `ajuda/index.html`:
+
+- **45 artigos** cobrindo todos os 6 portais
+- **Mockups HTML/CSS** inline simulando as telas com dados de exemplo
+- **Busca full-text** em tempo real (título, descrição, keywords)
+- **Navegação por portal** com sidebar collapsible
+- **FAQ** em cada artigo (2-3 perguntas)
+- **Exportar PDF** via `window.print()` com @media print
+- **Filtragem por portal**: `?portal=pais|gerente|professora|secretaria|aluno` — cada usuário só vê sua seção
+- **Mobile responsive** com menu hamburger
+
+URLs por portal:
+- `/ajuda/?portal=pais` — Portal dos Pais
+- `/ajuda/?portal=gerente` — Portal do Gerente
+- `/ajuda/?portal=professora` — Portal da Professora
+- `/ajuda/?portal=secretaria` — Portal da Secretaria
+- `/ajuda/?portal=aluno` — Portal do Aluno
+- `/ajuda/` — Completo (admin)
+
+---
+
+## Site Comercial (Landing Page)
+
+Landing page em `site/index.html` — marca **Lumied**.
+
+**URL:** `https://lumied.com.br` (redirect para `/site/`)
+
+### Seções
+- Hero com mockup dashboard, stats animados
+- Problemas que resolve (WhatsApp, planilhas, sistemas desconectados)
+- 6 features com screenshots e descrições
+- Galeria de screenshots (desktop + mobile) com lightbox zoom
+- Planos de preços (Essencial, Profissional, Premium, Enterprise)
+- Depoimentos
+- Formulário de contato
+- Footer
+
+### Técnico
+- HTML/CSS/JS puro (Inter + Playfair Display)
+- Lightbox com animação zoom em todas as imagens
+- 100% responsivo (mobile, tablet, desktop)
+- `vercel.json` redireciona `lumied.com.br` → `/site/`
 
 ---
 
 ## Multi-tenancy
 
-- `escola_id` em 30 tabelas de dados
+- `escola_id` em 30+ tabelas de dados
 - `plano_limites`: limites por recurso (max_alunos, max_storage_gb, etc.)
 - `check_limite()`: função SQL para verificar limites
-- `escola_uso`: cache de uso atual
-- Subdomínios por escola (`escolas.subdominio`)
-- Feature gating granular: admin toggle item a item por escola
+- `escola_uso` + `escola_uso_historico`: tracking de uso
+- Subdomínios por escola (`escolas.subdominio` → `escola.lumied.com.br`)
+- Feature gating granular: `plano_modulos` + `escola_modulos` override
+- 4 temas visuais (Corporativo, Lúdico, Sério, Interativo)
 
 ---
 
-## Temas Visuais (4)
+## Segurança
 
-| Tema | Público-alvo | Arquivo preview |
-|------|-------------|-----------------|
-| Lúdico | Infantil/Fundamental | `temas/ludico.html` |
-| Sério | Ensino Médio | `temas/serio.html` |
-| Interativo | Idiomas/Geral | `temas/interativo.html` |
-| Corporativo | Padrão atual | `gerente.html` |
-
-Selecionável no Admin Panel por escola. CSS em `themes.css`.
+- **RLS** habilitado em 20+ tabelas com policies restritivas
+- **Rate Limiting** em todas as 19 edge functions
+- **Input Validation** com schemas + sanitização XSS
+- **PBKDF2** 100k-120k iterações para senhas
+- **WebAuthn/Face ID** nos portais principais
+- **HSTS** + X-Frame DENY + Permissions-Policy + nosniff
+- **LGPD**: consentimento, export (`lgpd_exportar_dados()`), anonimização (`lgpd_anonimizar()`), audit log
 
 ---
 
 ## Banco de Dados
 
-- **78 migrations** (009-078)
-- **Tabela `alunos`** centralizada (normalização)
-- **80+ indexes** em FKs e colunas de query
-- **Materialized views**: `mv_dashboard_stats`, `mv_frequencia_resumo`
-- **Triggers**: `trigger_set_atualizado_em` em 16 tabelas
-- **Funções**: `check_limite()`, `lgpd_exportar_dados()`, `lgpd_anonimizar()`, `cleanup_expired_sessions()`, `refresh_dashboard_stats()`
+- **82 migrations** (009-082)
+- Últimas migrations relevantes:
+  - `048_planos_modulos.sql` — escolas, planos, modulos, admins
+  - `075_multitenancy_limites.sql` — plano_limites, escola_uso
+  - `078_lgpd.sql` — consentimentos, solicitações, audit log
+  - `081_tickets.sql` — tabela tickets de suporte
+  - `082_ticket_resolver_cron.sql` — pg_cron job para auto-resposta
 
 ---
 
-## Comandos
+## Observabilidade
+
+### Sentry (`lumied.sentry.io`)
+- Frontend: SDK Browser v9.25.0 via `sentry-init.js` em todos os portais
+- Edge Functions: `_shared/sentry.ts` reporter HTTP
+- Performance: tracesSampleRate 0.2 (prod), Session Replay 10%
+- Alertas: High Error Rate, New Issues, P95 > 3s
+
+### Better Stack
+- Monitoramento via API REST (sem CLI)
+- Integrado no painel admin (Status do Sistema)
+
+---
+
+## Comandos Úteis
 
 ```bash
+# Deploy Edge Functions
+supabase functions deploy <nome> --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj --import-map supabase/functions/deno.json
+
+# Deploy todas as functions
+for fn in admin api diplomas academico comunicacao cobranca operacional financeiro-ext rh loja health ticket-resolver; do
+  supabase functions deploy $fn --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj --import-map supabase/functions/deno.json
+done
+
+# SQL remoto via Management API
+curl --ssl-no-revoke -s -X POST "https://api.supabase.com/v1/projects/brgorknbrjlfwvrrlwxj/database/query" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT * FROM escola_config"}'
+
 # Build frontend
 node build.js
 
-# Testes unitários
+# Testes
 npm test
-# ou: npx deno-bin test supabase/functions/__tests__/ --allow-net --allow-read --allow-env
-
-# Testes e2e
 npx playwright test
 
-# Deploy Edge Functions
-supabase functions deploy <nome> --no-verify-jwt
-
-# Deploy todas as functions
-for fn in admin api diplomas academico comunicacao cobranca operacional financeiro-ext rh loja health; do
-  supabase functions deploy $fn --no-verify-jwt
-done
-
-# Push migrations
-supabase db push
-
-# Deploy frontend (Vercel)
-npx vercel --yes --prod
+# Deploy frontend (auto via push para main)
+git push origin main
 
 # Health check
 curl https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/health
@@ -192,147 +251,19 @@ curl https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/health
 
 ---
 
-## CI/CD
+## Deploy Multi-Tenant
 
-- `.github/workflows/ci.yml`: lint → test → deploy (on push to main)
-- `.github/workflows/auto-merge-claude.yml`: auto-merge branches `claude/**`
-- Claude só pode push para `claude/**` (proxy Git bloqueia main)
-
----
-
-## Decisões Arquiteturais
-
-### Router Pattern (v2)
-Functions refatoradas usam `Router` + middleware chain:
-```typescript
-router.on("action_name", authGerente, rateLimit(), validateInput(schema), requireFeature("slug"), handler);
 ```
-Functions legadas (`api`, `diplomas`) usam padrão híbrido com rate limit + sanitização integrados.
-
-### Feature Gating
-- Tabela `modulos` com 38 módulos (15 existentes + 23 novos)
-- Tabela `plano_modulos` mapeia módulos por plano
-- Tabela `escola_modulos` permite override granular
-- Frontend: `data-modulo` attributes + `applyModuleGating()`
-
-### Bottom Nav (Mobile)
-- Padrão: 4-5 itens principais + botão "Mais" com grid expandível
-- Pais: Início, Dia a Dia, Boletim, Boletos, ☰ Mais
-- Professora: Fila, Chamada, Notas, Agenda, ☰ Mais
-
-### Pickup Animado
-- Portal pais: cenário com céu, estrada, carro animado + família + ETA
-- Portal professora: mini-pista animada em cada card da fila
-
----
-
-## Observabilidade (Sentry)
-
-**Organização:** `lumied.sentry.io`
-**Projeto:** `javascript`
-
-### Frontend (`sentry-init.js`)
-- SDK Sentry Browser v9.25.0 via CDN (bundle com tracing + replay)
-- Incluído em todos os 5 portais principais via `<script src="/sentry-init.js">`
-- Auto-detecção de ambiente (development/staging/production) por hostname
-- Performance monitoring: `tracesSampleRate` 0.2 (prod), 1.0 (dev)
-- Session Replay: 10% sessões (prod), 100% em erros
-- `beforeSend`: scrub de dados sensíveis (password, token, CPF, cartão)
-- Ignora erros não-acionáveis (ResizeObserver, AbortError, etc.)
-- Helpers globais: `SentrySetUser()`, `SentryClearUser()`, `SentryCaptureException()`, `SentryCaptureMessage()`
-
-### Edge Functions (`_shared/sentry.ts`)
-- Reporter via HTTP envelope API (zero dependências externas)
-- `captureException(error, extra)` — envia eventos de erro com stack trace
-- `captureMessage(message, level, extra)` — envia mensagens
-- DSN via env var `SENTRY_DSN`
-- Integrado no `withErrorHandler` (`errors.ts`) — fire-and-forget
-
-### Alertas Configurados
-- **High Error Rate** — >10 erros/min
-- **New Issues** — alerta em issues inéditas
-- **P95 > 3s** — alerta de performance (warning 2s, critical 3s)
-
-### CI (Sentry Release)
-- Job `sentry-release` no CI: cria release, upload de source maps, marca deploy
-- Secrets: `SENTRY_AUTH_TOKEN`, `SENTRY_DSN`
-
----
-
-## Edge Functions Adicionais (pós-merge)
-
-| Function | Descrição |
-|----------|-----------|
-| `boletos-sync` | Sync de boletos do Banco Inter |
-| `daily-digest` | Resumo diário por aluno (email + push) |
-
-Total: **18 Edge Functions ativas** no Supabase.
-
----
-
-## Deno Configuration
-
-- `supabase/functions/deno.json` — Import map para Edge Functions:
-  - `@std/testing/asserts` → `jsr:@std/assert`
-  - `@supabase/supabase-js` → `https://esm.sh/@supabase/supabase-js@2`
-- CI usa `--config supabase/functions/deno.json` para lint e testes
-
----
-
-## GitHub Actions
-
-### `ci.yml` — CI/CD Pipeline
-1. **Lint & Type Check** — `deno lint --config deno.json` nos `_shared/` e `__tests__/`
-2. **Unit Tests** — `deno test --config deno.json` com `--allow-net --allow-read --allow-env`
-3. **Deploy Edge Functions** — `supabase functions deploy` (todas, exceto `_shared` e `__tests__`)
-4. **Deploy Frontend (Vercel)** — `vercel --yes --prod`
-5. **Sentry Release** — cria release, upload source maps, marca deploy
-
-### `auto-merge-claude.yml` — Auto-merge
-- Trigger: push em `claude/**`
-- Merge automático em `main` com `--no-ff`
-- Usa `actions/checkout@v5` (Node.js 24 compatível)
-
-### Secrets Configurados
-| Secret | Serviço |
-|--------|---------|
-| `SUPABASE_ACCESS_TOKEN` | Supabase Management API |
-| `VERCEL_TOKEN` | Vercel deploy |
-| `VERCEL_ORG_ID` | Vercel org |
-| `VERCEL_PROJECT_ID` | Vercel project |
-| `SENTRY_AUTH_TOKEN` | Sentry releases |
-| `SENTRY_DSN` | Sentry event ingestion |
-
----
-
-## Permissões (`settings.json`)
-
-```json
-{
-  "permissions": {
-    "allow": ["Edit(src/**)", "Edit(app/**)", "Bash(npm run *)", "Bash(git add*)", "Bash(git commit*)"],
-    "deny": ["Edit(.env*)", "Bash(rm -rf*)", "Bash(git push*)"]
-  }
-}
+GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → escola-a.lumied.com.br
+                     └──> Vercel Projeto B (env: SUPABASE_URL=yyy) → escola-b.lumied.com.br
 ```
-<<<<<<< HEAD
-=======
-GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → domínio escola A
-                     └──> Vercel Projeto B (env: SUPABASE_URL=yyy) → domínio escola B
-                     └──> Vercel Projeto C (env: SUPABASE_URL=zzz) → domínio escola C
-```
-
-### Build Script
-- `build.sh` gera `config.js` a partir de env vars do Vercel (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON`)
-- Se env vars não existem, mantém `config.js` do repo (fallback para escola atual)
-- `vercel.json` → `buildCommand: "bash build.sh"`
 
 ### Novo Cliente (9 passos, ~15 min)
 1. **Supabase**: criar projeto → anotar REF + Anon Key
 2. **Script**: `bash deploy-novo-cliente.sh <REF> <TOKEN>` (migrations + Edge Functions)
 3. **Supabase Auth**: Site URL + Redirect URLs + Google Provider
 4. **Vercel**: import repo + env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON`)
-5. **DNS**: CNAME `app` → `cname.vercel-dns.com`
+5. **DNS (Cloudflare)**: CNAME `escola` → `cname.vercel-dns.com` (wildcard `*` já configurado)
 6. **Google OAuth**: adicionar redirect URI do novo Supabase
 7. **setup.html**: wizard (nome, cores, módulos, primeiro gerente)
 8. **admin.html**: configurar secrets (RESEND obrigatório, ML/Inter/Google opcionais)
@@ -342,76 +273,43 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → d
 
 ---
 
-## Documentação do Projeto
+## Credenciais e Secrets
+
+### Supabase Edge Functions Secrets
+- `RESEND_API_KEY` — API do Resend para envio de emails
+- `APP_URL` — URL pública do portal (ex: `https://maplebearcaxias.lumied.com.br`)
+- `ML_CLIENT_ID`, `ML_CLIENT_SECRET` — Mercado Livre OAuth
+- `INTER_CLIENT_ID`, `INTER_CLIENT_SECRET`, `INTER_CONTA` — Banco Inter
+- `INTER_RELAY_URL`, `RELAY_SECRET` — Relay mTLS no Render
+- `GOOGLE_MAPS_KEY`, `GOOGLE_SERVICE_ACCOUNT` — Google Maps/Calendar
+- `SENTRY_DSN` — Sentry event ingestion
+
+### Google OAuth
+- Client ID: `88100226947-3i672iq8v2uk1ijjp11ba25p893gp6nu.apps.googleusercontent.com`
+- Authorized JS origins: `https://maplebearcaxias.lumied.com.br`
+- Redirect URI: `https://brgorknbrjlfwvrrlwxj.supabase.co/auth/v1/callback`
+
+### DNS (Cloudflare)
+- Zone: `lumied.com.br` (ID: `8b2c34bf85fc32f734de3facd380956d`)
+- Nameservers: `aleena.ns.cloudflare.com`, `yichun.ns.cloudflare.com`
+- A `@` → `76.76.21.21` (Vercel)
+- CNAME `*` → `cname.vercel-dns.com`
+- CNAME `www` → `cname.vercel-dns.com`
+- Proxy: **OFF** (DNS only) — SSL gerido pelo Vercel
+
+---
+
+## Documentação
 
 | Arquivo | Conteúdo |
 |---------|----------|
 | `CLAUDE.md` | Documentação técnica completa (este arquivo) |
 | `NOVO-CLIENTE.md` | Guia passo a passo para deploy de novo cliente |
-| `COMERCIAL.md` | Apresentação comercial: módulos, funcionalidades, planos, diferenciais |
-| `CONTEXTO.md` | Contexto histórico do projeto (legado) |
-| `MANIFEST.md` | Manifest de desenvolvimento (legado) |
-| `deploy-novo-cliente.sh` | Script automatizado de deploy (migrations + Edge Functions) |
-| `build.sh` | Build script Vercel (gera config.js a partir de env vars) |
-| `config.js` | Credenciais Supabase (fallback — sobrescrito no build por env vars) |
-| `site/index.html` | Landing page comercial "EduFlow" (vendas, planos, módulos, FAQ) |
-
----
-
-## Modelo Comercial (SaaS por Assinatura)
-
-### Planos sugeridos (base + por aluno/mês)
-
-| Plano | Base/mês | Por aluno | Exemplo 300 alunos | Módulos |
-|-------|----------|-----------|---------------------|---------|
-| **Essencial** | R$ 199 | R$ 2,90 | R$ 1.069 | Pais + Gerente, turnos, atividades, calendário |
-| **Profissional** | R$ 399 | R$ 4,90 | R$ 1.869 | + Almoxarifado, CRM, Professoras, Secretaria, Pickup, Emergência |
-| **Completo** | R$ 699 | R$ 6,90 | R$ 2.769 | Todos os 14 módulos + todas as integrações |
-
-### Concorrência (referência de preço para 300 alunos)
-- WPensar: ~R$ 600 (básico)
-- Sistema Quality: ~R$ 1.500-2.200
-- Proesc: ~R$ 1.500-2.100
-- Sponte: ~R$ 2.000-2.500
-- ClassApp: ~R$ 1.200 (só comunicação)
-- TOTVS: R$ 5.000+ (enterprise)
-
-### Diferenciais competitivos
-- Almoxarifado com NF-e XML + busca de preços em 5 plataformas
-- CRM com extensão Chrome para WhatsApp
-- Pickup GPS em tempo real
-- Sistema de emergência (lockdown)
-- Login biométrico (Face ID/fingerprint)
-- White-label completo (cores, logo, módulos)
-- Zero taxa de implantação
-- Deploy em 15 minutos
-
-> Apresentação completa: `COMERCIAL.md`
-
----
-
-## Site Comercial (Landing Page)
-
-Landing page interativa em `site/index.html` — marca **"EduFlow"** (editável).
-
-**URL**: `https://maplebearcaxias.lumied.com.br/site/` (ou domínio próprio para vendas)
-
-### Seções
-- **Hero**: título gradiente, mockup animado, stats (14 módulos, 4 portais, 6 integrações)
-- **Portais**: 4 cards com hover (pais, professoras, secretaria, gerente)
-- **Módulos**: 6 tabs interativas (almoxarifado, CRM, financeiro, pickup, emergência, manutenção) com features e visual
-- **Diferenciais**: 6 cards animados (white-label, biometria, NF-e, WhatsApp, pickup GPS, setup 15min)
-- **Números**: barra com métricas do sistema
-- **Preços**: 3 planos (Essencial, Profissional, Completo) com badge "Mais popular", exemplos de valor
-- **FAQ**: 6 perguntas colapsáveis
-- **CTA**: botões WhatsApp + email
-- **Footer**: links, contato, copyright
-
-### Técnico
-- HTML/CSS/JS puro (zero dependências)
-- Google Fonts (Inter + Playfair Display)
-- Scroll reveal animations (IntersectionObserver)
-- 100% responsivo (mobile, tablet, desktop)
-- CTAs apontam para WhatsApp (número editável no HTML)
-- Marca "EduFlow" editável em ~10 ocorrências no arquivo
->>>>>>> 28bad58 (feat: migrar domínio para escola.lumied.com.br)
+| `COMERCIAL.md` | Apresentação comercial: módulos, funcionalidades, planos |
+| `CONTEXTO.md` | Contexto histórico do projeto |
+| `ajuda/index.html` | Central de Ajuda (45 artigos, todos os portais) |
+| `site/index.html` | Landing page comercial Lumied |
+| `ticket-widget.js` | Widget flutuante de suporte (todos os portais) |
+| `deploy-novo-cliente.sh` | Script automatizado de deploy |
+| `build.sh` | Build script Vercel (gera config.js) |
+| `sentry-init.js` | Inicialização Sentry frontend |
