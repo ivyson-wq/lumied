@@ -14,4 +14,4 @@ SENTRY_ORG = "lumied"
 
 [[kv_namespaces]]
 binding = "MONITOR_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "c3fbb6fc97b445c3bf1eb4aafda87534"

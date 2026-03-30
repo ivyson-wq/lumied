@@ -156,11 +156,10 @@ async function checkSupabaseAuth(env: Env): Promise<CheckResult> {
   const start = Date.now();
   try {
     const resp = await fetchWithTimeout(
-      `${env.SUPABASE_URL}/auth/v1/health`,
+      `${env.SUPABASE_URL}/auth/v1/settings`,
       {
         headers: {
           apikey: env.SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
         },
       }
     );
@@ -168,7 +167,7 @@ async function checkSupabaseAuth(env: Env): Promise<CheckResult> {
     if (!resp.ok) {
       return {
         service: "Supabase Auth",
-        status: "critical",
+        status: resp.status === 401 ? "warning" : "critical",
         latencyMs: latency,
         message: `HTTP ${resp.status}`,
         timestamp: now(),
@@ -662,6 +661,14 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   if (url.pathname === "/status") {
     const data = await getDashboard(env.MONITOR_KV);
     return new Response(JSON.stringify(data ?? { error: "no data yet" }, null, 2), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (url.pathname === "/run") {
+    await handleCron(env);
+    const data = await getDashboard(env.MONITOR_KV);
+    return new Response(JSON.stringify(data, null, 2), {
       headers: { "Content-Type": "application/json" },
     });
   }
