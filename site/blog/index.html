@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — Lumied | Gestão Escolar Inteligente</title>
+<meta name="description" content="Blog do Lumied: artigos sobre gestão escolar, tecnologia na educação, LGPD, comunicação escola-família e muito mais.">
+<meta name="theme-color" content="#0F172A">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: rgba(99,102,241,.08);
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --dark: #0F172A;
+  --dark-2: #1E293B;
+  --dark-3: #334155;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dark: #1E293B;
+  --bg-light: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --green: #10B981;
+  --red: #EF4444;
+  --gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A78BFA 100%);
+  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; width: 100%; position: relative; }
+
+/* ═══ HEADER ═══ */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(15,23,42,.85); backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 24px; height: 72px;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background .3s;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-icon { width: 36px; height: 36px; background: var(--gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
+.logo-text span { color: var(--accent); }
+.nav { display: flex; align-items: center; gap: 32px; }
+.nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav a:hover { color: #fff; }
+.nav-cta { padding: 10px 24px; background: var(--primary); color: #fff !important; border-radius: 8px; font-weight: 600; transition: all .2s; }
+.nav-cta:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+
+/* ═══ PAGE HERO ═══ */
+.page-hero {
+  background: var(--dark); color: #fff; padding: 140px 24px 80px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.page-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,.15) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,.08) 0%, transparent 60%);
+}
+.page-hero-grid {
+  position: absolute; inset: 0; opacity: .04;
+  background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.page-hero .container { position: relative; z-index: 1; }
+.page-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 800; line-height: 1.1; margin-bottom: 20px; letter-spacing: -1px; }
+.page-hero h1 em { font-style: normal; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.page-hero p { font-size: 18px; color: var(--text-muted); line-height: 1.7; max-width: 640px; margin: 0 auto; }
+.breadcrumb { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.breadcrumb a { color: var(--primary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* ═══ SECTIONS ═══ */
+.section { padding: 100px 24px; overflow-x: clip; }
+.section-light { background: var(--bg-light); }
+.container { max-width: 1200px; margin: 0 auto; width: 100%; }
+
+/* ═══ BLOG GRID ═══ */
+.blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+.blog-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: all .3s; display: flex; flex-direction: column; }
+.blog-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(99,102,241,.1); }
+.blog-card-img { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; font-size: 64px; position: relative; }
+.blog-card-img-1 { background: linear-gradient(135deg, #10B981 0%, #059669 100%); }
+.blog-card-img-2 { background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); }
+.blog-card-img-3 { background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%); }
+.blog-card-img-4 { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); }
+.blog-card-img-5 { background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%); }
+.blog-card-img-6 { background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); }
+.blog-card-body { padding: 24px; flex: 1; display: flex; flex-direction: column; }
+.blog-card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.blog-tag { display: inline-block; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.tag-comunicacao { background: rgba(16,185,129,.1); color: #059669; }
+.tag-gestao { background: rgba(99,102,241,.1); color: #6366F1; }
+.tag-edtech { background: rgba(245,158,11,.1); color: #D97706; }
+.tag-operacional { background: rgba(239,68,68,.1); color: #DC2626; }
+.tag-lgpd { background: rgba(14,165,233,.1); color: #0284C7; }
+.tag-seguranca { background: rgba(139,92,246,.1); color: #7C3AED; }
+.blog-date { font-size: 12px; color: var(--text-muted); }
+.blog-card-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; line-height: 1.3; margin-bottom: 12px; color: var(--text-dark); }
+.blog-card-title a { color: inherit; text-decoration: none; }
+.blog-card-title a:hover { color: var(--primary); }
+.blog-card-excerpt { font-size: 14px; color: #64748B; line-height: 1.6; flex: 1; margin-bottom: 16px; }
+.blog-card-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; transition: gap .2s; }
+.blog-card-link:hover { gap: 10px; }
+
+/* ═══ NEWSLETTER ═══ */
+.newsletter { background: var(--dark); border-radius: 20px; padding: 48px; text-align: center; margin-top: 60px; }
+.newsletter h3 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+.newsletter p { font-size: 15px; color: var(--text-muted); margin-bottom: 24px; }
+.newsletter-form { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; max-width: 500px; margin: 0 auto; }
+.newsletter-form input { padding: 12px 16px; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; background: rgba(255,255,255,.06); color: #fff; font-family: inherit; font-size: 14px; outline: none; flex: 1; min-width: 200px; }
+.newsletter-form input::placeholder { color: rgba(255,255,255,.4); }
+.newsletter-form input:focus { border-color: var(--primary); }
+.newsletter-form button { padding: 12px 24px; background: var(--gradient); color: #fff; border: none; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.newsletter-form button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,.3); }
+
+/* ═══ FOOTER ═══ */
+.footer { background: var(--dark); color: var(--text-muted); padding: 60px 24px 32px; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; max-width: 1200px; margin: 0 auto; }
+.footer-brand p { font-size: 13px; line-height: 1.6; margin-top: 12px; }
+.footer h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 16px; }
+.footer a { color: var(--text-muted); text-decoration: none; font-size: 13px; display: block; margin-bottom: 10px; transition: color .2s; }
+.footer a:hover { color: #fff; }
+.footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 1024px) {
+  .blog-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .nav { display: none; }
+  .hamburger { display: block; }
+  .blog-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .page-hero { padding: 110px 16px 60px; }
+  .section { padding: 60px 16px; }
+  .newsletter { padding: 32px 20px; }
+  .newsletter-form { flex-direction: column; }
+  .newsletter-form input { min-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <a href="/site/" class="logo">
+    <div class="logo-icon">🎓</div>
+    <div class="logo-text">Lumi<span>ed</span></div>
+  </a>
+  <nav class="nav">
+    <a href="/site/#features">Funcionalidades</a>
+    <a href="/site/#videos">Demos</a>
+    <a href="/site/#screenshots">Screenshots</a>
+    <a href="/site/#pricing">Precos</a>
+    <a href="/site/#contact" class="nav-cta">Agende uma Demo</a>
+  </nav>
+  <button class="hamburger" onclick="document.querySelector('.nav').style.display=document.querySelector('.nav').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<!-- ═══ PAGE HERO ═══ -->
+<section class="page-hero">
+  <div class="page-hero-grid"></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="/site/">Home</a>
+      <span>/</span>
+      <span>Blog</span>
+    </div>
+    <h1>Blog <em>Lumied</em></h1>
+    <p>Artigos sobre gestao escolar, tecnologia na educacao, comunicacao com familias e tendencias do setor EdTech.</p>
+  </div>
+</section>
+
+<!-- ═══ BLOG LISTING ═══ -->
+<section class="section section-light">
+  <div class="container">
+    <div class="blog-grid">
+
+      <!-- Artigo 1 -->
+      <article class="blog-card">
+        <div class="blog-card-img blog-card-img-1">📱</div>
+        <div class="blog-card-body">
+          <div class="blog-card-meta">
+            <span class="blog-tag tag-comunicacao">Comunicacao</span>
+            <span class="blog-date">15 Mar 2026</span>
+          </div>
+          <h2 class="blog-card-title"><a href="/site/blog/fim-dos-grupos-de-whatsapp/">O Fim dos Grupos de WhatsApp nas Escolas</a></h2>
+          <p class="blog-card-excerpt">Grupos de WhatsApp escolares sao um problema crescente: mensagens perdidas, falta de privacidade, pais respondendo fora de hora. Descubra como a comunicacao escolar digital resolve tudo isso.</p>
+          <a href="/site/blog/fim-dos-grupos-de-whatsapp/" class="blog-card-link">Ler mais →</a>
+        </div>
+      </article>
+
+      <!-- Artigo 2 -->
+      <article class="blog-card">
+        <div class="blog-card-img blog-card-img-2">🔍</div>
+        <div class="blog-card-body">
+          <div class="blog-card-meta">
+            <span class="blog-tag tag-gestao">Gestao</span>
+            <span class="blog-date">08 Mar 2026</span>
+          </div>
+          <h2 class="blog-card-title"><a href="#">5 Sinais de que sua Escola Precisa de um Sistema de Gestao</a></h2>
+          <p class="blog-card-excerpt">Secretaria sobrecarregada, financeiro no Excel, informacoes desencontradas entre setores. Se sua escola enfrenta esses problemas, e hora de considerar uma plataforma de gestao integrada.</p>
+          <a href="#" class="blog-card-link">Ler mais →</a>
+        </div>
+      </article>
+
+      <!-- Artigo 3 -->
+      <article class="blog-card">
+        <div class="blog-card-img blog-card-img-3">🌍</div>
+        <div class="blog-card-body">
+          <div class="blog-card-meta">
+            <span class="blog-tag tag-edtech">EdTech</span>
+            <span class="blog-date">01 Mar 2026</span>
+          </div>
+          <h2 class="blog-card-title"><a href="#">Como a Tecnologia Esta Transformando a Educacao Bilingue</a></h2>
+          <p class="blog-card-excerpt">Escolas bilingues enfrentam desafios unicos: curriculo duplo, certificacoes internacionais, comunicacao em dois idiomas. Veja como a tecnologia esta ajudando a superar cada um deles.</p>
+          <a href="#" class="blog-card-link">Ler mais →</a>
+        </div>
+      </article>
+
+      <!-- Artigo 4 -->
+      <article class="blog-card">
+        <div class="blog-card-img blog-card-img-4">📦</div>
+        <div class="blog-card-body">
+          <div class="blog-card-meta">
+            <span class="blog-tag tag-operacional">Operacional</span>
+            <span class="blog-date">22 Fev 2026</span>
+          </div>
+          <h2 class="blog-card-title"><a href="#">Almoxarifado Escolar: Como Controlar Materiais sem Planilhas</a></h2>
+          <p class="blog-card-excerpt">Material didatico sumindo, estoque desatualizado, compras duplicadas. O controle de almoxarifado digital elimina esses problemas e ainda gera economia real para a escola.</p>
+          <a href="#" class="blog-card-link">Ler mais →</a>
+        </div>
+      </article>
+
+      <!-- Artigo 5 -->
+      <article class="blog-card">
+        <div class="blog-card-img blog-card-img-5">🔒</div>
+        <div class="blog-card-body">
+          <div class="blog-card-meta">
+            <span class="blog-tag tag-lgpd">LGPD</span>
+            <span class="blog-date">15 Fev 2026</span>
+          </div>
+          <h2 class="blog-card-title"><a href="#">LGPD na Escola: O Guia Completo para Adequacao</a></h2>
+          <p class="blog-card-excerpt">A Lei Geral de Protecao de Dados se aplica a escolas que tratam dados de menores. Entenda as obrigacoes, os riscos e como se adequar de forma pratica com tecnologia.</p>
+          <a href="#" class="blog-card-link">Ler mais →</a>
+        </div>
+      </article>
+
+      <!-- Artigo 6 -->
+      <article class="blog-card">
+        <div class="blog-card-img blog-card-img-6">📍</div>
+        <div class="blog-card-body">
+          <div class="blog-card-meta">
+            <span class="blog-tag tag-seguranca">Seguranca</span>
+            <span class="blog-date">08 Fev 2026</span>
+          </div>
+          <h2 class="blog-card-title"><a href="#">Pickup Escolar: GPS em Tempo Real para Seguranca dos Alunos</a></h2>
+          <p class="blog-card-excerpt">A saida dos alunos e um dos momentos mais criticos do dia escolar. Descubra como o sistema de pickup com GPS em tempo real garante que cada crianca seja entregue a pessoa certa.</p>
+          <a href="#" class="blog-card-link">Ler mais →</a>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- Newsletter -->
+    <div class="newsletter">
+      <h3>Receba nossos artigos</h3>
+      <p>Cadastre-se para receber conteudos sobre gestao escolar, EdTech e inovacao na educacao.</p>
+      <div class="newsletter-form">
+        <input type="email" placeholder="Seu melhor email">
+        <button type="button">Inscrever-se</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/site/" class="logo" style="margin-bottom:8px;">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">Lumi<span>ed</span></div>
+      </a>
+      <p>Plataforma completa de gestao escolar inteligente. Feita para escolas bilingues que querem crescer.</p>
+    </div>
+    <div>
+      <h4>Produto</h4>
+      <a href="/site/#features">Funcionalidades</a>
+      <a href="/site/#pricing">Planos</a>
+      <a href="/site/">Atualizacoes</a>
+      <a href="/site/">Integracao</a>
+    </div>
+    <div>
+      <h4>Empresa</h4>
+      <a href="/site/sobre/">Sobre nos</a>
+      <a href="/site/blog/">Blog</a>
+      <a href="/site/">Carreiras</a>
+      <a href="/site/#contact">Contato</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="/site/">Termos de Uso</a>
+      <a href="/site/">Politica de Privacidade</a>
+      <a href="/site/">LGPD</a>
+      <a href="/site/">SLA</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>2026 Lumied. Todos os direitos reservados.</span>
+    <span>Feito com 💜 no Brasil</span>
+  </div>
+</footer>
+
+</body>
+</html>

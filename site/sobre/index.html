@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sobre Nós — Lumied | Gestão Escolar Inteligente</title>
+<meta name="description" content="Conheça a Lumied: startup brasileira de EdTech que nasceu dentro de uma escola real para transformar a gestão escolar com tecnologia acessível.">
+<meta name="theme-color" content="#0F172A">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: rgba(99,102,241,.08);
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --dark: #0F172A;
+  --dark-2: #1E293B;
+  --dark-3: #334155;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dark: #1E293B;
+  --bg-light: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --green: #10B981;
+  --red: #EF4444;
+  --gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A78BFA 100%);
+  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; width: 100%; position: relative; }
+
+/* ═══ HEADER ═══ */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(15,23,42,.85); backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 24px; height: 72px;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background .3s;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-icon { width: 36px; height: 36px; background: var(--gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
+.logo-text span { color: var(--accent); }
+.nav { display: flex; align-items: center; gap: 32px; }
+.nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav a:hover { color: #fff; }
+.nav-cta { padding: 10px 24px; background: var(--primary); color: #fff !important; border-radius: 8px; font-weight: 600; transition: all .2s; }
+.nav-cta:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+
+/* ═══ PAGE HERO ═══ */
+.page-hero {
+  background: var(--dark); color: #fff; padding: 140px 24px 80px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.page-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,.15) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,.08) 0%, transparent 60%);
+}
+.page-hero-grid {
+  position: absolute; inset: 0; opacity: .04;
+  background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.page-hero .container { position: relative; z-index: 1; }
+.page-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 56px); font-weight: 800; line-height: 1.1; margin-bottom: 20px; letter-spacing: -1px; }
+.page-hero h1 em { font-style: normal; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.page-hero p { font-size: 18px; color: var(--text-muted); line-height: 1.7; max-width: 640px; margin: 0 auto; }
+.breadcrumb { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.breadcrumb a { color: var(--primary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* ═══ SECTIONS ═══ */
+.section { padding: 100px 24px; overflow-x: clip; }
+.section-dark { background: var(--dark); color: #fff; }
+.section-light { background: var(--bg-light); }
+.section-white { background: #fff; }
+.container { max-width: 1200px; margin: 0 auto; width: 100%; }
+.section-header { text-align: center; margin-bottom: 60px; }
+.section-badge { display: inline-block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); margin-bottom: 12px; }
+.section-dark .section-badge { color: var(--accent); }
+.section-title { font-family: 'Playfair Display', serif; font-size: clamp(28px, 4vw, 42px); font-weight: 800; line-height: 1.2; margin-bottom: 16px; letter-spacing: -.5px; }
+.section-sub { font-size: 17px; color: var(--text-muted); max-width: 600px; margin: 0 auto; line-height: 1.7; }
+.section-light .section-sub, .section-white .section-sub { color: #64748B; }
+
+/* ═══ MISSION / VISION / VALUES ═══ */
+.mvv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.mvv-card { background: var(--dark-2); border: 1px solid rgba(255,255,255,.06); border-radius: 16px; padding: 36px; transition: all .3s; }
+.mvv-card:hover { border-color: var(--primary); transform: translateY(-4px); }
+.mvv-icon { font-size: 40px; margin-bottom: 16px; }
+.mvv-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.mvv-text { font-size: 15px; color: var(--text-muted); line-height: 1.7; }
+
+/* ═══ VALUES GRID ═══ */
+.values-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.value-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; text-align: center; transition: all .3s; position: relative; overflow: hidden; }
+.value-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gradient); opacity: 0; transition: opacity .3s; }
+.value-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(99,102,241,.1); }
+.value-card:hover::before { opacity: 1; }
+.value-icon { font-size: 36px; margin-bottom: 14px; }
+.value-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--text-dark); }
+.value-text { font-size: 14px; color: #64748B; line-height: 1.6; }
+
+/* ═══ DIFERENCIAL ═══ */
+.diferencial-row { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.diferencial-content h2 { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 800; margin-bottom: 20px; }
+.diferencial-content p { font-size: 16px; color: #64748B; line-height: 1.8; margin-bottom: 16px; }
+.diferencial-highlight { background: var(--primary-light); border-left: 4px solid var(--primary); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-top: 24px; }
+.diferencial-highlight p { color: var(--primary-dark); font-weight: 600; margin-bottom: 0; }
+.diferencial-visual { display: flex; flex-direction: column; gap: 16px; }
+.dif-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; align-items: flex-start; gap: 16px; transition: all .3s; }
+.dif-card:hover { border-color: var(--primary); box-shadow: 0 8px 24px rgba(99,102,241,.08); }
+.dif-card-icon { font-size: 28px; flex-shrink: 0; }
+.dif-card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.dif-card-text { font-size: 13px; color: #64748B; line-height: 1.5; }
+
+/* ═══ TIMELINE ═══ */
+.timeline { position: relative; max-width: 700px; margin: 0 auto; }
+.timeline::before { content: ''; position: absolute; left: 50%; transform: translateX(-50%); top: 0; bottom: 0; width: 3px; background: var(--gradient); border-radius: 3px; }
+.timeline-item { display: flex; align-items: center; margin-bottom: 48px; position: relative; }
+.timeline-item:last-child { margin-bottom: 0; }
+.timeline-item:nth-child(odd) { flex-direction: row-reverse; text-align: right; }
+.timeline-dot { width: 20px; height: 20px; background: var(--primary); border: 4px solid var(--dark); border-radius: 50%; position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; }
+.timeline-content { width: 42%; padding: 24px; background: var(--dark-2); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; }
+.timeline-year { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+.timeline-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.timeline-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+/* ═══ NUMBERS ═══ */
+.numbers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.number-card { text-align: center; padding: 32px 16px; }
+.number-value { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 800; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; margin-bottom: 8px; }
+.number-label { font-size: 15px; color: var(--text-muted); font-weight: 500; }
+
+/* ═══ TEAM ═══ */
+.team-banner { background: var(--primary-light); border: 1px solid rgba(99,102,241,.15); border-radius: 16px; padding: 48px; text-align: center; }
+.team-banner h3 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); margin-bottom: 16px; }
+.team-banner p { font-size: 16px; color: #64748B; line-height: 1.8; max-width: 700px; margin: 0 auto; }
+.team-tags { display: flex; justify-content: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+.team-tag { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 100px; font-size: 13px; font-weight: 500; color: var(--text-dark); }
+
+/* ═══ CTA ═══ */
+.cta-section { background: var(--gradient); padding: 80px 24px; text-align: center; position: relative; overflow: hidden; }
+.cta-section::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 30% 50%, rgba(255,255,255,.1) 0%, transparent 60%); }
+.cta-section h2 { font-family: 'Playfair Display', serif; font-size: clamp(28px, 4vw, 40px); font-weight: 800; color: #fff; margin-bottom: 16px; position: relative; }
+.cta-section p { font-size: 17px; color: rgba(255,255,255,.8); margin-bottom: 32px; position: relative; }
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #fff; color: var(--primary); border: none; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; text-decoration: none; box-shadow: 0 8px 32px rgba(0,0,0,.15); position: relative; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+
+/* ═══ FOOTER ═══ */
+.footer { background: var(--dark); color: var(--text-muted); padding: 60px 24px 32px; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; max-width: 1200px; margin: 0 auto; }
+.footer-brand p { font-size: 13px; line-height: 1.6; margin-top: 12px; }
+.footer h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 16px; }
+.footer a { color: var(--text-muted); text-decoration: none; font-size: 13px; display: block; margin-bottom: 10px; transition: color .2s; }
+.footer a:hover { color: #fff; }
+.footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 1024px) {
+  .mvv-grid { grid-template-columns: 1fr; }
+  .values-grid { grid-template-columns: repeat(2, 1fr); }
+  .diferencial-row { grid-template-columns: 1fr; gap: 40px; }
+  .numbers-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .nav { display: none; }
+  .hamburger { display: block; }
+  .values-grid { grid-template-columns: 1fr; }
+  .numbers-grid { grid-template-columns: repeat(2, 1fr); }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .page-hero { padding: 110px 16px 60px; }
+  .section { padding: 60px 16px; }
+  .timeline::before { left: 20px; }
+  .timeline-dot { left: 20px; }
+  .timeline-item, .timeline-item:nth-child(odd) { flex-direction: row; text-align: left; padding-left: 52px; }
+  .timeline-content { width: 100%; }
+  .number-value { font-size: 40px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <a href="/site/" class="logo">
+    <div class="logo-icon">🎓</div>
+    <div class="logo-text">Lumi<span>ed</span></div>
+  </a>
+  <nav class="nav">
+    <a href="/site/#features">Funcionalidades</a>
+    <a href="/site/#videos">Demos</a>
+    <a href="/site/#screenshots">Screenshots</a>
+    <a href="/site/#pricing">Precos</a>
+    <a href="/site/#contact" class="nav-cta">Agende uma Demo</a>
+  </nav>
+  <button class="hamburger" onclick="document.querySelector('.nav').style.display=document.querySelector('.nav').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<!-- ═══ PAGE HERO ═══ -->
+<section class="page-hero">
+  <div class="page-hero-grid"></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="/site/">Home</a>
+      <span>/</span>
+      <span>Sobre Nos</span>
+    </div>
+    <h1>Nascemos dentro de uma <em>escola real</em></h1>
+    <p>Somos uma startup brasileira de EdTech que entende as dores do dia a dia escolar porque vivemos elas. Conheca a historia por tras do Lumied.</p>
+  </div>
+</section>
+
+<!-- ═══ MISSAO / VISAO ═══ -->
+<section class="section section-dark">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Quem somos</div>
+      <h2 class="section-title">Missao, Visao e Proposito</h2>
+      <p class="section-sub">Acreditamos que tecnologia acessivel pode transformar a educacao.</p>
+    </div>
+    <div class="mvv-grid">
+      <div class="mvv-card">
+        <div class="mvv-icon">🎯</div>
+        <div class="mvv-title">Missao</div>
+        <div class="mvv-text">Transformar a gestao escolar com tecnologia acessivel, integrando todos os processos em uma plataforma unica. Queremos que diretores, professores e familias tenham tudo o que precisam ao alcance de um clique, sem complexidade, sem custos proibitivos e sem fragmentacao de sistemas.</div>
+      </div>
+      <div class="mvv-card">
+        <div class="mvv-icon">🔭</div>
+        <div class="mvv-title">Visao</div>
+        <div class="mvv-text">Ser a plataforma lider de gestao escolar para escolas bilingues na America Latina. Queremos ser reconhecidos como a solucao que finalmente uniu comunicacao, financeiro, pedagogico e operacional em um unico ecossistema inteligente, escalavel e adaptavel a cada realidade escolar.</div>
+      </div>
+      <div class="mvv-card">
+        <div class="mvv-icon">💡</div>
+        <div class="mvv-title">Proposito</div>
+        <div class="mvv-text">Empoderar escolas para que foquem no que realmente importa: a educacao. Eliminamos a burocracia, os processos manuais e as ferramentas desconectadas para que educadores possam dedicar seu tempo ao desenvolvimento dos alunos, nao a planilhas e grupos de WhatsApp.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ VALORES ═══ -->
+<section class="section section-light">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Nossos valores</div>
+      <h2 class="section-title" style="color:var(--text-dark);">O que nos guia</h2>
+      <p class="section-sub">Quatro pilares que orientam cada decisao de produto, cada linha de codigo e cada interacao com nossos clientes.</p>
+    </div>
+    <div class="values-grid">
+      <div class="value-card">
+        <div class="value-icon">🚀</div>
+        <div class="value-title">Inovacao</div>
+        <div class="value-text">Buscamos constantemente novas formas de resolver problemas antigos. Usamos inteligencia artificial, automacao e design centrado no usuario para entregar solucoes que realmente fazem diferenca no cotidiano escolar.</div>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">✨</div>
+        <div class="value-title">Simplicidade</div>
+        <div class="value-text">Tecnologia so funciona quando e facil de usar. Cada funcionalidade do Lumied e projetada para ser intuitiva, sem manuais extensos, sem treinamentos de semanas. Se o usuario precisa pensar demais, nos falhamos.</div>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🔒</div>
+        <div class="value-title">Seguranca</div>
+        <div class="value-text">Lidamos com dados de criancas e familias — a responsabilidade e enorme. LGPD compliance nativo, criptografia em todas as camadas, autenticacao biometrica e auditoria completa de cada acao na plataforma.</div>
+      </div>
+      <div class="value-card">
+        <div class="value-icon">🤝</div>
+        <div class="value-title">Transparencia</div>
+        <div class="value-text">Precos claros, comunicacao honesta, metricas acessiveis. Acreditamos que escolas merecem saber exatamente o que estao pagando, como seus dados sao usados e qual o status de cada processo.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DIFERENCIAL ═══ -->
+<section class="section section-white">
+  <div class="container">
+    <div class="diferencial-row">
+      <div class="diferencial-content">
+        <div class="section-badge">Nosso diferencial</div>
+        <h2>Nascida dentro de uma escola real</h2>
+        <p>O Lumied nao nasceu em um laboratorio de tecnologia. Nasceu dentro de uma escola bilingue, observando diretamente as dores de diretores, coordenadores, professores e familias. Cada funcionalidade foi construida a partir de necessidades reais, nao de suposicoes.</p>
+        <p>Diferente de outros sistemas de gestao escolar que tentam adaptar ERPs corporativos para o contexto educacional, o Lumied foi pensado desde o primeiro dia para escolas. Entendemos que a secretaria precisa responder 200 mensagens por dia, que o coordenador precisa acompanhar a frequencia em tempo real, que os pais querem saber se o filho chegou na escola.</p>
+        <div class="diferencial-highlight">
+          <p>Nao somos um sistema generico adaptado para escolas. Somos uma plataforma feita POR quem vive a escola, PARA quem vive a escola.</p>
+        </div>
+      </div>
+      <div class="diferencial-visual">
+        <div class="dif-card">
+          <div class="dif-card-icon">🏫</div>
+          <div>
+            <div class="dif-card-title">Contexto real</div>
+            <div class="dif-card-text">Cada feature foi validada em ambiente escolar antes de ser lanca. Sabemos o que funciona na pratica porque testamos na pratica.</div>
+          </div>
+        </div>
+        <div class="dif-card">
+          <div class="dif-card-icon">⚡</div>
+          <div>
+            <div class="dif-card-title">Deploy em 15 minutos</div>
+            <div class="dif-card-text">Uma escola nova pode estar 100% operacional em apenas 15 minutos. Sem semanas de implantacao, sem consultoria cara.</div>
+          </div>
+        </div>
+        <div class="dif-card">
+          <div class="dif-card-icon">🔧</div>
+          <div>
+            <div class="dif-card-title">Modular e flexivel</div>
+            <div class="dif-card-text">Ative apenas os modulos que sua escola precisa. Comece com comunicacao e financeiro, adicione CRM e pedagogico quando estiver pronto.</div>
+          </div>
+        </div>
+        <div class="dif-card">
+          <div class="dif-card-icon">🌎</div>
+          <div>
+            <div class="dif-card-title">Feito para bilingues</div>
+            <div class="dif-card-text">Interface e funcionalidades pensadas para a realidade de escolas bilingues: curriculo duplo, certificados internacionais, growth plans.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TIMELINE ═══ -->
+<section class="section section-dark">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Nossa historia</div>
+      <h2 class="section-title">Uma jornada de inovacao</h2>
+      <p class="section-sub">Do primeiro prototipo a uma plataforma completa com 23 modulos.</p>
+    </div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <div class="timeline-year">2024</div>
+          <div class="timeline-title">O inicio</div>
+          <div class="timeline-text">Desenvolvimento iniciado dentro de uma escola bilingue. Primeiros modulos: comunicacao com familias, agenda digital e controle de pickup. Validacao direta com diretores e coordenadores.</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <div class="timeline-year">2024</div>
+          <div class="timeline-title">Expansao dos modulos</div>
+          <div class="timeline-text">Financeiro integrado com Banco Inter, CRM de matriculas, almoxarifado, biblioteca. A plataforma cresce de 5 para 15 modulos. Implementacao de multi-tenancy para escalar.</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <div class="timeline-year">2025</div>
+          <div class="timeline-title">Lancamento oficial</div>
+          <div class="timeline-text">Lancamento do Lumied como plataforma SaaS. 23 modulos ativos, 4 portais (Pais, Gerente, Professora, Aluno), LGPD compliance, 82 migrations, 100 testes automatizados.</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-content">
+          <div class="timeline-year">2026</div>
+          <div class="timeline-title">Expansao e crescimento</div>
+          <div class="timeline-text">Foco em escalar para novas escolas bilingues na America Latina. Novos modulos de RH, loja virtual e integracao contabil. Suporte com IA para resolucao automatica de tickets.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ NUMEROS ═══ -->
+<section class="section section-light">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Lumied em numeros</div>
+      <h2 class="section-title" style="color:var(--text-dark);">Construido com solidez</h2>
+      <p class="section-sub">Cada numero representa dedicacao, planejamento e compromisso com a qualidade.</p>
+    </div>
+    <div class="numbers-grid">
+      <div class="number-card">
+        <div class="number-value">23</div>
+        <div class="number-label">Modulos integrados</div>
+      </div>
+      <div class="number-card">
+        <div class="number-value">19</div>
+        <div class="number-label">Edge Functions</div>
+      </div>
+      <div class="number-card">
+        <div class="number-value">82</div>
+        <div class="number-label">Migrations</div>
+      </div>
+      <div class="number-card">
+        <div class="number-value">4</div>
+        <div class="number-label">Portais dedicados</div>
+      </div>
+    </div>
+    <div class="numbers-grid" style="margin-top: 8px;">
+      <div class="number-card">
+        <div class="number-value">100</div>
+        <div class="number-label">Testes automatizados</div>
+      </div>
+      <div class="number-card">
+        <div class="number-value">15</div>
+        <div class="number-label">Min para deploy</div>
+      </div>
+      <div class="number-card">
+        <div class="number-value">45</div>
+        <div class="number-label">Artigos de ajuda</div>
+      </div>
+      <div class="number-card">
+        <div class="number-value">139+</div>
+        <div class="number-label">Actions na API</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ EQUIPE ═══ -->
+<section class="section section-white">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge">Equipe</div>
+      <h2 class="section-title" style="color:var(--text-dark);">Quem faz o Lumied acontecer</h2>
+    </div>
+    <div class="team-banner">
+      <h3>Startup brasileira 100% focada em EdTech</h3>
+      <p>Somos uma equipe enxuta e apaixonada por educacao e tecnologia. Combinamos experiencia em desenvolvimento de software, design de produto e gestao escolar para construir a plataforma que gostaríamos que existisse quando comecamos a trabalhar com escolas. Nosso compromisso e entregar tecnologia de ponta com a simplicidade que o dia a dia escolar exige.</p>
+      <div class="team-tags">
+        <span class="team-tag">🇧🇷 100% brasileira</span>
+        <span class="team-tag">🎓 EdTech</span>
+        <span class="team-tag">☁️ Cloud-native</span>
+        <span class="team-tag">🔐 LGPD compliant</span>
+        <span class="team-tag">⚡ Supabase + Vercel</span>
+        <span class="team-tag">🤖 AI-powered</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section class="cta-section">
+  <h2>Quer conhecer o Lumied de perto?</h2>
+  <p>Agende uma demonstracao gratuita e descubra como podemos transformar a gestao da sua escola.</p>
+  <a href="/site/#contact" class="btn-primary">Agende uma Demonstracao →</a>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/site/" class="logo" style="margin-bottom:8px;">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">Lumi<span>ed</span></div>
+      </a>
+      <p>Plataforma completa de gestao escolar inteligente. Feita para escolas bilingues que querem crescer.</p>
+    </div>
+    <div>
+      <h4>Produto</h4>
+      <a href="/site/#features">Funcionalidades</a>
+      <a href="/site/#pricing">Planos</a>
+      <a href="/site/">Atualizacoes</a>
+      <a href="/site/">Integracao</a>
+    </div>
+    <div>
+      <h4>Empresa</h4>
+      <a href="/site/sobre/">Sobre nos</a>
+      <a href="/site/blog/">Blog</a>
+      <a href="/site/">Carreiras</a>
+      <a href="/site/#contact">Contato</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="/site/">Termos de Uso</a>
+      <a href="/site/">Politica de Privacidade</a>
+      <a href="/site/">LGPD</a>
+      <a href="/site/">SLA</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>2026 Lumied. Todos os direitos reservados.</span>
+    <span>Feito com 💜 no Brasil</span>
+  </div>
+</footer>
+
+</body>
+</html>
