@@ -1,0 +1,3121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Ajuda — Lumied</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Variables ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#C8102E;--bg:#f0ece6;--sb:#1c1712;--text:#1a1a1a;--muted:#7a7169;
+  --border:#e2dbd1;--green:#2d7a3a;--blue:#1a6bb5;
+  --sidebar-w:260px;--header-h:60px;
+  --radius:8px;--radius-lg:12px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg);line-height:1.6;font-weight:400}
+h1,h2,h3,h4{font-family:'Lora',serif;font-weight:700;line-height:1.3}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Header ── */
+.header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:var(--sb);color:#fff;display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100}
+.header-logo{display:flex;align-items:center;gap:8px;font-family:'Lora',serif;font-weight:700;font-size:1.15rem;white-space:nowrap}
+.header-logo span.emoji{font-size:1.4rem}
+.header-search{flex:1;max-width:420px;position:relative}
+.header-search input{width:100%;padding:8px 14px 8px 36px;border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:.9rem;background:#2e2820;color:#fff;outline:none}
+.header-search input::placeholder{color:var(--muted)}
+.header-search input:focus{background:#3a3228;box-shadow:0 0 0 2px var(--red)}
+.header-search .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.95rem;opacity:.6}
+.hamburger{display:none;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;padding:4px}
+.btn-pdf{background:var(--red);color:#fff;border:none;padding:6px 14px;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;white-space:nowrap}
+.btn-pdf:hover{opacity:.9}
+
+/* ── Layout ── */
+.layout{display:flex;margin-top:var(--header-h);min-height:calc(100vh - var(--header-h))}
+
+/* ── Sidebar ── */
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:#fff;border-right:1px solid var(--border);padding:20px 0;overflow-y:auto;position:sticky;top:var(--header-h);height:calc(100vh - var(--header-h))}
+.sidebar-section{margin-bottom:6px}
+.sidebar-section-title{display:flex;align-items:center;gap:8px;padding:10px 18px;font-family:'Lora',serif;font-weight:700;font-size:.92rem;cursor:pointer;user-select:none;color:var(--sb);transition:background .15s}
+.sidebar-section-title:hover{background:var(--bg)}
+.sidebar-section-title .chevron{font-size:.65rem;transition:transform .2s;margin-left:auto;color:var(--muted)}
+.sidebar-section.open .chevron{transform:rotate(90deg)}
+.sidebar-links{display:none;padding:0 18px 6px 44px}
+.sidebar-section.open .sidebar-links{display:block}
+.sidebar-links a{display:block;padding:5px 0;font-size:.85rem;color:var(--muted);text-decoration:none;transition:color .15s}
+.sidebar-links a:hover,.sidebar-links a.active{color:var(--red);font-weight:500}
+
+/* ── Main ── */
+.main{flex:1;padding:32px 40px 60px;max-width:900px}
+.main h2{font-size:1.6rem;margin-bottom:8px}
+.main h3{font-size:1.15rem;margin:24px 0 10px;color:var(--sb)}
+
+/* ── Welcome ── */
+.welcome{text-align:center;padding:60px 20px}
+.welcome h1{font-size:2rem;margin-bottom:12px}
+.welcome p{color:var(--muted);max-width:520px;margin:0 auto 30px}
+.portal-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;max-width:640px;margin:0 auto}
+.portal-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 12px;text-align:center;cursor:pointer;transition:box-shadow .2s,border-color .2s}
+.portal-card:hover{border-color:var(--red);box-shadow:0 4px 16px rgba(0,0,0,.07)}
+.portal-card .emoji{font-size:2rem;display:block;margin-bottom:8px}
+.portal-card .label{font-weight:600;font-size:.88rem}
+
+/* ── Articles ── */
+.help-article{display:none;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;margin-bottom:24px}
+.help-article.visible{display:block}
+.article-desc{color:var(--muted);margin-bottom:20px;font-size:.95rem}
+.path-indicator{display:inline-block;background:var(--bg);padding:4px 12px;border-radius:var(--radius);font-size:.82rem;color:var(--muted);margin-bottom:16px;font-weight:500}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:18px;margin:12px 0 20px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-number{width:32px;height:32px;min-width:32px;background:var(--red);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;margin-top:2px}
+.step-content{flex:1}
+.step-content p{margin-bottom:8px}
+
+/* Tip Box */
+.tip-box{background:#faf6ee;border-left:4px solid #e6a817;padding:14px 18px;border-radius:0 var(--radius) var(--radius) 0;margin:18px 0;font-size:.9rem}
+.warning-box{background:#fdf0f0;border-left:4px solid var(--red);padding:14px 18px;border-radius:0 var(--radius) var(--radius) 0;margin:18px 0;font-size:.9rem}
+.info-box{background:#eef5fb;border-left:4px solid var(--blue);padding:14px 18px;border-radius:0 var(--radius) var(--radius) 0;margin:18px 0;font-size:.9rem}
+
+/* FAQ */
+.faq-section{margin-top:24px;border-top:1px solid var(--border);padding-top:18px}
+.faq-section h3{margin-top:0}
+details{margin-bottom:10px;background:var(--bg);border-radius:var(--radius);overflow:hidden}
+details summary{padding:12px 16px;cursor:pointer;font-weight:500;font-size:.9rem;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:'▸ ';color:var(--red);font-weight:700}
+details[open] summary::before{content:'▾ '}
+details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
+
+/* ── Mockups ── */
+.mockup{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.06);margin:12px 0 16px;font-size:.82rem;max-width:480px}
+.mockup-header{background:var(--sb);color:#fff;padding:10px 14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;font-size:.8rem}
+.mockup-header .dots{display:flex;gap:4px}
+.mockup-header .dots span{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.mockup-sidebar{background:#f8f5f0;padding:10px;border-right:1px solid var(--border);font-size:.75rem}
+.mockup-content{padding:14px}
+.mockup-btn{display:inline-block;padding:6px 16px;border-radius:var(--radius);font-weight:600;font-size:.78rem;border:none;cursor:default;margin:4px 2px}
+.mockup-btn.primary{background:var(--red);color:#fff}
+.mockup-btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.mockup-btn.green{background:var(--green);color:#fff}
+.mockup-btn.blue{background:var(--blue);color:#fff}
+.mockup-input{display:block;width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:.8rem;background:#faf9f7;margin:4px 0;color:var(--muted)}
+.mockup-table{width:100%;border-collapse:collapse;font-size:.78rem;margin:8px 0}
+.mockup-table th{background:var(--bg);text-align:left;padding:6px 8px;font-weight:600;border-bottom:1px solid var(--border)}
+.mockup-table td{padding:6px 8px;border-bottom:1px solid var(--border)}
+.mockup-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin:6px 0}
+.mockup-nav{display:flex;justify-content:space-around;background:var(--sb);color:#fff;padding:8px;font-size:.7rem;text-align:center;border-top:1px solid rgba(255,255,255,.1)}
+.mockup-nav .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.6}
+.mockup-nav .nav-item.active{opacity:1;color:var(--red)}
+.mockup-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600}
+.mockup-pill.green{background:#e6f4ea;color:var(--green)}
+.mockup-pill.red{background:#fde8e8;color:var(--red)}
+.mockup-pill.blue{background:#e8f0fb;color:var(--blue)}
+.mockup-pill.yellow{background:#fef7e0;color:#b5850a}
+.mockup-pill.gray{background:var(--bg);color:var(--muted)}
+.mockup-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.mockup-avatar{width:28px;height:28px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;color:var(--muted)}
+.mockup-flex{display:flex;gap:8px}
+.mockup-grid{display:grid;gap:8px}
+.mockup-stat{text-align:center;padding:8px}
+.mockup-stat .num{font-size:1.3rem;font-weight:700;font-family:'Lora',serif}
+.mockup-stat .lbl{font-size:.7rem;color:var(--muted)}
+.no-results{display:none;text-align:center;padding:60px 20px;color:var(--muted)}
+.no-results.visible{display:block}
+
+/* ── Mobile ── */
+@media(max-width:768px){
+  .hamburger{display:block}
+  .sidebar{position:fixed;top:var(--header-h);left:-280px;width:280px;z-index:90;transition:left .25s;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+  .sidebar.open{left:0}
+  .sidebar-overlay{display:none;position:fixed;inset:0;top:var(--header-h);background:rgba(0,0,0,.3);z-index:89}
+  .sidebar-overlay.active{display:block}
+  .main{padding:20px 16px 40px}
+  .help-article{padding:20px}
+  .header-search{max-width:200px}
+  .welcome h1{font-size:1.4rem}
+  .portal-cards{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── Print ── */
+@media print{
+  .header,.sidebar,.sidebar-overlay,.hamburger,.btn-pdf,.header-search{display:none!important}
+  .layout{display:block}
+  .main{max-width:100%;padding:0}
+  .help-article{display:block!important;break-inside:avoid;border:none;box-shadow:none;padding:16px 0;margin-bottom:16px;page-break-inside:avoid}
+  .help-article+.help-article{border-top:1px solid #ccc;padding-top:24px}
+  .mockup{box-shadow:none}
+  .welcome{display:none}
+  .no-results{display:none!important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+  <div class="header-logo"><span class="emoji">📚</span> Central de Ajuda</div>
+  <div class="header-search">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Buscar artigos..." oninput="handleSearch(this.value)">
+  </div>
+  <button class="btn-pdf" onclick="window.print()">Exportar PDF</button>
+</header>
+
+<!-- ═══ SIDEBAR OVERLAY (mobile) ═══ -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══ LAYOUT ═══ -->
+<div class="layout">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar" id="sidebar">
+
+  <div class="sidebar-section open" data-portal="pais">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">👨‍👩‍👧 Portal dos Pais <span class="chevron">▸</span></div>
+    <div class="sidebar-links">
+      <a href="#pais-login">Login e Cadastro</a>
+      <a href="#pais-home">Tela Inicial</a>
+      <a href="#pais-pickup">Pickup — Estou a Caminho</a>
+      <a href="#pais-turno">Mudança de Turno</a>
+      <a href="#pais-extra">Atividades Extracurriculares</a>
+      <a href="#pais-boletos">Boletos</a>
+      <a href="#pais-agenda">Agenda Digital</a>
+    </div>
+  </div>
+
+  <div class="sidebar-section" data-portal="gerente">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">👔 Portal do Gerente <span class="chevron">▸</span></div>
+    <div class="sidebar-links">
+      <a href="#gerente-login">Login e Navegação</a>
+      <a href="#gerente-dashboard">Dashboard Analytics</a>
+      <a href="#gerente-turnos">Turnos</a>
+      <a href="#gerente-atividades">Atividades</a>
+      <a href="#gerente-professoras">Professoras</a>
+      <a href="#gerente-almoxarifado">Almoxarifado</a>
+      <a href="#gerente-manutencao">Manutenção</a>
+      <a href="#gerente-achados">Achados e Perdidos</a>
+      <a href="#gerente-financeiro">Financeiro</a>
+      <a href="#gerente-crm">CRM</a>
+      <a href="#gerente-academico">Acadêmico</a>
+      <a href="#gerente-calendario">Calendário</a>
+      <a href="#gerente-comunicacao">Comunicação</a>
+      <a href="#gerente-matricula">Matrícula Online</a>
+      <a href="#gerente-config">Configurações</a>
+      <a href="#gerente-emergencia">Emergência</a>
+    </div>
+  </div>
+
+  <div class="sidebar-section" data-portal="professora">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">👩‍🏫 Portal da Professora <span class="chevron">▸</span></div>
+    <div class="sidebar-links">
+      <a href="#prof-login">Login e Navegação</a>
+      <a href="#prof-fila">Fila de Retirada</a>
+      <a href="#prof-diplomas">Diplomas e Ranking</a>
+      <a href="#prof-agp">Annual Growth Plan</a>
+      <a href="#prof-materiais">Materiais</a>
+      <a href="#prof-atestados">Atestados Médicos</a>
+      <a href="#prof-manutencao">Manutenção</a>
+      <a href="#prof-achados">Achados e Perdidos</a>
+      <a href="#prof-impressoes">Impressões</a>
+      <a href="#prof-agenda">Agenda Digital</a>
+      <a href="#prof-notas">Notas</a>
+      <a href="#prof-chamada">Chamada</a>
+    </div>
+  </div>
+
+  <div class="sidebar-section" data-portal="secretaria">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">📋 Portal da Secretaria <span class="chevron">▸</span></div>
+    <div class="sidebar-links">
+      <a href="#sec-login">Login</a>
+      <a href="#sec-atestados">Validação de Atestados</a>
+    </div>
+  </div>
+
+  <div class="sidebar-section" data-portal="aluno">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">🎓 Portal do Aluno <span class="chevron">▸</span></div>
+    <div class="sidebar-links">
+      <a href="#aluno-login">Login</a>
+      <a href="#aluno-notas">Notas</a>
+      <a href="#aluno-frequencia">Frequência</a>
+      <a href="#aluno-provas">Provas</a>
+    </div>
+  </div>
+
+  <div class="sidebar-section" data-portal="setup">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">⚙️ Setup Wizard <span class="chevron">▸</span></div>
+    <div class="sidebar-links">
+      <a href="#setup-escola">Dados da Escola</a>
+      <a href="#setup-cores">Cores e Branding</a>
+      <a href="#setup-modulos">Módulos</a>
+      <a href="#setup-gerente">Primeiro Gerente</a>
+    </div>
+  </div>
+
+</nav>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main class="main" id="mainContent">
+
+<!-- Welcome screen -->
+<div class="welcome" id="welcomeScreen">
+  <h1>📚 Bem-vindo à Central de Ajuda Lumied</h1>
+  <p>Encontre guias detalhados para cada portal da plataforma. Selecione um portal abaixo ou use a busca acima.</p>
+  <div class="portal-cards">
+    <div class="portal-card" onclick="openPortal('pais')"><span class="emoji">👨‍👩‍👧</span><span class="label">Pais</span></div>
+    <div class="portal-card" onclick="openPortal('gerente')"><span class="emoji">👔</span><span class="label">Gerente</span></div>
+    <div class="portal-card" onclick="openPortal('professora')"><span class="emoji">👩‍🏫</span><span class="label">Professora</span></div>
+    <div class="portal-card" onclick="openPortal('secretaria')"><span class="emoji">📋</span><span class="label">Secretaria</span></div>
+    <div class="portal-card" onclick="openPortal('aluno')"><span class="emoji">🎓</span><span class="label">Aluno</span></div>
+    <div class="portal-card" onclick="openPortal('setup')"><span class="emoji">⚙️</span><span class="label">Setup Wizard</span></div>
+  </div>
+</div>
+
+<!-- No results message -->
+<div class="no-results" id="noResults">
+  <h2>😕 Nenhum resultado encontrado</h2>
+  <p>Tente buscar com outras palavras-chave.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               PORTAL DOS PAIS                          -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="pais-login" class="help-article" data-portal="pais" data-keywords="login cadastro senha email google biometria magic link acesso primeiro entrar registrar conta">
+  <h2>🔑 Login e Cadastro</h2>
+  <p class="article-desc">Aprenda a acessar o portal dos pais usando email, Google ou biometria.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Tela de Login</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse o endereço da sua escola (ex: <strong>maplebearcaxias.lumied.com.br</strong>) no navegador do celular ou computador.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>Lumied</span><div class="dots"><span></span><span></span><span></span></div></div>
+          <div class="mockup-content" style="text-align:center;padding:24px">
+            <div style="font-size:2rem;margin-bottom:8px">📚</div>
+            <div style="font-family:'Lora',serif;font-weight:700;font-size:1.1rem;margin-bottom:16px">Maple Bear Caxias</div>
+            <div class="mockup-input" style="text-align:left">📧 seu.email@exemplo.com</div>
+            <div class="mockup-input" style="text-align:left">🔒 ••••••••</div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:8px">Entrar</div>
+            <div style="margin:12px 0;color:var(--muted);font-size:.75rem">— ou —</div>
+            <div class="mockup-btn secondary" style="width:100%">G  Entrar com Google</div>
+            <div style="margin-top:12px;font-size:.78rem"><a href="#">Esqueci minha senha</a> · <a href="#">Magic Link</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Insira o <strong>email</strong> cadastrado pela escola e sua <strong>senha</strong>. Caso seja seu primeiro acesso, clique em <em>"Magic Link"</em> para receber um link de autenticação por email.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Alternativamente, use <strong>"Entrar com Google"</strong> se seu email cadastrado for Gmail. O sistema associa automaticamente sua conta.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <p>Após o primeiro login, o sistema oferece habilitar <strong>biometria</strong> (impressão digital ou Face ID) para acessos futuros mais rápidos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Use a opção de biometria para acessar rapidamente ao buscar seu filho na escola. O Magic Link é a melhor opção se você esqueceu a senha — não precisa redefinir nada, basta clicar no link enviado ao email.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Esqueci minha senha. O que faço?</summary><p>Clique em "Magic Link" na tela de login. Você receberá um email com um link de acesso único. Ao clicar, entrará automaticamente e poderá alterar sua senha nas configurações.</p></details>
+    <details><summary>Não recebi o email do Magic Link.</summary><p>Verifique sua pasta de spam/lixo eletrônico. O email é enviado por noreply@lumied.com.br. Se não encontrar, confirme com a escola se o email cadastrado está correto.</p></details>
+    <details><summary>Posso usar o mesmo login para mais de um filho?</summary><p>Sim! Se você tem mais de um filho na escola, todos aparecerão na mesma conta. Basta alternar entre eles na tela inicial.</p></details>
+  </div>
+</article>
+
+<article id="pais-home" class="help-article" data-portal="pais" data-keywords="tela inicial home painel filhos alunos resumo notificacoes avisos">
+  <h2>🏠 Tela Inicial</h2>
+  <p class="article-desc">Visão geral do painel principal dos pais com resumo de cada filho matriculado.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Home</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Ao fazer login, você verá a tela inicial com os cartões de cada filho matriculado. Cada cartão exibe foto, nome, turma e turno.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📚 Lumied — Home</span><span>👤</span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;margin-bottom:10px">Olá, Maria! 👋</div>
+            <div class="mockup-card">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="mockup-avatar">LP</div>
+                <div><div style="font-weight:600">Lorenzo Pereira</div><div style="font-size:.72rem;color:var(--muted)">Year 2B — Manhã</div></div>
+                <div class="mockup-pill green" style="margin-left:auto">Presente</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="mockup-avatar">SP</div>
+                <div><div style="font-weight:600">Sofia Pereira</div><div style="font-size:.72rem;color:var(--muted)">Year 4A — Manhã</div></div>
+                <div class="mockup-pill green" style="margin-left:auto">Presente</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;font-weight:600;font-size:.85rem">📢 Avisos Recentes</div>
+            <div class="mockup-card" style="font-size:.78rem">
+              <div style="font-weight:600">Reunião de Pais — 15/04</div>
+              <div style="color:var(--muted)">A reunião será às 18h30 no auditório principal.</div>
+            </div>
+          </div>
+          <div class="mockup-nav">
+            <div class="nav-item active">🏠<span>Home</span></div>
+            <div class="nav-item">🚗<span>Pickup</span></div>
+            <div class="nav-item">📅<span>Agenda</span></div>
+            <div class="nav-item">💰<span>Boletos</span></div>
+            <div class="nav-item">👤<span>Perfil</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Toque em um cartão de filho para ver detalhes: agenda do dia, atividades extracurriculares inscritas e avisos específicos da turma.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Use a barra de navegação inferior para acessar rapidamente as seções: Pickup, Agenda, Boletos e Perfil.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Os avisos na tela inicial são enviados pela gestão da escola. Fique atento a avisos fixados (marcados com 📌) pois são importantes.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Meu filho não aparece na tela inicial.</summary><p>Entre em contato com a secretaria da escola. É necessário que o CPF ou email do responsável esteja vinculado à matrícula do aluno no sistema.</p></details>
+    <details><summary>Como alterar a foto do meu filho?</summary><p>Toque no avatar do aluno e selecione "Alterar foto". A foto será visível para a escola e usada na fila de retirada.</p></details>
+  </div>
+</article>
+
+<article id="pais-pickup" class="help-article" data-portal="pais" data-keywords="pickup retirada estou a caminho buscar filho aluno fila carro chegada">
+  <h2>🚗 Pickup — Estou a Caminho</h2>
+  <p class="article-desc">Avise a escola que você está indo buscar seu filho e acompanhe a fila de retirada em tempo real.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Pickup</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse a aba <strong>Pickup</strong> na navegação inferior. Você verá a lista de filhos disponíveis para retirada.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🚗 Pickup</span><span>👤</span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;margin-bottom:10px">Selecione quem buscar</div>
+            <div class="mockup-card" style="display:flex;align-items:center;gap:10px">
+              <div class="mockup-avatar">LP</div>
+              <div style="flex:1"><div style="font-weight:600">Lorenzo Pereira</div><div style="font-size:.72rem;color:var(--muted)">Year 2B</div></div>
+              <input type="checkbox" checked style="width:18px;height:18px">
+            </div>
+            <div class="mockup-card" style="display:flex;align-items:center;gap:10px">
+              <div class="mockup-avatar">SP</div>
+              <div style="flex:1"><div style="font-weight:600">Sofia Pereira</div><div style="font-size:.72rem;color:var(--muted)">Year 4A</div></div>
+              <input type="checkbox" checked style="width:18px;height:18px">
+            </div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:12px;text-align:center">🚗 Estou a Caminho!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Marque os filhos que deseja buscar e toque em <strong>"Estou a Caminho!"</strong>. A escola receberá uma notificação em tempo real.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Após acionar, você verá sua posição na fila e o status atualizado. Quando a professora entregar a criança, o status mudará para <strong>"Retirado"</strong>.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🚗 Pickup — Status</span><span></span></div>
+          <div class="mockup-content" style="text-align:center">
+            <div style="font-size:2rem;margin:8px 0">🚗</div>
+            <div style="font-weight:700;font-size:1rem;margin-bottom:4px">A caminho</div>
+            <div style="color:var(--muted);font-size:.82rem;margin-bottom:12px">Posição na fila: <strong>3º</strong></div>
+            <div class="mockup-card" style="text-align:left">
+              <div style="font-weight:600;font-size:.82rem">Lorenzo Pereira</div>
+              <div class="mockup-pill yellow">Aguardando</div>
+            </div>
+            <div class="mockup-card" style="text-align:left">
+              <div style="font-weight:600;font-size:.82rem">Sofia Pereira</div>
+              <div class="mockup-pill yellow">Aguardando</div>
+            </div>
+            <div class="mockup-btn secondary" style="width:100%;margin-top:10px">Cancelar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ Importante:</strong> Só acione o "Estou a Caminho" quando realmente estiver se dirigindo à escola. Acionamentos falsos atrapalham a organização da fila.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso cancelar depois de acionar?</summary><p>Sim. Toque em "Cancelar" na tela de status. A escola será notificada automaticamente.</p></details>
+    <details><summary>Outra pessoa pode buscar meu filho?</summary><p>Sim, desde que esteja cadastrada como responsável autorizado. Peça à escola para incluir o CPF da pessoa no sistema. Pessoas não cadastradas não podem retirar alunos.</p></details>
+    <details><summary>O que acontece se eu não acionar o pickup?</summary><p>A escola ainda pode entregar seu filho normalmente, mas sem a organização prévia da fila. O pickup é opcional, mas altamente recomendado para agilizar a saída.</p></details>
+  </div>
+</article>
+
+<article id="pais-turno" class="help-article" data-portal="pais" data-keywords="mudanca turno troca manha tarde periodo horario solicitar">
+  <h2>🔄 Mudança de Turno</h2>
+  <p class="article-desc">Solicite alteração de turno do seu filho (manhã para tarde ou vice-versa) diretamente pelo app.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Perfil do Aluno → Mudança de Turno</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Na tela inicial, toque no cartão do filho desejado. Em seguida, toque em <strong>"Solicitar Mudança de Turno"</strong>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Selecione o turno desejado e a data de início pretendida. Adicione uma justificativa se necessário.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🔄 Mudança de Turno</span><span></span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;margin-bottom:8px">Lorenzo Pereira — Year 2B</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Turno atual: <strong>Manhã</strong></div>
+            <div style="font-size:.82rem;font-weight:500;margin-bottom:4px">Novo turno:</div>
+            <div class="mockup-card" style="border-color:var(--red);background:#fdf5f5;display:flex;align-items:center;gap:8px">
+              <span>🌅</span> <strong>Tarde</strong> <span style="font-size:.72rem;color:var(--muted)">(13h às 17h30)</span>
+            </div>
+            <div style="font-size:.82rem;font-weight:500;margin:8px 0 4px">A partir de:</div>
+            <div class="mockup-input">📅 01/05/2026</div>
+            <div style="font-size:.82rem;font-weight:500;margin:8px 0 4px">Motivo (opcional):</div>
+            <div class="mockup-input" style="height:48px">Mudança no horário de trabalho</div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:10px;text-align:center">Enviar Solicitação</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>A solicitação será enviada à gestão da escola. Você receberá uma notificação quando for aprovada ou recusada. O prazo médio de resposta é de 48 horas úteis.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>ℹ️ Nota:</strong> A mudança de turno depende de disponibilidade de vagas. Caso não haja vaga, seu filho permanecerá no turno atual e será colocado em uma lista de espera.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>A mudança é imediata?</summary><p>Não. A escola precisa avaliar a disponibilidade de vagas no turno solicitado. Você será notificado quando a decisão for tomada.</p></details>
+    <details><summary>Posso cancelar uma solicitação pendente?</summary><p>Sim, enquanto a solicitação estiver com status "Pendente", você pode cancelá-la acessando o histórico de solicitações.</p></details>
+  </div>
+</article>
+
+<article id="pais-extra" class="help-article" data-portal="pais" data-keywords="atividades extracurriculares esportes musica artes ballet futebol natacao inscrever matricula">
+  <h2>🎯 Atividades Extracurriculares</h2>
+  <p class="article-desc">Inscreva seu filho em atividades extracurriculares oferecidas pela escola, como esportes, música e artes.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Perfil do Aluno → Extracurriculares</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Toque no cartão do filho desejado e selecione <strong>"Atividades Extracurriculares"</strong>. Você verá as atividades disponíveis para a faixa etária.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🎯 Extracurriculares</span><span></span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;margin-bottom:10px">Lorenzo — Year 2B</div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600">⚽ Futebol</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Ter e Qui · 15h-16h · R$ 150/mês</div>
+                </div>
+                <div class="mockup-pill green">Vagas: 8</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600">🩰 Ballet</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Seg e Qua · 15h-16h · R$ 180/mês</div>
+                </div>
+                <div class="mockup-pill green">Vagas: 5</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600">🎵 Música</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Sex · 14h-15h30 · R$ 120/mês</div>
+                </div>
+                <div class="mockup-pill red">Esgotado</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Toque na atividade desejada para ver detalhes (descrição, professor, local, horários). Se houver vagas, toque em <strong>"Inscrever"</strong>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Confirme a inscrição. O valor será adicionado automaticamente ao seu próximo boleto. Você pode cancelar até 5 dias antes do vencimento.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Se uma atividade estiver esgotada, toque em "Lista de Espera" para ser notificado quando abrir uma vaga.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso cancelar uma inscrição?</summary><p>Sim, acesse a atividade inscrita e toque em "Cancelar Inscrição". O cancelamento deve ser feito até 5 dias antes do vencimento do boleto para não ser cobrado.</p></details>
+    <details><summary>O valor é cobrado separadamente?</summary><p>Não. O valor da atividade extracurricular é somado ao boleto mensal da escola.</p></details>
+    <details><summary>Meu filho pode participar de mais de uma atividade?</summary><p>Sim, desde que os horários não conflitem. O sistema alerta automaticamente se houver choque de horários.</p></details>
+  </div>
+</article>
+
+<article id="pais-boletos" class="help-article" data-portal="pais" data-keywords="boletos pagamento financeiro mensalidade valor fatura pagar segunda via pix">
+  <h2>💰 Boletos</h2>
+  <p class="article-desc">Visualize, pague e gerencie os boletos de mensalidade e taxas adicionais.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Boletos</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse a aba <strong>Boletos</strong> na navegação inferior. Você verá a lista de boletos organizados por mês.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>💰 Boletos</span><span></span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600">Março/2026</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Venc: 10/03/2026</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight:700">R$ 2.850,00</div>
+                  <div class="mockup-pill green">Pago</div>
+                </div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600">Abril/2026</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Venc: 10/04/2026</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight:700">R$ 2.850,00</div>
+                  <div class="mockup-pill yellow">Aberto</div>
+                </div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600">Maio/2026</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Venc: 10/05/2026</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight:700">R$ 2.850,00</div>
+                  <div class="mockup-pill gray">Futuro</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Toque no boleto para ver os detalhes. Você pode copiar o <strong>código de barras</strong>, gerar um <strong>PIX</strong>, ou baixar o PDF do boleto.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Para pagar via PIX, toque em <strong>"Pagar com PIX"</strong>. Um QR Code será exibido. Escaneie com seu app bancário. A confirmação é automática e leva até 30 minutos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Pagamentos via PIX são confirmados automaticamente. Se usar boleto bancário, a compensação pode levar até 3 dias úteis.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Paguei mas ainda aparece como "Aberto".</summary><p>Se pagou via boleto bancário, aguarde até 3 dias úteis para compensação. Se pagou via PIX e após 1 hora ainda não atualizou, entre em contato com a escola.</p></details>
+    <details><summary>Como gero uma segunda via?</summary><p>Toque no boleto vencido e selecione "Gerar 2ª via". O novo boleto terá juros e multa calculados automaticamente.</p></details>
+    <details><summary>Onde vejo o detalhamento do valor?</summary><p>Ao abrir o boleto, toque em "Ver detalhamento". Lá você encontrará a mensalidade base, atividades extracurriculares e possíveis descontos.</p></details>
+  </div>
+</article>
+
+<article id="pais-agenda" class="help-article" data-portal="pais" data-keywords="agenda digital diario comunicacao professora recado foto atividade dia rotina">
+  <h2>📅 Agenda Digital</h2>
+  <p class="article-desc">Acompanhe o dia a dia do seu filho com fotos, recados e relatórios da professora.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Agenda</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse a aba <strong>Agenda</strong> na navegação inferior. Selecione o filho (se tiver mais de um) e a data desejada.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📅 Agenda Digital</span><span>Lorenzo ▾</span></div>
+          <div class="mockup-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="font-size:.82rem">◀</span>
+              <div style="font-weight:600">28 de Março, 2026</div>
+              <span style="font-size:.82rem">▶</span>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">🍎 Alimentação</div>
+              <div style="font-size:.78rem;color:var(--muted)">Almoço: Comeu bem ✅ · Lanche: Comeu parcialmente ⚠️</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">😴 Soneca</div>
+              <div style="font-size:.78rem;color:var(--muted)">Dormiu de 12h30 às 14h00 (1h30)</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">📝 Atividades do Dia</div>
+              <div style="font-size:.78rem;color:var(--muted)">Pintura com guache, roda de leitura, parquinho</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">💬 Recado da Professora</div>
+              <div style="font-size:.78rem;color:var(--muted)">"Lorenzo participou ativamente da roda de leitura e compartilhou sua história favorita com os colegas. Dia maravilhoso!"</div>
+            </div>
+            <div class="mockup-card" style="text-align:center;background:var(--bg)">
+              <div style="font-size:.78rem;color:var(--muted)">📷 3 fotos do dia</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Navegue entre os dias usando as setas. Cada dia mostra: alimentação, soneca (se aplicável), atividades realizadas, recados e fotos.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Toque nas fotos para abri-las em tela cheia. Você pode baixá-las ou compartilhar diretamente.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Ative as notificações push para receber um alerta sempre que a professora publicar na agenda digital. Assim você não perde nenhum momento!
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>A agenda é atualizada em tempo real?</summary><p>A professora atualiza ao longo do dia. Geralmente, o resumo completo fica disponível até o final do expediente escolar.</p></details>
+    <details><summary>Posso responder aos recados?</summary><p>Sim, toque no recado e use o campo de resposta. A professora será notificada. Para assuntos urgentes, prefira contato direto com a escola.</p></details>
+    <details><summary>Posso ver agendas de dias anteriores?</summary><p>Sim, navegue pelas datas usando as setas ou toque na data para abrir um calendário e selecionar qualquer dia do ano letivo.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               PORTAL DO GERENTE                         -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="gerente-login" class="help-article" data-portal="gerente" data-keywords="gerente login navegacao acesso painel administrativo admin menu">
+  <h2>🔐 Login e Navegação</h2>
+  <p class="article-desc">Acesse o painel administrativo do gerente e conheça a estrutura de navegação.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Login</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>suaescola.lumied.com.br/area-restrita</strong> e entre com suas credenciais de gerente. Use email e senha ou Magic Link.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📚 Lumied — Acesso Restrito</span><div class="dots"><span></span><span></span><span></span></div></div>
+          <div class="mockup-content" style="text-align:center;padding:20px">
+            <div style="font-size:1.5rem;margin-bottom:6px">👔</div>
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:14px">Área Restrita</div>
+            <div class="mockup-input" style="text-align:left">📧 gerente@escola.com.br</div>
+            <div class="mockup-input" style="text-align:left">🔒 ••••••••</div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:6px">Entrar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Após login, o painel administrativo é exibido com a sidebar de navegação à esquerda contendo todos os módulos habilitados para sua escola.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📚 Lumied — Gerente</span><span>⚙️ Config</span></div>
+          <div style="display:flex;min-height:120px">
+            <div class="mockup-sidebar" style="width:110px;font-size:.7rem">
+              <div style="padding:4px 0;font-weight:600;color:var(--red)">📊 Dashboard</div>
+              <div style="padding:4px 0">🔄 Turnos</div>
+              <div style="padding:4px 0">🎯 Atividades</div>
+              <div style="padding:4px 0">👩‍🏫 Professoras</div>
+              <div style="padding:4px 0">📦 Almoxarifado</div>
+              <div style="padding:4px 0">🔧 Manutenção</div>
+              <div style="padding:4px 0">💰 Financeiro</div>
+              <div style="padding:4px 0">📞 CRM</div>
+              <div style="padding:4px 0">📝 Acadêmico</div>
+              <div style="padding:4px 0">📅 Calendário</div>
+            </div>
+            <div class="mockup-content" style="flex:1;font-size:.75rem;color:var(--muted)">
+              <div style="font-weight:600;color:var(--text);margin-bottom:6px">Dashboard</div>
+              Conteúdo do módulo selecionado...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em qualquer módulo na sidebar para navegar. Em dispositivos móveis, use o menu hamburger (☰) para abrir a sidebar.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Os módulos visíveis na sidebar dependem da configuração da sua escola. Se um módulo não aparece, verifique em Configurações → Módulos.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Não consigo acessar. O que faço?</summary><p>Verifique se está acessando /area-restrita (e não a URL do portal dos pais). Use o Magic Link se esqueceu a senha. Caso persista, entre em contato com o suporte Lumied.</p></details>
+    <details><summary>Posso ter mais de um gerente?</summary><p>Sim. Na seção Configurações → Usuários, você pode adicionar múltiplos gerentes com diferentes níveis de permissão.</p></details>
+    <details><summary>O painel funciona no celular?</summary><p>Sim. A interface é responsiva, mas recomendamos desktop para tarefas administrativas complexas como relatórios e configurações.</p></details>
+  </div>
+</article>
+
+<article id="gerente-dashboard" class="help-article" data-portal="gerente" data-keywords="dashboard analytics painel graficos metricas indicadores relatorios kpi presenca financeiro">
+  <h2>📊 Dashboard Analytics</h2>
+  <p class="article-desc">Monitore indicadores-chave da escola em tempo real: presença, financeiro, matrículas e muito mais.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Dashboard</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>O Dashboard é a primeira tela após o login. Ele exibe cartões de resumo com os principais indicadores do dia.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📊 Dashboard</span><span>Hoje: 28/03/2026</span></div>
+          <div class="mockup-content">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+              <div class="mockup-card">
+                <div class="mockup-stat"><div class="num" style="color:var(--green)">247</div><div class="lbl">Alunos Presentes</div></div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-stat"><div class="num" style="color:var(--red)">12</div><div class="lbl">Ausências Hoje</div></div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-stat"><div class="num" style="color:var(--blue)">95,4%</div><div class="lbl">Adimplência</div></div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-stat"><div class="num">18</div><div class="lbl">Leads Novos</div></div>
+              </div>
+            </div>
+            <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">📈 Presença Semanal</div>
+            <div class="mockup-card" style="height:50px;display:flex;align-items:flex-end;gap:4px;padding:8px">
+              <div style="flex:1;background:var(--green);height:80%;border-radius:2px"></div>
+              <div style="flex:1;background:var(--green);height:90%;border-radius:2px"></div>
+              <div style="flex:1;background:var(--green);height:75%;border-radius:2px"></div>
+              <div style="flex:1;background:var(--green);height:95%;border-radius:2px"></div>
+              <div style="flex:1;background:var(--green);opacity:.4;height:40%;border-radius:2px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em qualquer cartão para aprofundar os dados. Por exemplo, ao clicar em "Ausências Hoje" você verá a lista completa de alunos ausentes por turma.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Use os filtros de período (Hoje, Semana, Mês, Personalizado) para ver dados históricos. Todos os gráficos são atualizados em tempo real.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> O Dashboard atualiza automaticamente a cada 60 segundos. Você também pode forçar uma atualização puxando a tela para baixo (pull-to-refresh).
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso exportar os dados do dashboard?</summary><p>Sim. Clique no ícone de download (⬇) no canto superior direito de cada gráfico para exportar em CSV ou PDF.</p></details>
+    <details><summary>Os dados são em tempo real?</summary><p>Sim. Os dados de presença e pickup são atualizados em tempo real. Dados financeiros são atualizados quando ocorre compensação de pagamento.</p></details>
+    <details><summary>Posso personalizar quais indicadores aparecem?</summary><p>Sim. Clique em "Personalizar Dashboard" para reorganizar os cartões, adicionar ou remover indicadores conforme sua preferência.</p></details>
+  </div>
+</article>
+
+<article id="gerente-turnos" class="help-article" data-portal="gerente" data-keywords="turnos horarios manha tarde integral periodo configurar criar turno">
+  <h2>🔄 Turnos</h2>
+  <p class="article-desc">Configure e gerencie os turnos da escola (manhã, tarde, integral) e defina horários de entrada e saída.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Turnos</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Turnos</strong> na sidebar. Você verá a lista de turnos cadastrados com seus horários e total de alunos.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🔄 Turnos</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Novo Turno</span></div>
+          <div class="mockup-content">
+            <table class="mockup-table">
+              <tr><th>Turno</th><th>Entrada</th><th>Saída</th><th>Alunos</th></tr>
+              <tr><td>🌅 Manhã</td><td>07:30</td><td>12:00</td><td>142</td></tr>
+              <tr><td>🌇 Tarde</td><td>13:00</td><td>17:30</td><td>118</td></tr>
+              <tr><td>☀️ Integral</td><td>07:30</td><td>17:30</td><td>45</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Para criar um novo turno, clique em <strong>"+ Novo Turno"</strong>. Defina o nome, horário de entrada, horário de saída e tolerância para atraso.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Para editar um turno existente, clique nele na lista. Você pode alterar os horários, mas cuidado: isso afetará todos os alunos daquele turno.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ Atenção:</strong> Alterar horários de um turno ativo afeta imediatamente a marcação de presença e atrasos de todos os alunos vinculados. Faça alterações com antecedência.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso ter mais de 3 turnos?</summary><p>Sim. Você pode criar quantos turnos forem necessários (ex: Semi-integral, Estendido). Cada turno pode ter seus próprios horários.</p></details>
+    <details><summary>Como transferir um aluno de turno?</summary><p>Acesse Acadêmico → Alunos, selecione o aluno e altere o turno. Ou aprove uma solicitação de mudança de turno feita pelos pais.</p></details>
+  </div>
+</article>
+
+<article id="gerente-atividades" class="help-article" data-portal="gerente" data-keywords="atividades extracurriculares cadastrar gerenciar vagas inscritos horarios professor">
+  <h2>🎯 Atividades</h2>
+  <p class="article-desc">Crie e gerencie atividades extracurriculares, defina vagas, horários e valores.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Atividades</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Atividades</strong> na sidebar. Visualize todas as atividades cadastradas, inscritos e capacidade.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🎯 Atividades Extracurriculares</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Nova</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between">
+                <div>
+                  <div style="font-weight:600">⚽ Futebol</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Prof. Ricardo · Ter e Qui 15h-16h</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight:600;font-size:.85rem">22/30</div>
+                  <div style="font-size:.7rem;color:var(--muted)">inscritos</div>
+                </div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between">
+                <div>
+                  <div style="font-weight:600">🩰 Ballet</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Profa. Ana · Seg e Qua 15h-16h</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight:600;font-size:.85rem">15/20</div>
+                  <div style="font-size:.7rem;color:var(--muted)">inscritos</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Nova"</strong> para criar uma atividade. Preencha: nome, descrição, professor responsável, dias da semana, horário, limite de vagas, faixa etária e valor mensal.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em uma atividade existente para ver a lista de inscritos, gerenciar a lista de espera e editar detalhes.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Como desativar uma atividade sem excluí-la?</summary><p>Edite a atividade e marque "Ocultar do portal dos pais". A atividade continuará visível no painel do gerente mas não aceitará novas inscrições.</p></details>
+    <details><summary>O valor aparece automaticamente no boleto dos pais?</summary><p>Sim. Ao criar a atividade com valor, ele será somado automaticamente ao boleto mensal de cada família inscrita.</p></details>
+  </div>
+</article>
+
+<article id="gerente-professoras" class="help-article" data-portal="gerente" data-keywords="professoras professores equipe cadastrar funcionarios staff recursos humanos rh">
+  <h2>👩‍🏫 Professoras</h2>
+  <p class="article-desc">Gerencie o cadastro de professoras, atribua turmas e controle acessos.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Professoras</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Professoras</strong> na sidebar. Você verá a lista completa de professoras com turma, turno e status.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>👩‍🏫 Professoras</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Cadastrar</span></div>
+          <div class="mockup-content">
+            <table class="mockup-table">
+              <tr><th>Nome</th><th>Turma</th><th>Turno</th><th>Status</th></tr>
+              <tr><td>Ana Clara</td><td>Year 1A</td><td>Manhã</td><td><span class="mockup-pill green">Ativa</span></td></tr>
+              <tr><td>Beatriz Lima</td><td>Year 2B</td><td>Manhã</td><td><span class="mockup-pill green">Ativa</span></td></tr>
+              <tr><td>Carla Santos</td><td>Year 3A</td><td>Tarde</td><td><span class="mockup-pill yellow">Licença</span></td></tr>
+              <tr><td>Débora Reis</td><td>Year 4A</td><td>Manhã</td><td><span class="mockup-pill green">Ativa</span></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Cadastrar"</strong> para adicionar uma nova professora. Preencha nome, email, CPF, turma atribuída e turno. Um email de convite será enviado automaticamente.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em uma professora para editar dados, trocar de turma, visualizar histórico ou desativar acesso.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Uma professora pode ter acesso a mais de uma turma?</summary><p>Sim. Ao editar o cadastro, você pode atribuir múltiplas turmas. Isso é útil para professoras de atividades especiais.</p></details>
+    <details><summary>Como revogar o acesso de uma professora?</summary><p>Acesse o perfil da professora e clique em "Desativar Acesso". O login será bloqueado imediatamente, mas os dados históricos serão preservados.</p></details>
+  </div>
+</article>
+
+<article id="gerente-almoxarifado" class="help-article" data-portal="gerente" data-keywords="almoxarifado estoque materiais suprimentos pedidos controle inventario">
+  <h2>📦 Almoxarifado</h2>
+  <p class="article-desc">Controle o estoque de materiais escolares e gerencie pedidos de reposição das professoras.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Almoxarifado</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Almoxarifado</strong> na sidebar. Veja o inventário atual e os pedidos pendentes das professoras.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📦 Almoxarifado</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Item</span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Pedidos Pendentes <span class="mockup-pill red">3</span></div>
+            <div class="mockup-card" style="font-size:.78rem">
+              <div style="display:flex;justify-content:space-between">
+                <div><strong>Profa. Beatriz</strong> — Year 2B</div>
+                <div class="mockup-pill yellow">Pendente</div>
+              </div>
+              <div style="color:var(--muted);margin-top:4px">10x Folha A4, 5x Cola bastão, 2x Tesoura</div>
+            </div>
+            <div style="font-weight:600;font-size:.82rem;margin:10px 0 6px">Estoque</div>
+            <table class="mockup-table">
+              <tr><th>Item</th><th>Qtd</th><th>Status</th></tr>
+              <tr><td>Folha A4 (resma)</td><td>24</td><td><span class="mockup-pill green">OK</span></td></tr>
+              <tr><td>Cola bastão</td><td>8</td><td><span class="mockup-pill yellow">Baixo</span></td></tr>
+              <tr><td>Tesoura escolar</td><td>2</td><td><span class="mockup-pill red">Crítico</span></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Para aprovar um pedido, clique nele e selecione <strong>"Aprovar"</strong> ou <strong>"Aprovar parcialmente"</strong> (ajustando quantidades). A professora será notificada e poderá retirar os itens.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Para cadastrar novos itens ou atualizar o estoque, use o botão <strong>"+ Item"</strong> ou clique em um item existente para editar a quantidade.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Configure alertas de estoque mínimo em cada item. Quando a quantidade atingir o mínimo definido, você receberá uma notificação.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>As professoras veem o estoque disponível?</summary><p>Não. As professoras apenas fazem pedidos. Quem vê e gerencia o estoque é o gerente. Isso evita pedidos desnecessários.</p></details>
+    <details><summary>Posso gerar relatório de consumo?</summary><p>Sim. Acesse Almoxarifado → Relatórios para ver consumo por período, por turma ou por item. Exporte em CSV ou PDF.</p></details>
+  </div>
+</article>
+
+<article id="gerente-manutencao" class="help-article" data-portal="gerente" data-keywords="manutencao reparos consertos infraestrutura chamados ordem servico predial">
+  <h2>🔧 Manutenção</h2>
+  <p class="article-desc">Receba e gerencie chamados de manutenção abertos por professoras e funcionários.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Manutenção</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Manutenção</strong> na sidebar. Veja todos os chamados organizados por prioridade e status.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🔧 Manutenção</span><span></span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Torneira vazando — Banheiro Y2</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Aberto por Profa. Ana · 27/03</div>
+                </div>
+                <div class="mockup-pill red">Urgente</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Lâmpada queimada — Sala Year 3A</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Aberto por Profa. Carla · 26/03</div>
+                </div>
+                <div class="mockup-pill yellow">Normal</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Pintura descascando — Corredor B</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Aberto por Profa. Débora · 25/03</div>
+                </div>
+                <div class="mockup-pill blue">Baixa</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em um chamado para ver detalhes, fotos anexadas e atualizar o status (Pendente → Em andamento → Concluído).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Ao concluir um chamado, adicione um comentário descrevendo a solução. A pessoa que abriu o chamado será notificada.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Quem pode abrir chamados de manutenção?</summary><p>Professoras e gerentes podem abrir chamados pelo app. Cada chamado inclui descrição, local, prioridade e foto opcional.</p></details>
+    <details><summary>Posso atribuir um chamado a um prestador externo?</summary><p>Sim. Ao abrir o chamado, adicione um comentário interno com os dados do prestador. O sistema permite marcar como "Aguardando fornecedor".</p></details>
+  </div>
+</article>
+
+<article id="gerente-achados" class="help-article" data-portal="gerente" data-keywords="achados perdidos objetos encontrados lost found pertences">
+  <h2>🔍 Achados e Perdidos</h2>
+  <p class="article-desc">Registre e gerencie objetos encontrados na escola para que os pais possam reclamá-los.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Achados e Perdidos</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Achados e Perdidos</strong> na sidebar. Veja a lista de itens registrados com fotos e status.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🔍 Achados e Perdidos</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Registrar</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card" style="display:flex;gap:10px;align-items:center">
+              <div style="width:40px;height:40px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🧥</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:.82rem">Jaqueta azul marinho — Tam. 8</div>
+                <div style="font-size:.72rem;color:var(--muted)">Encontrado: 26/03 · Pátio</div>
+              </div>
+              <div class="mockup-pill yellow">Pendente</div>
+            </div>
+            <div class="mockup-card" style="display:flex;gap:10px;align-items:center">
+              <div style="width:40px;height:40px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🍱</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:.82rem">Lancheira verde com nome "Pedro"</div>
+                <div style="font-size:.72rem;color:var(--muted)">Encontrado: 25/03 · Refeitório</div>
+              </div>
+              <div class="mockup-pill green">Devolvido</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Para registrar um item, clique em <strong>"+ Registrar"</strong>. Tire uma foto, descreva o item, selecione onde foi encontrado e a data.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Quando um pai reclamar o item, marque como <strong>"Devolvido"</strong> e registre quem retirou.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Os pais conseguem ver os itens perdidos?</summary><p>A funcionalidade pode ser habilitada para que os pais vejam fotos dos itens no portal. Consulte Configurações → Módulos.</p></details>
+    <details><summary>Itens não reclamados são descartados?</summary><p>Você define a política. O sistema permite configurar um prazo (ex: 30 dias) após o qual os itens são arquivados automaticamente.</p></details>
+  </div>
+</article>
+
+<article id="gerente-financeiro" class="help-article" data-portal="gerente" data-keywords="financeiro boletos pagamentos inadimplencia receita despesa fluxo caixa relatorio contas">
+  <h2>💰 Financeiro</h2>
+  <p class="article-desc">Controle financeiro completo: boletos, inadimplência, receitas e fluxo de caixa.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Financeiro</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Financeiro</strong> na sidebar. O módulo exibe um resumo financeiro do mês com boletos emitidos, pagos e atrasados.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>💰 Financeiro — Março/2026</span><span></span></div>
+          <div class="mockup-content">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+              <div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--green);font-size:1rem">R$ 428k</div><div class="lbl">Recebido</div></div></div>
+              <div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--blue);font-size:1rem">R$ 450k</div><div class="lbl">Previsto</div></div></div>
+              <div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--red);font-size:1rem">R$ 22k</div><div class="lbl">Inadimplente</div></div></div>
+            </div>
+            <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Inadimplentes</div>
+            <table class="mockup-table">
+              <tr><th>Família</th><th>Valor</th><th>Atraso</th></tr>
+              <tr><td>Pereira</td><td>R$ 2.850</td><td><span class="mockup-pill red">15 dias</span></td></tr>
+              <tr><td>Silva</td><td>R$ 3.100</td><td><span class="mockup-pill yellow">5 dias</span></td></tr>
+              <tr><td>Oliveira</td><td>R$ 2.850</td><td><span class="mockup-pill yellow">3 dias</span></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em uma família inadimplente para ver o histórico de pagamentos e enviar um lembrete automático por email ou WhatsApp.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Use a aba <strong>"Relatórios"</strong> para gerar demonstrativos por período, turma ou tipo de receita. Exporte em PDF ou CSV.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Configure lembretes automáticos para boletos próximos do vencimento. Vá em Configurações → Notificações → Financeiro.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Como faço para dar desconto em um boleto?</summary><p>Acesse o boleto do aluno, clique em "Editar" e aplique o desconto (percentual ou valor fixo). Adicione um motivo para registro interno.</p></details>
+    <details><summary>A integração com o banco é automática?</summary><p>Sim. Pagamentos via PIX são confirmados automaticamente. Boletos bancários são reconciliados via arquivo de retorno do banco (CNAB 240).</p></details>
+    <details><summary>Posso emitir nota fiscal?</summary><p>A emissão de NFS-e depende da integração configurada com a prefeitura local. Consulte Configurações → Integrações → Nota Fiscal.</p></details>
+  </div>
+</article>
+
+<article id="gerente-crm" class="help-article" data-portal="gerente" data-keywords="crm leads funil vendas matricula prospeccao contato interessados conversao">
+  <h2>📞 CRM</h2>
+  <p class="article-desc">Gerencie leads e prospects interessados na escola. Acompanhe todo o funil de matrículas.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → CRM</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>CRM</strong> na sidebar. Visualize o funil de vendas com leads organizados por etapa.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📞 CRM — Funil de Matrículas</span><span></span></div>
+          <div class="mockup-content">
+            <div style="display:flex;gap:6px;font-size:.72rem;overflow-x:auto">
+              <div style="min-width:100px;background:var(--bg);border-radius:6px;padding:6px">
+                <div style="font-weight:600;margin-bottom:6px;text-align:center">Novo Lead<br><span class="mockup-pill blue">12</span></div>
+                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>Maria Souza</strong><br>Year 1 · ☎ 📧</div>
+                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>João Lima</strong><br>Year 3 · ☎</div>
+              </div>
+              <div style="min-width:100px;background:var(--bg);border-radius:6px;padding:6px">
+                <div style="font-weight:600;margin-bottom:6px;text-align:center">Visita<br><span class="mockup-pill yellow">5</span></div>
+                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>Ana Costa</strong><br>Year 2 · 30/03</div>
+              </div>
+              <div style="min-width:100px;background:var(--bg);border-radius:6px;padding:6px">
+                <div style="font-weight:600;margin-bottom:6px;text-align:center">Matriculado<br><span class="mockup-pill green">3</span></div>
+                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>Pedro Alves</strong><br>Year 1 · ✅</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em um lead para ver detalhes, registrar interações (ligação, email, visita) e mover para a próxima etapa do funil.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Leads novos podem vir da <strong>Matrícula Online</strong> (formulário público) ou ser cadastrados manualmente.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso personalizar as etapas do funil?</summary><p>Sim. Acesse CRM → Configurações para adicionar, renomear ou reordenar as etapas do funil conforme o processo da sua escola.</p></details>
+    <details><summary>Como importar leads de uma planilha?</summary><p>Clique em "Importar" e faça upload de um CSV com colunas: Nome, Email, Telefone, Ano Desejado. O sistema mapeia automaticamente os campos.</p></details>
+  </div>
+</article>
+
+<article id="gerente-academico" class="help-article" data-portal="gerente" data-keywords="academico alunos turmas matricula lista classe enturmar transferir year">
+  <h2>📝 Acadêmico</h2>
+  <p class="article-desc">Gerencie turmas, alunos, matrículas e dados acadêmicos de toda a escola.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Acadêmico</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Acadêmico</strong> na sidebar. Veja as turmas com quantidade de alunos e professora responsável.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📝 Acadêmico — Turmas</span><span></span></div>
+          <div class="mockup-content">
+            <table class="mockup-table">
+              <tr><th>Turma</th><th>Professora</th><th>Alunos</th><th>Turno</th></tr>
+              <tr><td>Year 1A</td><td>Ana Clara</td><td>22</td><td>Manhã</td></tr>
+              <tr><td>Year 1B</td><td>Fernanda Dias</td><td>20</td><td>Tarde</td></tr>
+              <tr><td>Year 2A</td><td>Gabriela Nunes</td><td>24</td><td>Manhã</td></tr>
+              <tr><td>Year 2B</td><td>Beatriz Lima</td><td>23</td><td>Manhã</td></tr>
+              <tr><td>Year 3A</td><td>Carla Santos</td><td>21</td><td>Tarde</td></tr>
+              <tr><td>Year 4A</td><td>Débora Reis</td><td>25</td><td>Manhã</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em uma turma para ver a lista de alunos. De lá, você pode acessar o perfil de cada aluno, transferir de turma ou editar dados.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Use a aba <strong>"Alunos"</strong> para buscar qualquer aluno por nome, turma ou responsável. Acesse detalhes completos: contatos, documentos, histórico e boletos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Como enturmar um aluno novo?</summary><p>Acesse Acadêmico → Alunos → "+ Novo Aluno". Preencha os dados e selecione a turma. Ou, se veio pelo CRM, converta o lead em aluno.</p></details>
+    <details><summary>Posso criar turmas novas durante o ano?</summary><p>Sim. Acesse Acadêmico → Turmas → "+ Nova Turma". Defina o nome, ano, turno e professora. Depois, adicione ou transfira alunos.</p></details>
+  </div>
+</article>
+
+<article id="gerente-calendario" class="help-article" data-portal="gerente" data-keywords="calendario eventos feriados reunioes datas agenda escolar planejamento">
+  <h2>📅 Calendário</h2>
+  <p class="article-desc">Gerencie o calendário escolar com eventos, feriados, reuniões e datas importantes.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Calendário</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Calendário</strong> na sidebar. Veja o mês atual com eventos e feriados destacados por cor.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📅 Calendário — Abril 2026</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Evento</span></div>
+          <div class="mockup-content" style="font-size:.72rem">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:2px;text-align:center;margin-bottom:6px">
+              <div style="font-weight:600">Seg</div><div style="font-weight:600">Ter</div><div style="font-weight:600">Qua</div><div style="font-weight:600">Qui</div><div style="font-weight:600">Sex</div>
+              <div style="padding:4px;background:var(--bg);border-radius:4px">1</div><div style="padding:4px">2</div><div style="padding:4px">3</div><div style="padding:4px">4</div><div style="padding:4px">5</div>
+              <div style="padding:4px">8</div><div style="padding:4px">9</div><div style="padding:4px;background:#e6f4ea;border-radius:4px;font-weight:600">10 📝</div><div style="padding:4px">11</div><div style="padding:4px">12</div>
+              <div style="padding:4px">15</div><div style="padding:4px">16</div><div style="padding:4px">17</div><div style="padding:4px">18</div><div style="padding:4px">19</div>
+              <div style="padding:4px;background:#fde8e8;border-radius:4px;font-weight:600">21 🎉</div><div style="padding:4px">22</div><div style="padding:4px">23</div><div style="padding:4px">24</div><div style="padding:4px">25</div>
+            </div>
+            <div class="mockup-card" style="font-size:.72rem"><span class="mockup-pill green">10/04</span> Reunião de Pais — Year 1 e 2</div>
+            <div class="mockup-card" style="font-size:.72rem"><span class="mockup-pill red">21/04</span> Tiradentes — Sem aula</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Evento"</strong> para criar. Defina título, data, tipo (Evento, Feriado, Reunião, Prova), turmas envolvidas e se é visível aos pais.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Eventos marcados como "Visível aos pais" aparecerão automaticamente na agenda do portal dos pais. Feriados desativam a chamada automaticamente.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Feriados bloqueiam a chamada automaticamente?</summary><p>Sim. Ao criar um evento do tipo "Feriado", a chamada é desativada para aquele dia. Isso também afeta o cálculo de frequência.</p></details>
+    <details><summary>Posso importar feriados nacionais?</summary><p>Sim. Ao configurar o calendário, use "Importar Feriados Nacionais" para adicionar automaticamente todos os feriados do ano.</p></details>
+  </div>
+</article>
+
+<article id="gerente-comunicacao" class="help-article" data-portal="gerente" data-keywords="comunicacao avisos notificacoes mensagem circular comunicado pais email whatsapp push">
+  <h2>📢 Comunicação</h2>
+  <p class="article-desc">Envie comunicados, avisos e notificações para pais, professoras ou toda a comunidade escolar.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Comunicação</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Comunicação</strong> na sidebar. Veja o histórico de comunicados enviados e crie novos.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📢 Comunicação</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Novo Comunicado</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem">📌 Reunião de Pais — Abril</div>
+              <div style="font-size:.72rem;color:var(--muted)">Enviado em 25/03 · Para: Todos os pais · ✅ Lido por 78%</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem">Cardápio da Semana 31/03</div>
+              <div style="font-size:.72rem;color:var(--muted)">Enviado em 28/03 · Para: Pais Year 1 e 2 · ✅ Lido por 65%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Novo Comunicado"</strong>. Escreva o título e conteúdo, selecione os destinatários (todos, por turma, por turno) e os canais de envio (Push, Email, WhatsApp).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Após enviar, acompanhe a taxa de leitura em tempo real. Use o ícone 📌 para fixar comunicados importantes na tela inicial dos pais.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Comunicados fixados (📌) ficam no topo da tela inicial dos pais até que você os desafixe. Use com moderação para não saturar.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Os pais podem responder aos comunicados?</summary><p>Depende da configuração. Ao criar o comunicado, marque "Permitir respostas" se desejar. As respostas ficam visíveis apenas para o gerente.</p></details>
+    <details><summary>Posso agendar um comunicado para envio futuro?</summary><p>Sim. Ao criar o comunicado, selecione "Agendar" e defina a data e hora de envio desejadas.</p></details>
+  </div>
+</article>
+
+<article id="gerente-matricula" class="help-article" data-portal="gerente" data-keywords="matricula online formulario inscricao novo aluno rematricula vaga">
+  <h2>📋 Matrícula Online</h2>
+  <p class="article-desc">Configure o formulário de matrícula online e gerencie as inscrições recebidas.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Matrícula Online</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Matrícula Online</strong> na sidebar. Veja as inscrições recebidas e o link público do formulário.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📋 Matrícula Online</span><span></span></div>
+          <div class="mockup-content">
+            <div class="mockup-card" style="background:var(--bg);font-size:.78rem">
+              <div style="font-weight:600">Link público:</div>
+              <div style="color:var(--blue);word-break:break-all">maplebearcaxias.lumied.com.br/matricula</div>
+            </div>
+            <div style="font-weight:600;font-size:.82rem;margin:8px 0 4px">Inscrições Recentes</div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Lucas Fernandes</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Year 1 · Mãe: Juliana · 28/03</div>
+                </div>
+                <div class="mockup-pill yellow">Nova</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Isabella Rocha</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Year 2 · Pai: Marcos · 27/03</div>
+                </div>
+                <div class="mockup-pill green">Aprovada</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em uma inscrição para ver todos os dados preenchidos. Você pode aprovar (gera automaticamente o lead no CRM), solicitar documentos adicionais ou rejeitar.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Para personalizar o formulário, acesse <strong>"Configurar Formulário"</strong>. Adicione ou remova campos, defina quais são obrigatórios e personalize a mensagem de boas-vindas.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso compartilhar o link nas redes sociais?</summary><p>Sim! O link é público e pode ser compartilhado em Instagram, Facebook, WhatsApp ou impresso em materiais promocionais.</p></details>
+    <details><summary>A matrícula online substitui o contrato presencial?</summary><p>Depende da política da escola. A matrícula online pode ser usada como pré-inscrição, com o contrato sendo assinado presencialmente ou via assinatura digital.</p></details>
+  </div>
+</article>
+
+<article id="gerente-config" class="help-article" data-portal="gerente" data-keywords="configuracoes ajustes preferencias modulos escola branding cores personalizar usuarios permissoes">
+  <h2>⚙️ Configurações</h2>
+  <p class="article-desc">Personalize a plataforma: dados da escola, cores, módulos ativos, usuários e permissões.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Configurações</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Clique no ícone de engrenagem (⚙️) no canto superior direito ou acesse <strong>Configurações</strong> na sidebar.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>⚙️ Configurações</span><span></span></div>
+          <div class="mockup-content" style="font-size:.78rem">
+            <div class="mockup-card" style="display:flex;align-items:center;gap:8px">🏫 <strong>Dados da Escola</strong><span style="margin-left:auto;color:var(--muted)">▸</span></div>
+            <div class="mockup-card" style="display:flex;align-items:center;gap:8px">🎨 <strong>Cores e Branding</strong><span style="margin-left:auto;color:var(--muted)">▸</span></div>
+            <div class="mockup-card" style="display:flex;align-items:center;gap:8px">🧩 <strong>Módulos</strong><span style="margin-left:auto;color:var(--muted)">▸</span></div>
+            <div class="mockup-card" style="display:flex;align-items:center;gap:8px">👥 <strong>Usuários e Permissões</strong><span style="margin-left:auto;color:var(--muted)">▸</span></div>
+            <div class="mockup-card" style="display:flex;align-items:center;gap:8px">🔔 <strong>Notificações</strong><span style="margin-left:auto;color:var(--muted)">▸</span></div>
+            <div class="mockup-card" style="display:flex;align-items:center;gap:8px">🔗 <strong>Integrações</strong><span style="margin-left:auto;color:var(--muted)">▸</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Em <strong>"Dados da Escola"</strong>, atualize nome, endereço, telefone, logo e dados CNPJ. Em <strong>"Cores e Branding"</strong>, personalize as cores do app dos pais.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Em <strong>"Módulos"</strong>, ative ou desative funcionalidades (ex: Achados e Perdidos, Impressões). Módulos desativados ficam ocultos na sidebar.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ Atenção:</strong> Alterações em Configurações afetam toda a escola imediatamente. Tenha cuidado ao desativar módulos que já estejam em uso.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso dar acesso de gerente a outra pessoa?</summary><p>Sim. Em Usuários e Permissões, adicione o email da pessoa e selecione o perfil "Gerente" ou crie um perfil personalizado com permissões específicas.</p></details>
+    <details><summary>Alterar as cores afeta o portal dos pais imediatamente?</summary><p>Sim. As cores são aplicadas em tempo real. Os pais verão as novas cores ao recarregar o app.</p></details>
+  </div>
+</article>
+
+<article id="gerente-emergencia" class="help-article" data-portal="gerente" data-keywords="emergencia alerta evacuacao seguranca panico incendio urgente lockdown">
+  <h2>🚨 Emergência</h2>
+  <p class="article-desc">Acione o protocolo de emergência para notificar toda a comunidade escolar instantaneamente.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Emergência</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Emergência</strong> na sidebar (ícone vermelho). Esta seção contém os protocolos de emergência da escola.</p>
+        <div class="mockup">
+          <div class="mockup-header" style="background:var(--red)"><span>🚨 EMERGÊNCIA</span><span></span></div>
+          <div class="mockup-content" style="text-align:center;padding:20px">
+            <div style="font-size:2rem;margin-bottom:8px">🚨</div>
+            <div style="font-weight:700;margin-bottom:12px;color:var(--red)">Acionar Alerta de Emergência</div>
+            <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px">Ao acionar, TODOS os pais receberão uma notificação push imediata com instruções.</div>
+            <div class="mockup-btn primary" style="width:100%;padding:12px;font-size:.9rem">⚠️ ACIONAR EMERGÊNCIA</div>
+            <div style="margin-top:12px;font-size:.72rem;color:var(--muted)">Tipo: Evacuação · Lockdown · Alerta Médico · Outro</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Selecione o <strong>tipo de emergência</strong> (Evacuação, Lockdown, Alerta Médico, Outro) e descreva brevemente a situação. Confirme o acionamento com sua senha.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Uma notificação push prioritária será enviada a todos os pais. Eles verão um banner vermelho com instruções (ex: "Não se dirija à escola. Aguarde novo comunicado.").</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ ATENÇÃO:</strong> Use esta funcionalidade APENAS em emergências reais. Acionamentos falsos podem gerar pânico desnecessário e configurar uso indevido.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Como encerrar o alerta de emergência?</summary><p>Acesse novamente a seção Emergência e clique em "Encerrar Alerta". Uma notificação de "Tudo Seguro" será enviada a todos os pais.</p></details>
+    <details><summary>Quem pode acionar a emergência?</summary><p>Apenas usuários com perfil "Gerente" têm acesso a esta funcionalidade. É necessário confirmar com senha para evitar acionamentos acidentais.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               PORTAL DA PROFESSORA                      -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="prof-login" class="help-article" data-portal="professora" data-keywords="professora login acesso navegacao painel professor teacher">
+  <h2>🔐 Login e Navegação</h2>
+  <p class="article-desc">Acesse o portal da professora e conheça os módulos disponíveis.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Login</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>suaescola.lumied.com.br/area-restrita</strong> e entre com o email cadastrado pelo gerente da escola.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📚 Lumied — Professora</span><span></span></div>
+          <div class="mockup-content" style="text-align:center;padding:18px">
+            <div style="font-size:1.5rem;margin-bottom:6px">👩‍🏫</div>
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:12px">Portal da Professora</div>
+            <div class="mockup-input" style="text-align:left">📧 professora@escola.com.br</div>
+            <div class="mockup-input" style="text-align:left">🔒 ••••••••</div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:6px">Entrar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Após login, você verá a tela principal com acesso rápido a Chamada, Agenda Digital, Fila de Retirada e outras funcionalidades da sua turma.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>A sidebar à esquerda (ou menu hamburger no celular) contém todos os módulos disponíveis para o seu perfil.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> O primeiro login é feito através do link de convite enviado ao seu email. Se não recebeu, peça ao gerente da escola para reenviar.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso acessar pelo celular?</summary><p>Sim. O portal funciona no navegador do celular e é otimizado para telas pequenas. Recomendamos salvar como atalho na tela inicial.</p></details>
+    <details><summary>Esqueci minha senha.</summary><p>Use a opção "Magic Link" na tela de login. Um link de acesso será enviado ao seu email cadastrado.</p></details>
+  </div>
+</article>
+
+<article id="prof-fila" class="help-article" data-portal="professora" data-keywords="fila retirada pickup buscar aluno entrega pais carro saida dismissal">
+  <h2>🚗 Fila de Retirada</h2>
+  <p class="article-desc">Veja em tempo real quais pais estão a caminho e organize a entrega dos alunos.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Fila de Retirada</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Fila de Retirada</strong> na sidebar ou tela inicial. Veja os alunos cuja família acionou "Estou a Caminho".</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🚗 Fila de Retirada</span><span style="font-size:.7rem">Ao vivo 🔴</span></div>
+          <div class="mockup-content">
+            <div class="mockup-row">
+              <div style="font-weight:700;color:var(--red);min-width:20px">1</div>
+              <div class="mockup-avatar">LP</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:.82rem">Lorenzo Pereira</div><div style="font-size:.7rem;color:var(--muted)">Year 2B · Mãe: Maria</div></div>
+              <div class="mockup-btn green" style="padding:4px 10px">Entregar</div>
+            </div>
+            <div class="mockup-row">
+              <div style="font-weight:700;color:var(--red);min-width:20px">2</div>
+              <div class="mockup-avatar">AS</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:.82rem">Alice Santos</div><div style="font-size:.7rem;color:var(--muted)">Year 2B · Pai: Carlos</div></div>
+              <div class="mockup-btn green" style="padding:4px 10px">Entregar</div>
+            </div>
+            <div class="mockup-row" style="opacity:.5">
+              <div style="font-weight:700;color:var(--muted);min-width:20px">3</div>
+              <div class="mockup-avatar">MO</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:.82rem">Miguel Oliveira</div><div style="font-size:.7rem;color:var(--muted)">Year 2B · Mãe: Juliana</div></div>
+              <div class="mockup-btn secondary" style="padding:4px 10px">Aguardando</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Quando o responsável chegar e você entregar a criança, toque em <strong>"Entregar"</strong>. O horário é registrado automaticamente e o pai recebe uma confirmação.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>A fila atualiza em tempo real. Novos acionamentos aparecem automaticamente na parte inferior da lista.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ Importante:</strong> Verifique sempre a identidade do responsável antes de entregar. Se a pessoa não estiver cadastrada, entre em contato com a gestão.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>E se alguém não cadastrado vier buscar?</summary><p>Não entregue a criança. Entre em contato com a gestão e com o responsável principal para autorização. Segurança é prioridade.</p></details>
+    <details><summary>O que acontece se eu clicar em "Entregar" por engano?</summary><p>Avise o gerente imediatamente. O registro pode ser corrigido pela gestão no painel administrativo.</p></details>
+  </div>
+</article>
+
+<article id="prof-diplomas" class="help-article" data-portal="professora" data-keywords="diplomas ranking certificados alunos destaque comportamento reconhecimento gamificacao estrelas pontos">
+  <h2>🏆 Diplomas e Ranking</h2>
+  <p class="article-desc">Reconheça o esforço dos alunos com diplomas digitais e acompanhe o ranking da turma.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Diplomas e Ranking</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Diplomas e Ranking</strong> na sidebar. Veja o ranking atual da turma baseado em pontos de comportamento e participação.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🏆 Ranking — Year 2B</span><span></span></div>
+          <div class="mockup-content">
+            <div class="mockup-row">
+              <div style="font-weight:700;min-width:20px">🥇</div>
+              <div class="mockup-avatar">AS</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:.82rem">Alice Santos</div></div>
+              <div style="font-weight:700;color:var(--red)">⭐ 142</div>
+            </div>
+            <div class="mockup-row">
+              <div style="font-weight:700;min-width:20px">🥈</div>
+              <div class="mockup-avatar">LP</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:.82rem">Lorenzo Pereira</div></div>
+              <div style="font-weight:700;color:var(--red)">⭐ 128</div>
+            </div>
+            <div class="mockup-row">
+              <div style="font-weight:700;min-width:20px">🥉</div>
+              <div class="mockup-avatar">MO</div>
+              <div style="flex:1"><div style="font-weight:600;font-size:.82rem">Miguel Oliveira</div></div>
+              <div style="font-weight:700;color:var(--red)">⭐ 115</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Para dar estrelas, toque no aluno e selecione a quantidade. Você pode adicionar um motivo (ex: "Ajudou um colega", "Participação na aula").</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Para emitir um diploma digital, toque em <strong>"+ Diploma"</strong>, selecione o modelo (Melhor Aluno, Destaque em Leitura, etc.) e o aluno. O diploma fica disponível no portal dos pais.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Os pais veem o ranking?</summary><p>Os pais veem apenas as estrelas e diplomas do próprio filho, não o ranking completo da turma. Isso evita comparações indesejadas.</p></details>
+    <details><summary>Posso remover estrelas?</summary><p>Sim. Toque no aluno, acesse o histórico de estrelas e remova a que desejar, adicionando um motivo.</p></details>
+  </div>
+</article>
+
+<article id="prof-agp" class="help-article" data-portal="professora" data-keywords="annual growth plan agp crescimento profissional avaliacao metas desenvolvimento carreira">
+  <h2>📈 Annual Growth Plan</h2>
+  <p class="article-desc">Acompanhe seu plano de desenvolvimento profissional anual com metas e feedbacks da gestão.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Annual Growth Plan</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Annual Growth Plan</strong> na sidebar. Veja suas metas definidas em conjunto com a gestão e o progresso de cada uma.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📈 AGP — Beatriz Lima</span><span>2026</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">Meta 1: Certificação Cambridge TKT</div>
+              <div style="background:var(--bg);border-radius:10px;height:8px;overflow:hidden;margin:6px 0"><div style="background:var(--green);height:100%;width:70%;border-radius:10px"></div></div>
+              <div style="font-size:.72rem;color:var(--muted)">70% concluído · Prazo: Jun/2026</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">Meta 2: Implementar project-based learning</div>
+              <div style="background:var(--bg);border-radius:10px;height:8px;overflow:hidden;margin:6px 0"><div style="background:var(--blue);height:100%;width:40%;border-radius:10px"></div></div>
+              <div style="font-size:.72rem;color:var(--muted)">40% concluído · Prazo: Out/2026</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">Meta 3: Workshop de classroom management</div>
+              <div style="background:var(--bg);border-radius:10px;height:8px;overflow:hidden;margin:6px 0"><div style="background:var(--muted);height:100%;width:10%;border-radius:10px"></div></div>
+              <div style="font-size:.72rem;color:var(--muted)">10% concluído · Prazo: Nov/2026</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em uma meta para ver detalhes, atualizar o progresso e ver os feedbacks da gestão. Você pode anexar evidências (certificados, fotos de atividades).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>O AGP é revisado trimestralmente com a gestão. Use a aba <strong>"Histórico"</strong> para ver planos de anos anteriores.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Quem define as metas?</summary><p>As metas são definidas em conjunto entre professora e gestão no início do ano letivo. Ambos podem sugerir e negociar as metas.</p></details>
+    <details><summary>Posso alterar uma meta durante o ano?</summary><p>Solicite à gestão. Metas podem ser ajustadas em comum acordo, especialmente se circunstâncias mudarem.</p></details>
+  </div>
+</article>
+
+<article id="prof-materiais" class="help-article" data-portal="professora" data-keywords="materiais pedidos almoxarifado solicitar material suprimentos escolar papelaria">
+  <h2>📦 Materiais</h2>
+  <p class="article-desc">Solicite materiais do almoxarifado da escola para sua turma.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Materiais</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Materiais</strong> na sidebar. Crie um novo pedido de materiais para sua turma.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📦 Materiais</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Novo Pedido</span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Meus Pedidos</div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Pedido #45</div>
+                  <div style="font-size:.72rem;color:var(--muted)">10x Folha A4, 5x Cola · 25/03</div>
+                </div>
+                <div class="mockup-pill green">Aprovado</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Pedido #48</div>
+                  <div style="font-size:.72rem;color:var(--muted)">3x Tinta guache, 20x Pincel · 28/03</div>
+                </div>
+                <div class="mockup-pill yellow">Pendente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Novo Pedido"</strong>. Selecione os itens necessários e as quantidades. Adicione uma justificativa se necessário (ex: "Projeto de artes semana que vem").</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Aguarde a aprovação do gerente. Você será notificada quando o pedido for aprovado e os materiais estiverem prontos para retirada.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>O que acontece se o item não está em estoque?</summary><p>O gerente pode aprovar parcialmente o pedido ou informar a previsão de reposição. Você será notificada sobre o status.</p></details>
+    <details><summary>Posso cancelar um pedido pendente?</summary><p>Sim. Acesse o pedido e toque em "Cancelar" enquanto o status for "Pendente".</p></details>
+  </div>
+</article>
+
+<article id="prof-atestados" class="help-article" data-portal="professora" data-keywords="atestados medicos saude doenca falta justificada aluno afastamento documento">
+  <h2>🏥 Atestados Médicos</h2>
+  <p class="article-desc">Registre atestados médicos de alunos para justificar faltas automaticamente.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Atestados Médicos</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Atestados Médicos</strong> na sidebar. Veja os atestados pendentes de validação e os já registrados.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🏥 Atestados Médicos</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Registrar</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Lorenzo Pereira</div>
+                  <div style="font-size:.72rem;color:var(--muted)">26/03 a 28/03 · 3 dias · CID: J06</div>
+                </div>
+                <div class="mockup-pill yellow">Pendente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Registrar"</strong>. Selecione o aluno, tire foto do atestado, informe o período de afastamento e o CID (se disponível).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>O atestado será enviado para validação da secretaria. Após validação, as faltas do período serão automaticamente justificadas na chamada.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Preciso do CID obrigatoriamente?</summary><p>Não é obrigatório, mas é recomendável para registro completo. O campo de CID pode ficar em branco se o atestado não informar.</p></details>
+    <details><summary>Os pais podem enviar atestado pelo app?</summary><p>Depende da configuração da escola. Se habilitado, os pais podem enviar pelo portal e a professora receberá para análise.</p></details>
+  </div>
+</article>
+
+<article id="prof-manutencao" class="help-article" data-portal="professora" data-keywords="manutencao chamado reparo conserto infraestrutura reportar problema">
+  <h2>🔧 Manutenção</h2>
+  <p class="article-desc">Abra chamados de manutenção para reportar problemas na infraestrutura da escola.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Manutenção</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Manutenção</strong> na sidebar. Veja seus chamados anteriores e crie novos.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🔧 Manutenção</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Novo Chamado</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Ar-condicionado com ruído</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Sala Year 2B · 27/03</div>
+                </div>
+                <div class="mockup-pill blue">Em andamento</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Novo Chamado"</strong>. Descreva o problema, selecione o local (sala, banheiro, pátio, etc.), defina a prioridade e anexe uma foto se possível.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>A gestão receberá o chamado e atualizará o status. Você será notificada quando houver alguma atualização ou conclusão.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Qual a diferença entre as prioridades?</summary><p><strong>Urgente:</strong> risco à segurança ou impossibilita a aula. <strong>Normal:</strong> incômodo mas a aula continua. <strong>Baixa:</strong> melhoria estética ou preventiva.</p></details>
+    <details><summary>Posso editar um chamado depois de enviado?</summary><p>Sim, enquanto o status for "Pendente". Após ser assumido pela gestão, você pode apenas adicionar comentários.</p></details>
+  </div>
+</article>
+
+<article id="prof-achados" class="help-article" data-portal="professora" data-keywords="achados perdidos objetos encontrados registrar lost found pertences">
+  <h2>🔍 Achados e Perdidos</h2>
+  <p class="article-desc">Registre itens encontrados na escola para que possam ser devolvidos aos donos.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Achados e Perdidos</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Achados e Perdidos</strong> na sidebar. Veja os itens registrados e registre novos.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🔍 Achados e Perdidos</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Registrar</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card" style="display:flex;gap:10px;align-items:center">
+              <div style="width:40px;height:40px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center">🧢</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:.82rem">Boné vermelho</div>
+                <div style="font-size:.72rem;color:var(--muted)">Encontrado: 28/03 · Parquinho</div>
+              </div>
+              <div class="mockup-pill yellow">Pendente</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Registrar"</strong>, tire uma foto do item, descreva-o e indique onde foi encontrado. O item ficará visível para a gestão.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Onde fica o item físico?</summary><p>Leve o item até o local designado pela escola (geralmente recepção ou secretaria). O registro no sistema é apenas para controle e notificação.</p></details>
+    <details><summary>Os pais são notificados?</summary><p>Depende da configuração. Se habilitado, os pais da turma são notificados sobre novos itens encontrados.</p></details>
+  </div>
+</article>
+
+<article id="prof-impressoes" class="help-article" data-portal="professora" data-keywords="impressoes imprimir copias xerox impressora solicitar quantidade paginas">
+  <h2>🖨️ Impressões</h2>
+  <p class="article-desc">Solicite impressões de materiais didáticos diretamente pelo sistema, sem ir até a secretaria.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Impressões</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Impressões</strong> na sidebar. Crie uma solicitação de impressão.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>🖨️ Impressões</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Nova Solicitação</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Atividade de Matemática</div>
+                  <div style="font-size:.72rem;color:var(--muted)">23 cópias · Frente · P&B · Até 30/03</div>
+                </div>
+                <div class="mockup-pill green">Pronta</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Prova de English</div>
+                  <div style="font-size:.72rem;color:var(--muted)">23 cópias · Frente/Verso · P&B · Até 01/04</div>
+                </div>
+                <div class="mockup-pill yellow">Pendente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Clique em <strong>"+ Nova Solicitação"</strong>. Faça upload do arquivo (PDF ou imagem), defina o número de cópias, tipo (P&B ou Colorido), frente/verso e data limite.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Quando a impressão estiver pronta, você receberá uma notificação. Retire na secretaria ou no local indicado.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Solicite com pelo menos 24h de antecedência para materiais de prova. Para atividades do dia a dia, o prazo habitual é de 4 horas.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Quais formatos de arquivo são aceitos?</summary><p>PDF, PNG, JPG e DOCX. Recomendamos PDF para garantir a formatação correta.</p></details>
+    <details><summary>Posso editar o pedido depois de enviado?</summary><p>Sim, enquanto o status for "Pendente". Após iniciar a impressão, não é mais possível alterar.</p></details>
+  </div>
+</article>
+
+<article id="prof-agenda" class="help-article" data-portal="professora" data-keywords="agenda digital diario publicar postar fotos recados alimentacao soneca atividades registro">
+  <h2>📅 Agenda Digital</h2>
+  <p class="article-desc">Publique o diário do dia: alimentação, soneca, atividades, fotos e recados para os pais.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Agenda Digital</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Agenda Digital</strong> na sidebar. Selecione a data e preencha os campos do dia para toda a turma ou individualmente.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📅 Agenda — Year 2B</span><span>28/03/2026</span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;font-size:.82rem;margin-bottom:8px">Publicar para a turma</div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">🍎 Alimentação</div>
+              <div style="font-size:.75rem;display:flex;gap:4px;flex-wrap:wrap">
+                <span class="mockup-btn secondary" style="padding:2px 8px">Comeu bem</span>
+                <span class="mockup-btn secondary" style="padding:2px 8px">Parcial</span>
+                <span class="mockup-btn secondary" style="padding:2px 8px">Não comeu</span>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">📝 Atividades do Dia</div>
+              <div class="mockup-input">Pintura com guache, roda de leitura...</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">📷 Fotos</div>
+              <div style="font-size:.75rem;color:var(--muted)">Toque para adicionar fotos do dia</div>
+            </div>
+            <div class="mockup-card">
+              <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">💬 Recado</div>
+              <div class="mockup-input" style="height:40px">Escreva um recado para os pais...</div>
+            </div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:8px;text-align:center">Publicar Agenda</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Preencha alimentação (individualmente ou padrão para turma), atividades realizadas, fotos do dia e um recado geral. Você pode personalizar por aluno quando necessário.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em <strong>"Publicar Agenda"</strong>. Os pais serão notificados e poderão visualizar no portal. Você pode editar a agenda mesmo após publicada.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Você pode salvar como rascunho e publicar depois. Use o botão "Salvar Rascunho" para ir adicionando informações ao longo do dia.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso publicar a agenda de dias anteriores?</summary><p>Sim, você pode selecionar qualquer data e publicar retroativamente. Os pais serão notificados normalmente.</p></details>
+    <details><summary>As fotos têm limite de tamanho?</summary><p>Cada foto é otimizada automaticamente. Você pode enviar até 10 fotos por dia. Se precisar de mais, converse com a gestão.</p></details>
+  </div>
+</article>
+
+<article id="prof-notas" class="help-article" data-portal="professora" data-keywords="notas avaliacoes conceitos lancar nota prova trabalho trimestre boletim">
+  <h2>📝 Notas</h2>
+  <p class="article-desc">Lance notas de provas, trabalhos e avaliações para cada aluno da sua turma.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Notas</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Notas</strong> na sidebar. Selecione a disciplina e o período (trimestre/bimestre) para lançar notas.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📝 Notas — Year 2B</span><span>1º Tri</span></div>
+          <div class="mockup-content">
+            <div style="font-size:.78rem;font-weight:600;margin-bottom:6px">English · Prova 1</div>
+            <table class="mockup-table">
+              <tr><th>Aluno</th><th>Nota</th><th>Conceito</th></tr>
+              <tr><td>Alice Santos</td><td><div class="mockup-input" style="width:50px;display:inline-block;text-align:center;margin:0;padding:4px">9.5</div></td><td><span class="mockup-pill green">A</span></td></tr>
+              <tr><td>Lorenzo Pereira</td><td><div class="mockup-input" style="width:50px;display:inline-block;text-align:center;margin:0;padding:4px">8.0</div></td><td><span class="mockup-pill green">B</span></td></tr>
+              <tr><td>Miguel Oliveira</td><td><div class="mockup-input" style="width:50px;display:inline-block;text-align:center;margin:0;padding:4px">6.5</div></td><td><span class="mockup-pill yellow">C</span></td></tr>
+            </table>
+            <div class="mockup-btn primary" style="margin-top:8px">Salvar Notas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Insira a nota de cada aluno. O conceito (A, B, C, D) é calculado automaticamente com base na escala configurada pela escola.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em <strong>"Salvar Notas"</strong>. As notas ficam disponíveis no portal do aluno e dos pais após a publicação do boletim pela gestão.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Os pais veem as notas imediatamente?</summary><p>Não. As notas ficam como rascunho até a gestão publicar oficialmente o boletim do período.</p></details>
+    <details><summary>Posso usar conceitos em vez de notas numéricas?</summary><p>Sim. Isso depende da configuração da escola. Converse com a gestão sobre qual sistema de avaliação utilizar.</p></details>
+  </div>
+</article>
+
+<article id="prof-chamada" class="help-article" data-portal="professora" data-keywords="chamada frequencia presenca falta atraso lista alunos attendance diario presentes ausentes">
+  <h2>📋 Chamada</h2>
+  <p class="article-desc">Faça a chamada diária da turma, registre presenças, faltas e atrasos.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Chamada</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Chamada</strong> na sidebar ou na tela inicial. A lista de alunos da turma é exibida para marcar presença.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📋 Chamada — Year 2B</span><span>28/03/2026</span></div>
+          <div class="mockup-content">
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <div class="mockup-btn primary" style="padding:4px 10px">Todos presentes</div>
+            </div>
+            <div class="mockup-row">
+              <div class="mockup-avatar">AS</div>
+              <div style="flex:1;font-weight:600;font-size:.82rem">Alice Santos</div>
+              <div style="display:flex;gap:4px">
+                <span class="mockup-btn green" style="padding:2px 8px;font-size:.7rem">✓</span>
+                <span class="mockup-btn secondary" style="padding:2px 8px;font-size:.7rem">F</span>
+                <span class="mockup-btn secondary" style="padding:2px 8px;font-size:.7rem">A</span>
+              </div>
+            </div>
+            <div class="mockup-row">
+              <div class="mockup-avatar">LP</div>
+              <div style="flex:1;font-weight:600;font-size:.82rem">Lorenzo Pereira</div>
+              <div style="display:flex;gap:4px">
+                <span class="mockup-btn green" style="padding:2px 8px;font-size:.7rem">✓</span>
+                <span class="mockup-btn secondary" style="padding:2px 8px;font-size:.7rem">F</span>
+                <span class="mockup-btn secondary" style="padding:2px 8px;font-size:.7rem">A</span>
+              </div>
+            </div>
+            <div class="mockup-row">
+              <div class="mockup-avatar">MO</div>
+              <div style="flex:1;font-weight:600;font-size:.82rem">Miguel Oliveira</div>
+              <div style="display:flex;gap:4px">
+                <span class="mockup-btn secondary" style="padding:2px 8px;font-size:.7rem">✓</span>
+                <span class="mockup-btn primary" style="padding:2px 8px;font-size:.7rem;background:var(--red)">F</span>
+                <span class="mockup-btn secondary" style="padding:2px 8px;font-size:.7rem">A</span>
+              </div>
+            </div>
+            <div style="margin-top:8px;text-align:center">
+              <div class="mockup-btn primary" style="width:100%">Salvar Chamada</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Marque cada aluno como: <strong>Presente (✓)</strong>, <strong>Falta (F)</strong> ou <strong>Atraso (A)</strong>. Use "Todos presentes" para marcar a turma inteira e ajustar individualmente.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em <strong>"Salvar Chamada"</strong>. Os dados ficam disponíveis imediatamente no dashboard do gerente e no relatório de frequência.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> A chamada pode ser editada até o final do dia. Se um aluno chegar atrasado, altere de "Falta" para "Atraso" e registre o horário de chegada.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso fazer chamada em mais de um horário?</summary><p>Sim, a escola pode configurar chamada dupla (entrada e saída). Consulte a gestão sobre a política de chamada.</p></details>
+    <details><summary>Faltas com atestado são contabilizadas?</summary><p>Faltas com atestado validado são marcadas como "Falta Justificada" e não contam negativamente no percentual de frequência.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               PORTAL DA SECRETARIA                      -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="sec-login" class="help-article" data-portal="secretaria" data-keywords="secretaria login acesso area restrita secretary">
+  <h2>🔐 Login</h2>
+  <p class="article-desc">Acesse o portal da secretaria para gerenciar validações e documentos.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Secretaria → Login</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>suaescola.lumied.com.br/area-restrita</strong> e entre com suas credenciais de secretaria.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📚 Lumied — Secretaria</span><div class="dots"><span></span><span></span><span></span></div></div>
+          <div class="mockup-content" style="text-align:center;padding:20px">
+            <div style="font-size:1.5rem;margin-bottom:6px">📋</div>
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:14px">Portal da Secretaria</div>
+            <div class="mockup-input" style="text-align:left">📧 secretaria@escola.com.br</div>
+            <div class="mockup-input" style="text-align:left">🔒 ••••••••</div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:6px">Entrar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Após o login, você terá acesso ao módulo de <strong>Validação de Atestados</strong> e outros módulos habilitados pelo gerente.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>O perfil de secretaria é criado pelo gerente em Configurações → Usuários. Se não possui acesso, solicite ao gerente.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>A secretaria tem acesso aos mesmos módulos do gerente?</summary><p>Não. O perfil de secretaria tem acesso limitado aos módulos atribuídos pelo gerente (geralmente atestados, impressões e atendimento).</p></details>
+    <details><summary>Posso alterar minha senha?</summary><p>Sim. Após login, acesse seu perfil no canto superior direito e selecione "Alterar Senha".</p></details>
+  </div>
+</article>
+
+<article id="sec-atestados" class="help-article" data-portal="secretaria" data-keywords="validacao atestados medicos aprovar rejeitar documento verificar secretaria">
+  <h2>✅ Validação de Atestados</h2>
+  <p class="article-desc">Valide ou rejeite atestados médicos enviados pelas professoras e pais.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Secretaria → Validação de Atestados</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Validação de Atestados</strong>. Veja todos os atestados pendentes de validação com foto do documento.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>✅ Validação de Atestados</span><span class="mockup-pill red">3 pendentes</span></div>
+          <div class="mockup-content">
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Lorenzo Pereira — Year 2B</div>
+                  <div style="font-size:.72rem;color:var(--muted)">26/03 a 28/03 · 3 dias · CID: J06</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Enviado por: Profa. Beatriz · 28/03</div>
+                </div>
+              </div>
+              <div style="background:var(--bg);border-radius:6px;height:50px;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--muted);margin-bottom:8px">📄 Foto do atestado (toque para ampliar)</div>
+              <div style="display:flex;gap:6px">
+                <div class="mockup-btn green" style="flex:1;text-align:center">✅ Validar</div>
+                <div class="mockup-btn primary" style="flex:1;text-align:center;background:var(--red)">❌ Rejeitar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Toque na foto do atestado para ampliar e verificar a autenticidade. Confira: nome do aluno, data, carimbo/CRM do médico e período de afastamento.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em <strong>"Validar"</strong> para aprovar (as faltas serão justificadas automaticamente) ou <strong>"Rejeitar"</strong> com um motivo (ex: "Documento ilegível", "Sem carimbo do médico").</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ Atenção:</strong> Ao validar um atestado, as faltas do período são automaticamente convertidas em "Falta Justificada". Verifique cuidadosamente antes de aprovar.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso reverter uma validação?</summary><p>Sim, mas apenas o gerente pode reverter. Solicite ao gerente caso tenha validado um atestado por engano.</p></details>
+    <details><summary>O que acontece ao rejeitar?</summary><p>A professora e/ou o pai que enviou recebem uma notificação com o motivo da rejeição. Eles podem reenviar com um documento melhor.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               PORTAL DO ALUNO                           -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="aluno-login" class="help-article" data-portal="aluno" data-keywords="aluno login acesso estudante student portal">
+  <h2>🔐 Login</h2>
+  <p class="article-desc">Acesse o portal do aluno para ver notas, frequência e provas.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Aluno → Login</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>suaescola.lumied.com.br/aluno</strong> no navegador. Use o email cadastrado pela escola e sua senha.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📚 Lumied — Aluno</span><div class="dots"><span></span><span></span><span></span></div></div>
+          <div class="mockup-content" style="text-align:center;padding:20px">
+            <div style="font-size:1.5rem;margin-bottom:6px">🎓</div>
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:14px">Portal do Aluno</div>
+            <div class="mockup-input" style="text-align:left">📧 aluno@escola.com.br</div>
+            <div class="mockup-input" style="text-align:left">🔒 ••••••••</div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:6px">Entrar</div>
+            <div style="margin-top:8px;font-size:.78rem"><a href="#">Esqueci minha senha</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Após login, você verá a tela principal com acesso a: Notas, Frequência e Provas. O portal é simplificado para foco no aluno.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Use a navegação inferior (mobile) ou sidebar (desktop) para alternar entre os módulos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> O portal do aluno é destinado a alunos mais velhos (a partir do Year 5/6). Alunos mais novos acompanham pelo portal dos pais.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Não tenho email cadastrado. Como faço?</summary><p>Peça à secretaria da escola para cadastrar seu email. Após o cadastro, você receberá um email de convite com as instruções.</p></details>
+    <details><summary>Meus pais conseguem ver as mesmas informações?</summary><p>Sim. Notas e frequência também estão disponíveis no portal dos pais.</p></details>
+  </div>
+</article>
+
+<article id="aluno-notas" class="help-article" data-portal="aluno" data-keywords="notas boletim media conceito resultado avaliacao prova trabalho aluno">
+  <h2>📊 Notas</h2>
+  <p class="article-desc">Consulte suas notas por disciplina, trimestre e tipo de avaliação.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Aluno → Notas</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Notas</strong> na navegação. Veja o resumo por disciplina com a média atual de cada período.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📊 Minhas Notas</span><span>1º Trimestre</span></div>
+          <div class="mockup-content">
+            <table class="mockup-table">
+              <tr><th>Disciplina</th><th>P1</th><th>P2</th><th>Trab.</th><th>Média</th></tr>
+              <tr><td>English</td><td>8.5</td><td>9.0</td><td>8.0</td><td><strong>8.5</strong></td></tr>
+              <tr><td>Math</td><td>7.0</td><td>7.5</td><td>9.0</td><td><strong>7.8</strong></td></tr>
+              <tr><td>Science</td><td>9.0</td><td>—</td><td>8.5</td><td><strong>8.8</strong></td></tr>
+              <tr><td>Social Studies</td><td>8.0</td><td>8.5</td><td>7.5</td><td><strong>8.0</strong></td></tr>
+            </table>
+            <div style="text-align:center;margin-top:8px">
+              <div style="font-size:.75rem;color:var(--muted)">Média Geral: <strong style="color:var(--green)">8.3</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Toque em uma disciplina para ver o detalhamento: data de cada avaliação, tipo (prova, trabalho, participação) e o peso de cada uma no cálculo da média.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Use as abas de trimestre/bimestre para navegar entre os períodos. Notas com "—" ainda não foram lançadas.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>A nota é a final ou pode mudar?</summary><p>Notas publicadas são oficiais. Porém, se houver revisão de prova ou recuperação, o professor pode atualizar a nota.</p></details>
+    <details><summary>Qual a média mínima para aprovação?</summary><p>Depende da política da escola. Geralmente é 6.0 ou 7.0. Consulte a secretaria para saber a regra da sua série.</p></details>
+  </div>
+</article>
+
+<article id="aluno-frequencia" class="help-article" data-portal="aluno" data-keywords="frequencia presenca falta atraso porcentagem faltas justificadas aluno attendance">
+  <h2>📅 Frequência</h2>
+  <p class="article-desc">Acompanhe sua frequência escolar com detalhamento de presenças, faltas e atrasos.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Aluno → Frequência</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Frequência</strong> na navegação. Veja o resumo geral e o calendário com as marcações do mês.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📅 Minha Frequência</span><span>Março/2026</span></div>
+          <div class="mockup-content">
+            <div style="display:flex;justify-content:space-around;margin-bottom:10px">
+              <div class="mockup-stat"><div class="num" style="color:var(--green)">94%</div><div class="lbl">Frequência</div></div>
+              <div class="mockup-stat"><div class="num">18</div><div class="lbl">Presenças</div></div>
+              <div class="mockup-stat"><div class="num" style="color:var(--red)">1</div><div class="lbl">Faltas</div></div>
+              <div class="mockup-stat"><div class="num" style="color:var(--blue)">1</div><div class="lbl">Atrasos</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:.7rem;text-align:center">
+              <div style="font-weight:600">S</div><div style="font-weight:600">T</div><div style="font-weight:600">Q</div><div style="font-weight:600">Q</div><div style="font-weight:600">S</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">2✓</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">3✓</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">4✓</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">5✓</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">6✓</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">9✓</div>
+              <div style="padding:4px;background:#e8f0fb;border-radius:4px">10 A</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">11✓</div>
+              <div style="padding:4px;background:#e6f4ea;border-radius:4px">12✓</div>
+              <div style="padding:4px;background:#fde8e8;border-radius:4px">13 F</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>No calendário, cada dia é colorido: <strong style="color:var(--green)">verde = presente</strong>, <strong style="color:var(--red)">vermelho = falta</strong>, <strong style="color:var(--blue)">azul = atraso</strong>. Toque em um dia para ver detalhes.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Navegue entre meses para ver o histórico completo. O percentual de frequência acumulado é exibido no topo.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ Atenção:</strong> A frequência mínima exigida é geralmente 75%. Se estiver abaixo desse limite, procure a secretaria para regularizar sua situação.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Faltas justificadas contam na frequência?</summary><p>Faltas com atestado médico validado são marcadas como "Justificadas" e geralmente não afetam negativamente o percentual de frequência.</p></details>
+    <details><summary>Atrasos contam como falta?</summary><p>Depende da política da escola. Em geral, atrasos reduzem parcialmente a frequência. Consulte o regimento escolar.</p></details>
+  </div>
+</article>
+
+<article id="aluno-provas" class="help-article" data-portal="aluno" data-keywords="provas avaliacoes calendario datas horarios exames testes simulado conteudo">
+  <h2>📝 Provas</h2>
+  <p class="article-desc">Consulte o calendário de provas com datas, horários e conteúdo programado.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Aluno → Provas</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Acesse <strong>Provas</strong> na navegação. Veja o calendário de provas próximas e passadas.</p>
+        <div class="mockup">
+          <div class="mockup-header"><span>📝 Provas</span><span>Abril/2026</span></div>
+          <div class="mockup-content">
+            <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Próximas Provas</div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">English — Unit Test 2</div>
+                  <div style="font-size:.72rem;color:var(--muted)">02/04 · 09h00 · Sala Y6A</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Conteúdo: Chapters 4-6</div>
+                </div>
+                <div class="mockup-pill blue">Em 3 dias</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Math — Prova P2</div>
+                  <div style="font-size:.72rem;color:var(--muted)">07/04 · 10h30 · Sala Y6A</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Conteúdo: Frações e decimais</div>
+                </div>
+                <div class="mockup-pill yellow">Em 8 dias</div>
+              </div>
+            </div>
+            <div class="mockup-card">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-weight:600;font-size:.82rem">Science — Lab Assessment</div>
+                  <div style="font-size:.72rem;color:var(--muted)">10/04 · 08h00 · Laboratório</div>
+                  <div style="font-size:.72rem;color:var(--muted)">Conteúdo: Ecossistemas</div>
+                </div>
+                <div class="mockup-pill gray">Em 11 dias</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Toque em uma prova para ver detalhes completos: conteúdo programático, materiais permitidos, orientações da professora e peso na média.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Na aba <strong>"Realizadas"</strong>, veja provas já feitas com a nota obtida (quando publicada).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Ative as notificações push para receber lembretes 3 dias e 1 dia antes de cada prova.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>O calendário de provas pode mudar?</summary><p>Sim. O professor pode alterar datas. Você será notificado sobre qualquer alteração nas datas de prova.</p></details>
+    <details><summary>Posso ver as provas de trimestres anteriores?</summary><p>Sim. Use o filtro de período para navegar entre trimestres e ver o histórico completo de provas e notas.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               SETUP WIZARD                              -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="setup-escola" class="help-article" data-portal="setup" data-keywords="setup wizard dados escola nome endereco cnpj telefone logo configuracao inicial primeiro acesso onboarding">
+  <h2>🏫 Dados da Escola</h2>
+  <p class="article-desc">Configure as informações básicas da sua escola na primeira etapa do Setup Wizard.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Setup Wizard → Etapa 1: Dados da Escola</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Ao acessar o Lumied pela primeira vez, o Setup Wizard é iniciado automaticamente. A primeira etapa solicita os dados da escola.</p>
+        <div class="mockup">
+          <div class="mockup-header" style="background:var(--red)"><span>⚙️ Setup Wizard — Etapa 1 de 4</span><span></span></div>
+          <div class="mockup-content">
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:10px">Dados da Escola</div>
+            <div style="font-size:.78rem;font-weight:500;margin-bottom:2px">Nome da escola:</div>
+            <div class="mockup-input">Maple Bear Caxias do Sul</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Subdomínio:</div>
+            <div class="mockup-input">maplebearcaxias.lumied.com.br</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">CNPJ:</div>
+            <div class="mockup-input">12.345.678/0001-90</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Endereço:</div>
+            <div class="mockup-input">Rua das Flores, 123 — Caxias do Sul/RS</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Telefone:</div>
+            <div class="mockup-input">(54) 3221-4567</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Logo:</div>
+            <div style="background:var(--bg);border-radius:6px;padding:12px;text-align:center;font-size:.75rem;color:var(--muted)">📁 Clique para fazer upload (PNG ou SVG)</div>
+            <div class="mockup-btn primary" style="width:100%;margin-top:10px;text-align:center">Próximo →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Preencha todos os campos obrigatórios: nome da escola, subdomínio desejado, CNPJ, endereço e telefone. Faça upload do logo.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em <strong>"Próximo"</strong> para avançar à etapa de Cores e Branding. Você pode voltar e editar esses dados a qualquer momento em Configurações.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>ℹ️ Sobre o subdomínio:</strong> O subdomínio é o endereço que pais, alunos e professores usarão para acessar a plataforma. Escolha algo curto e fácil de lembrar.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso usar um domínio próprio?</summary><p>Sim! Após concluir o wizard, acesse Configurações → Domínio Personalizado para configurar um domínio próprio (ex: app.suaescola.com.br).</p></details>
+    <details><summary>Posso alterar o subdomínio depois?</summary><p>Sim, mas com cautela. Todos os links já compartilhados deixarão de funcionar. É recomendável definir corretamente desde o início.</p></details>
+  </div>
+</article>
+
+<article id="setup-cores" class="help-article" data-portal="setup" data-keywords="cores branding personalizar tema visual identidade marca cor primaria logo">
+  <h2>🎨 Cores e Branding</h2>
+  <p class="article-desc">Personalize as cores e identidade visual da plataforma para combinar com sua escola.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Setup Wizard → Etapa 2: Cores e Branding</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Na segunda etapa do wizard, configure as cores que serão usadas em toda a plataforma.</p>
+        <div class="mockup">
+          <div class="mockup-header" style="background:var(--red)"><span>⚙️ Setup Wizard — Etapa 2 de 4</span><span></span></div>
+          <div class="mockup-content">
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:10px">Cores e Branding</div>
+            <div style="font-size:.78rem;font-weight:500;margin-bottom:4px">Cor primária:</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:6px;background:#C8102E;border:2px solid var(--text)"></div>
+              <div style="width:32px;height:32px;border-radius:6px;background:#1a6bb5;border:2px solid transparent"></div>
+              <div style="width:32px;height:32px;border-radius:6px;background:#2d7a3a;border:2px solid transparent"></div>
+              <div style="width:32px;height:32px;border-radius:6px;background:#7b2d8e;border:2px solid transparent"></div>
+              <div style="width:32px;height:32px;border-radius:6px;background:#e6a817;border:2px solid transparent"></div>
+            </div>
+            <div style="font-size:.78rem;font-weight:500;margin-bottom:4px">Cor de fundo:</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:6px;background:#f0ece6;border:2px solid var(--text)"></div>
+              <div style="width:32px;height:32px;border-radius:6px;background:#ffffff;border:2px solid transparent"></div>
+              <div style="width:32px;height:32px;border-radius:6px;background:#f5f5f5;border:2px solid transparent"></div>
+            </div>
+            <div style="font-size:.78rem;font-weight:500;margin-bottom:4px;margin-top:8px">Pré-visualização:</div>
+            <div style="background:var(--bg);border-radius:6px;padding:10px;font-size:.75rem">
+              <div style="background:var(--red);color:#fff;padding:6px;border-radius:4px;font-weight:600;text-align:center;margin-bottom:6px">Maple Bear Caxias</div>
+              <div style="background:#fff;padding:6px;border-radius:4px;border:1px solid var(--border)">Preview do conteúdo...</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <div class="mockup-btn secondary" style="flex:1;text-align:center">← Voltar</div>
+              <div class="mockup-btn primary" style="flex:1;text-align:center">Próximo →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Selecione a <strong>cor primária</strong> (usada em botões, links e destaque) e a <strong>cor de fundo</strong>. Você pode escolher das opções pré-definidas ou inserir um código hexadecimal personalizado.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Confira a pré-visualização em tempo real e avance para a próxima etapa.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Use as cores oficiais da sua franquia/escola para manter a identidade visual consistente. Para Maple Bear, o vermelho (#C8102E) é a cor padrão.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso mudar as cores depois?</summary><p>Sim. Acesse Configurações → Cores e Branding a qualquer momento para alterar. As mudanças são aplicadas em tempo real.</p></details>
+    <details><summary>As cores afetam todos os portais?</summary><p>A cor primária é usada no portal dos pais e na página de login. O painel administrativo usa as cores padrão do Lumied para consistência.</p></details>
+  </div>
+</article>
+
+<article id="setup-modulos" class="help-article" data-portal="setup" data-keywords="modulos funcionalidades ativar desativar recursos features habilitar plano">
+  <h2>🧩 Módulos</h2>
+  <p class="article-desc">Escolha quais módulos e funcionalidades estarão disponíveis na sua escola.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Setup Wizard → Etapa 3: Módulos</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Na terceira etapa, selecione quais módulos deseja ativar. Módulos desativados ficam ocultos para todos os usuários.</p>
+        <div class="mockup">
+          <div class="mockup-header" style="background:var(--red)"><span>⚙️ Setup Wizard — Etapa 3 de 4</span><span></span></div>
+          <div class="mockup-content" style="font-size:.78rem">
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:10px">Módulos</div>
+            <div class="mockup-card" style="display:flex;align-items:center;justify-content:space-between">
+              <div>📊 Dashboard Analytics</div>
+              <div style="width:36px;height:20px;background:var(--green);border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;right:2px"></div></div>
+            </div>
+            <div class="mockup-card" style="display:flex;align-items:center;justify-content:space-between">
+              <div>🚗 Pickup / Fila de Retirada</div>
+              <div style="width:36px;height:20px;background:var(--green);border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;right:2px"></div></div>
+            </div>
+            <div class="mockup-card" style="display:flex;align-items:center;justify-content:space-between">
+              <div>📅 Agenda Digital</div>
+              <div style="width:36px;height:20px;background:var(--green);border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;right:2px"></div></div>
+            </div>
+            <div class="mockup-card" style="display:flex;align-items:center;justify-content:space-between">
+              <div>💰 Financeiro / Boletos</div>
+              <div style="width:36px;height:20px;background:var(--green);border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;right:2px"></div></div>
+            </div>
+            <div class="mockup-card" style="display:flex;align-items:center;justify-content:space-between">
+              <div>📞 CRM</div>
+              <div style="width:36px;height:20px;background:var(--muted);border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px"></div></div>
+            </div>
+            <div class="mockup-card" style="display:flex;align-items:center;justify-content:space-between">
+              <div>🔍 Achados e Perdidos</div>
+              <div style="width:36px;height:20px;background:var(--muted);border-radius:10px;position:relative"><div style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px"></div></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <div class="mockup-btn secondary" style="flex:1;text-align:center">← Voltar</div>
+              <div class="mockup-btn primary" style="flex:1;text-align:center">Próximo →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Use os toggles para ativar/desativar cada módulo. Módulos essenciais (Chamada, Notas, Acadêmico) estão sempre ativos.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Você pode alterar os módulos ativos a qualquer momento em Configurações → Módulos. Não se preocupe em ativar tudo agora.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>ℹ️ Recomendação:</strong> Comece com os módulos essenciais (Dashboard, Pickup, Agenda, Financeiro) e ative os demais conforme a necessidade da escola cresce.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Desativar um módulo apaga os dados?</summary><p>Não. Os dados são preservados. Ao reativar o módulo, tudo estará como antes. Desativar apenas oculta o módulo da interface.</p></details>
+    <details><summary>Alguns módulos dependem de outros?</summary><p>Sim. Por exemplo, "Validação de Atestados" requer que "Atestados Médicos" esteja ativo. O sistema alerta sobre dependências.</p></details>
+  </div>
+</article>
+
+<article id="setup-gerente" class="help-article" data-portal="setup" data-keywords="primeiro gerente administrador admin usuario principal criar conta convite setup">
+  <h2>👤 Primeiro Gerente</h2>
+  <p class="article-desc">Crie a conta do primeiro gerente que administrará a plataforma no dia a dia.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Setup Wizard → Etapa 4: Primeiro Gerente</div>
+
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Na última etapa do wizard, cadastre o primeiro gerente da escola.</p>
+        <div class="mockup">
+          <div class="mockup-header" style="background:var(--red)"><span>⚙️ Setup Wizard — Etapa 4 de 4</span><span></span></div>
+          <div class="mockup-content">
+            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:10px">Primeiro Gerente</div>
+            <div style="font-size:.78rem;font-weight:500;margin-bottom:2px">Nome completo:</div>
+            <div class="mockup-input">Ana Paula Ferreira</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Email:</div>
+            <div class="mockup-input">ana.paula@maplebearcaxias.com.br</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">CPF:</div>
+            <div class="mockup-input">123.456.789-00</div>
+            <div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Telefone:</div>
+            <div class="mockup-input">(54) 99123-4567</div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <div class="mockup-btn secondary" style="flex:1;text-align:center">← Voltar</div>
+              <div class="mockup-btn primary" style="flex:1;text-align:center">🚀 Concluir Setup</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Preencha os dados do gerente: nome, email, CPF e telefone. Este será o administrador principal da plataforma.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Clique em <strong>"Concluir Setup"</strong>. Um email de convite será enviado ao gerente com o link para criar sua senha. O wizard é concluído e a escola está pronta para uso!</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Dica:</strong> Após o setup, o gerente pode adicionar mais usuários (outros gerentes, professoras, secretárias) em Configurações → Usuários.
+  </div>
+
+  <div class="warning-box">
+    <strong>⚠️ Importante:</strong> O email do primeiro gerente deve ser válido e acessível, pois é por ele que o convite será enviado. Sem acesso ao email, não será possível ativar a conta.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso refazer o setup?</summary><p>O Setup Wizard é executado apenas uma vez. Após conclusão, todas as configurações ficam acessíveis via menu Configurações no painel do gerente.</p></details>
+    <details><summary>O gerente cadastrado aqui pode ser removido depois?</summary><p>Sim, mas é necessário ter pelo menos um gerente ativo. Você pode adicionar novos gerentes e depois desativar o original, se necessário.</p></details>
+    <details><summary>E se eu errar algum dado?</summary><p>Todos os dados podem ser editados depois em Configurações. Não se preocupe — nada no setup é irreversível.</p></details>
+  </div>
+</article>
+
+</main>
+</div><!-- /layout -->
+
+<script>
+/* ── Sidebar toggle (mobile) ── */
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('active');
+}
+
+/* ── Sidebar section collapse ── */
+function toggleSection(el){
+  el.parentElement.classList.toggle('open');
+}
+
+/* ── Navigation ── */
+function navigateTo(hash){
+  // Hide welcome
+  document.getElementById('welcomeScreen').style.display='none';
+  document.getElementById('noResults').classList.remove('visible');
+  // Clear search
+  document.getElementById('searchInput').value='';
+  // Hide all articles
+  document.querySelectorAll('.help-article').forEach(a=>a.classList.remove('visible'));
+  // Show target
+  const target=document.getElementById(hash);
+  if(target){
+    target.classList.add('visible');
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  // Update sidebar active state
+  document.querySelectorAll('.sidebar-links a').forEach(a=>a.classList.remove('active'));
+  const link=document.querySelector('.sidebar-links a[href="#'+hash+'"]');
+  if(link){
+    link.classList.add('active');
+    // Open parent section
+    const section=link.closest('.sidebar-section');
+    if(section && !section.classList.contains('open')) section.classList.add('open');
+  }
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+/* ── Hash-based navigation ── */
+function handleHash(){
+  const hash=location.hash.replace('#','');
+  if(hash) navigateTo(hash);
+}
+window.addEventListener('hashchange',handleHash);
+window.addEventListener('DOMContentLoaded',handleHash);
+
+/* ── Open portal from welcome cards ── */
+function openPortal(portal){
+  const section=document.querySelector('.sidebar-section[data-portal="'+portal+'"]');
+  if(section){
+    // Open this section, close others
+    document.querySelectorAll('.sidebar-section').forEach(s=>s.classList.remove('open'));
+    section.classList.add('open');
+    // Navigate to first article
+    const firstLink=section.querySelector('.sidebar-links a');
+    if(firstLink){
+      const hash=firstLink.getAttribute('href').replace('#','');
+      location.hash=hash;
+    }
+  }
+}
+
+/* ── Search ── */
+function handleSearch(query){
+  const q=query.toLowerCase().trim();
+  const articles=document.querySelectorAll('.help-article');
+  const welcome=document.getElementById('welcomeScreen');
+  const noResults=document.getElementById('noResults');
+
+  if(!q){
+    // Empty search — show welcome, hide articles
+    welcome.style.display='';
+    noResults.classList.remove('visible');
+    articles.forEach(a=>a.classList.remove('visible'));
+    return;
+  }
+
+  welcome.style.display='none';
+  let found=0;
+
+  articles.forEach(a=>{
+    const title=(a.querySelector('h2')?.textContent||'').toLowerCase();
+    const desc=(a.querySelector('.article-desc')?.textContent||'').toLowerCase();
+    const keywords=(a.dataset.keywords||'').toLowerCase();
+    const match=title.includes(q)||desc.includes(q)||keywords.includes(q);
+    a.classList.toggle('visible',match);
+    if(match) found++;
+  });
+
+  noResults.classList.toggle('visible',found===0);
+}
+</script>
+</body>
+</html>
