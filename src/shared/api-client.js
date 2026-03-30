@@ -2,6 +2,7 @@
  * Lumied API Client — centralized fetch wrapper
  * Features: auto-auth, retry, caching, error handling, timing
  */
+import { captureError } from './sentry.js';
 
 const CACHE = new Map();
 const CACHE_TTL = 30000; // 30s default
@@ -110,6 +111,9 @@ export class ApiClient {
     }
 
     // All retries failed
+    captureError(lastError || new Error('API request failed'), {
+      endpoint, action: body?.action, retries: maxRetries,
+    });
     const errorData = { error: 'Erro de conexão. Verifique sua internet.', code: 'NETWORK_ERROR' };
     if (this.onError) this.onError(errorData, lastError);
     return errorData;
