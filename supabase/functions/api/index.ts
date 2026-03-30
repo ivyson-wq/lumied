@@ -1700,6 +1700,33 @@ serve(async (req: Request) => {
       resolucao_tela: resolucao_tela || null,
     });
     if (insErr) return err("Erro ao criar ticket: " + insErr.message);
+    // Notificar admin por email
+    try {
+      const resendKey = Deno.env.get("RESEND_API_KEY");
+      if (resendKey) {
+        const tipoLabel: Record<string, string> = { bug: 'Bug/Erro', duvida: 'Dúvida', sugestao: 'Sugestão', urgente: '🚨 URGENTE' };
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "Lumied Tickets <noreply@lumied.com.br>",
+            to: ["ivyson@gmail.com"],
+            subject: `[Ticket ${tipoLabel[(tipo as string) || 'bug'] || tipo}] ${(descricao as string || '').slice(0, 80)}`,
+            html: `<div style="font-family:sans-serif;max-width:600px;">
+              <h2 style="color:#C8102E;">Novo Ticket de Suporte</h2>
+              <table style="border-collapse:collapse;width:100%;">
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Tipo</td><td style="padding:8px;">${tipoLabel[(tipo as string) || 'bug'] || tipo}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Email</td><td style="padding:8px;">${email}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Portal</td><td style="padding:8px;">${portal}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">URL</td><td style="padding:8px;">${url_pagina || '—'}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Descrição</td><td style="padding:8px;">${descricao}</td></tr>
+              </table>
+              <p style="margin-top:16px;font-size:12px;color:#999;">Acesse o painel admin para responder.</p>
+            </div>`
+          })
+        });
+      }
+    } catch {}
     return ok({ success: true });
   }
 
