@@ -242,7 +242,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   .hero-inner { grid-template-columns: 1fr; text-align: center; }
   .hero p { margin: 0 auto 32px; }
   .hero-ctas { justify-content: center; }
-  .hero-visual { display: none; }
+  .hero-visual { margin-top: 24px; }
+  .hero-float { display: none; }
   .pricing-grid { grid-template-columns: repeat(2, 1fr); }
   .features-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -437,49 +438,49 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
     <!-- Module Videos Grid -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;" class="videos-grid">
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-notas.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">📝 Notas & Boletim</strong><br><span style="font-size:11px;color:#64748B;">Lancamento de notas em grid, media ponderada, recuperacao, boletim digital</span></div>
       </div>
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-frequencia.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">✅ Frequencia & Chamada</strong><br><span style="font-size:11px;color:#64748B;">Chamada diaria, % presenca, alertas de infrequencia, barra de progresso</span></div>
       </div>
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-financeiro.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">💰 Financeiro</strong><br><span style="font-size:11px;color:#64748B;">Dashboard, receitas vs despesas, boletos Inter, DRE, conciliacao</span></div>
       </div>
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-crm.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">🎯 CRM Pipeline</strong><br><span style="font-size:11px;color:#64748B;">Kanban de leads, estagios configuráveis, conversao, vagas por serie</span></div>
       </div>
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-almoxarifado.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">📦 Almoxarifado</strong><br><span style="font-size:11px;color:#64748B;">Requisicoes, orcamentos, busca de precos, aprovacao, compras</span></div>
       </div>
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-chat.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">💬 Chat Escola-Familia</strong><br><span style="font-size:11px;color:#64748B;">Mensagens diretas, avisos por turma, confirmacao de leitura</span></div>
       </div>
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-agenda.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">📅 Agenda Digital</strong><br><span style="font-size:11px;color:#64748B;">Diario do aluno: atividades, refeicoes, sono, humor, fotos em tempo real</span></div>
       </div>
       <div class="video-card">
-        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+        <video muted loop playsinline preload="metadata" style="width:100%;border-radius:10px 10px 0 0;aspect-ratio:16/9;object-fit:cover;background:#1E293B;" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-biblioteca.mp4" type="video/mp4">
         </video>
         <div style="padding:12px;"><strong style="font-size:13px;">📚 Biblioteca</strong><br><span style="font-size:11px;color:#64748B;">Acervo, emprestimos, devoluções, multas, reservas online</span></div>

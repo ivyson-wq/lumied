@@ -1,4 +1,50 @@
 /* ═══════════════════════════════════════════════════════════
+   LUMIED — Skeleton Loading + Auto-save Indicator
+   ═══════════════════════════════════════════════════════════ */
+.skeleton{background:linear-gradient(90deg,#f0ece6 25%,#e8e2d8 50%,#f0ece6 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-text{height:14px;margin-bottom:8px;width:80%;}.skeleton-text.short{width:40%;}.skeleton-text.medium{width:60%;}
+.skeleton-card{height:120px;margin-bottom:12px;}
+.skeleton-stat{height:80px;}
+
+/* Auto-save indicator */
+.autosave-indicator{position:fixed;bottom:80px;right:16px;background:rgba(45,122,58,.9);color:#fff;font-size:11px;font-weight:600;padding:6px 14px;border-radius:100px;z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;}
+.autosave-indicator.show{opacity:1;}
+
+/* Quick action buttons */
+.quick-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.quick-action{display:flex;align-items:center;gap:8px;padding:12px 18px;background:#fff;border:1.5px solid var(--border,#e2dbd1);border-radius:12px;font-family:inherit;font-size:13px;font-weight:600;color:var(--text,#1a1a1a);cursor:pointer;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.quick-action:hover{border-color:var(--red,#C8102E);background:var(--red-light,rgba(200,16,46,.04));transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.quick-action .qa-icon{font-size:18px;}
+
+/* Search modal (Ctrl+K) */
+.search-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-start;justify-content:center;padding-top:20vh;backdrop-filter:blur(4px);}
+.search-overlay.show{display:flex;}
+.search-box{background:#fff;border-radius:14px;width:100%;max-width:540px;box-shadow:0 24px 60px rgba(0,0,0,.25);overflow:hidden;}
+.search-input-wrap{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border,#e2dbd1);}
+.search-input-wrap input{flex:1;border:none;outline:none;font-family:inherit;font-size:16px;background:transparent;}
+.search-input-wrap .search-icon{font-size:18px;color:var(--muted,#999);margin-right:10px;}
+.search-results{max-height:320px;overflow-y:auto;}
+.search-result{display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer;transition:background .1s;}
+.search-result:hover,.search-result.selected{background:var(--red-light,rgba(200,16,46,.04));}
+.search-result .sr-icon{font-size:16px;width:24px;text-align:center;}
+.search-result .sr-text{font-size:14px;color:var(--text,#1a1a1a);}.search-result .sr-hint{font-size:11px;color:var(--muted,#999);}
+
+/* Camera FAB (floating action button) */
+.camera-fab{position:fixed;bottom:80px;right:20px;width:56px;height:56px;background:var(--red,#C8102E);color:#fff;border:none;border-radius:50%;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(200,16,46,.4);z-index:60;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.camera-fab:hover{transform:scale(1.1);box-shadow:0 8px 24px rgba(200,16,46,.5);}
+
+/* Morning briefing card */
+.briefing-card{background:linear-gradient(135deg,var(--red,#C8102E),#a00d24);border-radius:16px;padding:20px 24px;color:#fff;margin-bottom:20px;position:relative;overflow:hidden;}
+.briefing-card::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.08);border-radius:50%;}
+.briefing-card h3{font-family:'Lora',serif;font-size:18px;margin-bottom:4px;}
+.briefing-card p{font-size:13px;opacity:.85;}
+.briefing-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;}
+.briefing-metric{background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center;}
+.briefing-metric .bm-value{font-size:22px;font-weight:700;}
+.briefing-metric .bm-label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;opacity:.7;}
+
+/* ═══════════════════════════════════════════════════════════
    LUMIED — Sistema de Temas Visuais
    Cada tema sobrescreve as CSS variables do :root
    Aplicar classe no <body>: body.theme-ludico, body.theme-serio, etc.

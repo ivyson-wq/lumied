@@ -218,6 +218,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .pbnav-more-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border:none;background:#faf8f5;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:10px;color:var(--text);cursor:pointer;transition:background .15s;}
 .pbnav-more-item:hover{background:var(--red-light);color:var(--red);}
 .pbnav-more-item span{font-size:20px;}
+.camera-fab{position:fixed;bottom:80px;right:20px;width:56px;height:56px;background:var(--red);color:#fff;border:none;border-radius:50%;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(200,16,46,.4);z-index:55;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.camera-fab:hover{transform:scale(1.1);}
 .has-prof-bnav{padding-bottom:70px;}
 
 /* GREETING BAR */
@@ -842,11 +844,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <span class="pbnav-icon">☰</span>
     <span class="pbnav-label">Mais</span>
   </button>
-  <button class="pbnav-item" onclick="switchProfPage('achados',this)" data-page="achados" data-modulo="achados">
-    <span class="pbnav-icon">🔍</span>
-    <span class="pbnav-label">Achados</span>
-  </button>
 </nav>
+
+<!-- Camera FAB -->
+<button class="camera-fab" onclick="openCameraCapture()" aria-label="Tirar foto" data-modulo="agenda_digital" style="display:none;">📷</button>
 
 <!-- Menu "Mais" expandido -->
 <div id="profMoreMenu" style="display:none;position:fixed;bottom:60px;left:0;right:0;background:#fff;border-top:1px solid var(--border);box-shadow:0 -8px 24px rgba(0,0,0,.12);z-index:60;padding:12px 16px;border-radius:16px 16px 0 0;">
@@ -1056,7 +1057,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.body.classList.add('has-prof-bnav');
     loadAll();
     showBioRegisterButton();
-    loadModulosHabilitadosProf();
+    loadModulosHabilitadosProf().then(() => showCameraFab());
   }
 
   // ── Módulos habilitados (feature gating) ──
@@ -1082,6 +1083,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.querySelectorAll('.ps-item').forEach(b => b.classList.toggle('active', b.dataset.page === page));
     window.scrollTo({ top: 0, behavior: 'smooth' });
     closeProfMore();
+  }
+
+  // ── CAMERA FAB ──
+  function openCameraCapture() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      // Show preview and confirm
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (confirm('Enviar esta foto para a agenda digital?')) {
+          // TODO: upload to agenda
+          if (typeof showToast === 'function') showToast('Foto capturada! Selecione o registro na Agenda Digital para anexar.', 'success');
+          else alert('Foto capturada!');
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
+  // Show camera FAB after login if agenda_digital module is enabled
+  function showCameraFab() {
+    const fab = document.querySelector('.camera-fab');
+    if (fab && window._enabledModules?.has('agenda_digital')) fab.style.display = 'flex';
   }
 
   function toggleProfMore() {

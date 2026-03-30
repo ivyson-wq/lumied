@@ -1119,7 +1119,71 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </div>
 
       <!-- ANALYTICS DASHBOARD -->
+      <!-- ONBOARDING WIZARD -->
+      <div id="onboardingWizard" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:250;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+        <div style="background:#fff;border-radius:20px;max-width:600px;width:95%;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:40px;margin-bottom:8px;">🍁</div>
+            <h2 style="font-family:'Lora',serif;font-size:22px;">Bem-vindo ao Lumied!</h2>
+            <p style="color:var(--muted);font-size:13px;">Configure sua escola em 5 passos simples.</p>
+          </div>
+          <div id="onboardingSteps">
+            <div class="ob-step" data-step="1" style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goOnboardingStep(1)">
+              <div class="ob-check" id="obCheck1" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">1</div>
+              <div><div style="font-weight:600;font-size:14px;">Dados da Escola</div><div style="font-size:12px;color:var(--muted);">Nome, logo, contato</div></div>
+              <span style="margin-left:auto;font-size:16px;">→</span>
+            </div>
+            <div class="ob-step" data-step="2" style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goOnboardingStep(2)">
+              <div class="ob-check" id="obCheck2" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">2</div>
+              <div><div style="font-weight:600;font-size:14px;">Séries e Turmas</div><div style="font-size:12px;color:var(--muted);">Cadastre Bear Care, Year 1, Year 2...</div></div>
+              <span style="margin-left:auto;font-size:16px;">→</span>
+            </div>
+            <div class="ob-step" data-step="3" style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goOnboardingStep(3)">
+              <div class="ob-check" id="obCheck3" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">3</div>
+              <div><div style="font-weight:600;font-size:14px;">Professoras</div><div style="font-size:12px;color:var(--muted);">Cadastre sua equipe docente</div></div>
+              <span style="margin-left:auto;font-size:16px;">→</span>
+            </div>
+            <div class="ob-step" data-step="4" style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goOnboardingStep(4)">
+              <div class="ob-check" id="obCheck4" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">4</div>
+              <div><div style="font-weight:600;font-size:14px;">Famílias</div><div style="font-size:12px;color:var(--muted);">Importe ou cadastre as famílias</div></div>
+              <span style="margin-left:auto;font-size:16px;">→</span>
+            </div>
+            <div class="ob-step" data-step="5" style="padding:12px 0;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="goOnboardingStep(5)">
+              <div class="ob-check" id="obCheck5" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">5</div>
+              <div><div style="font-weight:600;font-size:14px;">Primeiro Aviso</div><div style="font-size:12px;color:var(--muted);">Envie uma mensagem para os pais</div></div>
+              <span style="margin-left:auto;font-size:16px;">→</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:20px;">
+            <button onclick="closeOnboarding()" style="flex:1;padding:12px;background:var(--white);color:var(--text);border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;cursor:pointer;">Pular por agora</button>
+            <button onclick="closeOnboarding();showPanel('series')" style="flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Começar Setup →</button>
+          </div>
+        </div>
+      </div>
+
       <div id="panelAnalytics" class="panel active">
+        <!-- Morning Briefing -->
+        <div class="briefing-card" id="morningBriefing">
+          <h3 id="briefingGreeting">Bom dia!</h3>
+          <p id="briefingDate"></p>
+          <div class="briefing-metrics" id="briefingMetrics">
+            <div class="briefing-metric"><div class="bm-value" id="bmAlunos">—</div><div class="bm-label">Alunos</div></div>
+            <div class="briefing-metric"><div class="bm-value" id="bmPresenca">—</div><div class="bm-label">Presença</div></div>
+            <div class="briefing-metric"><div class="bm-value" id="bmReceita">—</div><div class="bm-label">Receita Mês</div></div>
+            <div class="briefing-metric"><div class="bm-value" id="bmPendentes">—</div><div class="bm-label">Pendências</div></div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions" id="quickActions">
+          <button class="quick-action" onclick="showPanel('crmLeads',this)"><span class="qa-icon">👥</span> Novos Leads</button>
+          <button class="quick-action" onclick="showPanel('almPend',this)"><span class="qa-icon">⏳</span> Aprovar Material</button>
+          <button class="quick-action" onclick="showPanel('finBoletos',this)"><span class="qa-icon">🏦</span> Boletos</button>
+          <button class="quick-action" onclick="showPanel('notasVisao',this)"><span class="qa-icon">📝</span> Ver Notas</button>
+          <button class="quick-action" onclick="showPanel('impressoes',this)"><span class="qa-icon">🖨️</span> Impressões</button>
+          <button class="quick-action" onclick="showPanel('emergencia',this)"><span class="qa-icon">🚨</span> Emergência</button>
+        </div>
+
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
           <div class="sec-title" style="margin:0;">Dashboard Analytics</div>
           <select id="analyticsAno" onchange="loadAnalytics()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
@@ -7777,6 +7841,149 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   // ── CLEANUP ON UNLOAD ─────────────────────────────────
   window.addEventListener('beforeunload', () => { if (pollInterval) clearInterval(pollInterval); });
+
+  // ═══ ONBOARDING WIZARD ═══
+  async function checkOnboarding() {
+    // Show wizard if escola has no series, no professoras, no familias
+    try {
+      const [sRes, pRes, fRes] = await Promise.all([
+        api({ action: 'series_list' }),
+        api({ action: 'professoras_list' }),
+        api({ action: 'familias_list' })
+      ]);
+      const series = Array.isArray(sRes) ? sRes : (sRes.data || []);
+      const profs = Array.isArray(pRes) ? pRes : (pRes.data || []);
+      const fams = Array.isArray(fRes) ? fRes : (fRes.data || []);
+      // If all empty or very few, show wizard
+      if (series.length <= 1 && profs.length === 0 && fams.length === 0) {
+        document.getElementById('onboardingWizard').style.display = 'flex';
+      }
+      // Mark completed steps
+      if (series.length > 0) markOnboardingStep(2);
+      if (profs.length > 0) markOnboardingStep(3);
+      if (fams.length > 0) markOnboardingStep(4);
+    } catch(e) {}
+  }
+  function markOnboardingStep(n) {
+    const el = document.getElementById('obCheck' + n);
+    if (el) { el.textContent = '✓'; el.style.background = 'var(--green)'; el.style.color = '#fff'; el.style.borderColor = 'var(--green)'; }
+  }
+  function goOnboardingStep(n) {
+    closeOnboarding();
+    if (n === 1) showPanel('logo');
+    if (n === 2) showPanel('series');
+    if (n === 3) showPanel('equipe');
+    if (n === 4) showPanel('familias');
+    if (n === 5) showPanel('chatConversas');
+  }
+  function closeOnboarding() { document.getElementById('onboardingWizard').style.display = 'none'; localStorage.setItem('mb_onboarding_done', '1'); }
+
+  // ═══ MORNING BRIEFING ═══
+  function loadMorningBriefing() {
+    const now = new Date();
+    const hour = now.getHours();
+    const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+    const firstName = (currentGerente?.nome || 'Gestor').split(/\s/)[0];
+    document.getElementById('briefingGreeting').textContent = greeting + ', ' + firstName + '!';
+    document.getElementById('briefingDate').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  // Chamar após login
+  const _origShowApp = showApp;
+  showApp = function(user) {
+    _origShowApp(user);
+    loadMorningBriefing();
+    if (!localStorage.getItem('mb_onboarding_done')) checkOnboarding();
+  };
+
+  // ═══ BUSCA RÁPIDA (Ctrl+K) ═══
+  const searchData = [
+    {icon:'📊',text:'Dashboard Analytics',panel:'analytics'},
+    {icon:'📝',text:'Notas / Visão Geral',panel:'notasVisao'},
+    {icon:'✅',text:'Frequência',panel:'frequencia'},
+    {icon:'📖',text:'Diário de Classe',panel:'diarioClasse'},
+    {icon:'🏆',text:'Diplomas',panel:'diplomas'},
+    {icon:'📈',text:'Growth Plan',panel:'pdi'},
+    {icon:'📦',text:'Almoxarifado Dashboard',panel:'almDash'},
+    {icon:'⏳',text:'Almoxarifado Pendentes',panel:'almPend'},
+    {icon:'🗃️',text:'Insumos',panel:'almInsumos'},
+    {icon:'💰',text:'Dashboard Financeiro',panel:'finDash'},
+    {icon:'📝',text:'Lançamentos',panel:'finLanc'},
+    {icon:'🧾',text:'Mensalidades',panel:'finMens'},
+    {icon:'📈',text:'DRE',panel:'finDre'},
+    {icon:'⚖️',text:'Balanço Patrimonial',panel:'finBalanco'},
+    {icon:'🏦',text:'Boletos',panel:'finBoletos'},
+    {icon:'📋',text:'CRM Pipeline',panel:'crmKanban'},
+    {icon:'👥',text:'Leads',panel:'crmLeads'},
+    {icon:'💬',text:'Templates WhatsApp',panel:'crmTemplates'},
+    {icon:'🎯',text:'Vagas',panel:'crmVagas'},
+    {icon:'📝',text:'Matrículas',panel:'crmMatriculas'},
+    {icon:'💬',text:'Chat / Conversas',panel:'chatConversas'},
+    {icon:'📊',text:'Pesquisas',panel:'pesquisas'},
+    {icon:'📅',text:'Calendário',panel:'calendario'},
+    {icon:'👥',text:'Equipe',panel:'equipe'},
+    {icon:'👨‍👩‍👧',text:'Famílias',panel:'familias'},
+    {icon:'🔧',text:'Manutenção',panel:'manutencao'},
+    {icon:'🔍',text:'Achados & Perdidos',panel:'achados'},
+    {icon:'🖨️',text:'Impressões',panel:'impressoes'},
+    {icon:'🚨',text:'Emergência',panel:'emergencia'},
+    {icon:'⚙️',text:'Config Notas',panel:'notasConfig'},
+    {icon:'📚',text:'Disciplinas',panel:'notasDisciplinas'},
+    {icon:'📅',text:'Períodos Letivos',panel:'notasPeriodos'},
+    {icon:'📋',text:'Formulários Matrícula',panel:'matriculaForm'},
+    {icon:'📊',text:'Status Matrículas',panel:'matriculaStatus'},
+  ];
+
+  // Create search overlay
+  const searchOverlay = document.createElement('div');
+  searchOverlay.className = 'search-overlay';
+  searchOverlay.innerHTML = '<div class="search-box"><div class="search-input-wrap"><span class="search-icon">🔍</span><input id="searchInput" placeholder="Buscar funcionalidade..." autocomplete="off"><span style="font-size:11px;color:var(--muted);padding:4px 8px;border:1px solid var(--border);border-radius:4px;">ESC</span></div><div class="search-results" id="searchResults"></div></div>';
+  searchOverlay.addEventListener('click', (e) => { if (e.target === searchOverlay) closeSearch(); });
+  document.body.appendChild(searchOverlay);
+
+  function openSearch() {
+    searchOverlay.classList.add('show');
+    const input = document.getElementById('searchInput');
+    input.value = '';
+    input.focus();
+    renderSearchResults('');
+  }
+  function closeSearch() { searchOverlay.classList.remove('show'); }
+
+  function renderSearchResults(query) {
+    const q = query.toLowerCase();
+    const filtered = q ? searchData.filter(s => s.text.toLowerCase().includes(q)) : searchData.slice(0, 8);
+    document.getElementById('searchResults').innerHTML = filtered.map((s, i) =>
+      '<div class="search-result' + (i === 0 ? ' selected' : '') + '" onclick="showPanel(\'' + s.panel + '\');closeSearch()"><span class="sr-icon">' + s.icon + '</span><div><div class="sr-text">' + s.text + '</div></div></div>'
+    ).join('') || '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Nenhum resultado</div>';
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+    if (e.key === 'Escape' && searchOverlay.classList.contains('show')) closeSearch();
+    if (searchOverlay.classList.contains('show') && e.key === 'Enter') {
+      const sel = document.querySelector('.search-result.selected');
+      if (sel) sel.click();
+    }
+  });
+  document.getElementById('searchInput')?.addEventListener('input', (e) => renderSearchResults(e.target.value));
+
+  // ═══ AUTO-SAVE ═══
+  let autoSaveIndicator = document.createElement('div');
+  autoSaveIndicator.className = 'autosave-indicator';
+  autoSaveIndicator.textContent = '✓ Salvo';
+  document.body.appendChild(autoSaveIndicator);
+
+  function showAutoSaved() {
+    autoSaveIndicator.classList.add('show');
+    setTimeout(() => autoSaveIndicator.classList.remove('show'), 1500);
+  }
+
+  // Auto-save on input blur for form fields
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('input, select, textarea') && e.target.closest('.form-card, .ff')) {
+      showAutoSaved();
+    }
+  });
 </script>
 </body>
 </html>
