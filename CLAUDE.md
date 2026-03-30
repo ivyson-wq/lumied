@@ -223,3 +223,95 @@ Functions legadas (`api`, `diplomas`) usam padrão híbrido com rate limit + san
 ### Pickup Animado
 - Portal pais: cenário com céu, estrada, carro animado + família + ETA
 - Portal professora: mini-pista animada em cada card da fila
+
+---
+
+## Observabilidade (Sentry)
+
+**Organização:** `lumied.sentry.io`
+**Projeto:** `javascript`
+
+### Frontend (`sentry-init.js`)
+- SDK Sentry Browser v9.25.0 via CDN (bundle com tracing + replay)
+- Incluído em todos os 5 portais principais via `<script src="/sentry-init.js">`
+- Auto-detecção de ambiente (development/staging/production) por hostname
+- Performance monitoring: `tracesSampleRate` 0.2 (prod), 1.0 (dev)
+- Session Replay: 10% sessões (prod), 100% em erros
+- `beforeSend`: scrub de dados sensíveis (password, token, CPF, cartão)
+- Ignora erros não-acionáveis (ResizeObserver, AbortError, etc.)
+- Helpers globais: `SentrySetUser()`, `SentryClearUser()`, `SentryCaptureException()`, `SentryCaptureMessage()`
+
+### Edge Functions (`_shared/sentry.ts`)
+- Reporter via HTTP envelope API (zero dependências externas)
+- `captureException(error, extra)` — envia eventos de erro com stack trace
+- `captureMessage(message, level, extra)` — envia mensagens
+- DSN via env var `SENTRY_DSN`
+- Integrado no `withErrorHandler` (`errors.ts`) — fire-and-forget
+
+### Alertas Configurados
+- **High Error Rate** — >10 erros/min
+- **New Issues** — alerta em issues inéditas
+- **P95 > 3s** — alerta de performance (warning 2s, critical 3s)
+
+### CI (Sentry Release)
+- Job `sentry-release` no CI: cria release, upload de source maps, marca deploy
+- Secrets: `SENTRY_AUTH_TOKEN`, `SENTRY_DSN`
+
+---
+
+## Edge Functions Adicionais (pós-merge)
+
+| Function | Descrição |
+|----------|-----------|
+| `boletos-sync` | Sync de boletos do Banco Inter |
+| `daily-digest` | Resumo diário por aluno (email + push) |
+
+Total: **18 Edge Functions ativas** no Supabase.
+
+---
+
+## Deno Configuration
+
+- `supabase/functions/deno.json` — Import map para Edge Functions:
+  - `@std/testing/asserts` → `jsr:@std/assert`
+  - `@supabase/supabase-js` → `https://esm.sh/@supabase/supabase-js@2`
+- CI usa `--config supabase/functions/deno.json` para lint e testes
+
+---
+
+## GitHub Actions
+
+### `ci.yml` — CI/CD Pipeline
+1. **Lint & Type Check** — `deno lint --config deno.json` nos `_shared/` e `__tests__/`
+2. **Unit Tests** — `deno test --config deno.json` com `--allow-net --allow-read --allow-env`
+3. **Deploy Edge Functions** — `supabase functions deploy` (todas, exceto `_shared` e `__tests__`)
+4. **Deploy Frontend (Vercel)** — `vercel --yes --prod`
+5. **Sentry Release** — cria release, upload source maps, marca deploy
+
+### `auto-merge-claude.yml` — Auto-merge
+- Trigger: push em `claude/**`
+- Merge automático em `main` com `--no-ff`
+- Usa `actions/checkout@v5` (Node.js 24 compatível)
+
+### Secrets Configurados
+| Secret | Serviço |
+|--------|---------|
+| `SUPABASE_ACCESS_TOKEN` | Supabase Management API |
+| `VERCEL_TOKEN` | Vercel deploy |
+| `VERCEL_ORG_ID` | Vercel org |
+| `VERCEL_PROJECT_ID` | Vercel project |
+| `SENTRY_AUTH_TOKEN` | Sentry releases |
+| `SENTRY_DSN` | Sentry event ingestion |
+
+---
+
+## Permissões (`settings.json`)
+
+```json
+{
+  "permissions": {
+    "allow": ["Edit(src/**)", "Edit(app/**)", "Bash(npm run *)", "Bash(git add*)", "Bash(git commit*)"],
+    "deny": ["Edit(.env*)", "Bash(rm -rf*)", "Bash(git push*)"]
+  }
+}
+```
