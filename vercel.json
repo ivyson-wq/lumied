@@ -1,9 +1,17 @@
 {
   "buildCommand": "bash build.sh",
   "outputDirectory": ".",
-  "rewrites": [
-    { "source": "/", "has": [{ "type": "host", "value": "lumied.com.br" }], "destination": "/site/index.html" },
-    { "source": "/", "has": [{ "type": "host", "value": "www.lumied.com.br" }], "destination": "/site/index.html" }
+  "routes": [
+    {
+      "src": "^/$",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "dest": "/site/index.html"
+    },
+    {
+      "src": "^/$",
+      "has": [{ "type": "host", "value": "www.lumied.com.br" }],
+      "dest": "/site/index.html"
+    }
   ],
   "headers": [
     {
