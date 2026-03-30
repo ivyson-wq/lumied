@@ -1,0 +1,17 @@
+name = "lumied-monitor"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+LUMIED_URL = "https://lumied.com.br"
+SUPABASE_URL = "https://brgorknbrjlfwvrrlwxj.supabase.co"
+SUPABASE_HEALTH_URL = "https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/health"
+GITHUB_REPO = "ivyson-wq/maple-bear-rs"
+SENTRY_ORG = "lumied"
+
+[[kv_namespaces]]
+binding = "MONITOR_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
