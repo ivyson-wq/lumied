@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Analytics: Dados que Transformam Decisoes na Escola — Blog Lumied</title>
+<meta name="description" content="Aprenda a usar dashboards e analytics para tomar decisoes baseadas em dados na sua escola: KPIs, taxa de evasao, inadimplencia e muito mais.">
+<meta name="theme-color" content="#0F172A">
+<meta property="og:title" content="Dashboard Analytics: Dados que Transformam Decisoes na Escola">
+<meta property="og:description" content="Aprenda a usar dashboards e analytics para tomar decisoes baseadas em dados na sua escola: KPIs, taxa de evasao, inadimplencia e muito mais.">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: rgba(99,102,241,.08);
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --dark: #0F172A;
+  --dark-2: #1E293B;
+  --dark-3: #334155;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dark: #1E293B;
+  --bg-light: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --green: #10B981;
+  --red: #EF4444;
+  --gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A78BFA 100%);
+  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; width: 100%; position: relative; }
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(15,23,42,.85); backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 24px; height: 72px;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background .3s;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-icon { width: 36px; height: 36px; background: var(--gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
+.logo-text span { color: var(--accent); }
+.nav { display: flex; align-items: center; gap: 32px; }
+.nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav a:hover { color: #fff; }
+.nav-cta { padding: 10px 24px; background: var(--primary); color: #fff !important; border-radius: 8px; font-weight: 600; transition: all .2s; }
+.nav-cta:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+.article-hero {
+  background: var(--dark); color: #fff; padding: 140px 24px 60px;
+  position: relative; overflow: hidden;
+}
+.article-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,.15) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,.08) 0%, transparent 60%);
+}
+.article-hero-grid {
+  position: absolute; inset: 0; opacity: .04;
+  background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.article-hero .container { position: relative; z-index: 1; max-width: 800px; }
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.breadcrumb a { color: var(--primary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.article-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(32px, 4.5vw, 48px); font-weight: 800; line-height: 1.15; margin-bottom: 20px; letter-spacing: -1px; }
+.article-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.article-author { display: flex; align-items: center; gap: 10px; }
+.author-avatar { width: 40px; height: 40px; background: var(--gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.author-name { font-size: 14px; font-weight: 600; color: #fff; }
+.author-role { font-size: 12px; color: var(--text-muted); }
+.article-date { font-size: 13px; color: var(--text-muted); }
+.article-tag { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; background: rgba(99,102,241,.15); color: #6366F1; }
+.article-reading { font-size: 13px; color: var(--text-muted); }
+.article-section { padding: 60px 24px 100px; background: #fff; }
+.article-container { max-width: 760px; margin: 0 auto; }
+.article-content h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); margin: 48px 0 16px; line-height: 1.3; }
+.article-content h3 { font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 36px 0 12px; }
+.article-content p { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 20px; }
+.article-content ul, .article-content ol { margin: 16px 0 24px 24px; }
+.article-content li { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 8px; }
+.article-content strong { color: var(--text-dark); }
+.article-content blockquote { border-left: 4px solid var(--primary); background: var(--primary-light); padding: 20px 24px; margin: 28px 0; border-radius: 0 12px 12px 0; }
+.article-content blockquote p { color: var(--primary-dark); font-weight: 500; margin-bottom: 0; font-style: italic; }
+.highlight-box { background: var(--bg-light); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.highlight-box h4 { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.highlight-box ul { margin: 0 0 0 20px; }
+.highlight-box li { font-size: 14px; margin-bottom: 6px; }
+.scenario-box { background: linear-gradient(135deg, rgba(99,102,241,.04) 0%, rgba(139,92,246,.04) 100%); border: 1px solid rgba(99,102,241,.15); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.scenario-box h4 { font-size: 15px; font-weight: 700; color: var(--primary-dark); margin-bottom: 10px; }
+.scenario-box p { font-size: 14px; color: #64748B; margin-bottom: 0; }
+.share-bar { display: flex; align-items: center; gap: 12px; padding: 24px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 40px 0; }
+.share-label { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: all .2s; }
+.share-whatsapp { background: #25D366; color: #fff; }
+.share-whatsapp:hover { background: #1DA851; }
+.share-linkedin { background: #0A66C2; color: #fff; }
+.share-linkedin:hover { background: #004182; }
+.share-twitter { background: #1DA1F2; color: #fff; }
+.share-twitter:hover { background: #0C85D0; }
+.cta-box { background: var(--gradient); border-radius: 16px; padding: 40px; text-align: center; margin: 48px 0; }
+.cta-box h3 { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+.cta-box p { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto; }
+.cta-box-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #fff; color: var(--primary); border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; transition: all .2s; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+.cta-box-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+.related-section { background: var(--bg-light); padding: 80px 24px; }
+.related-section .container { max-width: 1200px; margin: 0 auto; }
+.related-header { text-align: center; margin-bottom: 40px; }
+.related-header h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); }
+.related-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.related-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all .3s; text-decoration: none; display: block; }
+.related-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(99,102,241,.1); }
+.related-tag { display: inline-block; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+.related-tag-gestao { background: rgba(99,102,241,.1); color: #6366F1; }
+.related-tag-financeiro { background: rgba(239,68,68,.1); color: #DC2626; }
+.related-tag-administrativo { background: rgba(16,185,129,.1); color: #059669; }
+.related-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; line-height: 1.3; }
+.related-excerpt { font-size: 13px; color: #64748B; line-height: 1.6; }
+.footer { background: var(--dark); color: var(--text-muted); padding: 60px 24px 32px; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; max-width: 1200px; margin: 0 auto; }
+.footer-brand p { font-size: 13px; line-height: 1.6; margin-top: 12px; }
+.footer h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 16px; }
+.footer a { color: var(--text-muted); text-decoration: none; font-size: 13px; display: block; margin-bottom: 10px; transition: color .2s; }
+.footer a:hover { color: #fff; }
+.footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+@media (max-width: 768px) {
+  .nav { display: none; }
+  .hamburger { display: block; }
+  .article-hero { padding: 110px 16px 50px; }
+  .article-section { padding: 40px 16px 60px; }
+  .article-content h2 { font-size: 24px; margin-top: 36px; }
+  .article-content h3 { font-size: 18px; }
+  .related-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .share-bar { flex-wrap: wrap; }
+  .cta-box { padding: 28px 20px; }
+  .related-section { padding: 60px 16px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <a href="/site/" class="logo">
+    <div class="logo-icon">🎓</div>
+    <div class="logo-text">Lumi<span>ed</span></div>
+  </a>
+  <nav class="nav">
+    <a href="/site/#features">Funcionalidades</a>
+    <a href="/site/#videos">Demos</a>
+    <a href="/site/#screenshots">Screenshots</a>
+    <a href="/site/#pricing">Precos</a>
+    <a href="/site/#contact" class="nav-cta">Agende uma Demo</a>
+  </nav>
+  <button class="hamburger" onclick="document.querySelector('.nav').style.display=document.querySelector('.nav').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<section class="article-hero">
+  <div class="article-hero-grid"></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="/site/">Home</a>
+      <span>/</span>
+      <a href="/site/blog/">Blog</a>
+      <span>/</span>
+      <span>Dashboard Analytics</span>
+    </div>
+    <h1>Dashboard Analytics: Dados que Transformam Decisoes na Escola</h1>
+    <div class="article-meta">
+      <div class="article-author">
+        <div class="author-avatar">📝</div>
+        <div>
+          <div class="author-name">Equipe Lumied</div>
+          <div class="author-role">Blog Lumied</div>
+        </div>
+      </div>
+      <span class="article-date">20 de Dezembro de 2025</span>
+      <span class="article-tag">Gestao</span>
+      <span class="article-reading">10 min de leitura</span>
+    </div>
+  </div>
+</section>
+
+<section class="article-section">
+  <div class="article-container">
+    <div class="article-content">
+
+      <p>Imagine a seguinte situacao: voce e diretor de uma escola com 500 alunos. No final do ano, descobre que perdeu 12% dos alunos por evasao — 60 familias que simplesmente nao renovaram a matricula. Quando pergunta a equipe o que aconteceu, ninguem sabe responder com precisao. Foram problemas financeiros? Insatisfacao com o ensino? Mudanca de cidade? A resposta e um misto de achismos e impressoes pessoais.</p>
+
+      <p>Agora imagine outro cenario: no meio do ano, voce abre o dashboard do seu sistema de gestao e ve um alerta: "15 familias apresentam 3 ou mais indicadores de risco de evasao". Voce clica no alerta e ve o detalhamento: 5 familias estao com inadimplencia crescente, 4 tiveram queda significativa na frequencia dos filhos, 3 registraram reclamacoes nos ultimos 30 dias, e 3 nao abriram nenhuma comunicacao da escola no ultimo mes. Com esses dados em maos, voce aciona a equipe para intervir antes que essas familias decidam sair.</p>
+
+      <p>Essa e a diferenca entre gerir uma escola com base em intuicao e gerir com base em dados.</p>
+
+      <h2>Por que escolas precisam de analytics</h2>
+
+      <p>O setor educacional e um dos mais atrasados em relacao ao uso de dados para tomada de decisao. Enquanto empresas de varejo, saude e tecnologia ja usam dashboards sofisticados ha anos, a maioria das escolas ainda toma decisoes baseadas em planilhas desatualizadas, relatorios manuais feitos uma vez por semestre, e a percepcao subjetiva da equipe.</p>
+
+      <p>Isso nao e culpa dos gestores escolares — e culpa das ferramentas que tinham disponiveis ate agora. Sistemas de gestao escolar tradicionais foram construidos para registrar dados, nao para analisa-los. Eles armazenam informacoes em tabelas, mas nao as transformam em insights acionaveis.</p>
+
+      <h3>O problema do "dado morto"</h3>
+
+      <p>Sua escola provavelmente ja tem todos os dados de que precisa. Cadastros de alunos, historico de pagamentos, registros de frequencia, notas, comunicacoes enviadas, atendimentos na secretaria. O problema e que esses dados estao "mortos" — armazenados em sistemas diferentes, sem conexao entre si, e sem nenhuma analise automatica.</p>
+
+      <blockquote>
+        <p>Dados sem analise sao apenas numeros ocupando espaco no servidor. Dados com analise sao a bussola que guia a escola na direcao certa.</p>
+      </blockquote>
+
+      <h2>Os KPIs que toda escola deveria monitorar</h2>
+
+      <p>KPI significa Key Performance Indicator — indicador-chave de desempenho. Sao as metricas que realmente importam para a saude da sua escola. O Lumied organiza esses KPIs em quatro dimensoes: financeira, academica, operacional e de satisfacao.</p>
+
+      <h3>KPIs financeiros</h3>
+
+      <div class="highlight-box">
+        <h4>Metricas financeiras essenciais:</h4>
+        <ul>
+          <li><strong>Taxa de inadimplencia:</strong> percentual de familias com parcelas em atraso (meta: abaixo de 5%)</li>
+          <li><strong>Ticket medio por aluno:</strong> receita media mensal por aluno matriculado</li>
+          <li><strong>MRR (Monthly Recurring Revenue):</strong> receita recorrente mensal total</li>
+          <li><strong>Custo por aluno:</strong> despesas totais divididas pelo numero de alunos</li>
+          <li><strong>Margem operacional:</strong> receita menos despesas operacionais</li>
+          <li><strong>Dias medios de atraso:</strong> media de dias entre vencimento e pagamento</li>
+        </ul>
+      </div>
+
+      <h3>KPIs academicos</h3>
+
+      <div class="highlight-box">
+        <h4>Metricas academicas essenciais:</h4>
+        <ul>
+          <li><strong>Taxa de frequencia:</strong> percentual medio de presenca por turma (meta: acima de 92%)</li>
+          <li><strong>Media de desempenho:</strong> nota media por disciplina, turma e serie</li>
+          <li><strong>Taxa de aprovacao:</strong> percentual de alunos aprovados por serie</li>
+          <li><strong>Alunos em recuperacao:</strong> numero e percentual de alunos abaixo da media</li>
+          <li><strong>Evolucao trimestral:</strong> comparativo de notas entre trimestres</li>
+        </ul>
+      </div>
+
+      <h3>KPIs operacionais</h3>
+
+      <div class="highlight-box">
+        <h4>Metricas operacionais essenciais:</h4>
+        <ul>
+          <li><strong>Taxa de ocupacao:</strong> alunos matriculados vs. capacidade total (meta: acima de 85%)</li>
+          <li><strong>Taxa de evasao:</strong> percentual de alunos que nao renovaram (meta: abaixo de 8%)</li>
+          <li><strong>Taxa de captacao:</strong> novos alunos matriculados vs. leads recebidos</li>
+          <li><strong>NPS (Net Promoter Score):</strong> satisfacao geral das familias</li>
+          <li><strong>Tempo medio de atendimento:</strong> tempo entre solicitacao e resposta na secretaria</li>
+        </ul>
+      </div>
+
+      <h2>O dashboard do Lumied na pratica</h2>
+
+      <p>O painel do gerente no Lumied foi projetado para que o gestor escolar tenha uma visao completa da saude da escola em uma unica tela. Ao fazer login, o diretor ve imediatamente os indicadores mais criticos, com codificacao por cores: verde para metricas saudaveis, amarelo para atencao, e vermelho para situacoes criticas.</p>
+
+      <h3>Visao geral em tempo real</h3>
+
+      <p>O dashboard principal mostra cards com os KPIs mais importantes: total de alunos ativos, taxa de inadimplencia atual, frequencia media do mes, e NPS da ultima pesquisa. Cada card e clicavel e leva a um detalhamento completo da metrica.</p>
+
+      <div class="scenario-box">
+        <h4>Cenario: reuniao de diretoria</h4>
+        <p>Na reuniao mensal de diretoria, o gestor abre o dashboard do Lumied no projetor. Em 5 minutos, a equipe ve: "Inadimplencia subiu de 4.2% para 6.1% no ultimo mes, concentrada nas turmas do Ensino Medio. Frequencia caiu 2 pontos nas turmas do 8o e 9o ano. Tres familias abriram reclamacoes sobre o servico de transporte." Com esses dados, a equipe define acoes concretas: reforcar a regua de cobranca, investigar a queda de frequencia, e reunir com a empresa de transporte.</p>
+      </div>
+
+      <h3>Relatorios visuais automaticos</h3>
+
+      <p>Alem do dashboard em tempo real, o Lumied gera relatorios visuais automaticos com periodicidade configuravel. A escola pode receber no email da direcao um relatorio semanal com os principais indicadores, comparativos com a semana anterior, e alertas sobre metricas que saíram da faixa saudavel.</p>
+
+      <p>Os relatorios incluem graficos de linha para evolucao temporal, graficos de barra para comparativos entre turmas, e graficos de pizza para distribuicao de categorias. Tudo gerado automaticamente, sem que ninguem precise abrir uma planilha ou criar um grafico manualmente.</p>
+
+      <h3>Alertas inteligentes</h3>
+
+      <p>O sistema nao espera que o gestor va ate o dashboard para verificar um problema. Quando uma metrica ultrapassa um limite configurado, o Lumied envia um alerta automatico. Por exemplo: "A taxa de inadimplencia ultrapassou 5%. 12 familias estao com mais de 30 dias de atraso." Ou: "O aluno Joao Silva completou 5 faltas consecutivas. Recomenda-se contato com a familia."</p>
+
+      <h2>Analytics preditivo: antecipando problemas</h2>
+
+      <p>O nivel mais avancado de analytics nao e apenas mostrar o que ja aconteceu — e prever o que vai acontecer. O Lumied utiliza modelos de analise para identificar padroes que indicam risco de evasao, inadimplencia ou queda de desempenho antes que esses problemas se concretizem.</p>
+
+      <h3>Score de risco de evasao</h3>
+
+      <p>Cada familia recebe automaticamente um score de risco de evasao, calculado com base em multiplos fatores: historico de pagamento, frequencia do aluno, engajamento com as comunicacoes da escola, reclamacoes registradas, e participacao em eventos. Familias com score alto aparecem em uma lista prioritaria para intervencao da equipe.</p>
+
+      <div class="highlight-box">
+        <h4>Fatores que compoe o score de risco:</h4>
+        <ul>
+          <li>Atraso crescente nos pagamentos (peso: 25%)</li>
+          <li>Queda na frequencia do aluno (peso: 20%)</li>
+          <li>Baixo engajamento com comunicacoes — nao abre emails/notificacoes (peso: 15%)</li>
+          <li>Reclamacoes registradas nos ultimos 60 dias (peso: 20%)</li>
+          <li>Nao participacao em eventos e reunioes (peso: 10%)</li>
+          <li>Historico: familia nova (primeiro ano) tem risco naturalmente maior (peso: 10%)</li>
+        </ul>
+      </div>
+
+      <h2>Comparativos e benchmarks</h2>
+
+      <p>Uma metrica isolada tem pouco significado. A taxa de inadimplencia de 6% e boa ou ruim? Depende do contexto. O Lumied permite que a escola compare suas metricas em diferentes dimensoes: comparativo mensal (este mes vs. mes anterior), comparativo anual (este ano vs. ano passado), comparativo entre turmas (qual turma tem melhor frequencia), e comparativo entre periodos (manha vs. tarde).</p>
+
+      <p>Esses comparativos permitem identificar tendencias, sazonalidades e anomalias. Por exemplo, e normal que a inadimplencia suba em janeiro (ferias) e caia em marco (volta as aulas). Mas se a inadimplencia de marco deste ano esta maior que a de marco do ano passado, isso e um sinal de alerta que merece investigacao.</p>
+
+      <h2>Da informacao a acao</h2>
+
+      <p>O maior erro que escolas cometem ao adotar analytics e tratar o dashboard como um painel decorativo — bonito de ver, mas que nao gera acao concreta. O Lumied combate isso com um sistema de "proximos passos" vinculado a cada alerta.</p>
+
+      <p>Quando o sistema identifica uma situacao critica, ele nao apenas mostra o numero — ele sugere uma acao. "Inadimplencia acima de 5%: considere ativar a regua de cobranca automatica." "Frequencia abaixo de 85% na turma 7A: agende reuniao com o coordenador pedagogico." "NPS caiu 10 pontos: envie pesquisa de satisfacao detalhada para identificar causas."</p>
+
+      <p>Dados sem acao sao apenas curiosidade. Dados com acao sao gestao profissional.</p>
+
+      <div class="share-bar">
+        <span class="share-label">Compartilhe:</span>
+        <a href="https://api.whatsapp.com/send?text=Dashboard%20Analytics%3A%20Dados%20que%20Transformam%20Decisoes%20na%20Escola%20-%20Blog%20Lumied" target="_blank" rel="noopener" class="share-btn share-whatsapp">WhatsApp</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=" target="_blank" rel="noopener" class="share-btn share-linkedin">LinkedIn</a>
+        <a href="https://twitter.com/intent/tweet?text=Dashboard%20Analytics%20para%20Escolas%20-%20Blog%20Lumied&url=" target="_blank" rel="noopener" class="share-btn share-twitter">Twitter</a>
+      </div>
+
+      <div class="cta-box">
+        <h3>Quer tomar decisoes baseadas em dados?</h3>
+        <p>Conheca o dashboard analytics do Lumied e transforme a gestao da sua escola. Agende uma demonstracao gratuita.</p>
+        <a href="/site/#contact" class="cta-box-btn">Agende uma Demonstracao →</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="related-section">
+  <div class="container">
+    <div class="related-header">
+      <h2>Artigos relacionados</h2>
+    </div>
+    <div class="related-grid">
+      <a href="/site/blog/financeiro-escolar-dre-balanco/" class="related-card">
+        <span class="related-tag related-tag-financeiro">Financeiro</span>
+        <div class="related-title">Financeiro Escolar: DRE e Balanco Simplificados</div>
+        <p class="related-excerpt">Gestao financeira profissional para escolas com DRE automatico, balanco patrimonial e fluxo de caixa.</p>
+      </a>
+      <a href="/site/blog/5-sinais-escola-precisa-sistema/" class="related-card">
+        <span class="related-tag related-tag-gestao">Gestao</span>
+        <div class="related-title">5 Sinais de que sua Escola Precisa de um Sistema de Gestao</div>
+        <p class="related-excerpt">Secretaria sobrecarregada, financeiro no Excel, informacoes desencontradas. Reconhece esses sinais?</p>
+      </a>
+      <a href="/site/blog/regua-cobranca-automatica/" class="related-card">
+        <span class="related-tag related-tag-financeiro">Financeiro</span>
+        <div class="related-title">Regua de Cobranca Automatica: Reduza a Inadimplencia em 40%</div>
+        <p class="related-excerpt">Lembretes automaticos por email, SMS e WhatsApp que reduzem a inadimplencia sem desgastar o relacionamento.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/site/" class="logo" style="margin-bottom:8px;">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">Lumi<span>ed</span></div>
+      </a>
+      <p>Plataforma completa de gestao escolar inteligente. Feita para escolas bilingues que querem crescer.</p>
+    </div>
+    <div>
+      <h4>Produto</h4>
+      <a href="/site/#features">Funcionalidades</a>
+      <a href="/site/#pricing">Planos</a>
+      <a href="/site/">Atualizacoes</a>
+      <a href="/site/">Integracao</a>
+    </div>
+    <div>
+      <h4>Empresa</h4>
+      <a href="/site/sobre/">Sobre nos</a>
+      <a href="/site/blog/">Blog</a>
+      <a href="/site/">Carreiras</a>
+      <a href="/site/#contact">Contato</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="/site/">Termos de Uso</a>
+      <a href="/site/">Politica de Privacidade</a>
+      <a href="/site/">LGPD</a>
+      <a href="/site/">SLA</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>2026 Lumied. Todos os direitos reservados.</span>
+    <span>Feito com 💜 no Brasil</span>
+  </div>
+</footer>
+
+</body>
+</html>

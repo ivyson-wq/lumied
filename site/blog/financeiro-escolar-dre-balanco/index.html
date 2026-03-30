@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financeiro Escolar: DRE, Balanco e Controle Completo — Blog Lumied</title>
+<meta name="description" content="Como o modulo financeiro do Lumied transforma a gestao financeira escolar com DRE automatica, balanco patrimonial, conciliacao bancaria e controle completo de receitas e despesas.">
+<meta name="theme-color" content="#0F172A">
+<meta property="og:title" content="Financeiro Escolar: DRE, Balanco e Controle Completo">
+<meta property="og:description" content="Como o modulo financeiro do Lumied transforma a gestao financeira escolar com DRE automatica, balanco patrimonial, conciliacao bancaria e controle completo de receitas e despesas.">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: rgba(99,102,241,.08);
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --dark: #0F172A;
+  --dark-2: #1E293B;
+  --dark-3: #334155;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dark: #1E293B;
+  --bg-light: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --green: #10B981;
+  --red: #EF4444;
+  --gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A78BFA 100%);
+  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; width: 100%; position: relative; }
+.header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(15,23,42,.85); backdrop-filter: blur(20px) saturate(1.8); border-bottom: 1px solid rgba(255,255,255,.06); padding: 0 24px; height: 72px; display: flex; align-items: center; justify-content: space-between; transition: background .3s; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-icon { width: 36px; height: 36px; background: var(--gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
+.logo-text span { color: var(--accent); }
+.nav { display: flex; align-items: center; gap: 32px; }
+.nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav a:hover { color: #fff; }
+.nav-cta { padding: 10px 24px; background: var(--primary); color: #fff !important; border-radius: 8px; font-weight: 600; transition: all .2s; }
+.nav-cta:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+.article-hero { background: var(--dark); color: #fff; padding: 140px 24px 60px; position: relative; overflow: hidden; }
+.article-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,.15) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,.08) 0%, transparent 60%); }
+.article-hero-grid { position: absolute; inset: 0; opacity: .04; background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px); background-size: 60px 60px; }
+.article-hero .container { position: relative; z-index: 1; max-width: 800px; }
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.breadcrumb a { color: var(--primary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.article-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(32px, 4.5vw, 48px); font-weight: 800; line-height: 1.15; margin-bottom: 20px; letter-spacing: -1px; }
+.article-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.article-author { display: flex; align-items: center; gap: 10px; }
+.author-avatar { width: 40px; height: 40px; background: var(--gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.author-name { font-size: 14px; font-weight: 600; color: #fff; }
+.author-role { font-size: 12px; color: var(--text-muted); }
+.article-date { font-size: 13px; color: var(--text-muted); }
+.article-tag { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.article-reading { font-size: 13px; color: var(--text-muted); }
+.article-section { padding: 60px 24px 100px; background: #fff; }
+.article-container { max-width: 760px; margin: 0 auto; }
+.article-content h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); margin: 48px 0 16px; line-height: 1.3; }
+.article-content h3 { font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 36px 0 12px; }
+.article-content p { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 20px; }
+.article-content ul, .article-content ol { margin: 16px 0 24px 24px; }
+.article-content li { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 8px; }
+.article-content strong { color: var(--text-dark); }
+.article-content blockquote { border-left: 4px solid var(--primary); background: var(--primary-light); padding: 20px 24px; margin: 28px 0; border-radius: 0 12px 12px 0; }
+.article-content blockquote p { color: var(--primary-dark); font-weight: 500; margin-bottom: 0; font-style: italic; }
+.highlight-box { background: var(--bg-light); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.highlight-box h4 { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.highlight-box ul { margin: 0 0 0 20px; }
+.highlight-box li { font-size: 14px; margin-bottom: 6px; }
+.scenario-box { background: linear-gradient(135deg, rgba(99,102,241,.04) 0%, rgba(139,92,246,.04) 100%); border: 1px solid rgba(99,102,241,.15); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.scenario-box h4 { font-size: 15px; font-weight: 700; color: var(--primary-dark); margin-bottom: 10px; }
+.scenario-box p { font-size: 14px; color: #64748B; margin-bottom: 0; }
+.share-bar { display: flex; align-items: center; gap: 12px; padding: 24px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 40px 0; }
+.share-label { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: all .2s; }
+.share-whatsapp { background: #25D366; color: #fff; }
+.share-whatsapp:hover { background: #1DA851; }
+.share-linkedin { background: #0A66C2; color: #fff; }
+.share-linkedin:hover { background: #004182; }
+.share-twitter { background: #1DA1F2; color: #fff; }
+.share-twitter:hover { background: #0C85D0; }
+.cta-box { background: var(--gradient); border-radius: 16px; padding: 40px; text-align: center; margin: 48px 0; }
+.cta-box h3 { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+.cta-box p { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto; }
+.cta-box-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #fff; color: var(--primary); border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; transition: all .2s; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+.cta-box-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+.related-section { background: var(--bg-light); padding: 80px 24px; }
+.related-section .container { max-width: 1200px; margin: 0 auto; }
+.related-header { text-align: center; margin-bottom: 40px; }
+.related-header h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); }
+.related-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.related-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all .3s; text-decoration: none; display: block; }
+.related-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(99,102,241,.1); }
+.related-tag { display: inline-block; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+.related-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; line-height: 1.3; }
+.related-excerpt { font-size: 13px; color: #64748B; line-height: 1.6; }
+.footer { background: var(--dark); color: var(--text-muted); padding: 60px 24px 32px; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; max-width: 1200px; margin: 0 auto; }
+.footer-brand p { font-size: 13px; line-height: 1.6; margin-top: 12px; }
+.footer h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 16px; }
+.footer a { color: var(--text-muted); text-decoration: none; font-size: 13px; display: block; margin-bottom: 10px; transition: color .2s; }
+.footer a:hover { color: #fff; }
+.footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+@media (max-width: 768px) {
+  .nav { display: none; }
+  .hamburger { display: block; }
+  .article-hero { padding: 110px 16px 50px; }
+  .article-section { padding: 40px 16px 60px; }
+  .article-content h2 { font-size: 24px; margin-top: 36px; }
+  .article-content h3 { font-size: 18px; }
+  .related-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .share-bar { flex-wrap: wrap; }
+  .cta-box { padding: 28px 20px; }
+  .related-section { padding: 60px 16px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <a href="/site/" class="logo">
+    <div class="logo-icon">🎓</div>
+    <div class="logo-text">Lumi<span>ed</span></div>
+  </a>
+  <nav class="nav">
+    <a href="/site/#features">Funcionalidades</a>
+    <a href="/site/#videos">Demos</a>
+    <a href="/site/#screenshots">Screenshots</a>
+    <a href="/site/#pricing">Precos</a>
+    <a href="/site/#contact" class="nav-cta">Agende uma Demo</a>
+  </nav>
+  <button class="hamburger" onclick="document.querySelector('.nav').style.display=document.querySelector('.nav').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<section class="article-hero">
+  <div class="article-hero-grid"></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="/site/">Home</a> / <a href="/site/blog/">Blog</a> / Financeiro Escolar
+    </div>
+    <h1>Financeiro Escolar: DRE, Balanco e Controle Completo</h1>
+    <div class="article-meta">
+      <div class="article-author">
+        <div class="author-avatar">💰</div>
+        <div>
+          <div class="author-name">Equipe Lumied</div>
+          <div class="author-role">Gestao Financeira Escolar</div>
+        </div>
+      </div>
+      <span class="article-date">5 de Marco de 2026</span>
+      <span class="article-tag" style="background: rgba(99,102,241,.15); color: #6366F1;">Gestao</span>
+      <span class="article-reading">10 min de leitura</span>
+    </div>
+  </div>
+</section>
+
+<section class="article-section">
+  <div class="article-container">
+    <div class="article-content">
+
+      <p>A gestao financeira e, sem duvida, uma das areas mais criticas de qualquer instituicao de ensino. E tambem uma das mais negligenciadas do ponto de vista tecnologico. Enquanto escolas investem em plataformas pedagogicas e sistemas de comunicacao, o setor financeiro muitas vezes continua preso a planilhas manuais, processos fragmentados e informacoes desencontradas.</p>
+
+      <p>O resultado? Gestores que nao conseguem responder com rapidez perguntas basicas como: "Qual foi o resultado operacional do ultimo trimestre?" ou "Quanto temos de inadimplencia real descontando as renegociacoes?". Essa falta de visibilidade compromete decisoes estrategicas e coloca a saude financeira da escola em risco.</p>
+
+      <blockquote>
+        <p>Uma escola que nao domina seus numeros financeiros esta navegando no escuro. O modulo financeiro do Lumied foi construido para trazer clareza, automacao e controle total para a gestao escolar.</p>
+      </blockquote>
+
+      <h2>O Problema: Financeiro Escolar na Era das Planilhas</h2>
+
+      <p>Antes de falar sobre solucoes, e importante entender a realidade que a maioria das escolas enfrenta hoje. O cenario tipico envolve uma combinacao de ferramentas desconectadas, processos manuais e falta de padronizacao que gera ineficiencia em toda a cadeia financeira.</p>
+
+      <div class="highlight-box">
+        <h4>🚨 Problemas comuns na gestao financeira escolar</h4>
+        <ul>
+          <li>Planilhas de Excel como principal ferramenta de controle financeiro</li>
+          <li>Lancamentos manuais que geram erros e retrabalho constante</li>
+          <li>Falta de integracao entre cobranca, tesouraria e contabilidade</li>
+          <li>Impossibilidade de gerar DRE e balanco em tempo real</li>
+          <li>Conciliacao bancaria feita manualmente, consumindo horas por semana</li>
+          <li>Inadimplencia sem controle sistematico de cobranca</li>
+          <li>Relatorios financeiros que levam dias para serem compilados</li>
+        </ul>
+      </div>
+
+      <p>Esses problemas nao sao apenas inconvenientes operacionais. Eles representam riscos reais para a sustentabilidade da instituicao. Uma escola que nao consegue mensurar com precisao suas receitas e despesas esta vulneravel a surpresas desagradaveis no fluxo de caixa, dificuldades para cumprir obrigacoes fiscais e incapacidade de planejar investimentos futuros.</p>
+
+      <div class="scenario-box">
+        <h4>Cenario real: O susto do final do ano</h4>
+        <p>Uma escola com 400 alunos descobriu apenas em novembro que seu resultado operacional do ano seria negativo. O motivo? Despesas com manutencao e contratacoes nao estavam sendo acompanhadas em tempo real. Com um sistema financeiro integrado, esse problema teria sido identificado ainda no primeiro trimestre, permitindo ajustes a tempo.</p>
+      </div>
+
+      <h2>Dashboard Financeiro: Visao em Tempo Real</h2>
+
+      <p>O modulo financeiro do Lumied comeca pelo dashboard — uma visao panoramica e em tempo real de toda a saude financeira da escola. Ao acessar o painel, o gestor tem diante de si os indicadores mais importantes, atualizados automaticamente a cada transacao registrada no sistema.</p>
+
+      <h3>Indicadores do Dashboard</h3>
+
+      <p>O painel principal apresenta os numeros que realmente importam para a tomada de decisao diaria. Nao se trata de uma tela com dezenas de graficos confusos, mas de uma visao objetiva e acionavel.</p>
+
+      <div class="highlight-box">
+        <h4>📊 Metricas disponiveis no dashboard</h4>
+        <ul>
+          <li><strong>Receita bruta e liquida</strong> — Total faturado vs. total efetivamente recebido</li>
+          <li><strong>Despesas por categoria</strong> — Folha de pagamento, infraestrutura, material, marketing</li>
+          <li><strong>Fluxo de caixa projetado</strong> — Previsao para os proximos 30, 60 e 90 dias</li>
+          <li><strong>Taxa de inadimplencia</strong> — Percentual atualizado com aging de dividas</li>
+          <li><strong>Resultado operacional</strong> — Margem do periodo atual vs. periodos anteriores</li>
+          <li><strong>Saldo bancario consolidado</strong> — Todas as contas em uma unica visao</li>
+        </ul>
+      </div>
+
+      <p>Cada indicador e clicavel, permitindo ao gestor fazer drill-down e entender a composicao de cada numero. Clicou na inadimplencia? Ve a lista de titulos em aberto por aluno, por turma, por periodo. Clicou nas despesas? Ve o detalhamento por centro de custo e por fornecedor.</p>
+
+      <h2>DRE: Demonstracao de Resultado Automatica</h2>
+
+      <p>A DRE (Demonstracao do Resultado do Exercicio) e um dos relatorios financeiros mais importantes para qualquer organizacao. Ela mostra, de forma estruturada, se a escola esta gerando lucro ou prejuizo em um determinado periodo. No Lumied, a DRE e gerada automaticamente com base nos lancamentos financeiros realizados.</p>
+
+      <h3>Como funciona a DRE no Lumied</h3>
+
+      <p>Diferente de sistemas genericos onde voce precisa exportar dados e montar a DRE manualmente, o Lumied gera o relatorio completo com um clique. A estrutura segue o padrao contabil brasileiro e e organizada para refletir a realidade de uma instituicao de ensino.</p>
+
+      <div class="highlight-box">
+        <h4>📋 Estrutura da DRE escolar</h4>
+        <ul>
+          <li><strong>Receita Bruta</strong> — Mensalidades, matriculas, atividades extras, material didatico</li>
+          <li><strong>(-) Deducoes</strong> — Descontos concedidos, bolsas, devolucoes</li>
+          <li><strong>= Receita Liquida</strong></li>
+          <li><strong>(-) Custos dos Servicos</strong> — Folha docente, material pedagogico</li>
+          <li><strong>= Resultado Bruto</strong></li>
+          <li><strong>(-) Despesas Operacionais</strong> — Administrativo, comercial, infraestrutura</li>
+          <li><strong>(-) Despesas Financeiras</strong> — Juros, tarifas bancarias, taxas</li>
+          <li><strong>(+) Receitas Financeiras</strong> — Rendimentos, juros recebidos</li>
+          <li><strong>= Resultado Operacional</strong></li>
+          <li><strong>= Resultado Liquido do Periodo</strong></li>
+        </ul>
+      </div>
+
+      <p>A DRE pode ser gerada para qualquer periodo — mensal, trimestral, semestral ou anual. Alem disso, o sistema permite comparar periodos lado a lado, facilitando a analise de tendencias e a identificacao de desvios.</p>
+
+      <blockquote>
+        <p>Com a DRE automatica do Lumied, o gestor escolar deixa de depender do contador para saber se a escola esta dando lucro. A informacao esta disponivel em tempo real, sempre que necessario.</p>
+      </blockquote>
+
+      <div class="scenario-box">
+        <h4>Cenario pratico: Analise trimestral</h4>
+        <p>A diretora financeira acessa o Lumied na segunda-feira de manha e gera a DRE do primeiro trimestre. Em segundos, ela identifica que as despesas com manutencao cresceram 23% em relacao ao mesmo periodo do ano anterior. Com essa informacao, convoca uma reuniao com o time de infraestrutura para entender as causas e definir acoes corretivas antes que o impacto se agrave.</p>
+      </div>
+
+      <h2>Balanco Patrimonial</h2>
+
+      <p>Enquanto a DRE mostra o resultado de um periodo, o balanco patrimonial oferece uma fotografia da situacao financeira da escola em um momento especifico. Ele revela o que a instituicao possui (ativos), o que deve (passivos) e qual e o patrimonio liquido.</p>
+
+      <p>O Lumied gera o balanco patrimonial de forma automatizada, organizando as informacoes de acordo com a estrutura contabil padrao.</p>
+
+      <h3>Componentes do Balanco</h3>
+
+      <div class="highlight-box">
+        <h4>🏦 Estrutura do balanco no Lumied</h4>
+        <ul>
+          <li><strong>Ativo Circulante</strong> — Caixa, bancos, contas a receber, estoques</li>
+          <li><strong>Ativo Nao Circulante</strong> — Imoveis, equipamentos, veiculos, software</li>
+          <li><strong>Passivo Circulante</strong> — Fornecedores, salarios a pagar, impostos, emprestimos de curto prazo</li>
+          <li><strong>Passivo Nao Circulante</strong> — Financiamentos de longo prazo, provisoes</li>
+          <li><strong>Patrimonio Liquido</strong> — Capital social, reservas, resultado acumulado</li>
+        </ul>
+      </div>
+
+      <p>O balanco e essencial para analises como liquidez corrente, endividamento e capacidade de investimento. No Lumied, esses indicadores sao calculados automaticamente e apresentados junto ao relatorio, facilitando a interpretacao mesmo para gestores sem formacao contabil.</p>
+
+      <h2>Plano de Contas Escolar</h2>
+
+      <p>Um bom controle financeiro comeca com um plano de contas bem estruturado. O Lumied ja vem com um plano de contas pre-configurado especificamente para instituicoes de ensino, mas que pode ser totalmente personalizado de acordo com as necessidades de cada escola.</p>
+
+      <h3>Organizacao inteligente</h3>
+
+      <p>O plano de contas do Lumied segue uma hierarquia logica que facilita tanto o lancamento diario quanto a geracao de relatorios. As contas sao organizadas em grupos e subgrupos que refletem a operacao escolar.</p>
+
+      <div class="highlight-box">
+        <h4>📂 Exemplo de plano de contas escolar</h4>
+        <ul>
+          <li><strong>1. Receitas</strong> — 1.1 Mensalidades | 1.2 Matriculas | 1.3 Atividades Extras | 1.4 Material Didatico | 1.5 Eventos</li>
+          <li><strong>2. Custos</strong> — 2.1 Folha Docente | 2.2 Material Pedagogico | 2.3 Tecnologia Educacional</li>
+          <li><strong>3. Despesas Administrativas</strong> — 3.1 Folha Administrativa | 3.2 Aluguel | 3.3 Utilidades | 3.4 Seguros</li>
+          <li><strong>4. Despesas Comerciais</strong> — 4.1 Marketing | 4.2 Eventos | 4.3 Parcerias</li>
+          <li><strong>5. Despesas Financeiras</strong> — 5.1 Juros | 5.2 Tarifas Bancarias | 5.3 IOF</li>
+        </ul>
+      </div>
+
+      <p>Cada lancamento financeiro e vinculado a uma conta do plano, garantindo que todos os dados alimentem corretamente a DRE e o balanco. O sistema tambem permite a criacao de centros de custo por unidade, turma ou projeto, oferecendo uma granularidade ainda maior na analise.</p>
+
+      <h2>Conciliacao Bancaria Automatizada</h2>
+
+      <p>A conciliacao bancaria e uma das tarefas mais tediosas e propensas a erros na rotina financeira. Comparar extrato bancario com lancamentos internos, identificar divergencias e corrigir inconsistencias pode consumir horas por semana quando feito manualmente.</p>
+
+      <p>O Lumied automatiza esse processo com integracao direta via API com as principais instituicoes bancarias, incluindo o Banco Inter.</p>
+
+      <h3>Como funciona</h3>
+
+      <div class="highlight-box">
+        <h4>🔄 Fluxo de conciliacao no Lumied</h4>
+        <ul>
+          <li>Importacao automatica do extrato bancario via integracao API</li>
+          <li>Matching inteligente entre lancamentos internos e movimentacoes bancarias</li>
+          <li>Destaque automatico de divergencias para revisao manual</li>
+          <li>Conciliacao em lote para itens ja identificados pelo sistema</li>
+          <li>Historico completo de conciliacoes anteriores para auditoria</li>
+          <li>Alertas automaticos quando saldo contabil diverge do saldo bancario</li>
+        </ul>
+      </div>
+
+      <p>O resultado e uma conciliacao que antes levava horas e agora e feita em minutos. Alem da economia de tempo, a automacao elimina erros humanos e garante que os saldos estejam sempre atualizados e corretos.</p>
+
+      <div class="scenario-box">
+        <h4>Cenario pratico: Conciliacao semanal</h4>
+        <p>O assistente financeiro da escola abre o modulo de conciliacao na sexta-feira. O sistema ja importou automaticamente as movimentacoes da semana e fez o matching de 94% dos lancamentos. Restam apenas 6 itens para revisao manual — uma transferencia entre contas que nao foi registrada e 5 tarifas bancarias avulsas. Em 15 minutos, a conciliacao da semana esta completa.</p>
+      </div>
+
+      <h2>Gestao de Mensalidades</h2>
+
+      <p>Mensalidades representam a principal fonte de receita de qualquer escola particular. Gerenciar esse fluxo de forma eficiente — desde a definicao de valores ate o recebimento efetivo — e fundamental para a sustentabilidade da instituicao.</p>
+
+      <p>No Lumied, a gestao de mensalidades esta totalmente integrada ao modulo financeiro, eliminando a necessidade de sistemas separados ou controles paralelos.</p>
+
+      <h3>Funcionalidades de mensalidades</h3>
+
+      <div class="highlight-box">
+        <h4>💳 Controle completo de mensalidades</h4>
+        <ul>
+          <li><strong>Configuracao flexivel</strong> — Valores diferenciados por turma, serie, turno ou tipo de contrato</li>
+          <li><strong>Descontos automaticos</strong> — Bolsas, irmaos, pagamento antecipado, conveniados</li>
+          <li><strong>Reajustes programados</strong> — Aplicacao automatica de indices anuais</li>
+          <li><strong>Parcelamento</strong> — Opcoes de parcelamento de matricula e material</li>
+          <li><strong>Lancamento automatico</strong> — Geracao mensal dos titulos sem intervencao manual</li>
+          <li><strong>Baixa automatica</strong> — Confirmacao de pagamento via retorno bancario</li>
+        </ul>
+      </div>
+
+      <p>Cada mensalidade gera automaticamente um lancamento no contas a receber e alimenta a DRE quando recebida. Nao ha necessidade de digitacao dupla ou reconciliacao entre sistemas diferentes.</p>
+
+      <h2>Boletos com Integracao Banco Inter</h2>
+
+      <p>A emissao de boletos e uma parte essencial da cobranca escolar. O Lumied oferece integracao nativa com o Banco Inter via API, permitindo a geracao, envio e baixa automatica de boletos diretamente pela plataforma.</p>
+
+      <h3>Fluxo completo de boletos</h3>
+
+      <p>O processo de cobranca por boleto no Lumied e totalmente automatizado, desde a geracao ate a confirmacao de pagamento.</p>
+
+      <div class="highlight-box">
+        <h4>🏧 Integracao com Banco Inter</h4>
+        <ul>
+          <li><strong>Geracao automatica</strong> — Boletos criados junto com o lancamento da mensalidade</li>
+          <li><strong>Envio por e-mail</strong> — Responsaveis recebem o boleto automaticamente</li>
+          <li><strong>Segunda via</strong> — Disponivel no portal do responsavel a qualquer momento</li>
+          <li><strong>Baixa automatica</strong> — Pagamentos identificados via arquivo de retorno</li>
+          <li><strong>Juros e multa</strong> — Calculo automatico conforme parametros configurados</li>
+          <li><strong>Cancelamento e substituicao</strong> — Gestao completa do ciclo de vida do boleto</li>
+        </ul>
+      </div>
+
+      <blockquote>
+        <p>Com a integracao bancaria do Lumied, a escola elimina o trabalho manual de gerar boletos, conferir pagamentos e dar baixa nas cobracas. Tudo acontece de forma automatica e segura.</p>
+      </blockquote>
+
+      <h2>Regua de Cobranca Automatica</h2>
+
+      <p>Inadimplencia e um desafio constante para escolas particulares. Sem um processo estruturado de cobranca, a taxa de inadimplencia tende a crescer ao longo do ano, comprometendo o fluxo de caixa e a capacidade de investimento da instituicao.</p>
+
+      <p>O Lumied implementa uma regua de cobranca automatica — uma sequencia programada de acoes que sao disparadas conforme o status de cada titulo.</p>
+
+      <h3>Etapas da regua de cobranca</h3>
+
+      <div class="highlight-box">
+        <h4>⏱ Sequencia automatizada de cobranca</h4>
+        <ul>
+          <li><strong>D-5:</strong> Lembrete de vencimento proximo via e-mail e notificacao</li>
+          <li><strong>D-1:</strong> Lembrete de vencimento amanha com link para pagamento</li>
+          <li><strong>D+1:</strong> Aviso de atraso com boleto atualizado (juros e multa)</li>
+          <li><strong>D+7:</strong> Segunda notificacao de atraso com tom mais urgente</li>
+          <li><strong>D+15:</strong> Contato telefonico pela equipe financeira (tarefa gerada automaticamente)</li>
+          <li><strong>D+30:</strong> Notificacao formal com prazo para regularizacao</li>
+          <li><strong>D+60:</strong> Encaminhamento para negociacao ou medidas adicionais</li>
+        </ul>
+      </div>
+
+      <p>A regua e totalmente personalizavel. A escola define os prazos, os canais de comunicacao (e-mail, SMS, WhatsApp, notificacao no app) e o tom de cada mensagem. O sistema executa tudo automaticamente, liberando a equipe financeira para focar em casos que realmente precisam de atencao humana.</p>
+
+      <div class="scenario-box">
+        <h4>Cenario pratico: Reducao de inadimplencia</h4>
+        <p>Uma escola que implementou a regua de cobranca do Lumied reduziu sua inadimplencia de 12% para 4,5% em apenas 4 meses. O segredo? Cobracas consistentes, no momento certo, pelo canal certo. Muitos responsaveis simplesmente esqueciam da data de vencimento — o lembrete automatico resolveu 60% dos casos de atraso.</p>
+      </div>
+
+      <h2>Relatorios e Compliance</h2>
+
+      <p>Alem da DRE e do balanco, o modulo financeiro do Lumied oferece uma suite completa de relatorios gerenciais e fiscais que atendem tanto as necessidades de gestao interna quanto as exigencias legais e regulatorias.</p>
+
+      <h3>Relatorios gerenciais</h3>
+
+      <div class="highlight-box">
+        <h4>📈 Relatorios disponiveis</h4>
+        <ul>
+          <li><strong>Fluxo de caixa realizado e projetado</strong> — Visao historica e previsao futura</li>
+          <li><strong>Contas a receber aging</strong> — Inadimplencia por faixa de atraso</li>
+          <li><strong>Contas a pagar</strong> — Compromissos futuros por fornecedor e vencimento</li>
+          <li><strong>Analise de receita por turma</strong> — Rentabilidade por segmento</li>
+          <li><strong>Custo por aluno</strong> — Quanto custa cada estudante para a escola</li>
+          <li><strong>Comparativo orcado vs. realizado</strong> — Desvios do planejamento</li>
+          <li><strong>Relatorio de bolsas e descontos</strong> — Impacto na receita bruta</li>
+          <li><strong>Movimentacao bancaria</strong> — Extrato detalhado por conta</li>
+        </ul>
+      </div>
+
+      <h3>Compliance e obrigacoes fiscais</h3>
+
+      <p>O Lumied tambem auxilia a escola no cumprimento de suas obrigacoes fiscais e regulatorias. O sistema gera arquivos nos formatos exigidos pela Receita Federal e pelos orgaos reguladores da educacao.</p>
+
+      <div class="highlight-box">
+        <h4>✅ Compliance financeiro</h4>
+        <ul>
+          <li>Exportacao de dados para o contador nos formatos padrao (SPED, EFD)</li>
+          <li>Geracao de informe de rendimentos para responsaveis (declaracao de IR)</li>
+          <li>Controle de retencoes de impostos (ISS, IRRF, PIS, COFINS)</li>
+          <li>Audit trail completo — rastreabilidade de todas as operacoes financeiras</li>
+          <li>Backup automatico de documentos fiscais</li>
+        </ul>
+      </div>
+
+      <blockquote>
+        <p>O financeiro da escola precisa ser mais do que um setor que paga contas e cobra mensalidades. Com o Lumied, ele se torna um centro de inteligencia que orienta as decisoes estrategicas da instituicao.</p>
+      </blockquote>
+
+      <h2>Integracao Total com a Plataforma</h2>
+
+      <p>Uma das maiores vantagens do modulo financeiro do Lumied e sua integracao nativa com todos os outros modulos da plataforma. Isso significa que dados fluem automaticamente entre setores, eliminando retrabalho e inconsistencias.</p>
+
+      <div class="highlight-box">
+        <h4>🔗 Integracoes do modulo financeiro</h4>
+        <ul>
+          <li><strong>Matricula → Financeiro:</strong> Contrato assinado gera automaticamente os lancamentos de mensalidade</li>
+          <li><strong>Secretaria → Financeiro:</strong> Alteracoes de turma ou serie ajustam valores automaticamente</li>
+          <li><strong>Atividades Extras → Financeiro:</strong> Inscricao em atividades gera cobranca adicional</li>
+          <li><strong>Portal do Responsavel → Financeiro:</strong> Pais acessam boletos, historico e segunda via</li>
+          <li><strong>CRM → Financeiro:</strong> Proposta aceita no CRM inicia o fluxo de cobranca de matricula</li>
+        </ul>
+      </div>
+
+      <p>Essa integracao elimina a necessidade de sistemas paralelos, planilhas auxiliares ou digitacao dupla. Cada informacao e registrada uma unica vez e propagada automaticamente para todos os modulos que precisam dela.</p>
+
+      <div class="scenario-box">
+        <h4>Cenario pratico: Da matricula ao recebimento</h4>
+        <p>Um responsavel assina o contrato de matricula no portal online. Automaticamente, o Lumied cria os 12 lancamentos de mensalidade, gera os boletos via Banco Inter, envia o primeiro boleto por e-mail e ativa a regua de cobranca. O setor financeiro nao precisa fazer nada — tudo acontece em segundo plano, de forma segura e rastreavel.</p>
+      </div>
+
+      <h2>Conclusao: Gestao Financeira Escolar de Verdade</h2>
+
+      <p>Gerir o financeiro de uma escola vai muito alem de emitir boletos e pagar fornecedores. Envolve planejamento, analise, controle e tomada de decisao baseada em dados. O modulo financeiro do Lumied foi projetado para cobrir toda essa jornada — do lancamento mais simples ao relatorio mais complexo.</p>
+
+      <p>Com DRE automatica, balanco patrimonial, conciliacao bancaria, gestao de mensalidades, integracao com Banco Inter e regua de cobranca inteligente, o Lumied transforma o setor financeiro da escola em um verdadeiro centro de excelencia operacional.</p>
+
+      <p>Se a sua escola ainda depende de planilhas, processos manuais e informacoes fragmentadas para tomar decisoes financeiras, esta na hora de dar um passo adiante. A tecnologia existe, esta pronta e pode ser implementada de forma rapida e segura.</p>
+
+      <div class="cta-box">
+        <h3>Transforme o financeiro da sua escola</h3>
+        <p>Conheca o modulo financeiro completo do Lumied. DRE, balanco, conciliacao, boletos e muito mais — tudo em uma unica plataforma.</p>
+        <a href="/site/#contact" class="cta-box-btn">Agende uma Demonstracao →</a>
+      </div>
+
+      <div class="share-bar">
+        <span class="share-label">Compartilhe:</span>
+        <a href="https://wa.me/?text=Financeiro%20Escolar%3A%20DRE%2C%20Balanco%20e%20Controle%20Completo%20%E2%80%94%20Blog%20Lumied" target="_blank" class="share-btn share-whatsapp">WhatsApp</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=" target="_blank" class="share-btn share-linkedin">LinkedIn</a>
+        <a href="https://twitter.com/intent/tweet?text=Financeiro%20Escolar%3A%20DRE%2C%20Balanco%20e%20Controle%20Completo" target="_blank" class="share-btn share-twitter">Twitter</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="related-section">
+  <div class="container">
+    <div class="related-header">
+      <h2>Artigos Relacionados</h2>
+    </div>
+    <div class="related-grid">
+      <a href="/site/blog/regua-cobranca-automatica/" class="related-card">
+        <span class="related-tag" style="background: rgba(99,102,241,.1); color: #6366F1;">Gestao</span>
+        <div class="related-title">Regua de Cobranca Automatica</div>
+        <div class="related-excerpt">Como automatizar o processo de cobranca escolar e reduzir a inadimplencia com sequencias inteligentes de notificacoes e acoes programadas.</div>
+      </a>
+      <a href="/site/blog/matricula-online-processo-digital/" class="related-card">
+        <span class="related-tag" style="background: rgba(99,102,241,.1); color: #6366F1;">Gestao</span>
+        <div class="related-title">Matricula Online: Processo 100% Digital</div>
+        <div class="related-excerpt">Digitalize todo o processo de matricula da sua escola — da inscricao a assinatura do contrato — com o modulo de matricula online do Lumied.</div>
+      </a>
+      <a href="/site/blog/lgpd-escola-guia-completo/" class="related-card">
+        <span class="related-tag" style="background: rgba(14,165,233,.1); color: #0284C7;">LGPD</span>
+        <div class="related-title">LGPD na Escola: O Guia Completo</div>
+        <div class="related-excerpt">Tudo o que sua escola precisa saber sobre a Lei Geral de Protecao de Dados e como o Lumied garante conformidade total com a legislacao.</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/site/" class="logo" style="margin-bottom:8px;">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">Lumi<span>ed</span></div>
+      </a>
+      <p>Plataforma completa de gestao escolar inteligente. Feita para escolas bilingues que querem crescer.</p>
+    </div>
+    <div>
+      <h4>Produto</h4>
+      <a href="/site/#features">Funcionalidades</a>
+      <a href="/site/#pricing">Planos</a>
+      <a href="/site/">Atualizacoes</a>
+      <a href="/site/">Integracao</a>
+    </div>
+    <div>
+      <h4>Empresa</h4>
+      <a href="/site/sobre/">Sobre nos</a>
+      <a href="/site/blog/">Blog</a>
+      <a href="/site/">Carreiras</a>
+      <a href="/site/#contact">Contato</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="/site/">Termos de Uso</a>
+      <a href="/site/">Politica de Privacidade</a>
+      <a href="/site/">LGPD</a>
+      <a href="/site/">SLA</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>2026 Lumied. Todos os direitos reservados.</span>
+    <span>Feito com 💜 no Brasil</span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestao de Manutencao Escolar: Do Chamado a Resolucao — Blog Lumied</title>
+<meta name="description" content="Gerencie chamados de manutencao escolar com niveis de urgencia, fotos, equipes responsaveis e historico completo. Saiba como o Lumied organiza tudo.">
+<meta name="theme-color" content="#0F172A">
+<meta property="og:title" content="Gestao de Manutencao Escolar: Do Chamado a Resolucao">
+<meta property="og:description" content="Gerencie chamados de manutencao escolar com niveis de urgencia, fotos, equipes responsaveis e historico completo. Saiba como o Lumied organiza tudo.">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: rgba(99,102,241,.08);
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --dark: #0F172A;
+  --dark-2: #1E293B;
+  --dark-3: #334155;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dark: #1E293B;
+  --bg-light: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --green: #10B981;
+  --red: #EF4444;
+  --gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A78BFA 100%);
+  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; width: 100%; position: relative; }
+
+/* ═══ HEADER ═══ */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(15,23,42,.85); backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 24px; height: 72px;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background .3s;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-icon { width: 36px; height: 36px; background: var(--gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
+.logo-text span { color: var(--accent); }
+.nav { display: flex; align-items: center; gap: 32px; }
+.nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav a:hover { color: #fff; }
+.nav-cta { padding: 10px 24px; background: var(--primary); color: #fff !important; border-radius: 8px; font-weight: 600; transition: all .2s; }
+.nav-cta:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+
+/* ═══ ARTICLE HERO ═══ */
+.article-hero {
+  background: var(--dark); color: #fff; padding: 140px 24px 60px;
+  position: relative; overflow: hidden;
+}
+.article-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,.15) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,.08) 0%, transparent 60%);
+}
+.article-hero-grid {
+  position: absolute; inset: 0; opacity: .04;
+  background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.article-hero .container { position: relative; z-index: 1; max-width: 800px; }
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.breadcrumb a { color: var(--primary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.article-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(32px, 4.5vw, 48px); font-weight: 800; line-height: 1.15; margin-bottom: 20px; letter-spacing: -1px; }
+.article-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.article-author { display: flex; align-items: center; gap: 10px; }
+.author-avatar { width: 40px; height: 40px; background: var(--gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.author-name { font-size: 14px; font-weight: 600; color: #fff; }
+.author-role { font-size: 12px; color: var(--text-muted); }
+.article-date { font-size: 13px; color: var(--text-muted); }
+.article-tag { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; background: rgba(245,158,11,.15); color: #D97706; }
+.article-reading { font-size: 13px; color: var(--text-muted); }
+
+/* ═══ ARTICLE BODY ═══ */
+.article-section { padding: 60px 24px 100px; background: #fff; }
+.article-container { max-width: 760px; margin: 0 auto; }
+.article-content h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); margin: 48px 0 16px; line-height: 1.3; }
+.article-content h3 { font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 36px 0 12px; }
+.article-content p { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 20px; }
+.article-content ul, .article-content ol { margin: 16px 0 24px 24px; }
+.article-content li { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 8px; }
+.article-content strong { color: var(--text-dark); }
+.article-content blockquote { border-left: 4px solid var(--primary); background: var(--primary-light); padding: 20px 24px; margin: 28px 0; border-radius: 0 12px 12px 0; }
+.article-content blockquote p { color: var(--primary-dark); font-weight: 500; margin-bottom: 0; font-style: italic; }
+.highlight-box { background: var(--bg-light); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.highlight-box h4 { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.highlight-box ul { margin: 0 0 0 20px; }
+.highlight-box li { font-size: 14px; margin-bottom: 6px; }
+.scenario-box { background: linear-gradient(135deg, rgba(99,102,241,.04) 0%, rgba(139,92,246,.04) 100%); border: 1px solid rgba(99,102,241,.15); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.scenario-box h4 { font-size: 15px; font-weight: 700; color: var(--primary-dark); margin-bottom: 10px; }
+.scenario-box p { font-size: 14px; color: #64748B; margin-bottom: 0; }
+
+/* ═══ SHARE ═══ */
+.share-bar { display: flex; align-items: center; gap: 12px; padding: 24px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 40px 0; }
+.share-label { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: all .2s; }
+.share-whatsapp { background: #25D366; color: #fff; }
+.share-whatsapp:hover { background: #1DA851; }
+.share-linkedin { background: #0A66C2; color: #fff; }
+.share-linkedin:hover { background: #004182; }
+.share-twitter { background: #1DA1F2; color: #fff; }
+.share-twitter:hover { background: #0C85D0; }
+
+/* ═══ CTA BOX ═══ */
+.cta-box { background: var(--gradient); border-radius: 16px; padding: 40px; text-align: center; margin: 48px 0; }
+.cta-box h3 { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+.cta-box p { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto; }
+.cta-box-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #fff; color: var(--primary); border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; transition: all .2s; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+.cta-box-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+
+/* ═══ RELATED ═══ */
+.related-section { background: var(--bg-light); padding: 80px 24px; }
+.related-section .container { max-width: 1200px; margin: 0 auto; }
+.related-header { text-align: center; margin-bottom: 40px; }
+.related-header h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); }
+.related-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.related-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all .3s; text-decoration: none; display: block; }
+.related-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(99,102,241,.1); }
+.related-tag { display: inline-block; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+.related-tag-operacional { background: rgba(245,158,11,.1); color: #D97706; }
+.related-tag-seguranca { background: rgba(239,68,68,.1); color: #EF4444; }
+.related-tag-pedagogico { background: rgba(99,102,241,.1); color: #6366F1; }
+.related-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; line-height: 1.3; }
+.related-excerpt { font-size: 13px; color: #64748B; line-height: 1.6; }
+
+/* ═══ FOOTER ═══ */
+.footer { background: var(--dark); color: var(--text-muted); padding: 60px 24px 32px; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; max-width: 1200px; margin: 0 auto; }
+.footer-brand p { font-size: 13px; line-height: 1.6; margin-top: 12px; }
+.footer h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 16px; }
+.footer a { color: var(--text-muted); text-decoration: none; font-size: 13px; display: block; margin-bottom: 10px; transition: color .2s; }
+.footer a:hover { color: #fff; }
+.footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+  .nav { display: none; }
+  .hamburger { display: block; }
+  .article-hero { padding: 110px 16px 50px; }
+  .article-section { padding: 40px 16px 60px; }
+  .article-content h2 { font-size: 24px; margin-top: 36px; }
+  .article-content h3 { font-size: 18px; }
+  .related-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .share-bar { flex-wrap: wrap; }
+  .cta-box { padding: 28px 20px; }
+  .related-section { padding: 60px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <a href="/site/" class="logo">
+    <div class="logo-icon">🎓</div>
+    <div class="logo-text">Lumi<span>ed</span></div>
+  </a>
+  <nav class="nav">
+    <a href="/site/#features">Funcionalidades</a>
+    <a href="/site/#videos">Demos</a>
+    <a href="/site/#screenshots">Screenshots</a>
+    <a href="/site/#pricing">Precos</a>
+    <a href="/site/#contact" class="nav-cta">Agende uma Demo</a>
+  </nav>
+  <button class="hamburger" onclick="document.querySelector('.nav').style.display=document.querySelector('.nav').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<!-- ═══ ARTICLE HERO ═══ -->
+<section class="article-hero">
+  <div class="article-hero-grid"></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="/site/">Home</a>
+      <span>/</span>
+      <a href="/site/blog/">Blog</a>
+      <span>/</span>
+      <span>Gestao de Manutencao Escolar</span>
+    </div>
+    <h1>Gestao de Manutencao Escolar: Do Chamado a Resolucao</h1>
+    <div class="article-meta">
+      <div class="article-author">
+        <div class="author-avatar">📝</div>
+        <div>
+          <div class="author-name">Equipe Lumied</div>
+          <div class="author-role">Blog Lumied</div>
+        </div>
+      </div>
+      <span class="article-date">20 de Janeiro de 2026</span>
+      <span class="article-tag">Operacional</span>
+      <span class="article-reading">8 min de leitura</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ARTICLE BODY ═══ -->
+<section class="article-section">
+  <div class="article-container">
+    <div class="article-content">
+
+      <p>A torneira do banheiro do segundo andar esta vazando ha tres dias. A lampada da sala 7 queimou semana passada e ninguem trocou. O ar-condicionado da diretoria faz um barulho estranho. A fechadura do portao lateral esta emperrando. Todos esses problemas foram reportados — verbalmente, por bilhete, por WhatsApp, ou simplesmente mencionados no corredor. E todos estao perdidos em algum lugar entre a boa intencao de quem ouviu e a falta de um sistema para rastrear.</p>
+
+      <p>A gestao de manutencao e um dos aspectos mais negligenciados na administracao escolar. Nao porque as escolas nao se importem, mas porque a maioria simplesmente nao tem ferramentas adequadas para organizar chamados, priorizar urgencias, acompanhar resolucoes e manter um historico. O resultado e um ciclo vicioso de problemas que se acumulam, reclamacoes que crescem e uma infraestrutura que se deteriora mais rapido do que deveria.</p>
+
+      <h2>O custo invisivel da manutencao desorganizada</h2>
+
+      <p>Quando a manutencao escolar e gerenciada de forma informal — por bilhetes, mensagens no WhatsApp ou conversas no corredor — varios problemas surgem que afetam diretamente a operacao da escola.</p>
+
+      <h3>Problemas que se agravam por falta de acompanhamento</h3>
+
+      <p>Um pequeno vazamento que poderia ser resolvido com um aperto de parafuso se transforma em uma infiltracao que danifica o piso e a parede. Uma lampada queimada em um corredor cria um risco de seguranca para alunos. Um ar-condicionado com problema de manutencao preventiva quebra no meio do verao e precisa ser substituido inteiro. Em todos esses casos, o custo de resolver o problema cresce exponencialmente quanto mais tempo ele e ignorado.</p>
+
+      <h3>Responsabilidade difusa: o problema de ninguem</h3>
+
+      <p>Quando nao existe um sistema formal de chamados, a responsabilidade fica difusa. A professora avisa a coordenadora, que comenta com o zelador, que diz que vai ver. Ninguem registrou, ninguem acompanhou, e semanas depois o problema continua la. Quando alguem pergunta "o que aconteceu com aquele conserto?", ninguem sabe responder.</p>
+
+      <blockquote>
+        <p>Se nao esta registrado, nao existe. Na gestao de manutencao, problemas sem registro sao problemas sem solucao.</p>
+      </blockquote>
+
+      <h3>Falta de dados para planejamento</h3>
+
+      <p>Sem um historico organizado de manutencoes, a escola nao consegue planejar. Quais areas da escola demandam mais reparos? Qual equipamento quebra com mais frequencia? Quanto a escola gasta por mes com manutencao corretiva? Qual fornecedor entrega no prazo? Sem dados, todas essas decisoes sao tomadas no escuro.</p>
+
+      <h2>Como o Lumied organiza a manutencao escolar</h2>
+
+      <p>O modulo de Gestao de Manutencao do Lumied transforma um processo caótico em um fluxo organizado, rastreavel e eficiente. Desde a abertura do chamado ate a resolucao, tudo e registrado, priorizado e acompanhado.</p>
+
+      <h3>Abertura de chamados: rapida e completa</h3>
+
+      <p>Qualquer membro da equipe escolar pode abrir um chamado de manutencao diretamente pelo sistema. O formulario e simples e rapido, mas captura todas as informacoes necessarias para que o problema seja entendido e priorizado corretamente.</p>
+
+      <div class="highlight-box">
+        <h4>Informacoes capturadas em cada chamado:</h4>
+        <ul>
+          <li>Localizacao exata (bloco, andar, sala, area externa)</li>
+          <li>Categoria do problema (eletrica, hidraulica, estrutural, equipamento, limpeza)</li>
+          <li>Descricao detalhada do problema</li>
+          <li>Fotos do problema (camera do celular direto no sistema)</li>
+          <li>Nivel de urgencia (baixa, media, alta, critica)</li>
+          <li>Quem reportou e quando</li>
+        </ul>
+      </div>
+
+      <div class="scenario-box">
+        <h4>Cenario: professora reporta vazamento</h4>
+        <p>A professora Ana entra na sala 12 e percebe uma mancha de umidade no teto. Abre o Lumied no celular, toca em "Novo Chamado", seleciona "Hidraulica", aponta a camera e tira uma foto, marca urgencia "Alta" e escreve "Mancha de umidade no teto, possivel vazamento do andar de cima". Em 30 segundos o chamado esta registrado, e o responsavel pela manutencao ja recebeu a notificacao.</p>
+      </div>
+
+      <h3>Niveis de urgencia e priorizacao automatica</h3>
+
+      <p>Nem todo problema e igual. Uma lampada queimada na reserva e diferente de um vazamento de gas na cozinha. O Lumied permite classificar chamados em quatro niveis de urgencia, cada um com prazos de atendimento e fluxos de notificacao diferentes.</p>
+
+      <ul>
+        <li><strong>Baixa:</strong> Problemas esteticos ou de conforto que nao afetam a operacao. Prazo sugerido: 7 dias.</li>
+        <li><strong>Media:</strong> Problemas que afetam o conforto mas nao a seguranca. Prazo sugerido: 3 dias.</li>
+        <li><strong>Alta:</strong> Problemas que podem se agravar ou que afetam aulas. Prazo sugerido: 24 horas.</li>
+        <li><strong>Critica:</strong> Riscos a seguranca de alunos e equipe. Prazo sugerido: imediato. Notificacao para direcao.</li>
+      </ul>
+
+      <h3>Atribuicao de equipes e responsaveis</h3>
+
+      <p>Cada chamado pode ser atribuido a um responsavel especifico ou a uma equipe. O sistema permite cadastrar a equipe de manutencao interna, zeladores, e ate prestadores de servico externos. Quando um chamado e atribuido, o responsavel recebe notificacao e pode acompanhar o status pelo proprio celular.</p>
+
+      <h3>Acompanhamento com fotos e atualizacoes</h3>
+
+      <p>O responsavel pela resolucao pode atualizar o status do chamado em tempo real, adicionando comentarios e fotos do progresso. Isso cria um historico visual completo de cada manutencao — do problema ate a solucao.</p>
+
+      <div class="highlight-box">
+        <h4>Status de um chamado:</h4>
+        <ul>
+          <li><strong>Aberto:</strong> chamado registrado, aguardando atribuicao</li>
+          <li><strong>Em analise:</strong> responsavel esta avaliando o problema</li>
+          <li><strong>Em andamento:</strong> reparo em execucao</li>
+          <li><strong>Aguardando material:</strong> reparo depende de peca ou material</li>
+          <li><strong>Aguardando fornecedor:</strong> servico terceirizado agendado</li>
+          <li><strong>Concluido:</strong> problema resolvido, com foto de comprovacao</li>
+        </ul>
+      </div>
+
+      <h2>Relatorios e inteligencia operacional</h2>
+
+      <p>Um dos maiores beneficios de digitalizar a gestao de manutencao e a geracao automatica de relatorios e indicadores. O Lumied transforma dados brutos em informacoes acionaveis para a direcao da escola.</p>
+
+      <h3>Dashboard de manutencao</h3>
+
+      <p>O painel apresenta uma visao geral em tempo real: quantos chamados estao abertos, quantos foram resolvidos no mes, qual o tempo medio de resolucao, quais areas da escola demandam mais manutencao, e quais chamados estao atrasados. Tudo visual, com graficos e indicadores coloridos.</p>
+
+      <h3>Historico por local e equipamento</h3>
+
+      <p>Ao longo do tempo, o sistema acumula um historico valioso. A escola consegue identificar padroes: "a sala 12 sempre tem problemas de infiltracao", "o ar-condicionado da sala 5 ja quebrou 4 vezes este ano", "o fornecedor X atrasa em 60% dos chamados". Essas informacoes permitem decisoes mais inteligentes sobre investimentos em infraestrutura e escolha de fornecedores.</p>
+
+      <h3>Custo de manutencao</h3>
+
+      <p>Cada chamado pode ter o custo de resolucao registrado — materiais, mao de obra, servicos terceirizados. Ao fim do mes, a escola tem um relatorio completo de quanto gastou com manutencao, segmentado por categoria, area e fornecedor. Isso e essencial para planejamento orcamentario e para justificar investimentos preventivos.</p>
+
+      <div class="scenario-box">
+        <h4>Cenario: justificando investimento preventivo</h4>
+        <p>O diretor analisa o relatorio anual de manutencao e percebe que a escola gastou R$ 18.000 em reparos no sistema hidraulico — a maioria emergenciais. Com esses dados, justifica ao conselho um investimento de R$ 8.000 em manutencao preventiva, que reduz os custos emergenciais em 70% no ano seguinte. Sem dados, esse argumento seria impossivel de fazer.</p>
+      </div>
+
+      <h2>Manutencao preventiva: antecipando problemas</h2>
+
+      <p>Alem de gerenciar chamados reativos, o Lumied permite programar manutencoes preventivas. A escola cadastra rotinas de manutencao periodica — limpeza de caixa d'agua, revisao de extintores, manutencao de ar-condicionados, poda de arvores — e o sistema gera automaticamente os chamados na data programada.</p>
+
+      <p>Isso transforma a cultura de manutencao da escola: em vez de so apagar incendios, a equipe trabalha proativamente para prevenir problemas. O resultado e uma infraestrutura mais bem cuidada, menos emergencias, e custos significativamente menores ao longo do tempo.</p>
+
+      <div class="highlight-box">
+        <h4>Resultados da gestao de manutencao digital:</h4>
+        <ul>
+          <li><strong>Tempo medio de resolucao reduzido em 45%</strong> — chamados nao se perdem mais</li>
+          <li><strong>Reducao de 30% nos custos de manutencao</strong> — preventiva custa menos que corretiva</li>
+          <li><strong>100% dos chamados rastreados</strong> — nenhum problema fica sem acompanhamento</li>
+          <li><strong>Historico completo para auditoria</strong> — fotos antes e depois de cada reparo</li>
+          <li><strong>Satisfacao da equipe melhorou</strong> — problemas reportados sao efetivamente resolvidos</li>
+          <li><strong>Planejamento orcamentario mais preciso</strong> — dados reais em vez de estimativas</li>
+        </ul>
+      </div>
+
+      <p>Gestao de manutencao nao e glamourosa, mas e essencial. Uma escola com infraestrutura bem cuidada e uma escola onde alunos aprendem melhor, professores trabalham com mais conforto e pais confiam na instituicao. Com o Lumied, cada parafuso solto, cada lampada queimada e cada goteira tem um chamado, um responsavel e um prazo. Do problema a solucao, tudo registrado.</p>
+
+      <!-- ═══ SHARE ═══ -->
+      <div class="share-bar">
+        <span class="share-label">Compartilhe:</span>
+        <a href="https://api.whatsapp.com/send?text=Gestao%20de%20Manutencao%20Escolar%20-%20Blog%20Lumied" target="_blank" rel="noopener" class="share-btn share-whatsapp">WhatsApp</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=" target="_blank" rel="noopener" class="share-btn share-linkedin">LinkedIn</a>
+        <a href="https://twitter.com/intent/tweet?text=Gestao%20de%20Manutencao%20Escolar&url=" target="_blank" rel="noopener" class="share-btn share-twitter">Twitter</a>
+      </div>
+
+      <!-- ═══ CTA ═══ -->
+      <div class="cta-box">
+        <h3>Quer organizar a manutencao da sua escola?</h3>
+        <p>Conheca o modulo de Gestao de Manutencao do Lumied e transforme chamados perdidos em solucoes rastreadas. Agende uma demonstracao gratuita.</p>
+        <a href="/site/#contact" class="cta-box-btn">Agende uma Demonstracao →</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ARTIGOS RELACIONADOS ═══ -->
+<section class="related-section">
+  <div class="container">
+    <div class="related-header">
+      <h2>Artigos relacionados</h2>
+    </div>
+    <div class="related-grid">
+      <a href="/site/blog/sistema-emergencia-lockdown-escolar/" class="related-card">
+        <span class="related-tag related-tag-seguranca">Seguranca</span>
+        <div class="related-title">Sistema de Emergencia: Lockdown Escolar em Tempo Real</div>
+        <p class="related-excerpt">Protocolos de emergencia, botao de lockdown e notificacoes instantaneas para proteger alunos e equipe.</p>
+      </a>
+      <a href="/site/blog/controle-frequencia-chamada-digital/" class="related-card">
+        <span class="related-tag related-tag-pedagogico">Pedagogico</span>
+        <div class="related-title">Controle de Frequencia: Chamada Digital em 1 Minuto</div>
+        <p class="related-excerpt">Chamada digital com estatisticas, alertas de faltas e integracao direta com os pais.</p>
+      </a>
+      <a href="/site/blog/relatorios-pedagogicos-bncc/" class="related-card">
+        <span class="related-tag related-tag-pedagogico">Pedagogico</span>
+        <div class="related-title">Relatorios Pedagogicos Alinhados a BNCC</div>
+        <p class="related-excerpt">Competencias BNCC, relatorios por aluno, diario de classe digital e visao gerencial integrada.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/site/" class="logo" style="margin-bottom:8px;">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">Lumi<span>ed</span></div>
+      </a>
+      <p>Plataforma completa de gestao escolar inteligente. Feita para escolas bilingues que querem crescer.</p>
+    </div>
+    <div>
+      <h4>Produto</h4>
+      <a href="/site/#features">Funcionalidades</a>
+      <a href="/site/#pricing">Planos</a>
+      <a href="/site/">Atualizacoes</a>
+      <a href="/site/">Integracao</a>
+    </div>
+    <div>
+      <h4>Empresa</h4>
+      <a href="/site/sobre/">Sobre nos</a>
+      <a href="/site/blog/">Blog</a>
+      <a href="/site/">Carreiras</a>
+      <a href="/site/#contact">Contato</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="/site/">Termos de Uso</a>
+      <a href="/site/">Politica de Privacidade</a>
+      <a href="/site/">LGPD</a>
+      <a href="/site/">SLA</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>2026 Lumied. Todos os direitos reservados.</span>
+    <span>Feito com 💜 no Brasil</span>
+  </div>
+</footer>
+
+</body>
+</html>

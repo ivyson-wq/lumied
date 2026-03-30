@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Emergencia: Lockdown Escolar em Tempo Real — Blog Lumied</title>
+<meta name="description" content="Protocolos de emergencia, botao de lockdown, notificacoes instantaneas e coordenacao em tempo real para proteger alunos e equipe escolar.">
+<meta name="theme-color" content="#0F172A">
+<meta property="og:title" content="Sistema de Emergencia: Lockdown Escolar em Tempo Real">
+<meta property="og:description" content="Protocolos de emergencia, botao de lockdown, notificacoes instantaneas e coordenacao em tempo real para proteger alunos e equipe escolar.">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: rgba(99,102,241,.08);
+  --accent: #F59E0B;
+  --accent-dark: #D97706;
+  --dark: #0F172A;
+  --dark-2: #1E293B;
+  --dark-3: #334155;
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dark: #1E293B;
+  --bg-light: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --green: #10B981;
+  --red: #EF4444;
+  --gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A78BFA 100%);
+  --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-dark); line-height: 1.6; overflow-x: hidden; width: 100%; position: relative; }
+
+/* ═══ HEADER ═══ */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(15,23,42,.85); backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 24px; height: 72px;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background .3s;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-icon { width: 36px; height: 36px; background: var(--gradient); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-text { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
+.logo-text span { color: var(--accent); }
+.nav { display: flex; align-items: center; gap: 32px; }
+.nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav a:hover { color: #fff; }
+.nav-cta { padding: 10px 24px; background: var(--primary); color: #fff !important; border-radius: 8px; font-weight: 600; transition: all .2s; }
+.nav-cta:hover { background: var(--primary-dark); transform: translateY(-1px); }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+
+/* ═══ ARTICLE HERO ═══ */
+.article-hero {
+  background: var(--dark); color: #fff; padding: 140px 24px 60px;
+  position: relative; overflow: hidden;
+}
+.article-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,.15) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,.08) 0%, transparent 60%);
+}
+.article-hero-grid {
+  position: absolute; inset: 0; opacity: .04;
+  background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.article-hero .container { position: relative; z-index: 1; max-width: 800px; }
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.breadcrumb a { color: var(--primary); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.article-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(32px, 4.5vw, 48px); font-weight: 800; line-height: 1.15; margin-bottom: 20px; letter-spacing: -1px; }
+.article-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.article-author { display: flex; align-items: center; gap: 10px; }
+.author-avatar { width: 40px; height: 40px; background: var(--gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.author-name { font-size: 14px; font-weight: 600; color: #fff; }
+.author-role { font-size: 12px; color: var(--text-muted); }
+.article-date { font-size: 13px; color: var(--text-muted); }
+.article-tag { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; background: rgba(239,68,68,.15); color: #EF4444; }
+.article-reading { font-size: 13px; color: var(--text-muted); }
+
+/* ═══ ARTICLE BODY ═══ */
+.article-section { padding: 60px 24px 100px; background: #fff; }
+.article-container { max-width: 760px; margin: 0 auto; }
+.article-content h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); margin: 48px 0 16px; line-height: 1.3; }
+.article-content h3 { font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 36px 0 12px; }
+.article-content p { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 20px; }
+.article-content ul, .article-content ol { margin: 16px 0 24px 24px; }
+.article-content li { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 8px; }
+.article-content strong { color: var(--text-dark); }
+.article-content blockquote { border-left: 4px solid var(--primary); background: var(--primary-light); padding: 20px 24px; margin: 28px 0; border-radius: 0 12px 12px 0; }
+.article-content blockquote p { color: var(--primary-dark); font-weight: 500; margin-bottom: 0; font-style: italic; }
+.highlight-box { background: var(--bg-light); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.highlight-box h4 { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.highlight-box ul { margin: 0 0 0 20px; }
+.highlight-box li { font-size: 14px; margin-bottom: 6px; }
+.scenario-box { background: linear-gradient(135deg, rgba(99,102,241,.04) 0%, rgba(139,92,246,.04) 100%); border: 1px solid rgba(99,102,241,.15); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.scenario-box h4 { font-size: 15px; font-weight: 700; color: var(--primary-dark); margin-bottom: 10px; }
+.scenario-box p { font-size: 14px; color: #64748B; margin-bottom: 0; }
+
+/* ═══ SHARE ═══ */
+.share-bar { display: flex; align-items: center; gap: 12px; padding: 24px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 40px 0; }
+.share-label { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+.share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; transition: all .2s; }
+.share-whatsapp { background: #25D366; color: #fff; }
+.share-whatsapp:hover { background: #1DA851; }
+.share-linkedin { background: #0A66C2; color: #fff; }
+.share-linkedin:hover { background: #004182; }
+.share-twitter { background: #1DA1F2; color: #fff; }
+.share-twitter:hover { background: #0C85D0; }
+
+/* ═══ CTA BOX ═══ */
+.cta-box { background: var(--gradient); border-radius: 16px; padding: 40px; text-align: center; margin: 48px 0; }
+.cta-box h3 { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+.cta-box p { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto; }
+.cta-box-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #fff; color: var(--primary); border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; transition: all .2s; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+.cta-box-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+
+/* ═══ RELATED ═══ */
+.related-section { background: var(--bg-light); padding: 80px 24px; }
+.related-section .container { max-width: 1200px; margin: 0 auto; }
+.related-header { text-align: center; margin-bottom: 40px; }
+.related-header h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 800; color: var(--text-dark); }
+.related-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.related-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all .3s; text-decoration: none; display: block; }
+.related-card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(99,102,241,.1); }
+.related-tag { display: inline-block; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 12px; }
+.related-tag-seguranca { background: rgba(239,68,68,.1); color: #EF4444; }
+.related-tag-operacional { background: rgba(245,158,11,.1); color: #D97706; }
+.related-tag-comunicacao { background: rgba(16,185,129,.1); color: #10B981; }
+.related-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; line-height: 1.3; }
+.related-excerpt { font-size: 13px; color: #64748B; line-height: 1.6; }
+
+/* ═══ FOOTER ═══ */
+.footer { background: var(--dark); color: var(--text-muted); padding: 60px 24px 32px; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; max-width: 1200px; margin: 0 auto; }
+.footer-brand p { font-size: 13px; line-height: 1.6; margin-top: 12px; }
+.footer h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 16px; }
+.footer a { color: var(--text-muted); text-decoration: none; font-size: 13px; display: block; margin-bottom: 10px; transition: color .2s; }
+.footer a:hover { color: #fff; }
+.footer-bottom { max-width: 1200px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+  .nav { display: none; }
+  .hamburger { display: block; }
+  .article-hero { padding: 110px 16px 50px; }
+  .article-section { padding: 40px 16px 60px; }
+  .article-content h2 { font-size: 24px; margin-top: 36px; }
+  .article-content h3 { font-size: 18px; }
+  .related-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .share-bar { flex-wrap: wrap; }
+  .cta-box { padding: 28px 20px; }
+  .related-section { padding: 60px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <a href="/site/" class="logo">
+    <div class="logo-icon">🎓</div>
+    <div class="logo-text">Lumi<span>ed</span></div>
+  </a>
+  <nav class="nav">
+    <a href="/site/#features">Funcionalidades</a>
+    <a href="/site/#videos">Demos</a>
+    <a href="/site/#screenshots">Screenshots</a>
+    <a href="/site/#pricing">Precos</a>
+    <a href="/site/#contact" class="nav-cta">Agende uma Demo</a>
+  </nav>
+  <button class="hamburger" onclick="document.querySelector('.nav').style.display=document.querySelector('.nav').style.display==='flex'?'none':'flex'">☰</button>
+</header>
+
+<!-- ═══ ARTICLE HERO ═══ -->
+<section class="article-hero">
+  <div class="article-hero-grid"></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="/site/">Home</a>
+      <span>/</span>
+      <a href="/site/blog/">Blog</a>
+      <span>/</span>
+      <span>Sistema de Emergencia: Lockdown Escolar</span>
+    </div>
+    <h1>Sistema de Emergencia: Lockdown Escolar em Tempo Real</h1>
+    <div class="article-meta">
+      <div class="article-author">
+        <div class="author-avatar">📝</div>
+        <div>
+          <div class="author-name">Equipe Lumied</div>
+          <div class="author-role">Blog Lumied</div>
+        </div>
+      </div>
+      <span class="article-date">5 de Janeiro de 2026</span>
+      <span class="article-tag">Seguranca</span>
+      <span class="article-reading">10 min de leitura</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ARTICLE BODY ═══ -->
+<section class="article-section">
+  <div class="article-container">
+    <div class="article-content">
+
+      <p>Nenhum gestor escolar quer pensar em emergencias. Mas a realidade e que escolas sao responsaveis pela seguranca de centenas de criancas durante horas todos os dias, e situacoes de emergencia — desde incendios ate ameacas externas — podem acontecer a qualquer momento. A diferenca entre uma emergencia que e gerenciada com sucesso e uma que se transforma em tragedia esta, quase sempre, na velocidade e na organizacao da resposta.</p>
+
+      <p>O Lumied inclui um modulo de Sistema de Emergencia projetado para dar a escolas as ferramentas necessarias para reagir em segundos. Botao de lockdown com um toque, notificacoes instantaneas para toda a equipe, comunicacao coordenada com pais, e protocolos pre-configurados que eliminam a hesitacao nos momentos mais criticos.</p>
+
+      <h2>Por que escolas precisam de um sistema digital de emergencia</h2>
+
+      <p>A maioria das escolas brasileiras tem algum tipo de plano de emergencia — geralmente um documento impresso guardado na gaveta do diretor. O problema e que, em uma situacao real de emergencia, ninguem abre a gaveta para ler um documento de 20 paginas. As decisoes precisam ser tomadas em segundos, nao em minutos.</p>
+
+      <h3>O fator tempo</h3>
+
+      <p>Em situacoes de emergencia, cada segundo conta. Estudos sobre resposta a emergencias em ambientes escolares mostram que os primeiros 60 segundos sao os mais criticos para a seguranca de alunos e equipe. E nesse intervalo que portas precisam ser trancadas, alunos precisam ser orientados, e autoridades precisam ser contatadas. Um sistema digital reduz o tempo de ativacao de protocolos de minutos para segundos.</p>
+
+      <h3>Comunicacao coordenada</h3>
+
+      <p>Em uma emergencia, a comunicacao e tao importante quanto a acao. Professores precisam saber o que esta acontecendo e o que fazer. A direcao precisa coordenar a resposta. Pais precisam ser informados sem causar panico. Autoridades precisam receber informacoes precisas. Tentar fazer tudo isso por telefone, WhatsApp ou intercomunicador e receita para caos e informacoes desencontradas.</p>
+
+      <blockquote>
+        <p>Em uma emergencia escolar, o maior inimigo nao e a ameaca em si — e a falta de informacao. Quando as pessoas nao sabem o que esta acontecendo, o panico toma conta. Um sistema de emergencia digital substitui o panico por protocolo.</p>
+      </blockquote>
+
+      <h3>Responsabilidade legal</h3>
+
+      <p>Escolas tem responsabilidade legal pela seguranca dos alunos durante o horario escolar. Em caso de incidentes, a instituicao pode ser responsabilizada se nao tinha protocolos de emergencia adequados ou se a resposta foi considerada negligente. Ter um sistema digital documentado, testado e operacional e uma proteção juridica importante — alem de, obviamente, salvar vidas.</p>
+
+      <h2>O botao de lockdown: ativacao em 1 toque</h2>
+
+      <p>O recurso central do sistema de emergencia do Lumied e o botao de lockdown. Acessivel a partir do portal do gerente e de usuarios autorizados, ele permite ativar um protocolo de emergencia com um unico toque — seguido de uma confirmacao para evitar ativacoes acidentais.</p>
+
+      <h3>O que acontece quando o lockdown e ativado</h3>
+
+      <p>A ativacao do lockdown dispara uma cascata automatica de acoes simultaneas, projetada para maximizar a seguranca no menor tempo possivel:</p>
+
+      <div class="highlight-box">
+        <h4>Sequencia automatica de ativacao:</h4>
+        <ul>
+          <li><strong>Segundo 0:</strong> Notificacao push para todos os professores e funcionarios com instrucoes claras</li>
+          <li><strong>Segundo 0:</strong> Alerta sonoro no sistema (em dispositivos com app aberto)</li>
+          <li><strong>Segundo 5:</strong> Comunicacao automatica para autoridades pre-cadastradas (policia, bombeiros)</li>
+          <li><strong>Segundo 10:</strong> Notificacao para os pais informando que a escola esta em protocolo de emergencia</li>
+          <li><strong>Segundo 10:</strong> Painel de situacao ativado com status de cada sala/area</li>
+          <li><strong>Continuo:</strong> Canal de comunicacao em tempo real entre direcao e professores</li>
+        </ul>
+      </div>
+
+      <div class="scenario-box">
+        <h4>Cenario: ameaca externa reportada</h4>
+        <p>A porteira da escola percebe uma situacao suspeita na rua em frente ao portao. Liga para a direcao, que imediatamente aciona o botao de lockdown no Lumied. Em 5 segundos, todos os 32 professores e 15 funcionarios recebem no celular: "LOCKDOWN ATIVADO — Ameaca externa. Tranquem portas, afastem alunos das janelas, aguardem instrucoes." A policia e notificada automaticamente. Os pais recebem: "Informamos que a escola ativou protocolo de seguranca preventivo. Todos os alunos estao seguros nas salas. Nao venham a escola neste momento. Atualizacoes serao enviadas." Tudo em menos de 15 segundos.</p>
+      </div>
+
+      <h2>Tipos de emergencia e protocolos</h2>
+
+      <p>Nem toda emergencia e igual, e a resposta deve ser proporcional e adequada ao tipo de ameaca. O Lumied permite configurar diferentes protocolos para diferentes tipos de situacao, cada um com instrucoes especificas.</p>
+
+      <h3>Lockdown total</h3>
+
+      <p>Para ameacas de violencia externa ou interna. Todas as portas devem ser trancadas, alunos devem se posicionar longe de janelas e portas, silencio absoluto. Comunicacao exclusivamente digital para evitar ruido que sinalize presenca.</p>
+
+      <h3>Evacuacao</h3>
+
+      <p>Para incendios, vazamento de gas ou risco estrutural. Alunos e equipe devem seguir rotas de evacuacao pre-definidas para pontos de encontro seguros. O sistema exibe o mapa de evacuacao no celular de cada professor e permite confirmar a chegada ao ponto de encontro.</p>
+
+      <h3>Alerta medico</h3>
+
+      <p>Para emergencias medicas (aluno ou funcionario com problema de saude grave). Aciona equipe de primeiros socorros, notifica SAMU, e localiza rapidamente a ficha medica do aluno (alergias, condicoes pre-existentes, medicamentos, contato de emergencia).</p>
+
+      <h3>Desastre natural</h3>
+
+      <p>Para tempestades severas, enchentes ou outros eventos climaticos. Instrucoes especificas para cada tipo de evento, com areas seguras mapeadas e protocolo de comunicacao com pais sobre possivel atraso na liberacao.</p>
+
+      <div class="highlight-box">
+        <h4>Protocolos configuraveis:</h4>
+        <ul>
+          <li>Tipo de emergencia e nivel de gravidade</li>
+          <li>Instrucoes especificas para cada funcao (professor, porteiro, enfermaria, direcao)</li>
+          <li>Contatos de emergencia externos (policia, bombeiros, SAMU, defesa civil)</li>
+          <li>Mensagem personalizada para pais (evitando panico desnecessario)</li>
+          <li>Mapa de evacuacao digital com pontos de encontro</li>
+          <li>Lista de verificacao pos-emergencia</li>
+        </ul>
+      </div>
+
+      <h2>Painel de situacao em tempo real</h2>
+
+      <p>Durante uma emergencia, a direcao precisa saber o que esta acontecendo em cada parte da escola. O painel de situacao do Lumied mostra, em tempo real, o status de cada sala e area:</p>
+
+      <ul>
+        <li><strong>Verde:</strong> sala segura, porta trancada, alunos contabilizados</li>
+        <li><strong>Amarelo:</strong> sala em processo de protecao, aguardando confirmacao</li>
+        <li><strong>Vermelho:</strong> sala com problema — aluno faltando, porta nao travada, necessita assistencia</li>
+        <li><strong>Cinza:</strong> area sem resposta — pode indicar problema de comunicacao</li>
+      </ul>
+
+      <p>Cada professor confirma o status da sua sala pelo celular: "Porta trancada, 24 alunos presentes, todos seguros." Se um aluno esta faltando — por exemplo, estava no banheiro quando o lockdown foi ativado — o professor reporta imediatamente, e a equipe de busca e acionada.</p>
+
+      <h2>Comunicacao com os pais durante a emergencia</h2>
+
+      <p>Uma das situacoes mais dificeis durante uma emergencia escolar e a comunicacao com os pais. Se nao receberem informacao, entram em panico e se deslocam para a escola — o que pode agravar a situacao. Se receberem informacao errada ou incompleta, o panico e ainda pior.</p>
+
+      <p>O Lumied gerencia essa comunicacao de forma profissional e controlada. As mensagens sao pre-configuradas para cada tipo de emergencia, com linguagem cuidadosamente elaborada para informar sem alarmar. A escola pode enviar atualizacoes em tempo real, e o sistema inclui instrucoes claras: "Nao se desloque a escola neste momento. A situacao esta sob controle. Enviaremos atualizacao em 15 minutos."</p>
+
+      <h3>Controle de acesso durante a emergencia</h3>
+
+      <p>Durante um lockdown, o sistema bloqueia automaticamente todas as funcoes de pickup e saida antecipada. Nenhum aluno pode ser liberado ate que o protocolo seja encerrado. Isso garante que a escola mantenha controle total sobre quem esta dentro e quem esta fora das instalacoes.</p>
+
+      <h2>Simulacros e treinamento</h2>
+
+      <p>Um sistema de emergencia so funciona se as pessoas sabem usa-lo. O Lumied permite realizar simulacros digitais — ativacoes de teste que seguem todo o fluxo normal, mas com a marcacao clara de "SIMULACRO" para nao causar alarme real. Apos cada simulacro, o sistema gera um relatorio de desempenho.</p>
+
+      <div class="highlight-box">
+        <h4>Metricas de simulacro:</h4>
+        <ul>
+          <li>Tempo entre ativacao e confirmacao de cada sala</li>
+          <li>Salas que demoraram mais para responder</li>
+          <li>Professores que nao receberam a notificacao (celular desligado, app desinstalado)</li>
+          <li>Tempo total para 100% das salas confirmarem seguranca</li>
+          <li>Comparativo com simulacros anteriores (evolucao)</li>
+          <li>Pontos de melhoria identificados</li>
+        </ul>
+      </div>
+
+      <div class="scenario-box">
+        <h4>Cenario: simulacro revela falha</h4>
+        <p>A escola realiza um simulacro de lockdown. O relatorio mostra que a sala 14 levou 4 minutos para confirmar — o dobro da media. Investigando, descobrem que a professora daquela sala nao tinha o app instalado no celular e so ficou sabendo quando ouviu barulho no corredor. A escola resolve o problema, refaz o simulacro 2 semanas depois, e o tempo cai para 45 segundos. Sem o simulacro digital, essa falha so seria descoberta em uma emergencia real.</p>
+      </div>
+
+      <h2>Pos-emergencia: documentacao e aprendizado</h2>
+
+      <p>Apos o encerramento de uma emergencia (real ou simulacro), o sistema gera automaticamente um relatorio completo com timeline de eventos, tempos de resposta, comunicacoes enviadas e acoes tomadas. Esse relatorio e essencial para tres propositos: aprimorar os protocolos, documentar a resposta da escola para fins legais, e servir como base para treinamento futuro.</p>
+
+      <p>A seguranca escolar nao pode depender de improvisacao. Em um momento de crise, quando o medo domina e cada segundo importa, a diferenca entre um resultado positivo e uma tragedia esta na preparacao. O Lumied transforma protocolos de papel em acoes instantaneas, panico em procedimento, e incerteza em informacao coordenada. Porque quando se trata da seguranca de criancas, "vamos resolver na hora" nao e uma opcao aceitavel.</p>
+
+      <!-- ═══ SHARE ═══ -->
+      <div class="share-bar">
+        <span class="share-label">Compartilhe:</span>
+        <a href="https://api.whatsapp.com/send?text=Sistema%20de%20Emergencia%3A%20Lockdown%20Escolar%20em%20Tempo%20Real%20-%20Blog%20Lumied" target="_blank" rel="noopener" class="share-btn share-whatsapp">WhatsApp</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=" target="_blank" rel="noopener" class="share-btn share-linkedin">LinkedIn</a>
+        <a href="https://twitter.com/intent/tweet?text=Sistema%20de%20Emergencia%20Lockdown%20Escolar&url=" target="_blank" rel="noopener" class="share-btn share-twitter">Twitter</a>
+      </div>
+
+      <!-- ═══ CTA ═══ -->
+      <div class="cta-box">
+        <h3>Quer proteger sua escola com tecnologia?</h3>
+        <p>Conheca o Sistema de Emergencia do Lumied e tenha protocolos de seguranca ativaveis em segundos. Agende uma demonstracao gratuita.</p>
+        <a href="/site/#contact" class="cta-box-btn">Agende uma Demonstracao →</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ARTIGOS RELACIONADOS ═══ -->
+<section class="related-section">
+  <div class="container">
+    <div class="related-header">
+      <h2>Artigos relacionados</h2>
+    </div>
+    <div class="related-grid">
+      <a href="/site/blog/login-biometrico-escola/" class="related-card">
+        <span class="related-tag related-tag-seguranca">Seguranca</span>
+        <div class="related-title">Login Biometrico na Escola: Face ID e Fingerprint para Todos</div>
+        <p class="related-excerpt">WebAuthn, Face ID e impressao digital para acesso seguro e sem senhas ao sistema escolar.</p>
+      </a>
+      <a href="/site/blog/gestao-manutencao-escolar/" class="related-card">
+        <span class="related-tag related-tag-operacional">Operacional</span>
+        <div class="related-title">Gestao de Manutencao Escolar: Do Chamado a Resolucao</div>
+        <p class="related-excerpt">Chamados com urgencia, fotos, equipes responsaveis e historico completo de manutencoes.</p>
+      </a>
+      <a href="/site/blog/fim-dos-grupos-de-whatsapp/" class="related-card">
+        <span class="related-tag related-tag-comunicacao">Comunicacao</span>
+        <div class="related-title">O Fim dos Grupos de WhatsApp nas Escolas</div>
+        <p class="related-excerpt">Grupos de WhatsApp causam problemas de privacidade e ruido. Descubra como a comunicacao escolar digital resolve tudo isso.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/site/" class="logo" style="margin-bottom:8px;">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">Lumi<span>ed</span></div>
+      </a>
+      <p>Plataforma completa de gestao escolar inteligente. Feita para escolas bilingues que querem crescer.</p>
+    </div>
+    <div>
+      <h4>Produto</h4>
+      <a href="/site/#features">Funcionalidades</a>
+      <a href="/site/#pricing">Planos</a>
+      <a href="/site/">Atualizacoes</a>
+      <a href="/site/">Integracao</a>
+    </div>
+    <div>
+      <h4>Empresa</h4>
+      <a href="/site/sobre/">Sobre nos</a>
+      <a href="/site/blog/">Blog</a>
+      <a href="/site/">Carreiras</a>
+      <a href="/site/#contact">Contato</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="/site/">Termos de Uso</a>
+      <a href="/site/">Politica de Privacidade</a>
+      <a href="/site/">LGPD</a>
+      <a href="/site/">SLA</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>2026 Lumied. Todos os direitos reservados.</span>
+    <span>Feito com 💜 no Brasil</span>
+  </div>
+</footer>
+
+</body>
+</html>
