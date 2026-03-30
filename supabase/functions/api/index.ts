@@ -1684,6 +1684,25 @@ serve(async (req: Request) => {
     } catch { return ok({ modulos: [], tema: 'corporativo' }); }
   }
 
+  // ── Ticket de suporte (público) ──
+  if (action === "ticket_create") {
+    const { email, nome, portal, tipo, descricao, url_pagina, user_agent, resolucao_tela } = body as any;
+    if (!email || !descricao || !portal) return err("email, descricao e portal obrigatórios.");
+    // Tentar encontrar escola_id
+    let escola_id = null;
+    try {
+      const { data: esc } = await admin.from("escolas").select("id").eq("ativo", true).limit(1).single();
+      escola_id = esc?.id || null;
+    } catch {}
+    const { error: insErr } = await admin.from("tickets").insert({
+      escola_id, email, nome: nome || null, portal, tipo: tipo || "bug",
+      descricao, url_pagina: url_pagina || null, user_agent: user_agent || null,
+      resolucao_tela: resolucao_tela || null,
+    });
+    if (insErr) return err("Erro ao criar ticket: " + insErr.message);
+    return ok({ success: true });
+  }
+
   // WebAuthn login (public — before session validation)
   // These are handled above in the public section, but we put them here as fallthrough
   return err("Ação desconhecida.");

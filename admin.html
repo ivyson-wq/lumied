@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/sentry-init.js"></script>
-<title>Maple Bear RS — Painel Admin</title>
+<title>Lumied — Painel Admin</title>
 <meta name="theme-color" content="#1c1712">
 <link rel="icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -116,9 +116,50 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .modal{background:var(--white);border-radius:16px;padding:30px;width:100%;max-width:600px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;max-height:90vh;overflow-y:auto;}
 .modal h3{font-family:'Lora',serif;font-size:17px;margin-bottom:6px;}.modal .msub{font-size:13px;color:var(--muted);margin-bottom:20px;}
 
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.kpi-value{font-family:'Lora',serif;font-size:28px;font-weight:700;color:var(--text);}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-top:4px;}
+.kpi-icon{font-size:22px;margin-bottom:6px;}
+
+/* USAGE BAR */
+.usage-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;}
+.usage-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+.usage-ok{background:var(--green);}.usage-warn{background:#c27800;}.usage-crit{background:var(--red);}
+
+/* ALERTS */
+.alert-card{padding:12px 16px;border-left:3px solid var(--red);background:var(--white);border-radius:0 8px 8px 0;margin-bottom:8px;font-size:13px;cursor:pointer;transition:background .15s;}
+.alert-card:hover{background:#faf8f5;}.alert-card.warn{border-left-color:#c27800;}.alert-card.info{border-left-color:var(--blue);}
+
+/* HEALTH */
+.health-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;}
+.health-dot.healthy{background:var(--green);}.health-dot.degraded{background:#c27800;}.health-dot.unhealthy{background:var(--red);}.health-dot.unknown{background:var(--muted);}
+.health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.health-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+
+/* EXTRA PILLS */
+.status-pill.expirando{background:rgba(194,120,0,.1);color:#c27800;}
+.status-pill.expirado{background:rgba(200,16,46,.1);color:var(--red);}
+.status-pill.aberto{background:rgba(194,120,0,.1);color:#c27800;}
+.status-pill.respondido{background:rgba(26,107,181,.1);color:var(--blue);}
+.status-pill.fechado{background:rgba(122,113,105,.1);color:var(--muted);}
+.status-pill.pendente{background:rgba(194,120,0,.1);color:#c27800;}
+.status-pill.concluida{background:rgba(45,122,58,.1);color:var(--green);}
+.status-pill.recusada{background:rgba(200,16,46,.1);color:var(--red);}
+
+/* BADGE */
+.nav-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:100px;margin-left:auto;}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-tab{padding:6px 14px;border-radius:100px;border:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted);}
+.filter-tab:hover{border-color:var(--red);color:var(--text);}.filter-tab.active{background:var(--red);color:#fff;border-color:var(--red);}
+
 @media(max-width:768px){
   .sidebar{width:100%;height:auto;position:relative;}.main{margin-left:0;}
   .plans-grid{grid-template-columns:1fr 1fr;}.ff-row{grid-template-columns:1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
 }
 </style>
 </head>
@@ -128,8 +169,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
-      <div class="leaf">🍁</div>
-      <h1>Maple Bear RS</h1>
+      <div class="leaf">📚</div>
+      <h1>Lumied</h1>
       <span>Painel Administrativo</span>
     </div>
     <div id="setupForm" style="display:none;">
@@ -156,16 +197,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 <div id="appShell">
   <nav class="sidebar">
     <div class="sb-brand">
-      <div class="sb-leaf">🍁</div>
-      <h1>Maple Bear RS</h1>
+      <div class="sb-leaf">📚</div>
+      <h1>Lumied</h1>
       <span>Admin</span>
     </div>
     <div class="sb-nav">
+      <div class="sb-label">Overview</div>
+      <a class="nav-item active" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard</a>
       <div class="sb-label">Gestão</div>
-      <a class="nav-item active" onclick="showPanel('escolas',this)"><span class="ic">🏫</span> Escolas</a>
+      <a class="nav-item" onclick="showPanel('escolas',this)"><span class="ic">🏫</span> Escolas</a>
       <a class="nav-item" onclick="showPanel('planos',this)"><span class="ic">📋</span> Planos</a>
       <a class="nav-item" onclick="showPanel('modulos',this)"><span class="ic">🧩</span> Módulos</a>
       <div class="sb-label">Sistema</div>
+      <a class="nav-item" onclick="showPanel('status',this)"><span class="ic">🟢</span> Status</a>
+      <a class="nav-item" onclick="showPanel('lgpd',this)"><span class="ic">🔒</span> LGPD</a>
+      <a class="nav-item" onclick="showPanel('tickets',this)"><span class="ic">🎫</span> Tickets <span class="nav-badge" id="ticketsBadge" style="display:none;">0</span></a>
       <a class="nav-item" onclick="showPanel('admins',this)"><span class="ic">👤</span> Admins</a>
     </div>
     <div class="sb-footer">
@@ -176,12 +222,41 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
   <div class="main">
     <div class="topbar">
-      <h2 id="panelTitle">Escolas</h2>
+      <h2 id="panelTitle">Dashboard</h2>
     </div>
     <div class="content">
 
+      <!-- ═══ PAINEL: DASHBOARD ═══ -->
+      <div id="panelDashboard" class="panel active">
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-icon">🏫</div><div class="kpi-value" id="kpiEscolas">-</div><div class="kpi-label">Escolas Ativas</div></div>
+          <div class="kpi-card"><div class="kpi-icon">👨‍🎓</div><div class="kpi-value" id="kpiAlunos">-</div><div class="kpi-label">Total Alunos</div></div>
+          <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value" id="kpiMrr">-</div><div class="kpi-label">MRR</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🎫</div><div class="kpi-value" id="kpiTickets">-</div><div class="kpi-label">Tickets Abertos</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <div class="sec-title">Alertas</div>
+            <div id="dashAlerts"><div class="empty-state">Carregando...</div></div>
+          </div>
+          <div>
+            <div class="sec-title">Top Módulos</div>
+            <div id="dashModulos"><div class="empty-state">Carregando...</div></div>
+          </div>
+        </div>
+        <div style="margin-top:24px;">
+          <div class="sec-title">Escolas — Uso de Recursos</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Escola</th><th>Plano</th><th>Alunos</th><th>Expira</th><th>Status</th></tr></thead>
+              <tbody id="dashEscolasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ═══ PAINEL: ESCOLAS ═══ -->
-      <div id="panelEscolas" class="panel active">
+      <div id="panelEscolas" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
           <div class="sec-title" style="margin-bottom:0;">Escolas <span class="count-badge" id="escolasCount">0</span></div>
           <button class="btn-primary" onclick="showEscolaForm()">+ Nova Escola</button>
@@ -212,6 +287,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
                 </select>
               </div>
             </div>
+            <div class="ff-row">
+              <div class="ff"><label>Subdomínio</label><div style="display:flex;align-items:center;gap:0;"><input id="escolaSubdominio" placeholder="maplebearcaxias" style="border-radius:8px 0 0 8px;"><span style="padding:10px 12px;background:#f5f0ea;border:1.5px solid var(--border);border-left:none;border-radius:0 8px 8px 0;font-size:12px;color:var(--muted);white-space:nowrap;">.lumied.com.br</span></div></div>
+              <div class="ff"><label>Supabase URL</label><input id="escolaSupabaseUrl" placeholder="https://xxxxx.supabase.co"></div>
+            </div>
+            <div class="ff"><label>Supabase Anon Key</label><input id="escolaSupabaseAnon" placeholder="eyJ..."></div>
             <div style="margin-top:8px;"><a href="/temas-preview.html" target="_blank" style="font-size:12px;color:var(--primary);text-decoration:none;">🎨 Ver preview dos temas →</a></div>
             <div class="btn-bar">
               <button class="btn-primary" onclick="salvarEscola()">Salvar</button>
@@ -221,8 +301,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Escola</th><th>CNPJ</th><th>Plano</th><th>Status</th><th>Ações</th></tr></thead>
-            <tbody id="escolasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+            <thead><tr><th>Escola</th><th>Plano</th><th>Alunos</th><th>Expira</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="escolasBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -282,6 +362,62 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- ═══ PAINEL: STATUS DO SISTEMA ═══ -->
+      <div id="panelStatus" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="sec-title" style="margin-bottom:0;">Status do Sistema</div>
+          <button class="btn-secondary" onclick="loadStatus()">🔄 Verificar</button>
+        </div>
+        <div id="statusGrid" class="health-grid"><div class="empty-state">Clique em Verificar para checar a saúde dos serviços.</div></div>
+      </div>
+
+      <!-- ═══ PAINEL: LGPD ═══ -->
+      <div id="panelLgpd" class="panel">
+        <div class="sec-title">LGPD — Solicitações de Dados</div>
+        <div class="filter-tabs" id="lgpdFilters">
+          <button class="filter-tab active" onclick="filterLgpd('',this)">Todas</button>
+          <button class="filter-tab" onclick="filterLgpd('pendente',this)">Pendentes</button>
+          <button class="filter-tab" onclick="filterLgpd('concluida',this)">Concluídas</button>
+          <button class="filter-tab" onclick="filterLgpd('recusada',this)">Recusadas</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Email</th><th>Tipo</th><th>Status</th><th>Solicitado</th><th>Processado</th><th>Ações</th></tr></thead>
+            <tbody id="lgpdBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ PAINEL: TICKETS ═══ -->
+      <div id="panelTickets" class="panel">
+        <div class="sec-title">Tickets de Suporte <span class="count-badge" id="ticketsCount">0</span></div>
+        <div class="filter-tabs" id="ticketFilters">
+          <button class="filter-tab active" onclick="filterTickets('',this)">Todos</button>
+          <button class="filter-tab" onclick="filterTickets('aberto',this)">Abertos</button>
+          <button class="filter-tab" onclick="filterTickets('respondido',this)">Respondidos</button>
+          <button class="filter-tab" onclick="filterTickets('fechado',this)">Fechados</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Escola</th><th>Email</th><th>Portal</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+            <tbody id="ticketsBody"><tr><td colspan="8" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: RESPONDER TICKET ═══ -->
+<div class="modal-overlay" id="modalResponderTicket">
+  <div class="modal" style="max-width:550px;">
+    <h3>Responder Ticket</h3>
+    <p class="msub" id="ticketResumo"></p>
+    <div class="ff"><label>Resposta</label><textarea id="ticketResposta" rows="4" placeholder="Digite sua resposta..."></textarea></div>
+    <div class="btn-bar">
+      <button class="btn-primary" onclick="enviarRespostaTicket()">Enviar Resposta</button>
+      <button class="btn-secondary" onclick="fecharModal('modalResponderTicket')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -408,7 +544,7 @@ function showApp(nome, email) {
   document.getElementById('appShell').style.display = 'flex';
   document.getElementById('adminNome').textContent = nome;
   document.getElementById('adminEmail').textContent = email;
-  loadEscolas();
+  loadDashboard();
 }
 
 // Enter no login
@@ -422,7 +558,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { escolas: 'Escolas', planos: 'Planos de Assinatura', modulos: 'Módulos', admins: 'Administradores' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', planos:'Planos de Assinatura', modulos:'Módulos', status:'Status do Sistema', lgpd:'LGPD', tickets:'Tickets de Suporte', admins:'Administradores' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -430,40 +566,63 @@ function showPanel(id, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   document.getElementById('panelTitle').textContent = titles[id] || id;
+  if (id === 'dashboard') loadDashboard();
   if (id === 'escolas') loadEscolas();
   if (id === 'planos') loadPlanos();
   if (id === 'modulos') loadModulos();
+  if (id === 'status') loadStatus();
+  if (id === 'lgpd') loadLgpd();
+  if (id === 'tickets') loadTickets();
   if (id === 'admins') loadAdmins();
 }
 
 // ═══════════════════════════════════════════════════════════
 //  ESCOLAS
 // ═══════════════════════════════════════════════════════════
-let _escolas = [], _planos = [], _modulos = [];
+let _escolas = [], _planos = [], _modulos = [], _escolaUso = [];
 
 async function loadEscolas() {
-  const [eRes, pRes] = await Promise.all([api({ action: 'escolas_list' }), api({ action: 'planos_list' })]);
+  const [eRes, pRes, usoRes] = await Promise.all([api({ action: 'escolas_list' }), api({ action: 'planos_list' }), api({ action: 'escola_uso_list' })]);
   _escolas = Array.isArray(eRes) ? eRes : [];
   _planos = Array.isArray(pRes) ? pRes : [];
+  _escolaUso = Array.isArray(usoRes) ? usoRes : [];
   document.getElementById('escolasCount').textContent = _escolas.length;
 
-  // Populate plano select
   const sel = document.getElementById('escolaPlano');
   sel.innerHTML = '<option value="">Sem plano</option>' + _planos.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
 
+  const usoMap = {};
+  for (const eu of _escolaUso) usoMap[eu.id] = eu;
+
   const tbody = document.getElementById('escolasBody');
-  if (_escolas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhuma escola cadastrada</td></tr>'; return; }
-  tbody.innerHTML = _escolas.map(e => `<tr>
-    <td><strong>${esc(e.nome)}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(e.slug || '')}</span></td>
-    <td>${esc(e.cnpj || '—')}</td>
-    <td>${e.planos ? `<span class="status-pill ativo">${esc(e.planos.nome)}</span>` : '<span style="color:var(--muted);">—</span>'}</td>
-    <td>${e.ativo ? '<span class="status-pill ativo">Ativo</span>' : '<span class="status-pill inativo">Inativo</span>'}</td>
-    <td>
-      <button class="action-btn" onclick="abrirModulosEscola('${e.id}','${esc(e.nome)}')">🧩 Módulos</button>
-      <button class="action-btn" onclick="editarEscola('${e.id}')">✏️</button>
-      <button class="action-btn del" onclick="desativarEscola('${e.id}')">🗑️</button>
-    </td>
-  </tr>`).join('');
+  if (_escolas.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma escola cadastrada</td></tr>'; return; }
+  const now = Date.now();
+  tbody.innerHTML = _escolas.map(e => {
+    const eu = usoMap[e.id] || {};
+    const alunos = eu.uso?.max_alunos?.uso_atual || 0;
+    const limAlunos = eu.limites?.max_alunos || 0;
+    const pct = limAlunos > 0 ? Math.round(alunos / limAlunos * 100) : 0;
+    const barClass = pct >= 90 ? 'usage-crit' : pct >= 70 ? 'usage-warn' : 'usage-ok';
+    const expira = e.plano_fim ? new Date(e.plano_fim) : null;
+    const diasExp = expira ? Math.ceil((expira - now) / 86400000) : null;
+    let statusHtml = e.ativo ? '<span class="status-pill ativo">Ativo</span>' : '<span class="status-pill inativo">Inativo</span>';
+    if (e.ativo && diasExp !== null && diasExp < 0) statusHtml = '<span class="status-pill expirado">Expirado</span>';
+    else if (e.ativo && diasExp !== null && diasExp <= 30) statusHtml = '<span class="status-pill expirando">Expirando</span>';
+    else if (e.ativo && pct >= 90) statusHtml = '<span class="status-pill expirando">Limite</span>';
+    const sub = e.subdominio || e.slug || '';
+    return `<tr>
+      <td><strong>${esc(e.nome)}</strong><br>${sub ? `<a href="https://${esc(sub)}.lumied.com.br" target="_blank" style="font-size:11px;color:var(--blue);">${esc(sub)}.lumied.com.br</a>` : '<span style="font-size:11px;color:var(--muted);">—</span>'}</td>
+      <td>${e.planos ? `<span class="status-pill ativo">${esc(e.planos.nome)}</span>` : '—'}</td>
+      <td>${limAlunos > 0 ? `${alunos}/${limAlunos} <div class="usage-bar"><div class="usage-bar-fill ${barClass}" style="width:${Math.min(pct,100)}%"></div></div>` : '—'}</td>
+      <td>${expira ? `<span style="color:${diasExp <= 30 ? 'var(--red)' : diasExp <= 60 ? '#c27800' : 'var(--text)'};font-size:12px;">${expira.toLocaleDateString('pt-BR')}</span>` : '—'}</td>
+      <td>${statusHtml}</td>
+      <td>
+        <button class="action-btn" onclick="abrirModulosEscola('${e.id}','${esc(e.nome)}')">🧩</button>
+        <button class="action-btn" onclick="editarEscola('${e.id}')">✏️</button>
+        <button class="action-btn del" onclick="desativarEscola('${e.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function showEscolaForm() {
@@ -476,6 +635,9 @@ function showEscolaForm() {
   document.getElementById('escolaContatoEmail').value = '';
   document.getElementById('escolaContatoTel').value = '';
   document.getElementById('escolaTema').value = 'corporativo';
+  document.getElementById('escolaSubdominio').value = '';
+  document.getElementById('escolaSupabaseUrl').value = '';
+  document.getElementById('escolaSupabaseAnon').value = '';
   document.getElementById('escolaFormWrap').style.display = 'block';
   document.getElementById('escolaNome').focus();
 }
@@ -494,6 +656,9 @@ function editarEscola(id) {
   document.getElementById('escolaContatoEmail').value = e.contato_email || '';
   document.getElementById('escolaContatoTel').value = e.contato_telefone || '';
   document.getElementById('escolaTema').value = e.tema || 'corporativo';
+  document.getElementById('escolaSubdominio').value = e.subdominio || '';
+  document.getElementById('escolaSupabaseUrl').value = e.supabase_url || '';
+  document.getElementById('escolaSupabaseAnon').value = e.supabase_anon_key || '';
   document.getElementById('escolaFormWrap').style.display = 'block';
 }
 
@@ -508,6 +673,9 @@ async function salvarEscola() {
     contato_email: document.getElementById('escolaContatoEmail').value.trim() || null,
     contato_telefone: document.getElementById('escolaContatoTel').value.trim() || null,
     tema: document.getElementById('escolaTema').value || 'corporativo',
+    subdominio: document.getElementById('escolaSubdominio').value.trim() || null,
+    supabase_url: document.getElementById('escolaSupabaseUrl').value.trim() || null,
+    supabase_anon_key: document.getElementById('escolaSupabaseAnon').value.trim() || null,
   };
   if (!data.nome) return showToast('Nome obrigatório', 'error');
 
@@ -754,6 +922,188 @@ async function criarAdmin() {
   showToast('Admin criado!');
   fecharModal('modalNovoAdmin');
   loadAdmins();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+async function loadDashboard() {
+  const [stats, usoList] = await Promise.all([api({ action: 'dashboard_stats' }), api({ action: 'escola_uso_list' })]);
+  if (stats.error) return;
+
+  document.getElementById('kpiEscolas').textContent = stats.total_escolas || 0;
+  document.getElementById('kpiAlunos').textContent = (stats.total_alunos || 0).toLocaleString('pt-BR');
+  document.getElementById('kpiMrr').textContent = 'R$ ' + (stats.mrr || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  document.getElementById('kpiTickets').textContent = stats.tickets_abertos || 0;
+
+  // Badge tickets
+  const badge = document.getElementById('ticketsBadge');
+  if (stats.tickets_abertos > 0) { badge.textContent = stats.tickets_abertos; badge.style.display = ''; } else badge.style.display = 'none';
+
+  // Alertas
+  let alertHtml = '';
+  if (stats.lgpd_pendentes > 0) alertHtml += `<div class="alert-card info" onclick="showPanel('lgpd')">🔒 ${stats.lgpd_pendentes} solicitação(ões) LGPD pendente(s)</div>`;
+  if (stats.tickets_abertos > 0) alertHtml += `<div class="alert-card warn" onclick="showPanel('tickets')">🎫 ${stats.tickets_abertos} ticket(s) aberto(s)</div>`;
+  for (const e of (stats.escolas_expirando || [])) alertHtml += `<div class="alert-card warn">⏰ ${esc(e.nome)} — plano expira em ${new Date(e.plano_fim).toLocaleDateString('pt-BR')}</div>`;
+  for (const e of (stats.escolas_expiradas || [])) alertHtml += `<div class="alert-card">🚨 ${esc(e.nome)} — plano expirado!</div>`;
+  document.getElementById('dashAlerts').innerHTML = alertHtml || '<div class="empty-state" style="padding:20px;">Nenhum alerta</div>';
+
+  // Top módulos
+  let modHtml = '';
+  for (const m of (stats.top_modulos || [])) modHtml += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>${esc(m.nome)}</span><span style="font-weight:600;">${m.count} escolas</span></div>`;
+  document.getElementById('dashModulos').innerHTML = modHtml || '<div class="empty-state" style="padding:20px;">Sem dados</div>';
+
+  // Tabela escolas uso
+  const escolas = Array.isArray(usoList) ? usoList : [];
+  const now = Date.now();
+  const tbody = document.getElementById('dashEscolasBody');
+  if (escolas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhuma escola</td></tr>'; return; }
+  tbody.innerHTML = escolas.filter(e => e.ativo).map(e => {
+    const alunos = e.uso?.max_alunos?.uso_atual || 0;
+    const lim = e.limites?.max_alunos || 0;
+    const pct = lim > 0 ? Math.round(alunos / lim * 100) : 0;
+    const barClass = pct >= 90 ? 'usage-crit' : pct >= 70 ? 'usage-warn' : 'usage-ok';
+    const expira = e.plano_fim ? new Date(e.plano_fim) : null;
+    const dias = expira ? Math.ceil((expira - now) / 86400000) : null;
+    let st = '<span class="status-pill ativo">OK</span>';
+    if (dias !== null && dias < 0) st = '<span class="status-pill expirado">Expirado</span>';
+    else if (dias !== null && dias <= 30) st = '<span class="status-pill expirando">Expirando</span>';
+    else if (pct >= 90) st = '<span class="status-pill expirando">Limite</span>';
+    return `<tr>
+      <td><strong>${esc(e.nome)}</strong></td>
+      <td>${e.planos ? esc(e.planos.nome) : '—'}</td>
+      <td>${lim > 0 ? `${alunos}/${lim} <div class="usage-bar"><div class="usage-bar-fill ${barClass}" style="width:${Math.min(pct,100)}%"></div></div>` : '—'}</td>
+      <td>${expira ? expira.toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${st}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STATUS DO SISTEMA
+// ═══════════════════════════════════════════════════════════
+async function loadStatus() {
+  document.getElementById('statusGrid').innerHTML = '<div class="empty-state"><div class="spinner-sm"></div> Verificando saúde dos serviços...</div>';
+  const d = await api({ action: 'system_health' });
+  const checks = Array.isArray(d) ? d : [];
+  if (checks.length === 0) { document.getElementById('statusGrid').innerHTML = '<div class="empty-state">Nenhuma escola com Supabase URL configurada.</div>'; return; }
+  document.getElementById('statusGrid').innerHTML = checks.map(c => {
+    const st = c.status || 'unknown';
+    const dbMs = c.checks?.database?.latency_ms;
+    const stMs = c.checks?.storage?.latency_ms;
+    return `<div class="health-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span class="health-dot ${st}"></span>
+        <strong style="font-size:14px;">${esc(c.nome || '?')}</strong>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto;">${esc(c.slug || '')}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);">
+        ${dbMs !== undefined ? `DB: ${dbMs}ms` : ''} ${stMs !== undefined ? `| Storage: ${stMs}ms` : ''}
+        ${c.error ? `<br><span style="color:var(--red);">${esc(c.error)}</span>` : ''}
+      </div>
+      <div style="margin-top:8px;"><span class="status-pill ${st}">${st}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LGPD
+// ═══════════════════════════════════════════════════════════
+let _lgpdFilter = '';
+
+async function loadLgpd() {
+  const d = await api({ action: 'lgpd_solicitacoes_list', status: _lgpdFilter || undefined });
+  const items = Array.isArray(d) ? d : [];
+  const tbody = document.getElementById('lgpdBody');
+  if (items.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma solicitação</td></tr>'; return; }
+  const tipoLabel = { exportar_dados:'Exportar Dados', excluir_dados:'Excluir Dados', retificar_dados:'Retificar Dados' };
+  tbody.innerHTML = items.map(s => `<tr>
+    <td>${esc(s.email)}</td>
+    <td>${tipoLabel[s.tipo] || s.tipo}</td>
+    <td><span class="status-pill ${s.status}">${s.status}</span></td>
+    <td style="font-size:12px;">${new Date(s.solicitado_em).toLocaleDateString('pt-BR')}</td>
+    <td style="font-size:12px;">${s.processado_em ? new Date(s.processado_em).toLocaleDateString('pt-BR') : '—'}</td>
+    <td>${s.status === 'pendente' ? `<button class="action-btn" onclick="processarLgpd('${s.id}','aprovar')">✅ Aprovar</button><button class="action-btn del" onclick="processarLgpd('${s.id}','recusar')">❌ Recusar</button>` : (s.respondido_por ? esc(s.respondido_por) : '')}</td>
+  </tr>`).join('');
+}
+
+function filterLgpd(status, el) {
+  _lgpdFilter = status;
+  document.querySelectorAll('#lgpdFilters .filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  loadLgpd();
+}
+
+async function processarLgpd(id, acao) {
+  let motivo_recusa = null;
+  if (acao === 'recusar') {
+    motivo_recusa = prompt('Motivo da recusa:');
+    if (!motivo_recusa) return;
+  } else if (!confirm('Confirma a aprovação desta solicitação?')) return;
+  const d = await api({ action: 'lgpd_solicitacoes_process', id, acao, motivo_recusa });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Solicitação ' + (acao === 'aprovar' ? 'aprovada' : 'recusada') + '!');
+  loadLgpd();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TICKETS
+// ═══════════════════════════════════════════════════════════
+let _ticketFilter = '', _respondTicketId = null;
+
+async function loadTickets() {
+  const d = await api({ action: 'tickets_list', status: _ticketFilter || undefined });
+  const tickets = Array.isArray(d) ? d : [];
+  document.getElementById('ticketsCount').textContent = tickets.length;
+  const tbody = document.getElementById('ticketsBody');
+  if (tickets.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum ticket</td></tr>'; return; }
+  const tipoIcon = { bug:'🐛', duvida:'❓', sugestao:'💡', urgente:'🚨' };
+  tbody.innerHTML = tickets.map(t => `<tr>
+    <td style="font-size:12px;">${esc(t.escolas?.nome || '—')}</td>
+    <td style="font-size:12px;">${esc(t.email)}<br><span style="color:var(--muted);">${esc(t.nome || '')}</span></td>
+    <td><span style="font-size:11px;text-transform:uppercase;font-weight:600;color:var(--muted);">${esc(t.portal)}</span></td>
+    <td>${tipoIcon[t.tipo] || ''} ${esc(t.tipo)}</td>
+    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;" title="${esc(t.descricao)}">${esc(t.descricao)}</td>
+    <td><span class="status-pill ${t.status}">${t.status}</span></td>
+    <td style="font-size:12px;">${new Date(t.criado_em).toLocaleDateString('pt-BR')}</td>
+    <td>
+      ${t.status === 'aberto' ? `<button class="action-btn" onclick="abrirResponderTicket('${t.id}','${esc(t.descricao).replace(/'/g,"\\'")}')">💬</button>` : ''}
+      ${t.status !== 'fechado' ? `<button class="action-btn del" onclick="fecharTicket('${t.id}')">✖</button>` : ''}
+    </td>
+  </tr>`).join('');
+}
+
+function filterTickets(status, el) {
+  _ticketFilter = status;
+  document.querySelectorAll('#ticketFilters .filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  loadTickets();
+}
+
+function abrirResponderTicket(id, desc) {
+  _respondTicketId = id;
+  document.getElementById('ticketResumo').textContent = desc;
+  document.getElementById('ticketResposta').value = '';
+  document.getElementById('modalResponderTicket').classList.add('show');
+}
+
+async function enviarRespostaTicket() {
+  if (!_respondTicketId) return;
+  const resposta = document.getElementById('ticketResposta').value.trim();
+  if (!resposta) return showToast('Escreva uma resposta', 'error');
+  const d = await api({ action: 'ticket_respond', id: _respondTicketId, resposta });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Ticket respondido!');
+  fecharModal('modalResponderTicket');
+  loadTickets();
+}
+
+async function fecharTicket(id) {
+  if (!confirm('Fechar este ticket?')) return;
+  const d = await api({ action: 'ticket_close', id });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Ticket fechado');
+  loadTickets();
 }
 
 // ═══════════════════════════════════════════════════════════

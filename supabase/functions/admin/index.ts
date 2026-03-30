@@ -234,6 +234,148 @@ router.on("admins_update", authAdmin, validateInput(idSchema), async (ctx) => {
   return successResponse({ success: true });
 });
 
+// ── Auth: Dashboard stats ──
+router.on("dashboard_stats", authAdmin, async (ctx) => {
+  const [escolasRes, usoRes, modulosRes, lgpdRes, ticketsRes] = await Promise.all([
+    ctx.sb.from("escolas").select("id, nome, slug, plano_id, plano_fim, ativo, criado_em, planos(nome, preco_mensal)"),
+    ctx.sb.from("escola_uso").select("escola_id, recurso, uso_atual"),
+    ctx.sb.from("escola_modulos").select("modulo_id, modulos(nome)").eq("habilitado", true),
+    ctx.sb.from("lgpd_solicitacoes").select("id", { count: "exact", head: true }).eq("status", "pendente"),
+    ctx.sb.from("tickets").select("id", { count: "exact", head: true }).eq("status", "aberto"),
+  ]);
+  const escolas = escolasRes.data ?? [];
+  const uso = usoRes.data ?? [];
+  const ativas = escolas.filter((e: any) => e.ativo);
+  const totalAlunos = uso.filter((u: any) => u.recurso === "max_alunos").reduce((s: number, u: any) => s + (u.uso_atual || 0), 0);
+  const mrr = ativas.reduce((s: number, e: any) => s + ((e.planos as any)?.preco_mensal || 0), 0);
+  // Módulos mais usados
+  const modCount: Record<string, { nome: string; count: number }> = {};
+  for (const m of (modulosRes.data ?? [])) {
+    const nome = (m.modulos as any)?.nome || "?";
+    modCount[nome] = modCount[nome] || { nome, count: 0 };
+    modCount[nome].count++;
+  }
+  const topModulos = Object.values(modCount).sort((a, b) => b.count - a.count).slice(0, 5);
+  // Alertas
+  const now = Date.now();
+  const d30 = 30 * 86400000;
+  const expirando = ativas.filter((e: any) => e.plano_fim && (new Date(e.plano_fim).getTime() - now) < d30 && (new Date(e.plano_fim).getTime() - now) > 0);
+  const expirado = ativas.filter((e: any) => e.plano_fim && new Date(e.plano_fim).getTime() < now);
+  return successResponse({
+    total_escolas: ativas.length,
+    total_alunos: totalAlunos,
+    mrr,
+    top_modulos: topModulos,
+    tickets_abertos: ticketsRes.count ?? 0,
+    lgpd_pendentes: lgpdRes.count ?? 0,
+    escolas_expirando: expirando.map((e: any) => ({ id: e.id, nome: e.nome, plano_fim: e.plano_fim })),
+    escolas_expiradas: expirado.map((e: any) => ({ id: e.id, nome: e.nome, plano_fim: e.plano_fim })),
+  });
+});
+
+// ── Auth: Escola uso list ──
+router.on("escola_uso_list", authAdmin, async (ctx) => {
+  const [escolasRes, usoRes, limitesRes] = await Promise.all([
+    ctx.sb.from("escolas").select("id, nome, slug, subdominio, supabase_url, plano_id, plano_fim, ativo, planos(nome, slug)").order("nome"),
+    ctx.sb.from("escola_uso").select("escola_id, recurso, uso_atual, atualizado_em"),
+    ctx.sb.from("plano_limites").select("plano_id, recurso, limite"),
+  ]);
+  const escolas = escolasRes.data ?? [];
+  const usoMap: Record<string, Record<string, any>> = {};
+  for (const u of (usoRes.data ?? [])) {
+    usoMap[u.escola_id] = usoMap[u.escola_id] || {};
+    usoMap[u.escola_id][u.recurso] = u;
+  }
+  const limMap: Record<string, Record<string, number>> = {};
+  for (const l of (limitesRes.data ?? [])) {
+    limMap[l.plano_id] = limMap[l.plano_id] || {};
+    limMap[l.plano_id][l.recurso] = l.limite;
+  }
+  const result = escolas.map((e: any) => ({
+    ...e,
+    uso: usoMap[e.id] || {},
+    limites: e.plano_id ? (limMap[e.plano_id] || {}) : {},
+  }));
+  return successResponse(result);
+});
+
+// ── Auth: LGPD solicitações ──
+router.on("lgpd_solicitacoes_list", authAdmin, async (ctx) => {
+  const { status: filtro } = ctx.body as any;
+  let q = ctx.sb.from("lgpd_solicitacoes").select("*").order("solicitado_em", { ascending: false });
+  if (filtro) q = q.eq("status", filtro);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("lgpd_solicitacoes_process", authAdmin, async (ctx) => {
+  const { id, acao, motivo_recusa } = ctx.body as any;
+  if (!id || !acao) throw new AppError("VALIDATION_FAILED", "id e acao obrigatórios.");
+  const { data: sol } = await ctx.sb.from("lgpd_solicitacoes").select("*").eq("id", id).single();
+  if (!sol) throw new AppError("NOT_FOUND", "Solicitação não encontrada.");
+  if (sol.status !== "pendente") throw new AppError("CONFLICT", "Solicitação já processada.");
+  if (acao === "aprovar") {
+    let dados_exportados = null;
+    if (sol.tipo === "exportar_dados") {
+      const { data } = await ctx.sb.rpc("lgpd_exportar_dados", { p_email: sol.email });
+      dados_exportados = data;
+    } else if (sol.tipo === "excluir_dados") {
+      await ctx.sb.rpc("lgpd_anonimizar", { p_email: sol.email });
+    }
+    await ctx.sb.from("lgpd_solicitacoes").update({ status: "concluida", dados_exportados, processado_por: ctx.user!.email, processado_em: new Date().toISOString() }).eq("id", id);
+  } else {
+    await ctx.sb.from("lgpd_solicitacoes").update({ status: "recusada", motivo_recusa, processado_por: ctx.user!.email, processado_em: new Date().toISOString() }).eq("id", id);
+  }
+  log.info("LGPD solicitação processada", { metadata: { id, acao } });
+  return successResponse({ success: true });
+});
+
+// ── Auth: System health ──
+router.on("system_health", authAdmin, async (ctx) => {
+  const { data: escolas } = await ctx.sb.from("escolas").select("id, nome, slug, supabase_url, ativo").eq("ativo", true).not("supabase_url", "is", null);
+  const checks = await Promise.allSettled((escolas ?? []).map(async (e: any) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const r = await fetch(`${e.supabase_url}/functions/v1/health`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      const body = await r.json();
+      return { escola_id: e.id, nome: e.nome, slug: e.slug, ...body };
+    } catch (err) {
+      clearTimeout(timer);
+      return { escola_id: e.id, nome: e.nome, slug: e.slug, status: "unhealthy", error: (err as Error).message };
+    }
+  }));
+  return successResponse(checks.map((c) => c.status === "fulfilled" ? c.value : { status: "unhealthy", error: "timeout" }));
+});
+
+// ── Auth: Tickets ──
+router.on("tickets_list", authAdmin, async (ctx) => {
+  const { status: filtro, escola_id } = ctx.body as any;
+  let q = ctx.sb.from("tickets").select("*, escolas(nome)").order("criado_em", { ascending: false });
+  if (filtro) q = q.eq("status", filtro);
+  if (escola_id) q = q.eq("escola_id", escola_id);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("ticket_respond", authAdmin, async (ctx) => {
+  const { id, resposta } = ctx.body as any;
+  if (!id || !resposta) throw new AppError("VALIDATION_FAILED", "id e resposta obrigatórios.");
+  const { error } = await ctx.sb.from("tickets").update({ resposta, respondido_por: ctx.user!.email, status: "respondido" }).eq("id", id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  log.info("Ticket respondido", { metadata: { id } });
+  return successResponse({ success: true });
+});
+
+router.on("ticket_close", authAdmin, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const { error } = await ctx.sb.from("tickets").update({ status: "fechado" }).eq("id", id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
 // ═══ SERVE ═══
 serve(async (req: Request) => {
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { autoRefreshToken: false, persistSession: false } });
