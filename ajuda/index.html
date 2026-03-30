@@ -3087,6 +3087,25 @@ function openPortal(portal){
   }
 }
 
+/* ── Portal filtering via ?portal= ── */
+const _portalParam = new URLSearchParams(location.search).get('portal');
+if (_portalParam) {
+  // Hide sidebar sections for other portals
+  document.querySelectorAll('.sidebar-section').forEach(s => {
+    if (s.dataset.portal !== _portalParam) s.style.display = 'none';
+  });
+  // Open the matching section
+  const mySection = document.querySelector('.sidebar-section[data-portal="' + _portalParam + '"]');
+  if (mySection) { mySection.classList.add('open'); mySection.style.display = ''; }
+  // Hide welcome portal cards for other portals
+  document.querySelectorAll('.portal-card').forEach(c => {
+    if (c.getAttribute('onclick')?.includes("'" + _portalParam + "'")) c.style.display = '';
+    else c.style.display = 'none';
+  });
+  // Filter search results to only this portal
+  const _origSearch = handleSearch;
+}
+
 /* ── Search ── */
 function handleSearch(query){
   const q=query.toLowerCase().trim();
@@ -3106,6 +3125,8 @@ function handleSearch(query){
   let found=0;
 
   articles.forEach(a=>{
+    // If portal filter active, skip articles from other portals
+    if(_portalParam && a.dataset.portal !== _portalParam){ a.classList.remove('visible'); return; }
     const title=(a.querySelector('h2')?.textContent||'').toLowerCase();
     const desc=(a.querySelector('.article-desc')?.textContent||'').toLowerCase();
     const keywords=(a.dataset.keywords||'').toLowerCase();

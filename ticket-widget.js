@@ -73,7 +73,7 @@
       <label>Descreva o problema</label>
       <textarea id="tw-desc" rows="4" placeholder="Descreva o que aconteceu ou o que precisa..."></textarea>
       <button class="tw-submit" id="tw-send" onclick="twEnviar()">Enviar</button>
-      <a href="/ajuda/" target="_blank" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#7a7169;text-decoration:none;">📖 Consultar Manual de Ajuda</a>
+      <a href="/ajuda/?portal=' + portal + '" target="_blank" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#7a7169;text-decoration:none;">📖 Consultar Manual de Ajuda</a>
     </div>
   `;
   document.body.appendChild(panel);
@@ -126,7 +126,7 @@
             <label>Descreva o problema</label>
             <textarea id="tw-desc" rows="4" placeholder="Descreva o que aconteceu ou o que precisa..."></textarea>
             <button class="tw-submit" id="tw-send" onclick="twEnviar()">Enviar</button>
-            <a href="/ajuda/" target="_blank" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#7a7169;text-decoration:none;">📖 Consultar Manual de Ajuda</a>
+            <a href="/ajuda/?portal=' + portal + '" target="_blank" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#7a7169;text-decoration:none;">📖 Consultar Manual de Ajuda</a>
           `;
         }, 300);
       }, 2500);
