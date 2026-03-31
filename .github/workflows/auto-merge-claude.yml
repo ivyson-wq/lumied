@@ -18,10 +18,26 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Merge into main
+      - name: Rebase and merge into main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="${{ github.ref_name }}"
+
+          # Garantir main atualizado
           git checkout main
-          git merge --no-ff origin/${{ github.ref_name }} -m "auto-merge: ${{ github.ref_name }}"
+          git pull origin main
+
+          # Rebase do branch claude sobre main
+          git checkout "$BRANCH"
+          if ! git rebase main; then
+            echo "::error::Rebase falhou — conflitos detectados no branch $BRANCH"
+            git rebase --abort
+            exit 1
+          fi
+
+          # Merge fast-forward-safe
+          git checkout main
+          git merge --no-ff "$BRANCH" -m "auto-merge: $BRANCH"
           git push origin main
