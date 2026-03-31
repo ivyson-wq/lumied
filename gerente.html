@@ -463,6 +463,22 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Profs</a>
         <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Secretaria</a>
       </div>
+      <div data-modulo="compliance">
+      <div class="sb-label" onclick="toggleSbSection(this)">Compliance <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> Painel Geral</a>
+        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> Horários Profs</a>
+        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> Importar Ponto</a>
+        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> Hora Extra</a>
+        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> Incidentes</a>
+        <a class="nav-item" href="#" onclick="showPanel('compCertificacoes',this)"><span class="ic">🎓</span> Certificações</a>
+        <a class="nav-item" href="#" onclick="showPanel('compInspecoes',this)"><span class="ic">📋</span> Inspeções</a>
+        <a class="nav-item" href="#" onclick="showPanel('compPoliticas',this)"><span class="ic">📄</span> Políticas</a>
+        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> Calendário</a>
+        <a class="nav-item" href="#" onclick="showPanel('compAlertas',this)"><span class="ic">📧</span> Alertas</a>
+      </div>
+      </div>
+
       <div data-modulo="emergencias" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
         <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
       </div>
@@ -1519,6 +1535,94 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="impGerenteContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- COMPLIANCE — Dashboard Completo -->
+      <div id="panelCompDash" class="panel">
+        <div class="sec-title">⚖️ Compliance — Painel Geral</div>
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="display:inline-flex;width:120px;height:120px;border-radius:50%;border:8px solid #2d7a3a;align-items:center;justify-content:center;flex-direction:column;">
+            <div style="font-size:32px;font-weight:900;color:#1a1a1a;" id="compScore">—</div>
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Score</div>
+          </div>
+        </div>
+        <div class="dip-stats">
+          <div class="stat-card" data-g="diaria"><div class="stat-label">Incidentes</div><div class="stat-value" id="compIncidentesAbertos">—</div><div class="stat-sub">abertos</div></div>
+          <div class="stat-card" data-g="semi"><div class="stat-label">Certificações</div><div class="stat-value" id="compCertVencidas">—</div><div class="stat-sub">vencidas</div></div>
+          <div class="stat-card" data-g="integral"><div class="stat-label">Prazos</div><div class="stat-value" id="compPrazosAtrasados">—</div><div class="stat-sub">atrasados</div></div>
+          <div class="stat-card" data-g="total"><div class="stat-label">Inspeções</div><div class="stat-value" id="compInspecoesPend">—</div><div class="stat-sub">com pendências</div></div>
+          <div class="stat-card" data-g="semi"><div class="stat-label">Hora Extra</div><div class="stat-value" id="compHoraExtraPend">—</div><div class="stat-sub">pendentes</div></div>
+        </div>
+      </div>
+
+      <!-- COMPLIANCE — Horários Professoras -->
+      <div id="panelCompHorarios" class="panel">
+        <div class="sec-title">🕐 Horários Pré-Configurados</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Configure o horário de trabalho de cada professora para detecção automática de hora extra.</p>
+        <table class="data-table"><thead><tr><th>Professora</th><th>Dia</th><th>Entrada</th><th>Saída</th><th>Tolerância</th></tr></thead>
+        <tbody id="compHorariosBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Importar Ponto -->
+      <div id="panelCompImportar" class="panel">
+        <div class="sec-title">📂 Importar Arquivo de Ponto</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Importe o arquivo de ponto das professoras (CSV). O sistema detectará horas extras não autorizadas.</p>
+        <div class="form-card"><div class="ff"><label>Arquivo de Ponto (CSV)</label><input type="file" id="compArquivoPonto" accept=".csv,.txt" style="padding:10px;border:1px solid #ddd;border-radius:8px;width:100%;"></div>
+        <button onclick="importarPontoCompliance()" style="margin-top:10px;padding:10px 28px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Importar</button></div>
+      </div>
+
+      <!-- COMPLIANCE — Ocorrências Hora Extra -->
+      <div id="panelCompOcorrencias" class="panel">
+        <div class="sec-title">⚠️ Ocorrências — Hora Extra Não Autorizada</div>
+        <table class="data-table"><thead><tr><th>Data</th><th>Professora</th><th>Saída Prevista</th><th>Saída Real</th><th>Excedente</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="compOcorrenciasBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Incidentes -->
+      <div id="panelCompIncidentes" class="panel">
+        <div class="sec-title">🛡️ Incidentes — Proteção ao Aluno</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Registro de bullying, discriminação, acidentes e outros eventos.</p>
+        <button onclick="alert('Funcionalidade em implementação')" style="padding:8px 18px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;margin-bottom:16px;">+ Registrar Incidente</button>
+        <table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Gravidade</th><th>Descrição</th><th>Status</th></tr></thead>
+        <tbody id="compIncidentesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Certificações -->
+      <div id="panelCompCertificacoes" class="panel">
+        <div class="sec-title">🎓 Certificações e Treinamentos</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Controle de certificações obrigatórias e treinamentos programados.</p>
+        <table class="data-table"><thead><tr><th>Funcionário</th><th>Certificação</th><th>Obtida em</th><th>Vencimento</th><th>Status</th></tr></thead>
+        <tbody id="compCertBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Inspeções -->
+      <div id="panelCompInspecoes" class="panel">
+        <div class="sec-title">📋 Inspeções e Vistorias</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Checklists de cantina, infraestrutura, transporte e segurança.</p>
+        <table class="data-table"><thead><tr><th>Data</th><th>Inspeção</th><th>Categoria</th><th>Conformidade</th><th>Status</th></tr></thead>
+        <tbody id="compInspecoesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Políticas -->
+      <div id="panelCompPoliticas" class="panel">
+        <div class="sec-title">📄 Políticas e Documentos</div>
+        <table class="data-table"><thead><tr><th>Título</th><th>Categoria</th><th>Versão</th><th>Vigente desde</th><th>Revisão</th><th>Status</th></tr></thead>
+        <tbody id="compPoliticasBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Calendário -->
+      <div id="panelCompCalendario" class="panel">
+        <div class="sec-title">📅 Calendário de Compliance</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Prazos regulatórios: trabalhistas, fiscais, MEC, LGPD, saúde e segurança.</p>
+        <table class="data-table"><thead><tr><th>Prazo</th><th>Obrigação</th><th>Categoria</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="compCalendarioBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Alertas -->
+      <div id="panelCompAlertas" class="panel">
+        <div class="sec-title">📧 Alertas de Compliance Enviados</div>
+        <table class="data-table"><thead><tr><th>Data</th><th>Professora</th><th>E-mail</th><th>Assunto</th><th>Enviado</th></tr></thead>
+        <tbody id="compAlertasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+      </div>
+
       <!-- EMERGENCIA -->
       <div id="panelEmergencia" class="panel">
         <div style="text-align:center;padding:20px 0 30px;">
@@ -2393,6 +2497,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='notasDisciplinas') loadNotasDisciplinas();
     if(id==='notasPeriodos') loadNotasPeriodos();
     if(id==='notasVisao') initNotasVisao();
+    if(id==='compDash') loadCompDashboard();
+    if(id==='compHorarios') loadCompHorarios();
+    if(id==='compOcorrencias') loadCompOcorrencias();
+    if(id==='compIncidentes') loadCompIncidentes();
+    if(id==='compCertificacoes') loadCompCertificacoes();
+    if(id==='compInspecoes') loadCompInspecoes();
+    if(id==='compPoliticas') loadCompPoliticas();
+    if(id==='compCalendario') loadCompCalendario();
     return false;
   }
 
@@ -7987,6 +8099,36 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       showAutoSaved();
     }
   });
+
+  // ═══ COMPLIANCE MODULE ═══
+  const COMPLIANCE_API = CONFIG.SUPABASE_URL + '/functions/v1/compliance';
+  async function compApi(body) {
+    const token = getToken();
+    const r = await fetch(COMPLIANCE_API, { method:'POST', headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON,'Authorization':'Bearer '+CONFIG.SUPABASE_ANON}, body: JSON.stringify({...body, _token: token}) });
+    return r.json();
+  }
+  async function loadCompDashboard() {
+    const d = await compApi({ action:'compliance_dashboard_completo' });
+    if (d.error) return;
+    const s = d.data || d;
+    const el = document.getElementById('compScore');
+    el.textContent = s.score_compliance ?? '—';
+    el.parentElement.style.borderColor = (s.score_compliance >= 80 ? '#2d7a3a' : s.score_compliance >= 50 ? '#d4830a' : '#C8102E');
+    document.getElementById('compIncidentesAbertos').textContent = s.incidentes_abertos ?? 0;
+    document.getElementById('compCertVencidas').textContent = s.certificacoes_vencidas ?? 0;
+    document.getElementById('compPrazosAtrasados').textContent = s.prazos_atrasados ?? 0;
+    document.getElementById('compInspecoesPend').textContent = s.inspecoes_com_pendencias ?? 0;
+    document.getElementById('compHoraExtraPend').textContent = s.hora_extra_pendentes ?? 0;
+  }
+  async function loadCompHorarios() { const d = await compApi({action:'compliance_horarios_list'}); const items = d.data||[]; document.getElementById('compHorariosBody').innerHTML = items.length ? items.map(h=>`<tr><td>${h.professoras?.nome||'—'}</td><td>${{1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex'}[h.dia_semana]||h.dia_semana}</td><td>${h.hora_entrada}</td><td>${h.hora_saida}</td><td>${h.tolerancia_minutos}min</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhum horário.</td></tr>'; }
+  async function loadCompOcorrencias() { const d = await compApi({action:'compliance_ocorrencias_list',status:'pendente'}); const items = d.data||[]; document.getElementById('compOcorrenciasBody').innerHTML = items.length ? items.map(o=>`<tr><td>${String(o.data_ocorrencia).split('-').reverse().join('/')}</td><td>${o.professoras?.nome||'—'}</td><td>${o.hora_prevista_saida}</td><td>${o.hora_real_saida}</td><td><strong>${o.minutos_excedentes}min</strong></td><td><span class="status-pill" style="background:#d4830a;color:#fff;">Pendente</span></td><td><button onclick="compApi({action:'compliance_confirmar_ocorrencia',id:'${o.id}'}).then(()=>{showToast('Confirmada');loadCompOcorrencias()})" style="background:#C8102E;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">Confirmar</button></td></tr>`).join('') : '<tr><td colspan="7" class="empty-state">Nenhuma.</td></tr>'; }
+  async function loadCompIncidentes() { const d = await compApi({action:'compliance_incidentes_list'}); const items = d.data||[]; document.getElementById('compIncidentesBody').innerHTML = items.length ? items.map(i=>`<tr><td>${String(i.data_ocorrencia).split('-').reverse().join('/')}</td><td>${i.tipo}</td><td><span class="status-pill" style="background:${{baixa:'#2d7a3a',media:'#d4830a',alta:'#C8102E',critica:'#7a0016'}[i.gravidade]||'#888'};color:#fff;">${i.gravidade}</span></td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.descricao}</td><td>${i.status}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhum.</td></tr>'; }
+  async function loadCompCertificacoes() { const d = await compApi({action:'compliance_cert_list'}); const items = d.data||[]; document.getElementById('compCertBody').innerHTML = items.length ? items.map(c=>`<tr><td>${c.rh_funcionarios?.nome||'—'}</td><td>${c.compliance_certificacoes_tipos?.nome||'—'}</td><td>${String(c.data_obtencao).split('-').reverse().join('/')}</td><td>${c.data_vencimento?String(c.data_vencimento).split('-').reverse().join('/'):'—'}</td><td><span class="status-pill" style="background:${{valida:'#2d7a3a',vencida:'#C8102E',pendente:'#d4830a'}[c.status]||'#888'};color:#fff;">${c.status}</span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhuma.</td></tr>'; }
+  async function loadCompInspecoes() { const d = await compApi({action:'compliance_inspecoes_list'}); const items = d.data||[]; document.getElementById('compInspecoesBody').innerHTML = items.length ? items.map(i=>`<tr><td>${String(i.data_inspecao).split('-').reverse().join('/')}</td><td>${i.compliance_inspecao_templates?.nome||'—'}</td><td>${i.compliance_inspecao_templates?.categoria||'—'}</td><td><strong>${i.conformidade_pct}%</strong></td><td><span class="status-pill" style="background:${{concluida:'#2d7a3a',pendencias:'#d4830a',reprovada:'#C8102E'}[i.status]||'#888'};color:#fff;">${i.status}</span></td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhuma.</td></tr>'; }
+  async function loadCompPoliticas() { const d = await compApi({action:'compliance_politicas_list'}); const items = d.data||[]; document.getElementById('compPoliticasBody').innerHTML = items.length ? items.map(p=>`<tr><td>${p.titulo}</td><td>${p.categoria}</td><td>v${p.versao}</td><td>${p.vigente_desde?String(p.vigente_desde).split('-').reverse().join('/'):'—'}</td><td>${p.revisao_proxima?String(p.revisao_proxima).split('-').reverse().join('/'):'—'}</td><td><span class="status-pill" style="background:${{vigente:'#2d7a3a',rascunho:'#d4830a',revogada:'#888'}[p.status]||'#888'};color:#fff;">${p.status}</span></td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhuma.</td></tr>'; }
+  async function loadCompCalendario() { const d = await compApi({action:'compliance_calendario_list'}); const items = d.data||[]; document.getElementById('compCalendarioBody').innerHTML = items.length ? items.map(c=>`<tr><td>${String(c.data_limite).split('-').reverse().join('/')}</td><td>${c.titulo}</td><td>${c.categoria}</td><td><span class="status-pill" style="background:${{baixa:'#888',normal:'#1a6bb5',alta:'#d4830a',critica:'#C8102E'}[c.prioridade]||'#888'};color:#fff;">${c.prioridade}</span></td><td><span class="status-pill" style="background:${{pendente:'#d4830a',em_andamento:'#1a6bb5',concluido:'#2d7a3a',atrasado:'#C8102E'}[c.status]||'#888'};color:#fff;">${c.status}</span></td><td>${c.status!=='concluido'?`<button onclick="compApi({action:'compliance_calendario_concluir',id:'${c.id}'}).then(()=>{showToast('Concluído');loadCompCalendario()})" style="background:#2d7a3a;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">Concluir</button>`:'✓'}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhum.</td></tr>'; }
+  async function loadCompAlertas() { const d = await compApi({action:'compliance_alertas_list'}); const items = d.data||[]; document.getElementById('compAlertasBody').innerHTML = items.length ? items.map(a=>`<tr><td>${new Date(a.criado_em).toLocaleDateString('pt-BR')}</td><td>${a.professoras?.nome||'—'}</td><td>${a.email_destino}</td><td>${a.assunto}</td><td>${a.enviado?'<span class="status-pill" style="background:#2d7a3a;color:#fff;">Sim</span>':'<span class="status-pill" style="background:#C8102E;color:#fff;">Não</span>'}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhum.</td></tr>'; }
+  async function importarPontoCompliance() { showToast('Funcionalidade de importação via UI em desenvolvimento.','info'); }
 </script>
 <script src="/ticket-widget.js"></script>
 </body>
