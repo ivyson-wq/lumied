@@ -1730,7 +1730,63 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
-  // WebAuthn login (public — before session validation)
-  // These are handled above in the public section, but we put them here as fallthrough
+  // ── Indicações B2C (público) ────────────────────────
+  if (action === "indicacao_criar") {
+    const { indicador_nome, indicador_email, indicador_telefone, lead_nome, lead_telefone, lead_email, lead_serie_interesse, lead_mensagem, codigo_indicacao } = body as any;
+    if (!indicador_nome || !indicador_email || !lead_nome || !lead_telefone || !codigo_indicacao) return err("Campos obrigatórios ausentes.");
+    const { data: ind, error: insErr } = await admin.from("indicacoes").insert({ indicador_nome, indicador_email, indicador_telefone, lead_nome, lead_telefone, lead_email, lead_serie_interesse, lead_mensagem, codigo_indicacao, ip_origem: ip }).select().single();
+    if (insErr) return err(insErr.message);
+    const { data: primeiroEstagio } = await admin.from("crm_estagios").select("id").order("ordem").limit(1).single();
+    if (primeiroEstagio) {
+      const { data: crmLead } = await admin.from("crm_leads").insert({ nome_responsavel: lead_nome, email: lead_email, telefone: lead_telefone, serie_interesse: lead_serie_interesse, origem: "indicacao", observacoes: `Indicado por: ${indicador_nome} (${indicador_email}). ${lead_mensagem || ""}`.trim(), estagio_id: primeiroEstagio.id }).select("id").single();
+      if (crmLead) await admin.from("indicacoes").update({ crm_lead_id: crmLead.id }).eq("id", ind.id);
+    }
+    return ok({ data: ind, success: true });
+  }
+  if (action === "indicacao_rastrear") {
+    const { codigo_indicacao: cod } = body as any;
+    if (!cod) return err("Código obrigatório.");
+    const { data: indData } = await admin.from("indicacoes").select("lead_nome, status, recompensa_status, recompensa_descricao, criado_em").eq("codigo_indicacao", cod.toUpperCase()).single();
+    if (!indData) return err("Indicação não encontrada.", 404);
+    return ok({ data: indData });
+  }
+
+  // ── Indicações B2B (parceiros) ────────────────────
+  if (action === "indicacao_b2b_auth") {
+    const { email: authEmail } = body as any;
+    if (!authEmail) return err("E-mail obrigatório.");
+    const { data: ger } = await admin.from("gerentes").select("id, nome, email").eq("email", authEmail).single();
+    if (!ger) return err("E-mail não encontrado.", 404);
+    const { data: esc } = await admin.from("escolas").select("id, nome").eq("ativo", true).limit(1).single();
+    return ok({ data: { ...ger, escola_id: esc?.id, escola_nome: esc?.nome, is_gerente: true } });
+  }
+  if (action === "indicacao_b2b_criar") {
+    const { indicador_email: ie, indicador_nome: iname, escola_indicadora_id, escola_nome: en, escola_cidade, escola_estado, escola_tipo, contato_nome, contato_telefone, contato_email, contato_cargo, mensagem: msg2, codigo } = body as any;
+    if (!ie || !en || !contato_nome || !contato_telefone || !codigo) return err("Campos obrigatórios ausentes.");
+    const { data: b2bData, error: b2bErr } = await admin.from("indicacoes_b2b").insert({ escola_indicadora_id, indicador_nome: iname, indicador_email: ie, escola_nome: en, escola_cidade, escola_estado, escola_tipo, contato_nome, contato_telefone, contato_email, contato_cargo, mensagem: msg2, codigo }).select().single();
+    if (b2bErr) return err(b2bErr.message);
+    return ok({ data: b2bData, success: true });
+  }
+  if (action === "indicacao_b2b_list") {
+    const { email: listEmail } = body as any;
+    if (!listEmail) return err("E-mail obrigatório.");
+    const { data: b2bList } = await admin.from("indicacoes_b2b").select("*").eq("indicador_email", listEmail).order("criado_em", { ascending: false });
+    return ok({ data: b2bList ?? [] });
+  }
+  if (action === "indicacao_b2b_config_salvar") {
+    const { bonificacao_demonstracao, bonificacao_contratacao, bonificacao_especial } = body as any;
+    await admin.from("indicacoes_b2b_config").update({ bonificacao_demonstracao, bonificacao_contratacao, bonificacao_especial }).eq("programa_ativo", true);
+    return ok({ success: true });
+  }
+
+  // ── Suporte FAQ (público) ─────────────────────────
+  if (action === "suporte_faq_list") {
+    const { portal: p } = body as any;
+    let q = admin.from("suporte_faq").select("id, pergunta, resposta, palavras_chave, categoria").eq("ativo", true).order("ordem");
+    if (p && p !== 'todos') q = q.or(`portal.eq.todos,portal.eq.${p}`);
+    const { data: faqData } = await q;
+    return ok({ data: faqData ?? [] });
+  }
+
   return err("Ação desconhecida.");
 });

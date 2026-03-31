@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumied Partners — Indique Escolas</title>
+<meta name="description" content="Indique escolas para o Lumied e ganhe benefícios no seu plano.">
+<meta name="theme-color" content="#0F172A">
+<link rel="icon" href="/icon-lumied-96.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAFAF9;--bg-dark:#0C0A09;--surface:#fff;--border:#E7E5E4;--text:#1C1917;--muted:#78716C;--accent:#C8102E;--accent-hover:#A00D24;--green:#16A34A;--blue:#2563EB;--radius:16px;--radius-sm:10px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--text);background:var(--bg);min-height:100vh;}
+
+/* HEADER */
+.header{background:var(--bg-dark);padding:48px 24px 56px;text-align:center;position:relative;overflow:hidden;}
+.header::before{content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(200,16,46,.08) 0%,transparent 70%);pointer-events:none;}
+.header *{position:relative;z-index:1;}
+.header-logos{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;}
+.header-logos img{height:36px;filter:brightness(10);}
+.header-logos .mark{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;}
+.badge{display:inline-block;background:rgba(200,16,46,.15);border:1px solid rgba(200,16,46,.25);border-radius:999px;padding:5px 16px;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:16px;letter-spacing:.5px;}
+.header h1{font-size:clamp(28px,4.5vw,40px);font-weight:900;color:#FAFAF9;line-height:1.1;margin-bottom:12px;letter-spacing:-.5px;}
+.header h1 em{font-style:normal;font-family:'Instrument Serif',serif;color:var(--accent);}
+.header p{color:#A8A29E;font-size:16px;max-width:520px;margin:0 auto;line-height:1.6;}
+
+/* AUTH BAR */
+.auth-bar{max-width:700px;margin:-28px auto 0;padding:0 24px;position:relative;z-index:2;}
+.auth-card{background:var(--surface);border-radius:var(--radius);padding:20px 24px;box-shadow:0 4px 24px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.auth-card label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.auth-card input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;min-width:200px;}
+.auth-card input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(200,16,46,.08);}
+.auth-card button{padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .2s;}
+.auth-card button:hover{background:var(--accent-hover);}
+
+/* CONTENT */
+.container{max-width:800px;margin:0 auto;padding:0 24px;}
+
+/* BENEFITS */
+.benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:40px auto;max-width:800px;padding:0 24px;}
+.benefit{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:all .2s;}
+.benefit:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.06);}
+.benefit-icon{font-size:32px;margin-bottom:10px;}
+.benefit h3{font-size:15px;font-weight:700;margin-bottom:4px;}
+.benefit p{font-size:13px;color:var(--muted);line-height:1.5;}
+.benefit .value{font-size:20px;font-weight:900;color:var(--green);margin-top:8px;}
+
+/* FORM */
+.form-section{max-width:700px;margin:40px auto;padding:0 24px;}
+.form-card{background:var(--surface);border-radius:var(--radius);padding:32px;box-shadow:0 2px 16px rgba(0,0,0,.04);display:none;}
+.form-card.visible{display:block;}
+.form-card h2{font-size:20px;font-weight:800;margin-bottom:4px;}
+.form-card .sub{color:var(--muted);font-size:14px;margin-bottom:24px;line-height:1.5;}
+.ff{margin-bottom:14px;}
+.ff label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.5px;margin-bottom:4px;}
+.ff input,.ff select,.ff textarea{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;}
+.ff input:focus,.ff select:focus,.ff textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(200,16,46,.08);}
+.ff textarea{resize:vertical;min-height:70px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn-submit{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s;}
+.btn-submit:hover{background:var(--accent-hover);}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed;}
+
+/* MY REFERRALS */
+.referrals-section{max-width:700px;margin:32px auto;padding:0 24px;display:none;}
+.referrals-section.visible{display:block;}
+.ref-table{width:100%;border-collapse:collapse;font-size:13px;}
+.ref-table th{text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+.ref-table td{padding:10px 12px;border-bottom:1px solid var(--border);}
+.ref-table tr:hover td{background:rgba(200,16,46,.02);}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;color:#fff;}
+
+/* SUCCESS */
+.success-state{display:none;text-align:center;padding:40px 20px;}
+.success-state .check{width:72px;height:72px;background:#eafbef;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:16px;}
+
+/* FOOTER */
+.footer{text-align:center;padding:32px 24px;margin-top:48px;border-top:1px solid var(--border);}
+.footer p{font-size:12px;color:var(--muted);}
+
+/* CONFIG (admin only) */
+.config-section{max-width:700px;margin:32px auto;padding:0 24px;display:none;}
+.config-section.visible{display:block;}
+.config-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;}
+
+@media(max-width:600px){.row2{grid-template-columns:1fr;}.auth-card{flex-direction:column;align-items:stretch;}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logos">
+    <div class="mark">L</div>
+    <img src="/icon-lumied-96.png" alt="Lumied">
+  </div>
+  <div class="badge">Programa de Parceiros</div>
+  <h1>Indique escolas para o <em>Lumied</em></h1>
+  <p>Você já usa o Lumied. Agora ajude outras escolas a descobrirem também — e ganhe benefícios exclusivos no seu plano.</p>
+</div>
+
+<!-- AUTH -->
+<div class="auth-bar">
+  <div class="auth-card" id="authCard">
+    <div style="flex:1;">
+      <label>Acesse com o e-mail da sua escola</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <input type="email" id="partnerEmail" placeholder="gerente@suaescola.com.br" onkeydown="if(event.key==='Enter')autenticarParceiro()">
+        <button onclick="autenticarParceiro()">Entrar</button>
+      </div>
+    </div>
+  </div>
+  <div id="authOk" style="display:none;background:var(--surface);border-radius:var(--radius);padding:14px 20px;box-shadow:0 4px 24px rgba(0,0,0,.08);display:none;align-items:center;justify-content:space-between;">
+    <span style="font-size:14px;"><strong id="partnerNome">—</strong> <span style="color:var(--muted);font-size:12px;" id="partnerEscola">—</span></span>
+    <button onclick="sairParceiro()" style="padding:6px 14px;background:#f0f0f0;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;">Sair</button>
+  </div>
+</div>
+
+<!-- BENEFITS -->
+<div class="benefits">
+  <div class="benefit">
+    <div class="benefit-icon">📞</div>
+    <h3>Escola Contatada</h3>
+    <p>Quando entrarmos em contato com a escola indicada.</p>
+    <div class="value" id="benDemo">5% off</div>
+  </div>
+  <div class="benefit">
+    <div class="benefit-icon">🎓</div>
+    <h3>Escola Contratou</h3>
+    <p>Quando a escola indicada assinar o Lumied.</p>
+    <div class="value" id="benContrato">1 mês grátis</div>
+  </div>
+  <div class="benefit">
+    <div class="benefit-icon">🏆</div>
+    <h3>Top Parceiro</h3>
+    <p>Escola que mais trouxer indicações no trimestre.</p>
+    <div class="value" id="benEspecial">R$ 500</div>
+  </div>
+</div>
+
+<!-- FORM -->
+<div class="form-section">
+  <div class="form-card" id="formCard">
+    <h2>Indicar uma escola</h2>
+    <p class="sub">Preencha os dados da escola que deseja indicar. Nosso time comercial entrará em contato de forma profissional, mencionando a sua recomendação.</p>
+
+    <form id="indicacaoB2BForm" onsubmit="enviarIndicacaoB2B(event)">
+      <fieldset style="border:none;padding:0;margin-bottom:20px;">
+        <legend style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;">Dados da escola indicada</legend>
+        <div class="ff">
+          <label>Nome da escola *</label>
+          <input type="text" id="b2bEscolaNome" required placeholder="Escola Bilíngue ABC">
+        </div>
+        <div class="row2">
+          <div class="ff">
+            <label>Cidade</label>
+            <input type="text" id="b2bCidade" placeholder="Porto Alegre">
+          </div>
+          <div class="ff">
+            <label>Estado</label>
+            <select id="b2bEstado">
+              <option value="RS" selected>RS</option><option value="SC">SC</option><option value="PR">PR</option>
+              <option value="SP">SP</option><option value="RJ">RJ</option><option value="MG">MG</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div class="ff">
+          <label>Tipo de escola</label>
+          <select id="b2bTipo">
+            <option value="">Selecione...</option>
+            <option value="bilingue">Bilíngue</option>
+            <option value="internacional">Internacional</option>
+            <option value="particular">Particular</option>
+            <option value="rede">Rede de Ensino</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset style="border:none;padding:0;">
+        <legend style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px;">Contato na escola</legend>
+        <div class="ff">
+          <label>Nome do contato *</label>
+          <input type="text" id="b2bContatoNome" required placeholder="Diretora Maria">
+        </div>
+        <div class="row2">
+          <div class="ff">
+            <label>Telefone *</label>
+            <input type="tel" id="b2bContatoTel" required placeholder="(51) 99999-0000">
+          </div>
+          <div class="ff">
+            <label>E-mail</label>
+            <input type="email" id="b2bContatoEmail" placeholder="contato@escola.com.br">
+          </div>
+        </div>
+        <div class="ff">
+          <label>Cargo do contato</label>
+          <input type="text" id="b2bContatoCargo" placeholder="Diretora, Coordenadora, etc.">
+        </div>
+        <div class="ff">
+          <label>Mensagem (opcional)</label>
+          <textarea id="b2bMsg" placeholder="Conte por que essa escola se beneficiaria do Lumied..."></textarea>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="btn-submit" id="b2bBtnSubmit">Enviar Indicação</button>
+    </form>
+
+    <!-- SUCCESS -->
+    <div class="success-state" id="b2bSuccess">
+      <div class="check">✓</div>
+      <h2 style="font-size:22px;font-weight:800;margin-bottom:8px;">Indicação enviada!</h2>
+      <p style="color:var(--muted);font-size:14px;max-width:400px;margin:0 auto;">Nosso time comercial vai entrar em contato com a escola. Acompanhe o status abaixo.</p>
+      <div style="margin-top:16px;font-size:18px;font-weight:900;color:var(--accent);" id="b2bCodigo">—</div>
+      <button onclick="novaIndicacaoB2B()" style="margin-top:20px;padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;font-family:inherit;">Nova indicação</button>
+    </div>
+  </div>
+</div>
+
+<!-- MY REFERRALS -->
+<div class="referrals-section" id="referralsSection">
+  <h2 style="font-size:18px;font-weight:800;margin-bottom:16px;">Minhas Indicações</h2>
+  <table class="ref-table">
+    <thead><tr><th>Código</th><th>Escola</th><th>Cidade</th><th>Status</th><th>Bonificação</th><th>Data</th></tr></thead>
+    <tbody id="b2bReferralsBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Carregando...</td></tr></tbody>
+  </table>
+</div>
+
+<!-- ADMIN CONFIG (visible only for gerentes) -->
+<div class="config-section" id="configSection">
+  <div class="config-card">
+    <h3 style="font-size:16px;font-weight:800;margin-bottom:16px;">Configurar Bonificações</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Defina as recompensas para cada etapa do programa de indicações B2B.</p>
+    <div class="row2" style="margin-bottom:12px;">
+      <div class="ff">
+        <label>Tipo (demonstração)</label>
+        <select id="cfgDemoTipo"><option value="desconto_mensalidade">Desconto na mensalidade</option><option value="cashback">Cashback</option><option value="meses_gratis">Meses grátis</option></select>
+      </div>
+      <div class="ff">
+        <label>Valor (demonstração)</label>
+        <input type="number" id="cfgDemoValor" value="5" placeholder="5">
+      </div>
+    </div>
+    <div class="row2" style="margin-bottom:12px;">
+      <div class="ff">
+        <label>Tipo (contratação)</label>
+        <select id="cfgContratoTipo"><option value="meses_gratis">Meses grátis</option><option value="desconto_mensalidade">Desconto na mensalidade</option><option value="cashback">Cashback</option><option value="comissao">Comissão</option></select>
+      </div>
+      <div class="ff">
+        <label>Valor (contratação)</label>
+        <input type="number" id="cfgContratoValor" value="1" placeholder="1">
+      </div>
+    </div>
+    <div class="row2" style="margin-bottom:16px;">
+      <div class="ff">
+        <label>Tipo (especial/trimestral)</label>
+        <select id="cfgEspecialTipo"><option value="comissao">Comissão/Bônus</option><option value="meses_gratis">Meses grátis</option></select>
+      </div>
+      <div class="ff">
+        <label>Valor (especial)</label>
+        <input type="number" id="cfgEspecialValor" value="500" placeholder="500">
+      </div>
+    </div>
+    <button onclick="salvarConfigB2B()" style="padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;font-family:inherit;">Salvar Configuração</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Programa Lumied Partners. Benefícios sujeitos aos termos de uso do plano contratado.</p>
+  <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;">
+    <img src="/icon-lumied-48.png" alt="Lumied" style="height:16px;opacity:.5;">
+    <span style="font-size:11px;color:var(--muted);">Lumied &copy; 2026</span>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+const API = SUPABASE_URL + '/functions/v1/api';
+
+let partnerData = null;
+
+async function apiCall(body) {
+  const r = await fetch(API, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+function gerarCodigo() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'LPT-';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function autenticarParceiro() {
+  const email = document.getElementById('partnerEmail').value.trim();
+  if (!email) return alert('Informe seu e-mail.');
+
+  // Verificar se é gerente de escola cliente
+  const d = await apiCall({ action: 'indicacao_b2b_auth', email });
+  if (d.error || !d.data) {
+    alert(d.error || 'E-mail não encontrado. Este programa é exclusivo para escolas clientes Lumied.');
+    return;
+  }
+
+  partnerData = d.data;
+  document.getElementById('authCard').style.display = 'none';
+  document.getElementById('authOk').style.display = 'flex';
+  document.getElementById('partnerNome').textContent = partnerData.nome;
+  document.getElementById('partnerEscola').textContent = partnerData.escola_nome || '';
+  document.getElementById('formCard').classList.add('visible');
+  document.getElementById('referralsSection').classList.add('visible');
+
+  // Se gerente, mostrar config
+  if (partnerData.is_gerente) {
+    document.getElementById('configSection').classList.add('visible');
+  }
+
+  carregarMinhasIndicacoes();
+}
+
+function sairParceiro() {
+  partnerData = null;
+  document.getElementById('authCard').style.display = 'flex';
+  document.getElementById('authOk').style.display = 'none';
+  document.getElementById('formCard').classList.remove('visible');
+  document.getElementById('referralsSection').classList.remove('visible');
+  document.getElementById('configSection').classList.remove('visible');
+}
+
+async function enviarIndicacaoB2B(e) {
+  e.preventDefault();
+  if (!partnerData) return alert('Faça login primeiro.');
+  const btn = document.getElementById('b2bBtnSubmit');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+
+  const codigo = gerarCodigo();
+  const body = {
+    action: 'indicacao_b2b_criar',
+    indicador_email: partnerData.email,
+    indicador_nome: partnerData.nome,
+    escola_indicadora_id: partnerData.escola_id,
+    escola_nome: document.getElementById('b2bEscolaNome').value.trim(),
+    escola_cidade: document.getElementById('b2bCidade').value.trim(),
+    escola_estado: document.getElementById('b2bEstado').value,
+    escola_tipo: document.getElementById('b2bTipo').value,
+    contato_nome: document.getElementById('b2bContatoNome').value.trim(),
+    contato_telefone: document.getElementById('b2bContatoTel').value.trim(),
+    contato_email: document.getElementById('b2bContatoEmail').value.trim(),
+    contato_cargo: document.getElementById('b2bContatoCargo').value.trim(),
+    mensagem: document.getElementById('b2bMsg').value.trim(),
+    codigo,
+  };
+
+  const d = await apiCall(body);
+  btn.disabled = false; btn.textContent = 'Enviar Indicação';
+
+  if (d.error) return alert('Erro: ' + d.error);
+
+  document.getElementById('indicacaoB2BForm').style.display = 'none';
+  document.querySelector('#formCard h2').style.display = 'none';
+  document.querySelector('#formCard .sub').style.display = 'none';
+  document.getElementById('b2bSuccess').style.display = 'block';
+  document.getElementById('b2bCodigo').textContent = codigo;
+  carregarMinhasIndicacoes();
+}
+
+function novaIndicacaoB2B() {
+  document.getElementById('indicacaoB2BForm').reset();
+  document.getElementById('indicacaoB2BForm').style.display = 'block';
+  document.querySelector('#formCard h2').style.display = 'block';
+  document.querySelector('#formCard .sub').style.display = 'block';
+  document.getElementById('b2bSuccess').style.display = 'none';
+  document.getElementById('b2bBtnSubmit').disabled = false;
+}
+
+async function carregarMinhasIndicacoes() {
+  if (!partnerData) return;
+  const d = await apiCall({ action: 'indicacao_b2b_list', email: partnerData.email });
+  const items = d.data || d || [];
+  const tbody = document.getElementById('b2bReferralsBody');
+
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Nenhuma indicação ainda. Seja o primeiro!</td></tr>';
+    return;
+  }
+
+  const statusColors = {indicada:'#d4830a',contatada:'#2563EB',demonstracao:'#7c3aed',negociacao:'#d4830a',contratada:'#16A34A',recusada:'#888',expirada:'#888'};
+  const statusLabels = {indicada:'Indicada',contatada:'Contatada',demonstracao:'Em demo',negociacao:'Negociando',contratada:'Contratou!',recusada:'Recusada',expirada:'Expirada'};
+  const bonColors = {aguardando:'#d4830a',elegivel:'#2563EB',aplicada:'#16A34A',expirada:'#888'};
+
+  tbody.innerHTML = items.map(r => {
+    const dataFmt = new Date(r.criado_em).toLocaleDateString('pt-BR');
+    return `<tr>
+      <td style="font-weight:700;font-size:12px;">${r.codigo}</td>
+      <td>${r.escola_nome}</td>
+      <td>${r.escola_cidade||'—'}</td>
+      <td><span class="pill" style="background:${statusColors[r.status]||'#888'}">${statusLabels[r.status]||r.status}</span></td>
+      <td><span class="pill" style="background:${bonColors[r.bonificacao_status]||'#888'}">${r.bonificacao_status}</span></td>
+      <td>${dataFmt}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function salvarConfigB2B() {
+  const body = {
+    action: 'indicacao_b2b_config_salvar',
+    email: partnerData?.email,
+    bonificacao_demonstracao: { tipo: document.getElementById('cfgDemoTipo').value, valor: parseFloat(document.getElementById('cfgDemoValor').value) },
+    bonificacao_contratacao: { tipo: document.getElementById('cfgContratoTipo').value, valor: parseFloat(document.getElementById('cfgContratoValor').value) },
+    bonificacao_especial: { tipo: document.getElementById('cfgEspecialTipo').value, valor: parseFloat(document.getElementById('cfgEspecialValor').value) },
+  };
+  const d = await apiCall(body);
+  if (d.error) return alert('Erro: ' + d.error);
+  alert('Configuração salva com sucesso!');
+}
+</script>
+</body>
+</html>

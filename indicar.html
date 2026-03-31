@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indique e Ganhe — Maple Bear</title>
+<meta name="description" content="Indique famílias para a Maple Bear e ganhe recompensas exclusivas.">
+<meta name="theme-color" content="#C8102E">
+<link rel="icon" href="/icon-apple.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.07);--cream:#f8f5f0;--border:#e6ddd3;--text:#1a1a1a;--muted:#7a7169;--white:#fff;--green:#2d7a3a;--blue:#1a6bb5;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+
+/* HEADER */
+.hero{background:var(--red);position:relative;overflow:hidden;padding:48px 24px 56px;text-align:center;}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5C20 15,10 20,15 30C20 40,28 35,30 45C32 35,40 40,45 30C50 20,40 15,30 5Z' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E") repeat;}
+.hero *{position:relative;z-index:1;}
+.hero-badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:100px;padding:6px 18px;font-size:13px;color:rgba(255,255,255,.9);font-weight:600;margin-bottom:18px;letter-spacing:.5px;}
+.hero h1{font-family:'Lora',serif;font-size:clamp(28px,5vw,42px);font-weight:700;color:#fff;line-height:1.15;margin-bottom:12px;}
+.hero p{color:rgba(255,255,255,.8);font-size:16px;max-width:520px;margin:0 auto;line-height:1.6;}
+
+/* LOGOS */
+.brand-logos{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;}
+.brand-logos img{height:40px;object-fit:contain;}
+.brand-logos .sep{width:1px;height:28px;background:rgba(255,255,255,.3);}
+.brand-leaf{width:44px;height:44px;background:rgba(255,255,255,.18);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:1.5px solid rgba(255,255,255,.25);}
+
+/* STEPS */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;max-width:800px;margin:-32px auto 0;padding:0 24px;position:relative;z-index:2;}
+.step{background:#fff;border-radius:16px;padding:28px 20px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.06);}
+.step-num{width:40px;height:40px;background:var(--red);color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;margin-bottom:12px;}
+.step h3{font-size:15px;font-weight:700;margin-bottom:6px;}
+.step p{font-size:13px;color:var(--muted);line-height:1.5;}
+
+/* FORM */
+.form-section{max-width:600px;margin:48px auto;padding:0 24px;}
+.form-card{background:#fff;border-radius:20px;padding:32px;box-shadow:0 2px 16px rgba(0,0,0,.05);}
+.form-card h2{font-family:'Lora',serif;font-size:22px;margin-bottom:6px;}
+.form-card .sub{color:var(--muted);font-size:14px;margin-bottom:24px;line-height:1.5;}
+.ff{margin-bottom:16px;}
+.ff label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.5px;margin-bottom:5px;}
+.ff input,.ff select,.ff textarea{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;transition:border .2s,box-shadow .2s;}
+.ff input:focus,.ff select:focus,.ff textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px var(--red-light);}
+.ff textarea{resize:vertical;min-height:80px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn-submit{width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;font-family:inherit;}
+.btn-submit:hover{background:var(--red-dark);}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed;}
+
+/* REWARDS */
+.rewards{max-width:600px;margin:0 auto 48px;padding:0 24px;}
+.reward-card{display:flex;align-items:center;gap:16px;background:#fff;border-radius:14px;padding:18px 20px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.reward-icon{font-size:32px;flex-shrink:0;}
+.reward-info h4{font-size:15px;font-weight:700;margin-bottom:3px;}
+.reward-info p{font-size:13px;color:var(--muted);line-height:1.4;}
+.reward-value{margin-left:auto;font-size:18px;font-weight:700;color:var(--green);white-space:nowrap;}
+
+/* SUCCESS */
+.success-state{display:none;text-align:center;padding:40px 20px;}
+.success-state .check{width:72px;height:72px;background:#eafbef;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:16px;}
+.success-state h2{font-family:'Lora',serif;font-size:24px;margin-bottom:8px;}
+.success-state p{color:var(--muted);font-size:14px;line-height:1.6;max-width:400px;margin:0 auto;}
+.success-state .code{display:inline-block;background:var(--red-light);color:var(--red);font-weight:700;font-size:18px;padding:10px 24px;border-radius:10px;margin-top:16px;letter-spacing:1px;}
+
+/* TRACKING */
+.track-section{max-width:600px;margin:0 auto 48px;padding:0 24px;}
+.track-card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.05);}
+.track-card h3{font-size:16px;font-weight:700;margin-bottom:12px;}
+.track-row{display:flex;gap:10px;}
+.track-row input{flex:1;}
+.track-row button{padding:12px 20px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.track-result{margin-top:16px;display:none;}
+
+/* FOOTER */
+.footer{text-align:center;padding:24px;border-top:1px solid var(--border);}
+.footer p{font-size:12px;color:var(--muted);}
+.footer a{color:var(--red);text-decoration:none;}
+.powered{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted);}
+.powered img{height:16px;opacity:.6;}
+
+@media(max-width:600px){.row2{grid-template-columns:1fr;}.steps{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="brand-logos">
+    <div class="brand-leaf">🍁</div>
+    <div class="sep"></div>
+    <img src="/icon-lumied-96.png" alt="Lumied" style="height:32px;filter:brightness(10);">
+  </div>
+  <div class="hero-badge">Programa de Indicações</div>
+  <h1>Indique uma família<br>e ganhe recompensas</h1>
+  <p>Você já conhece a qualidade da educação bilíngue. Compartilhe essa experiência com quem você gosta e seja recompensado por isso.</p>
+</div>
+
+<!-- STEPS -->
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <h3>Indique</h3>
+    <p>Preencha o formulário com os dados da família que deseja indicar.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <h3>Acompanhe</h3>
+    <p>Receba um código de rastreio e acompanhe o status da sua indicação.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <h3>Ganhe</h3>
+    <p>Quando o indicado se matricular, você recebe sua recompensa automaticamente.</p>
+  </div>
+</div>
+
+<!-- REWARDS -->
+<div class="rewards" style="margin-top:40px;">
+  <h2 style="font-family:'Lora',serif;font-size:20px;margin-bottom:16px;text-align:center;">Suas Recompensas</h2>
+  <div class="reward-card">
+    <div class="reward-icon">🎯</div>
+    <div class="reward-info">
+      <h4>Indicação Registrada</h4>
+      <p>Ao enviar uma indicação válida que resulte em contato.</p>
+    </div>
+    <div class="reward-value">R$ 100</div>
+  </div>
+  <div class="reward-card">
+    <div class="reward-icon">🎓</div>
+    <div class="reward-info">
+      <h4>Matrícula Confirmada</h4>
+      <p>Quando o indicado efetuar a matrícula na escola.</p>
+    </div>
+    <div class="reward-value">R$ 300</div>
+  </div>
+  <div class="reward-card" style="border:2px solid var(--red);">
+    <div class="reward-icon">🏆</div>
+    <div class="reward-info">
+      <h4>Top Indicador do Mês</h4>
+      <p>Quem fizer mais indicações que resultem em matrícula no mês.</p>
+    </div>
+    <div class="reward-value" style="color:var(--red);">Brinde VIP</div>
+  </div>
+</div>
+
+<!-- FORM -->
+<div class="form-section">
+  <div class="form-card" id="formCard">
+    <h2>Fazer uma Indicação</h2>
+    <p class="sub">Preencha os dados abaixo. Entraremos em contato com a família indicada de forma respeitosa, mencionando a sua recomendação.</p>
+
+    <form id="indicacaoForm" onsubmit="enviarIndicacao(event)">
+      <fieldset style="border:none;padding:0;margin-bottom:20px;">
+        <legend style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:12px;">Seus dados (quem indica)</legend>
+        <div class="ff">
+          <label>Seu nome completo *</label>
+          <input type="text" id="indNome" required placeholder="Maria Silva">
+        </div>
+        <div class="row2">
+          <div class="ff">
+            <label>Seu e-mail *</label>
+            <input type="email" id="indEmail" required placeholder="maria@email.com">
+          </div>
+          <div class="ff">
+            <label>Seu telefone</label>
+            <input type="tel" id="indTelefone" placeholder="(54) 99999-0000">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset style="border:none;padding:0;">
+        <legend style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:12px;">Dados do indicado</legend>
+        <div class="ff">
+          <label>Nome da família / responsável *</label>
+          <input type="text" id="leadNome" required placeholder="João e Ana Souza">
+        </div>
+        <div class="row2">
+          <div class="ff">
+            <label>Telefone do indicado *</label>
+            <input type="tel" id="leadTelefone" required placeholder="(54) 99888-0000">
+          </div>
+          <div class="ff">
+            <label>E-mail do indicado</label>
+            <input type="email" id="leadEmail" placeholder="joao@email.com">
+          </div>
+        </div>
+        <div class="ff">
+          <label>Série de interesse</label>
+          <select id="leadSerie">
+            <option value="">Não sei / Não informado</option>
+            <option>Toddler (1-2 anos)</option>
+            <option>Nursery (2-3 anos)</option>
+            <option>Junior Kindergarten (3-4 anos)</option>
+            <option>Intermediate Kindergarten (4-5 anos)</option>
+            <option>Senior Kindergarten (5-6 anos)</option>
+            <option>Year 1 (6-7 anos)</option>
+            <option>Year 2 (7-8 anos)</option>
+            <option>Year 3 (8-9 anos)</option>
+            <option>Year 4 (9-10 anos)</option>
+            <option>Year 5 (10-11 anos)</option>
+          </select>
+        </div>
+        <div class="ff">
+          <label>Mensagem (opcional)</label>
+          <textarea id="leadMsg" placeholder="Conte por que você recomenda a Maple Bear para esta família..."></textarea>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="btn-submit" id="btnSubmit">Enviar Indicação</button>
+    </form>
+  </div>
+
+  <!-- SUCCESS STATE -->
+  <div class="success-state" id="successState">
+    <div class="check">✓</div>
+    <h2>Indicação enviada!</h2>
+    <p>Obrigado pela confiança. Entraremos em contato com a família indicada em breve. Use o código abaixo para acompanhar o status:</p>
+    <div class="code" id="codigoIndicacao">—</div>
+    <p style="margin-top:16px;font-size:13px;">Você também receberá este código por e-mail.</p>
+    <button onclick="novaIndicacao()" style="margin-top:20px;padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">Fazer nova indicação</button>
+  </div>
+</div>
+
+<!-- TRACKING -->
+<div class="track-section">
+  <div class="track-card">
+    <h3>Acompanhar minha indicação</h3>
+    <div class="track-row">
+      <input type="text" id="trackCodigo" placeholder="Digite seu código (ex: IND-A1B2C3)">
+      <button onclick="rastrearIndicacao()">Consultar</button>
+    </div>
+    <div class="track-result" id="trackResult"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Programa sujeito a <a href="#">termos e condições</a>. Válido enquanto o programa estiver ativo.</p>
+  <div class="powered">Powered by <img src="/icon-lumied-48.png" alt="Lumied"> <strong>Lumied</strong></div>
+</div>
+
+<script>
+  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  const API = SUPABASE_URL + '/functions/v1/api';
+
+  function gerarCodigo() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'IND-';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  }
+
+  async function enviarIndicacao(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    const codigo = gerarCodigo();
+    const body = {
+      action: 'indicacao_criar',
+      indicador_nome: document.getElementById('indNome').value.trim(),
+      indicador_email: document.getElementById('indEmail').value.trim(),
+      indicador_telefone: document.getElementById('indTelefone').value.trim(),
+      lead_nome: document.getElementById('leadNome').value.trim(),
+      lead_telefone: document.getElementById('leadTelefone').value.trim(),
+      lead_email: document.getElementById('leadEmail').value.trim(),
+      lead_serie_interesse: document.getElementById('leadSerie').value,
+      lead_mensagem: document.getElementById('leadMsg').value.trim(),
+      codigo_indicacao: codigo,
+    };
+
+    try {
+      const r = await fetch(API, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+
+      if (d.error) {
+        alert('Erro: ' + d.error);
+        btn.disabled = false;
+        btn.textContent = 'Enviar Indicação';
+        return;
+      }
+
+      document.getElementById('formCard').querySelector('form').style.display = 'none';
+      document.getElementById('formCard').querySelector('h2').style.display = 'none';
+      document.getElementById('formCard').querySelector('.sub').style.display = 'none';
+      const success = document.getElementById('successState');
+      success.style.display = 'block';
+      document.getElementById('codigoIndicacao').textContent = codigo;
+    } catch (err) {
+      alert('Erro de conexão. Tente novamente.');
+      btn.disabled = false;
+      btn.textContent = 'Enviar Indicação';
+    }
+  }
+
+  function novaIndicacao() {
+    document.getElementById('indicacaoForm').reset();
+    document.getElementById('formCard').querySelector('form').style.display = 'block';
+    document.getElementById('formCard').querySelector('h2').style.display = 'block';
+    document.getElementById('formCard').querySelector('.sub').style.display = 'block';
+    document.getElementById('successState').style.display = 'none';
+    document.getElementById('btnSubmit').disabled = false;
+    document.getElementById('btnSubmit').textContent = 'Enviar Indicação';
+  }
+
+  async function rastrearIndicacao() {
+    const codigo = document.getElementById('trackCodigo').value.trim().toUpperCase();
+    if (!codigo) return;
+
+    const result = document.getElementById('trackResult');
+    result.style.display = 'block';
+    result.innerHTML = '<p style="color:var(--muted);">Consultando...</p>';
+
+    try {
+      const r = await fetch(API, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+        body: JSON.stringify({ action:'indicacao_rastrear', codigo_indicacao: codigo }),
+      });
+      const d = await r.json();
+
+      if (d.error || !d.data) {
+        result.innerHTML = '<p style="color:var(--red);">Código não encontrado. Verifique e tente novamente.</p>';
+        return;
+      }
+
+      const ind = d.data;
+      const statusMap = {
+        pendente: {label:'Pendente — Aguardando contato', color:'#d4830a', icon:'🕐'},
+        contatado: {label:'Contatado — A escola entrou em contato', color:'var(--blue)', icon:'📞'},
+        matriculado: {label:'Matriculado — Parabéns! Recompensa liberada', color:'var(--green)', icon:'🎉'},
+        expirado: {label:'Expirado', color:'#888', icon:'⏰'},
+        cancelado: {label:'Cancelado', color:'#888', icon:'❌'},
+      };
+      const st = statusMap[ind.status] || {label:ind.status,color:'#666',icon:'❓'};
+      const recompMap = {
+        aguardando: 'Aguardando elegibilidade',
+        elegivel: 'Elegível — Em processamento',
+        entregue: 'Entregue!',
+        expirada: 'Expirada',
+      };
+
+      result.innerHTML = `
+        <div style="background:var(--cream);border-radius:12px;padding:16px;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:24px;">${st.icon}</span>
+            <div>
+              <div style="font-weight:700;font-size:14px;">Status: <span style="color:${st.color}">${st.label}</span></div>
+              <div style="font-size:12px;color:var(--muted);">Lead: ${ind.lead_nome}</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--muted);">
+            Recompensa: <strong>${recompMap[ind.recompensa_status] || ind.recompensa_status}</strong>
+            ${ind.recompensa_descricao ? ' — ' + ind.recompensa_descricao : ''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">
+            Indicado em: ${new Date(ind.criado_em).toLocaleDateString('pt-BR')}
+          </div>
+        </div>
+      `;
+    } catch {
+      result.innerHTML = '<p style="color:var(--red);">Erro ao consultar. Tente novamente.</p>';
+    }
+  }
+</script>
+</body>
+</html>
