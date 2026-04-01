@@ -37,12 +37,14 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 
 ---
 
-## Edge Functions (19 ativas)
+## Edge Functions (21 ativas)
 
 | Function | Padrão | Descrição |
 |----------|--------|-----------|
 | `admin` | **Router v2** | SaaS admin: escolas, planos, módulos, dashboard stats, tickets, LGPD, system health |
-| `api` | **Hybrid** | Gerente: 139+ actions. Rate limit + sanitização + ticket_create |
+| `api` | **Hybrid** | Gerente: 160+ actions. Inclui indicações B2C/B2B, suporte FAQ, WhatsApp SaaS endpoints |
+| `compliance` | **Router v2** | Compliance: hora extra, incidentes/bullying, certificações, inspeções, políticas, calendário regulatório, score |
+| `ponto` | **Router v2** | Parser AFD (Portaria 671), espelho de ponto, dashboard, justificativas |
 | `diplomas` | **Hybrid** | Professora/pais: 108 actions |
 | `academico` | Legado | Notas, frequência, diário, documentos, relatórios BNCC, portal aluno, provas |
 | `comunicacao` | **Router v2** | Agenda digital, chat escola-família |
@@ -194,13 +196,16 @@ Landing page em `site/index.html` — marca **Lumied**.
 
 ## Banco de Dados
 
-- **82 migrations** (009-082)
+- **92 migrations** (009-092)
 - Últimas migrations relevantes:
-  - `048_planos_modulos.sql` — escolas, planos, modulos, admins
-  - `075_multitenancy_limites.sql` — plano_limites, escola_uso
-  - `078_lgpd.sql` — consentimentos, solicitações, audit log
-  - `081_tickets.sql` — tabela tickets de suporte
-  - `082_ticket_resolver_cron.sql` — pg_cron job para auto-resposta
+  - `085_compliance.sql` — hora extra: horários, ponto, ocorrências, alertas
+  - `086_indicacoes.sql` — indicações B2C (pais indicam famílias)
+  - `087_suporte.sql` — FAQ + tickets de suporte inteligente
+  - `088_compliance_expandido.sql` — incidentes, certificações, inspeções, políticas, calendário regulatório
+  - `089_indicacoes_b2b.sql` — indicações B2B (escolas indicam escolas)
+  - `090_whatsapp.sql` — WhatsApp atendimento: departamentos, conversation_state, push comercial
+  - `091_afd_ponto.sql` — ponto AFD: employees, imports, events, daily_summary, justificativas
+  - `092_whatsapp_gateway.sql` — WhatsApp gateway: famílias, janelas 24h, mensagens, eventos, FAQs, relatórios semanais
 
 ---
 
@@ -289,6 +294,22 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → e
 - Authorized JS origins: `https://maplebearcaxias.lumied.com.br`
 - Redirect URI: `https://brgorknbrjlfwvrrlwxj.supabase.co/auth/v1/callback`
 
+### Cloudflare Workers
+- Account ID: `d0d79afc2b86f65653d10dbef3ceaee7`
+- API Token: `cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e`
+
+| Worker | URL | Cron | Descrição |
+|--------|-----|------|-----------|
+| `lumied-monitor` | `https://lumied-monitor.ivyson.workers.dev` | `*/15 * * * *` | Monitoramento Sentry/Vercel/Supabase |
+| `whatsapp-worker` | `https://whatsapp-worker.ivyson.workers.dev` | `*/30 * * * *` | Atendimento departamental + push comercial (Maple Bear BG) |
+| `whatsapp-gateway` | `https://whatsapp-gateway.ivyson.workers.dev` | `0 9 * * 6` | Comunicação escola→família: confirmações, FAQ bot (Claude), relatório semanal (Claude), estou-a-caminho |
+
+**Deploy Workers:**
+```bash
+cd whatsapp-gateway  # ou whatsapp-worker
+CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUDFLARE_ACCOUNT_ID=d0d79afc2b86f65653d10dbef3ceaee7 npx wrangler deploy
+```
+
 ### DNS (Cloudflare)
 - Zone: `lumied.com.br` (ID: `8b2c34bf85fc32f734de3facd380956d`)
 - Nameservers: `aleena.ns.cloudflare.com`, `yichun.ns.cloudflare.com`
@@ -313,3 +334,74 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → e
 | `deploy-novo-cliente.sh` | Script automatizado de deploy |
 | `build.sh` | Build script Vercel (gera config.js) |
 | `sentry-init.js` | Inicialização Sentry frontend |
+| `indicar.html` | Página de indicação B2C (pais indicam famílias) |
+| `parceiros.html` | Página de indicação B2B (escolas indicam escolas — Lumied Partners) |
+| `suporte-widget.js` | Widget de suporte inteligente (FAQ + ticket) em todos os portais |
+| `whatsapp-worker/` | Cloudflare Worker — atendimento departamental WhatsApp |
+| `whatsapp-gateway/` | Cloudflare Worker — comunicação escola→família WhatsApp |
+
+---
+
+## Módulos adicionados (Abril 2026)
+
+### Compliance Expandido (Premium+)
+- **Hora extra**: horários pré-configurados, importação de ponto, verificação automática (cron 12/12h), alerta por email
+- **Incidentes/Bullying**: registro, investigação, encaminhamento (Conselho Tutelar), histórico de ações
+- **Certificações**: 8 tipos obrigatórios pré-cadastrados, vencimento automático, treinamentos programados
+- **Inspeções**: checklists (cantina, infraestrutura, transporte), score de conformidade
+- **Políticas**: repositório com versão, aceite obrigatório, revisão programada
+- **Calendário regulatório**: 13 obrigações pré-cadastradas (RAIS, eSocial, FGTS, Censo MEC, AVCB, LGPD RIPD)
+- **Score de compliance**: 0-100 baseado em problemas abertos
+
+### Ponto AFD (Portaria MTP 671/2021)
+- Parser de arquivo AFD (registros tipo 1/3/5/9) gerado por REP-C homologado
+- De-para PIS → funcionário, cálculo de horas (pares entrada/saída)
+- Espelho de ponto mensal, justificativas com aprovação, dashboard
+- Edge Function `ponto` com 15 actions
+
+### Indicações B2C (`indicar.html`)
+- Pais indicam famílias, código de rastreio (IND-XXXXXX)
+- Recompensas: R$100 indicação + R$300 matrícula
+- Auto-cria lead no CRM
+
+### Indicações B2B (`parceiros.html` — Lumied Partners)
+- Escolas clientes indicam outras escolas
+- Bonificações configuráveis: desconto, meses grátis, cashback, comissão
+- Pipeline: indicada → contatada → demonstração → negociação → contratada
+
+### WhatsApp Worker (Maple Bear BG)
+- Menu + roteamento departamental, detecção de urgência, push comercial (lembretes 24h/2h/follow-up)
+- Templates Meta: `maple_bear_lembrete_24h`, `maple_bear_lembrete_2h`, `maple_bear_followup`
+
+### WhatsApp Gateway (comunicação escola→família)
+- Comunicados com confirmação de leitura ("Li e confirmo")
+- "Estou a caminho" por keyword no WhatsApp
+- Confirmação de eventos (botões Confirmo/Não vou)
+- FAQ bot com Claude Haiku (responde antes de rotear para professora)
+- Relatório semanal automático por aluno (Claude Haiku, cron sábado 9h)
+- Janela 24h: texto livre gratuito vs template pago
+- Toggle por escola: `escolas.modulo_whatsapp`
+
+---
+
+## Pendências de Configuração (WhatsApp)
+
+### Secrets ainda não configurados nos Workers:
+1. `WHATSAPP_TOKEN` — Obtido após criar app no Meta Business Manager
+2. `WHATSAPP_VERIFY_TOKEN` — Inventar uma string (ex: `lumied_wa_verify_2026`)
+3. `META_PHONE_NUMBER_ID` — Obtido no Meta Developers → WhatsApp → API Setup
+4. `SUPABASE_SERVICE_KEY` — Supabase Dashboard → Settings → API → service_role
+5. `ANTHROPIC_API_KEY` — console.anthropic.com (para FAQ bot + relatório semanal)
+6. `APP_INTERNAL_SECRET` — Inventar uma string para auth entre Worker e app
+7. `APP_BASE_URL` — URL do Supabase ou do app
+
+### Meta Business Manager — Passos pendentes:
+1. Conta verificada no Meta Business Manager (CNPJ + site) — 3-7 dias
+2. App criado no Meta Developers com produto WhatsApp
+3. Número dedicado cadastrado e verificado
+4. Templates cadastrados e aprovados (1-3 dias):
+   - `aviso_escolar_v1` (Utility) — comunicados
+   - `maple_bear_lembrete_24h` (Utility)
+   - `maple_bear_lembrete_2h` (Utility)
+   - `maple_bear_followup` (Utility)
+5. Webhook configurado → `https://whatsapp-gateway.ivyson.workers.dev/webhook`
