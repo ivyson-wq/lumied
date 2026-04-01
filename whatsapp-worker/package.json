@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-worker",
+  "version": "1.0.0",
+  "description": "Maple Bear WhatsApp — Cloudflare Worker (Meta Cloud API)",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
