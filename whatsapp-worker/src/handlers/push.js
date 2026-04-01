@@ -15,8 +15,7 @@ export async function handlePushMessages({ meta, db }) {
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const meetings24h = await db.query('wa_scheduled_meetings', {
     filters: {
-      'meeting_at': `lte.${in24h.toISOString()}`,
-      'meeting_at': `gte.${now.toISOString()}`,
+      'meeting_at': `and(lte.${in24h.toISOString()},gte.${now.toISOString()})`,
       'reminder_24h': 'eq.false',
     },
   });
@@ -41,8 +40,7 @@ export async function handlePushMessages({ meta, db }) {
   const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   const meetings2h = await db.query('wa_scheduled_meetings', {
     filters: {
-      'meeting_at': `lte.${in2h.toISOString()}`,
-      'meeting_at': `gte.${now.toISOString()}`,
+      'meeting_at': `and(lte.${in2h.toISOString()},gte.${now.toISOString()})`,
       'reminder_2h': 'eq.false',
       'reminder_24h': 'eq.true',
     },
