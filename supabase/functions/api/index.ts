@@ -1779,6 +1779,47 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── WhatsApp — Endpoints de integração SaaS ────────
+  if (action === "wa_family_by_phone") {
+    const { phone: waPhone } = body as any;
+    if (!waPhone) return err("Phone obrigatório.");
+    // Normalizar: remover +55, espaços, hifens
+    const cleanPhone = waPhone.replace(/\D/g, '').replace(/^55/, '');
+    // Buscar família por telefone (pai ou mãe)
+    const { data: fam } = await admin.from("familias").select("id, nome_responsavel, email, telefone, alunos(id, nome)").or(`telefone.like.%${cleanPhone}%,telefone2.like.%${cleanPhone}%`).limit(1).single();
+    if (!fam) return ok({ data: null });
+    const aluno = fam.alunos?.[0];
+    return ok({ data: { familia_id: fam.id, nome_responsavel: fam.nome_responsavel, email: fam.email, aluno_id: aluno?.id, aluno_nome: aluno?.nome } });
+  }
+
+  if (action === "wa_student_balance") {
+    const { student_id: sid } = body as any;
+    if (!sid) return err("student_id obrigatório.");
+    const { data: aluno } = await admin.from("alunos").select("nome").eq("id", sid).single();
+    const { data: boletos } = await admin.from("boletos").select("descricao, valor, vencimento, status").eq("aluno_id", sid).order("vencimento", { ascending: false }).limit(5);
+    return ok({ data: { aluno_nome: aluno?.nome, items: boletos ?? [] } });
+  }
+
+  if (action === "wa_student_attendance_today") {
+    const { student_id: sid } = body as any;
+    if (!sid) return err("student_id obrigatório.");
+    const today = new Date().toISOString().split("T")[0];
+    const { data: aluno } = await admin.from("alunos").select("nome").eq("id", sid).single();
+    const { data: freq } = await admin.from("frequencia").select("presente, hora_entrada").eq("aluno_id", sid).eq("data", today).single();
+    return ok({ data: freq ? { aluno_nome: aluno?.nome, presente: freq.presente, hora_entrada: freq.hora_entrada } : null });
+  }
+
+  if (action === "wa_class_events") {
+    const { class_id: cid } = body as any;
+    const { data: eventos } = await admin.from("calendario_eventos").select("titulo, data, descricao").gte("data", new Date().toISOString().split("T")[0]).order("data").limit(5);
+    return ok({ data: eventos ?? [] });
+  }
+
+  if (action === "wa_meetings_scheduled") {
+    const { data: meetings } = await admin.from("wa_scheduled_meetings").select("*").gte("meeting_at", new Date().toISOString()).eq("followup_sent", false).order("meeting_at");
+    return ok({ data: meetings ?? [] });
+  }
+
   // ── Suporte FAQ (público) ─────────────────────────
   if (action === "suporte_faq_list") {
     const { portal: p } = body as any;
