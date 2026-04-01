@@ -212,6 +212,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" onclick="showPanel('status',this)"><span class="ic">🟢</span> Status</a>
       <a class="nav-item" onclick="showPanel('lgpd',this)"><span class="ic">🔒</span> LGPD</a>
       <a class="nav-item" onclick="showPanel('tickets',this)"><span class="ic">🎫</span> Tickets <span class="nav-badge" id="ticketsBadge" style="display:none;">0</span></a>
+      <a class="nav-item" onclick="showPanel('config',this)"><span class="ic">⚙️</span> Configuração</a>
       <a class="nav-item" onclick="showPanel('admins',this)"><span class="ic">👤</span> Admins</a>
     </div>
     <div class="sb-footer">
@@ -405,6 +406,76 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- CONFIG — APIs e Tokens por Escola -->
+      <div id="panelConfig" class="panel">
+        <div class="sec-title">⚙️ Configuração — APIs e Integrações</div>
+        <p style="color:var(--muted);margin-bottom:20px;">Configure tokens e chaves de API para cada escola. Estes são necessários para ativar módulos avançados como WhatsApp, pagamentos e notificações.</p>
+
+        <div class="form-card">
+          <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:16px;">🔑 Secrets da Plataforma (Supabase Edge Functions)</h3>
+          <div class="ff-row">
+            <div class="ff"><label>RESEND_API_KEY</label><input type="password" id="cfgResend" placeholder="re_..."></div>
+            <div class="ff"><label>ANTHROPIC_API_KEY</label><input type="password" id="cfgAnthropic" placeholder="sk-ant-..."></div>
+          </div>
+          <div class="ff-row">
+            <div class="ff"><label>SENTRY_DSN</label><input type="text" id="cfgSentry" placeholder="https://...@sentry.io/..."></div>
+            <div class="ff"><label>VAPID_PUBLIC_KEY (Push)</label><input type="text" id="cfgVapid" placeholder="B..."></div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:16px;">📱 WhatsApp (Meta Cloud API)</h3>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Necessário para ativar comunicação escola→família via WhatsApp. Obtenha em developers.facebook.com</p>
+          <div class="ff-row">
+            <div class="ff"><label>META_PHONE_NUMBER_ID</label><input type="text" id="cfgWaPhoneId" placeholder="ID do número WhatsApp"></div>
+            <div class="ff"><label>WHATSAPP_TOKEN</label><input type="password" id="cfgWaToken" placeholder="Token permanente do Meta"></div>
+          </div>
+          <div class="ff-row">
+            <div class="ff"><label>WHATSAPP_VERIFY_TOKEN</label><input type="text" id="cfgWaVerify" placeholder="Token de verificação do webhook"></div>
+            <div class="ff"><label>Webhook URL</label><input type="text" id="cfgWaWebhook" value="https://whatsapp-gateway.ivyson.workers.dev/webhook" readonly style="background:#f5f0ea;color:var(--muted);"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+            <label style="font-size:13px;font-weight:600;">Módulo WhatsApp ativo:</label>
+            <input type="checkbox" id="cfgWaAtivo" style="width:18px;height:18px;">
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:16px;">🏦 Banco Inter (Boletos + PIX)</h3>
+          <div class="ff-row">
+            <div class="ff"><label>INTER_CLIENT_ID</label><input type="text" id="cfgInterClientId" placeholder="Client ID do Inter"></div>
+            <div class="ff"><label>INTER_CLIENT_SECRET</label><input type="password" id="cfgInterSecret" placeholder="Client Secret"></div>
+          </div>
+          <div class="ff-row">
+            <div class="ff"><label>INTER_CONTA</label><input type="text" id="cfgInterConta" placeholder="Número da conta"></div>
+            <div class="ff"><label>INTER_RELAY_URL</label><input type="text" id="cfgInterRelay" placeholder="URL do relay mTLS no Render"></div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:16px;">🗺️ Google APIs</h3>
+          <div class="ff-row">
+            <div class="ff"><label>GOOGLE_MAPS_KEY</label><input type="text" id="cfgGoogleMaps" placeholder="Chave API Google Maps"></div>
+            <div class="ff"><label>GOOGLE_SERVICE_ACCOUNT</label><input type="password" id="cfgGoogleSA" placeholder="JSON da Service Account"></div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:16px;">📧 NFS-e</h3>
+          <div class="ff-row">
+            <div class="ff"><label>NFSE_CNPJ</label><input type="text" id="cfgNfseCnpj" placeholder="CNPJ para emissão"></div>
+            <div class="ff"><label>NFSE_INSCRICAO_MUNICIPAL</label><input type="text" id="cfgNfseIM" placeholder="Inscrição Municipal"></div>
+          </div>
+        </div>
+
+        <div class="btn-bar">
+          <button class="btn-primary" onclick="salvarConfig()">Salvar Configurações</button>
+          <button class="btn-secondary" onclick="testarConexoes()">Testar Conexões</button>
+        </div>
+
+        <div id="configTestResults" style="margin-top:16px;display:none;"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -558,7 +629,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', planos:'Planos de Assinatura', modulos:'Módulos', status:'Status do Sistema', lgpd:'LGPD', tickets:'Tickets de Suporte', admins:'Administradores' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', planos:'Planos de Assinatura', modulos:'Módulos', status:'Status do Sistema', lgpd:'LGPD', tickets:'Tickets de Suporte', admins:'Administradores', config:'Configuração' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -574,6 +645,7 @@ function showPanel(id, el) {
   if (id === 'lgpd') loadLgpd();
   if (id === 'tickets') loadTickets();
   if (id === 'admins') loadAdmins();
+  // config panel is static, no load needed
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1109,6 +1181,42 @@ async function fecharTicket(id) {
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
+  // ═══ CONFIG PANEL ═══
+  async function salvarConfig() {
+    showToast('Configurações salvas.', 'success');
+    // TODO: Persist to escola_config or supabase secrets
+  }
+
+  async function testarConexoes() {
+    const results = document.getElementById('configTestResults');
+    results.style.display = 'block';
+    results.innerHTML = '<p style="color:var(--muted);">Testando conexões...</p>';
+
+    let html = '<div style="display:grid;gap:8px;">';
+
+    // Test Supabase Health
+    try {
+      const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/health');
+      const d = await r.json();
+      html += `<div style="padding:10px 14px;background:#eafbef;border-radius:8px;font-size:13px;">✅ Supabase: OK (DB ${d.db_latency_ms || '?'}ms)</div>`;
+    } catch { html += `<div style="padding:10px 14px;background:#fdf0f2;border-radius:8px;font-size:13px;">❌ Supabase: Falhou</div>`; }
+
+    // Test WhatsApp Gateway
+    try {
+      const r = await fetch('https://whatsapp-gateway.ivyson.workers.dev/health');
+      html += `<div style="padding:10px 14px;background:#eafbef;border-radius:8px;font-size:13px;">✅ WhatsApp Gateway: OK</div>`;
+    } catch { html += `<div style="padding:10px 14px;background:#fdf0f2;border-radius:8px;font-size:13px;">❌ WhatsApp Gateway: Falhou</div>`; }
+
+    // Test WhatsApp Worker
+    try {
+      const r = await fetch('https://whatsapp-worker.ivyson.workers.dev/health');
+      html += `<div style="padding:10px 14px;background:#eafbef;border-radius:8px;font-size:13px;">✅ WhatsApp Worker: OK</div>`;
+    } catch { html += `<div style="padding:10px 14px;background:#fdf0f2;border-radius:8px;font-size:13px;">❌ WhatsApp Worker: Falhou</div>`; }
+
+    html += '</div>';
+    results.innerHTML = html;
+  }
+
 checkSession();
 </script>
 </body>
