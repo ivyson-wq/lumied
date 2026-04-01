@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-gateway",
+  "version": "1.0.0",
+  "description": "Maple Bear WhatsApp Gateway — comunicação escola-família",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
