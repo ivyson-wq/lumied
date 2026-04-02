@@ -8130,6 +8130,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function loadCompAlertas() { const d = await compApi({action:'compliance_alertas_list'}); const items = d.data||[]; document.getElementById('compAlertasBody').innerHTML = items.length ? items.map(a=>`<tr><td>${new Date(a.criado_em).toLocaleDateString('pt-BR')}</td><td>${a.professoras?.nome||'—'}</td><td>${a.email_destino}</td><td>${a.assunto}</td><td>${a.enviado?'<span class="status-pill" style="background:#2d7a3a;color:#fff;">Sim</span>':'<span class="status-pill" style="background:#C8102E;color:#fff;">Não</span>'}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhum.</td></tr>'; }
   async function importarPontoCompliance() { showToast('Funcionalidade de importação via UI em desenvolvimento.','info'); }
 </script>
+<script src="/lumied-ux.js" defer></script>
 <script src="/ticket-widget.js"></script>
 </body>
 </html>
