@@ -295,6 +295,97 @@ async function coletarContextoProfessora(sb: any, profId: string | undefined) {
 }
 
 // ═══════════════════════════════════════════════════════
+//  ROI — Dashboard de retorno real
+// ═══════════════════════════════════════════════════════
+
+router.on("roi_dashboard", authGerente, async (ctx) => {
+  // Config ROI da escola
+  const { data: config } = await ctx.sb.from("roi_config").select("*").limit(1).single();
+  const cfg = config || { mensalidade_media_aluno: 2500, salario_medio_admin: 3500, total_staff_admin: 2, custo_hora_admin: 22, taxa_evasao_anterior: 8, taxa_inadimplencia_anterior: 10, operational_savings_rate: 0.30, evasion_reduction_rate: 0.40, default_reduction_rate: 0.20 };
+
+  // Dados reais do mês atual
+  const mesAtual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const { data: snapshot } = await ctx.sb.from("roi_snapshots").select("*").eq("mes", mesAtual).limit(1).single();
+
+  // Dados reais do banco
+  const [alunos, boletos, msgs, leads] = await Promise.all([
+    ctx.sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true),
+    ctx.sb.from("boletos").select("valor, status").eq("status", "pago").gte("criado_em", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+    ctx.sb.from("wa_consumo_mensal").select("templates_enviados, textos_livres_enviados").eq("mes", new Date().getMonth() + 1).eq("ano", new Date().getFullYear()).limit(1).single(),
+    ctx.sb.from("crm_leads").select("*", { count: "exact", head: true }),
+  ]);
+
+  const totalAlunos = (alunos.count as number) || 0;
+  const receitaMensal = totalAlunos * cfg.mensalidade_media_aluno;
+  const boletosPagos = (boletos.data || []).length;
+  const valorArrecadado = (boletos.data || []).reduce((s: number, b: any) => s + Number(b.valor || 0), 0);
+  const waMsgs = (msgs.data?.templates_enviados || 0) + (msgs.data?.textos_livres_enviados || 0);
+
+  // Cálculos ROI
+  const horasEconMes = Math.round(cfg.total_staff_admin * 176 * cfg.operational_savings_rate);
+  const econOperacionalMes = horasEconMes * cfg.custo_hora_admin;
+  const alunosRetidosMes = Math.round(totalAlunos * (cfg.taxa_evasao_anterior / 100) * cfg.evasion_reduction_rate / 12);
+  const evasaoEvitadaMes = alunosRetidosMes * cfg.mensalidade_media_aluno;
+  const inadEvitadaMes = receitaMensal * (cfg.taxa_inadimplencia_anterior / 100) * cfg.default_reduction_rate;
+  const totalEconomiaMes = econOperacionalMes + evasaoEvitadaMes + inadEvitadaMes;
+
+  // Histórico (últimos 6 meses)
+  const { data: historico } = await ctx.sb.from("roi_snapshots").select("mes, valor_economizado_total, horas_economizadas").order("mes", { ascending: false }).limit(6);
+
+  return successResponse({
+    mes: mesAtual,
+    metricas_reais: { total_alunos: totalAlunos, boletos_pagos: boletosPagos, valor_arrecadado: valorArrecadado, whatsapp_msgs: waMsgs, leads_total: leads.count || 0 },
+    roi_estimado: {
+      horas_economizadas_mes: horasEconMes,
+      economia_operacional_mes: Math.round(econOperacionalMes),
+      evasao_evitada_mes: Math.round(evasaoEvitadaMes),
+      inadimplencia_evitada_mes: Math.round(inadEvitadaMes),
+      total_economia_mes: Math.round(totalEconomiaMes),
+      total_economia_anual: Math.round(totalEconomiaMes * 12),
+      alunos_retidos_mes: alunosRetidosMes,
+    },
+    config: cfg,
+    historico: historico ?? [],
+  });
+});
+
+router.on("roi_config_salvar", authGerente, async (ctx) => {
+  const fields = ctx.body as any;
+  delete fields.action; delete fields._token;
+  const { data: escola } = await ctx.sb.from("escolas").select("id").eq("ativo", true).limit(1).single();
+  if (!escola) throw new AppError("NOT_FOUND", "Escola não encontrada.");
+  await ctx.sb.from("roi_config").upsert({ escola_id: escola.id, ...fields }, { onConflict: "escola_id" });
+  return successResponse({ success: true });
+});
+
+router.on("roi_gerar_snapshot", async (ctx) => {
+  // Chamado pelo cron mensal
+  const mesAtual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const { data: escolas } = await ctx.sb.from("escolas").select("id").eq("ativo", true);
+  let gerados = 0;
+  for (const escola of escolas ?? []) {
+    const { data: config } = await ctx.sb.from("roi_config").select("*").eq("escola_id", escola.id).single();
+    const cfg = config || { mensalidade_media_aluno: 2500, total_staff_admin: 2, custo_hora_admin: 22, taxa_evasao_anterior: 8, taxa_inadimplencia_anterior: 10, operational_savings_rate: 0.30, evasion_reduction_rate: 0.40, default_reduction_rate: 0.20 };
+    const { count: totalAlunos } = await ctx.sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true);
+    const n = (totalAlunos as number) || 0;
+    const horasEcon = Math.round(cfg.total_staff_admin * 176 * cfg.operational_savings_rate);
+    const econOp = horasEcon * cfg.custo_hora_admin;
+    const evasaoEvit = Math.round(n * (cfg.taxa_evasao_anterior / 100) * cfg.evasion_reduction_rate / 12) * cfg.mensalidade_media_aluno;
+    const inadEvit = n * cfg.mensalidade_media_aluno * (cfg.taxa_inadimplencia_anterior / 100) * cfg.default_reduction_rate;
+    await ctx.sb.from("roi_snapshots").upsert({
+      escola_id: escola.id, mes: mesAtual,
+      horas_economizadas: horasEcon,
+      minutos_economizados: horasEcon * 60,
+      valor_economizado_total: Math.round(econOp + evasaoEvit + inadEvit),
+      valor_inadimplencia_evitada: Math.round(inadEvit),
+      evasoes_evitadas: Math.round(n * (cfg.taxa_evasao_anterior / 100) * cfg.evasion_reduction_rate / 12),
+    }, { onConflict: "escola_id,mes" });
+    gerados++;
+  }
+  return successResponse({ gerados });
+});
+
+// ═══════════════════════════════════════════════════════
 //  Server
 // ═══════════════════════════════════════════════════════
 serve(async (req) => {

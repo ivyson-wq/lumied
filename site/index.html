@@ -929,6 +929,145 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   </div>
 </section>
 
+<!-- ── ROI CALCULATOR ── -->
+<section class="section" id="roi" style="background:linear-gradient(135deg,#0F0D12,#1A1530);">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-badge" style="background:rgba(107,63,160,.15);border-color:rgba(107,63,160,.3);color:#B794F4;">✨ Calculadora de ROI</div>
+      <h2 class="section-title" style="color:#fff;">Quanto sua escola economiza com o Lumied?</h2>
+      <p class="section-sub" style="color:#A8A29E;">Insira os dados da sua escola e veja o retorno estimado em tempo real.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:900px;margin:0 auto;" class="roi-layout">
+      <!-- INPUTS -->
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;">
+        <h3 style="color:#fff;font-size:15px;font-weight:700;margin-bottom:20px;">Dados da sua escola</h3>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Total de alunos</label>
+          <input type="range" id="roiAlunos" min="30" max="2000" value="200" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>30</span><span id="roiAlunosVal" style="color:#fff;font-weight:700;">200</span><span>2.000</span></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Mensalidade media (R$)</label>
+          <input type="range" id="roiMensalidade" min="500" max="5000" value="2500" step="100" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>R$ 500</span><span id="roiMensalidadeVal" style="color:#fff;font-weight:700;">R$ 2.500</span><span>R$ 5.000</span></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Pessoas na secretaria/admin</label>
+          <input type="range" id="roiStaff" min="1" max="10" value="2" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>1</span><span id="roiStaffVal" style="color:#fff;font-weight:700;">2</span><span>10</span></div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Taxa de evasao atual (%)</label>
+          <input type="range" id="roiEvasao" min="1" max="20" value="8" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>1%</span><span id="roiEvasaoVal" style="color:#fff;font-weight:700;">8%</span><span>20%</span></div>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Taxa de inadimplencia atual (%)</label>
+          <input type="range" id="roiInadimplencia" min="1" max="25" value="10" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>1%</span><span id="roiInadimplenciaVal" style="color:#fff;font-weight:700;">10%</span><span>25%</span></div>
+        </div>
+      </div>
+      <!-- RESULTS -->
+      <div>
+        <div style="background:linear-gradient(135deg,rgba(107,63,160,.15),rgba(26,107,181,.15));border:1px solid rgba(107,63,160,.2);border-radius:16px;padding:28px;margin-bottom:16px;text-align:center;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#B794F4;margin-bottom:8px;">Economia anual estimada</div>
+          <div id="roiTotal" style="font-size:48px;font-weight:900;color:#fff;line-height:1;">R$ 0</div>
+          <div id="roiMultiplo" style="font-size:14px;color:#16A34A;font-weight:700;margin-top:8px;">0x o investimento no Lumied</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
+            <div id="roiTempo" style="font-size:24px;font-weight:900;color:#fff;">0h</div>
+            <div style="font-size:11px;color:#A8A29E;">Horas/mes economizadas</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
+            <div id="roiEvasaoResult" style="font-size:24px;font-weight:900;color:#fff;">R$ 0</div>
+            <div style="font-size:11px;color:#A8A29E;">Evasao evitada/ano</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
+            <div id="roiInadResult" style="font-size:24px;font-weight:900;color:#fff;">R$ 0</div>
+            <div style="font-size:11px;color:#A8A29E;">Inadimplencia evitada/ano</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
+            <div id="roiOperacional" style="font-size:24px;font-weight:900;color:#fff;">R$ 0</div>
+            <div style="font-size:11px;color:#A8A29E;">Economia operacional/ano</div>
+          </div>
+        </div>
+        <a href="#contact" style="display:block;text-align:center;margin-top:16px;padding:14px;background:linear-gradient(135deg,#6B3FA0,#1A6BB5);color:#fff;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 20px rgba(107,63,160,.3);">Quero esse resultado para minha escola →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+function calcularROI() {
+  const alunos = parseInt(document.getElementById('roiAlunos').value);
+  const mensalidade = parseInt(document.getElementById('roiMensalidade').value);
+  const staff = parseInt(document.getElementById('roiStaff').value);
+  const evasao = parseInt(document.getElementById('roiEvasao').value);
+  const inadimplencia = parseInt(document.getElementById('roiInadimplencia').value);
+
+  // Atualizar labels
+  document.getElementById('roiAlunosVal').textContent = alunos.toLocaleString('pt-BR');
+  document.getElementById('roiMensalidadeVal').textContent = 'R$ ' + mensalidade.toLocaleString('pt-BR');
+  document.getElementById('roiStaffVal').textContent = staff;
+  document.getElementById('roiEvasaoVal').textContent = evasao + '%';
+  document.getElementById('roiInadimplenciaVal').textContent = inadimplencia + '%';
+
+  // Premissas
+  const SAVINGS_RATE = 0.30;
+  const EVASION_REDUCTION = 0.40;
+  const DEFAULT_REDUCTION = 0.20;
+  const MIN_PER_ENROLLMENT = 45;
+  const MIN_PER_COMMUNIQUE = 8;
+  const CUSTO_HORA = 22;
+
+  // Cálculos
+  const receitaMensal = alunos * mensalidade;
+  const receitaAnual = receitaMensal * 12;
+
+  // 1. Economia operacional (tempo admin)
+  const horasMesAdmin = staff * 176; // 22 dias × 8h
+  const horasEconomizadasMes = horasMesAdmin * SAVINGS_RATE;
+  const econOperacionalAnual = horasEconomizadasMes * CUSTO_HORA * 12;
+
+  // 2. Evasão evitada
+  const alunosEvadiriam = Math.round(alunos * (evasao / 100));
+  const alunosRetidos = Math.round(alunosEvadiriam * EVASION_REDUCTION);
+  const evasaoEvitadaAnual = alunosRetidos * mensalidade * 6; // 6 meses de receita preservada
+
+  // 3. Inadimplência evitada
+  const valorInadMensal = receitaMensal * (inadimplencia / 100);
+  const inadEvitadaAnual = valorInadMensal * DEFAULT_REDUCTION * 12;
+
+  // 4. Tempo economizado detalhado (horas/mês)
+  const minMatriculas = Math.round(alunos * 0.15 * MIN_PER_ENROLLMENT / 60); // 15% renovam/mês
+  const minComunicados = Math.round(alunos * 0.5 * MIN_PER_COMMUNIQUE / 60); // 0.5 comunicados/aluno/mês
+  const horasTempoMes = Math.round(horasEconomizadasMes + minMatriculas + minComunicados);
+
+  // Total
+  const totalAnual = econOperacionalAnual + evasaoEvitadaAnual + inadEvitadaAnual;
+
+  // Plano estimado
+  let planoMensal = 259;
+  if (alunos > 80) planoMensal = 649;
+  if (alunos > 300) planoMensal = 1249;
+  if (alunos > 800) planoMensal = 1659;
+  if (alunos > 1500) planoMensal = 2099;
+  const investimentoAnual = planoMensal * 12;
+  const multiplo = investimentoAnual > 0 ? (totalAnual / investimentoAnual).toFixed(1) : 0;
+
+  // Renderizar
+  document.getElementById('roiTotal').textContent = 'R$ ' + Math.round(totalAnual).toLocaleString('pt-BR');
+  document.getElementById('roiMultiplo').textContent = multiplo + 'x o investimento no Lumied';
+  document.getElementById('roiMultiplo').style.color = multiplo >= 3 ? '#16A34A' : multiplo >= 1 ? '#D97706' : '#DC2626';
+  document.getElementById('roiTempo').textContent = horasTempoMes + 'h';
+  document.getElementById('roiEvasaoResult').textContent = 'R$ ' + Math.round(evasaoEvitadaAnual).toLocaleString('pt-BR');
+  document.getElementById('roiInadResult').textContent = 'R$ ' + Math.round(inadEvitadaAnual).toLocaleString('pt-BR');
+  document.getElementById('roiOperacional').textContent = 'R$ ' + Math.round(econOperacionalAnual).toLocaleString('pt-BR');
+}
+calcularROI();
+</script>
+
 <!-- ── IMPLANTACAO ── -->
 <section class="section" id="implantacao" style="background:var(--bg);">
   <div class="container">
