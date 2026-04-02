@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, requireFeature } from "../_shared/router.ts";
+import { Router, rateLimit, authGerente, authProfessora, requireFeature } from "../_shared/router.ts";
 import { successResponse, AppError } from "../_shared/errors.ts";
 
 const router = new Router("compliance");
@@ -200,12 +200,24 @@ router.on("compliance_confirmar_ocorrencia", authGerente, feat, async (ctx) => {
 
   // Enviar e-mail de alerta
   const prof = (ocorrencia as any).professoras;
+  let alertaEnviado = false;
   if (prof?.email) {
     const alerta = await enviarAlertaHoraExtra(ctx.sb, ocorrencia, prof);
-    return successResponse({ confirmada: true, alerta_enviado: alerta.enviado, alerta_id: alerta.id });
+    alertaEnviado = alerta.enviado;
   }
 
-  return successResponse({ confirmada: true, alerta_enviado: false, motivo: "Professora sem e-mail cadastrado." });
+  // Criar ciência pendente para a professora (bloqueará o app até confirmação com selfie)
+  const dataFmt = String(ocorrencia.data_ocorrencia).split("-").reverse().join("/");
+  await ctx.sb.from("compliance_ciencias").insert({
+    professora_id: ocorrencia.professora_id,
+    ocorrencia_id: id,
+    tipo: "hora_extra",
+    titulo: `Hora extra não autorizada — ${dataFmt}`,
+    descricao: `Foi registrada hora extra não autorizada no dia ${dataFmt}. Saída prevista: ${ocorrencia.hora_prevista_saida}. Saída real: ${ocorrencia.hora_real_saida}. Excedente: ${ocorrencia.minutos_excedentes} minutos. Conforme política da escola, horas extras devem ser previamente autorizadas pela coordenação.`,
+    data_referencia: ocorrencia.data_ocorrencia,
+  });
+
+  return successResponse({ confirmada: true, alerta_enviado: alertaEnviado, ciencia_criada: true });
 });
 
 router.on("compliance_justificar_ocorrencia", authGerente, feat, async (ctx) => {
@@ -718,6 +730,117 @@ async function enviarAlertaHoraExtra(
     return { id: alerta.id, enviado: false };
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  CIÊNCIA COM SELFIE — Portal da Professora
+// ═══════════════════════════════════════════════════════════════
+
+// Professora: listar ciências pendentes (bloqueia o app)
+router.on("compliance_ciencias_pendentes", authProfessora, async (ctx) => {
+  const profId = ctx.user?.id;
+  if (!profId) throw new AppError("AUTH_REQUIRED", "Autenticação necessária.");
+  const { data } = await ctx.sb.from("compliance_ciencias")
+    .select("*")
+    .eq("professora_id", profId)
+    .eq("status", "pendente")
+    .order("criado_em");
+  return successResponse(data ?? []);
+});
+
+// Professora: confirmar ciência com selfie
+router.on("compliance_ciencia_confirmar", authProfessora, async (ctx) => {
+  const { ciencia_id, selfie_base64, ressalva } = ctx.body as any;
+  if (!ciencia_id || !selfie_base64) throw new AppError("VALIDATION_FAILED", "ciencia_id e selfie_base64 obrigatórios.");
+
+  // Verificar que pertence à professora
+  const profId = ctx.user?.id;
+  const { data: ciencia } = await ctx.sb.from("compliance_ciencias")
+    .select("id, professora_id, status")
+    .eq("id", ciencia_id)
+    .single();
+  if (!ciencia) throw new AppError("NOT_FOUND", "Ciência não encontrada.");
+  if (ciencia.professora_id !== profId) throw new AppError("FORBIDDEN", "Acesso negado.");
+  if (ciencia.status !== "pendente") throw new AppError("BAD_REQUEST", "Esta ciência já foi confirmada.");
+
+  // Processar selfie: base64 → buffer → upload Storage
+  const base64Data = selfie_base64.replace(/^data:image\/\w+;base64,/, "");
+  const binaryStr = atob(base64Data);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+  // Hash SHA-256 para integridade
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+  const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+  // Upload para Supabase Storage (bucket privado)
+  const fileName = `${profId}/${ciencia_id}_${Date.now()}.jpg`;
+  const { error: uploadErr } = await ctx.sb.storage
+    .from("compliance-selfies")
+    .upload(fileName, bytes, { contentType: "image/jpeg", upsert: false });
+  if (uploadErr) throw new AppError("BAD_REQUEST", "Erro ao salvar selfie: " + uploadErr.message);
+
+  // URL signed (válida por 10 anos — para auditoria)
+  const { data: urlData } = await ctx.sb.storage
+    .from("compliance-selfies")
+    .createSignedUrl(fileName, 315360000); // 10 anos
+
+  const selfieUrl = urlData?.signedUrl || fileName;
+
+  // Atualizar ciência
+  const status = ressalva ? "ciente_com_ressalva" : "ciente";
+  const { error: updateErr } = await ctx.sb.from("compliance_ciencias").update({
+    status,
+    ciente_em: new Date().toISOString(),
+    selfie_url: selfieUrl,
+    selfie_hash: hashHex,
+    selfie_metadata: {
+      device: ctx.req.headers.get("user-agent") || "unknown",
+      timestamp: new Date().toISOString(),
+      ip: ctx.ip,
+    },
+    ressalva: ressalva || null,
+    ip_confirmacao: ctx.ip,
+    user_agent: ctx.req.headers.get("user-agent"),
+  }).eq("id", ciencia_id);
+  if (updateErr) throw new AppError("BAD_REQUEST", updateErr.message);
+
+  return successResponse({ success: true, status, selfie_hash: hashHex });
+});
+
+// Gerente: criar ciência para professora (ao confirmar ocorrência)
+router.on("compliance_ciencia_criar", authGerente, feat, async (ctx) => {
+  const { professora_id, ocorrencia_id, tipo, titulo, descricao, data_referencia } = ctx.body as any;
+  if (!professora_id || !titulo || !descricao) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
+  const { data, error } = await ctx.sb.from("compliance_ciencias").insert({
+    professora_id, ocorrencia_id, tipo: tipo || "hora_extra", titulo, descricao, data_referencia,
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// Gerente: listar ciências (com filtros)
+router.on("compliance_ciencias_list", authGerente, feat, async (ctx) => {
+  const { professora_id, status } = ctx.body as any;
+  let q = ctx.sb.from("compliance_ciencias")
+    .select("*, professoras(id, nome, email)")
+    .order("criado_em", { ascending: false });
+  if (professora_id) q = q.eq("professora_id", professora_id);
+  if (status) q = q.eq("status", status);
+  const { data } = await q.limit(200);
+  return successResponse(data ?? []);
+});
+
+// Gerente: ver selfie de ciência específica
+router.on("compliance_ciencia_detalhe", authGerente, feat, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
+  const { data } = await ctx.sb.from("compliance_ciencias")
+    .select("*, professoras(id, nome, email)")
+    .eq("id", id)
+    .single();
+  if (!data) throw new AppError("NOT_FOUND", "Ciência não encontrada.");
+  return successResponse(data);
+});
 
 // ═══════════════════════════════════════════════════════════════
 //  Server
