@@ -27,9 +27,8 @@
   else if (path.includes('secretaria')) portal = 'secretaria';
   else if (path.includes('admin')) portal = 'admin';
   if (path.includes('admin')) return;
-  // Gerente: já tem barra de busca no dashboard, não injetar bottombar
-  if (portal === 'gerente') return;
 
+  const isGerente = portal === 'gerente';
   const API_ACTION = portal === 'professora' ? 'ai_perguntar_prof' : 'ai_perguntar';
   const TOKEN_KEY = portal === 'professora' ? 'mb_prof_token' : 'mb_token';
 
@@ -73,6 +72,22 @@
   respPanel.id = 'lumiResponse';
   respPanel.innerHTML = '<button class="close-resp" onclick="this.parentElement.style.display=\'none\'">×</button><div id="lumiRespContent"></div>';
   document.body.appendChild(respPanel);
+
+  // Gerente: esconder bottombar quando Dashboard está ativo (tem barra central)
+  if (isGerente) {
+    function checkDashboardActive() {
+      const dashPanel = document.getElementById('panelDashboard');
+      const isDash = dashPanel && dashPanel.classList.contains('active');
+      bar.style.display = isDash ? 'none' : 'flex';
+      respPanel.style.display = isDash ? 'none' : respPanel.style.display;
+    }
+    // Observar mudanças de painel
+    const observer = new MutationObserver(checkDashboardActive);
+    const content = document.querySelector('.content');
+    if (content) observer.observe(content, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    // Check inicial após app carregar
+    setTimeout(checkDashboardActive, 2000);
+  }
 
   function addMsg(text, type) {
     // Para bottombar, mostra no painel de resposta
