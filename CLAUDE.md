@@ -196,16 +196,20 @@ Landing page em `site/index.html` — marca **Lumied**.
 
 ## Banco de Dados
 
-- **92 migrations** (009-092)
-- Últimas migrations relevantes:
-  - `085_compliance.sql` — hora extra: horários, ponto, ocorrências, alertas
-  - `086_indicacoes.sql` — indicações B2C (pais indicam famílias)
-  - `087_suporte.sql` — FAQ + tickets de suporte inteligente
-  - `088_compliance_expandido.sql` — incidentes, certificações, inspeções, políticas, calendário regulatório
-  - `089_indicacoes_b2b.sql` — indicações B2B (escolas indicam escolas)
-  - `090_whatsapp.sql` — WhatsApp atendimento: departamentos, conversation_state, push comercial
-  - `091_afd_ponto.sql` — ponto AFD: employees, imports, events, daily_summary, justificativas
-  - `092_whatsapp_gateway.sql` — WhatsApp gateway: famílias, janelas 24h, mensagens, eventos, FAQs, relatórios semanais
+- **98 migrations** (009-098)
+- Migrations relevantes:
+  - `085-088` — Compliance: hora extra, incidentes, certificações, inspeções, políticas, calendário
+  - `086` — Indicações B2C (pais indicam famílias)
+  - `089` — Indicações B2B (escolas indicam escolas)
+  - `090` — WhatsApp atendimento departamental
+  - `091` — Ponto AFD (Portaria 671)
+  - `092` — WhatsApp gateway escola→família
+  - `093` — Reorganização comercial: 5 tiers (Starter/Gestão/Automação/Avançado/Rede)
+  - `094` — Ciência com selfie (bloqueio do portal da professora)
+  - `095` — Quiz de compliance com geração automática via Claude AI
+  - `096` — WhatsApp incluído nos tiers com travas de consumo (80%/95%/100%)
+  - `097` — Responsável financeiro + decisões financeiras + pacotes extras
+  - `098` — Correção de preços extras (margem saudável) + resp financeiro imutável
 
 ---
 
@@ -339,48 +343,96 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 | `suporte-widget.js` | Widget de suporte inteligente (FAQ + ticket) em todos os portais |
 | `whatsapp-worker/` | Cloudflare Worker — atendimento departamental WhatsApp |
 | `whatsapp-gateway/` | Cloudflare Worker — comunicação escola→família WhatsApp |
+| `lumied-ux.js` | UX Kit: onboarding, empty states, validação, toasts, busca sidebar |
 
 ---
 
-## Módulos adicionados (Abril 2026)
+## Planos Comerciais (5 tiers)
 
-### Compliance Expandido (Premium+)
-- **Hora extra**: horários pré-configurados, importação de ponto, verificação automática (cron 12/12h), alerta por email
-- **Incidentes/Bullying**: registro, investigação, encaminhamento (Conselho Tutelar), histórico de ações
-- **Certificações**: 8 tipos obrigatórios pré-cadastrados, vencimento automático, treinamentos programados
-- **Inspeções**: checklists (cantina, infraestrutura, transporte), score de conformidade
-- **Políticas**: repositório com versão, aceite obrigatório, revisão programada
-- **Calendário regulatório**: 13 obrigações pré-cadastradas (RAIS, eSocial, FGTS, Censo MEC, AVCB, LGPD RIPD)
-- **Score de compliance**: 0-100 baseado em problemas abertos
+| Tier | Preço/mês | Anual | Alunos | Módulos | WhatsApp |
+|------|-----------|-------|--------|---------|----------|
+| **Starter** | R$ 259 | R$ 207 | 80 | 6 | — |
+| **Gestão** | R$ 649 | R$ 519 | 300 | 19 | — |
+| **Automação** | R$ 1.249 | R$ 999 | 800 | 30 | 200 msgs/mês |
+| **Avançado** | R$ 1.659 | R$ 1.327 | 1.500 | 35 | 500 msgs/mês |
+| **Rede** | R$ 2.099 | R$ 1.679 | Ilimitado | Todos | 2.000 msgs/mês |
 
-### Ponto AFD (Portaria MTP 671/2021)
-- Parser de arquivo AFD (registros tipo 1/3/5/9) gerado por REP-C homologado
-- De-para PIS → funcionário, cálculo de horas (pares entrada/saída)
-- Espelho de ponto mensal, justificativas com aprovação, dashboard
-- Edge Function `ponto` com 15 actions
+### Pacotes Extras (aprovação do resp financeiro)
 
-### Indicações B2C (`indicar.html`)
-- Pais indicam famílias, código de rastreio (IND-XXXXXX)
-- Recompensas: R$100 indicação + R$300 matrícula
-- Auto-cria lead no CRM
+| Extra | Preço | Margem |
+|-------|-------|--------|
+| 100 msgs WhatsApp | R$ 69,90/mês | 50% |
+| 500 msgs WhatsApp | R$ 299,90/mês | 42% |
+| 1.000 msgs WhatsApp | R$ 549,90/mês | 36% |
+| Excedente avulso | R$ 0,75/msg | 53% |
+| 10 GB storage | R$ 19,90/mês | 94% |
+| 50 GB storage | R$ 79,90/mês | 93% |
+| 5 usuários | R$ 29,90/mês | ~100% |
+| 20 usuários | R$ 89,90/mês | ~100% |
 
-### Indicações B2B (`parceiros.html` — Lumied Partners)
-- Escolas clientes indicam outras escolas
-- Bonificações configuráveis: desconto, meses grátis, cashback, comissão
-- Pipeline: indicada → contatada → demonstração → negociação → contratada
+### WhatsApp — Travas de consumo
+- **80%** cota: alerta informativo ao gerente
+- **95%** cota: alerta URGENTE
+- **100%** cota: **BLOQUEADO** — cria decisão financeira pendente → resp financeiro deve aprovar
 
-### WhatsApp Worker (Maple Bear BG)
-- Menu + roteamento departamental, detecção de urgência, push comercial (lembretes 24h/2h/follow-up)
-- Templates Meta: `maple_bear_lembrete_24h`, `maple_bear_lembrete_2h`, `maple_bear_followup`
+### Responsável Financeiro
+- Definido no **onboarding** (primeira vez)
+- Após definição: **imutável por gerentes** — campos read-only
+- Só **staff Lumied** pode alterar (action `staff_alterar_resp_financeiro` via admin.html)
+- Histórico em `resp_financeiro_historico` (quem alterou, quando, motivo)
+- Aprova: excedentes, upgrades, downgrades, compra de extras
 
-### WhatsApp Gateway (comunicação escola→família)
-- Comunicados com confirmação de leitura ("Li e confirmo")
-- "Estou a caminho" por keyword no WhatsApp
-- Confirmação de eventos (botões Confirmo/Não vou)
-- FAQ bot com Claude Haiku (responde antes de rotear para professora)
-- Relatório semanal automático por aluno (Claude Haiku, cron sábado 9h)
-- Janela 24h: texto livre gratuito vs template pago
-- Toggle por escola: `escolas.modulo_whatsapp`
+---
+
+## Compliance (Automação+)
+
+### Módulos
+- **Hora extra**: horários, ponto, verificação automática (cron 12/12h), alerta email
+- **Incidentes/Bullying**: registro, investigação, encaminhamento Conselho Tutelar
+- **Certificações**: 8 tipos obrigatórios, vencimento automático, treinamentos
+- **Inspeções**: checklists (cantina, infraestrutura, transporte), score conformidade
+- **Políticas**: repositório com versão, aceite obrigatório
+- **Calendário regulatório**: 13 obrigações (RAIS, eSocial, FGTS, Censo, AVCB, LGPD RIPD)
+- **Score**: 0-100 baseado em problemas abertos
+
+### Ciência com Selfie
+- Ocorrência confirmada → cria ciência pendente → **bloqueia portal da professora**
+- Professora: lê notificação → tira selfie (câmera frontal) → opcionalmente escreve ressalva → confirma
+- Selfie: bucket privado, hash SHA-256, metadata (IP, device, timestamp)
+- Status: "ciente" ou "ciente_com_ressalva"
+
+### Quiz de Compliance (IA)
+- Gerente seleciona política/protocolo → **Claude Haiku gera perguntas automaticamente**
+- Múltipla escolha, 3 tentativas, nota mínima 70% configurável
+- Temas: evacuação, primeiros socorros, incêndio, bullying, LGPD, higiene
+- Periodicidade: mensal, trimestral, semestral, anual
+- Professora: banner no portal → quiz fullscreen → resultado imediato
+- Cron diário expira quizzes vencidos
+
+---
+
+## Ponto AFD (Portaria MTP 671/2021)
+- Parser AFD (registros tipo 1/3/5/9) de REP-C homologado
+- De-para PIS→funcionário, cálculo pares entrada/saída, espelho mensal
+- Justificativas com aprovação, dashboard
+- Edge Function `ponto` (15 actions)
+
+## Indicações
+- **B2C** (`indicar.html`): pais indicam famílias, R$100+R$300, CRM auto
+- **B2B** (`parceiros.html`): escolas indicam escolas, bonificações configuráveis
+
+## WhatsApp
+- **Worker** (`whatsapp-worker`): atendimento departamental, urgências, push comercial
+- **Gateway** (`whatsapp-gateway`): comunicação escola→família, confirmações, FAQ bot Claude, relatório semanal, estou-a-caminho, janela 24h
+
+## UX Kit (`lumied-ux.js`)
+- Onboarding tour de primeiro uso (por portal, 3-5 steps)
+- Empty states melhorados (ícone + explicação + próximo passo)
+- Confirmação para ações destrutivas (modal)
+- Validação inline (blur, email, obrigatório)
+- Toast global (success/error/info com ícone)
+- Touch targets 44px no mobile
+- Busca na sidebar do gerente (filtra 45+ painéis)
 
 ---
 
