@@ -11,6 +11,7 @@
 <link rel="icon" href="/icon-apple.png">
 <link rel="apple-touch-icon" href="/icon-apple.png">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/lumied-design.css">
 <link rel="stylesheet" href="/themes.css">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="/dist/gerente/index.js" defer></script>
@@ -524,6 +525,29 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- DASHBOARD -->
       <div id="panelDashboard" class="panel">
+        <!-- AI Greeting -->
+        <div class="ai-greeting">
+          <div class="ai-avatar">✨</div>
+          <div class="ai-message">
+            <h3>Bom dia! Aqui está seu resumo inteligente.</h3>
+            <p id="aiDailyResume">Carregando insights do dia...</p>
+          </div>
+          <button class="ai-ask" onclick="document.getElementById('lumiBtn')?.click()">Perguntar à Lumi ✨</button>
+        </div>
+
+        <!-- AI Insights -->
+        <div class="section-header-ai">
+          <h2>Insights da Lumi</h2>
+          <span class="lumi-badge">✨ IA</span>
+        </div>
+        <div class="insights-grid" id="aiInsightsGrid">
+          <div class="insight-card">
+            <div class="insight-icon">📊</div>
+            <div class="insight-title">Analisando dados...</div>
+            <div class="insight-text">A Lumi está coletando insights do dia para você.</div>
+          </div>
+        </div>
+
         <div class="stats-grid">
           <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="sTotal">—</div><div class="stat-sub">solicitações</div></div>
           <div class="stat-card" data-g="integral"><div class="stat-label">Integral</div><div class="stat-value" id="sIntegral">—</div><div class="stat-sub">todas freq.</div></div>
@@ -2554,6 +2578,40 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     const data = await api({ action:'solicitacoes_list' });
     if (!Array.isArray(data)) return;
     allData = data; updateStats(); renderTable();
+    loadAiInsights();
+  }
+
+  async function loadAiInsights() {
+    try {
+      const d = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/lumied-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
+        body: JSON.stringify({ action: 'ai_insights_list', portal: 'gerente', _token: getToken() }),
+      }).then(r => r.json());
+      const insights = d.data || [];
+      const grid = document.getElementById('aiInsightsGrid');
+      if (!grid) return;
+      if (insights.length === 0) {
+        grid.innerHTML = '<div class="insight-card"><div class="insight-icon">✨</div><div class="insight-title">Tudo tranquilo por aqui</div><div class="insight-text">A Lumi não detectou nenhum ponto de atenção. Continue assim!</div></div>';
+        return;
+      }
+      const impactIcons = { critico: '🔴', alto: '🟠', medio: '🟡', baixo: '🟢' };
+      const catIcons = { alerta: '⚠️', sugestao: '💡', previsao: '📈', resumo: '📋', anomalia: '🔍', oportunidade: '🎯' };
+      grid.innerHTML = insights.slice(0, 6).map(i => `
+        <div class="insight-card" onclick="if(typeof showToast==='function')showToast('Insight marcado como lido','info');fetch(CONFIG.SUPABASE_URL+'/functions/v1/lumied-ai',{method:'POST',headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON,'Authorization':'Bearer '+CONFIG.SUPABASE_ANON},body:JSON.stringify({action:'ai_insight_acao',id:'${i.id}',status:'lida',_token:getToken()})})">
+          <div class="insight-icon">${catIcons[i.categoria] || '✨'}</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="insight-title">${i.titulo}</div>
+            <span style="font-size:10px;">${impactIcons[i.impacto] || ''}</span>
+          </div>
+          <div class="insight-text">${i.descricao}</div>
+          ${i.acao_sugerida ? `<a class="insight-action">→ ${i.acao_sugerida}</a>` : ''}
+        </div>
+      `).join('');
+      // Update greeting with resume
+      const resumo = insights.find(i => i.categoria === 'resumo');
+      if (resumo) document.getElementById('aiDailyResume').textContent = resumo.descricao;
+    } catch (e) { console.log('[AI] Insights not loaded:', e); }
   }
 
   function updateStats() {
