@@ -6,6 +6,18 @@
 (function () {
   'use strict';
 
+  // Esperar autenticacao — so injetar apos login
+  function isLoggedIn() {
+    return localStorage.getItem('mb_token') || localStorage.getItem('mb_prof_token') || localStorage.getItem('mb_aluno_token') || localStorage.getItem('mb_admin_token');
+  }
+  if (!isLoggedIn()) {
+    // Re-checar a cada 2s ate login
+    const checkInterval = setInterval(() => { if (isLoggedIn()) { clearInterval(checkInterval); init(); } }, 2000);
+    return;
+  }
+  init();
+  function init() {
+
   // Config
   const path = location.pathname;
   let portal = 'pais';
@@ -143,4 +155,6 @@
       addMsg('Erro de conexão. Tente novamente.', 'ai');
     }
   };
+
+  } // fim da function init()
 })();
