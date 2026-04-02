@@ -80,7 +80,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
 .spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(200,16,46,.25);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.content{padding:24px 28px 48px;flex:1;max-width:1600px;}
+.content{padding:24px 28px 48px;flex:1;max-width:100%;}
 .panel{display:none;}.panel.active{display:block;}
 /* MOBILE BOTTOM BAR (gerente) */
 .ger-bottom-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(255,255,255,.96);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.08);padding:4px 8px calc(4px + env(safe-area-inset-bottom));backdrop-filter:blur(10px);justify-content:space-around;}
@@ -632,14 +632,16 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       <!-- DASHBOARD -->
       <div id="panelDashboard" class="panel">
-        <!-- AI Greeting -->
-        <div class="ai-greeting">
-          <div class="ai-avatar">✨</div>
-          <div class="ai-message">
-            <h3>Bom dia! Aqui está seu resumo inteligente.</h3>
-            <p id="aiDailyResume">Carregando insights do dia...</p>
+        <!-- LUMI SEARCH BAR (central no dashboard) -->
+        <div style="max-width:700px;margin:0 auto 32px;text-align:center;">
+          <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;" id="lumiGreeting">Bom dia!</h2>
+          <p id="aiDailyResume" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Carregando insights do dia...</p>
+          <div style="position:relative;" id="lumiSearchWrap">
+            <input type="text" id="lumiDashInput" placeholder="Pergunte qualquer coisa à Lumi... ex: Como está a inadimplência?" style="width:100%;padding:16px 56px 16px 48px;border:2px solid #e2dbd1;border-radius:16px;font-size:15px;font-family:inherit;outline:none;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.04);transition:border-color .2s,box-shadow .2s;" onfocus="this.style.borderColor='#6B3FA0';this.style.boxShadow='0 4px 24px rgba(107,63,160,.12)';" onblur="this.style.borderColor='#e2dbd1';this.style.boxShadow='0 4px 20px rgba(0,0,0,.04)';" onkeydown="if(event.key==='Enter')lumiDashPerguntar()">
+            <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;pointer-events:none;">✨</span>
+            <button onclick="lumiDashPerguntar()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6B3FA0,#1A6BB5);color:#fff;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">→</button>
           </div>
-          <button class="ai-ask" onclick="document.getElementById('lumiBtn')?.click()">Perguntar à Lumi ✨</button>
+          <div id="lumiDashResponse" style="display:none;margin-top:16px;text-align:left;background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;font-size:13px;color:var(--text);line-height:1.6;"></div>
         </div>
 
         <!-- AI Insights -->
@@ -3033,6 +3035,25 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (!Array.isArray(data)) return;
     allData = data; updateStats(); renderTable();
     loadAiInsights();
+  }
+
+  // Lumi search bar no dashboard
+  async function lumiDashPerguntar() {
+    const input = document.getElementById('lumiDashInput');
+    const pergunta = input.value.trim();
+    if (!pergunta) return;
+    const respDiv = document.getElementById('lumiDashResponse');
+    respDiv.style.display = 'block';
+    respDiv.innerHTML = '<span style="color:var(--muted);">✨ Analisando...</span>';
+    try {
+      const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/lumied-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
+        body: JSON.stringify({ action: 'ai_perguntar', pergunta, portal: 'gerente', _token: getToken() }),
+      }).then(r => r.json());
+      const texto = r.data?.resposta || r.resposta || 'Sem resposta.';
+      respDiv.innerHTML = '<div style="display:flex;gap:10px;"><span style="font-size:20px;flex-shrink:0;">✨</span><div>' + texto.replace(/\n/g, '<br>') + '</div></div>';
+    } catch { respDiv.innerHTML = '<span style="color:#C8102E;">Erro de conexão.</span>'; }
   }
 
   async function loadAiInsights() {
