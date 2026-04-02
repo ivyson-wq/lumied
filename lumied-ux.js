@@ -247,7 +247,62 @@
   }
 
   // ═══════════════════════════════════════════════════
-  // 8. CSS GLOBAL — animações e melhorias
+  // 8. USAGE ANALYTICS — track tab/panel usage for smart ordering
+  // ═══════════════════════════════════════════════════
+  function setupUsageTracking() {
+    const USAGE_KEY = `lumied_usage_${portal}`;
+    const TAB_ORDER_KEY = `lumied_tab_order_${portal}`;
+
+    // Track clicks on navigation items
+    document.addEventListener('click', (e) => {
+      const navItem = e.target.closest('.nav-item, .bnav-item');
+      if (!navItem) return;
+      const tab = navItem.dataset.tab;
+      const onclick = navItem.getAttribute('onclick') || '';
+      const id = tab || onclick.match(/(?:showPanel|switchTab)\('([^']+)'/)?.[1];
+      if (!id) return;
+      try {
+        const usage = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
+        usage[id] = (usage[id] || 0) + 1;
+        localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
+      } catch {}
+    });
+
+    // For pais portal: reorder bottom nav based on usage
+    if (portal === 'pais') {
+      reorderPaisNav();
+    }
+  }
+
+  function reorderPaisNav() {
+    const USAGE_KEY = `lumied_usage_pais`;
+    const bottomNav = document.getElementById('bottomNav');
+    if (!bottomNav) return;
+
+    try {
+      const usage = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
+      const total = Object.values(usage).reduce((a, b) => a + b, 0);
+      if (total < 8) return; // Not enough data
+
+      // Get all tab buttons (excluding "Mais" button)
+      const buttons = Array.from(bottomNav.querySelectorAll('.bnav-item'));
+      const maisBtn = buttons.find(b => b.id === 'paisMoreBtn');
+      const tabButtons = buttons.filter(b => b !== maisBtn && b.dataset.tab);
+
+      // Sort by usage (descending), keep top 4 visible
+      tabButtons.sort((a, b) => (usage[b.dataset.tab] || 0) - (usage[a.dataset.tab] || 0));
+
+      // The most used tabs go first in the bottom nav
+      const fragment = document.createDocumentFragment();
+      tabButtons.forEach(btn => fragment.appendChild(btn));
+      if (maisBtn) fragment.appendChild(maisBtn);
+      bottomNav.innerHTML = '';
+      bottomNav.appendChild(fragment);
+    } catch {}
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 9. CSS GLOBAL — animações e melhorias
   // ═══════════════════════════════════════════════════
   function injectGlobalCSS() {
     const style = document.createElement('style');
@@ -270,6 +325,7 @@
     setupInlineValidation();
     improveEmptyStates();
     addSidebarSearch();
+    setupUsageTracking();
     // Onboarding after app loads
     const appShell = document.getElementById('appShell') || document.getElementById('appWrap');
     if (appShell) {

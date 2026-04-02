@@ -210,6 +210,36 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .senha-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 .senha-modal-overlay.show{display:flex;}
 .senha-modal{background:var(--white);border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;}
+/* FAVORITOS */
+.fav-section{padding:0 0 8px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:4px;}
+.fav-section:empty{display:none;padding:0;border:none;margin:0;}
+.fav-header{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.35);padding:8px 12px 4px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.fav-header .fh-star{color:#f6a623;font-size:12px;}
+.nav-item .fav-star{margin-left:auto;font-size:11px;opacity:0;transition:opacity .15s;cursor:pointer;padding:2px 4px;flex-shrink:0;}
+.nav-item:hover .fav-star{opacity:.5;}
+.nav-item .fav-star:hover{opacity:1!important;transform:scale(1.2);}
+.nav-item .fav-star.is-fav{opacity:.85;color:#f6a623;}
+.nav-item.fav-clone{animation:slideIn .2s ease;}
+.sb-section .nav-item.is-less-used{opacity:.55;font-size:12.5px;padding:8px 12px;}
+.sb-section .nav-item.is-less-used:hover{opacity:.85;}
+/* DASHBOARD FAVORITOS */
+.dash-fav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px;}
+.dash-fav-card{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;background:#fff;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s;text-align:center;}
+.dash-fav-card:hover{border-color:var(--red);background:var(--red-light);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.dash-fav-card .dfc-icon{font-size:24px;}
+.dash-fav-card .dfc-label{font-size:12px;font-weight:600;color:var(--text);line-height:1.3;}
+.dash-fav-card.add-fav{border-style:dashed;opacity:.5;}
+.dash-fav-card.add-fav:hover{opacity:.8;}
+.customize-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.customize-bar .cb-title{font-family:'Lora',serif;font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
+.customize-btn{padding:5px 12px;border-radius:100px;border:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .2s;}
+.customize-btn:hover{border-color:var(--red);color:var(--red);}
+.customize-btn.active{border-color:var(--red);background:var(--red-light);color:var(--red);}
+.recently-used{margin-bottom:20px;}
+.recently-used .ru-title{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.ru-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.ru-chip{padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:var(--white);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.ru-chip:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
 /* PRINT STYLES */
 @media print{
   body *{visibility:hidden;}
@@ -359,6 +389,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <h1>Maple Bear</h1><span>Painel do Gerente</span>
     </div>
     <nav class="sb-nav">
+      <!-- Favoritos (populated by JS) -->
+      <div class="fav-section" id="favSection"></div>
       <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
 
       <div data-modulo="turno">
@@ -1240,14 +1272,17 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </div>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="quick-actions" id="quickActions">
-          <button class="quick-action" onclick="showPanel('crmLeads',this)"><span class="qa-icon">👥</span> Novos Leads</button>
-          <button class="quick-action" onclick="showPanel('almPend',this)"><span class="qa-icon">⏳</span> Aprovar Material</button>
-          <button class="quick-action" onclick="showPanel('finBoletos',this)"><span class="qa-icon">🏦</span> Boletos</button>
-          <button class="quick-action" onclick="showPanel('notasVisao',this)"><span class="qa-icon">📝</span> Ver Notas</button>
-          <button class="quick-action" onclick="showPanel('impressoes',this)"><span class="qa-icon">🖨️</span> Impressões</button>
-          <button class="quick-action" onclick="showPanel('emergencia',this)"><span class="qa-icon">🚨</span> Emergência</button>
+        <!-- Atalhos Favoritos (personalizável) -->
+        <div class="customize-bar">
+          <div class="cb-title">Meus Atalhos</div>
+          <button class="customize-btn" id="customizeToggle" onclick="toggleCustomizeMode()">Personalizar</button>
+        </div>
+        <div class="dash-fav-grid" id="dashFavGrid"></div>
+
+        <!-- Acessados Recentemente -->
+        <div class="recently-used" id="recentlyUsed">
+          <div class="ru-title">Recentes</div>
+          <div class="ru-chips" id="recentChips"></div>
         </div>
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
@@ -2515,6 +2550,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     loadModulosHabilitados();
     loadTemaEscola();
     showExportButtons(false);
+    initFavorites();
     // Poll a cada 15 segundos
     pollInterval = setInterval(()=>{
       if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
@@ -2612,7 +2648,255 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='compCalendario') loadCompCalendario();
     if(id==='contaFinanceiro') loadContaFinanceiro();
     if(id==='roi') loadRoiDashboard();
+    // Track usage for recents & smart ordering
+    if(id !== 'analytics') trackPanelUsage(id);
     return false;
+  }
+
+  // ── FAVORITOS & PERSONALIZAÇÃO ─────────────────────────
+  const FAV_KEY = 'lumied_fav_gerente';
+  const RECENT_KEY = 'lumied_recent_gerente';
+  const USAGE_KEY = 'lumied_usage_gerente';
+  let customizeMode = false;
+
+  // Panel metadata for display
+  const panelMeta = {
+    dashboard:{icon:'📊',label:'Dashboard Turnos'},series:{icon:'🎒',label:'Séries'},
+    dashAtiv:{icon:'📊',label:'Ativ. Extra'},atividades:{icon:'🎯',label:'Gerenciar Ativ.'},
+    diplomas:{icon:'🏆',label:'Diplomas'},atestados:{icon:'🏥',label:'Atestados'},
+    pdi:{icon:'📈',label:'Growth Plan'},impressoes:{icon:'🖨️',label:'Impressões'},
+    almDash:{icon:'📦',label:'Almoxarifado'},almPend:{icon:'⏳',label:'Alm. Pendentes'},
+    almTodas:{icon:'📋',label:'Requisições'},almInsumos:{icon:'🗃️',label:'Insumos'},
+    almTurmas:{icon:'🏫',label:'Alm. Turmas'},almOrc:{icon:'💰',label:'Orçamentos'},
+    almRel:{icon:'📈',label:'Alm. Relatório'},almCompras:{icon:'🛒',label:'Compras'},
+    manutencao:{icon:'🔧',label:'Manutenção'},achados:{icon:'🔍',label:'Achados'},
+    finDash:{icon:'💰',label:'Financeiro'},finLanc:{icon:'📝',label:'Lançamentos'},
+    finMens:{icon:'🧾',label:'Mensalidades'},finContas:{icon:'📊',label:'Plano Contas'},
+    finDre:{icon:'📈',label:'DRE'},finBalanco:{icon:'⚖️',label:'Balanço'},
+    finConciliacao:{icon:'🏦',label:'Conciliação'},finBoletos:{icon:'🏦',label:'Boletos'},
+    crmKanban:{icon:'📋',label:'Pipeline'},crmLeads:{icon:'👥',label:'Leads'},
+    crmTemplates:{icon:'💬',label:'Templates'},crmVagas:{icon:'🎯',label:'Vagas'},
+    crmMatriculas:{icon:'📝',label:'Matrículas'},crmConfigSeries:{icon:'⚙️',label:'Séries/Idade'},
+    notasConfig:{icon:'⚙️',label:'Config Notas'},notasDisciplinas:{icon:'📚',label:'Disciplinas'},
+    notasPeriodos:{icon:'📅',label:'Períodos'},notasVisao:{icon:'📝',label:'Visão Notas'},
+    frequencia:{icon:'✅',label:'Frequência'},diarioClasse:{icon:'📖',label:'Diário'},
+    calendario:{icon:'📅',label:'Calendário'},chatConversas:{icon:'💬',label:'Conversas'},
+    pesquisas:{icon:'📊',label:'Pesquisas'},matriculaForm:{icon:'📋',label:'Formulários'},
+    matriculaStatus:{icon:'📊',label:'Status Matrícula'},equipe:{icon:'👥',label:'Equipe'},
+    reunioes:{icon:'📅',label:'Reuniões'},logo:{icon:'🖼️',label:'Logotipo'},
+    acesso:{icon:'🔒',label:'Acesso'},familias:{icon:'👨‍👩‍👧',label:'Famílias'},
+    compDash:{icon:'⚖️',label:'Compliance'},compHorarios:{icon:'🕐',label:'Horários'},
+    compImportar:{icon:'📂',label:'Importar Ponto'},compOcorrencias:{icon:'⚠️',label:'Hora Extra'},
+    compIncidentes:{icon:'🛡️',label:'Incidentes'},compCertificacoes:{icon:'🎓',label:'Certificações'},
+    compInspecoes:{icon:'📋',label:'Inspeções'},compPoliticas:{icon:'📄',label:'Políticas'},
+    compCalendario:{icon:'📅',label:'Cal. Regulatório'},compAlertas:{icon:'📧',label:'Alertas'},
+    contaFinanceiro:{icon:'💳',label:'Conta & Plano'},roi:{icon:'📈',label:'ROI'},
+    emergencia:{icon:'🚨',label:'Emergência'}
+  };
+
+  function getFavorites() {
+    try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; }
+  }
+  function saveFavorites(favs) { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }
+
+  function getRecents() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
+  }
+  function getUsage() {
+    try { return JSON.parse(localStorage.getItem(USAGE_KEY)) || {}; } catch { return {}; }
+  }
+
+  function trackPanelUsage(id) {
+    // Update recents (max 8, no duplicates)
+    let recents = getRecents().filter(r => r !== id);
+    recents.unshift(id);
+    if (recents.length > 8) recents = recents.slice(0, 8);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recents));
+
+    // Update usage count
+    const usage = getUsage();
+    usage[id] = (usage[id] || 0) + 1;
+    localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
+
+    // Update recently used chips on dashboard
+    renderRecentChips();
+    // Update less-used styling
+    updateLessUsedItems();
+  }
+
+  function toggleFavorite(panelId, e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    let favs = getFavorites();
+    const idx = favs.indexOf(panelId);
+    if (idx >= 0) { favs.splice(idx, 1); } else { favs.push(panelId); }
+    saveFavorites(favs);
+    renderFavSection();
+    renderDashFavGrid();
+    updateStarStates();
+  }
+
+  function renderFavSection() {
+    const container = document.getElementById('favSection');
+    const favs = getFavorites();
+    if (!favs.length) { container.innerHTML = ''; return; }
+    let html = '<div class="fav-header"><span class="fh-star">★</span> Favoritos</div>';
+    favs.forEach(id => {
+      const meta = panelMeta[id];
+      if (!meta) return;
+      html += `<a class="nav-item fav-clone" href="#" onclick="showPanel('${id}',this)"><span class="ic">${meta.icon}</span> ${meta.label}<span class="fav-star is-fav" onclick="toggleFavorite('${id}',event)">★</span></a>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function updateStarStates() {
+    const favs = getFavorites();
+    document.querySelectorAll('.sb-nav .nav-item:not(.fav-clone)').forEach(item => {
+      const onclick = item.getAttribute('onclick') || '';
+      const match = onclick.match(/showPanel\('([^']+)'/);
+      if (!match) return;
+      const id = match[1];
+      let star = item.querySelector('.fav-star');
+      if (!star) {
+        star = document.createElement('span');
+        star.className = 'fav-star';
+        star.onclick = (e) => toggleFavorite(id, e);
+        item.appendChild(star);
+      }
+      star.textContent = favs.includes(id) ? '★' : '☆';
+      star.classList.toggle('is-fav', favs.includes(id));
+    });
+  }
+
+  function renderDashFavGrid() {
+    const grid = document.getElementById('dashFavGrid');
+    if (!grid) return;
+    const favs = getFavorites();
+    const recents = getRecents();
+    // Show favorites first, then top recents to fill at least 6 slots
+    let items = [...favs];
+    recents.forEach(r => { if (!items.includes(r) && items.length < 6) items.push(r); });
+    // If still less than 6, add defaults
+    const defaults = ['crmLeads','almPend','finBoletos','notasVisao','impressoes','emergencia'];
+    defaults.forEach(d => { if (!items.includes(d) && items.length < 6) items.push(d); });
+
+    let html = '';
+    items.slice(0, 8).forEach(id => {
+      const meta = panelMeta[id] || { icon: '📄', label: id };
+      const isFav = favs.includes(id);
+      html += `<div class="dash-fav-card" onclick="showPanel('${id}')">
+        <span class="dfc-icon">${meta.icon}</span>
+        <span class="dfc-label">${meta.label}</span>
+        ${customizeMode ? `<span class="fav-star ${isFav ? 'is-fav' : ''}" onclick="event.stopPropagation();toggleFavorite('${id}')" style="opacity:1;font-size:14px;">${isFav ? '★' : '☆'}</span>` : ''}
+      </div>`;
+    });
+    if (customizeMode) {
+      html += `<div class="dash-fav-card add-fav" onclick="showAllPanelsToFavorite()">
+        <span class="dfc-icon">+</span>
+        <span class="dfc-label">Adicionar</span>
+      </div>`;
+    }
+    grid.innerHTML = html;
+  }
+
+  function renderRecentChips() {
+    const container = document.getElementById('recentChips');
+    const wrapper = document.getElementById('recentlyUsed');
+    if (!container || !wrapper) return;
+    const recents = getRecents();
+    const favs = getFavorites();
+    // Show recents that aren't already in favorites grid
+    const shown = recents.filter(r => r !== 'analytics').slice(0, 5);
+    if (!shown.length) { wrapper.style.display = 'none'; return; }
+    wrapper.style.display = '';
+    container.innerHTML = shown.map(id => {
+      const meta = panelMeta[id] || { icon: '📄', label: id };
+      return `<button class="ru-chip" onclick="showPanel('${id}')">${meta.icon} ${meta.label}</button>`;
+    }).join('');
+  }
+
+  function toggleCustomizeMode() {
+    customizeMode = !customizeMode;
+    document.getElementById('customizeToggle').classList.toggle('active', customizeMode);
+    document.getElementById('customizeToggle').textContent = customizeMode ? 'Concluir' : 'Personalizar';
+    renderDashFavGrid();
+    // Show/hide star icons in sidebar
+    document.querySelectorAll('.sb-nav .fav-star').forEach(s => {
+      s.style.opacity = customizeMode ? '1' : '';
+    });
+  }
+
+  function showAllPanelsToFavorite() {
+    const favs = getFavorites();
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.style.zIndex = '210';
+    let items = Object.entries(panelMeta).map(([id, m]) => {
+      const isFav = favs.includes(id);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid ${isFav ? 'var(--red)' : 'var(--border)'};border-radius:9px;cursor:pointer;transition:all .15s;background:${isFav ? 'var(--red-light)' : '#fff'};" onclick="toggleFavorite('${id}');this.closest('.modal-overlay').remove();showAllPanelsToFavorite()">
+        <span style="font-size:18px;">${m.icon}</span>
+        <span style="flex:1;font-size:13px;font-weight:500;">${m.label}</span>
+        <span style="color:${isFav ? '#f6a623' : 'var(--muted)'};font-size:16px;">${isFav ? '★' : '☆'}</span>
+      </div>`;
+    }).join('');
+    overlay.innerHTML = `<div class="modal" style="max-height:80vh;overflow-y:auto;">
+      <h3>Escolher Favoritos</h3>
+      <p class="msub">Clique para adicionar ou remover dos seus atalhos.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">${items}</div>
+      <div class="modal-actions"><button class="btn-save" onclick="this.closest('.modal-overlay').remove()">Fechar</button></div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  }
+
+  function updateLessUsedItems() {
+    const usage = getUsage();
+    const totalVisits = Object.values(usage).reduce((a, b) => a + b, 0);
+    if (totalVisits < 10) return; // Not enough data yet
+    const avg = totalVisits / Math.max(Object.keys(usage).length, 1);
+    document.querySelectorAll('.sb-nav .sb-section .nav-item:not(.fav-clone)').forEach(item => {
+      const onclick = item.getAttribute('onclick') || '';
+      const match = onclick.match(/showPanel\('([^']+)'/);
+      if (!match) return;
+      const id = match[1];
+      const count = usage[id] || 0;
+      // Mark as less-used if below 20% of average
+      item.classList.toggle('is-less-used', count < avg * 0.2);
+    });
+  }
+
+  function initFavorites() {
+    renderFavSection();
+    updateStarStates();
+    renderDashFavGrid();
+    renderRecentChips();
+    updateLessUsedItems();
+    // Auto-collapse sidebar sections with no favorites and low usage
+    const favs = getFavorites();
+    const usage = getUsage();
+    const totalVisits = Object.values(usage).reduce((a, b) => a + b, 0);
+    if (totalVisits > 15) {
+      document.querySelectorAll('.sb-nav .sb-label').forEach(label => {
+        const section = label.nextElementSibling;
+        if (!section || !section.classList.contains('sb-section')) return;
+        const items = section.querySelectorAll('.nav-item');
+        let sectionUsage = 0;
+        let hasFav = false;
+        items.forEach(item => {
+          const onclick = item.getAttribute('onclick') || '';
+          const match = onclick.match(/showPanel\('([^']+)'/);
+          if (match) {
+            sectionUsage += usage[match[1]] || 0;
+            if (favs.includes(match[1])) hasFav = true;
+          }
+        });
+        // Auto-collapse low-usage sections (keep them already collapsed from HTML)
+        if (!hasFav && sectionUsage === 0) {
+          section.classList.add('collapsed');
+          const arrow = label.querySelector('.sb-arrow');
+          if (arrow) arrow.classList.add('collapsed');
+        }
+      });
+    }
   }
 
   // ── DATA ──────────────────────────────────────────────
