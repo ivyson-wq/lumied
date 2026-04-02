@@ -251,7 +251,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 }
 .toggle-switch.annual::after { left: 25px; }
 .save-badge { background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; }
-.pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.pricing-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
 .plan-card {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
   padding: 32px 24px; text-align: center; transition: all .2s; position: relative;
@@ -374,6 +374,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   .hero-ctas { justify-content: center; }
   .hero-visual { margin-top: 24px; }
   .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  .pricing-grid:first-of-type { grid-template-columns: repeat(3, 1fr); }
   .features-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px) {
@@ -781,93 +782,110 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
       <span class="save-badge">Economize 20%</span>
     </div>
     <div class="pricing-grid">
+      <!-- STARTER -->
       <div class="plan-card">
-        <div class="plan-name">Essencial</div>
-        <div class="plan-desc">Core academico para comecar</div>
+        <div class="plan-name">Starter</div>
+        <div class="plan-desc">Digitalize o basico</div>
         <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="299" data-annual="239">239</span><span class="period">/mes</span>
-          <div class="per-student">~R$ 1,20/aluno para 200 alunos</div>
+          <span class="currency">R$</span><span class="amount" data-monthly="259" data-annual="207">207</span><span class="period">/mes</span>
+          <div class="per-student">Ate 80 alunos</div>
         </div>
         <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Notas & Boletim Digital</li>
+          <li><span class="check">&#10003;</span> Notas & Boletim</li>
           <li><span class="check">&#10003;</span> Frequencia & Chamada</li>
-          <li><span class="check">&#10003;</span> Diario de Classe</li>
+          <li><span class="check">&#10003;</span> Portal do Aluno</li>
           <li><span class="check">&#10003;</span> Documentos do Aluno</li>
-          <li><span class="check">&#10003;</span> Pesquisas & Autorizacoes</li>
-          <li><span class="check">&#10003;</span> Portal Pais + Professoras</li>
-          <li><span class="check">&#10003;</span> Todos modulos existentes</li>
+          <li><span class="check">&#10003;</span> Calendario Escolar</li>
+          <li><span class="check">&#10003;</span> Login Biometrico</li>
           <li><span class="x">&mdash;</span> Agenda Digital</li>
-          <li><span class="x">&mdash;</span> Chat escola-familia</li>
-          <li><span class="x">&mdash;</span> CRM de Matriculas</li>
+          <li><span class="x">&mdash;</span> CRM / Financeiro</li>
         </ul>
-        <button class="plan-btn plan-btn-outline">Comecar Gratis</button>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Comecar</button>
       </div>
 
+      <!-- GESTAO -->
       <div class="plan-card featured">
         <div class="plan-badge">Mais Popular</div>
-        <div class="plan-name">Profissional</div>
-        <div class="plan-desc">Comunicacao + engajamento</div>
+        <div class="plan-name">Gestao</div>
+        <div class="plan-desc">Tudo num lugar so</div>
         <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="599" data-annual="479">479</span><span class="period">/mes</span>
-          <div class="per-student">~R$ 2,40/aluno para 200 alunos</div>
+          <span class="currency">R$</span><span class="amount" data-monthly="649" data-annual="519">519</span><span class="period">/mes</span>
+          <div class="per-student">Ate 300 alunos</div>
         </div>
         <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Tudo do Essencial +</li>
-          <li><span class="check">&#10003;</span> Agenda Digital (Dia a Dia)</li>
+          <li><span class="check">&#10003;</span> Tudo do Starter +</li>
+          <li><span class="check">&#10003;</span> Agenda Digital</li>
           <li><span class="check">&#10003;</span> Chat escola-familia</li>
-          <li><span class="check">&#10003;</span> Matricula Online</li>
+          <li><span class="check">&#10003;</span> CRM de Matriculas</li>
+          <li><span class="check">&#10003;</span> Financeiro completo</li>
+          <li><span class="check">&#10003;</span> Pickup GPS</li>
+          <li><span class="check">&#10003;</span> Almoxarifado</li>
           <li><span class="check">&#10003;</span> Relatorios BNCC</li>
-          <li><span class="check">&#10003;</span> Portal do Aluno</li>
-          <li><span class="check">&#10003;</span> Banco de Provas Online</li>
-          <li><span class="x">&mdash;</span> PIX Integrado</li>
-          <li><span class="x">&mdash;</span> Regua de Cobranca</li>
-          <li><span class="x">&mdash;</span> BI Analytics</li>
         </ul>
-        <button class="plan-btn plan-btn-primary">Agendar Demo</button>
+        <button class="plan-btn plan-btn-primary" onclick="location.href='#contact'">Agendar Demo</button>
       </div>
 
+      <!-- AUTOMACAO -->
       <div class="plan-card">
-        <div class="plan-name">Premium</div>
-        <div class="plan-desc">Automacao financeira + operacoes</div>
+        <div class="plan-name">Automacao</div>
+        <div class="plan-desc">O sistema trabalha por voce</div>
         <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="999" data-annual="799">799</span><span class="period">/mes</span>
-          <div class="per-student">~R$ 4,00/aluno para 200 alunos</div>
+          <span class="currency">R$</span><span class="amount" data-monthly="1.169" data-annual="935">935</span><span class="period">/mes</span>
+          <div class="per-student">Ate 800 alunos</div>
         </div>
         <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Tudo do Profissional +</li>
-          <li><span class="check">&#10003;</span> Contratos Digitais</li>
+          <li><span class="check">&#10003;</span> Tudo do Gestao +</li>
+          <li><span class="check">&#10003;</span> WhatsApp Gateway</li>
           <li><span class="check">&#10003;</span> Regua de Cobranca</li>
           <li><span class="check">&#10003;</span> PIX Integrado</li>
-          <li><span class="check">&#10003;</span> Biblioteca</li>
-          <li><span class="check">&#10003;</span> BI Analytics Avancado</li>
-          <li><span class="check">&#10003;</span> Cantina & Transporte</li>
-          <li><span class="x">&mdash;</span> App Nativo</li>
-          <li><span class="x">&mdash;</span> RH / Folha</li>
-          <li><span class="x">&mdash;</span> E-commerce</li>
+          <li><span class="check">&#10003;</span> Contratos Digitais</li>
+          <li><span class="check">&#10003;</span> Compliance completo</li>
+          <li><span class="check">&#10003;</span> Biblioteca & Cantina</li>
+          <li><span class="check">&#10003;</span> Transporte Escolar</li>
         </ul>
-        <button class="plan-btn plan-btn-outline">Agendar Demo</button>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Agendar Demo</button>
       </div>
 
+      <!-- AVANCADO -->
       <div class="plan-card">
-        <div class="plan-name">Enterprise</div>
-        <div class="plan-desc">Tudo + multi-escola</div>
+        <div class="plan-name">Avancado</div>
+        <div class="plan-desc">Analytics, RH e integracoes</div>
         <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="1.499" data-annual="1.199">1.199</span><span class="period">/mes</span>
-          <div class="per-student">Sob consulta para redes</div>
+          <span class="currency">R$</span><span class="amount" data-monthly="1.559" data-annual="1.247">1.247</span><span class="period">/mes</span>
+          <div class="per-student">Ate 1.500 alunos</div>
         </div>
         <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Tudo do Premium +</li>
+          <li><span class="check">&#10003;</span> Tudo do Automacao +</li>
+          <li><span class="check">&#10003;</span> BI / Analytics</li>
+          <li><span class="check">&#10003;</span> Gestao de RH / Folha</li>
+          <li><span class="check">&#10003;</span> Integracao Contabil</li>
+          <li><span class="check">&#10003;</span> Ponto AFD (Portaria 671)</li>
+          <li><span class="check">&#10003;</span> Growth Plan (PDI)</li>
+          <li><span class="x">&mdash;</span> App Nativo</li>
+          <li><span class="x">&mdash;</span> Multi-escola</li>
+        </ul>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Agendar Demo</button>
+      </div>
+
+      <!-- REDE -->
+      <div class="plan-card">
+        <div class="plan-name">Rede</div>
+        <div class="plan-desc">Multi-escola + escala total</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="1.949" data-annual="1.559">1.559</span><span class="period">/mes</span>
+          <div class="per-student">Alunos ilimitados</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Todos os modulos</li>
           <li><span class="check">&#10003;</span> App Nativo iOS/Android</li>
           <li><span class="check">&#10003;</span> EAD / Aulas Online</li>
-          <li><span class="check">&#10003;</span> Integracao Contabil</li>
-          <li><span class="check">&#10003;</span> Gestao de RH / Folha</li>
           <li><span class="check">&#10003;</span> E-commerce / Loja</li>
           <li><span class="check">&#10003;</span> Dashboard Multi-Escola</li>
+          <li><span class="check">&#10003;</span> WhatsApp Departamental</li>
           <li><span class="check">&#10003;</span> API Dedicada</li>
-          <li><span class="check">&#10003;</span> SLA 99.9%</li>
-          <li><span class="check">&#10003;</span> Suporte Prioritario</li>
+          <li><span class="check">&#10003;</span> SLA 99.9% + Suporte VIP</li>
         </ul>
-        <button class="plan-btn plan-btn-outline">Falar com Vendas</button>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Falar com Vendas</button>
       </div>
     </div>
   </div>
