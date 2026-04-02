@@ -482,6 +482,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
         <a class="nav-item" href="#" onclick="showPanel('contaFinanceiro',this)"><span class="ic">💳</span> Conta & Plano</a>
+        <a class="nav-item" href="#" onclick="showPanel('roi',this)"><span class="ic">📈</span> ROI & Economia</a>
       </div>
 
       <div data-modulo="emergencias" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
@@ -1651,6 +1652,26 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <tbody id="compAlertasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
 
+      <!-- ROI DASHBOARD -->
+      <div id="panelRoi" class="panel">
+        <div class="section-header-ai"><h2>📈 ROI — Retorno do Investimento</h2><span class="lumi-badge">✨ IA</span></div>
+        <div class="ai-greeting" style="margin-bottom:24px;">
+          <div class="ai-avatar">💰</div>
+          <div class="ai-message"><h3 id="roiResumo">Calculando seu retorno...</h3><p id="roiResumoSub">A Lumi está analisando os dados reais da escola.</p></div>
+        </div>
+        <div class="stat-grid" id="roiStats">
+          <div class="stat-item"><div class="stat-value" id="roiEconMes">—</div><div class="stat-label">Economia/mês</div></div>
+          <div class="stat-item"><div class="stat-value" id="roiEconAnual">—</div><div class="stat-label">Economia/ano</div></div>
+          <div class="stat-item"><div class="stat-value" id="roiHoras">—</div><div class="stat-label">Horas/mês economizadas</div></div>
+          <div class="stat-item"><div class="stat-value" id="roiRetidos">—</div><div class="stat-label">Alunos retidos/mês</div></div>
+        </div>
+        <div class="insights-grid" style="margin-bottom:24px;">
+          <div class="insight-card"><div class="insight-icon">⏱️</div><div class="insight-title">Economia operacional</div><div class="insight-text" id="roiOpText">—</div></div>
+          <div class="insight-card"><div class="insight-icon">🎓</div><div class="insight-title">Evasão evitada</div><div class="insight-text" id="roiEvasaoText">—</div></div>
+          <div class="insight-card"><div class="insight-icon">💳</div><div class="insight-title">Inadimplência evitada</div><div class="insight-text" id="roiInadText">—</div></div>
+        </div>
+      </div>
+
       <!-- CONTA & FINANCEIRO -->
       <div id="panelContaFinanceiro" class="panel">
         <div class="sec-title">💳 Conta & Plano</div>
@@ -2570,6 +2591,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='compPoliticas') loadCompPoliticas();
     if(id==='compCalendario') loadCompCalendario();
     if(id==='contaFinanceiro') loadContaFinanceiro();
+    if(id==='roi') loadRoiDashboard();
     return false;
   }
 
@@ -8245,6 +8267,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function aprovarDecisao(id){if(!confirm('Aprovar esta decisão financeira?'))return;const d=await api({action:'financeiro_decisao_aprovar',id});if(d.error)return showToast(d.error,'error');showToast('Decisão aprovada.','success');loadContaFinanceiro();}
   async function rejeitarDecisao(id){const motivo=prompt('Motivo da rejeição:');if(!motivo)return;const d=await api({action:'financeiro_decisao_rejeitar',id,motivo});if(d.error)return showToast(d.error,'error');showToast('Decisão rejeitada.','info');loadContaFinanceiro();}
   async function solicitarExtra(extraId){if(!confirm('Solicitar este extra? O responsável financeiro será notificado para aprovação.'))return;const d=await api({action:'financeiro_solicitar_extra',extra_id:extraId});if(d.error)return showToast(d.error,'error');showToast('Solicitação enviada ao responsável financeiro.','success');loadContaFinanceiro();}
+  // ═══ ROI DASHBOARD ═══
+  async function loadRoiDashboard(){try{const d=await fetch(CONFIG.SUPABASE_URL+'/functions/v1/lumied-ai',{method:'POST',headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON,'Authorization':'Bearer '+CONFIG.SUPABASE_ANON},body:JSON.stringify({action:'roi_dashboard',_token:getToken()})}).then(r=>r.json());if(d.error)return;const r=d.data?.roi_estimado||{};const m=d.data?.metricas_reais||{};const fmt=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');document.getElementById('roiEconMes').textContent=fmt(r.total_economia_mes||0);document.getElementById('roiEconAnual').textContent=fmt(r.total_economia_anual||0);document.getElementById('roiHoras').textContent=(r.horas_economizadas_mes||0)+'h';document.getElementById('roiRetidos').textContent=r.alunos_retidos_mes||0;document.getElementById('roiOpText').textContent=fmt(r.economia_operacional_mes||0)+'/mês — '+r.horas_economizadas_mes+'h de trabalho admin economizadas';document.getElementById('roiEvasaoText').textContent=fmt(r.evasao_evitada_mes||0)+'/mês — '+r.alunos_retidos_mes+' alunos que teriam saído foram retidos';document.getElementById('roiInadText').textContent=fmt(r.inadimplencia_evitada_mes||0)+'/mês em boletos que seriam perdidos';document.getElementById('roiResumo').textContent='Sua escola economiza '+fmt(r.total_economia_mes||0)+' por mês com o Lumied';document.getElementById('roiResumoSub').textContent='Isso equivale a '+fmt(r.total_economia_anual||0)+' por ano — com base nos dados reais da escola.';}catch(e){console.log('[ROI]',e);}}
 </script>
 <script src="/lumied-ux.js" defer></script>
 <script src="/ticket-widget.js"></script>
