@@ -479,6 +479,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       </div>
       </div>
 
+      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
+        <a class="nav-item" href="#" onclick="showPanel('contaFinanceiro',this)"><span class="ic">💳</span> Conta & Plano</a>
+      </div>
+
       <div data-modulo="emergencias" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
         <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
       </div>
@@ -1623,6 +1627,36 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <tbody id="compAlertasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
 
+      <!-- CONTA & FINANCEIRO -->
+      <div id="panelContaFinanceiro" class="panel">
+        <div class="sec-title">💳 Conta & Plano</div>
+
+        <div class="dip-stats" style="margin-bottom:24px;">
+          <div class="stat-card" data-g="total"><div class="stat-label">Plano Atual</div><div class="stat-value" id="cfPlanoAtual" style="font-size:18px;">—</div><div class="stat-sub" id="cfPlanoPreco">—</div></div>
+          <div class="stat-card" data-g="semi"><div class="stat-label">WhatsApp</div><div class="stat-value" id="cfWaConsumo">—</div><div class="stat-sub" id="cfWaLimite">de — msgs</div></div>
+          <div class="stat-card" data-g="integral"><div class="stat-label">Decisões</div><div class="stat-value" id="cfDecisoesPend">—</div><div class="stat-sub">pendentes</div></div>
+        </div>
+
+        <div class="form-card" style="margin-bottom:20px;">
+          <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:14px;">👤 Responsável Financeiro</h3>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Esta pessoa aprova compras de extras, upgrades de plano e excedentes de WhatsApp.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="ff"><label>Nome</label><input type="text" id="cfRespNome" placeholder="Nome completo"></div>
+            <div class="ff"><label>Cargo</label><input type="text" id="cfRespCargo" placeholder="Diretor(a) Financeiro(a)"></div>
+            <div class="ff"><label>E-mail</label><input type="email" id="cfRespEmail" placeholder="financeiro@escola.com"></div>
+            <div class="ff"><label>Telefone</label><input type="tel" id="cfRespTel" placeholder="(54) 99999-0000"></div>
+          </div>
+          <button onclick="salvarRespFinanceiro()" style="margin-top:10px;padding:10px 24px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Salvar</button>
+        </div>
+
+        <div class="sec-title">📋 Decisões Financeiras Pendentes</div>
+        <table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead>
+        <tbody id="cfDecisoesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+
+        <div class="sec-title" style="margin-top:24px;">🛒 Extras Disponíveis</div>
+        <div id="cfExtrasGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
+      </div>
+
       <!-- EMERGENCIA -->
       <div id="panelEmergencia" class="panel">
         <div style="text-align:center;padding:20px 0 30px;">
@@ -2505,6 +2539,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     if(id==='compInspecoes') loadCompInspecoes();
     if(id==='compPoliticas') loadCompPoliticas();
     if(id==='compCalendario') loadCompCalendario();
+    if(id==='contaFinanceiro') loadContaFinanceiro();
     return false;
   }
 
@@ -8129,6 +8164,22 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   async function loadCompCalendario() { const d = await compApi({action:'compliance_calendario_list'}); const items = d.data||[]; document.getElementById('compCalendarioBody').innerHTML = items.length ? items.map(c=>`<tr><td>${String(c.data_limite).split('-').reverse().join('/')}</td><td>${c.titulo}</td><td>${c.categoria}</td><td><span class="status-pill" style="background:${{baixa:'#888',normal:'#1a6bb5',alta:'#d4830a',critica:'#C8102E'}[c.prioridade]||'#888'};color:#fff;">${c.prioridade}</span></td><td><span class="status-pill" style="background:${{pendente:'#d4830a',em_andamento:'#1a6bb5',concluido:'#2d7a3a',atrasado:'#C8102E'}[c.status]||'#888'};color:#fff;">${c.status}</span></td><td>${c.status!=='concluido'?`<button onclick="compApi({action:'compliance_calendario_concluir',id:'${c.id}'}).then(()=>{showToast('Concluído');loadCompCalendario()})" style="background:#2d7a3a;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">Concluir</button>`:'✓'}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhum.</td></tr>'; }
   async function loadCompAlertas() { const d = await compApi({action:'compliance_alertas_list'}); const items = d.data||[]; document.getElementById('compAlertasBody').innerHTML = items.length ? items.map(a=>`<tr><td>${new Date(a.criado_em).toLocaleDateString('pt-BR')}</td><td>${a.professoras?.nome||'—'}</td><td>${a.email_destino}</td><td>${a.assunto}</td><td>${a.enviado?'<span class="status-pill" style="background:#2d7a3a;color:#fff;">Sim</span>':'<span class="status-pill" style="background:#C8102E;color:#fff;">Não</span>'}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhum.</td></tr>'; }
   async function importarPontoCompliance() { showToast('Funcionalidade de importação via UI em desenvolvimento.','info'); }
+  // ═══ CONTA & FINANCEIRO ═══
+  async function loadContaFinanceiro() {
+    const [resp, decisoes, consumo, extras] = await Promise.all([
+      api({action:'financeiro_resp_get'}), api({action:'financeiro_decisoes_pendentes'}),
+      api({action:'financeiro_wa_consumo'}), api({action:'financeiro_extras_disponiveis'}),
+    ]);
+    if(resp.data){const r=resp.data;document.getElementById('cfRespNome').value=r.resp_financeiro_nome||'';document.getElementById('cfRespEmail').value=r.resp_financeiro_email||'';document.getElementById('cfRespTel').value=r.resp_financeiro_telefone||'';document.getElementById('cfRespCargo').value=r.resp_financeiro_cargo||'';}
+    const dec=decisoes.data||[];document.getElementById('cfDecisoesPend').textContent=dec.length;
+    document.getElementById('cfDecisoesBody').innerHTML=dec.length?dec.map(d=>{const dt=new Date(d.criado_em).toLocaleDateString('pt-BR');const tipoMap={excedente_whatsapp:'WhatsApp Extra',upgrade_tier:'Upgrade',downgrade_tier:'Downgrade',addon_msgs:'Add-on Msgs',addon_storage:'Add-on Storage',addon_usuarios:'Add-on Usuários'};return`<tr><td>${dt}</td><td>${tipoMap[d.tipo]||d.tipo}</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.descricao}</td><td><strong>R$ ${(d.valor_estimado||0).toFixed(2)}</strong>${d.recorrente?'/mês':''}</td><td><button onclick="aprovarDecisao('${d.id}')" style="background:#2d7a3a;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;margin-right:4px;">Aprovar</button><button onclick="rejeitarDecisao('${d.id}')" style="background:#C8102E;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;">Rejeitar</button></td></tr>`}).join(''):'<tr><td colspan="5" class="empty-state">Nenhuma decisão pendente.</td></tr>';
+    if(consumo.consumo){const c=consumo.consumo;document.getElementById('cfWaConsumo').textContent=c.templates_enviados||0;document.getElementById('cfWaLimite').textContent=`de ${c.limite_templates||0} msgs`;}
+    const extrasArr=extras.data||[];document.getElementById('cfExtrasGrid').innerHTML=extrasArr.map(e=>`<div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;"><div style="font-size:14px;font-weight:700;margin-bottom:4px;">${e.nome}</div><div style="font-size:12px;color:#7a7169;margin-bottom:8px;">${e.descricao}</div><div style="font-size:18px;font-weight:900;color:#C8102E;margin-bottom:10px;">R$ ${e.preco.toFixed(2)}<span style="font-size:11px;font-weight:400;color:#7a7169;">${e.recorrente?'/mês':' único'}</span></div><button onclick="solicitarExtra('${e.id}')" style="width:100%;padding:8px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;">Solicitar</button></div>`).join('');
+  }
+  async function salvarRespFinanceiro(){const d=await api({action:'financeiro_resp_salvar',resp_financeiro_nome:document.getElementById('cfRespNome').value,resp_financeiro_email:document.getElementById('cfRespEmail').value,resp_financeiro_telefone:document.getElementById('cfRespTel').value,resp_financeiro_cargo:document.getElementById('cfRespCargo').value});if(d.error)return showToast(d.error,'error');showToast('Responsável financeiro salvo.','success');}
+  async function aprovarDecisao(id){if(!confirm('Aprovar esta decisão financeira?'))return;const d=await api({action:'financeiro_decisao_aprovar',id});if(d.error)return showToast(d.error,'error');showToast('Decisão aprovada.','success');loadContaFinanceiro();}
+  async function rejeitarDecisao(id){const motivo=prompt('Motivo da rejeição:');if(!motivo)return;const d=await api({action:'financeiro_decisao_rejeitar',id,motivo});if(d.error)return showToast(d.error,'error');showToast('Decisão rejeitada.','info');loadContaFinanceiro();}
+  async function solicitarExtra(extraId){if(!confirm('Solicitar este extra? O responsável financeiro será notificado para aprovação.'))return;const d=await api({action:'financeiro_solicitar_extra',extra_id:extraId});if(d.error)return showToast(d.error,'error');showToast('Solicitação enviada ao responsável financeiro.','success');loadContaFinanceiro();}
 </script>
 <script src="/lumied-ux.js" defer></script>
 <script src="/ticket-widget.js"></script>

@@ -1829,5 +1829,117 @@ serve(async (req: Request) => {
     return ok({ data: faqData ?? [] });
   }
 
+  // ── Responsável financeiro / Decisões ─────────────
+  if (action === "financeiro_resp_get") {
+    const { data: escola } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo").limit(1).single();
+    return ok({ data: escola });
+  }
+
+  if (action === "financeiro_resp_salvar") {
+    const { resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo } = body as any;
+    if (!resp_financeiro_nome || !resp_financeiro_email) return err("Nome e email do responsável financeiro obrigatórios.");
+    const { error: ue } = await admin.from("escolas").update({ resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo }).eq("ativo", true);
+    if (ue) return err(ue.message);
+    return ok({ success: true });
+  }
+
+  if (action === "financeiro_decisoes_pendentes") {
+    const { data } = await admin.from("escola_decisoes_financeiras").select("*").eq("status", "pendente").order("criado_em", { ascending: false });
+    return ok({ data: data ?? [] });
+  }
+
+  if (action === "financeiro_decisoes_list") {
+    const { status: st } = body as any;
+    let q2 = admin.from("escola_decisoes_financeiras").select("*").order("criado_em", { ascending: false });
+    if (st) q2 = q2.eq("status", st);
+    const { data } = await q2.limit(100);
+    return ok({ data: data ?? [] });
+  }
+
+  if (action === "financeiro_decisao_aprovar") {
+    const { id: decId } = body as any;
+    if (!decId) return err("ID obrigatório.");
+    const { data: decisao } = await admin.from("escola_decisoes_financeiras").select("*").eq("id", decId).single();
+    if (!decisao) return err("Decisão não encontrada.", 404);
+    if (decisao.status !== "pendente") return err("Decisão já processada.");
+
+    // Buscar resp financeiro
+    const { data: escola } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email").eq("id", decisao.escola_id).single();
+
+    await admin.from("escola_decisoes_financeiras").update({
+      status: "aprovado",
+      aprovado_por: escola?.resp_financeiro_nome || gerente?.nome || "Gerente",
+      aprovado_por_email: escola?.resp_financeiro_email,
+      aprovado_em: new Date().toISOString(),
+      executado: true,
+      executado_em: new Date().toISOString(),
+    }).eq("id", decId);
+
+    // Se for upgrade, aplicar mudança de plano
+    if (decisao.tipo === "upgrade_tier" && decisao.plano_solicitado) {
+      const { data: novoPlano } = await admin.from("planos").select("id").eq("slug", decisao.plano_solicitado).single();
+      if (novoPlano) await admin.from("escolas").update({ plano_id: novoPlano.id }).eq("id", decisao.escola_id);
+    }
+
+    return ok({ success: true, tipo: decisao.tipo });
+  }
+
+  if (action === "financeiro_decisao_rejeitar") {
+    const { id: decId, motivo } = body as any;
+    if (!decId) return err("ID obrigatório.");
+    const { data: escola } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email").limit(1).single();
+    await admin.from("escola_decisoes_financeiras").update({
+      status: "rejeitado", motivo_rejeicao: motivo || "Rejeitado pelo responsável financeiro.",
+      aprovado_por: escola?.resp_financeiro_nome || "Gerente", aprovado_em: new Date().toISOString(),
+    }).eq("id", decId);
+    return ok({ success: true });
+  }
+
+  if (action === "financeiro_solicitar_upgrade") {
+    const { plano_solicitado, motivo: motivoUp } = body as any;
+    if (!plano_solicitado) return err("plano_solicitado obrigatório.");
+    const { data: escola } = await admin.from("escolas").select("id, plano_id, planos(slug, preco_mensal)").limit(1).single();
+    const { data: novo } = await admin.from("planos").select("slug, nome, preco_mensal").eq("slug", plano_solicitado).single();
+    if (!novo) return err("Plano não encontrado.");
+    const diff = novo.preco_mensal - ((escola as any).planos?.preco_mensal || 0);
+    await admin.from("escola_decisoes_financeiras").insert({
+      escola_id: escola.id, tipo: "upgrade_tier",
+      descricao: `Upgrade de ${(escola as any).planos?.slug || '?'} para ${novo.nome}. Diferença: +R$ ${diff.toFixed(2)}/mês. ${motivoUp || ''}`,
+      valor_estimado: diff, recorrente: true,
+      plano_atual: (escola as any).planos?.slug, plano_solicitado,
+      solicitado_por: gerente?.nome || "Gerente", solicitado_por_email: gerente?.email,
+    });
+    return ok({ success: true, diferenca: diff });
+  }
+
+  if (action === "financeiro_extras_disponiveis") {
+    const { data } = await admin.from("escola_extras").select("*").eq("ativo", true).order("preco");
+    return ok({ data: data ?? [] });
+  }
+
+  if (action === "financeiro_solicitar_extra") {
+    const { extra_id } = body as any;
+    if (!extra_id) return err("extra_id obrigatório.");
+    const { data: extra } = await admin.from("escola_extras").select("*").eq("id", extra_id).single();
+    if (!extra) return err("Extra não encontrado.");
+    const { data: escola } = await admin.from("escolas").select("id").eq("ativo", true).limit(1).single();
+    await admin.from("escola_decisoes_financeiras").insert({
+      escola_id: escola.id, tipo: `addon_${extra.unidade}`,
+      descricao: `Contratação: ${extra.nome} — R$ ${extra.preco}/mês. ${extra.descricao}`,
+      valor_estimado: extra.preco, recorrente: extra.recorrente,
+      quantidade: extra.quantidade, preco_unitario: extra.preco / extra.quantidade,
+      solicitado_por: gerente?.nome || "Gerente", solicitado_por_email: gerente?.email,
+    });
+    return ok({ success: true });
+  }
+
+  if (action === "financeiro_wa_consumo") {
+    const mes = new Date().getMonth() + 1;
+    const ano = new Date().getFullYear();
+    const { data } = await admin.from("wa_consumo_mensal").select("*").eq("mes", mes).eq("ano", ano).limit(1).single();
+    const { data: alertas } = await admin.from("wa_consumo_alertas").select("*").order("criado_em", { ascending: false }).limit(10);
+    return ok({ consumo: data, alertas: alertas ?? [] });
+  }
+
   return err("Ação desconhecida.");
 });
