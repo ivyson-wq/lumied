@@ -145,6 +145,8 @@
     document.addEventListener('blur', (e) => {
       const input = e.target;
       if (!input.matches('input[required], input[type="email"]')) return;
+      // Ignorar tela de login — nao validar campos de login
+      if (input.closest('#loginScreen, #loginWall, .login-card, #loginForm')) return;
       clearValidation(input);
 
       if (input.required && !input.value.trim()) {
