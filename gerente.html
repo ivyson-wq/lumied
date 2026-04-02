@@ -1639,14 +1639,20 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
         <div class="form-card" style="margin-bottom:20px;">
           <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:14px;">👤 Responsável Financeiro</h3>
+          <div id="cfRespBloqueado" style="display:none;background:#fef3cd;border:1px solid #ead980;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:#7a5e00;">
+            🔒 O responsável financeiro foi definido no onboarding e <strong>não pode ser alterado por aqui</strong>. Para alterar, entre em contato com o suporte Lumied: <strong>suporte@lumied.com.br</strong>
+          </div>
+          <div id="cfRespEditavel" style="display:none;background:#eafbef;border:1px solid #b8e6c9;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:#2d7a3a;">
+            ⚠️ Defina o responsável financeiro agora. <strong>Após salvar, esta informação só poderá ser alterada pelo suporte Lumied.</strong>
+          </div>
           <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Esta pessoa aprova compras de extras, upgrades de plano e excedentes de WhatsApp.</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="ff"><label>Nome</label><input type="text" id="cfRespNome" placeholder="Nome completo"></div>
+            <div class="ff"><label>Nome *</label><input type="text" id="cfRespNome" placeholder="Nome completo"></div>
             <div class="ff"><label>Cargo</label><input type="text" id="cfRespCargo" placeholder="Diretor(a) Financeiro(a)"></div>
-            <div class="ff"><label>E-mail</label><input type="email" id="cfRespEmail" placeholder="financeiro@escola.com"></div>
+            <div class="ff"><label>E-mail *</label><input type="email" id="cfRespEmail" placeholder="financeiro@escola.com"></div>
             <div class="ff"><label>Telefone</label><input type="tel" id="cfRespTel" placeholder="(54) 99999-0000"></div>
           </div>
-          <button onclick="salvarRespFinanceiro()" style="margin-top:10px;padding:10px 24px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Salvar</button>
+          <button id="cfRespSaveBtn" onclick="salvarRespFinanceiro()" style="margin-top:10px;padding:10px 24px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Definir Responsável Financeiro</button>
         </div>
 
         <div class="sec-title">📋 Decisões Financeiras Pendentes</div>
@@ -8170,7 +8176,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       api({action:'financeiro_resp_get'}), api({action:'financeiro_decisoes_pendentes'}),
       api({action:'financeiro_wa_consumo'}), api({action:'financeiro_extras_disponiveis'}),
     ]);
-    if(resp.data){const r=resp.data;document.getElementById('cfRespNome').value=r.resp_financeiro_nome||'';document.getElementById('cfRespEmail').value=r.resp_financeiro_email||'';document.getElementById('cfRespTel').value=r.resp_financeiro_telefone||'';document.getElementById('cfRespCargo').value=r.resp_financeiro_cargo||'';}
+    if(resp.data){const r=resp.data;document.getElementById('cfRespNome').value=r.resp_financeiro_nome||'';document.getElementById('cfRespEmail').value=r.resp_financeiro_email||'';document.getElementById('cfRespTel').value=r.resp_financeiro_telefone||'';document.getElementById('cfRespCargo').value=r.resp_financeiro_cargo||'';
+    if(r.resp_financeiro_definido){document.getElementById('cfRespBloqueado').style.display='block';document.getElementById('cfRespEditavel').style.display='none';['cfRespNome','cfRespEmail','cfRespTel','cfRespCargo'].forEach(id=>{const el=document.getElementById(id);el.readOnly=true;el.style.background='#f5f0ea';el.style.color='#7a7169';});document.getElementById('cfRespSaveBtn').style.display='none';}else{document.getElementById('cfRespEditavel').style.display='block';document.getElementById('cfRespBloqueado').style.display='none';}}
     const dec=decisoes.data||[];document.getElementById('cfDecisoesPend').textContent=dec.length;
     document.getElementById('cfDecisoesBody').innerHTML=dec.length?dec.map(d=>{const dt=new Date(d.criado_em).toLocaleDateString('pt-BR');const tipoMap={excedente_whatsapp:'WhatsApp Extra',upgrade_tier:'Upgrade',downgrade_tier:'Downgrade',addon_msgs:'Add-on Msgs',addon_storage:'Add-on Storage',addon_usuarios:'Add-on Usuários'};return`<tr><td>${dt}</td><td>${tipoMap[d.tipo]||d.tipo}</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.descricao}</td><td><strong>R$ ${(d.valor_estimado||0).toFixed(2)}</strong>${d.recorrente?'/mês':''}</td><td><button onclick="aprovarDecisao('${d.id}')" style="background:#2d7a3a;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;margin-right:4px;">Aprovar</button><button onclick="rejeitarDecisao('${d.id}')" style="background:#C8102E;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;">Rejeitar</button></td></tr>`}).join(''):'<tr><td colspan="5" class="empty-state">Nenhuma decisão pendente.</td></tr>';
     if(consumo.consumo){const c=consumo.consumo;document.getElementById('cfWaConsumo').textContent=c.templates_enviados||0;document.getElementById('cfWaLimite').textContent=`de ${c.limite_templates||0} msgs`;}

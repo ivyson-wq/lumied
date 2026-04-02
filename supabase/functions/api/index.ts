@@ -1831,15 +1831,36 @@ serve(async (req: Request) => {
 
   // ── Responsável financeiro / Decisões ─────────────
   if (action === "financeiro_resp_get") {
-    const { data: escola } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo").limit(1).single();
+    const { data: escola } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo, resp_financeiro_definido").limit(1).single();
     return ok({ data: escola });
   }
 
   if (action === "financeiro_resp_salvar") {
     const { resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo } = body as any;
     if (!resp_financeiro_nome || !resp_financeiro_email) return err("Nome e email do responsável financeiro obrigatórios.");
-    const { error: ue } = await admin.from("escolas").update({ resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo }).eq("ativo", true);
-    if (ue) return err(ue.message);
+    // Verificar se já foi definido — só staff Lumied pode alterar depois
+    const { data: escolaCheck } = await admin.from("escolas").select("id, resp_financeiro_definido, resp_financeiro_nome, resp_financeiro_email").eq("ativo", true).limit(1).single();
+    if (escolaCheck?.resp_financeiro_definido) {
+      return err("O responsável financeiro já foi definido no onboarding e só pode ser alterado pelo suporte Lumied. Contate suporte@lumied.com.br");
+    }
+    // Primeira definição (onboarding)
+    await admin.from("escolas").update({
+      resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo,
+      resp_financeiro_definido: true, resp_financeiro_definido_em: new Date().toISOString(), resp_financeiro_definido_por: "onboarding",
+    }).eq("id", escolaCheck.id);
+    await admin.from("resp_financeiro_historico").insert({
+      escola_id: escolaCheck.id, acao: "definido", nome_novo: resp_financeiro_nome, email_novo: resp_financeiro_email, alterado_por: "onboarding",
+    });
+    return ok({ success: true });
+  }
+
+  // Staff Lumied (via admin.html): alterar resp financeiro
+  if (action === "staff_alterar_resp_financeiro") {
+    const { escola_id: eid, resp_financeiro_nome: rfn, resp_financeiro_email: rfe, resp_financeiro_telefone: rft, resp_financeiro_cargo: rfc, motivo: motivoRf, admin_nome: an } = body as any;
+    if (!eid || !rfn || !rfe) return err("escola_id, nome e email obrigatórios.");
+    const { data: ant } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email").eq("id", eid).single();
+    await admin.from("escolas").update({ resp_financeiro_nome: rfn, resp_financeiro_email: rfe, resp_financeiro_telefone: rft, resp_financeiro_cargo: rfc, resp_financeiro_definido_por: `staff:${an || "admin"}` }).eq("id", eid);
+    await admin.from("resp_financeiro_historico").insert({ escola_id: eid, acao: "alterado", nome_anterior: ant?.resp_financeiro_nome, email_anterior: ant?.resp_financeiro_email, nome_novo: rfn, email_novo: rfe, alterado_por: `staff:${an || "admin"}`, motivo: motivoRf });
     return ok({ success: true });
   }
 
