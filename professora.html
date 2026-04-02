@@ -1401,6 +1401,127 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   function showCameraFab() {
     const fab = document.querySelector('.camera-fab');
     if (fab && window._enabledModules?.has('agenda_digital')) fab.style.display = 'flex';
+    // Adicionar botão de microfone ao lado da câmera
+    if (window._enabledModules?.has('agenda_digital') && !document.getElementById('micFab')) {
+      const mic = document.createElement('button');
+      mic.id = 'micFab';
+      mic.style.cssText = 'position:fixed;bottom:140px;right:20px;width:52px;height:52px;border-radius:50%;background:#1a6bb5;color:#fff;border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(26,107,181,.4);z-index:999;display:flex;align-items:center;justify-content:center;transition:all .2s;';
+      mic.innerHTML = '🎤';
+      mic.title = 'Gravar áudio para agenda';
+      mic.onclick = abrirGravadorAudio;
+      document.body.appendChild(mic);
+    }
+  }
+
+  // ═══ GRAVADOR DE ÁUDIO + TRANSCRIÇÃO WHISPER ═══
+  let audioRecorder = null;
+  let audioChunks = [];
+  let audioRecording = false;
+
+  function abrirGravadorAudio() {
+    if (audioRecording) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'audioOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;font-family:"DM Sans",system-ui,sans-serif;';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:32px;max-width:400px;width:90%;text-align:center;">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Gravar recado de áudio</h3>
+        <p style="font-size:13px;color:#7a7169;margin-bottom:20px;">Grave um áudio e o sistema transcreve automaticamente para texto.</p>
+        <div id="audioStatus" style="font-size:48px;margin-bottom:16px;">🎤</div>
+        <div id="audioTimer" style="font-size:24px;font-weight:700;color:#C8102E;margin-bottom:16px;display:none;">00:00</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button id="btnGravar" onclick="iniciarGravacao()" style="padding:12px 28px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;">Gravar</button>
+          <button id="btnParar" onclick="pararGravacao()" style="padding:12px 28px;background:#2d7a3a;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;display:none;">Parar</button>
+          <button onclick="document.getElementById('audioOverlay').remove()" style="padding:12px 20px;background:#f0ece6;border:none;border-radius:10px;cursor:pointer;font-size:14px;">Cancelar</button>
+        </div>
+        <div id="audioTranscricao" style="display:none;margin-top:20px;text-align:left;">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7a7169;margin-bottom:6px;display:block;">Transcrição (revise antes de enviar)</label>
+          <textarea id="audioTexto" style="width:100%;min-height:100px;padding:12px;border:1px solid #e2dbd1;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button onclick="salvarAgendaAudio(false)" style="flex:1;padding:10px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;">Salvar na Agenda</button>
+            <button onclick="salvarAgendaAudio(true)" style="flex:1;padding:10px;background:#25D366;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;">Salvar + WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  async function iniciarGravacao() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      audioChunks = [];
+      audioRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+      audioRecorder.onstop = processarAudio;
+      audioRecorder.start();
+      audioRecording = true;
+      document.getElementById('btnGravar').style.display = 'none';
+      document.getElementById('btnParar').style.display = 'inline-block';
+      document.getElementById('audioStatus').textContent = '🔴';
+      document.getElementById('audioStatus').style.animation = 'pulse 1s infinite';
+      const timer = document.getElementById('audioTimer');
+      timer.style.display = 'block';
+      let sec = 0;
+      window._audioTimerInt = setInterval(() => {
+        sec++;
+        timer.textContent = `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+      }, 1000);
+    } catch (e) { alert('Não foi possível acessar o microfone. Verifique as permissões.'); }
+  }
+
+  function pararGravacao() {
+    if (audioRecorder && audioRecorder.state === 'recording') {
+      audioRecorder.stop();
+      audioRecorder.stream.getTracks().forEach(t => t.stop());
+    }
+    clearInterval(window._audioTimerInt);
+    audioRecording = false;
+    document.getElementById('btnParar').style.display = 'none';
+    document.getElementById('audioStatus').textContent = '⏳';
+    document.getElementById('audioStatus').style.animation = '';
+  }
+
+  async function processarAudio() {
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    document.getElementById('audioStatus').textContent = '⏳ Transcrevendo...';
+
+    // Converter para base64
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result;
+      try {
+        const token = localStorage.getItem('mb_prof_token');
+        const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/transcricao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
+          body: JSON.stringify({ action: 'transcrever_audio', audio_base64: base64, mime_type: 'audio/webm', _prof_token: token }),
+        });
+        const d = await r.json();
+        if (d.error) { alert('Erro: ' + d.error); document.getElementById('audioStatus').textContent = '❌'; return; }
+        document.getElementById('audioStatus').textContent = '✅';
+        document.getElementById('audioTexto').value = d.transcricao;
+        document.getElementById('audioTranscricao').style.display = 'block';
+      } catch (e) { alert('Erro de conexão.'); document.getElementById('audioStatus').textContent = '❌'; }
+    };
+    reader.readAsDataURL(blob);
+  }
+
+  async function salvarAgendaAudio(enviarWa) {
+    const texto = document.getElementById('audioTexto').value.trim();
+    if (!texto) return alert('Texto vazio.');
+    const token = localStorage.getItem('mb_prof_token');
+    try {
+      const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/transcricao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
+        body: JSON.stringify({ action: 'salvar_agenda_audio', texto, enviar_whatsapp: enviarWa, _prof_token: token }),
+      });
+      const d = await r.json();
+      if (d.error) return alert('Erro: ' + d.error);
+      document.getElementById('audioOverlay').remove();
+      if (typeof showToast === 'function') showToast(enviarWa ? 'Agenda salva! WhatsApp enviado para aprovação.' : 'Agenda salva!', 'success');
+    } catch (e) { alert('Erro de conexão.'); }
   }
 
   function toggleProfMore() {
