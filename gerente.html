@@ -318,17 +318,37 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 <body>
 
 <!-- LOGIN -->
-<div id="loginScreen">
-  <div class="login-card">
-    <div class="login-logo"><div class="leaf">🍁</div><h1>Maple Bear</h1><span>Painel do Gerente</span></div>
-    <h2>Entrar</h2>
-    <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="gerente@exemplo.com" autocomplete="email"></div>
-    <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar no Painel</button>
-    <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;">🔐 Entrar com biometria</button>
-    <div id="loginError">E-mail ou senha incorretos.</div>
+<div id="loginScreen" style="min-height:100vh;display:flex;">
+  <!-- Lado esquerdo: foto -->
+  <div style="flex:1;background:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&q=80') center/cover;position:relative;display:flex;align-items:flex-end;padding:40px;" class="login-photo-side">
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),transparent 60%);"></div>
+    <div style="position:relative;color:#fff;max-width:400px;">
+      <div style="font-size:28px;font-weight:800;line-height:1.2;margin-bottom:8px;">Gerencie sua escola com inteligencia</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.5;">Financeiro, matriculas, comunicacao com familias, compliance — tudo num so lugar.</div>
+    </div>
+  </div>
+  <!-- Lado direito: form -->
+  <div style="width:480px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px;">
+    <div style="width:100%;max-width:340px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
+        <div id="sidebarLeafLogin" style="font-size:28px;">🍁</div>
+        <div><div id="loginBrandName" style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Painel do Gerente</div></div>
+      </div>
+      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;">Bem-vindo de volta</h2>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;">Entre com suas credenciais para acessar o painel.</p>
+      <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"></div>
+      <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
+      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;">Entrar com biometria</button>
+      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;">E-mail ou senha incorretos.</div>
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
+        <img src="/icon-lumied-48.png" style="height:14px;opacity:.4;" alt="Lumied">
+        <span style="font-size:10px;color:#a89f95;">Powered by Lumied</span>
+      </div>
+    </div>
   </div>
 </div>
+<style>@media(max-width:768px){.login-photo-side{display:none !important;}#loginScreen>div:last-child{width:100% !important;}}</style>
 
 <!-- APP -->
 <div id="appShell">
