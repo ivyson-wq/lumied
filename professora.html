@@ -1060,6 +1060,127 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     showBioRegisterButton();
     loadModulosHabilitadosProf().then(() => showCameraFab());
     verificarCienciasPendentes();
+    verificarQuizPendente();
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  QUIZ DE COMPLIANCE — Tela no portal da professora
+  // ═══════════════════════════════════════════════════
+  async function verificarQuizPendente() {
+    try {
+      const d = await callApiCompliance({ action: 'compliance_quiz_pendentes' });
+      const pendentes = d.data || [];
+      if (pendentes.length === 0) return;
+      mostrarNotificacaoQuiz(pendentes);
+    } catch (e) { console.log('[QUIZ] Sem pendências:', e); }
+  }
+
+  function mostrarNotificacaoQuiz(quizzes) {
+    const q = quizzes[0];
+    const quiz = q.compliance_quizzes;
+    const prazoFmt = q.prazo ? q.prazo.split('-').reverse().join('/') : '—';
+    const banner = document.createElement('div');
+    banner.id = 'quizBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(135deg,#1a6bb5,#2d7a3a);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;font-family:"DM Sans",sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+    banner.innerHTML = `
+      <span style="font-size:24px;">📝</span>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;">Quiz pendente: ${quiz?.titulo || 'Compliance'}</div>
+        <div style="font-size:11px;opacity:.8;">Prazo: ${prazoFmt} · ${quiz?.total_perguntas || 5} perguntas · ${quiz?.tempo_limite_minutos || 15} min</div>
+      </div>
+      <button onclick="iniciarQuiz('${q.id}')" style="padding:8px 18px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px;">Iniciar Quiz →</button>
+      <button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:4px;">×</button>
+    `;
+    document.body.appendChild(banner);
+    document.querySelector('.main,.content')?.style.setProperty('margin-top', '56px');
+  }
+
+  let quizState = null;
+
+  async function iniciarQuiz(atribuicaoId) {
+    document.getElementById('quizBanner')?.remove();
+    const d = await callApiCompliance({ action: 'compliance_quiz_iniciar', atribuicao_id: atribuicaoId });
+    if (d.error) return alert('Erro: ' + d.error);
+    quizState = { atribuicaoId, quiz: d.data.quiz, perguntas: d.data.perguntas, tentativa: d.data.tentativa, respostas: {}, current: 0, startTime: Date.now() };
+    renderQuizOverlay();
+  }
+
+  function renderQuizOverlay() {
+    document.getElementById('quizOverlay')?.remove();
+    const s = quizState;
+    const p = s.perguntas[s.current];
+    const total = s.perguntas.length;
+    const overlay = document.createElement('div');
+    overlay.id = 'quizOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;font-family:"DM Sans",system-ui,sans-serif;padding:20px;overflow-y:auto;';
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;max-width:520px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <div style="background:#1a6bb5;color:#fff;padding:16px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-size:14px;font-weight:700;">${s.quiz.titulo}</div><div style="font-size:11px;opacity:.7;">Tentativa ${s.tentativa}</div></div>
+          <div style="font-size:13px;font-weight:700;">${s.current + 1} / ${total}</div>
+        </div>
+        <div style="padding:24px;">
+          <div style="display:flex;gap:4px;margin-bottom:20px;">${s.perguntas.map((_, i) => `<div style="flex:1;height:4px;border-radius:2px;background:${i < s.current ? '#2d7a3a' : i === s.current ? '#1a6bb5' : '#e2dbd1'};"></div>`).join('')}</div>
+          <div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:16px;line-height:1.5;">${p.pergunta}</div>
+          <div id="quizOpcoes" style="display:flex;flex-direction:column;gap:8px;">
+            ${(p.opcoes || []).map((opt, i) => `
+              <button class="quiz-opt" data-idx="${i}" onclick="selecionarOpcao(${i})" style="text-align:left;padding:12px 16px;border:2px solid #e2dbd1;border-radius:10px;background:#fff;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;line-height:1.4;">
+                <span style="font-weight:700;color:#1a6bb5;margin-right:8px;">${String.fromCharCode(65 + i)}.</span> ${opt}
+              </button>
+            `).join('')}
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:24px;">
+            <button onclick="${s.current > 0 ? 'quizState.current--;renderQuizOverlay()' : ''}" style="padding:10px 20px;background:#f0ece6;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;${s.current === 0 ? 'opacity:.3;pointer-events:none;' : ''}">← Anterior</button>
+            <button id="quizNextBtn" onclick="avancarQuiz()" style="padding:10px 24px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;">${s.current === total - 1 ? 'Finalizar Quiz' : 'Próxima →'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    // Marcar opção já selecionada
+    const sel = s.respostas[p.id];
+    if (sel !== undefined) document.querySelector(`.quiz-opt[data-idx="${sel}"]`)?.style.setProperty('border-color', '#1a6bb5');
+  }
+
+  function selecionarOpcao(idx) {
+    const p = quizState.perguntas[quizState.current];
+    quizState.respostas[p.id] = idx;
+    document.querySelectorAll('.quiz-opt').forEach(b => b.style.borderColor = '#e2dbd1');
+    document.querySelector(`.quiz-opt[data-idx="${idx}"]`).style.borderColor = '#1a6bb5';
+    document.querySelector(`.quiz-opt[data-idx="${idx}"]`).style.background = 'rgba(26,107,181,.05)';
+  }
+
+  async function avancarQuiz() {
+    const s = quizState;
+    const p = s.perguntas[s.current];
+    if (s.respostas[p.id] === undefined) return alert('Selecione uma resposta.');
+    if (s.current < s.perguntas.length - 1) { s.current++; renderQuizOverlay(); return; }
+    // Finalizar — enviar respostas
+    document.getElementById('quizNextBtn').disabled = true;
+    document.getElementById('quizNextBtn').textContent = 'Enviando...';
+    const respostasArr = s.perguntas.map(p => ({
+      pergunta_id: p.id, resposta_selecionada: s.respostas[p.id],
+      tempo_segundos: Math.round((Date.now() - s.startTime) / 1000 / s.perguntas.length),
+    }));
+    const d = await callApiCompliance({ action: 'compliance_quiz_responder', atribuicao_id: s.atribuicaoId, respostas: respostasArr });
+    if (d.error) { alert('Erro: ' + d.error); return; }
+    const r = d.data;
+    document.getElementById('quizOverlay').remove();
+    // Mostrar resultado
+    const resultOverlay = document.createElement('div');
+    resultOverlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;font-family:"DM Sans",system-ui,sans-serif;';
+    const cor = r.aprovado ? '#2d7a3a' : '#C8102E';
+    resultOverlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;padding:36px;max-width:400px;width:90%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4);">
+        <div style="font-size:56px;margin-bottom:16px;">${r.aprovado ? '🎉' : '📚'}</div>
+        <h2 style="font-size:24px;font-weight:900;color:${cor};margin-bottom:8px;">${r.aprovado ? 'Aprovado!' : 'Tente novamente'}</h2>
+        <div style="font-size:48px;font-weight:900;color:${cor};margin:16px 0;">${r.nota}%</div>
+        <p style="font-size:14px;color:#7a7169;margin-bottom:8px;">${r.corretas} de ${r.total} corretas</p>
+        ${!r.aprovado ? `<p style="font-size:13px;color:#7a7169;">Mínimo: ${s.quiz.nota_minima}% · Tentativas restantes: ${r.tentativas_restantes}</p>` : '<p style="font-size:13px;color:#2d7a3a;">Parabéns! Seu certificado foi registrado.</p>'}
+        <button onclick="this.parentElement.parentElement.remove()" style="margin-top:20px;padding:12px 28px;background:${cor};color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Fechar</button>
+      </div>
+    `;
+    document.body.appendChild(resultOverlay);
   }
 
   // ═══════════════════════════════════════════════════

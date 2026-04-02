@@ -843,6 +843,218 @@ router.on("compliance_ciencia_detalhe", authGerente, feat, async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  QUIZ DE COMPLIANCE — Geração IA + Aplicação
+// ═══════════════════════════════════════════════════════════════
+
+// Gerente: criar quiz e gerar perguntas via Claude
+router.on("compliance_quiz_criar", authGerente, feat, async (ctx) => {
+  const { titulo, descricao, politica_id, tema, total_perguntas, nota_minima, tempo_limite_minutos, recorrencia, aplica_a, prompt_contexto } = ctx.body as any;
+  if (!titulo || !tema) throw new AppError("VALIDATION_FAILED", "titulo e tema obrigatórios.");
+
+  // Criar quiz
+  const { data: quiz, error } = await ctx.sb.from("compliance_quizzes").insert({
+    titulo, descricao, politica_id, tema,
+    total_perguntas: total_perguntas || 5,
+    nota_minima: nota_minima || 70,
+    tempo_limite_minutos: tempo_limite_minutos || 15,
+    recorrencia: recorrencia || "trimestral",
+    aplica_a: aplica_a || "todos",
+    prompt_contexto,
+    criado_por: ctx.user?.nome,
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  // Buscar conteúdo da política base (se houver)
+  let conteudoPolitica = "";
+  if (politica_id) {
+    const { data: pol } = await ctx.sb.from("compliance_politicas").select("titulo, conteudo_html").eq("id", politica_id).single();
+    if (pol?.conteudo_html) {
+      conteudoPolitica = pol.conteudo_html.replace(/<[^>]*>/g, " ").substring(0, 3000);
+    }
+  }
+
+  // Gerar perguntas via Claude Haiku
+  const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+  if (ANTHROPIC_KEY && conteudoPolitica) {
+    try {
+      const nPerguntas = total_perguntas || 5;
+      const promptIA = `Você é um especialista em compliance escolar. Com base no documento abaixo, gere exatamente ${nPerguntas} perguntas de múltipla escolha (4 alternativas cada) para avaliar se um funcionário de escola entende o conteúdo.
+
+DOCUMENTO (${tema}):
+${conteudoPolitica}
+
+${prompt_contexto ? `CONTEXTO EXTRA: ${prompt_contexto}` : ""}
+
+Responda APENAS em JSON válido, sem markdown, no formato:
+[{"pergunta":"texto","opcoes":["A","B","C","D"],"resposta_correta":0,"explicacao":"porquê","dificuldade":"media"}]
+
+Onde resposta_correta é o índice (0-3) da opção correta. Varie a dificuldade entre fácil, média e difícil. Perguntas em português brasileiro.`;
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, messages: [{ role: "user", content: promptIA }] }),
+      });
+
+      if (res.ok) {
+        const aiData = await res.json() as any;
+        const texto = aiData.content?.[0]?.text || "";
+        // Extrair JSON do texto
+        const jsonMatch = texto.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const perguntas = JSON.parse(jsonMatch[0]) as Array<{ pergunta: string; opcoes: string[]; resposta_correta: number; explicacao: string; dificuldade: string }>;
+          for (let i = 0; i < perguntas.length; i++) {
+            await ctx.sb.from("compliance_quiz_perguntas").insert({
+              quiz_id: quiz.id,
+              ordem: i + 1,
+              pergunta: perguntas[i].pergunta,
+              tipo: "multipla_escolha",
+              opcoes: perguntas[i].opcoes,
+              resposta_correta: perguntas[i].resposta_correta,
+              explicacao: perguntas[i].explicacao,
+              dificuldade: perguntas[i].dificuldade || "media",
+            });
+          }
+          await ctx.sb.from("compliance_quizzes").update({ perguntas_geradas: true }).eq("id", quiz.id);
+        }
+      }
+    } catch (e) { console.error("[QUIZ] Erro ao gerar perguntas:", e); }
+  }
+
+  return successResponse(quiz);
+});
+
+// Gerente: atribuir quiz a funcionários
+router.on("compliance_quiz_atribuir", authGerente, feat, async (ctx) => {
+  const { quiz_id, professora_ids, prazo_dias } = ctx.body as any;
+  if (!quiz_id || !Array.isArray(professora_ids)) throw new AppError("VALIDATION_FAILED", "quiz_id e professora_ids[] obrigatórios.");
+  const prazo = new Date(); prazo.setDate(prazo.getDate() + (prazo_dias || 7));
+  const prazoStr = prazo.toISOString().split("T")[0];
+
+  let atribuidos = 0;
+  for (const profId of professora_ids) {
+    const { data: prof } = await ctx.sb.from("professoras").select("id, nome, email").eq("id", profId).single();
+    if (!prof) continue;
+    await ctx.sb.from("compliance_quiz_atribuicoes").insert({
+      quiz_id, professora_id: profId, nome: prof.nome, email: prof.email, cargo: "professora", prazo: prazoStr,
+    });
+    atribuidos++;
+  }
+  return successResponse({ atribuidos, prazo: prazoStr });
+});
+
+// Gerente: listar quizzes
+router.on("compliance_quizzes_list", authGerente, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_quizzes").select("*, compliance_politicas(titulo)").eq("ativo", true).order("criado_em", { ascending: false });
+  return successResponse(data ?? []);
+});
+
+// Gerente: ver resultados de um quiz
+router.on("compliance_quiz_resultados", authGerente, feat, async (ctx) => {
+  const { quiz_id } = ctx.body as any;
+  if (!quiz_id) throw new AppError("VALIDATION_FAILED", "quiz_id obrigatório.");
+  const { data: atribuicoes } = await ctx.sb.from("compliance_quiz_atribuicoes").select("*").eq("quiz_id", quiz_id).order("nome");
+  const { data: quiz } = await ctx.sb.from("compliance_quizzes").select("titulo, nota_minima, total_perguntas").eq("id", quiz_id).single();
+  return successResponse({ quiz, atribuicoes: atribuicoes ?? [] });
+});
+
+// Professora: listar quizzes pendentes
+router.on("compliance_quiz_pendentes", authProfessora, async (ctx) => {
+  const profId = ctx.user?.id;
+  if (!profId) throw new AppError("AUTH_REQUIRED", "Autenticação necessária.");
+  const { data } = await ctx.sb.from("compliance_quiz_atribuicoes")
+    .select("*, compliance_quizzes(id, titulo, descricao, tema, total_perguntas, tempo_limite_minutos, nota_minima)")
+    .eq("professora_id", profId)
+    .in("status", ["pendente", "em_andamento"])
+    .order("prazo");
+  return successResponse(data ?? []);
+});
+
+// Professora: obter perguntas do quiz (iniciar tentativa)
+router.on("compliance_quiz_iniciar", authProfessora, async (ctx) => {
+  const { atribuicao_id } = ctx.body as any;
+  if (!atribuicao_id) throw new AppError("VALIDATION_FAILED", "atribuicao_id obrigatório.");
+
+  const { data: atrib } = await ctx.sb.from("compliance_quiz_atribuicoes").select("*, compliance_quizzes(id, titulo, total_perguntas, tempo_limite_minutos, nota_minima, tentativas_max)").eq("id", atribuicao_id).single();
+  if (!atrib) throw new AppError("NOT_FOUND", "Atribuição não encontrada.");
+  if (atrib.professora_id !== ctx.user?.id) throw new AppError("FORBIDDEN", "Acesso negado.");
+  const quiz = (atrib as any).compliance_quizzes;
+  if (atrib.tentativas >= (quiz.tentativas_max || 3)) throw new AppError("BAD_REQUEST", "Número máximo de tentativas atingido.");
+
+  // Marcar como em andamento
+  await ctx.sb.from("compliance_quiz_atribuicoes").update({ status: "em_andamento" }).eq("id", atribuicao_id);
+
+  // Buscar perguntas (sem a resposta correta!)
+  const { data: perguntas } = await ctx.sb.from("compliance_quiz_perguntas")
+    .select("id, ordem, pergunta, tipo, opcoes, dificuldade")
+    .eq("quiz_id", quiz.id)
+    .order("ordem");
+
+  return successResponse({
+    atribuicao_id,
+    quiz: { titulo: quiz.titulo, tempo_limite_minutos: quiz.tempo_limite_minutos, nota_minima: quiz.nota_minima },
+    perguntas: perguntas ?? [],
+    tentativa: atrib.tentativas + 1,
+  });
+});
+
+// Professora: enviar respostas e receber nota
+router.on("compliance_quiz_responder", authProfessora, async (ctx) => {
+  const { atribuicao_id, respostas } = ctx.body as any;
+  if (!atribuicao_id || !Array.isArray(respostas)) throw new AppError("VALIDATION_FAILED", "atribuicao_id e respostas[] obrigatórios.");
+
+  const { data: atrib } = await ctx.sb.from("compliance_quiz_atribuicoes").select("*, compliance_quizzes(id, nota_minima, tentativas_max)").eq("id", atribuicao_id).single();
+  if (!atrib || atrib.professora_id !== ctx.user?.id) throw new AppError("FORBIDDEN", "Acesso negado.");
+
+  const quiz = (atrib as any).compliance_quizzes;
+  const tentativa = atrib.tentativas + 1;
+
+  // Buscar gabarito
+  const { data: perguntas } = await ctx.sb.from("compliance_quiz_perguntas").select("id, resposta_correta, explicacao").eq("quiz_id", quiz.id);
+  const gabarito = new Map((perguntas ?? []).map((p: any) => [p.id, p]));
+
+  let corretas = 0;
+  const resultados: any[] = [];
+
+  for (const resp of respostas) {
+    const gab = gabarito.get(resp.pergunta_id);
+    const correta = gab ? resp.resposta_selecionada === gab.resposta_correta : false;
+    if (correta) corretas++;
+
+    await ctx.sb.from("compliance_quiz_respostas").insert({
+      atribuicao_id, pergunta_id: resp.pergunta_id, tentativa,
+      resposta_selecionada: resp.resposta_selecionada,
+      correta, tempo_segundos: resp.tempo_segundos || 0,
+    });
+
+    resultados.push({ pergunta_id: resp.pergunta_id, correta, explicacao: gab?.explicacao });
+  }
+
+  const totalPerguntas = perguntas?.length || 1;
+  const nota = Math.round((corretas / totalPerguntas) * 100);
+  const aprovado = nota >= (quiz.nota_minima || 70);
+
+  // Atualizar atribuição
+  await ctx.sb.from("compliance_quiz_atribuicoes").update({
+    tentativas: tentativa,
+    melhor_nota: Math.max(nota, atrib.melhor_nota || 0),
+    ultima_tentativa_em: new Date().toISOString(),
+    status: aprovado ? "aprovado" : tentativa >= (quiz.tentativas_max || 3) ? "reprovado" : "em_andamento",
+    ...(aprovado ? { aprovado_em: new Date().toISOString() } : {}),
+  }).eq("id", atribuicao_id);
+
+  return successResponse({
+    nota,
+    corretas,
+    total: totalPerguntas,
+    aprovado,
+    tentativa,
+    tentativas_restantes: Math.max(0, (quiz.tentativas_max || 3) - tentativa),
+    resultados,
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Server
 // ═══════════════════════════════════════════════════════════════
 serve(async (req) => {
