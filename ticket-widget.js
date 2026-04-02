@@ -5,6 +5,17 @@
 (function() {
   'use strict';
 
+  // Esperar autenticacao — widgets so aparecem apos login
+  function hasAuth() {
+    return localStorage.getItem('mb_token') || localStorage.getItem('mb_prof_token') || localStorage.getItem('mb_aluno_token');
+  }
+  if (!hasAuth()) {
+    const chk = setInterval(() => { if (hasAuth()) { clearInterval(chk); startWidget(); } }, 2000);
+    return;
+  }
+  startWidget();
+  function startWidget() {
+
   // Detectar portal
   const path = location.pathname;
   let portal = 'pais';
@@ -136,4 +147,6 @@
       alert('Erro ao enviar ticket. Tente novamente.');
     }
   };
+
+  } // fim da function startWidget()
 })();
