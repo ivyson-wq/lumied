@@ -254,6 +254,16 @@ input[readonly]{background:#f5f5f5;color:var(--muted);cursor:default;border-colo
 .bnav-badge{position:absolute;top:2px;right:calc(50% - 16px);width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid #fff;}
 .bnav-item{position:relative;}
 body.has-bottomnav{padding-bottom:72px;}
+/* ATALHOS FAVORITOS PAIS */
+.pais-shortcuts{margin-bottom:16px;}
+.pais-shortcuts .ps-title{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.pais-shortcuts .ps-title .ps-edit{margin-left:auto;font-size:11px;color:var(--muted);cursor:pointer;border:1px solid var(--border);padding:3px 10px;border-radius:100px;font-weight:500;text-transform:none;letter-spacing:0;transition:all .2s;}
+.pais-shortcuts .ps-title .ps-edit:hover{color:var(--red);border-color:var(--red);}
+.shortcut-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.shortcut-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--white);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s;text-align:center;}
+.shortcut-card:hover{border-color:var(--red);background:var(--red-light);transform:translateY(-1px);}
+.shortcut-card .sc-icon{font-size:22px;}
+.shortcut-card .sc-label{font-size:11px;font-weight:600;color:var(--text);line-height:1.2;}
 
 /* HEADER COMPACT */
 .site-header.compact .header-inner{padding:12px 24px 10px;}
@@ -525,6 +535,12 @@ body.has-bottomnav{padding-bottom:0;}
 
   <!-- TAB: INICIO -->
   <div class="tab-panel active" id="tabInicio">
+
+  <!-- ATALHOS PERSONALIZÁVEIS -->
+  <div class="card pais-shortcuts" id="paisShortcuts">
+    <div class="ps-title">Acesso Rápido <span class="ps-edit" id="paisEditShortcuts" onclick="togglePaisShortcutEdit()">Editar</span></div>
+    <div class="shortcut-grid" id="paisShortcutGrid"></div>
+  </div>
 
   <!-- ESTOU A CAMINHO -->
   <div class="card" id="pickupCard" style="display:none;">
@@ -889,6 +905,60 @@ body.has-bottomnav{padding-bottom:0;}
     if (tab === 'diaadia') carregarDiaADia();
     if (tab === 'boletim') carregarBoletim();
     if (tab === 'achados') carregarAchados();
+  }
+
+  // ── ATALHOS PERSONALIZÁVEIS ──────────────────────────────
+  const PAIS_FAV_KEY = 'lumied_fav_pais';
+  const paisTabMeta = {
+    inicio: { icon: '🏠', label: 'Início' },
+    diaadia: { icon: '📅', label: 'Dia a Dia' },
+    boletim: { icon: '📝', label: 'Boletim' },
+    boletos: { icon: '💰', label: 'Boletos' },
+    solicitar: { icon: '🕐', label: 'Turno' },
+    atividades: { icon: '🎯', label: 'Atividades' },
+    achados: { icon: '🔍', label: 'Achados' }
+  };
+  let paisEditMode = false;
+
+  function getPaisFavorites() {
+    try { return JSON.parse(localStorage.getItem(PAIS_FAV_KEY)) || ['boletos','diaadia','boletim']; }
+    catch { return ['boletos','diaadia','boletim']; }
+  }
+
+  function renderPaisShortcuts() {
+    const grid = document.getElementById('paisShortcutGrid');
+    if (!grid) return;
+    const favs = getPaisFavorites();
+    if (!favs.length && !paisEditMode) {
+      document.getElementById('paisShortcuts').style.display = 'none';
+      return;
+    }
+    document.getElementById('paisShortcuts').style.display = '';
+    const items = paisEditMode ? Object.keys(paisTabMeta).filter(k => k !== 'inicio') : favs;
+    grid.innerHTML = items.map(id => {
+      const meta = paisTabMeta[id] || { icon: '📄', label: id };
+      const isFav = favs.includes(id);
+      return `<div class="shortcut-card" style="${paisEditMode && !isFav ? 'opacity:.45;border-style:dashed;' : ''}" onclick="${paisEditMode ? `togglePaisFav('${id}')` : `switchTab('${id}')`}">
+        <span class="sc-icon">${meta.icon}</span>
+        <span class="sc-label">${meta.label}</span>
+        ${paisEditMode ? `<span style="font-size:12px;color:${isFav ? '#f6a623' : 'var(--muted)'}">${isFav ? '★' : '☆'}</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function togglePaisFav(id) {
+    let favs = getPaisFavorites();
+    const idx = favs.indexOf(id);
+    if (idx >= 0) favs.splice(idx, 1); else favs.push(id);
+    localStorage.setItem(PAIS_FAV_KEY, JSON.stringify(favs));
+    renderPaisShortcuts();
+  }
+
+  function togglePaisShortcutEdit() {
+    paisEditMode = !paisEditMode;
+    const btn = document.getElementById('paisEditShortcuts');
+    btn.textContent = paisEditMode ? 'Concluir' : 'Editar';
+    renderPaisShortcuts();
   }
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
@@ -1299,6 +1369,7 @@ body.has-bottomnav{padding-bottom:0;}
     carregarAchados();
     showBioRegisterButton();
     loadModulosHabilitadosPais();
+    renderPaisShortcuts();
   }
 
   // ── Módulos habilitados (feature gating) ──
