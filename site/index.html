@@ -1396,7 +1396,7 @@ function togglePricing(el) {
   const isAnnual = el.classList.contains('annual');
   const labels = el.parentElement.querySelectorAll('span:not(.save-badge)');
   labels.forEach(l => l.classList.remove('active'));
-  labels[isAnnual ? 2 : 0].classList.add('active');
+  labels[isAnnual ? 1 : 0].classList.add('active');
   document.querySelectorAll('.amount[data-monthly]').forEach(a => {
     a.textContent = isAnnual ? a.dataset.annual : a.dataset.monthly;
   });
