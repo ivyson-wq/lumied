@@ -54,6 +54,22 @@ export async function enviarTemplate(env: Env, phoneId: string, para: string, no
   });
 }
 
+export async function enviarBotoesClassificacao(env: Env, phoneId: string, para: string, corpo: string, docId: string) {
+  return chamarApi(env, phoneId, para, {
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: corpo.substring(0, 1024) },
+      action: {
+        buttons: [
+          { type: 'reply', reply: { id: `doc_${docId}_confirmar`, title: '✅ Confirmar' } },
+          { type: 'reply', reply: { id: `doc_${docId}_rejeitar`, title: '🔄 Reclassificar' } },
+        ],
+      },
+    },
+  });
+}
+
 export async function marcarComoLida(env: Env, phoneId: string, messageId: string) {
   const res = await fetch(`${GRAPH_URL}/${phoneId}/messages`, {
     method: 'POST',

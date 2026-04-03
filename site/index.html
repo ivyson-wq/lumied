@@ -1093,8 +1093,8 @@ function calcularROI() {
   let planoMensal = 259;
   if (alunos > 80) planoMensal = 649;
   if (alunos > 300) planoMensal = 1249;
-  if (alunos > 800) planoMensal = 1659;
-  if (alunos > 1500) planoMensal = 2099;
+  if (alunos > 800) planoMensal = 2079;
+  if (alunos > 1500) planoMensal = 2939;
   const investimentoAnual = planoMensal * 12;
   const multiplo = investimentoAnual > 0 ? (totalAnual / investimentoAnual).toFixed(1) : 0;
 
@@ -1224,7 +1224,7 @@ calcularROI();
         <div class="plan-name">Avançado</div>
         <div class="plan-desc">Analytics, RH e integrações</div>
         <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="1.659" data-annual="1.327">1.327</span><span class="period">/mês</span>
+          <span class="currency">R$</span><span class="amount" data-monthly="2.079" data-annual="1.659">1.659</span><span class="period">/mês</span>
           <div class="per-student">Até 1.500 alunos · 500 msgs WhatsApp/mês</div>
         </div>
         <ul class="plan-features">
@@ -1246,7 +1246,7 @@ calcularROI();
         <div class="plan-name">Rede</div>
         <div class="plan-desc">Multi-escola + escala total</div>
         <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="2.099" data-annual="1.679">1.679</span><span class="period">/mês</span>
+          <span class="currency">R$</span><span class="amount" data-monthly="2.939" data-annual="2.351">2.351</span><span class="period">/mês</span>
           <div class="per-student">Alunos ilimitados · 2.000 msgs WhatsApp/mês</div>
         </div>
         <ul class="plan-features">

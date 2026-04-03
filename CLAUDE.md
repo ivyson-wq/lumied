@@ -398,8 +398,8 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 | **Starter** | R$ 259 | R$ 207 | 80 | 6 | — |
 | **Gestão** | R$ 649 | R$ 519 | 300 | 19 | — |
 | **Automação** | R$ 1.249 | R$ 999 | 800 | 30 | 200 msgs/mês |
-| **Avançado** | R$ 1.659 | R$ 1.327 | 1.500 | 35 | 500 msgs/mês |
-| **Rede** | R$ 2.099 | R$ 1.679 | Ilimitado | Todos | 2.000 msgs/mês |
+| **Avançado** | R$ 2.079 | R$ 1.659 | 1.500 | 35 | 500 msgs/mês |
+| **Rede** | R$ 2.939 | R$ 2.351 | Ilimitado | Todos | 2.000 msgs/mês |
 
 ### Pacotes Extras (aprovação do resp financeiro)
 

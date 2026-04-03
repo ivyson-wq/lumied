@@ -5,6 +5,7 @@ import { enviarTextoLivre, enviarMensagemComBotao, marcarComoLida } from '../ser
 import { ativarEstouACaminho } from '../features/estou-a-caminho';
 import { processarConfirmacao } from '../features/confirmacao';
 import { processarFaq } from '../features/faq-bot';
+import { processarDocumento, processarConfirmacaoDocumento } from '../features/documento-intake';
 
 const KEYWORDS_ESTOU_A_CAMINHO = ['A CAMINHO', 'ACAMINHO', 'BUSCA', 'BUSCANDO', 'ESTOU INDO', 'JA ESTOU'];
 
@@ -23,6 +24,60 @@ export async function handleWebhook(req: Request, env: Env): Promise<Response> {
 
         // Marcar como lida
         await marcarComoLida(env, phoneId, msg.id);
+
+        // ── Check if sender is STAFF (coordenação/direção/secretaria) ──
+        const { data: staff } = await db
+          .from('wa_staff').select('id,escola_id,nome,papel,whatsapp')
+          .eq('whatsapp', waId).eq('ativo', true).single();
+
+        if (staff) {
+          // Staff member — handle document intake or confirmation
+
+          // Document confirmation buttons (doc_<id>_confirmar / doc_<id>_rejeitar)
+          if (msg.type === 'interactive' && msg.interactive?.button_reply?.id?.startsWith('doc_')) {
+            await processarConfirmacaoDocumento(db, env, phoneId, waId, msg.interactive.button_reply.id);
+            continue;
+          }
+
+          // Image or document from staff → document intake
+          if (msg.type === 'image' && msg.image) {
+            await processarDocumento(db, env, phoneId, staff, {
+              id: msg.image.id,
+              mime_type: msg.image.mime_type,
+              sha256: msg.image.sha256,
+            }, msg.image.caption);
+            continue;
+          }
+
+          if (msg.type === 'document' && msg.document) {
+            await processarDocumento(db, env, phoneId, staff, {
+              id: msg.document.id,
+              mime_type: msg.document.mime_type,
+              sha256: msg.document.sha256,
+              filename: msg.document.filename,
+            }, msg.document.caption);
+            continue;
+          }
+
+          // Text from staff without media — treat as context for next document
+          if (msg.type === 'text') {
+            await enviarTextoLivre(env, phoneId, waId,
+              `📎 Olá, ${staff.nome}! Para arquivar um documento, envie a *foto* ou *arquivo* (PDF, imagem). ` +
+              `Pode incluir uma descrição na legenda.\n\n` +
+              `Exemplos:\n` +
+              `_📸 Foto do atestado médico da prof. Maria_\n` +
+              `_📄 Certificado de primeiros socorros_\n` +
+              `_📋 Ata da reunião pedagógica de março_`);
+            continue;
+          }
+
+          // Other media types from staff — not supported yet
+          await enviarTextoLivre(env, phoneId, waId,
+            '⚠️ Formato não suportado. Envie como *foto* ou *PDF/documento*.');
+          continue;
+        }
+
+        // ── Regular flow: family member ──
 
         // 1. Buscar família
         const { data: familia } = await db
