@@ -38,24 +38,19 @@ O tom deve ser caloroso, positivo e informativo. Escreva em português brasileir
 Não use markdown. Comece com uma saudação incluindo o nome do aluno.`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
-        messages: [{ role: 'user', content: prompt }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 300, temperature: 0.7 },
       }),
     });
 
-    if (!res.ok) { console.error('[RELATORIO] Anthropic error:', res.status); return; }
+    if (!res.ok) { console.error('[RELATORIO] Gemini error:', res.status); return; }
 
     const data = await res.json() as any;
-    const texto = data.content?.[0]?.text;
+    const texto = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!texto) return;
 
     const cabecalho = `🍁 *Maple Bear • Resumo da Semana*\n\n`;

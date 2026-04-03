@@ -873,9 +873,9 @@ router.on("compliance_quiz_criar", authGerente, feat, async (ctx) => {
     }
   }
 
-  // Gerar perguntas via Claude Haiku
-  const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-  if (ANTHROPIC_KEY && conteudoPolitica) {
+  // Gerar perguntas via Gemini Flash
+  const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (GEMINI_KEY && conteudoPolitica) {
     try {
       const nPerguntas = total_perguntas || 5;
       const promptIA = `Você é um especialista em compliance escolar. Com base no documento abaixo, gere exatamente ${nPerguntas} perguntas de múltipla escolha (4 alternativas cada) para avaliar se um funcionário de escola entende o conteúdo.
@@ -890,15 +890,15 @@ Responda APENAS em JSON válido, sem markdown, no formato:
 
 Onde resposta_correta é o índice (0-3) da opção correta. Varie a dificuldade entre fácil, média e difícil. Perguntas em português brasileiro.`;
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, messages: [{ role: "user", content: promptIA }] }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: promptIA }] }], generationConfig: { maxOutputTokens: 2000, temperature: 0.5 } }),
       });
 
       if (res.ok) {
         const aiData = await res.json() as any;
-        const texto = aiData.content?.[0]?.text || "";
+        const texto = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
         // Extrair JSON do texto
         const jsonMatch = texto.match(/\[[\s\S]*\]/);
         if (jsonMatch) {

@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════
-//  Shared: AI Service — Claude API wrapper
+//  Shared: AI Service — Gemini Flash API wrapper
 //  Camada nativa de inteligência operacional
 // ═══════════════════════════════════════════════════════
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export interface AIResponse {
   text: string;
@@ -21,40 +21,97 @@ export async function askClaude(
     temperature?: number;
   } = {}
 ): Promise<AIResponse | null> {
-  const key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!key) { console.log("[AI] ANTHROPIC_API_KEY não configurada"); return null; }
+  const key = Deno.env.get("GEMINI_API_KEY");
+  if (!key) { console.log("[AI] GEMINI_API_KEY não configurada"); return null; }
 
-  const model = options.model || "claude-haiku-4-5-20251001";
+  const model = options.model || "gemini-2.0-flash";
+
+  const contents: any[] = [];
+
+  // System instruction via systemInstruction field
+  const systemInstruction = options.system ? { parts: [{ text: options.system }] } : undefined;
+
+  contents.push({ role: "user", parts: [{ text: prompt }] });
+
   const body: any = {
-    model,
-    max_tokens: options.maxTokens || 500,
-    messages: [{ role: "user", content: prompt }],
+    contents,
+    generationConfig: {
+      maxOutputTokens: options.maxTokens || 500,
+      temperature: options.temperature ?? 0.7,
+    },
   };
-  if (options.system) body.system = options.system;
-  if (options.temperature !== undefined) body.temperature = options.temperature;
+  if (systemInstruction) body.systemInstruction = systemInstruction;
 
   try {
-    const res = await fetch(ANTHROPIC_URL, {
+    const res = await fetch(`${GEMINI_URL}/${model}:generateContent?key=${key}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
     if (!res.ok) {
-      console.error("[AI] Claude error:", res.status, await res.text());
+      console.error("[AI] Gemini error:", res.status, await res.text());
       return null;
     }
 
     const data = await res.json() as any;
-    const text = data.content?.[0]?.text || "";
-    const tokensIn = data.usage?.input_tokens || 0;
-    const tokensOut = data.usage?.output_tokens || 0;
-    // Haiku: $0.25/M input, $1.25/M output → ~R$ 1.30/M in, R$ 6.50/M out
-    const cost = (tokensIn * 0.0000013) + (tokensOut * 0.0000065);
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const tokensIn = data.usageMetadata?.promptTokenCount || 0;
+    const tokensOut = data.usageMetadata?.candidatesTokenCount || 0;
+    // Gemini Flash: free tier up to 15 RPM, paid ~$0.075/M input, $0.30/M output
+    const cost = (tokensIn * 0.0000004) + (tokensOut * 0.0000016);
+
+    return { text, tokens_input: tokensIn, tokens_output: tokensOut, cost };
+  } catch (e) {
+    console.error("[AI] Fetch error:", e);
+    return null;
+  }
+}
+
+/**
+ * Ask with image (vision) — for document classification
+ */
+export async function askWithImage(
+  prompt: string,
+  imageBase64: string,
+  mimeType: string,
+  options: { system?: string; maxTokens?: number } = {}
+): Promise<AIResponse | null> {
+  const key = Deno.env.get("GEMINI_API_KEY");
+  if (!key) { console.log("[AI] GEMINI_API_KEY não configurada"); return null; }
+
+  const model = "gemini-2.0-flash";
+  const systemInstruction = options.system ? { parts: [{ text: options.system }] } : undefined;
+
+  const body: any = {
+    contents: [{
+      role: "user",
+      parts: [
+        { inlineData: { mimeType, data: imageBase64 } },
+        { text: prompt },
+      ],
+    }],
+    generationConfig: { maxOutputTokens: options.maxTokens || 300, temperature: 0.3 },
+  };
+  if (systemInstruction) body.systemInstruction = systemInstruction;
+
+  try {
+    const res = await fetch(`${GEMINI_URL}/${model}:generateContent?key=${key}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      console.error("[AI] Gemini vision error:", res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json() as any;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const tokensIn = data.usageMetadata?.promptTokenCount || 0;
+    const tokensOut = data.usageMetadata?.candidatesTokenCount || 0;
+    const cost = (tokensIn * 0.0000004) + (tokensOut * 0.0000016);
 
     return { text, tokens_input: tokensIn, tokens_output: tokensOut, cost };
   } catch (e) {

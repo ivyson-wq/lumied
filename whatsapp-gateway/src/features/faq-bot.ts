@@ -16,36 +16,28 @@ export async function processarFaq(
 
   const faqsTexto = faqs.map((f: any) => `P: ${f.pergunta}\nR: ${f.resposta}`).join('\n\n');
 
-  // Consultar Anthropic API
+  // Consultar Gemini Flash API
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: `Você é o assistente da Maple Bear. Responda a pergunta abaixo APENAS se encontrar uma resposta clara nas FAQs fornecidas. Se não souber com certeza, responda APENAS com a palavra: ROTEAR
+        contents: [{ role: 'user', parts: [{ text: `Você é o assistente da Maple Bear. Responda a pergunta abaixo APENAS se encontrar uma resposta clara nas FAQs fornecidas. Se não souber com certeza, responda APENAS com a palavra: ROTEAR
 
 FAQs:
 ${faqsTexto}
 
 Pergunta do responsável: ${pergunta}
 
-Responda de forma amigável e direta. Máximo 3 linhas.`,
-        }],
+Responda de forma amigável e direta. Máximo 3 linhas.` }] }],
+        generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
       }),
     });
 
     if (!res.ok) return false;
 
     const data = await res.json() as any;
-    const resposta = data.content?.[0]?.text?.trim();
+    const resposta = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!resposta || resposta === 'ROTEAR') return false;
 
@@ -62,7 +54,7 @@ Responda de forma amigável e direta. Máximo 3 linhas.`,
 
     return true;
   } catch (e) {
-    console.error('[FAQ-BOT] Erro Anthropic:', e);
+    console.error('[FAQ-BOT] Erro Gemini:', e);
     return false;
   }
 }
