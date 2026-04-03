@@ -236,9 +236,71 @@ Landing page em `site/index.html` — marca **Lumied**.
 
 ---
 
+## Permissões (RBAC)
+
+Sistema de controle de acesso granular por papel + overrides por usuário.
+
+### 7 Papéis
+`gerente`, `diretor`, `financeiro`, `professora`, `professora_assistente`, `secretaria`, `manutencao`
+
+### 25 Módulos
+`dashboard`, `alunos`, `turmas`, `turnos`, `atividades`, `notas`, `frequencia`, `comunicacao`, `crm`, `financeiro`, `diplomas`, `atestados`, `almoxarifado`, `compliance`, `biblioteca`, `cantina`, `transporte`, `rh`, `whatsapp`, `loja`, `analytics`, `equipe`, `familias`, `config`, `historico_aluno`
+
+### Tabelas
+- `permissoes_papel` — Defaults por papel (pode_ver, pode_editar por módulo)
+- `permissoes_usuario` — Overrides por usuário (gerente pode personalizar)
+
+### Lógica de merge
+`permissoes_get` retorna defaults do papel + overrides do usuário (overrides prevalecem).
+
+### Defaults por papel
+| Papel | Acesso |
+|-------|--------|
+| **gerente/diretor** | Tudo (ver+editar) |
+| **financeiro** | Dashboard(ver), financeiro(edit), familias(ver), boletos(edit) |
+| **professora** | Dashboard(ver), notas(edit), frequencia(edit), comunicacao(edit), diplomas(edit), atividades(ver) |
+| **prof. assistente** | Dashboard(ver), frequencia(edit), comunicacao(ver) |
+| **secretaria** | Dashboard(ver), alunos(edit), familias(edit), atestados(edit), turmas(ver), crm(ver) |
+| **manutencao** | Almoxarifado(edit) |
+
+### UI
+Botão 🔐 na lista da equipe → modal com 25 módulos × checkboxes (ver/editar) → salvar/restaurar padrão.
+
+### Endpoints
+- `permissoes_get` — Busca permissões do usuário (merge papel + overrides)
+- `permissoes_update` — Salva overrides personalizados
+- `permissoes_reset` — Remove overrides, volta ao padrão do papel
+
+---
+
+## WhatsApp Document Intake
+
+Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → classificação automática por IA → confirmação → arquivamento.
+
+### Fluxo
+1. Staff envia foto ou PDF via WhatsApp
+2. Gateway detecta remetente na tabela `wa_staff`
+3. Baixa mídia da Meta API → salva no bucket `wa-documentos` (Supabase Storage)
+4. Claude Haiku classifica em 13 categorias
+5. Envia resultado + botões [✅ Confirmar] [🔄 Reclassificar]
+6. Staff confirma → status `confirmado`
+
+### 13 Categorias
+`atestado_medico`, `certificacao`, `politica`, `inspecao`, `documento_aluno`, `ata_aluno`, `contrato`, `nota_fiscal`, `comprovante`, `comunicado`, `ata_reuniao`, `relatorio`, `outro`
+
+### Tabelas
+- `wa_documentos` — Tracking de documentos recebidos (classificação, status, contexto IA)
+- `wa_staff` — Staff autorizado a enviar documentos via WhatsApp
+- `aluno_historico` — Atas do aluno (acesso restrito coordenação/direção)
+
+### Bucket Storage
+- `wa-documentos` — Público, 10MB, mimes: JPEG, PNG, WebP, PDF, DOC, DOCX, XLSX
+
+---
+
 ## Banco de Dados
 
-- **100 migrations** (009-100)
+- **103 migrations** (009-103)
 - Migrations relevantes:
   - `085-088` — Compliance: hora extra, incidentes, certificações, inspeções, políticas, calendário
   - `086` — Indicações B2C (pais indicam famílias)
@@ -254,6 +316,9 @@ Landing page em `site/index.html` — marca **Lumied**.
   - `098` — Correção de preços extras (margem saudável) + resp financeiro imutável
   - `099` — IA Nativa (ia_insights, ia_conversas, ia_config)
   - `100` — ROI Calculator (roi_config, roi_resultados)
+  - `101` — WhatsApp Document Intake (wa_documentos, wa_staff)
+  - `102` — Histórico do Aluno (aluno_historico, atas restritas)
+  - `103` — Permissões por usuário (permissoes_usuario, defaults 7 papéis × 25 módulos)
 
 ---
 
