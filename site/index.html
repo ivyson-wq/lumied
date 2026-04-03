@@ -344,7 +344,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 }
 .toggle-switch.annual::after { left: 27px; }
 .save-badge { background: var(--gradient-primary); color: #fff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
-.pricing-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 .plan-card {
   background: var(--bg-card-light); border: 1px solid var(--border-light); border-radius: 20px;
   padding: 32px 24px; text-align: center; transition: all .3s; position: relative;
@@ -572,7 +572,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   .hero-visual { margin-top: 32px; }
   .hero-screenshot { transform: none; }
   .hero-screenshot:hover { transform: none; }
-  .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+  .pricing-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
   .features-grid { grid-template-columns: repeat(2, 1fr); }
   .roi-layout { grid-template-columns: 1fr; }
 }
@@ -1261,6 +1261,27 @@ calcularROI();
         </ul>
         <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 3.999</strong><br><span style="font-size:10px;">em até 5x de R$ 799,80</span></div>
         <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Falar com Vendas</button>
+      </div>
+      <!-- PUBLICO -->
+      <div class="plan-card" style="border-color:var(--green);border-width:2px;">
+        <div class="plan-badge" style="background:var(--green);">Escolas Públicas</div>
+        <div class="plan-name">Público</div>
+        <div class="plan-desc">Gestão para redes municipais e estaduais</div>
+        <div class="plan-price">
+          <span class="amount" style="font-size:28px;">Sob Consulta</span>
+          <div class="per-student" style="color:var(--green);">Licitação · Pregão · Nota de Empenho</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Todos os módulos do Gestão</li>
+          <li><span class="check">&#10003;</span> Multi-escola (rede municipal)</li>
+          <li><span class="check">&#10003;</span> Dashboard consolidado da rede</li>
+          <li><span class="check">&#10003;</span> Relatórios para Censo Escolar</li>
+          <li><span class="check">&#10003;</span> Integração FNDE/PDDE</li>
+          <li><span class="check">&#10003;</span> Merenda escolar (PNAE)</li>
+          <li><span class="check">&#10003;</span> Transporte escolar</li>
+          <li><span class="check">&#10003;</span> Compliance MEC</li>
+        </ul>
+        <button class="plan-btn plan-btn-outline" style="border-color:var(--green);color:var(--green);" onclick="location.href='#contact'">Solicitar Proposta</button>
       </div>
     </div>
   </div>

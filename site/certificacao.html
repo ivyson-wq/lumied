@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Certificação Escola Digital — Lumied</title>
+<meta name="description" content="Selo de Escola Digital Lumied. Certifique sua escola como referência em gestão digital. 3 níveis: Bronze, Prata e Ouro.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236C63FF'/><path d='M50 20L30 45h40L50 20zM30 50v25h40V50H30z' fill='white'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAFAFA;--dark:#0A0A0F;--primary:#6C63FF;--green:#10B981;--gold:#F59E0B;--bronze:#CD7F32;--silver:#A0AEC0;--text:#525252;--heading:#171717;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;color:var(--text);line-height:1.6;background:var(--bg);}
+.header{background:var(--dark);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header a{color:#fff;text-decoration:none;font-weight:700;font-size:14px;}
+.header nav a{color:#a3a3a3;margin-left:20px;font-weight:500;font-size:13px;}
+.header nav a:hover{color:#fff;}
+.hero{background:linear-gradient(135deg,var(--dark),#1A1030);padding:100px 24px 80px;text-align:center;color:#fff;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(108,99,255,.15),transparent 70%);top:-100px;right:-100px;}
+.seal{width:140px;height:140px;margin:0 auto 24px;background:linear-gradient(135deg,var(--primary),#3B82F6);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(108,99,255,.3);}
+.seal svg{width:70px;height:70px;fill:#fff;}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,48px);font-weight:800;margin-bottom:12px;letter-spacing:-.02em;}
+.hero p{font-size:17px;max-width:560px;margin:0 auto 32px;color:rgba(255,255,255,.7);line-height:1.7;}
+.section{padding:80px 24px;}
+.container{max-width:1000px;margin:0 auto;}
+.section-title{font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,36px);font-weight:800;color:var(--heading);text-align:center;margin-bottom:12px;}
+.section-sub{text-align:center;font-size:15px;color:var(--text);max-width:520px;margin:0 auto 48px;}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.tier{background:#fff;border-radius:16px;padding:32px 24px;text-align:center;border:2px solid #e5e5e5;transition:all .3s;}
+.tier:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.08);}
+.tier-icon{width:64px;height:64px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.tier-bronze .tier-icon{background:rgba(205,127,50,.1);color:var(--bronze);}
+.tier-silver .tier-icon{background:rgba(160,174,192,.1);color:var(--silver);}
+.tier-gold .tier-icon{background:rgba(245,158,11,.1);color:var(--gold);}
+.tier h3{font-size:22px;font-weight:800;color:var(--heading);margin-bottom:4px;}
+.tier .req{font-size:13px;color:var(--primary);font-weight:600;margin-bottom:16px;}
+.tier ul{list-style:none;text-align:left;font-size:13px;}
+.tier ul li{padding:6px 0;border-bottom:1px solid #f5f5f5;display:flex;gap:8px;}
+.tier ul li:last-child{border:none;}
+.check{color:var(--green);font-weight:700;}
+.benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:40px;}
+.benefit{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:24px;text-align:center;}
+.benefit .icon{font-size:32px;margin-bottom:12px;}
+.benefit h4{font-size:15px;font-weight:700;color:var(--heading);margin-bottom:6px;}
+.benefit p{font-size:13px;color:var(--text);}
+.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:40px;}
+.step{text-align:center;}
+.step-num{width:40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;margin:0 auto 12px;}
+.step h4{font-size:14px;font-weight:700;color:var(--heading);margin-bottom:4px;}
+.step p{font-size:12px;color:var(--text);}
+.cta-bar{background:linear-gradient(135deg,var(--primary),#3B82F6);padding:48px 24px;text-align:center;color:#fff;}
+.cta-bar h2{font-size:clamp(22px,3vw,32px);font-weight:800;margin-bottom:8px;}
+.cta-bar p{font-size:15px;opacity:.8;margin-bottom:20px;}
+.cta-bar a{display:inline-block;padding:14px 32px;background:#fff;color:var(--primary);border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;}
+.footer{background:var(--dark);color:#a3a3a3;padding:32px 24px;text-align:center;font-size:12px;}
+.footer a{color:#a3a3a3;text-decoration:none;}
+@media(max-width:768px){.tiers,.steps-grid{grid-template-columns:1fr;}.benefits{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+<div class="header">
+  <a href="/site/">← Lumied</a>
+  <nav>
+    <a href="/site/#features">Funcionalidades</a>
+    <a href="/site/#pricing">Planos</a>
+    <a href="/site/blog/">Blog</a>
+    <a href="/site/#contact" style="color:var(--primary);font-weight:600;">Agendar Demo</a>
+  </nav>
+</div>
+
+<section class="hero">
+  <div class="seal"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+  <h1>Certificação Escola Digital</h1>
+  <p>Transforme sua escola em referência de gestão digital. O selo Lumied atesta que sua instituição utiliza tecnologia de ponta para oferecer a melhor experiência a famílias, professores e alunos.</p>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">3 Níveis de Certificação</h2>
+    <p class="section-sub">Cada nível reconhece o grau de maturidade digital da sua escola.</p>
+    <div class="tiers">
+      <div class="tier tier-bronze">
+        <div class="tier-icon">🥉</div>
+        <h3>Bronze</h3>
+        <div class="req">6+ módulos ativos · 3 meses</div>
+        <ul>
+          <li><span class="check">✓</span> Selo digital para site e redes sociais</li>
+          <li><span class="check">✓</span> Certificado oficial Lumied</li>
+          <li><span class="check">✓</span> Listagem no diretório Lumied</li>
+          <li><span class="check">✓</span> Badge "Escola Digital" no portal</li>
+        </ul>
+      </div>
+      <div class="tier tier-silver" style="border-color:var(--silver);">
+        <div class="tier-icon">🥈</div>
+        <h3>Prata</h3>
+        <div class="req">15+ módulos ativos · 6 meses · 80% adoção</div>
+        <ul>
+          <li><span class="check">✓</span> Tudo do Bronze +</li>
+          <li><span class="check">✓</span> Case study publicado no blog</li>
+          <li><span class="check">✓</span> Destaque no site Lumied</li>
+          <li><span class="check">✓</span> Suporte prioritário</li>
+          <li><span class="check">✓</span> Selo para material impresso</li>
+        </ul>
+      </div>
+      <div class="tier tier-gold" style="border-color:var(--gold);">
+        <div class="tier-icon">🥇</div>
+        <h3>Ouro</h3>
+        <div class="req">23 módulos · 12 meses · 90% adoção · IA ativa</div>
+        <ul>
+          <li><span class="check">✓</span> Tudo do Prata +</li>
+          <li><span class="check">✓</span> Convite para conselho consultivo</li>
+          <li><span class="check">✓</span> Co-marketing (eventos e webinars)</li>
+          <li><span class="check">✓</span> Acesso antecipado a novos módulos</li>
+          <li><span class="check">✓</span> Desconto de 10% na renovação</li>
+          <li><span class="check">✓</span> Selo premium com QR de verificação</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#fff;">
+  <div class="container">
+    <h2 class="section-title">Por que se certificar?</h2>
+    <div class="benefits">
+      <div class="benefit"><div class="icon">🏆</div><h4>Credibilidade</h4><p>Demonstre às famílias que sua escola investe em tecnologia e inovação.</p></div>
+      <div class="benefit"><div class="icon">📈</div><h4>Marketing</h4><p>Use o selo em campanhas de matrícula, site e materiais impressos.</p></div>
+      <div class="benefit"><div class="icon">🤝</div><h4>Comunidade</h4><p>Faça parte da rede de escolas digitais referência no Brasil.</p></div>
+      <div class="benefit"><div class="icon">🎯</div><h4>Diferenciação</h4><p>Destaque-se da concorrência com um selo verificável de qualidade.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Como conseguir?</h2>
+    <div class="steps-grid">
+      <div class="step"><div class="step-num">1</div><h4>Use o Lumied</h4><p>Ative os módulos do seu plano e treine sua equipe.</p></div>
+      <div class="step"><div class="step-num">2</div><h4>Atinja a adoção</h4><p>Mantenha uso ativo por 80%+ da equipe por 3+ meses.</p></div>
+      <div class="step"><div class="step-num">3</div><h4>Solicite</h4><p>A Lumi monitora automaticamente. Quando elegível, você será notificado.</p></div>
+      <div class="step"><div class="step-num">4</div><h4>Receba o selo</h4><p>Certificado digital + badge para site, redes e materiais.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="cta-bar">
+  <h2>Comece sua jornada de certificação</h2>
+  <p>O primeiro passo é usar o Lumied. Agende uma demo e descubra como.</p>
+  <a href="/site/#contact">Agendar Demo Gratuita →</a>
+</div>
+
+<div class="footer">
+  <p>© 2026 Lumied. Todos os direitos reservados. <a href="/site/">lumied.com.br</a></p>
+</div>
+</body>
+</html>
