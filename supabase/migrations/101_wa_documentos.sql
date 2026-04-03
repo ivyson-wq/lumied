@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS wa_documentos (
     'politica',
     'inspecao',
     'documento_aluno',
+    'ata_aluno',
     'contrato',
     'nota_fiscal',
     'comprovante',

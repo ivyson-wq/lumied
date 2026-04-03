@@ -30,6 +30,7 @@ const CLASSIFICACOES: Record<string, { label: string; destino: string }> = {
   politica:          { label: 'Política/Protocolo',   destino: 'compliance_politicas' },
   inspecao:          { label: 'Relatório de Inspeção', destino: 'compliance_inspecoes' },
   documento_aluno:   { label: 'Documento do Aluno',   destino: 'matricula_documentos' },
+  ata_aluno:         { label: 'Ata do Aluno',         destino: 'aluno_historico' },
   contrato:          { label: 'Contrato',             destino: 'documentos_escola' },
   nota_fiscal:       { label: 'Nota Fiscal',          destino: 'documentos_escola' },
   comprovante:       { label: 'Comprovante',          destino: 'documentos_escola' },
@@ -120,6 +121,7 @@ async function classificarDocumento(
 - politica: Políticas internas, protocolos, regulamentos, procedimentos
 - inspecao: Relatórios de inspeção, checklists de conformidade, vistorias
 - documento_aluno: RG, CPF, certidão nascimento, comprovante, histórico escolar
+- ata_aluno: Atas de ocorrência do aluno, registros de comportamento, acompanhamento pedagógico individual, reunião com responsáveis sobre o aluno
 - contrato: Contratos de matrícula, prestação de serviços, trabalhistas
 - nota_fiscal: Notas fiscais, recibos, cupons fiscais
 - comprovante: Comprovantes de pagamento, depósito, transferência
