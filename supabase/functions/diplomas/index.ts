@@ -35,7 +35,7 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
   }
   // Fallback: sessão unificada (tabela sessoes/usuarios)
   const user = await getUsuario(sb, token)
-  if (user && (user.papel === 'professora' || user.papel === 'gerente')) {
+  if (user && user.papel === 'professora') {
     // Busca dados da professora pelo mesmo ID ou email
     const { data: prof } = await sb
       .from('professoras').select('id, nome, email')
@@ -176,8 +176,8 @@ async function uploadArquivo(
   return { url: publicUrl }
 }
 
-const ML_CLIENT_ID = Deno.env.get('ML_CLIENT_ID') || '1358685762306521'
-const ML_CLIENT_SECRET = Deno.env.get('ML_CLIENT_SECRET') || 'jTYGWwi1V8XOxS7cpcfyrSNoI2bLiPFB'
+const ML_CLIENT_ID = Deno.env.get('ML_CLIENT_ID') || ''
+const ML_CLIENT_SECRET = Deno.env.get('ML_CLIENT_SECRET') || ''
 const ML_REDIRECT_URI = Deno.env.get('ML_REDIRECT_URI') || `${Deno.env.get('SUPABASE_URL')}/functions/v1/diplomas?action=ml_oauth_callback`
 
 async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string | null> {

@@ -11,7 +11,7 @@ initSentry();
 const SUPABASE_ANON = window.__SUPABASE_ANON || '';
 
 const api = createClient(SUPABASE_ANON, {
-  tokenKey: 'mb_prof_token',
+  tokenKey: 'prof_token',
   onAuthError: () => {
     showToast('Sessão expirada.', 'error');
     appStore.set('user', null);

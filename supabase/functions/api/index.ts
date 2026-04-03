@@ -67,8 +67,8 @@ serve(async (req: Request) => {
     const userEmail = (user.email || "").toLowerCase().trim()
     // Busca email do superusuário no banco
     const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").maybeSingle()
-    const superEmail = (cfgRow?.valor || "ivyson@gmail.com").toLowerCase().trim()
-    if (userEmail !== superEmail) return err("Acesso negado. Apenas o superusuário pode acessar esta página.", 403)
+    const superEmail = cfgRow?.valor?.toLowerCase().trim() || ''
+    if (!superEmail || userEmail !== superEmail) return err("Acesso negado. Apenas o superusuário pode acessar esta página.", 403)
     return ok({ ok: true, email: userEmail })
   }
 
@@ -80,8 +80,8 @@ serve(async (req: Request) => {
     if (authErr || !user) return err("Sessão inválida.", 401)
     const userEmail = (user.email || "").toLowerCase().trim()
     const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").maybeSingle()
-    const superEmail = (cfgRow?.valor || "ivyson@gmail.com").toLowerCase().trim()
-    if (userEmail !== superEmail) return err("Acesso negado.", 403)
+    const superEmail = cfgRow?.valor?.toLowerCase().trim() || ''
+    if (!superEmail || userEmail !== superEmail) return err("Acesso negado.", 403)
     const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
     if (!configs?.length) return err("Nenhuma config fornecida.")
     for (const c of configs) {
@@ -283,8 +283,11 @@ serve(async (req: Request) => {
 
   // Remover ausência (criança vai comparecer afinal)
   if (action === "ausencia_delete") {
-    const { id } = body as { id: string };
-    await admin.from("ausencias").delete().eq("id", id);
+    const { id, email_resp } = body as { id: string; email_resp: string };
+    if (!id || !email_resp) return err("ID e email_resp obrigatórios.");
+    const { data: ausencia } = await admin.from("ausencias").select("id").eq("id", id).eq("email_resp", email_resp).maybeSingle();
+    if (!ausencia) return err("Ausência não encontrada ou não pertence a este responsável.", 404);
+    await admin.from("ausencias").delete().eq("id", id).eq("email_resp", email_resp);
     return ok({ success: true });
   }
 

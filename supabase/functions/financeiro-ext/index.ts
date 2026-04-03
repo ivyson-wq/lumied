@@ -33,7 +33,7 @@ router.on("pix_gerar_cobranca", authGerente, requireFeature("pix"), async (ctx) 
   if (!valor) throw new AppError("VALIDATION_FAILED", "Valor obrigatório.");
   const { data: config } = await ctx.sb.from("pix_config").select("*").eq("ativo", true).limit(1).single();
   if (!config) throw new AppError("BAD_REQUEST", "PIX não configurado.");
-  const txid = "MB" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+  const txid = "MB" + Date.now().toString(36).toUpperCase() + Array.from(crypto.getRandomValues(new Uint8Array(4))).map(b => b.toString(36)).join('').toUpperCase();
   const payload = gerarPayloadPix(config.chave_pix, config.nome_beneficiario || "MAPLE BEAR", config.cidade || "CAXIAS DO SUL", valor, txid);
   const { data, error } = await ctx.sb.from("pix_cobrancas").insert({ boleto_id, mensalidade_id, txid, qr_code_payload: payload, valor, descricao, familia_email, expira_em: new Date(Date.now() + 24 * 3600000).toISOString() }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);

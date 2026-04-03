@@ -219,7 +219,7 @@ async function loadProvas() {
   const token = localStorage.getItem('mb_aluno_token');
   if (!token) return;
   // Simple validation: try to get notas
-  const d = await api({ action:'aluno_notas_get', aluno_email: '', ano: 2026, _aluno_token: token });
+  const d = await api({ action:'aluno_notas_get', aluno_email: '', ano: new Date().getFullYear(), _aluno_token: token });
   // If no error about session, we're ok — but we need the aluno data
   // For now, just redirect to login if no stored data
   // TODO: add aluno_perfil action

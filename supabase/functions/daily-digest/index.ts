@@ -88,7 +88,7 @@ serve(async (req: Request) => {
             </table>
           </div>
           <div style="background:#f0ece6;padding:16px;border-radius:0 0 16px 16px;text-align:center;border:1px solid #e2dbd1;border-top:none;">
-            <a href="https://app.maplebearcaxiasdosul.com.br" style="display:inline-block;padding:10px 24px;background:#C8102E;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+            <a href="${Deno.env.get('APP_URL') || 'https://app.maplebearcaxiasdosul.com.br'}" style="display:inline-block;padding:10px 24px;background:#C8102E;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
               Ver mais no Portal
             </a>
             <p style="margin:12px 0 0;font-size:11px;color:#999;">

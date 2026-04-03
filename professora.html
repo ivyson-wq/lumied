@@ -1212,7 +1212,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   async function callApiCompliance(body) {
-    const token = localStorage.getItem('mb_prof_token');
+    const token = localStorage.getItem('prof_token');
     const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/compliance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
@@ -1492,7 +1492,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     reader.onloadend = async () => {
       const base64 = reader.result;
       try {
-        const token = localStorage.getItem('mb_prof_token');
+        const token = localStorage.getItem('prof_token');
         const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/transcricao', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
@@ -1511,7 +1511,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   async function salvarAgendaAudio(enviarWa) {
     const texto = document.getElementById('audioTexto').value.trim();
     if (!texto) return alert('Texto vazio.');
-    const token = localStorage.getItem('mb_prof_token');
+    const token = localStorage.getItem('prof_token');
     try {
       const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/transcricao', {
         method: 'POST',

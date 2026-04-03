@@ -2518,9 +2518,9 @@ body.has-bottomnav{padding-bottom:0;}
         const icon = tipoIcons[item.tipo] || '📌';
         html += `<div style="display:flex;gap:10px;padding:8px 0;">
           <span style="font-size:18px;">${icon}</span>
-          <div><strong style="font-size:13px;">${item.titulo || item.tipo}</strong>
-          ${item.descricao ? `<p style="font-size:12px;color:var(--muted);margin-top:2px;">${item.descricao}</p>` : ''}
-          ${item.valor ? `<span style="font-size:12px;color:var(--blue);">${item.valor}</span>` : ''}
+          <div><strong style="font-size:13px;">${esc2(item.titulo || item.tipo)}</strong>
+          ${item.descricao ? `<p style="font-size:12px;color:var(--muted);margin-top:2px;">${esc2(item.descricao)}</p>` : ''}
+          ${item.valor ? `<span style="font-size:12px;color:var(--blue);">${esc2(item.valor)}</span>` : ''}
           </div></div>`;
         // Fotos
         for (const foto of item.agenda_fotos || []) {
@@ -2573,7 +2573,7 @@ body.has-bottomnav{padding-bottom:0;}
         const media = disc.media !== null ? disc.media.toFixed(1) : '—';
         const cor = disc.media !== null && disc.media >= 7 ? 'color:var(--green);font-weight:700;' : disc.media !== null ? 'color:var(--red);font-weight:700;' : '';
         html += `<tr style="border-bottom:1px solid #f0ece6;">
-          <td style="padding:10px 12px;">${disc.nome}</td>
+          <td style="padding:10px 12px;">${esc2(disc.nome)}</td>
           <td style="padding:10px 12px;text-align:center;${cor}">${media}</td>
         </tr>`;
       }
@@ -2599,8 +2599,8 @@ body.has-bottomnav{padding-bottom:0;}
       return `<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f0ece6;">
         ${it.foto_url ? `<img src="${it.foto_url}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;">` : '<div style="width:48px;height:48px;background:#f0ece6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>'}
         <div style="flex:1;">
-          <div style="font-weight:600;font-size:13px;">${it.descricao}</div>
-          ${it.local_encontrado ? `<div style="font-size:11px;color:var(--muted);">📍 ${it.local_encontrado} · ${dt}</div>` : `<div style="font-size:11px;color:var(--muted);">${dt}</div>`}
+          <div style="font-weight:600;font-size:13px;">${esc2(it.descricao)}</div>
+          ${it.local_encontrado ? `<div style="font-size:11px;color:var(--muted);">📍 ${esc2(it.local_encontrado)} · ${dt}</div>` : `<div style="font-size:11px;color:var(--muted);">${dt}</div>`}
         </div>
       </div>`;
     }).join('');

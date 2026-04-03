@@ -134,7 +134,7 @@ serve(async (req: Request) => {
           await sendEscalationEmail(resendKey, ticket);
         }
         await sb.from("tickets").update({
-          status: "respondido",
+          status: "escalado",
           resposta: "Obrigado pelo seu contato! Sua solicitação foi encaminhada para nossa equipe técnica e será analisada em breve. Você receberá um retorno por email.",
           respondido_por: "lumied-auto@lumied.com.br",
         }).eq("id", ticket.id);

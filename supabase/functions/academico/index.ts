@@ -289,6 +289,7 @@ serve(async (req: Request) => {
     if (formula === "ponderada") {
       let somaPN = 0, somaPesos = 0;
       for (const av of normais) {
+        if (!av.valor_maximo || av.valor_maximo <= 0) continue;
         const nota = notas.find(n => n.avaliacao_id === av.id);
         if (nota && nota.valor !== null) {
           somaPN += (nota.valor / av.valor_maximo) * 10 * av.peso;
@@ -299,6 +300,7 @@ serve(async (req: Request) => {
     } else {
       let soma = 0, count = 0;
       for (const av of normais) {
+        if (!av.valor_maximo || av.valor_maximo <= 0) continue;
         const nota = notas.find(n => n.avaliacao_id === av.id);
         if (nota && nota.valor !== null) {
           soma += (nota.valor / av.valor_maximo) * 10;
@@ -312,6 +314,7 @@ serve(async (req: Request) => {
     if (recup.length > 0 && config?.permite_recuperacao) {
       const pesoRecup = config.peso_recuperacao || 0.4;
       for (const av of recup) {
+        if (!av.valor_maximo || av.valor_maximo <= 0) continue;
         const nota = notas.find(n => n.avaliacao_id === av.id);
         if (nota && nota.valor !== null) {
           const notaRecup = (nota.valor / av.valor_maximo) * 10;

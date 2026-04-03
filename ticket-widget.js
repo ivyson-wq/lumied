@@ -7,7 +7,7 @@
 
   // Esperar autenticacao — widgets so aparecem apos login
   function hasAuth() {
-    return localStorage.getItem('mb_token') || localStorage.getItem('mb_prof_token') || localStorage.getItem('mb_aluno_token');
+    return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('mb_aluno_token');
   }
   if (!hasAuth()) {
     const chk = setInterval(() => { if (hasAuth()) { clearInterval(chk); startWidget(); } }, 2000);

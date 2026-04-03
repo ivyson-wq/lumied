@@ -8,7 +8,7 @@
 
   // Esperar autenticacao — so injetar apos login
   function isLoggedIn() {
-    return localStorage.getItem('mb_token') || localStorage.getItem('mb_prof_token') || localStorage.getItem('mb_aluno_token') || localStorage.getItem('mb_admin_token');
+    return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('mb_aluno_token') || localStorage.getItem('mb_admin_token');
   }
   if (!isLoggedIn()) {
     // Re-checar a cada 2s ate login
@@ -30,7 +30,7 @@
 
   const isGerente = portal === 'gerente';
   const API_ACTION = portal === 'professora' ? 'ai_perguntar_prof' : 'ai_perguntar';
-  const TOKEN_KEY = portal === 'professora' ? 'mb_prof_token' : 'mb_token';
+  const TOKEN_KEY = portal === 'professora' ? 'prof_token' : 'mb_token';
 
   // Inject CSS — bottombar fixa
   const style = document.createElement('style');

@@ -3052,7 +3052,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         body: JSON.stringify({ action: 'ai_perguntar', pergunta, portal: 'gerente', _token: getToken() }),
       }).then(r => r.json());
       const texto = r.data?.resposta || r.resposta || 'Sem resposta.';
-      respDiv.innerHTML = '<div style="display:flex;gap:10px;"><span style="font-size:20px;flex-shrink:0;">✨</span><div>' + texto.replace(/\n/g, '<br>') + '</div></div>';
+      const safe = texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      respDiv.innerHTML = '<div style="display:flex;gap:10px;"><span style="font-size:20px;flex-shrink:0;">✨</span><div>' + safe.replace(/\n/g, '<br>') + '</div></div>';
     } catch { respDiv.innerHTML = '<span style="color:#C8102E;">Erro de conexão.</span>'; }
   }
 
@@ -3076,11 +3077,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div class="insight-card" onclick="if(typeof showToast==='function')showToast('Insight marcado como lido','info');fetch(CONFIG.SUPABASE_URL+'/functions/v1/lumied-ai',{method:'POST',headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON,'Authorization':'Bearer '+CONFIG.SUPABASE_ANON},body:JSON.stringify({action:'ai_insight_acao',id:'${i.id}',status:'lida',_token:getToken()})})">
           <div class="insight-icon">${catIcons[i.categoria] || '✨'}</div>
           <div style="display:flex;align-items:center;gap:6px;">
-            <div class="insight-title">${i.titulo}</div>
+            <div class="insight-title">${esc(i.titulo)}</div>
             <span style="font-size:10px;">${impactIcons[i.impacto] || ''}</span>
           </div>
-          <div class="insight-text">${i.descricao}</div>
-          ${i.acao_sugerida ? `<a class="insight-action">→ ${i.acao_sugerida}</a>` : ''}
+          <div class="insight-text">${esc(i.descricao)}</div>
+          ${i.acao_sugerida ? `<a class="insight-action">→ ${esc(i.acao_sugerida)}</a>` : ''}
         </div>
       `).join('');
       // Update greeting with resume
