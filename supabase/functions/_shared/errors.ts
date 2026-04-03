@@ -5,8 +5,16 @@
 import { getCorsHeaders } from "./cors.ts";
 import { captureException } from "./sentry.ts";
 
-// Default headers (for responses without request context)
-const CORS_HEADERS = getCorsHeaders();
+// Current CORS headers — updated per-request via setRequestForCors()
+let _currentCorsHeaders = getCorsHeaders();
+
+/**
+ * Update CORS headers based on the current request origin.
+ * Call this at the start of each request handler.
+ */
+export function setRequestForCors(req: Request): void {
+  _currentCorsHeaders = getCorsHeaders(req);
+}
 
 export type ErrorCode =
   | 'VALIDATION_FAILED'
@@ -62,7 +70,7 @@ export function errorResponse(code: ErrorCode, message: string, details?: unknow
       ...(details ? { details } : {}),
       timestamp: new Date().toISOString(),
     }),
-    { status, headers: CORS_HEADERS }
+    { status, headers: _currentCorsHeaders }
   );
 }
 
@@ -72,7 +80,7 @@ export function errorResponse(code: ErrorCode, message: string, details?: unknow
 export function successResponse(data: unknown, status = 200): Response {
   return new Response(
     JSON.stringify(data),
-    { status, headers: CORS_HEADERS }
+    { status, headers: _currentCorsHeaders }
   );
 }
 
@@ -80,7 +88,7 @@ export function successResponse(data: unknown, status = 200): Response {
  * CORS preflight Response
  */
 export function corsResponse(): Response {
-  return new Response("ok", { headers: CORS_HEADERS });
+  return new Response("ok", { headers: _currentCorsHeaders });
 }
 
 /**
@@ -89,6 +97,7 @@ export function corsResponse(): Response {
 export function withErrorHandler(handler: (req: Request) => Promise<Response>): (req: Request) => Promise<Response> {
   return async (req: Request) => {
     try {
+      setRequestForCors(req);
       if (req.method === "OPTIONS") return corsResponse();
       return await handler(req);
     } catch (error) {

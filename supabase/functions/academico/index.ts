@@ -12,7 +12,8 @@ import { sanitizeBody } from "../_shared/validation.ts";
 import { validarSessao } from "../_shared/auth.ts";
 import { captureException } from "../_shared/sentry.ts";
 
-const CORS = getCorsHeaders();
+// CORS set dynamically per request inside serve()
+let CORS: Record<string, string> = getCorsHeaders();
 
 const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
 const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
@@ -28,6 +29,7 @@ async function validarSessaoProf(sb: ReturnType<typeof createClient>, token: str
 }
 
 serve(async (req: Request) => {
+  CORS = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
 

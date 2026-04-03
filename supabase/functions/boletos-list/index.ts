@@ -122,9 +122,10 @@ import { getCorsHeaders } from '../_shared/cors.ts'
 import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
 import { captureException } from '../_shared/sentry.ts'
 
-const corsHeaders = getCorsHeaders()
+let corsHeaders: Record<string, string> = getCorsHeaders()
 
 Deno.serve(async (req) => {
+  corsHeaders = getCorsHeaders(req)
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
   if (req.method !== 'POST') return new Response('Método não permitido', { status: 405, headers: corsHeaders })
 

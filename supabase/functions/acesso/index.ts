@@ -3,7 +3,7 @@ import { getCorsHeaders } from '../_shared/cors.ts'
 import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
 import { captureException } from '../_shared/sentry.ts'
 
-const CORS = getCorsHeaders()
+let CORS: Record<string, string> = getCorsHeaders()
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
@@ -42,6 +42,7 @@ async function sendEmail(to: string[], subject: string, html: string, cfg?: Reco
 }
 
 Deno.serve(async (req) => {
+  CORS = getCorsHeaders(req)
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
   try {
 

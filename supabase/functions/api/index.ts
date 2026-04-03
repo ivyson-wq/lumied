@@ -15,18 +15,18 @@ import { hashSenhaV1 as hashSenha, hashSenha as hashSenhaProf, verificarSenhaAut
 
 const log = createLogger("api");
 
-const CORS = getCorsHeaders();
-
-const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
-const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
-
 // ── Validar sessão (gerente) ──
 async function validarSessao(admin: ReturnType<typeof createClient>, token: string | null) {
   return _validarSessao(admin, "gerente_sessoes", "gerentes", "gerente_id", token);
 }
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return corsResponse();
+  // Dynamic CORS based on request origin
+  const CORS = getCorsHeaders(req);
+  const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
+  const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,

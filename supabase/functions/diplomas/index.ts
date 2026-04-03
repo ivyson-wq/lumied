@@ -9,7 +9,8 @@ import { hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomTo
 
 const log = createLogger('diplomas')
 
-const CORS = getCorsHeaders()
+// CORS headers are set dynamically per-request inside serve()
+let CORS: Record<string, string> = getCorsHeaders()
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
@@ -208,6 +209,7 @@ async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string |
 }
 
 Deno.serve(async (req) => {
+  CORS = getCorsHeaders(req)
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
 
   // Rate limiting

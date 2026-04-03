@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import { errorResponse, corsResponse, AppError } from "./errors.ts";
+import { errorResponse, corsResponse, setRequestForCors, AppError } from "./errors.ts";
 import { checkRateLimit, getClientIP, RateLimitConfig } from "./ratelimit.ts";
 import { validate, sanitizeBody, Schema } from "./validation.ts";
 import { createLogger } from "./logger.ts";
@@ -55,6 +55,7 @@ export class Router {
 
   /** Handle incoming request */
   async handle(req: Request, sb: SupabaseClient): Promise<Response> {
+    setRequestForCors(req);
     if (req.method === "OPTIONS") return corsResponse();
 
     const startTime = Date.now();
