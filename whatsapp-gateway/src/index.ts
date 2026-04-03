@@ -7,6 +7,23 @@ import { handleWebhook } from './handlers/webhook';
 import { handleSend } from './handlers/send';
 import { handleCron } from './handlers/cron';
 
+/**
+ * Verify Meta webhook signature (X-Hub-Signature-256)
+ */
+async function verifyWebhookSignature(req: Request, rawBody: string, appSecret?: string): Promise<boolean> {
+  if (!appSecret) return true; // Skip if not configured yet
+  const signature = req.headers.get('x-hub-signature-256');
+  if (!signature) return false;
+  const [, hash] = signature.split('=');
+  if (!hash) return false;
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(appSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
+  const computed = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return computed === hash;
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -31,7 +48,19 @@ export default {
 
     // Webhook de mensagens (POST)
     if (req.method === 'POST' && url.pathname === '/webhook') {
-      return handleWebhook(req, env);
+      // Verify Meta signature before processing
+      const rawBody = await req.text();
+      if (!(await verifyWebhookSignature(req, rawBody, env.META_APP_SECRET))) {
+        console.error('[WEBHOOK] Invalid signature — rejecting');
+        return new Response('Invalid signature', { status: 401 });
+      }
+      // Re-create request with parsed body for handler
+      const newReq = new Request(req.url, {
+        method: req.method,
+        headers: req.headers,
+        body: rawBody,
+      });
+      return handleWebhook(newReq, env);
     }
 
     // Envio de mensagens aprovadas (POST — chamado pelo app)

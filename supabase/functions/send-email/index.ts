@@ -4,12 +4,11 @@
 //  Usa Resend como provedor de e-mail (configurar RESEND_API_KEY)
 // ═══════════════════════════════════════════════════════════════
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
+import { captureException } from '../_shared/sentry.ts'
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Content-Type': 'application/json',
-}
+const CORS = getCorsHeaders()
 
 const ok  = (data: unknown)        => new Response(JSON.stringify(data), { headers: CORS })
 const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: CORS })
@@ -84,6 +83,12 @@ function emailAtividade(body: Record<string, unknown>, escolaNome: string, cor: 
 // ── Handler ──────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  try {
+
+  // Rate limiting (10 emails/min per IP)
+  const ip = getClientIP(req)
+  const rl = checkRateLimit(ip, 'upload') // reuse upload preset (10/min)
+  if (!rl.allowed) return err(`Tente novamente em ${rl.retryAfterSeconds}s.`, 429)
 
   let body: Record<string, unknown> = {}
   try { body = await req.json() } catch { return err('Body inválido') }
@@ -141,5 +146,11 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error('[send-email] Fetch error:', e)
     return ok({ sent: false, reason: 'Erro de conexão com Resend' })
+  }
+
+  } catch (error) {
+    console.error('[send-email] Unhandled error:', error)
+    captureException(error instanceof Error ? error : new Error(String(error)), { function: 'send-email' }).catch(() => {})
+    return err('Erro interno do servidor.', 500)
   }
 })

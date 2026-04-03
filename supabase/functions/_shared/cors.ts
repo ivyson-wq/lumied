@@ -5,22 +5,26 @@
 const ALLOWED_ORIGINS = [
   "https://app.maplebearcaxiasdosul.com.br",
   "https://maple-bear-rs.vercel.app",
+  "https://lumied.com.br",
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:3000",
 ];
 
 export function getCorsHeaders(req?: Request): Record<string, string> {
-  let origin = "*";
+  let origin = ALLOWED_ORIGINS[0]; // Default to primary origin
   if (req) {
     const reqOrigin = req.headers.get("origin") || "";
-    // Allow if matches whitelist or is a Vercel preview deploy
-    if (ALLOWED_ORIGINS.includes(reqOrigin) || reqOrigin.includes("vercel.app")) {
+    if (ALLOWED_ORIGINS.includes(reqOrigin)) {
       origin = reqOrigin;
-    } else if (reqOrigin) {
-      // Unknown origin — still allow for now but log
+    } else if (reqOrigin.endsWith(".lumied.com.br")) {
+      // Allow any escola subdomain
+      origin = reqOrigin;
+    } else if (reqOrigin.endsWith(".vercel.app") && reqOrigin.includes("maple-bear")) {
+      // Allow Vercel preview deploys for this project only
       origin = reqOrigin;
     }
+    // Unknown origins are rejected — origin stays as default (not echoed back)
   }
   return {
     "Access-Control-Allow-Origin": origin,

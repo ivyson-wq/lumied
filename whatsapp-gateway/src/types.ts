@@ -1,6 +1,7 @@
 export interface Env {
   WHATSAPP_TOKEN: string;
   WHATSAPP_VERIFY_TOKEN: string;
+  META_APP_SECRET?: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_KEY: string;
   ANTHROPIC_API_KEY: string;

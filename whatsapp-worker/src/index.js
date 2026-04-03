@@ -9,6 +9,24 @@ import { SupabaseClient } from './services/supabase.js';
 import { SaasAPI } from './services/saas.js';
 import { ChatwootAPI } from './services/chatwoot.js';
 
+/**
+ * Verify Meta webhook signature (X-Hub-Signature-256)
+ * @see https://developers.facebook.com/docs/graph-api/webhooks/getting-started#verification-requests
+ */
+async function verifyWebhookSignature(request, body, appSecret) {
+  if (!appSecret) return true; // Skip if not configured yet
+  const signature = request.headers.get('x-hub-signature-256');
+  if (!signature) return false;
+  const [, hash] = signature.split('=');
+  if (!hash) return false;
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(appSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+  const computed = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return computed === hash;
+}
+
 export default {
   // ── HTTP Handler (Webhook da Meta) ──
   async fetch(request, env) {
@@ -37,7 +55,15 @@ export default {
     // Webhook messages (POST)
     if (request.method === 'POST' && url.pathname === '/webhook') {
       try {
-        const body = await request.json();
+        const rawBody = await request.text();
+
+        // Verify Meta webhook signature
+        if (!(await verifyWebhookSignature(request, rawBody, env.META_APP_SECRET))) {
+          console.error('[WEBHOOK] Invalid signature — rejecting request');
+          return new Response('Invalid signature', { status: 401 });
+        }
+
+        const body = JSON.parse(rawBody);
         const services = initServices(env);
 
         // Processar cada mensagem recebida

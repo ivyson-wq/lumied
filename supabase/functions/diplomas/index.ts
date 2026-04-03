@@ -5,14 +5,11 @@ import { getCorsHeaders } from '../_shared/cors.ts'
 import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
 import { sanitizeBody } from '../_shared/validation.ts'
 import { createLogger } from '../_shared/logger.ts'
+import { hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken } from '../_shared/auth.ts'
 
 const log = createLogger('diplomas')
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Content-Type': 'application/json',
-}
+const CORS = getCorsHeaders()
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
@@ -20,41 +17,6 @@ function json(data: unknown, status = 200) {
 
 async function criarNotif(sb: any, portal: string, destinatario: string, titulo: string, mensagem: string, tipo = 'info') {
   await sb.from('notificacoes').insert({ portal, destinatario, titulo, mensagem, tipo })
-}
-
-// ── PBKDF2 helpers ─────────────────────────────────────────
-async function hashSenha(senha: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16))
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('')
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']
-  )
-  const derived = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, 256
-  )
-  const hashHex = Array.from(new Uint8Array(derived)).map(b => b.toString(16).padStart(2, '0')).join('')
-  return saltHex + ':' + hashHex
-}
-
-async function verificarSenha(senha: string, hash: string): Promise<boolean> {
-  const [saltHex, hashHex] = hash.split(':')
-  if (!saltHex || !hashHex) return false
-  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(h => parseInt(h, 16)))
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']
-  )
-  const derived = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, 256
-  )
-  const computed = Array.from(new Uint8Array(derived)).map(b => b.toString(16).padStart(2, '0')).join('')
-  return computed === hashHex
-}
-
-function randomToken(): string {
-  return Array.from(crypto.getRandomValues(new Uint8Array(32)))
-    .map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 // ── Session validators ──────────────────────────────────────

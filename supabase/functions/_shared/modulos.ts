@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { getCorsHeaders } from "./cors.ts";
 
 /**
  * Retorna o Set de slugs de módulos habilitados para uma escola.
@@ -89,10 +90,7 @@ export function requireModulo(
     }),
     {
       status: 403,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: getCorsHeaders(),
     }
   );
 }

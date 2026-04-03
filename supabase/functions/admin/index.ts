@@ -8,32 +8,10 @@ import { Router, rateLimit, validateInput, auth, type Context } from "../_shared
 import { successResponse, errorResponse, AppError } from "../_shared/errors.ts";
 import { getModulosResolvidos } from "../_shared/modulos.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { hashSenha, verificarSenhaAuto, gerarToken, criarSessao } from "../_shared/auth.ts";
 import type { Schema } from "../_shared/validation.ts";
 
 const log = createLogger("admin");
-
-// ── Crypto helpers ──
-async function hashSenha(senha: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
-  return `${saltHex}:${Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, "0")).join("")}`;
-}
-
-async function verificarSenha(senha: string, stored: string): Promise<boolean> {
-  try {
-    const [saltHex, storedHash] = stored.split(":");
-    const salt = Uint8Array.from((saltHex.match(/.{2}/g) || []).map(h => parseInt(h, 16)));
-    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
-    const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
-    return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, "0")).join("") === storedHash;
-  } catch { return false; }
-}
-
-function gerarToken(): string {
-  return Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, "0")).join("");
-}
 
 // ── Admin auth middleware ──
 const authAdmin = auth("admin_sessoes", "admins", "id, nome, email");
@@ -74,7 +52,7 @@ router.on("admin_login", rateLimit({ windowMs: 60000, maxRequests: 5 }), validat
   const { data: admin } = await ctx.sb.from("admins").select("id, nome, email, senha_hash, ativo").eq("email", email).single();
   if (!admin) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
   if (!admin.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
-  if (!(await verificarSenha(senha, admin.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+  if (!(await verificarSenhaAuto(senha, admin.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
   const tkn = gerarToken();
   await ctx.sb.from("admin_sessoes").insert({ admin_id: admin.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
   log.info("Admin login", { user_id: admin.id, action: "admin_login" });

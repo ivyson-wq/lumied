@@ -1,10 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
+import { captureException } from '../_shared/sentry.ts'
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Content-Type': 'application/json',
-}
+const CORS = getCorsHeaders()
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
@@ -44,6 +43,12 @@ async function sendEmail(to: string[], subject: string, html: string, cfg?: Reco
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+  try {
+
+  // Rate limiting
+  const ip = getClientIP(req)
+  const rl = checkRateLimit(ip, 'api')
+  if (!rl.allowed) return json({ error: `Tente novamente em ${rl.retryAfterSeconds}s.` }, 429)
 
   const sb = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -240,4 +245,10 @@ Deno.serve(async (req) => {
   }
 
   return json({ error: 'Ação desconhecida' }, 400)
+
+  } catch (error) {
+    console.error('[acesso] Unhandled error:', error)
+    captureException(error instanceof Error ? error : new Error(String(error)), { function: 'acesso' }).catch(() => {})
+    return json({ error: 'Erro interno do servidor.' }, 500)
+  }
 })

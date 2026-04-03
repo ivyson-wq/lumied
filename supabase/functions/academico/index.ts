@@ -6,35 +6,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getModulosHabilitados, getEscolaPadrao, requireModulo } from "../_shared/modulos.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
+import { sanitizeBody } from "../_shared/validation.ts";
+import { validarSessao } from "../_shared/auth.ts";
+import { captureException } from "../_shared/sentry.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const CORS = getCorsHeaders();
 
 const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
 const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-// ── Validar sessão de gerente ──
+// ── Validar sessão de gerente (via shared auth) ──
 async function validarSessaoGerente(sb: ReturnType<typeof createClient>, token: string | null) {
-  if (!token) return null;
-  const { data } = await sb.from("gerente_sessoes").select("gerente_id, expira_em, gerentes(id, nome, email)").eq("token", token).single();
-  if (!data) return null;
-  if (new Date(data.expira_em) < new Date()) return null;
-  return data.gerentes as { id: string; nome: string; email: string };
+  return validarSessao(sb, "gerente_sessoes", "gerentes", "gerente_id", token);
 }
 
-// ── Validar sessão de professora ──
+// ── Validar sessão de professora (via shared auth) ──
 async function validarSessaoProf(sb: ReturnType<typeof createClient>, token: string | null) {
-  if (!token) return null;
-  const { data } = await sb.from("professora_sessoes").select("professora_id, expira_em, professoras(id, nome, email, serie_id)").eq("token", token).single();
-  if (!data) return null;
-  if (new Date(data.expira_em) < new Date()) return null;
-  return data.professoras as { id: string; nome: string; email: string; serie_id: string };
+  return validarSessao(sb, "professora_sessoes", "professoras", "professora_id", token, "id, nome, email, serie_id");
 }
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  try {
 
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -44,6 +39,15 @@ serve(async (req: Request) => {
 
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { return err("Body inválido"); }
+
+  // Rate limiting
+  const reqAction = (body.action as string) || '';
+  const ip = getClientIP(req);
+  const rl = checkRateLimit(ip, reqAction.startsWith("login") ? "login" : "api");
+  if (!rl.allowed) return err(`Tente novamente em ${rl.retryAfterSeconds}s.`, 429);
+
+  // Sanitize
+  body = sanitizeBody(body) as Record<string, unknown>;
 
   const { action } = body;
   const token = (body._token as string) || null;
@@ -940,4 +944,9 @@ serve(async (req: Request) => {
   }
 
   return err("Ação desconhecida: " + action, 404);
+  } catch (error) {
+    console.error("[academico] Unhandled error:", error);
+    captureException(error instanceof Error ? error : new Error(String(error)), { action: String(body?.action || 'unknown') }).catch(() => {});
+    return err("Erro interno do servidor.", 500);
+  }
 });

@@ -106,10 +106,13 @@ export function validate(data: Record<string, unknown>, schema: Schema): Validat
  */
 export function sanitize(value: string): string {
   return value
+    .replace(/&/g, '&amp;')   // Must be first (before other entity replacements)
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+    .replace(/`/g, '&#96;')   // Prevent template literal injection
+    .replace(/\x00/g, '')     // Strip null bytes
     .trim();
 }
 

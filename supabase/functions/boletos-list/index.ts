@@ -118,17 +118,22 @@ async function getBoletoPdf(token: string, codigoSolicitacao: string): Promise<U
   }
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { getCorsHeaders } from '../_shared/cors.ts'
+import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
+import { captureException } from '../_shared/sentry.ts'
+
+const corsHeaders = getCorsHeaders()
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
   if (req.method !== 'POST') return new Response('Método não permitido', { status: 405, headers: corsHeaders })
 
   try {
+    // Rate limiting
+    const ip = getClientIP(req)
+    const rl = checkRateLimit(ip, 'api')
+    if (!rl.allowed) return new Response(JSON.stringify({ error: `Tente novamente em ${rl.retryAfterSeconds}s.` }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
     const body = await req.json()
     const email: string | undefined = body.email
     const supabase = createClient(
@@ -266,7 +271,8 @@ Deno.serve(async (req) => {
     })
   } catch (err) {
     console.error('Erro em boletos-list:', err)
-    return new Response(JSON.stringify({ error: String(err) }), {
+    captureException(err instanceof Error ? err : new Error(String(err)), { function: 'boletos-list' }).catch(() => {})
+    return new Response(JSON.stringify({ error: 'Erro interno do servidor.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

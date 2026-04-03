@@ -9,62 +9,20 @@ import { getModulosHabilitados, getEscolaPadrao } from "../_shared/modulos.ts";
 import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
 import { sanitizeBody } from "../_shared/validation.ts";
 import { errorResponse } from "../_shared/errors.ts";
-import { corsResponse } from "../_shared/cors.ts";
+import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { hashSenhaV1 as hashSenha, hashSenha as hashSenhaProf, verificarSenhaAuto, gerarToken, validarSessao as _validarSessao } from "../_shared/auth.ts";
 
 const log = createLogger("api");
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const CORS = getCorsHeaders();
 
 const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
 const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-// ── Hashing de senha — gerentes (formato v1:base64:base64, 120k iter) ──
-async function hashSenha(senha: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const key  = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 120000, hash: "SHA-256" }, key, 256);
-  const s = btoa(String.fromCharCode(...salt));
-  const h = btoa(String.fromCharCode(...new Uint8Array(bits)));
-  return `v1:${s}:${h}`;
-}
-
-// ── Hashing de senha — professoras (formato hex:hex, 100k iter) ──
-// Compatível com a edge function 'diplomas' que faz o login da professora
-async function hashSenhaProf(senha: string): Promise<string> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
-  const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return `${saltHex}:${hashHex}`;
-}
-
-async function verificarSenha(senha: string, stored: string): Promise<boolean> {
-  try {
-    const [, sB64, hB64] = stored.split(":");
-    const salt = Uint8Array.from(atob(sB64), c => c.charCodeAt(0));
-    const key  = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
-    const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 120000, hash: "SHA-256" }, key, 256);
-    const novo = btoa(String.fromCharCode(...new Uint8Array(bits)));
-    return novo === hB64;
-  } catch { return false; }
-}
-
-// ── Validar sessão ─────────────────────────────────────────────
+// ── Validar sessão (gerente) ──
 async function validarSessao(admin: ReturnType<typeof createClient>, token: string | null) {
-  if (!token) return null;
-  const { data } = await admin
-    .from("gerente_sessoes")
-    .select("gerente_id, expira_em, gerentes(id, nome, email)")
-    .eq("token", token)
-    .single();
-  if (!data) return null;
-  if (new Date(data.expira_em) < new Date()) return null;
-  return data.gerentes as { id: string; nome: string; email: string };
+  return _validarSessao(admin, "gerente_sessoes", "gerentes", "gerente_id", token);
 }
 
 serve(async (req: Request) => {
@@ -213,7 +171,7 @@ serve(async (req: Request) => {
     if (!email || !senha) return err("E-mail e senha são obrigatórios.");
     const { data: g } = await admin.from("gerentes").select("*").eq("email", email).single();
     if (!g) return err("E-mail ou senha incorretos.", 401);
-    const ok2 = await verificarSenha(senha as string, g.senha_hash);
+    const ok2 = await verificarSenhaAuto(senha as string, g.senha_hash);
     if (!ok2) return err("E-mail ou senha incorretos.", 401);
     // Limpa sessões expiradas
     await admin.from("gerente_sessoes").delete().lt("expira_em", new Date().toISOString());
@@ -465,7 +423,7 @@ serve(async (req: Request) => {
     if (!senhaAtual || !novaSenha) return err("Preencha todos os campos.");
     if ((novaSenha as string).length < 6) return err("Senha mínima de 6 caracteres.");
     const { data: g } = await admin.from("gerentes").select("senha_hash").eq("id", gerente.id).single();
-    if (!g || !(await verificarSenha(senhaAtual, g.senha_hash))) return err("Senha atual incorreta.");
+    if (!g || !(await verificarSenhaAuto(senhaAtual, g.senha_hash))) return err("Senha atual incorreta.");
     const hash = await hashSenha(novaSenha);
     await admin.from("gerentes").update({ senha_hash: hash }).eq("id", gerente.id);
     return ok({ success: true });
