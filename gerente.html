@@ -3046,15 +3046,20 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     respDiv.style.display = 'block';
     respDiv.innerHTML = '<span style="color:var(--muted);">✨ Analisando...</span>';
     try {
-      const r = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/lumied-ai', {
+      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/lumied-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
         body: JSON.stringify({ action: 'ai_perguntar', pergunta, portal: 'gerente', _token: getToken() }),
-      }).then(r => r.json());
+      });
+      const r = await res.json();
+      if (r.error) {
+        respDiv.innerHTML = '<span style="color:#C8102E;">⚠️ ' + esc(r.error) + '</span>';
+        return;
+      }
       const texto = r.data?.resposta || r.resposta || 'Sem resposta.';
       const safe = texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       respDiv.innerHTML = '<div style="display:flex;gap:10px;"><span style="font-size:20px;flex-shrink:0;">✨</span><div>' + safe.replace(/\n/g, '<br>') + '</div></div>';
-    } catch { respDiv.innerHTML = '<span style="color:#C8102E;">Erro de conexão.</span>'; }
+    } catch(e) { respDiv.innerHTML = '<span style="color:#C8102E;">Erro de conexão. Tente novamente.</span>'; }
   }
 
   async function loadAiInsights() {

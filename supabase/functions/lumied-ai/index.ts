@@ -250,48 +250,54 @@ Com base nesses dados, qual a tendência para o próximo mês? Sugira ações pr
 //  COLETA DE CONTEXTO (dados reais do banco)
 // ═══════════════════════════════════════════════════════
 
+async function safeQuery(promise: Promise<any>): Promise<any> {
+  try { return await promise; } catch { return { data: null, count: 0 }; }
+}
+
 async function coletarContexto(sb: any, portal: string) {
   const hoje = new Date().toISOString().split("T")[0];
   const semanaAtras = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
 
   const [alunos, boletos, leads, compliance, frequencia] = await Promise.all([
-    sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true),
-    sb.from("boletos").select("valor, status, vencimento").eq("status", "pendente"),
-    sb.from("crm_leads").select("id, atualizado_em").order("atualizado_em", { ascending: false }),
-    sb.from("compliance_calendario").select("*", { count: "exact", head: true }).eq("status", "pendente").lte("data_limite", new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]),
-    sb.from("frequencia").select("presente").eq("data", hoje),
+    safeQuery(sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true)),
+    safeQuery(sb.from("boletos").select("valor, status, vencimento").eq("status", "pendente")),
+    safeQuery(sb.from("crm_leads").select("id, atualizado_em").order("atualizado_em", { ascending: false })),
+    safeQuery(sb.from("compliance_calendario").select("*", { count: "exact", head: true }).eq("status", "pendente").lte("data_limite", new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0])),
+    safeQuery(sb.from("frequencia").select("presente").eq("data", hoje)),
   ]);
 
-  const boletosData = boletos.data || [];
+  const boletosData = boletos?.data || [];
   const totalAberto = boletosData.reduce((s: number, b: any) => s + (Number(b.valor) || 0), 0);
-  const leadsData = leads.data || [];
+  const leadsData = leads?.data || [];
   const leadsParados = leadsData.filter((l: any) => l.atualizado_em && l.atualizado_em < semanaAtras).length;
-  const freqData = frequencia.data || [];
+  const freqData = frequencia?.data || [];
   const presentes = freqData.filter((f: any) => f.presente).length;
 
   return {
-    total_alunos: alunos.count || 0,
+    total_alunos: alunos?.count || 0,
     presentes_hoje: presentes,
     total_em_aberto: totalAberto.toFixed(2),
     boletos_pendentes: boletosData.length,
-    inadimplencia_pct: alunos.count ? Math.round((boletosData.length / (alunos.count as number)) * 100) : 0,
+    inadimplencia_pct: alunos?.count ? Math.round((boletosData.length / (alunos.count as number)) * 100) : 0,
     boletos_vencendo_semana: boletosData.filter((b: any) => b.vencimento && b.vencimento <= new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]).length,
     leads_total: leadsData.length,
     leads_parados: leadsParados,
     leads_novos_semana: leadsData.filter((l: any) => l.atualizado_em >= semanaAtras).length,
-    prazos_proximos: compliance.count || 0,
-    alunos_frequencia_baixa: 0, // seria calculado com query mais complexa
+    prazos_proximos: compliance?.count || 0,
+    alunos_frequencia_baixa: 0,
   };
 }
 
 async function coletarContextoProfessora(sb: any, profId: string | undefined) {
   if (!profId) return {};
-  const { data: prof } = await sb.from("professoras").select("nome, serie_id").eq("id", profId).single();
-  const { data: alunos } = await sb.from("alunos").select("*", { count: "exact", head: true }).eq("serie_id", prof?.serie_id);
-  return {
-    professora: prof?.nome,
-    total_alunos_turma: alunos?.count || 0,
-  };
+  try {
+    const { data: prof } = await sb.from("professoras").select("nome, serie_id").eq("id", profId).single();
+    const { data: alunos } = await sb.from("alunos").select("*", { count: "exact", head: true }).eq("serie_id", prof?.serie_id);
+    return {
+      professora: prof?.nome || 'Desconhecida',
+      total_alunos_turma: alunos?.count || 0,
+    };
+  } catch { return { professora: 'Desconhecida', total_alunos_turma: 0 }; }
 }
 
 // ═══════════════════════════════════════════════════════
