@@ -35,12 +35,15 @@
     return '';
   }
 
-  // CSS
+  // CSS — botão acima da Lumi bar (bottom:72px) para não sobrepor
   const style = document.createElement('style');
   style.textContent = `
-    #tw-btn{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:#C8102E;color:#fff;border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(200,16,46,.4);z-index:9999;transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;}
+    #tw-btn{position:fixed;bottom:72px;right:20px;width:44px;height:44px;border-radius:50%;background:#C8102E;color:#fff;border:none;cursor:pointer;font-size:18px;box-shadow:0 4px 16px rgba(200,16,46,.4);z-index:9995;transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;}
     #tw-btn:hover{transform:scale(1.1);box-shadow:0 6px 24px rgba(200,16,46,.5);}
-    #tw-panel{position:fixed;bottom:88px;right:24px;width:340px;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.2);z-index:9999;display:none;animation:twSlide .25s ease;font-family:'DM Sans',system-ui,sans-serif;overflow:hidden;}
+    #tw-tooltip{position:fixed;bottom:80px;right:72px;background:#fff;color:#1a1a1a;padding:8px 14px;border-radius:10px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:9995;white-space:nowrap;opacity:0;transform:translateX(8px);transition:all .3s;pointer-events:none;}
+    #tw-tooltip.show{opacity:1;transform:translateX(0);}
+    #tw-tooltip::after{content:'';position:absolute;right:-6px;top:50%;transform:translateY(-50%);border:6px solid transparent;border-left-color:#fff;}
+    #tw-panel{position:fixed;bottom:124px;right:20px;width:340px;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.2);z-index:9999;display:none;animation:twSlide .25s ease;font-family:'DM Sans',system-ui,sans-serif;overflow:hidden;}
     @keyframes twSlide{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
     #tw-panel.show{display:block;}
     .tw-header{background:#1c1712;color:#fff;padding:16px 18px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;}
@@ -62,8 +65,20 @@
   const btn = document.createElement('button');
   btn.id = 'tw-btn';
   btn.innerHTML = '?';
-  btn.title = 'Precisa de ajuda?';
+  btn.setAttribute('aria-label', 'Abrir suporte — enviar dúvida, bug ou sugestão');
   document.body.appendChild(btn);
+
+  // Tooltip balão informativo
+  const tooltip = document.createElement('div');
+  tooltip.id = 'tw-tooltip';
+  tooltip.textContent = 'Precisa de ajuda? Envie uma dúvida ou reporte um problema.';
+  document.body.appendChild(tooltip);
+
+  // Mostrar tooltip após 5s, esconder após 8s
+  setTimeout(function() {
+    tooltip.classList.add('show');
+    setTimeout(function() { tooltip.classList.remove('show'); }, 5000);
+  }, 5000);
 
   // Painel
   const panel = document.createElement('div');

@@ -6,19 +6,7 @@
 (function () {
   'use strict';
 
-  // Esperar autenticacao — so injetar apos login
-  function isLoggedIn() {
-    return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('mb_aluno_token') || localStorage.getItem('mb_admin_token');
-  }
-  if (!isLoggedIn()) {
-    // Re-checar a cada 2s ate login
-    const checkInterval = setInterval(() => { if (isLoggedIn()) { clearInterval(checkInterval); init(); } }, 2000);
-    return;
-  }
-  init();
-  function init() {
-
-  // Config
+  // Detect portal first
   const path = location.pathname;
   let portal = 'pais';
   if (path.includes('gerente')) portal = 'gerente';
@@ -26,11 +14,39 @@
   else if (path.includes('aluno')) portal = 'aluno';
   else if (path.includes('secretaria')) portal = 'secretaria';
   else if (path.includes('admin')) portal = 'admin';
-  if (path.includes('admin')) return;
+  if (portal === 'admin') return; // Não mostrar no admin
+
+  // Check if user is ACTUALLY logged in (verify login screen is hidden)
+  function isLoggedIn() {
+    // Check if login screen is visible — if so, NOT logged in
+    const loginScreen = document.getElementById('loginScreen') || document.getElementById('loginWall') || document.getElementById('loginCard');
+    if (loginScreen && loginScreen.style.display !== 'none' && !loginScreen.classList.contains('hidden')) return false;
+    // Also require a token
+    return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('mb_aluno_token') || localStorage.getItem('sec_token');
+  }
+
+  // Wait for DOM + login, max 60 checks (2 min)
+  let attempts = 0;
+  function tryInit() {
+    attempts++;
+    if (attempts > 60) return; // Give up after 2 minutes
+    if (!isLoggedIn()) { setTimeout(tryInit, 2000); return; }
+    init();
+  }
+  // Wait for DOM to be ready before first check
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(tryInit, 1000); });
+  } else {
+    setTimeout(tryInit, 1000);
+  }
+  return; // Exit IIFE — init() will be called when ready
+
+  function init() {
 
   const isGerente = portal === 'gerente';
   const API_ACTION = portal === 'professora' ? 'ai_perguntar_prof' : 'ai_perguntar';
-  const TOKEN_KEY = portal === 'professora' ? 'prof_token' : 'mb_token';
+  const TOKEN_KEYS = { professora: 'prof_token', aluno: 'mb_aluno_token', secretaria: 'sec_token' };
+  const TOKEN_KEY = TOKEN_KEYS[portal] || 'mb_token';
 
   // Inject CSS — bottombar fixa
   const style = document.createElement('style');
