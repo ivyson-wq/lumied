@@ -509,6 +509,60 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Permissões RBAC ────────────────────────────────────────────
+  if (action === "permissoes_get") {
+    const { usuario_id } = body as { usuario_id: string };
+    if (!usuario_id) return err("usuario_id obrigatório.");
+
+    // Get user's papel
+    const { data: user } = await admin.from("usuarios").select("papel").eq("id", usuario_id).single();
+    if (!user) return err("Usuário não encontrado.", 404);
+
+    // Get defaults for papel
+    const { data: defaults } = await admin.from("permissoes_papel")
+      .select("modulo, pode_ver, pode_editar")
+      .eq("papel", user.papel);
+
+    // Get user-specific overrides
+    const { data: overrides } = await admin.from("permissoes_usuario")
+      .select("modulo, pode_ver, pode_editar")
+      .eq("usuario_id", usuario_id);
+
+    // Merge: overrides take precedence
+    const permsMap: Record<string, {pode_ver: boolean, pode_editar: boolean}> = {};
+    for (const d of defaults || []) permsMap[d.modulo] = { pode_ver: d.pode_ver, pode_editar: d.pode_editar };
+    for (const o of overrides || []) permsMap[o.modulo] = { pode_ver: o.pode_ver, pode_editar: o.pode_editar };
+
+    const result = Object.entries(permsMap).map(([modulo, p]) => ({ modulo, ...p }));
+    return ok(result);
+  }
+  if (action === "permissoes_update") {
+    const { usuario_id, permissoes } = body as { usuario_id: string; permissoes: Array<{modulo: string; pode_ver: boolean; pode_editar: boolean}> };
+    if (!usuario_id || !Array.isArray(permissoes)) return err("usuario_id e permissoes obrigatórios.");
+
+    const escolaId = await getEscolaPadrao(admin);
+
+    for (const p of permissoes) {
+      await admin.from("permissoes_usuario").upsert({
+        escola_id: escolaId,
+        usuario_id,
+        modulo: p.modulo,
+        pode_ver: p.pode_ver,
+        pode_editar: p.pode_editar,
+        atualizado_por: gerente.email,
+        atualizado_em: new Date().toISOString(),
+      }, { onConflict: "usuario_id,modulo" });
+    }
+
+    return ok({ success: true });
+  }
+  if (action === "permissoes_reset") {
+    const { usuario_id } = body as { usuario_id: string };
+    if (!usuario_id) return err("usuario_id obrigatório.");
+    await admin.from("permissoes_usuario").delete().eq("usuario_id", usuario_id);
+    return ok({ success: true });
+  }
+
   // ── Configurações ────────────────────────────────────────────
   if (action === "config_set") {
     const { chave, valor } = body as { chave: string; valor: string };

@@ -3362,6 +3362,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div class="lr-main"><strong>${esc(u.nome||'—')}</strong><span>${esc(u.email)} · ${new Date(u.criado_em).toLocaleDateString('pt-BR')}${u.serie_nome ? ' · ' + esc(u.serie_nome) : ''}</span></div>
         ${turmaSelect}
         <span class="role-badge" style="background:${cor}15;color:${cor};border-color:${cor}30;">${PAPEIS[u.papel]||u.papel}</span>
+        <button class="action-btn" onclick="openPermissoes('${u.id}','${esc(u.nome||u.email)}','${u.papel}')" title="Permissões" style="font-size:14px;">🔐</button>
         ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
       </div>`;
     }).join('');
@@ -3406,6 +3407,119 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (d.error) { showToast(d.error, 'error'); return; }
     loadEquipe();
   }
+  // ── PERMISSIONS MODAL ──────────────────────────────────
+  const MODULOS_DISPONIVEIS = [
+    { slug: 'dashboard', nome: 'Dashboard' },
+    { slug: 'alunos', nome: 'Alunos' },
+    { slug: 'turmas', nome: 'Turmas' },
+    { slug: 'turnos', nome: 'Turnos' },
+    { slug: 'atividades', nome: 'Atividades' },
+    { slug: 'notas', nome: 'Notas & Boletim' },
+    { slug: 'frequencia', nome: 'Frequência' },
+    { slug: 'comunicacao', nome: 'Comunicação' },
+    { slug: 'crm', nome: 'CRM Matrículas' },
+    { slug: 'financeiro', nome: 'Financeiro' },
+    { slug: 'diplomas', nome: 'Diplomas' },
+    { slug: 'atestados', nome: 'Atestados' },
+    { slug: 'almoxarifado', nome: 'Almoxarifado' },
+    { slug: 'compliance', nome: 'Compliance' },
+    { slug: 'biblioteca', nome: 'Biblioteca' },
+    { slug: 'cantina', nome: 'Cantina' },
+    { slug: 'transporte', nome: 'Transporte' },
+    { slug: 'rh', nome: 'RH & Folha' },
+    { slug: 'whatsapp', nome: 'WhatsApp' },
+    { slug: 'loja', nome: 'Loja' },
+    { slug: 'analytics', nome: 'Analytics' },
+    { slug: 'equipe', nome: 'Equipe' },
+    { slug: 'familias', nome: 'Famílias' },
+    { slug: 'config', nome: 'Configurações' },
+    { slug: 'historico_aluno', nome: 'Histórico Aluno' },
+  ];
+
+  let permUserId = null;
+
+  async function openPermissoes(userId, nome, papel) {
+    permUserId = userId;
+    const d = await api({ action: 'permissoes_get', usuario_id: userId });
+    if (d.error) return showToast(d.error, 'error');
+
+    const perms = Array.isArray(d) ? d : [];
+    const permsMap = {};
+    for (const p of perms) permsMap[p.modulo] = p;
+
+    let html = '<div style="max-height:60vh;overflow-y:auto;padding-right:8px;">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+    html += '<thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px;">Módulo</th><th style="padding:8px;width:60px;">Ver</th><th style="padding:8px;width:60px;">Editar</th></tr></thead>';
+    html += '<tbody>';
+
+    for (const m of MODULOS_DISPONIVEIS) {
+      const p = permsMap[m.slug] || { pode_ver: false, pode_editar: false };
+      html += '<tr style="border-bottom:1px solid #f0f0f0;">';
+      html += '<td style="padding:8px;font-weight:500;">' + esc(m.nome) + '</td>';
+      html += '<td style="text-align:center;padding:8px;"><input type="checkbox" data-mod="' + m.slug + '" data-type="ver" ' + (p.pode_ver ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;"></td>';
+      html += '<td style="text-align:center;padding:8px;"><input type="checkbox" data-mod="' + m.slug + '" data-type="editar" ' + (p.pode_editar ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;"></td>';
+      html += '</tr>';
+    }
+
+    html += '</tbody></table></div>';
+    html += '<div style="display:flex;gap:8px;margin-top:16px;justify-content:space-between;">';
+    html += '<button onclick="resetPermissoes()" style="padding:8px 16px;background:#f5f5f5;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">Restaurar Padrão</button>';
+    html += '<div style="display:flex;gap:8px;">';
+    html += '<button onclick="closePermModal()" style="padding:8px 16px;background:#f5f5f5;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">Cancelar</button>';
+    html += '<button onclick="salvarPermissoes()" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Salvar</button>';
+    html += '</div></div>';
+
+    let overlay = document.getElementById('permModal');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'permModal';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+      + '<div><h3 style="font-size:16px;font-weight:700;color:var(--text-heading);margin:0;">Permissões — ' + esc(nome) + '</h3><span style="font-size:12px;color:var(--muted);">Papel: ' + esc(papel) + '</span></div>'
+      + '<button onclick="closePermModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>'
+      + '</div>'
+      + html
+      + '</div>';
+    overlay.style.display = 'flex';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closePermModal(); });
+  }
+
+  function closePermModal() {
+    const m = document.getElementById('permModal');
+    if (m) m.style.display = 'none';
+  }
+
+  async function salvarPermissoes() {
+    if (!permUserId) return;
+    const rows = document.querySelectorAll('#permModal input[data-mod]');
+    const permsMap = {};
+    rows.forEach(function(inp) {
+      const mod = inp.dataset.mod;
+      const type = inp.dataset.type;
+      if (!permsMap[mod]) permsMap[mod] = { modulo: mod, pode_ver: false, pode_editar: false };
+      if (type === 'ver') permsMap[mod].pode_ver = inp.checked;
+      if (type === 'editar') permsMap[mod].pode_editar = inp.checked;
+    });
+
+    const permissoes = Object.values(permsMap);
+    const d = await api({ action: 'permissoes_update', usuario_id: permUserId, permissoes: permissoes });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Permissões salvas!', 'success');
+    closePermModal();
+  }
+
+  async function resetPermissoes() {
+    if (!permUserId) return;
+    if (!confirm('Restaurar permissões para o padrão do papel?')) return;
+    const d = await api({ action: 'permissoes_reset', usuario_id: permUserId });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Permissões restauradas ao padrão.', 'success');
+    closePermModal();
+  }
+
   // Legacy aliases
   function loadUsers() { loadEquipe(); }
   async function changePassword() {
