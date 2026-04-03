@@ -438,6 +438,8 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 | Arquivo | Conteúdo |
 |---------|----------|
 | `CLAUDE.md` | Documentação técnica completa (este arquivo) |
+| `site/certificacao.html` | Página de certificação Escola Digital (3 níveis: Bronze/Prata/Ouro) |
+| `site/blog/` | Blog com 26 artigos (compliance, LGPD, WhatsApp, inadimplência, IA, etc.) |
 | `NOVO-CLIENTE.md` | Guia passo a passo para deploy de novo cliente |
 | `COMERCIAL.md` | Apresentação comercial: módulos, funcionalidades, planos |
 | `CONTEXTO.md` | Contexto histórico do projeto |
@@ -465,6 +467,7 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 | **Automação** | R$ 1.249 | R$ 999 | 800 | 30 | 200 msgs/mês |
 | **Avançado** | R$ 2.079 | R$ 1.659 | 1.500 | 35 | 500 msgs/mês |
 | **Rede** | R$ 2.939 | R$ 2.351 | Ilimitado | Todos | 2.000 msgs/mês |
+| **Público** | Sob consulta | — | Rede municipal | Gestão + Gov | Licitação/Pregão |
 
 ### Pacotes Extras (aprovação do resp financeiro)
 
