@@ -3,265 +3,364 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lumied — A primeira gestao escolar com inteligencia operacional</title>
-<meta name="description" content="A unica plataforma que analisa os dados da sua escola e diz o que fazer. Compliance com IA, WhatsApp nativo, CRM inteligente, financeiro automatizado. Para escolas bilingues.">
-<meta name="theme-color" content="#FAFAFA">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%235B5BD6'/><path d='M50 20L30 45h40L50 20zM30 50v25h40V50H30z' fill='white'/></svg>">
+<title>Lumied — A primeira gestão escolar com inteligência operacional</title>
+<meta name="description" content="A única plataforma que analisa os dados da sua escola e diz o que fazer. Compliance com IA, WhatsApp nativo, CRM inteligente, financeiro automatizado. Para escolas bilíngues.">
+<meta name="theme-color" content="#0A0A0F">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236C63FF'/><path d='M50 20L30 45h40L50 20zM30 50v25h40V50H30z' fill='white'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #FAFAFA;
-  --bg-card: #FFFFFF;
+  --bg-dark: #0A0A0F;
+  --bg-dark-alt: #12121A;
+  --bg-light: #FAFAFA;
+  --bg-card-light: #FFFFFF;
   --text-heading: #171717;
   --text-body: #525252;
   --text-muted: #A3A3A3;
-  --border: #E5E5E5;
-  --primary: #5B5BD6;
-  --primary-hover: #4F4FC5;
-  --primary-light: rgba(91,91,214,.04);
-  --green: #16A34A;
-  --radius-card: 12px;
-  --radius-btn: 8px;
+  --text-white: #F1F1F4;
+  --text-white-muted: #8B8B9E;
+  --border-light: #E5E5E5;
+  --border-dark: rgba(255,255,255,0.06);
+  --primary: #6C63FF;
+  --primary-hover: #5B54E6;
+  --primary-glow: rgba(108,99,255,0.4);
+  --gradient-primary: linear-gradient(135deg, #6C63FF, #3B82F6);
+  --gradient-hero: linear-gradient(135deg, #0A0A0F 0%, #1A1030 50%, #0A0A0F 100%);
+  --green: #10B981;
+  --radius-card: 16px;
+  --radius-btn: 10px;
+  --glass: rgba(255,255,255,0.03);
+  --glass-border: rgba(255,255,255,0.06);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-body); line-height: 1.5; background: var(--bg); overflow-x: hidden; width: 100%; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-body); line-height: 1.6; background: var(--bg-dark); overflow-x: hidden; width: 100%; }
+
+/* ── ANIMATIONS ── */
+.fade-up { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.8; } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(108,99,255,0.3); } 50% { box-shadow: 0 0 40px rgba(108,99,255,0.6); } }
 
 /* ── HEADER ── */
 .header {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  background: rgba(250,250,250,.8); backdrop-filter: blur(16px) saturate(1.5);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px; height: 64px;
+  background: transparent;
+  padding: 0 24px; height: 72px;
   display: flex; align-items: center; justify-content: space-between;
-  transition: background .3s, box-shadow .3s;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 100vw;
 }
-.header.scrolled { box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.header.scrolled {
+  background: rgba(10,10,15,0.85); backdrop-filter: blur(20px) saturate(1.5);
+  border-bottom: 1px solid var(--border-dark); box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+}
 .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo-icon { width: 32px; height: 32px; flex-shrink: 0; }
-.logo-text { font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 800; color: var(--text-heading); letter-spacing: -.5px; }
+.logo-icon { width: 34px; height: 34px; flex-shrink: 0; }
+.logo-text { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
 .nav { display: flex; align-items: center; gap: 32px; }
-.nav a { color: var(--text-body); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
-.nav a:hover { color: var(--text-heading); }
-.nav-cta { padding: 9px 20px; background: var(--primary); color: #fff !important; border-radius: var(--radius-btn); font-weight: 600; transition: all .2s; }
-.nav-cta:hover { background: var(--primary-hover); }
-.hamburger { display: none; background: none; border: none; color: var(--text-heading); font-size: 24px; cursor: pointer; padding: 4px; }
+.nav a { color: var(--text-white-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav a:hover { color: #fff; }
+.nav-cta {
+  padding: 10px 22px; background: var(--gradient-primary); color: #fff !important;
+  border-radius: var(--radius-btn); font-weight: 600; transition: all .3s;
+  box-shadow: 0 4px 15px rgba(108,99,255,0.3);
+}
+.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 25px var(--primary-glow); }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 4px; }
 
 /* ── HERO ── */
 .hero {
-  padding: 140px 24px 100px; background: var(--bg);
-  display: flex; align-items: center; justify-content: center;
+  position: relative; padding: 160px 24px 100px;
+  background: var(--gradient-hero); overflow: hidden; min-height: 100vh;
+  display: flex; align-items: center;
+}
+.hero::before {
+  content: ''; position: absolute; top: -200px; left: -200px;
+  width: 600px; height: 600px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%);
+  filter: blur(80px); pointer-events: none; animation: float 8s ease-in-out infinite;
+}
+.hero::after {
+  content: ''; position: absolute; bottom: -150px; right: -150px;
+  width: 500px; height: 500px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+  filter: blur(80px); pointer-events: none; animation: float 10s ease-in-out infinite reverse;
 }
 .hero-inner {
-  max-width: 1200px; margin: 0 auto; width: 100%;
+  max-width: 1200px; margin: 0 auto; width: 100%; position: relative; z-index: 2;
   display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
 }
 .hero-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--primary-light); border: 1px solid rgba(91,91,214,.12);
-  border-radius: 100px; padding: 5px 14px; font-size: 13px; font-weight: 500; color: var(--primary);
-  margin-bottom: 20px;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.25);
+  border-radius: 100px; padding: 6px 16px; font-size: 13px; font-weight: 600; color: var(--primary);
+  margin-bottom: 24px; animation: glow-pulse 3s ease infinite;
 }
+.hero-badge::before { content: ''; width: 8px; height: 8px; background: var(--primary); border-radius: 50%; }
 .hero h1 {
-  font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 56px);
-  font-weight: 800; line-height: 1.1; color: var(--text-heading);
-  letter-spacing: -0.02em; margin-bottom: 20px;
+  font-family: 'Playfair Display', serif; font-size: clamp(42px, 6vw, 72px);
+  font-weight: 800; line-height: 1.08; letter-spacing: -0.03em; margin-bottom: 24px;
+  background: linear-gradient(135deg, #FFFFFF 0%, #C4B5FD 50%, #93C5FD 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
-.hero p {
-  font-size: 18px; color: var(--text-body); line-height: 1.7;
-  margin-bottom: 32px; max-width: 520px;
-}
-.hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero p { font-size: 18px; color: var(--text-white-muted); line-height: 1.7; margin-bottom: 36px; max-width: 520px; }
+.hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
 .btn-primary {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 13px 26px; background: var(--primary); color: #fff;
+  padding: 14px 28px; background: var(--gradient-primary); color: #fff;
   border: none; border-radius: var(--radius-btn); font-family: inherit;
-  font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s; text-decoration: none;
+  font-size: 15px; font-weight: 700; cursor: pointer; transition: all .3s; text-decoration: none;
+  box-shadow: 0 4px 20px var(--primary-glow);
 }
-.btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--primary-glow); }
 .btn-ghost {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 13px 26px; background: transparent; color: var(--text-heading);
-  border: 1px solid var(--border); border-radius: var(--radius-btn); font-family: inherit;
-  font-size: 15px; font-weight: 500; cursor: pointer; transition: all .2s; text-decoration: none;
+  padding: 14px 28px; background: rgba(255,255,255,0.05); color: #fff;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-btn); font-family: inherit;
+  font-size: 15px; font-weight: 500; cursor: pointer; transition: all .3s; text-decoration: none;
+  backdrop-filter: blur(10px);
 }
-.btn-ghost:hover { border-color: #D4D4D4; background: #fff; }
+.btn-ghost:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+.hero-social {
+  display: flex; align-items: center; gap: 16px; margin-top: 32px;
+}
+.hero-social-avatars { display: flex; }
+.hero-social-avatars img {
+  width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(108,99,255,0.3);
+  object-fit: cover; margin-left: -10px;
+}
+.hero-social-avatars img:first-child { margin-left: 0; }
+.hero-social-text { font-size: 13px; color: var(--text-white-muted); line-height: 1.4; }
+.hero-social-text strong { color: #fff; }
 .hero-visual { position: relative; }
 .hero-screenshot {
   width: 100%; border-radius: 16px; overflow: hidden;
-  border: 1px solid var(--border); background: #fff;
-  box-shadow: 0 24px 60px rgba(0,0,0,.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(108,99,255,0.1);
+  transform: perspective(1200px) rotateY(-8deg);
+  transition: transform 0.5s ease;
 }
+.hero-screenshot:hover { transform: perspective(1200px) rotateY(-2deg); }
 .hero-screenshot img { width: 100%; display: block; border-radius: 15px; }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  background: var(--bg-dark-alt); border-top: 1px solid rgba(108,99,255,0.15);
+  border-bottom: 1px solid var(--border-dark); padding: 0 24px; position: relative;
+}
+.stats-bar::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(108,99,255,0.5), transparent);
+}
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; padding: 48px 0; max-width: 1200px; margin: 0 auto; }
+.stat-item { text-align: center; }
+.stat-number {
+  font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 800;
+  background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  letter-spacing: -0.02em;
+}
+.stat-label { font-size: 14px; color: var(--text-white-muted); margin-top: 4px; }
 
 /* ── SECTIONS ── */
 .section { padding: 100px 24px; overflow-x: clip; }
+.section-dark { background: var(--bg-dark); }
+.section-dark-alt { background: var(--bg-dark-alt); }
+.section-light { background: var(--bg-light); }
 .container { max-width: 1200px; margin: 0 auto; width: 100%; }
 .section-header { text-align: center; margin-bottom: 56px; }
 .section-badge {
-  display: inline-block; font-size: 12px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); margin-bottom: 10px;
+  display: inline-block; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); margin-bottom: 12px;
+}
+.section-badge-dark {
+  background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.2);
+  padding: 6px 16px; border-radius: 100px; color: var(--primary);
 }
 .section-title {
-  font-family: 'Playfair Display', serif; font-size: clamp(28px, 4vw, 36px);
-  font-weight: 800; line-height: 1.2; color: var(--text-heading);
-  letter-spacing: -0.02em; margin-bottom: 14px;
+  font-family: 'Playfair Display', serif; font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 14px;
 }
-.section-sub { font-size: 16px; color: var(--text-body); max-width: 560px; margin: 0 auto; line-height: 1.7; }
+.section-title-dark {
+  background: linear-gradient(135deg, #fff 0%, #C4B5FD 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.section-title-light { color: var(--text-heading); }
+.section-sub { font-size: 16px; max-width: 560px; margin: 0 auto; line-height: 1.7; }
+.section-sub-dark { color: var(--text-white-muted); }
+.section-sub-light { color: var(--text-body); }
 
-/* ── SOCIAL PROOF ── */
-.logos-section { padding: 40px 24px 48px; text-align: center; border-bottom: 1px solid var(--border); background: var(--bg); }
-.logos-label { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 500; margin-bottom: 20px; }
-.logos-grid { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; }
-.logos-grid span { font-size: 16px; font-weight: 600; color: var(--text-muted); }
+/* ── WHY SWITCH (LIGHT) ── */
+.why-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; max-width: 960px; margin: 0 auto; }
+.why-card {
+  padding: 32px; border: 1px solid var(--border-light); border-radius: var(--radius-card);
+  background: var(--bg-card-light); transition: all 0.3s;
+}
+.why-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.06); }
+.why-card img { width: 100%; height: 160px; object-fit: cover; border-radius: 12px; margin-bottom: 20px; }
+.why-card h3 { font-size: 17px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px; }
+.why-card p { font-size: 14px; color: var(--text-body); line-height: 1.6; }
 
-/* ── PROBLEMS ── */
+/* ── PROBLEMS (LIGHT) ── */
 .problems-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .problem-card {
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-card);
-  padding: 28px; transition: all .2s;
+  background: var(--bg-card-light); border: 1px solid var(--border-light); border-radius: var(--radius-card);
+  padding: 28px; transition: all 0.3s; border-left: 4px solid transparent; position: relative;
 }
-.problem-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.05); }
-.problem-icon { width: 40px; height: 40px; background: var(--primary-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.problem-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(108,99,255,0.08); border-left-color: var(--primary); }
+.problem-icon {
+  width: 44px; height: 44px; background: linear-gradient(135deg, rgba(108,99,255,0.08), rgba(59,130,246,0.08));
+  border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+}
 .problem-icon svg { width: 20px; height: 20px; stroke: var(--primary); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .problem-title { font-size: 16px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px; }
 .problem-text { font-size: 14px; color: var(--text-body); line-height: 1.6; }
 
-/* ── FEATURES ── */
+/* ── FEATURES (DARK) ── */
 .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .feature-card {
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-card);
-  overflow: hidden; transition: all .2s;
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-card);
+  overflow: hidden; transition: all 0.3s; backdrop-filter: blur(20px);
 }
-.feature-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+.feature-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 20px 40px rgba(108,99,255,0.15); border-color: rgba(108,99,255,0.2); }
 .feature-card img {
   width: 100%; aspect-ratio: 16/9; object-fit: cover; object-position: top;
-  display: block; border-bottom: 1px solid var(--border); cursor: pointer;
+  display: block; border-bottom: 1px solid var(--glass-border); cursor: pointer;
 }
 .feature-body { padding: 20px 24px 24px; }
-.feature-title { font-size: 15px; font-weight: 700; color: var(--text-heading); margin-bottom: 6px; }
-.feature-text { font-size: 13px; color: var(--text-body); line-height: 1.6; }
+.feature-title { font-size: 16px; font-weight: 700; color: var(--text-white); margin-bottom: 8px; }
+.feature-text { font-size: 13px; color: var(--text-white-muted); line-height: 1.7; }
 
 /* ── VIDEOS ── */
 .video-featured {
-  max-width: 960px; margin: 0 auto 40px; background: #fff;
-  border-radius: var(--radius-card); overflow: hidden; border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(0,0,0,.06);
+  max-width: 960px; margin: 0 auto 48px; border-radius: var(--radius-card); overflow: hidden;
+  border: 1px solid var(--border-light); background: #fff;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08); position: relative;
 }
 .video-featured video { width: 100%; display: block; aspect-ratio: 16/9; }
-.video-featured-body { padding: 16px 20px; }
-.video-featured-body strong { font-size: 15px; color: var(--text-heading); }
-.video-featured-body p { font-size: 13px; color: var(--text-body); margin-top: 4px; }
+.video-featured-body { padding: 20px 24px; }
+.video-featured-body strong { font-size: 16px; color: var(--text-heading); }
+.video-featured-body p { font-size: 14px; color: var(--text-body); margin-top: 4px; }
 .videos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .video-card {
-  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-card);
-  overflow: hidden; transition: all .2s; cursor: pointer;
+  background: #fff; border: 1px solid var(--border-light); border-radius: var(--radius-card);
+  overflow: hidden; transition: all .3s; cursor: pointer;
 }
-.video-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+.video-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
 .video-card video {
   width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block;
-  background: #F5F5F5; border-bottom: 1px solid var(--border);
+  background: #F5F5F5; border-bottom: 1px solid var(--border-light);
 }
-.video-card-body { padding: 12px; }
-.video-card-body strong { font-size: 13px; color: var(--text-heading); display: block; margin-bottom: 2px; }
-.video-card-body span { font-size: 11px; color: var(--text-body); line-height: 1.5; }
+.video-card-body { padding: 14px; }
+.video-card-body strong { font-size: 13px; color: var(--text-heading); display: block; margin-bottom: 4px; }
+.video-card-body span { font-size: 12px; color: var(--text-body); line-height: 1.5; }
 
-/* ── SCREENSHOTS ── */
-.ss-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 32px; flex-wrap: wrap; }
+/* ── SCREENSHOTS (DARK) ── */
+.ss-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 36px; flex-wrap: wrap; }
 .ss-tab {
-  padding: 9px 20px; border-radius: 100px; border: 1px solid var(--border);
-  background: transparent; color: var(--text-body); font-family: inherit;
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s;
+  padding: 10px 24px; border-radius: 100px; border: 1px solid var(--glass-border);
+  background: transparent; color: var(--text-white-muted); font-family: inherit;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .3s;
 }
-.ss-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
-.ss-tab:hover { border-color: var(--primary); }
+.ss-tab.active { background: var(--gradient-primary); border-color: transparent; color: #fff; box-shadow: 0 4px 15px var(--primary-glow); }
+.ss-tab:hover { border-color: rgba(108,99,255,0.3); color: #fff; }
 .ss-panel { position: absolute; opacity: 0; pointer-events: none; width: 100%; }
-.ss-panel.active { position: relative; opacity: 1; pointer-events: auto; animation: fadeIn .3s ease; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.ss-panel.active { position: relative; opacity: 1; pointer-events: auto; animation: fadeIn .4s ease; }
 .ss-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .ss-card {
-  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-card);
-  overflow: hidden; cursor: pointer; transition: all .2s;
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-card);
+  overflow: hidden; cursor: pointer; transition: all .3s; backdrop-filter: blur(20px);
 }
-.ss-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+.ss-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(108,99,255,0.15); border-color: rgba(108,99,255,0.2); }
 .ss-card img { width: 100%; display: block; aspect-ratio: 16/10; object-fit: cover; object-position: top; }
-.ss-caption { padding: 14px 16px; }
-.ss-caption strong { display: block; font-size: 14px; color: var(--text-heading); margin-bottom: 4px; }
-.ss-caption span { font-size: 12px; color: var(--text-body); line-height: 1.5; }
+.ss-caption { padding: 16px 18px; }
+.ss-caption strong { display: block; font-size: 14px; color: var(--text-white); margin-bottom: 4px; }
+.ss-caption span { font-size: 12px; color: var(--text-white-muted); line-height: 1.5; }
 .ss-mobile-card {
-  width: 220px; background: #fff; border: 1px solid var(--border);
-  border-radius: var(--radius-card); overflow: hidden; cursor: pointer; transition: all .2s;
+  width: 220px; background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card); overflow: hidden; cursor: pointer; transition: all .3s;
 }
-.ss-mobile-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+.ss-mobile-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(108,99,255,0.15); }
 .ss-mobile-card img { width: 100%; display: block; }
 .ss-mobile-card .ss-caption { padding: 12px; }
 
 /* ── LIGHTBOX ── */
 .lightbox {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88);
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.92);
   z-index: 999; align-items: center; justify-content: center; padding: 24px;
-  cursor: pointer; backdrop-filter: blur(12px); animation: lbFadeIn .2s ease;
+  cursor: pointer; backdrop-filter: blur(16px); animation: lbFadeIn .2s ease;
 }
 .lightbox.show { display: flex; }
 @keyframes lbFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes lbZoomIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes lbZoomIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .lightbox img {
   max-width: 92vw; max-height: 88vh; border-radius: 12px;
-  box-shadow: 0 24px 80px rgba(0,0,0,.4); object-fit: contain; animation: lbZoomIn .25s ease;
+  box-shadow: 0 24px 80px rgba(0,0,0,.5); object-fit: contain; animation: lbZoomIn .25s ease;
 }
 .lightbox-close {
-  position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,.1);
-  border: none; color: #fff; font-size: 28px; cursor: pointer; z-index: 1000;
-  width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; transition: background .2s;
+  position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.1); color: #fff; font-size: 28px; cursor: pointer; z-index: 1000;
+  width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; transition: all .3s;
 }
-.lightbox-close:hover { background: rgba(255,255,255,.2); }
+.lightbox-close:hover { background: rgba(255,255,255,.15); }
 
-/* ── STATS ── */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; padding: 60px 0; }
-.stat-item { text-align: center; }
-.stat-number { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 800; color: var(--text-heading); letter-spacing: -0.02em; }
-.stat-label { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
-.stat-divider { width: 1px; background: var(--border); }
-
-/* ── STEPS ── */
-.steps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-.step-card { text-align: center; }
+/* ── STEPS (LIGHT) ── */
+.steps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; position: relative; }
+.steps-row::before {
+  content: ''; position: absolute; top: 28px; left: 16%; right: 16%;
+  height: 2px; background: linear-gradient(90deg, var(--primary), #3B82F6);
+  opacity: 0.2; z-index: 0;
+}
+.step-card { text-align: center; position: relative; z-index: 1; }
 .step-number {
-  width: 48px; height: 48px; border: 2px solid var(--primary); border-radius: 50%;
+  width: 56px; height: 56px; border: 2px solid var(--primary); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 800; color: var(--primary); margin: 0 auto 16px;
+  font-size: 20px; font-weight: 800; color: var(--primary); margin: 0 auto 18px;
+  background: var(--bg-light); transition: all 0.3s;
 }
-.step-title { font-size: 16px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px; }
+.step-card:hover .step-number { background: var(--primary); color: #fff; }
+.step-title { font-size: 17px; font-weight: 700; color: var(--text-heading); margin-bottom: 8px; }
 .step-text { font-size: 14px; color: var(--text-body); line-height: 1.6; max-width: 320px; margin: 0 auto; }
 
-/* ── PRICING ── */
+/* ── PRICING (LIGHT) ── */
 .pricing-toggle { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 48px; }
 .pricing-toggle span { font-size: 14px; font-weight: 500; color: var(--text-muted); }
 .pricing-toggle .active { color: var(--text-heading); font-weight: 700; }
 .toggle-switch {
-  width: 48px; height: 26px; background: var(--primary); border-radius: 13px;
+  width: 52px; height: 28px; background: var(--gradient-primary); border-radius: 14px;
   position: relative; cursor: pointer; transition: background .2s;
+  box-shadow: 0 2px 10px var(--primary-glow);
 }
 .toggle-switch::after {
-  content: ''; width: 20px; height: 20px; background: #fff; border-radius: 10px;
+  content: ''; width: 22px; height: 22px; background: #fff; border-radius: 11px;
   position: absolute; top: 3px; left: 3px; transition: left .2s;
 }
-.toggle-switch.annual::after { left: 25px; }
-.save-badge { background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; }
+.toggle-switch.annual::after { left: 27px; }
+.save-badge { background: var(--gradient-primary); color: #fff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
 .pricing-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
 .plan-card {
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
-  padding: 32px 24px; text-align: center; transition: all .2s; position: relative;
+  background: var(--bg-card-light); border: 1px solid var(--border-light); border-radius: 20px;
+  padding: 32px 24px; text-align: center; transition: all .3s; position: relative;
 }
-.plan-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.05); }
-.plan-card.featured { border-color: var(--primary); border-width: 2px; }
+.plan-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.06); }
+.plan-card.featured {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--bg-card-light), var(--bg-card-light)) padding-box,
+              var(--gradient-primary) border-box;
+  box-shadow: 0 8px 30px rgba(108,99,255,0.15);
+}
 .plan-badge {
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  background: var(--primary); color: #fff; font-size: 11px; font-weight: 700;
-  padding: 4px 16px; border-radius: 100px; text-transform: uppercase; letter-spacing: .5px;
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  background: var(--gradient-primary); color: #fff; font-size: 11px; font-weight: 700;
+  padding: 5px 18px; border-radius: 100px; text-transform: uppercase; letter-spacing: .5px;
+  box-shadow: 0 4px 15px var(--primary-glow);
 }
 .plan-name { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--text-heading); margin-bottom: 6px; }
 .plan-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
@@ -279,119 +378,202 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 .plan-features .check { color: var(--green); font-weight: 700; flex-shrink: 0; }
 .plan-features .x { color: #D4D4D4; flex-shrink: 0; }
 .plan-btn {
-  width: 100%; padding: 12px; border-radius: var(--radius-btn); font-family: inherit;
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
+  width: 100%; padding: 13px; border-radius: var(--radius-btn); font-family: inherit;
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: all .3s;
 }
-.plan-btn-primary { background: var(--primary); color: #fff; border: none; }
-.plan-btn-primary:hover { background: var(--primary-hover); }
+.plan-btn-primary {
+  background: var(--gradient-primary); color: #fff; border: none;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+.plan-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--primary-glow); }
 .plan-btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
-.plan-btn-outline:hover { background: var(--primary-light); }
+.plan-btn-outline:hover { background: rgba(108,99,255,0.05); }
 
-/* ── TESTIMONIALS ── */
+/* ── IMPLANTACAO ── */
+.impl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; text-align: left; }
+.impl-card {
+  background: #fff; border: 1px solid var(--border-light); border-radius: 14px;
+  padding: 24px; transition: all 0.3s;
+}
+.impl-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+.impl-card h4 { font-size: 14px; font-weight: 700; color: var(--text-heading); margin-bottom: 12px; }
+.impl-card ul { list-style: none; font-size: 13px; color: var(--text-body); line-height: 2.2; }
+.impl-card li::before { content: '\2713  '; color: var(--green); font-weight: 700; }
+
+/* ── TESTIMONIALS (DARK) ── */
 .testimonials-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 .testimonial-card {
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-card);
-  padding: 28px; transition: all .2s;
+  background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-card);
+  padding: 32px; transition: all .3s; backdrop-filter: blur(20px);
 }
-.testimonial-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.05); }
-.testimonial-text { font-size: 15px; color: var(--text-body); line-height: 1.7; margin-bottom: 20px; font-style: italic; }
-.testimonial-author { display: flex; align-items: center; gap: 12px; }
+.testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(108,99,255,0.1); border-color: rgba(108,99,255,0.15); }
+.testimonial-stars { color: #FBBF24; font-size: 16px; letter-spacing: 2px; margin-bottom: 16px; }
+.testimonial-text { font-size: 15px; color: var(--text-white-muted); line-height: 1.8; margin-bottom: 24px; font-style: italic; }
+.testimonial-author { display: flex; align-items: center; gap: 14px; }
 .testimonial-avatar {
-  width: 42px; height: 42px; background: var(--primary-light); border: 1px solid rgba(91,91,214,.12);
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 700; color: var(--primary); flex-shrink: 0;
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(59,130,246,0.2));
+  border: 1px solid rgba(108,99,255,0.2); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: var(--primary); flex-shrink: 0;
 }
-.testimonial-name { font-size: 14px; font-weight: 700; color: var(--text-heading); }
-.testimonial-role { font-size: 12px; color: var(--text-muted); }
+.testimonial-name { font-size: 15px; font-weight: 700; color: var(--text-white); }
+.testimonial-role { font-size: 12px; color: var(--text-white-muted); }
 
 /* ── CTA FINAL ── */
 .cta-section {
-  background: rgba(91,91,214,.03); border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 80px 24px; text-align: center;
+  background: linear-gradient(135deg, #1A1040 0%, #0F1A3D 50%, #0A1030 100%);
+  padding: 100px 24px; text-align: center; position: relative; overflow: hidden;
+}
+.cta-section::before {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 600px; height: 600px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(108,99,255,0.1) 0%, transparent 70%);
+  filter: blur(80px); pointer-events: none;
 }
 .cta-section h2 {
-  font-family: 'Playfair Display', serif; font-size: clamp(28px, 4vw, 36px);
-  font-weight: 800; color: var(--text-heading); margin-bottom: 14px; letter-spacing: -0.02em;
+  font-family: 'Playfair Display', serif; font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800; margin-bottom: 14px; letter-spacing: -0.02em; position: relative; z-index: 1;
+  background: linear-gradient(135deg, #fff 0%, #C4B5FD 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.cta-section p { font-size: 16px; color: var(--text-body); margin-bottom: 32px; }
+.cta-section p { font-size: 16px; color: var(--text-white-muted); margin-bottom: 36px; position: relative; z-index: 1; }
 .cta-form {
   display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
-  max-width: 640px; margin: 0 auto;
+  max-width: 680px; margin: 0 auto; position: relative; z-index: 1;
 }
 .cta-form input {
-  padding: 13px 16px; border: 1px solid var(--border); border-radius: var(--radius-btn);
-  background: #fff; color: var(--text-heading); font-family: inherit; font-size: 14px;
-  outline: none; flex: 1; min-width: 180px; transition: border-color .2s;
+  padding: 14px 18px; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-btn);
+  background: rgba(255,255,255,0.05); color: #fff; font-family: inherit; font-size: 14px;
+  outline: none; flex: 1; min-width: 180px; transition: all .3s; backdrop-filter: blur(10px);
 }
-.cta-form input::placeholder { color: var(--text-muted); }
-.cta-form input:focus { border-color: var(--primary); }
+.cta-form input::placeholder { color: var(--text-white-muted); }
+.cta-form input:focus { border-color: var(--primary); box-shadow: 0 0 20px rgba(108,99,255,0.2); }
 .cta-form button {
-  padding: 13px 28px; background: var(--primary); color: #fff; border: none;
+  padding: 14px 30px; background: var(--gradient-primary); color: #fff; border: none;
   border-radius: var(--radius-btn); font-family: inherit; font-size: 15px;
-  font-weight: 700; cursor: pointer; transition: all .2s;
+  font-weight: 700; cursor: pointer; transition: all .3s;
+  box-shadow: 0 4px 20px var(--primary-glow);
 }
-.cta-form button:hover { background: var(--primary-hover); }
+.cta-form button:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--primary-glow); }
 
 /* ── FOOTER ── */
-.footer { background: #171717; color: #A3A3A3; padding: 60px 24px 32px; }
+.footer { background: #050507; color: #8B8B9E; padding: 64px 24px 32px; }
 .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; max-width: 1200px; margin: 0 auto; }
-.footer-brand p { font-size: 13px; line-height: 1.6; margin-top: 12px; }
-.footer h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 16px; }
-.footer a { color: #A3A3A3; text-decoration: none; font-size: 13px; display: block; margin-bottom: 10px; transition: color .2s; }
-.footer a:hover { color: #fff; }
+.footer-brand p { font-size: 13px; line-height: 1.7; margin-top: 14px; }
+.footer h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #fff; margin-bottom: 18px; }
+.footer a { color: #8B8B9E; text-decoration: none; font-size: 13px; display: block; margin-bottom: 12px; transition: color .2s; }
+.footer a:hover { color: var(--primary); }
 .footer-bottom {
-  max-width: 1200px; margin: 40px auto 0; padding-top: 24px;
-  border-top: 1px solid #2A2A2A; display: flex; justify-content: space-between;
+  max-width: 1200px; margin: 48px auto 0; padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between;
   align-items: center; font-size: 12px;
 }
 .footer .logo-text { color: #fff; }
 
 /* ── WHATSAPP FLOAT ── */
-.whatsapp-float { position: fixed; bottom: 24px; left: 24px; z-index: 998; display: flex; align-items: center; gap: 10px; text-decoration: none; animation: waBounce 2s ease infinite; }
+.whatsapp-float {
+  position: fixed; bottom: 24px; left: 24px; z-index: 998;
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
+}
 .whatsapp-float:hover { text-decoration: none; }
 .whatsapp-float .wa-btn {
-  width: 52px; height: 52px; border-radius: 50%; background: #25D366;
+  width: 56px; height: 56px; border-radius: 50%; background: #25D366;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 12px rgba(37,211,102,.3); transition: transform .2s;
+  box-shadow: 0 4px 15px rgba(37,211,102,.35); transition: all .3s;
+  animation: wa-pulse 2s ease infinite;
 }
-.whatsapp-float:hover .wa-btn { transform: scale(1.08); }
-.whatsapp-float .wa-btn svg { width: 26px; height: 26px; fill: #fff; }
+@keyframes wa-pulse {
+  0% { box-shadow: 0 4px 15px rgba(37,211,102,.35); }
+  50% { box-shadow: 0 4px 15px rgba(37,211,102,.35), 0 0 0 12px rgba(37,211,102,.12); }
+  100% { box-shadow: 0 4px 15px rgba(37,211,102,.35); }
+}
+.whatsapp-float:hover .wa-btn { transform: scale(1.1); }
+.whatsapp-float .wa-btn svg { width: 28px; height: 28px; fill: #fff; }
 .whatsapp-float .wa-tooltip {
-  background: #fff; color: var(--text-heading); padding: 8px 14px; border-radius: 8px;
-  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08); white-space: nowrap;
-  opacity: 0; transform: translateX(-8px); transition: all .2s;
+  background: #fff; color: var(--text-heading); padding: 10px 16px; border-radius: 10px;
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15); white-space: nowrap;
+  opacity: 0; transform: translateX(-8px); transition: all .3s;
 }
 .whatsapp-float:hover .wa-tooltip { opacity: 1; transform: translateX(0); }
-@keyframes waBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @media print { .whatsapp-float { display: none; } }
+
+/* ── ROI (DARK) ── */
+.roi-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; max-width: 900px; margin: 0 auto; }
+.roi-input-card {
+  background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: 20px; padding: 32px; backdrop-filter: blur(20px);
+}
+.roi-input-card h3 { color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 24px; }
+.roi-label {
+  display: block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--text-white-muted); margin-bottom: 8px;
+}
+.roi-range { width: 100%; accent-color: var(--primary); height: 6px; margin-bottom: 4px; cursor: pointer; }
+.roi-range-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-white-muted); margin-bottom: 20px; }
+.roi-range-info .roi-val { color: #fff; font-weight: 700; font-size: 13px; }
+.roi-result-hero {
+  background: linear-gradient(135deg, rgba(108,99,255,0.12), rgba(59,130,246,0.12));
+  border: 1px solid rgba(108,99,255,0.2); border-radius: 20px;
+  padding: 32px; margin-bottom: 16px; text-align: center;
+}
+.roi-result-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--primary); margin-bottom: 8px; }
+.roi-result-total { font-size: 48px; font-weight: 900; color: #fff; line-height: 1; }
+.roi-result-multiplo { font-size: 14px; color: var(--green); font-weight: 700; margin-top: 10px; }
+.roi-results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.roi-result-card {
+  background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: 14px; padding: 18px; text-align: center;
+}
+.roi-result-card .value { font-size: 24px; font-weight: 900; color: #fff; }
+.roi-result-card .label { font-size: 11px; color: var(--text-white-muted); margin-top: 2px; }
+.roi-cta {
+  display: block; text-align: center; margin-top: 16px; padding: 15px;
+  background: var(--gradient-primary); color: #fff; border-radius: var(--radius-btn);
+  font-weight: 700; font-size: 15px; text-decoration: none;
+  box-shadow: 0 4px 20px var(--primary-glow); transition: all 0.3s;
+}
+.roi-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--primary-glow); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 1024px) {
   .hero-inner { grid-template-columns: 1fr; text-align: center; }
-  .hero p { margin: 0 auto 32px; }
+  .hero p { margin: 0 auto 36px; }
   .hero-ctas { justify-content: center; }
-  .hero-visual { margin-top: 24px; }
-  .pricing-grid { grid-template-columns: repeat(2, 1fr); }
-  .pricing-grid:first-of-type { grid-template-columns: repeat(3, 1fr); }
+  .hero-social { justify-content: center; }
+  .hero-visual { margin-top: 32px; }
+  .hero-screenshot { transform: none; }
+  .hero-screenshot:hover { transform: none; }
+  .pricing-grid { grid-template-columns: repeat(3, 1fr); }
   .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .roi-layout { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
-  .nav { display: none; position: fixed; top: 64px; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--border); flex-direction: column; padding: 16px 24px; gap: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+  .nav {
+    display: none; position: fixed; top: 72px; left: 0; right: 0;
+    background: rgba(10,10,15,0.95); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-dark);
+    flex-direction: column; padding: 20px 24px; gap: 18px;
+  }
   .nav.open { display: flex; }
   .hamburger { display: block; }
   .problems-grid, .features-grid, .steps-row, .testimonials-grid, .ss-grid { grid-template-columns: 1fr; }
+  .steps-row::before { display: none; }
   .videos-grid { grid-template-columns: 1fr !important; }
   .pricing-grid { grid-template-columns: 1fr; }
-  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .stat-number { font-size: 36px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
   .cta-form { flex-direction: column; }
   .cta-form input { min-width: 100%; }
   .hero-inner { gap: 24px; }
-  .hero { padding: 100px 16px 60px; }
-  .section { padding: 60px 16px; }
+  .hero { padding: 120px 16px 60px; min-height: auto; }
+  .section { padding: 64px 16px; }
+  .hero h1 { font-size: clamp(36px, 8vw, 52px); }
   img, video { max-width: 100%; height: auto; }
+  .why-grid { grid-template-columns: 1fr; }
+  .impl-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -401,7 +583,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 <header class="header" id="mainHeader">
   <a href="#" class="logo">
     <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="8" fill="#5B5BD6"/>
+      <rect width="32" height="32" rx="8" fill="#6C63FF"/>
       <path d="M16 7L9 16h14L16 7z" fill="#fff"/>
       <rect x="10" y="18" width="12" height="7" rx="1.5" fill="#fff" opacity=".8"/>
     </svg>
@@ -423,20 +605,20 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
 <section class="hero">
   <div class="hero-inner">
     <div>
-      <div class="hero-badge">Usado por escolas bilingues no RS</div>
-      <h1>Menos planilha. Mais tempo para o que importa.</h1>
-      <p>O Lumied cuida da gestao para que voce cuide da educacao. Comunicacao com familias, financeiro, matriculas, pedagogico — tudo num lugar so. E com uma assistente inteligente que avisa quando algo precisa da sua atencao.</p>
+      <div class="hero-badge">Plataforma #1 para escolas bilíngues</div>
+      <h1>A gestão escolar que pensa por você</h1>
+      <p>O Lumied cuida da gestão para que você cuide da educação. Comunicação com famílias, financeiro, matrículas, pedagógico — tudo num lugar só. E com uma assistente inteligente que avisa quando algo precisa da sua atenção.</p>
       <div class="hero-ctas">
-        <a href="#contact" class="btn-primary">Quero conhecer — agendar conversa</a>
-        <a href="#roi" class="btn-ghost">Calcular minha economia</a>
+        <a href="#contact" class="btn-primary">Agendar Demo Gratuita</a>
+        <a href="#videos" class="btn-ghost">Ver em Ação ▶</a>
       </div>
-      <div style="display:flex;align-items:center;gap:16px;margin-top:28px;">
-        <div style="display:flex;">
-          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop&crop=face" style="width:36px;height:36px;border-radius:50%;border:2px solid #fff;object-fit:cover;">
-          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" style="width:36px;height:36px;border-radius:50%;border:2px solid #fff;margin-left:-10px;object-fit:cover;">
-          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" style="width:36px;height:36px;border-radius:50%;border:2px solid #fff;margin-left:-10px;object-fit:cover;">
+      <div class="hero-social">
+        <div class="hero-social-avatars">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop&crop=face" alt="">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" alt="">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="">
         </div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.4;"><strong style="color:var(--text-heading);">Diretoras e coordenadoras</strong> de escolas bilingues ja usam o Lumied no dia a dia.</div>
+        <div class="hero-social-text"><strong>Diretoras e coordenadoras</strong> de escolas bilíngues já usam o Lumied no dia a dia.</div>
       </div>
     </div>
     <div class="hero-visual">
@@ -447,227 +629,226 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   </div>
 </section>
 
-<!-- ── O QUE FAZ DIFERENTE ── -->
-<div style="background:#fff;padding:56px 0;border-bottom:1px solid var(--border);">
-  <div class="container">
-    <div style="text-align:center;margin-bottom:36px;">
-      <h2 style="font-size:clamp(22px,3vw,32px);font-weight:800;color:var(--text-heading);letter-spacing:-.3px;">Por que escolas estao trocando de sistema para o Lumied?</h2>
-      <p style="color:var(--text-muted);font-size:15px;max-width:520px;margin:8px auto 0;">Tres coisas que nenhum concorrente oferece junto.</p>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;max-width:900px;margin:0 auto;">
-      <div style="padding:28px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);">
-        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=200&fit=crop" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:16px;" alt="Diretora usando o sistema">
-        <h3 style="font-size:16px;font-weight:700;color:var(--text-heading);margin-bottom:6px;">Assistente que entende sua escola</h3>
-        <p style="font-size:13px;color:var(--text-body);line-height:1.6;">A Lumi le os dados reais — notas, frequencia, financeiro — e te avisa quando algo precisa de atencao. Como ter uma coordenadora a mais na equipe.</p>
-      </div>
-      <div style="padding:28px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);">
-        <img src="https://images.unsplash.com/photo-1577896851231-70ef18881754?w=400&h=200&fit=crop" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:16px;" alt="Professora em sala de aula">
-        <h3 style="font-size:16px;font-weight:700;color:var(--text-heading);margin-bottom:6px;">WhatsApp integrado de verdade</h3>
-        <p style="font-size:13px;color:var(--text-body);line-height:1.6;">Familias recebem comunicados, confirmam presenca em eventos e tiram duvidas — tudo pelo WhatsApp, sem grupo bagunçado.</p>
-      </div>
-      <div style="padding:28px;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);">
-        <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=200&fit=crop" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:16px;" alt="Reuniao de equipe escolar">
-        <h3 style="font-size:16px;font-weight:700;color:var(--text-heading);margin-bottom:6px;">Compliance que se faz sozinho</h3>
-        <p style="font-size:13px;color:var(--text-body);line-height:1.6;">Controle de ponto, certificacoes, inspecoes, calendario regulatorio. O sistema avisa antes do prazo vencer — voce so confirma.</p>
-      </div>
-    </div>
+<!-- ── ANIMATED STATS BAR ── -->
+<div class="stats-bar">
+  <div class="stats-row">
+    <div class="stat-item fade-up"><div class="stat-number" data-count="23">0</div><div class="stat-label">Módulos integrados</div></div>
+    <div class="stat-item fade-up"><div class="stat-number" data-count="6">0</div><div class="stat-label">Portais dedicados</div></div>
+    <div class="stat-item fade-up"><div class="stat-number" data-count="200" data-suffix="+">0</div><div class="stat-label">Actions na API</div></div>
+    <div class="stat-item fade-up"><div class="stat-number" data-count="99.9" data-suffix="%" data-decimal="true">0</div><div class="stat-label">Uptime garantido</div></div>
   </div>
 </div>
 
-<!-- ── SOCIAL PROOF ── -->
-<div style="background:var(--bg);padding:32px 0;border-bottom:1px solid var(--border);">
-  <div class="container" style="text-align:center;">
-    <p style="font-size:12px;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);font-weight:600;margin-bottom:16px;">Nasceu dentro de uma escola bilingue</p>
-    <div style="display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap;opacity:.5;">
-      <span style="font-size:15px;font-weight:700;color:var(--text-heading);">Maple Bear Caxias do Sul</span>
-      <span style="font-size:15px;font-weight:700;color:var(--text-heading);">Maple Bear Bento Goncalves</span>
-      <span style="font-size:15px;font-weight:700;color:var(--text-heading);">Escolas Bilingues RS</span>
-    </div>
-  </div>
-</div>
-
-<!-- ── PROBLEMS ── -->
-<section class="section" style="background:#fff;">
+<!-- ── POR QUE ESCOLAS ESTÃO TROCANDO (LIGHT) ── -->
+<section class="section section-light">
   <div class="container">
-    <div class="section-header">
-      <div class="section-badge">Soa familiar?</div>
-      <h2 class="section-title">A rotina de quem gerencia uma escola</h2>
-      <p class="section-sub">Se voce se identificou com pelo menos um, vale a pena conversar.</p>
+    <div class="section-header fade-up">
+      <div class="section-badge">Por que trocar?</div>
+      <h2 class="section-title section-title-light">Por que escolas estão trocando de sistema para o Lumied?</h2>
+      <p class="section-sub section-sub-light">Três coisas que nenhum concorrente oferece junto.</p>
     </div>
-    <div class="problems-grid">
-      <div class="problem-card">
-        <div class="problem-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-        <div class="problem-title">Grupos de WhatsApp incontrolaveis</div>
-        <div class="problem-text">Mensagens perdidas, pais respondendo fora de hora, coordenacao sem controle. O Lumied centraliza toda a comunicacao em um so lugar.</div>
+    <div class="why-grid">
+      <div class="why-card fade-up">
+        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=200&fit=crop" alt="Diretora usando o sistema">
+        <h3>Assistente que entende sua escola</h3>
+        <p>A Lumi lê os dados reais — notas, frequência, financeiro — e te avisa quando algo precisa de atenção. Como ter uma coordenadora a mais na equipe.</p>
       </div>
-      <div class="problem-card">
-        <div class="problem-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
-        <div class="problem-title">Planilhas que nao fecham</div>
-        <div class="problem-text">DRE manual, conciliacao bancaria no Excel, boletos controlados em caderno. Automatize 100% do financeiro com integracao bancaria.</div>
+      <div class="why-card fade-up">
+        <img src="https://images.unsplash.com/photo-1577896851231-70ef18881754?w=400&h=200&fit=crop" alt="Professora em sala de aula">
+        <h3>WhatsApp integrado de verdade</h3>
+        <p>Famílias recebem comunicados, confirmam presença em eventos e tiram dúvidas — tudo pelo WhatsApp, sem grupo bagunçado.</p>
       </div>
-      <div class="problem-card">
-        <div class="problem-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
-        <div class="problem-title">Sistemas desconectados</div>
-        <div class="problem-text">Um sistema para nota, outro para financeiro, outro para comunicacao. No Lumied, tudo esta integrado nativamente.</div>
-      </div>
-      <div class="problem-card">
-        <div class="problem-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-        <div class="problem-title">Processo de matricula manual</div>
-        <div class="problem-text">Formularios em papel, contratos impressos, documentos perdidos. Matricula 100% digital com assinatura eletronica.</div>
-      </div>
-      <div class="problem-card">
-        <div class="problem-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-        <div class="problem-title">Secretaria sobrecarregada</div>
-        <div class="problem-text">Ligacoes o dia inteiro para perguntas simples. Pais acessam tudo pelo app: notas, frequencia, boletos, boletim.</div>
-      </div>
-      <div class="problem-card">
-        <div class="problem-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-        <div class="problem-title">Sem visao do negocio</div>
-        <div class="problem-text">Taxa de evasao, inadimplencia, conversao de leads — sem dados nao ha gestao. Dashboard em tempo real com indicadores estrategicos.</div>
+      <div class="why-card fade-up">
+        <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=200&fit=crop" alt="Reunião de equipe escolar">
+        <h3>Compliance que se faz sozinho</h3>
+        <p>Controle de ponto, certificações, inspeções, calendário regulatório. O sistema avisa antes do prazo vencer — você só confirma.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── FEATURES ── -->
-<section class="section" id="features" style="background:var(--bg);">
+<!-- ── PROBLEMS (LIGHT) ── -->
+<section class="section section-light" style="padding-top:40px;">
   <div class="container">
-    <div class="section-header">
-      <div class="section-badge">✨ Modulos com IA</div>
-      <h2 class="section-title">Cada modulo tem inteligencia embutida</h2>
-      <p class="section-sub">Nao e so um sistema. Cada funcionalidade analisa, sugere e automatiza com a Lumi.</p>
+    <div class="section-header fade-up">
+      <div class="section-badge">Soa familiar?</div>
+      <h2 class="section-title section-title-light">A rotina de quem gerencia uma escola</h2>
+      <p class="section-sub section-sub-light">Se você se identificou com pelo menos um, vale a pena conversar.</p>
+    </div>
+    <div class="problems-grid">
+      <div class="problem-card fade-up">
+        <div class="problem-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="problem-title">Grupos de WhatsApp incontroláveis</div>
+        <div class="problem-text">Mensagens perdidas, pais respondendo fora de hora, coordenação sem controle. O Lumied centraliza toda a comunicação em um só lugar.</div>
+      </div>
+      <div class="problem-card fade-up">
+        <div class="problem-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+        <div class="problem-title">Planilhas que não fecham</div>
+        <div class="problem-text">DRE manual, conciliação bancária no Excel, boletos controlados em caderno. Automatize 100% do financeiro com integração bancária.</div>
+      </div>
+      <div class="problem-card fade-up">
+        <div class="problem-icon"><svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+        <div class="problem-title">Sistemas desconectados</div>
+        <div class="problem-text">Um sistema para nota, outro para financeiro, outro para comunicação. No Lumied, tudo está integrado nativamente.</div>
+      </div>
+      <div class="problem-card fade-up">
+        <div class="problem-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+        <div class="problem-title">Processo de matrícula manual</div>
+        <div class="problem-text">Formulários em papel, contratos impressos, documentos perdidos. Matrícula 100% digital com assinatura eletrônica.</div>
+      </div>
+      <div class="problem-card fade-up">
+        <div class="problem-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        <div class="problem-title">Secretaria sobrecarregada</div>
+        <div class="problem-text">Ligações o dia inteiro para perguntas simples. Pais acessam tudo pelo app: notas, frequência, boletos, boletim.</div>
+      </div>
+      <div class="problem-card fade-up">
+        <div class="problem-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <div class="problem-title">Sem visão do negócio</div>
+        <div class="problem-text">Taxa de evasão, inadimplência, conversão de leads — sem dados não há gestão. Dashboard em tempo real com indicadores estratégicos.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES (DARK) ── -->
+<section class="section section-dark" id="features" style="background: linear-gradient(180deg, #0A0A0F 0%, #12121A 50%, #0A0A0F 100%);">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Módulos com IA</div>
+      <h2 class="section-title section-title-dark">Cada módulo tem inteligência embutida</h2>
+      <p class="section-sub section-sub-dark">Não é só um sistema. Cada funcionalidade analisa, sugere e automatiza com a Lumi.</p>
     </div>
     <div class="features-grid">
-      <div class="feature-card">
-        <img src="screenshots/feat-chat.png" alt="Chat escola-familia" loading="lazy">
+      <div class="feature-card fade-up">
+        <img src="screenshots/feat-chat.png" alt="Chat escola-família" loading="lazy">
         <div class="feature-body">
-          <div class="feature-title">Comunicacao com Familias</div>
-          <div class="feature-text">Chat escola-familia, agenda digital, enquetes, autorizacoes, confirmacao de leitura. Substitui 100% dos grupos de WhatsApp.</div>
+          <div class="feature-title">Comunicação com Famílias</div>
+          <div class="feature-text">Chat escola-família, agenda digital, enquetes, autorizações, confirmação de leitura. Substitui 100% dos grupos de WhatsApp.</div>
         </div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up">
         <img src="screenshots/feat-financeiro.png" alt="Dashboard Financeiro" loading="lazy">
         <div class="feature-body">
           <div class="feature-title">Financeiro Completo</div>
-          <div class="feature-text">Boletos (Banco Inter), PIX integrado, DRE, balanco patrimonial, conciliacao bancaria, regua de cobranca automatica.</div>
+          <div class="feature-text">Boletos (Banco Inter), PIX integrado, DRE, balanço patrimonial, conciliação bancária, régua de cobrança automática.</div>
         </div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up">
         <img src="screenshots/mockup-crm-kanban.png" alt="CRM Pipeline Kanban" loading="lazy">
         <div class="feature-body">
-          <div class="feature-title">CRM de Matriculas</div>
-          <div class="feature-text">Pipeline Kanban, leads, templates WhatsApp, vagas por serie, matricula online com documentos e contrato digital.</div>
+          <div class="feature-title">CRM de Matrículas</div>
+          <div class="feature-text">Pipeline Kanban, leads, templates WhatsApp, vagas por série, matrícula online com documentos e contrato digital.</div>
         </div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up">
         <img src="screenshots/feat-notas.png" alt="Notas e Boletim" loading="lazy">
         <div class="feature-body">
-          <div class="feature-title">Academico & Pedagogico</div>
-          <div class="feature-text">Notas, boletim digital, frequencia, diario de classe, relatorios BNCC, banco de provas online, Growth Plan.</div>
+          <div class="feature-title">Acadêmico & Pedagógico</div>
+          <div class="feature-text">Notas, boletim digital, frequência, diário de classe, relatórios BNCC, banco de provas online, Growth Plan.</div>
         </div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up">
         <img src="screenshots/feat-almox.png" alt="Almoxarifado" loading="lazy">
         <div class="feature-body">
           <div class="feature-title">Operacional</div>
-          <div class="feature-text">Almoxarifado com busca de precos, biblioteca, cantina, transporte escolar com rastreio GPS, manutencao.</div>
+          <div class="feature-text">Almoxarifado com busca de preços, biblioteca, cantina, transporte escolar com rastreio GPS, manutenção.</div>
         </div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up">
         <img src="screenshots/feat-agenda.png" alt="Agenda Digital" loading="lazy">
         <div class="feature-body">
           <div class="feature-title">Agenda Digital & Portais</div>
-          <div class="feature-text">Diario do aluno com fotos, refeicoes, humor. Portais dedicados: pais, professoras, secretaria, gerencia. Face ID.</div>
+          <div class="feature-text">Diário do aluno com fotos, refeições, humor. Portais dedicados: pais, professoras, secretaria, gerência. Face ID.</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── VIDEO DEMOS ── -->
-<section class="section" id="videos" style="background:#fff;">
+<!-- ── VIDEO DEMOS (LIGHT) ── -->
+<section class="section section-light" id="videos">
   <div class="container">
-    <div class="section-header">
-      <div class="section-badge">Videos Demonstrativos</div>
-      <h2 class="section-title">Veja o Lumied em acao</h2>
-      <p class="section-sub">Assista como cada modulo funciona na pratica.</p>
+    <div class="section-header fade-up">
+      <div class="section-badge">Vídeos Demonstrativos</div>
+      <h2 class="section-title section-title-light">Veja o Lumied em ação</h2>
+      <p class="section-sub section-sub-light">Assista como cada módulo funciona na prática.</p>
     </div>
 
     <!-- Featured Video -->
-    <div class="video-featured">
+    <div class="video-featured fade-up">
       <video controls muted loop playsinline preload="metadata">
         <source src="videos/demo-dashboard-tour.mp4" type="video/mp4">
       </video>
       <div class="video-featured-body">
         <strong>Dashboard do Gerente — Tour Interativo</strong>
-        <p>Visao geral com metricas de alunos, receitas, despesas e notificacoes em tempo real. Navegacao entre todos os 23 modulos na sidebar.</p>
+        <p>Visão geral com métricas de alunos, receitas, despesas e notificações em tempo real. Navegação entre todos os 23 módulos na sidebar.</p>
       </div>
     </div>
 
     <!-- Module Videos Grid -->
     <div class="videos-grid">
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-notas.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>Notas & Boletim</strong><span>Lancamento de notas em grid, media ponderada, recuperacao, boletim digital</span></div>
+        <div class="video-card-body"><strong>Notas & Boletim</strong><span>Lançamento de notas em grid, média ponderada, recuperação, boletim digital</span></div>
       </div>
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-frequencia.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>Frequencia & Chamada</strong><span>Chamada diaria, % presenca, alertas de infrequencia, barra de progresso</span></div>
+        <div class="video-card-body"><strong>Frequência & Chamada</strong><span>Chamada diária, % presença, alertas de infrequência, barra de progresso</span></div>
       </div>
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-financeiro.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>Financeiro</strong><span>Dashboard, receitas vs despesas, boletos Inter, DRE, conciliacao</span></div>
+        <div class="video-card-body"><strong>Financeiro</strong><span>Dashboard, receitas vs despesas, boletos Inter, DRE, conciliação</span></div>
       </div>
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-crm.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>CRM Pipeline</strong><span>Kanban de leads, estagios configuraveis, conversao, vagas por serie</span></div>
+        <div class="video-card-body"><strong>CRM Pipeline</strong><span>Kanban de leads, estágios configuráveis, conversão, vagas por série</span></div>
       </div>
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-almoxarifado.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>Almoxarifado</strong><span>Requisicoes, orcamentos, busca de precos, aprovacao, compras</span></div>
+        <div class="video-card-body"><strong>Almoxarifado</strong><span>Requisições, orçamentos, busca de preços, aprovação, compras</span></div>
       </div>
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-chat.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>Chat Escola-Familia</strong><span>Mensagens diretas, avisos por turma, confirmacao de leitura</span></div>
+        <div class="video-card-body"><strong>Chat Escola-Família</strong><span>Mensagens diretas, avisos por turma, confirmação de leitura</span></div>
       </div>
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-agenda.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>Agenda Digital</strong><span>Diario do aluno: atividades, refeicoes, sono, humor, fotos em tempo real</span></div>
+        <div class="video-card-body"><strong>Agenda Digital</strong><span>Diário do aluno: atividades, refeições, sono, humor, fotos em tempo real</span></div>
       </div>
-      <div class="video-card">
+      <div class="video-card fade-up">
         <video muted loop playsinline preload="metadata" onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0" onclick="this.paused?this.play():this.pause()">
           <source src="videos/mod-biblioteca.mp4" type="video/mp4">
         </video>
-        <div class="video-card-body"><strong>Biblioteca</strong><span>Acervo, emprestimos, devolucoes, multas, reservas online</span></div>
+        <div class="video-card-body"><strong>Biblioteca</strong><span>Acervo, empréstimos, devoluções, multas, reservas online</span></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── SCREENSHOTS GALLERY ── -->
-<section class="section" id="screenshots" style="background:var(--bg);">
+<!-- ── SCREENSHOTS GALLERY (DARK) ── -->
+<section class="section section-dark" id="screenshots">
   <div class="container">
-    <div class="section-header">
-      <div class="section-badge">Veja na pratica</div>
-      <h2 class="section-title">Conheca cada detalhe do Lumied</h2>
-      <p class="section-sub">Capturas reais do sistema. Clique para ampliar.</p>
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Veja na prática</div>
+      <h2 class="section-title section-title-dark">Conheça cada detalhe do Lumied</h2>
+      <p class="section-sub section-sub-dark">Capturas reais do sistema. Clique para ampliar.</p>
     </div>
 
-    <div class="ss-tabs">
+    <div class="ss-tabs fade-up">
       <button class="ss-tab active" onclick="showSSTab('desktop',this)">Desktop</button>
       <button class="ss-tab" onclick="showSSTab('mobile',this)">Mobile</button>
       <button class="ss-tab" onclick="showSSTab('crm',this)">CRM</button>
@@ -676,46 +857,46 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
     <!-- Desktop Screenshots -->
     <div class="ss-panel active" id="ssDesktop">
       <div class="ss-grid">
-        <div class="ss-card" onclick="openLightbox(this)">
+        <div class="ss-card fade-up" onclick="openLightbox(this)">
           <img src="screenshots/mockup-dashboard.png" alt="Dashboard Analytics" loading="lazy">
           <div class="ss-caption">
             <strong>Dashboard Analytics</strong>
-            <span>Visao geral: alunos, receitas, frequencia, inadimplencia. Grafico de receitas vs despesas e notificacoes em tempo real.</span>
+            <span>Visão geral: alunos, receitas, frequência, inadimplência. Gráfico de receitas vs despesas e notificações em tempo real.</span>
           </div>
         </div>
-        <div class="ss-card" onclick="openLightbox(this)">
+        <div class="ss-card fade-up" onclick="openLightbox(this)">
           <img src="screenshots/gerente-login.png" alt="Login do Gerente" loading="lazy">
           <div class="ss-caption">
             <strong>Login Seguro</strong>
-            <span>Acesso com senha PBKDF2 + login biometrico Face ID. Design clean com branding personalizado.</span>
+            <span>Acesso com senha PBKDF2 + login biométrico Face ID. Design clean com branding personalizado.</span>
           </div>
         </div>
-        <div class="ss-card" onclick="openLightbox(this)">
+        <div class="ss-card fade-up" onclick="openLightbox(this)">
           <img src="screenshots/portal-pais-login.png" alt="Portal dos Pais" loading="lazy">
           <div class="ss-caption">
             <strong>Portal dos Pais</strong>
             <span>Login com Google, Magic Link ou biometria. Acesso a boletim, boletos, agenda digital, pickup.</span>
           </div>
         </div>
-        <div class="ss-card" onclick="openLightbox(this)">
-          <img src="screenshots/area-restrita.png" alt="Area Restrita" loading="lazy">
+        <div class="ss-card fade-up" onclick="openLightbox(this)">
+          <img src="screenshots/area-restrita.png" alt="Área Restrita" loading="lazy">
           <div class="ss-caption">
             <strong>Hub de Acesso</strong>
-            <span>Portais dedicados: Gerente, Professoras, Secretaria, Admin. Cada um com permissoes proprias.</span>
+            <span>Portais dedicados: Gerente, Professoras, Secretaria, Admin. Cada um com permissões próprias.</span>
           </div>
         </div>
-        <div class="ss-card" onclick="openLightbox(this)">
+        <div class="ss-card fade-up" onclick="openLightbox(this)">
           <img src="screenshots/admin-login.png" alt="Painel Admin" loading="lazy">
           <div class="ss-caption">
             <strong>Painel Admin (SaaS)</strong>
-            <span>Controle granular: toggle de modulos por escola, gestao de planos, escolas clientes.</span>
+            <span>Controle granular: toggle de módulos por escola, gestão de planos, escolas clientes.</span>
           </div>
         </div>
-        <div class="ss-card" onclick="openLightbox(this)">
+        <div class="ss-card fade-up" onclick="openLightbox(this)">
           <img src="screenshots/professora-login.png" alt="Portal Professoras" loading="lazy">
           <div class="ss-caption">
             <strong>Portal das Professoras</strong>
-            <span>Fila de retirada, diplomas, Growth Plan, almoxarifado, chamada, diario de classe.</span>
+            <span>Fila de retirada, diplomas, Growth Plan, almoxarifado, chamada, diário de classe.</span>
           </div>
         </div>
       </div>
@@ -735,7 +916,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
           <img src="screenshots/mobile-pais.png" alt="Portal Pais Mobile" loading="lazy">
           <div class="ss-caption">
             <strong>Login Mobile</strong>
-            <span>PWA instalavel com Face ID. Parece app nativo sem baixar da loja.</span>
+            <span>PWA instalável com Face ID. Parece app nativo sem baixar da loja.</span>
           </div>
         </div>
         <div class="ss-mobile-card" onclick="openLightbox(this)">
@@ -755,7 +936,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
           <img src="screenshots/mockup-crm-kanban.png" alt="CRM Pipeline Kanban" loading="lazy">
           <div class="ss-caption">
             <strong>CRM — Pipeline Kanban</strong>
-            <span>Drag-and-drop de leads entre estagios: Novo Lead, Primeiro Contato, Visita, Proposta, Matricula Fechada. Templates WhatsApp integrados.</span>
+            <span>Drag-and-drop de leads entre estágios: Novo Lead, Primeiro Contato, Visita, Proposta, Matrícula Fechada. Templates WhatsApp integrados.</span>
           </div>
         </div>
       </div>
@@ -763,238 +944,70 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   </div>
 </section>
 
-<!-- ── STATS ── -->
-<section class="section" style="background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 24px;">
+<!-- ── ROI CALCULATOR (DARK) ── -->
+<section class="section section-dark" id="roi" style="background: linear-gradient(135deg, #0F0D12 0%, #1A1530 50%, #0F0D12 100%);">
   <div class="container">
-    <div class="stats-row">
-      <div class="stat-item"><div class="stat-number">23</div><div class="stat-label">Modulos integrados</div></div>
-      <div class="stat-item"><div class="stat-number">6</div><div class="stat-label">Portais dedicados</div></div>
-      <div class="stat-item"><div class="stat-number">200+</div><div class="stat-label">Actions na API</div></div>
-      <div class="stat-item"><div class="stat-number">99.9%</div><div class="stat-label">Uptime garantido</div></div>
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Calculadora de ROI</div>
+      <h2 class="section-title section-title-dark">Quanto sua escola economiza com o Lumied?</h2>
+      <p class="section-sub section-sub-dark">Insira os dados da sua escola e veja o retorno estimado em tempo real.</p>
     </div>
-  </div>
-</section>
-
-<!-- ── HOW IT WORKS ── -->
-<section class="section" id="how" style="background:var(--bg);">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-badge">Comece em 3 passos</div>
-      <h2 class="section-title">Simples de comecar</h2>
-    </div>
-    <div class="steps-row">
-      <div class="step-card">
-        <div class="step-number">1</div>
-        <div class="step-title">Agende uma demo</div>
-        <div class="step-text">Apresentamos a plataforma completa e entendemos as necessidades especificas da sua escola.</div>
-      </div>
-      <div class="step-card">
-        <div class="step-number">2</div>
-        <div class="step-title">Implementacao assistida</div>
-        <div class="step-text">Configuramos tudo para voce: series, familias, professoras, financeiro. Migracao de dados incluida.</div>
-      </div>
-      <div class="step-card">
-        <div class="step-number">3</div>
-        <div class="step-title">Escola funcionando</div>
-        <div class="step-text">Em ate 7 dias, sua escola esta 100% digital. Suporte dedicado nos primeiros 30 dias.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── PRICING ── -->
-<section class="section" id="pricing" style="background:#fff;">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-badge">Planos & Precos</div>
-      <h2 class="section-title">Invista menos que um cafezinho por aluno</h2>
-      <p class="section-sub">Todos os planos incluem implantacao profissional com treinamento e acompanhamento.</p>
-    </div>
-    <div class="pricing-toggle">
-      <span>Mensal</span>
-      <div class="toggle-switch annual" onclick="togglePricing(this)"></div>
-      <span class="active">Anual</span>
-      <span class="save-badge">Economize 20%</span>
-    </div>
-    <div class="pricing-grid">
-      <!-- STARTER -->
-      <div class="plan-card">
-        <div class="plan-name">Starter</div>
-        <div class="plan-desc">Digitalize o basico</div>
-        <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="259" data-annual="207">207</span><span class="period">/mes</span>
-          <div class="per-student">Ate 80 alunos</div>
-        </div>
-        <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Notas & Boletim</li>
-          <li><span class="check">&#10003;</span> Frequencia & Chamada</li>
-          <li><span class="check">&#10003;</span> Portal do Aluno</li>
-          <li><span class="check">&#10003;</span> Documentos do Aluno</li>
-          <li><span class="check">&#10003;</span> Calendario Escolar</li>
-          <li><span class="check">&#10003;</span> Login Biometrico</li>
-          <li><span class="x">&mdash;</span> Agenda Digital</li>
-          <li><span class="x">&mdash;</span> CRM / Financeiro</li>
-        </ul>
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px;line-height:1.4;">Implantacao: <strong>R$ 479</strong><br><span style="font-size:10px;">em ate 2x de R$ 239,50</span></div>
-        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Comecar</button>
-      </div>
-
-      <!-- GESTAO -->
-      <div class="plan-card featured">
-        <div class="plan-badge">Mais Popular</div>
-        <div class="plan-name">Gestao</div>
-        <div class="plan-desc">Tudo num lugar so</div>
-        <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="649" data-annual="519">519</span><span class="period">/mes</span>
-          <div class="per-student">Ate 300 alunos</div>
-        </div>
-        <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Tudo do Starter +</li>
-          <li><span class="check">&#10003;</span> Agenda Digital</li>
-          <li><span class="check">&#10003;</span> Chat escola-familia</li>
-          <li><span class="check">&#10003;</span> CRM de Matriculas</li>
-          <li><span class="check">&#10003;</span> Financeiro completo</li>
-          <li><span class="check">&#10003;</span> Pickup GPS</li>
-          <li><span class="check">&#10003;</span> Almoxarifado</li>
-          <li><span class="check">&#10003;</span> Relatorios BNCC</li>
-        </ul>
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px;line-height:1.4;">Implantacao: <strong>R$ 799</strong><br><span style="font-size:10px;">em ate 3x de R$ 266,33</span></div>
-        <button class="plan-btn plan-btn-primary" onclick="location.href='#contact'">Agendar Demo</button>
-      </div>
-
-      <!-- AUTOMACAO -->
-      <div class="plan-card">
-        <div class="plan-name">Automacao</div>
-        <div class="plan-desc">O sistema trabalha por voce</div>
-        <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="1.249" data-annual="999">999</span><span class="period">/mes</span>
-          <div class="per-student">Ate 800 alunos · 200 msgs WhatsApp/mes</div>
-        </div>
-        <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Tudo do Gestao +</li>
-          <li><span class="check">&#10003;</span> WhatsApp Gateway</li>
-          <li><span class="check">&#10003;</span> Regua de Cobranca</li>
-          <li><span class="check">&#10003;</span> PIX Integrado</li>
-          <li><span class="check">&#10003;</span> Contratos Digitais</li>
-          <li><span class="check">&#10003;</span> Compliance completo</li>
-          <li><span class="check">&#10003;</span> Biblioteca & Cantina</li>
-          <li><span class="check">&#10003;</span> Transporte Escolar</li>
-        </ul>
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px;line-height:1.4;">Implantacao: <strong>R$ 1.499</strong><br><span style="font-size:10px;">em ate 3x de R$ 499,67</span></div>
-        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Agendar Demo</button>
-      </div>
-
-      <!-- AVANCADO -->
-      <div class="plan-card">
-        <div class="plan-name">Avancado</div>
-        <div class="plan-desc">Analytics, RH e integracoes</div>
-        <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="1.659" data-annual="1.327">1.327</span><span class="period">/mes</span>
-          <div class="per-student">Ate 1.500 alunos · 500 msgs WhatsApp/mes</div>
-        </div>
-        <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Tudo do Automacao +</li>
-          <li><span class="check">&#10003;</span> BI / Analytics</li>
-          <li><span class="check">&#10003;</span> Gestao de RH / Folha</li>
-          <li><span class="check">&#10003;</span> Integracao Contabil</li>
-          <li><span class="check">&#10003;</span> Ponto AFD (Portaria 671)</li>
-          <li><span class="check">&#10003;</span> Growth Plan (PDI)</li>
-          <li><span class="x">&mdash;</span> App Nativo</li>
-          <li><span class="x">&mdash;</span> Multi-escola</li>
-        </ul>
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px;line-height:1.4;">Implantacao: <strong>R$ 2.499</strong><br><span style="font-size:10px;">em ate 4x de R$ 624,75</span></div>
-        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Agendar Demo</button>
-      </div>
-
-      <!-- REDE -->
-      <div class="plan-card">
-        <div class="plan-name">Rede</div>
-        <div class="plan-desc">Multi-escola + escala total</div>
-        <div class="plan-price">
-          <span class="currency">R$</span><span class="amount" data-monthly="2.099" data-annual="1.679">1.679</span><span class="period">/mes</span>
-          <div class="per-student">Alunos ilimitados · 2.000 msgs WhatsApp/mes</div>
-        </div>
-        <ul class="plan-features">
-          <li><span class="check">&#10003;</span> Todos os modulos</li>
-          <li><span class="check">&#10003;</span> App Nativo iOS/Android</li>
-          <li><span class="check">&#10003;</span> EAD / Aulas Online</li>
-          <li><span class="check">&#10003;</span> E-commerce / Loja</li>
-          <li><span class="check">&#10003;</span> Dashboard Multi-Escola</li>
-          <li><span class="check">&#10003;</span> WhatsApp Departamental</li>
-          <li><span class="check">&#10003;</span> API Dedicada</li>
-          <li><span class="check">&#10003;</span> SLA 99.9% + Suporte VIP</li>
-        </ul>
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px;line-height:1.4;">Implantacao: <strong>R$ 3.999</strong><br><span style="font-size:10px;">em ate 5x de R$ 799,80</span></div>
-        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Falar com Vendas</button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── ROI CALCULATOR ── -->
-<section class="section" id="roi" style="background:linear-gradient(135deg,#0F0D12,#1A1530);">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-badge" style="background:rgba(107,63,160,.15);border-color:rgba(107,63,160,.3);color:#B794F4;">✨ Calculadora de ROI</div>
-      <h2 class="section-title" style="color:#fff;">Quanto sua escola economiza com o Lumied?</h2>
-      <p class="section-sub" style="color:#A8A29E;">Insira os dados da sua escola e veja o retorno estimado em tempo real.</p>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:900px;margin:0 auto;" class="roi-layout">
+    <div class="roi-layout fade-up">
       <!-- INPUTS -->
-      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px;">
-        <h3 style="color:#fff;font-size:15px;font-weight:700;margin-bottom:20px;">Dados da sua escola</h3>
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Total de alunos</label>
-          <input type="range" id="roiAlunos" min="30" max="2000" value="200" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>30</span><span id="roiAlunosVal" style="color:#fff;font-weight:700;">200</span><span>2.000</span></div>
-        </div>
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Mensalidade media (R$)</label>
-          <input type="range" id="roiMensalidade" min="500" max="5000" value="2500" step="100" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>R$ 500</span><span id="roiMensalidadeVal" style="color:#fff;font-weight:700;">R$ 2.500</span><span>R$ 5.000</span></div>
-        </div>
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Pessoas na secretaria/admin</label>
-          <input type="range" id="roiStaff" min="1" max="10" value="2" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>1</span><span id="roiStaffVal" style="color:#fff;font-weight:700;">2</span><span>10</span></div>
-        </div>
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Taxa de evasao atual (%)</label>
-          <input type="range" id="roiEvasao" min="1" max="20" value="8" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>1%</span><span id="roiEvasaoVal" style="color:#fff;font-weight:700;">8%</span><span>20%</span></div>
+      <div class="roi-input-card">
+        <h3>Dados da sua escola</h3>
+        <div>
+          <label class="roi-label">Total de alunos</label>
+          <input type="range" class="roi-range" id="roiAlunos" min="30" max="2000" value="200" oninput="calcularROI()">
+          <div class="roi-range-info"><span>30</span><span class="roi-val" id="roiAlunosVal">200</span><span>2.000</span></div>
         </div>
         <div>
-          <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#A8A29E;margin-bottom:6px;">Taxa de inadimplencia atual (%)</label>
-          <input type="range" id="roiInadimplencia" min="1" max="25" value="10" oninput="calcularROI()" style="width:100%;accent-color:#6B3FA0;">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#A8A29E;"><span>1%</span><span id="roiInadimplenciaVal" style="color:#fff;font-weight:700;">10%</span><span>25%</span></div>
+          <label class="roi-label">Mensalidade média (R$)</label>
+          <input type="range" class="roi-range" id="roiMensalidade" min="500" max="5000" value="2500" step="100" oninput="calcularROI()">
+          <div class="roi-range-info"><span>R$ 500</span><span class="roi-val" id="roiMensalidadeVal">R$ 2.500</span><span>R$ 5.000</span></div>
+        </div>
+        <div>
+          <label class="roi-label">Pessoas na secretaria/admin</label>
+          <input type="range" class="roi-range" id="roiStaff" min="1" max="10" value="2" oninput="calcularROI()">
+          <div class="roi-range-info"><span>1</span><span class="roi-val" id="roiStaffVal">2</span><span>10</span></div>
+        </div>
+        <div>
+          <label class="roi-label">Taxa de evasão atual (%)</label>
+          <input type="range" class="roi-range" id="roiEvasao" min="1" max="20" value="8" oninput="calcularROI()">
+          <div class="roi-range-info"><span>1%</span><span class="roi-val" id="roiEvasaoVal">8%</span><span>20%</span></div>
+        </div>
+        <div>
+          <label class="roi-label">Taxa de inadimplência atual (%)</label>
+          <input type="range" class="roi-range" id="roiInadimplencia" min="1" max="25" value="10" oninput="calcularROI()">
+          <div class="roi-range-info"><span>1%</span><span class="roi-val" id="roiInadimplenciaVal">10%</span><span>25%</span></div>
         </div>
       </div>
       <!-- RESULTS -->
       <div>
-        <div style="background:linear-gradient(135deg,rgba(107,63,160,.15),rgba(26,107,181,.15));border:1px solid rgba(107,63,160,.2);border-radius:16px;padding:28px;margin-bottom:16px;text-align:center;">
-          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#B794F4;margin-bottom:8px;">Economia anual estimada</div>
-          <div id="roiTotal" style="font-size:48px;font-weight:900;color:#fff;line-height:1;">R$ 0</div>
-          <div id="roiMultiplo" style="font-size:14px;color:#16A34A;font-weight:700;margin-top:8px;">0x o investimento no Lumied</div>
+        <div class="roi-result-hero">
+          <div class="roi-result-label">Economia anual estimada</div>
+          <div class="roi-result-total" id="roiTotal">R$ 0</div>
+          <div class="roi-result-multiplo" id="roiMultiplo">0x o investimento no Lumied</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
-            <div id="roiTempo" style="font-size:24px;font-weight:900;color:#fff;">0h</div>
-            <div style="font-size:11px;color:#A8A29E;">Horas/mes economizadas</div>
+        <div class="roi-results-grid">
+          <div class="roi-result-card">
+            <div class="value" id="roiTempo">0h</div>
+            <div class="label">Horas/mês economizadas</div>
           </div>
-          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
-            <div id="roiEvasaoResult" style="font-size:24px;font-weight:900;color:#fff;">R$ 0</div>
-            <div style="font-size:11px;color:#A8A29E;">Evasao evitada/ano</div>
+          <div class="roi-result-card">
+            <div class="value" id="roiEvasaoResult">R$ 0</div>
+            <div class="label">Evasão evitada/ano</div>
           </div>
-          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
-            <div id="roiInadResult" style="font-size:24px;font-weight:900;color:#fff;">R$ 0</div>
-            <div style="font-size:11px;color:#A8A29E;">Inadimplencia evitada/ano</div>
+          <div class="roi-result-card">
+            <div class="value" id="roiInadResult">R$ 0</div>
+            <div class="label">Inadimplência evitada/ano</div>
           </div>
-          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
-            <div id="roiOperacional" style="font-size:24px;font-weight:900;color:#fff;">R$ 0</div>
-            <div style="font-size:11px;color:#A8A29E;">Economia operacional/ano</div>
+          <div class="roi-result-card">
+            <div class="value" id="roiOperacional">R$ 0</div>
+            <div class="label">Economia operacional/ano</div>
           </div>
         </div>
-        <a href="#contact" style="display:block;text-align:center;margin-top:16px;padding:14px;background:linear-gradient(135deg,#6B3FA0,#1A6BB5);color:#fff;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 20px rgba(107,63,160,.3);">Quero esse resultado para minha escola →</a>
+        <a href="#contact" class="roi-cta">Quero esse resultado para minha escola &rarr;</a>
       </div>
     </div>
   </div>
@@ -1028,22 +1041,22 @@ function calcularROI() {
   const receitaAnual = receitaMensal * 12;
 
   // 1. Economia operacional (tempo admin)
-  const horasMesAdmin = staff * 176; // 22 dias × 8h
+  const horasMesAdmin = staff * 176;
   const horasEconomizadasMes = horasMesAdmin * SAVINGS_RATE;
   const econOperacionalAnual = horasEconomizadasMes * CUSTO_HORA * 12;
 
   // 2. Evasão evitada
   const alunosEvadiriam = Math.round(alunos * (evasao / 100));
   const alunosRetidos = Math.round(alunosEvadiriam * EVASION_REDUCTION);
-  const evasaoEvitadaAnual = alunosRetidos * mensalidade * 6; // 6 meses de receita preservada
+  const evasaoEvitadaAnual = alunosRetidos * mensalidade * 6;
 
   // 3. Inadimplência evitada
   const valorInadMensal = receitaMensal * (inadimplencia / 100);
   const inadEvitadaAnual = valorInadMensal * DEFAULT_REDUCTION * 12;
 
   // 4. Tempo economizado detalhado (horas/mês)
-  const minMatriculas = Math.round(alunos * 0.15 * MIN_PER_ENROLLMENT / 60); // 15% renovam/mês
-  const minComunicados = Math.round(alunos * 0.5 * MIN_PER_COMMUNIQUE / 60); // 0.5 comunicados/aluno/mês
+  const minMatriculas = Math.round(alunos * 0.15 * MIN_PER_ENROLLMENT / 60);
+  const minComunicados = Math.round(alunos * 0.5 * MIN_PER_COMMUNIQUE / 60);
   const horasTempoMes = Math.round(horasEconomizadasMes + minMatriculas + minComunicados);
 
   // Total
@@ -1061,7 +1074,7 @@ function calcularROI() {
   // Renderizar
   document.getElementById('roiTotal').textContent = 'R$ ' + Math.round(totalAnual).toLocaleString('pt-BR');
   document.getElementById('roiMultiplo').textContent = multiplo + 'x o investimento no Lumied';
-  document.getElementById('roiMultiplo').style.color = multiplo >= 3 ? '#16A34A' : multiplo >= 1 ? '#D97706' : '#DC2626';
+  document.getElementById('roiMultiplo').style.color = multiplo >= 3 ? '#10B981' : multiplo >= 1 ? '#D97706' : '#DC2626';
   document.getElementById('roiTempo').textContent = horasTempoMes + 'h';
   document.getElementById('roiEvasaoResult').textContent = 'R$ ' + Math.round(evasaoEvitadaAnual).toLocaleString('pt-BR');
   document.getElementById('roiInadResult').textContent = 'R$ ' + Math.round(inadEvitadaAnual).toLocaleString('pt-BR');
@@ -1070,78 +1083,240 @@ function calcularROI() {
 calcularROI();
 </script>
 
-<!-- ── IMPLANTACAO INCLUIDA ── -->
-<section class="section" id="implantacao" style="background:var(--bg);">
-  <div class="container" style="text-align:center;max-width:700px;">
-    <div class="section-badge">Implantacao profissional</div>
-    <h2 class="section-title">Cada plano inclui a implantacao ideal</h2>
-    <p class="section-sub" style="margin-bottom:32px;">Pagamento unico, parcelavel. Sua escola fica pronta em ate 7 dias uteis com treinamento e acompanhamento.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;text-align:left;">
-      <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-heading);margin-bottom:8px;">Starter e Gestao</div>
-        <ul style="list-style:none;font-size:12px;color:var(--text-body);line-height:2;">
-          <li>&#10003; Wizard de auto-configuracao</li>
-          <li>&#10003; 1 video-chamada de 1h</li>
-          <li>&#10003; Importacao de planilha</li>
-          <li>&#10003; Central de Ajuda completa</li>
+<!-- ── STEPS (LIGHT) ── -->
+<section class="section section-light" id="how">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-badge">Comece em 3 passos</div>
+      <h2 class="section-title section-title-light">Simples de começar</h2>
+    </div>
+    <div class="steps-row fade-up">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-title">Agende uma demo</div>
+        <div class="step-text">Apresentamos a plataforma completa e entendemos as necessidades específicas da sua escola.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-title">Implementação assistida</div>
+        <div class="step-text">Configuramos tudo para você: séries, famílias, professoras, financeiro. Migração de dados incluída.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-title">Escola funcionando</div>
+        <div class="step-text">Em até 7 dias, sua escola está 100% digital. Suporte dedicado nos primeiros 30 dias.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING (LIGHT) ── -->
+<section class="section section-light" id="pricing" style="padding-bottom:60px;">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-badge">Planos & Preços</div>
+      <h2 class="section-title section-title-light">Invista menos que um cafezinho por aluno</h2>
+      <p class="section-sub section-sub-light">Todos os planos incluem implantação profissional com treinamento e acompanhamento.</p>
+    </div>
+    <div class="pricing-toggle fade-up">
+      <span>Mensal</span>
+      <div class="toggle-switch annual" onclick="togglePricing(this)"></div>
+      <span class="active">Anual</span>
+      <span class="save-badge">Economize 20%</span>
+    </div>
+    <div class="pricing-grid fade-up">
+      <!-- STARTER -->
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-desc">Digitalize o básico</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="259" data-annual="207">207</span><span class="period">/mês</span>
+          <div class="per-student">Até 80 alunos</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Notas & Boletim</li>
+          <li><span class="check">&#10003;</span> Frequência & Chamada</li>
+          <li><span class="check">&#10003;</span> Portal do Aluno</li>
+          <li><span class="check">&#10003;</span> Documentos do Aluno</li>
+          <li><span class="check">&#10003;</span> Calendário Escolar</li>
+          <li><span class="check">&#10003;</span> Login Biométrico</li>
+          <li><span class="x">&mdash;</span> Agenda Digital</li>
+          <li><span class="x">&mdash;</span> CRM / Financeiro</li>
+        </ul>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 479</strong><br><span style="font-size:10px;">em até 2x de R$ 239,50</span></div>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Começar</button>
+      </div>
+
+      <!-- GESTAO -->
+      <div class="plan-card featured">
+        <div class="plan-badge">Mais Popular</div>
+        <div class="plan-name">Gestão</div>
+        <div class="plan-desc">Tudo num lugar só</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="649" data-annual="519">519</span><span class="period">/mês</span>
+          <div class="per-student">Até 300 alunos</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Tudo do Starter +</li>
+          <li><span class="check">&#10003;</span> Agenda Digital</li>
+          <li><span class="check">&#10003;</span> Chat escola-família</li>
+          <li><span class="check">&#10003;</span> CRM de Matrículas</li>
+          <li><span class="check">&#10003;</span> Financeiro completo</li>
+          <li><span class="check">&#10003;</span> Pickup GPS</li>
+          <li><span class="check">&#10003;</span> Almoxarifado</li>
+          <li><span class="check">&#10003;</span> Relatórios BNCC</li>
+        </ul>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 799</strong><br><span style="font-size:10px;">em até 3x de R$ 266,33</span></div>
+        <button class="plan-btn plan-btn-primary" onclick="location.href='#contact'">Agendar Demo</button>
+      </div>
+
+      <!-- AUTOMACAO -->
+      <div class="plan-card">
+        <div class="plan-name">Automação</div>
+        <div class="plan-desc">O sistema trabalha por você</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="1.249" data-annual="999">999</span><span class="period">/mês</span>
+          <div class="per-student">Até 800 alunos · 200 msgs WhatsApp/mês</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Tudo do Gestão +</li>
+          <li><span class="check">&#10003;</span> WhatsApp Gateway</li>
+          <li><span class="check">&#10003;</span> Régua de Cobrança</li>
+          <li><span class="check">&#10003;</span> PIX Integrado</li>
+          <li><span class="check">&#10003;</span> Contratos Digitais</li>
+          <li><span class="check">&#10003;</span> Compliance completo</li>
+          <li><span class="check">&#10003;</span> Biblioteca & Cantina</li>
+          <li><span class="check">&#10003;</span> Transporte Escolar</li>
+        </ul>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 1.499</strong><br><span style="font-size:10px;">em até 3x de R$ 499,67</span></div>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Agendar Demo</button>
+      </div>
+
+      <!-- AVANCADO -->
+      <div class="plan-card">
+        <div class="plan-name">Avançado</div>
+        <div class="plan-desc">Analytics, RH e integrações</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="1.659" data-annual="1.327">1.327</span><span class="period">/mês</span>
+          <div class="per-student">Até 1.500 alunos · 500 msgs WhatsApp/mês</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Tudo do Automação +</li>
+          <li><span class="check">&#10003;</span> BI / Analytics</li>
+          <li><span class="check">&#10003;</span> Gestão de RH / Folha</li>
+          <li><span class="check">&#10003;</span> Integração Contábil</li>
+          <li><span class="check">&#10003;</span> Ponto AFD (Portaria 671)</li>
+          <li><span class="check">&#10003;</span> Growth Plan (PDI)</li>
+          <li><span class="x">&mdash;</span> App Nativo</li>
+          <li><span class="x">&mdash;</span> Multi-escola</li>
+        </ul>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 2.499</strong><br><span style="font-size:10px;">em até 4x de R$ 624,75</span></div>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Agendar Demo</button>
+      </div>
+
+      <!-- REDE -->
+      <div class="plan-card">
+        <div class="plan-name">Rede</div>
+        <div class="plan-desc">Multi-escola + escala total</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="2.099" data-annual="1.679">1.679</span><span class="period">/mês</span>
+          <div class="per-student">Alunos ilimitados · 2.000 msgs WhatsApp/mês</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Todos os módulos</li>
+          <li><span class="check">&#10003;</span> App Nativo iOS/Android</li>
+          <li><span class="check">&#10003;</span> EAD / Aulas Online</li>
+          <li><span class="check">&#10003;</span> E-commerce / Loja</li>
+          <li><span class="check">&#10003;</span> Dashboard Multi-Escola</li>
+          <li><span class="check">&#10003;</span> WhatsApp Departamental</li>
+          <li><span class="check">&#10003;</span> API Dedicada</li>
+          <li><span class="check">&#10003;</span> SLA 99.9% + Suporte VIP</li>
+        </ul>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 3.999</strong><br><span style="font-size:10px;">em até 5x de R$ 799,80</span></div>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Falar com Vendas</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── IMPLANTACAO (LIGHT) ── -->
+<section class="section section-light" id="implantacao" style="padding-top:40px;">
+  <div class="container" style="text-align:center;max-width:760px;">
+    <div class="section-header fade-up">
+      <div class="section-badge">Implantação profissional</div>
+      <h2 class="section-title section-title-light">Cada plano inclui a implantação ideal</h2>
+      <p class="section-sub section-sub-light">Pagamento único, parcelável. Sua escola fica pronta em até 7 dias úteis com treinamento e acompanhamento.</p>
+    </div>
+    <div class="impl-grid fade-up">
+      <div class="impl-card">
+        <h4>Starter e Gestão</h4>
+        <ul>
+          <li>Wizard de autoconfiguração</li>
+          <li>1 videochamada de 1h</li>
+          <li>Importação de planilha</li>
+          <li>Central de Ajuda completa</li>
         </ul>
       </div>
-      <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-heading);margin-bottom:8px;">Automacao e Avancado</div>
-        <ul style="list-style:none;font-size:12px;color:var(--text-body);line-height:2;">
-          <li>&#10003; 3 sessoes de treinamento</li>
-          <li>&#10003; Importacao de dados completa</li>
-          <li>&#10003; Config de financeiro e boletos</li>
-          <li>&#10003; Suporte prioritario 30 dias</li>
+      <div class="impl-card">
+        <h4>Automação e Avançado</h4>
+        <ul>
+          <li>3 sessões de treinamento</li>
+          <li>Importação de dados completa</li>
+          <li>Config de financeiro e boletos</li>
+          <li>Suporte prioritário 30 dias</li>
         </ul>
       </div>
-      <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-heading);margin-bottom:8px;">Rede</div>
-        <ul style="list-style:none;font-size:12px;color:var(--text-body);line-height:2;">
-          <li>&#10003; Migracao de outro sistema</li>
-          <li>&#10003; 5 treinamentos por perfil</li>
-          <li>&#10003; Gerente de sucesso dedicado</li>
-          <li>&#10003; Acompanhamento 60 dias</li>
+      <div class="impl-card">
+        <h4>Rede</h4>
+        <ul>
+          <li>Migração de outro sistema</li>
+          <li>5 treinamentos por perfil</li>
+          <li>Gerente de sucesso dedicado</li>
+          <li>Acompanhamento 60 dias</li>
         </ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── TESTIMONIALS ── -->
-<section class="section" style="background:#fff;">
+<!-- ── TESTIMONIALS (DARK) ── -->
+<section class="section section-dark">
   <div class="container">
-    <div class="section-header">
-      <div class="section-badge">Depoimentos</div>
-      <h2 class="section-title">O que dizem nossos parceiros</h2>
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Depoimentos</div>
+      <h2 class="section-title section-title-dark">O que dizem nossos parceiros</h2>
     </div>
     <div class="testimonials-grid">
-      <div class="testimonial-card">
-        <div class="testimonial-text">"O Lumied substituiu 4 sistemas que usavamos. Hoje tudo esta em um lugar so. As familias adoram o portal e a secretaria finalmente respira."</div>
+      <div class="testimonial-card fade-up">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="testimonial-text">"O Lumied substituiu 4 sistemas que usávamos. Hoje tudo está em um lugar só. As famílias adoram o portal e a secretaria finalmente respira."</div>
         <div class="testimonial-author">
           <div class="testimonial-avatar">DP</div>
-          <div><div class="testimonial-name">Diretora Pedagogica</div><div class="testimonial-role">Escola Bilingue, Caxias do Sul</div></div>
+          <div><div class="testimonial-name">Diretora Pedagógica</div><div class="testimonial-role">Escola Bilíngue, Caxias do Sul</div></div>
         </div>
       </div>
-      <div class="testimonial-card">
-        <div class="testimonial-text">"A regua de cobranca automatica reduziu nossa inadimplencia de 8% para 2.5%. O financeiro agora roda praticamente sozinho."</div>
+      <div class="testimonial-card fade-up">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="testimonial-text">"A régua de cobrança automática reduziu nossa inadimplência de 8% para 2.5%. O financeiro agora roda praticamente sozinho."</div>
         <div class="testimonial-author">
           <div class="testimonial-avatar">GF</div>
           <div><div class="testimonial-name">Gestor Financeiro</div><div class="testimonial-role">Escola Internacional, Porto Alegre</div></div>
         </div>
       </div>
-      <div class="testimonial-card">
-        <div class="testimonial-text">"O CRM de matriculas com calculo automatico de serie por idade da crianca economiza horas do nosso time comercial. Genial."</div>
+      <div class="testimonial-card fade-up">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="testimonial-text">"O CRM de matrículas com cálculo automático de série por idade da criança economiza horas do nosso time comercial. Genial."</div>
         <div class="testimonial-author">
           <div class="testimonial-avatar">CM</div>
-          <div><div class="testimonial-name">Coordenadora de Matriculas</div><div class="testimonial-role">Maple Bear, Bento Goncalves</div></div>
+          <div><div class="testimonial-name">Coordenadora de Matrículas</div><div class="testimonial-role">Maple Bear, Bento Gonçalves</div></div>
         </div>
       </div>
-      <div class="testimonial-card">
+      <div class="testimonial-card fade-up">
+        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
         <div class="testimonial-text">"As professoras amaram a agenda digital. Registram o dia em 5 minutos e os pais veem as fotos em tempo real. Virou nosso diferencial."</div>
         <div class="testimonial-author">
           <div class="testimonial-avatar">PR</div>
-          <div><div class="testimonial-name">Professora</div><div class="testimonial-role">Ed. Infantil, Escola Bilingue</div></div>
+          <div><div class="testimonial-name">Professora</div><div class="testimonial-role">Ed. Infantil, Escola Bilíngue</div></div>
         </div>
       </div>
     </div>
@@ -1150,9 +1325,9 @@ calcularROI();
 
 <!-- ── CTA FINAL ── -->
 <section class="cta-section" id="contact">
-  <h2>Pronto para transformar sua escola?</h2>
-  <p>Agende uma demonstracao gratuita de 30 minutos. Sem compromisso.</p>
-  <form class="cta-form" onsubmit="event.preventDefault();alert('Obrigado! Entraremos em contato em ate 24h.');">
+  <h2 class="fade-up">Pronto para transformar sua escola?</h2>
+  <p class="fade-up">Agende uma demonstração gratuita de 30 minutos. Sem compromisso.</p>
+  <form class="cta-form fade-up" onsubmit="event.preventDefault();alert('Obrigado! Entraremos em contato em até 24h.');">
     <input type="text" placeholder="Nome da escola" required>
     <input type="email" placeholder="Seu melhor email" required>
     <input type="tel" placeholder="WhatsApp" required>
@@ -1166,24 +1341,24 @@ calcularROI();
     <div class="footer-brand">
       <a href="#" class="logo" style="margin-bottom:8px;">
         <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="32" height="32" rx="8" fill="#5B5BD6"/>
+          <rect width="32" height="32" rx="8" fill="#6C63FF"/>
           <path d="M16 7L9 16h14L16 7z" fill="#fff"/>
           <rect x="10" y="18" width="12" height="7" rx="1.5" fill="#fff" opacity=".8"/>
         </svg>
         <div class="logo-text">Lumied</div>
       </a>
-      <p>Plataforma completa de gestao escolar inteligente. Feita para escolas bilingues que querem crescer.</p>
+      <p>Plataforma completa de gestão escolar inteligente. Feita para escolas bilíngues que querem crescer.</p>
     </div>
     <div>
       <h4>Produto</h4>
       <a href="#features">Funcionalidades</a>
       <a href="#pricing">Planos</a>
       <a href="#roi">Calculadora ROI</a>
-      <a href="#implantacao">Implantacao</a>
+      <a href="#implantacao">Implantação</a>
     </div>
     <div>
       <h4>Empresa</h4>
-      <a href="/site/sobre/">Sobre nos</a>
+      <a href="/site/sobre/">Sobre nós</a>
       <a href="/site/blog/">Blog</a>
       <a href="#contact">Contato</a>
       <a href="#contact">Trabalhe conosco</a>
@@ -1215,6 +1390,7 @@ calcularROI();
 </a>
 
 <script>
+// ── PRICING TOGGLE ──
 function togglePricing(el) {
   el.classList.toggle('annual');
   const isAnnual = el.classList.contains('annual');
@@ -1230,6 +1406,7 @@ function togglePricing(el) {
   perStudents.forEach((ps, i) => { ps.textContent = isAnnual ? annualPrices[i] : monthlyPrices[i]; });
 }
 
+// ── SCREENSHOT TABS ──
 function showSSTab(tab, btn) {
   document.querySelectorAll('.ss-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ss-tab').forEach(t => t.classList.remove('active'));
@@ -1238,6 +1415,7 @@ function showSSTab(tab, btn) {
   btn.classList.add('active');
 }
 
+// ── LIGHTBOX ──
 function openLightbox(card) {
   const img = card.querySelector('img');
   if (!img) return;
@@ -1263,28 +1441,73 @@ document.querySelectorAll('.feature-card img, .hero-screenshot img').forEach(img
   });
 });
 
-// Smooth scroll for nav links
+// ── SMOOTH SCROLL ──
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
     e.preventDefault();
     const target = document.querySelector(a.getAttribute('href'));
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Close mobile nav
     document.getElementById('mainNav').classList.remove('open');
   });
 });
 
-// Header scroll effect
+// ── HEADER SCROLL EFFECT ──
 window.addEventListener('scroll', () => {
   const h = document.getElementById('mainHeader');
-  if (window.scrollY > 10) {
+  if (window.scrollY > 20) {
     h.classList.add('scrolled');
-    h.style.background = 'rgba(250,250,250,.95)';
   } else {
     h.classList.remove('scrolled');
-    h.style.background = 'rgba(250,250,250,.8)';
   }
 });
+
+// ── FADE-UP ON SCROLL (IntersectionObserver) ──
+const fadeObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      fadeObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
+
+// ── ANIMATED COUNTERS ──
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+      const target = parseFloat(el.dataset.count);
+      const suffix = el.dataset.suffix || '';
+      const isDecimal = el.dataset.decimal === 'true';
+      const duration = 2000;
+      const start = performance.now();
+
+      function animate(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = target * eased;
+
+        if (isDecimal) {
+          el.textContent = current.toFixed(1) + suffix;
+        } else {
+          el.textContent = Math.round(current) + suffix;
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      }
+
+      requestAnimationFrame(animate);
+      counterObserver.unobserve(el);
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.stat-number[data-count]').forEach(el => counterObserver.observe(el));
 </script>
 </body>
 </html>
