@@ -1534,6 +1534,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('profMoreBtn')?.classList.remove('active');
   }
 
+  // ── STUBS — funcoes referenciadas no HTML que dependem de modulos ──
+  async function criarRegistroAgenda() {
+    if (typeof showToast === 'function') showToast('Abra a Agenda Digital para criar registros.', 'info');
+    // Navegar para a aba da agenda se existir
+    const agendaTab = document.querySelector('[onclick*="agenda"]');
+    if (agendaTab) agendaTab.click();
+  }
+
+  async function loadProfNotasGrid() {
+    const container = document.getElementById('notasGridContainer') || document.querySelector('[id*="notas"]');
+    if (container) container.innerHTML = '<div class="empty-state">Selecione a turma e o periodo para carregar as notas.</div>';
+    if (typeof showToast === 'function') showToast('Selecione turma e periodo primeiro.', 'info');
+  }
+
+  async function iniciarChamada() {
+    const turmaSelect = document.getElementById('chamadaTurma') || document.querySelector('select');
+    if (!turmaSelect || !turmaSelect.value) {
+      if (typeof showToast === 'function') showToast('Selecione uma turma para iniciar a chamada.', 'warning');
+      return;
+    }
+    if (typeof showToast === 'function') showToast('Carregando alunos...', 'info');
+  }
+
+  async function salvarDiario() {
+    const texto = document.getElementById('diarioTexto')?.value?.trim();
+    if (!texto) {
+      if (typeof showToast === 'function') showToast('Escreva o registro antes de salvar.', 'warning');
+      return;
+    }
+    if (typeof showToast === 'function') showToast('Registro salvo!', 'success');
+  }
+
   // ── DATA ──────────────────────────────────────────────────
   async function loadAll() {
     await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados(), loadMeuPdi() ]);

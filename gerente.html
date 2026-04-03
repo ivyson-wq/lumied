@@ -3567,6 +3567,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     });
   }
 
+  function selectCor(el) {
+    document.querySelectorAll('.cor-opt').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('newAtivCor').value = el.dataset.cor;
+  }
+
   async function createAtividade() {
     const nome    = document.getElementById('newAtivNome').value.trim();
     const preco   = parseFloat(document.getElementById('newAtivPreco').value)||0;
@@ -5907,6 +5913,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <button onclick="almEditarInsumoById('${it.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
           <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;${it.preco_atualizado_em?'color:#1a6bb5;':''}">📊${it.preco_atualizado_em?' '+new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):''}</button>
           ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
+        </div>
       </div>`;
     }).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
   }
