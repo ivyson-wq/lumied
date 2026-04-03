@@ -152,21 +152,45 @@ Landing page em `site/index.html` — marca **Lumied**.
 
 **URL:** `https://lumied.com.br` (redirect para `/site/`)
 
-### Seções
-- Hero com mockup dashboard, stats animados
-- Problemas que resolve (WhatsApp, planilhas, sistemas desconectados)
-- 6 features com screenshots e descrições
-- Galeria de screenshots (desktop + mobile) com lightbox zoom
-- Planos de preços (Essencial, Profissional, Premium, Enterprise)
-- Depoimentos
-- Formulário de contato
-- Footer
+### Design (v2 — redesign 2026-04-03)
+- **Dark theme** com gradientes `#0A0A0F` → `#1A1030` alternando com seções claras `#FAFAFA`
+- **Glass morphism** nos cards (backdrop-filter blur + bordas translúcidas rgba)
+- **Primary:** `#6C63FF` com gradiente `#6C63FF → #3B82F6` nos CTAs
+- **Glow orbs** animados no hero (pseudo-elements com blur)
+- **Gradient text** no headline principal
+- **Fontes:** Inter (body) + Playfair Display (headings)
+- Inspirado em `social.menupass.com.br`
+
+### Seções (em ordem)
+1. **Hero** (dark) — Badge glow, headline gradiente, mockup 3D com perspective, 2 CTAs, avatares social proof
+2. **Stats Bar** (dark) — Contadores animados (IntersectionObserver): 23 módulos, 6 portais, 200+ actions, 99.9% uptime
+3. **Diferenciais** (light) — 3 cards com imagens: IA, WhatsApp, Compliance
+4. **Problemas** (light) — 6 problem cards com ícones SVG e hover lift
+5. **Features** (dark) — 6 módulos com screenshots e glass morphism
+6. **Vídeos** (light) — 1 vídeo featured + 8 módulos em grid (hover play)
+7. **Screenshots** (dark) — Tabs Desktop/Mobile/CRM, lightbox zoom
+8. **Calculadora ROI** (dark gradiente) — Sliders interativos, cálculo em tempo real
+9. **Como começar** (light) — 3 passos com linha conectora
+10. **Pricing** (light) — 5 planos com toggle mensal/anual, plano featured com glow
+11. **Implantação** (light) — 3 cards por tier
+12. **Testimonials** (dark) — 4 depoimentos com ★★★★★ e avatares
+13. **CTA Final** (gradiente) — Formulário nome/email/WhatsApp
+14. **Footer** (very dark `#050507`)
+15. **WhatsApp Float** — Botão fixo com pulse animation
+
+### Animações
+- Fade-up on scroll em todas as seções (IntersectionObserver)
+- Count-up nos stats (0 → valor final)
+- Hover glow + lift nos cards e botões
+- Header transparente → glass blur ao scrollar
+- Pulse ring no WhatsApp float
+- Perspective 3D no mockup do hero
 
 ### Técnico
-- HTML/CSS/JS puro (Inter + Playfair Display)
-- Lightbox com animação zoom em todas as imagens
+- HTML/CSS/JS puro (~1500 linhas, single file)
 - 100% responsivo (mobile, tablet, desktop)
 - `vercel.json` redireciona `lumied.com.br` → `/site/`
+- Deploy automático via `git push origin main` → Vercel
 
 ---
 
@@ -185,18 +209,36 @@ Landing page em `site/index.html` — marca **Lumied**.
 ## Segurança
 
 - **RLS** habilitado em 20+ tabelas com policies restritivas
-- **Rate Limiting** em todas as 19 edge functions
-- **Input Validation** com schemas + sanitização XSS
-- **PBKDF2** 100k-120k iterações para senhas
+- **Rate Limiting** em todas as edge functions (Router v2 + legacy via `checkRateLimit`)
+- **Input Validation** com schemas + sanitização XSS (`sanitize()`: HTML entities, backtick, null bytes, ampersand)
+- **CORS Whitelist** dinâmico por request — aceita `*.lumied.com.br` + whitelist + Vercel previews (rejeita origins desconhecidos)
+- **PBKDF2** 100k-120k iterações para senhas — centralizado em `_shared/auth.ts` com `verificarSenhaAuto()` (auto-detect hex vs base64)
 - **WebAuthn/Face ID** nos portais principais
-- **HSTS** + X-Frame DENY + Permissions-Policy + nosniff
+- **CSP** Content-Security-Policy header no Vercel (script-src, connect-src, frame-ancestors none)
+- **HSTS** + X-Frame DENY + Permissions-Policy + nosniff + Referrer-Policy
+- **Meta Webhook Signature** — HMAC-SHA256 (X-Hub-Signature-256) nos WhatsApp Workers
+- **Sentry** em todas as edge functions (Router v2 via middleware + legacy via try/catch + `captureException`)
+- **PIX txid** gerado com `crypto.getRandomValues()` (não Math.random)
 - **LGPD**: consentimento, export (`lgpd_exportar_dados()`), anonimização (`lgpd_anonimizar()`), audit log
+
+### Hardening realizado (2026-04-03)
+- Eliminada duplicação de `hashSenha`/`gerarToken`/`validarSessao` em 4 arquivos → centralizado em `_shared/auth.ts`
+- CORS bypass corrigido (antes aceitava qualquer origin)
+- Rate limiting adicionado a 5 functions legadas (academico, send-email, acesso, calendar, boletos-list)
+- XSS corrigido em innerHTML de boletim, achados, AI chat/insights (index.html, gerente.html)
+- Token key mismatch professora corrigido (`mb_prof_token` → `prof_token`)
+- Ownership check em `ausencia_delete`
+- Credenciais ML hardcoded removidas
+- Superuser email hardcoded removido
+- Divisão por zero em cálculo de notas corrigida
+- getProfessora não aceita mais gerente como professora
+- Ticket escalado agora marca status "escalado" (não "respondido")
 
 ---
 
 ## Banco de Dados
 
-- **98 migrations** (009-098)
+- **100 migrations** (009-100)
 - Migrations relevantes:
   - `085-088` — Compliance: hora extra, incidentes, certificações, inspeções, políticas, calendário
   - `086` — Indicações B2C (pais indicam famílias)
@@ -210,6 +252,8 @@ Landing page em `site/index.html` — marca **Lumied**.
   - `096` — WhatsApp incluído nos tiers com travas de consumo (80%/95%/100%)
   - `097` — Responsável financeiro + decisões financeiras + pacotes extras
   - `098` — Correção de preços extras (margem saudável) + resp financeiro imutável
+  - `099` — IA Nativa (ia_insights, ia_conversas, ia_config)
+  - `100` — ROI Calculator (roi_config, roi_resultados)
 
 ---
 
@@ -442,10 +486,11 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 1. `WHATSAPP_TOKEN` — Obtido após criar app no Meta Business Manager
 2. `WHATSAPP_VERIFY_TOKEN` — Inventar uma string (ex: `lumied_wa_verify_2026`)
 3. `META_PHONE_NUMBER_ID` — Obtido no Meta Developers → WhatsApp → API Setup
-4. `SUPABASE_SERVICE_KEY` — Supabase Dashboard → Settings → API → service_role
-5. `ANTHROPIC_API_KEY` — console.anthropic.com (para FAQ bot + relatório semanal)
-6. `APP_INTERNAL_SECRET` — Inventar uma string para auth entre Worker e app
-7. `APP_BASE_URL` — URL do Supabase ou do app
+4. `META_APP_SECRET` — App Secret do Meta Developers (para validação HMAC-SHA256 do webhook)
+5. `SUPABASE_SERVICE_KEY` — Supabase Dashboard → Settings → API → service_role
+6. `ANTHROPIC_API_KEY` — console.anthropic.com (para FAQ bot + relatório semanal)
+7. `APP_INTERNAL_SECRET` — Inventar uma string para auth entre Worker e app
+8. `APP_BASE_URL` — URL do Supabase ou do app
 
 ### Meta Business Manager — Passos pendentes:
 1. Conta verificada no Meta Business Manager (CNPJ + site) — 3-7 dias
