@@ -67,9 +67,39 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 
 ---
 
-## Painel Admin (`admin.html`)
+## Arquitetura Admin (2 níveis)
 
-Painel de gestão SaaS completo com 8 seções:
+### Painel Central Lumied (`admin-central.html`)
+**URL:** `admin.lumied.com.br` — Gestão SaaS global, só staff Lumied.
+
+| Seção | Descrição |
+|-------|-----------|
+| **Dashboard** | KPIs: MRR, ARR, escolas ativas, total alunos, tickets, staff |
+| **Escolas** | Lista de clientes com links para admin/gerente de cada escola |
+| **+ Nova Escola** | Onboarding automático: cria escola, config, gerente, módulos, séries |
+| **Staff** | CRUD de superusuários Lumied (fundador, cto, suporte, comercial, cs) |
+| **Audit Log** | Histórico de ações dos superusuários |
+| **Tickets** | Tickets centralizados de todas as escolas |
+
+**Onboarding automático (`staff_criar_escola`):**
+- Formulário: nome, subdomínio, plano, CNPJ, gerente (nome/email/senha)
+- Cria: escola + escola_config + gerente + usuarios + módulos do plano + séries padrão
+- Retorna: URLs, módulos ativados, checklist de pendências manuais
+- Módulos ativados automaticamente por plano (starter=6, gestão=19, automação=30, avançado=35, rede=40+)
+
+### Superusuários (`lumied_staff`)
+- Tabela separada de admins de escola
+- Sessões próprias (`lumied_staff_sessoes`)
+- Audit log (`lumied_staff_audit`)
+- Cargos: `fundador`, `cto`, `suporte`, `comercial`, `cs`
+- Acesso total a todos os portais de todos os clientes
+
+### Painel Admin da Escola (`admin.html`)
+
+**URL:** `escola.lumied.com.br/admin.html` — Config por escola, só staff Lumied.
+Sem link em nenhum portal — acesso apenas via URL direta.
+
+Painel de configuração da escola com 8 seções:
 
 | Seção | Descrição |
 |-------|-----------|
@@ -319,6 +349,7 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
   - `101` — WhatsApp Document Intake (wa_documentos, wa_staff)
   - `102` — Histórico do Aluno (aluno_historico, atas restritas)
   - `103` — Permissões por usuário (permissoes_usuario, defaults 7 papéis × 25 módulos)
+  - `104` — Lumied Staff (lumied_staff, sessões, audit log)
 
 ---
 
@@ -438,6 +469,8 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 | Arquivo | Conteúdo |
 |---------|----------|
 | `CLAUDE.md` | Documentação técnica completa (este arquivo) |
+| `admin-central.html` | Painel Central Lumied — gestão SaaS global (`admin.lumied.com.br`) |
+| `admin.html` | Painel Admin por escola — config, módulos, keys (só staff Lumied) |
 | `site/certificacao.html` | Página de certificação Escola Digital (3 níveis: Bronze/Prata/Ouro) |
 | `site/blog/` | Blog com 26 artigos (compliance, LGPD, WhatsApp, inadimplência, IA, etc.) |
 | `NOVO-CLIENTE.md` | Guia passo a passo para deploy de novo cliente |
