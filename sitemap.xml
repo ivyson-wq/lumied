@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://lumied.com.br/site/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://lumied.com.br/ajuda/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://lumied.com.br/site/certificacao.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/compliance-escolar/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/inadimplencia-escolar/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/whatsapp-escola-comunicacao/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/lgpd-escola-guia-definitivo/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/ia-gestao-escolar/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/5-sinais-escola-precisa-sistema/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/crm-escolar-matriculas/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/financeiro-escolar-dre-balanco/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/dashboard-analytics-escola/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lumied.com.br/site/blog/controle-frequencia-chamada-digital/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lumied.com.br/verificar.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+</urlset>

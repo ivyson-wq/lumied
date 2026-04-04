@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /site/
+Allow: /ajuda/
+Allow: /site/blog/
+Allow: /site/certificacao.html
+Allow: /assinar.html
+Allow: /verificar.html
+
+Disallow: /admin.html
+Disallow: /admin-central.html
+Disallow: /gerente.html
+Disallow: /professora.html
+Disallow: /secretaria.html
+Disallow: /aluno.html
+Disallow: /area-restrita.html
+Disallow: /dist/
+Disallow: /config.js
+
+Sitemap: https://lumied.com.br/sitemap.xml
