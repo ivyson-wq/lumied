@@ -352,36 +352,71 @@ serve(async (req: Request) => {
   if (action === "contrato_publico_get") {
     const { contrato_id } = body as any;
     if (!contrato_id) return err("contrato_id obrigatório.");
-    const { data } = await admin.from("contratos").select("id, familia_nome, familia_email, html_renderizado, status, contrato_templates(nome, tipo)").eq("id", contrato_id).single();
+    const { data } = await admin.from("contratos").select("id, familia_nome, familia_email, html_renderizado, status, codigo_verificacao, assinado_em, contrato_templates(nome, tipo), contrato_assinaturas(nome_signatario, assinado_em, ip)").eq("id", contrato_id).single();
     if (!data) return err("Contrato não encontrado.", 404);
     if (data.status === 'rascunho') return err("Contrato ainda não foi enviado.");
-    // Mark as viewed
     if (data.status === 'enviado') {
       await admin.from("contratos").update({ status: 'visualizado', visualizado_em: new Date().toISOString() }).eq("id", contrato_id);
     }
     return ok(data);
   }
 
-  if (action === "contrato_assinar") {
-    const { contrato_id, nome_signatario, assinatura_base64 } = body as any;
-    if (!contrato_id || !nome_signatario || !assinatura_base64) return err("contrato_id, nome_signatario e assinatura_base64 obrigatórios.");
+  // Verificar autenticidade de contrato por código
+  if (action === "contrato_verificar") {
+    const { codigo } = body as any;
+    if (!codigo) return err("Código de verificação obrigatório.");
+    const { data } = await admin.from("contratos").select("id, familia_nome, status, assinado_em, codigo_verificacao, documento_hash, contrato_templates(nome), contrato_assinaturas(nome_signatario, assinado_em, ip, documento_hash)").eq("codigo_verificacao", codigo.toUpperCase()).single();
+    if (!data) return err("Código não encontrado. Verifique e tente novamente.", 404);
+    return ok({ valido: data.status === 'assinado', contrato: data });
+  }
 
-    const { data: contrato } = await admin.from("contratos").select("status").eq("id", contrato_id).single();
+  if (action === "contrato_assinar") {
+    const { contrato_id, nome_signatario, assinatura_base64, aceite_termos, geolocation } = body as any;
+    if (!contrato_id || !nome_signatario || !assinatura_base64) return err("contrato_id, nome_signatario e assinatura_base64 obrigatórios.");
+    if (!aceite_termos) return err("É necessário aceitar os termos para assinar.");
+
+    const { data: contrato } = await admin.from("contratos").select("status, html_renderizado").eq("id", contrato_id).single();
     if (!contrato) return err("Contrato não encontrado.", 404);
     if (contrato.status === 'assinado') return err("Contrato já foi assinado.");
     if (contrato.status === 'cancelado') return err("Contrato foi cancelado.");
 
+    // Gerar hash SHA-256 do documento para garantir integridade
+    const docBytes = new TextEncoder().encode(contrato.html_renderizado || '');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', docBytes);
+    const docHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // Gerar código de verificação único (8 caracteres alfanuméricos)
+    const codigoBytes = crypto.getRandomValues(new Uint8Array(5));
+    const codigoVerificacao = 'LUM-' + Array.from(codigoBytes).map(b => b.toString(36).toUpperCase()).join('').substring(0, 8);
+
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const ua = req.headers.get('user-agent') || '';
+    const agora = new Date().toISOString();
 
+    // Registrar assinatura com evidências probatórias
     await admin.from("contrato_assinaturas").insert({
       contrato_id, tipo: 'responsavel', nome_signatario,
       assinatura_base64, ip, user_agent: ua,
+      documento_hash: docHash, aceite_termos: true,
+      geolocation: geolocation || null,
     });
 
-    await admin.from("contratos").update({ status: 'assinado' }).eq("id", contrato_id);
+    // Atualizar contrato com hash, código e status
+    await admin.from("contratos").update({
+      status: 'assinado',
+      assinado_em: agora,
+      documento_hash: docHash,
+      codigo_verificacao: codigoVerificacao,
+    }).eq("id", contrato_id);
 
-    return ok({ success: true, message: "Contrato assinado com sucesso!" });
+    return ok({
+      success: true,
+      message: "Contrato assinado com sucesso!",
+      codigo_verificacao: codigoVerificacao,
+      documento_hash: docHash,
+      assinado_em: agora,
+      evidencias: { ip, user_agent: ua, aceite_termos: true, geolocation: geolocation || null },
+    });
   }
 
   // ════════════════════════════════════════════════════════════

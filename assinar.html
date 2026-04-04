@@ -53,7 +53,22 @@ canvas{width:100%;height:180px;cursor:crosshair;display:block;touch-action:none;
   <div id="successMsg" class="success-msg" style="display:none;">
     <div class="icon">&#10004;</div>
     <h3>Contrato assinado com sucesso!</h3>
-    <p>Uma copia sera enviada para seu e-mail. Obrigado!</p>
+    <p>Uma cópia será enviada para seu e-mail.</p>
+    <div id="seloAssinatura" style="margin-top:20px;background:#fff;border:2px solid #2d7a3a;border-radius:10px;padding:16px;text-align:left;font-size:12px;color:#1a1a1a;max-width:400px;margin-left:auto;margin-right:auto;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e2dbd1;">
+        <span style="font-size:20px;">🔒</span>
+        <div><strong style="font-size:13px;color:#2d7a3a;">Documento Assinado Eletronicamente</strong><br><span style="font-size:10px;color:#7a7169;">Válido conforme Lei 14.063/2020 e MP 2.200-2/2001</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
+        <div><strong>Signatário:</strong><br><span id="seloNome">—</span></div>
+        <div><strong>Data/Hora:</strong><br><span id="seloData">—</span></div>
+        <div><strong>Código de Verificação:</strong><br><span id="seloCodigo" style="font-family:monospace;font-size:13px;color:#2d7a3a;font-weight:700;">—</span></div>
+        <div><strong>Hash SHA-256:</strong><br><span id="seloHash" style="font-family:monospace;font-size:9px;word-break:break-all;">—</span></div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:#7a7169;border-top:1px solid #e2dbd1;padding-top:6px;">
+        Verifique a autenticidade em: <strong>lumied.com.br/verificar?c=<span id="seloCodigoLink">—</span></strong>
+      </div>
+    </div>
   </div>
 
   <div id="contractWrap" style="display:none;">
@@ -65,14 +80,29 @@ canvas{width:100%;height:180px;cursor:crosshair;display:block;touch-action:none;
       <div class="contract-body" id="contractBody"></div>
     </div>
 
+    <!-- Selo no contrato (antes da assinatura) -->
+    <div style="background:#f8f9fa;border:1px solid #e2dbd1;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:11px;color:#7a7169;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:24px;">🔐</span>
+      <div>
+        <strong style="color:#1a1a1a;">Documento protegido por assinatura eletrônica</strong><br>
+        Este contrato será selado com hash SHA-256 no momento da assinatura, garantindo que o conteúdo não poderá ser alterado após assinado. Validade legal conforme Lei 14.063/2020 e MP 2.200-2/2001.
+      </div>
+    </div>
+
     <div class="sign-section" id="signSection">
-      <h3>Assinatura Eletronica</h3>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:16px;">Ao assinar abaixo, voce concorda com os termos deste contrato. A assinatura e juridicamente valida conforme MP 2.200-2/2001 e Lei 14.063/2020.</p>
-      <input type="text" class="sign-name" id="signName" placeholder="Nome completo do signatario">
+      <h3>Assinatura Eletrônica</h3>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:16px;">Preencha os campos abaixo para assinar este contrato digitalmente.</p>
+      <input type="text" class="sign-name" id="signName" placeholder="Nome completo do signatário">
       <div class="canvas-wrap">
         <canvas id="signCanvas"></canvas>
       </div>
       <div class="canvas-hint">Desenhe sua assinatura acima com o mouse ou dedo</div>
+      <div style="margin-bottom:16px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:#1a1a1a;line-height:1.5;">
+          <input type="checkbox" id="aceiteTermos" style="width:20px;height:20px;margin-top:2px;accent-color:#C8102E;flex-shrink:0;cursor:pointer;">
+          <span>Declaro que li integralmente o contrato acima, concordo com todos os seus termos e condições, e confirmo que esta assinatura eletrônica tem validade jurídica conforme a legislação brasileira (Lei 14.063/2020, MP 2.200-2/2001).</span>
+        </label>
+      </div>
       <div class="btn-row">
         <button class="btn-clear" onclick="clearCanvas()">Limpar</button>
         <button class="btn-sign" id="btnSign" onclick="assinarContrato()">Assinar Contrato</button>
@@ -178,10 +208,21 @@ function clearCanvas() {
   hasDrawn = false;
 }
 
+// Tentar obter geolocalização
+let userGeo = null;
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => { userGeo = `${pos.coords.latitude},${pos.coords.longitude}`; },
+    () => { userGeo = null; },
+    { timeout: 5000 }
+  );
+}
+
 async function assinarContrato() {
   const nome = document.getElementById('signName').value.trim();
   if (!nome) return alert('Informe seu nome completo.');
   if (!hasDrawn) return alert('Desenhe sua assinatura no campo acima.');
+  if (!document.getElementById('aceiteTermos').checked) return alert('Você precisa aceitar os termos para assinar.');
 
   const btn = document.getElementById('btnSign');
   btn.disabled = true; btn.textContent = 'Assinando...';
@@ -194,16 +235,52 @@ async function assinarContrato() {
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
-      body: JSON.stringify({ action: 'contrato_assinar', contrato_id: contratoId, nome_signatario: nome, assinatura_base64: assinatura }),
+      body: JSON.stringify({
+        action: 'contrato_assinar',
+        contrato_id: contratoId,
+        nome_signatario: nome,
+        assinatura_base64: assinatura,
+        aceite_termos: true,
+        geolocation: userGeo,
+      }),
     });
     const d = await r.json();
 
     if (d.error) { btn.disabled = false; btn.textContent = 'Assinar Contrato'; return alert(d.error); }
 
+    // Mostrar selo de assinatura com evidências
     document.getElementById('signSection').style.display = 'none';
     document.getElementById('successMsg').style.display = 'block';
     document.getElementById('contractStatus').textContent = 'Assinado';
     document.getElementById('contractStatus').className = 'contract-status status-assinado';
+
+    // Preencher selo probatório
+    document.getElementById('seloNome').textContent = nome;
+    document.getElementById('seloData').textContent = d.assinado_em ? new Date(d.assinado_em).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
+    document.getElementById('seloCodigo').textContent = d.codigo_verificacao || '—';
+    document.getElementById('seloCodigoLink').textContent = d.codigo_verificacao || '—';
+    document.getElementById('seloHash').textContent = d.documento_hash || '—';
+
+    // Adicionar selo também no corpo do contrato
+    const contractBody = document.getElementById('contractBody');
+    if (contractBody) {
+      contractBody.innerHTML += `
+        <div style="margin-top:32px;border-top:2px solid #2d7a3a;padding-top:16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <span style="font-size:24px;">🔒</span>
+            <strong style="color:#2d7a3a;font-size:14px;">Documento Assinado Eletronicamente</strong>
+          </div>
+          <div style="font-size:11px;color:#555;line-height:1.8;">
+            <strong>Signatário:</strong> ${nome}<br>
+            <strong>Data/Hora:</strong> ${new Date(d.assinado_em || Date.now()).toLocaleString('pt-BR')}<br>
+            <strong>Código de Verificação:</strong> <span style="font-family:monospace;color:#2d7a3a;font-weight:700;">${d.codigo_verificacao || '—'}</span><br>
+            <strong>Hash SHA-256:</strong> <span style="font-family:monospace;font-size:9px;">${d.documento_hash || '—'}</span><br>
+            <strong>IP:</strong> ${d.evidencias?.ip || '—'}<br>
+            <strong>Aceite dos Termos:</strong> Sim<br>
+            <strong>Validade Legal:</strong> Lei 14.063/2020 · MP 2.200-2/2001
+          </div>
+        </div>`;
+    }
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Assinar Contrato';
     alert('Erro ao assinar. Tente novamente.');
