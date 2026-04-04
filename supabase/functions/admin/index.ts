@@ -198,29 +198,29 @@ router.on("escola_modulos_get", authAdmin, validateInput(escolaIdSchema), async 
 router.on("escola_modulos_set", authAdmin, async (ctx) => {
   const { escola_id, modulos: moduloToggles } = ctx.body as { escola_id: string; modulos: Record<string, boolean> };
   if (!escola_id || !moduloToggles) throw new AppError("VALIDATION_FAILED", "escola_id e modulos obrigatórios.");
+
+  // Get all module IDs by slug
   const slugs = Object.keys(moduloToggles);
   const { data: modulosDb } = await ctx.sb.from("modulos").select("id, slug").in("slug", slugs);
-  if (!modulosDb) throw new AppError("NOT_FOUND", "Nenhum módulo encontrado.");
-  const { data: escola } = await ctx.sb.from("escolas").select("plano_id").eq("id", escola_id).single();
-  let planoSlugs = new Set<string>();
-  if (escola?.plano_id) {
-    const { data: pm } = await ctx.sb.from("plano_modulos").select("modulos(slug)").eq("plano_id", escola.plano_id);
-    planoSlugs = new Set((pm || []).map((r: any) => r.modulos?.slug).filter(Boolean));
-  }
-  const moduloIds = modulosDb.map(m => m.id);
-  await ctx.sb.from("escola_modulos").delete().eq("escola_id", escola_id).in("modulo_id", moduloIds);
-  const inserts: Array<{ escola_id: string; modulo_id: string; habilitado: boolean }> = [];
-  for (const m of modulosDb) {
-    if (moduloToggles[m.slug] !== planoSlugs.has(m.slug)) {
-      inserts.push({ escola_id, modulo_id: m.id, habilitado: moduloToggles[m.slug] });
-    }
-  }
+  if (!modulosDb || modulosDb.length === 0) throw new AppError("NOT_FOUND", "Nenhum módulo encontrado.");
+
+  // Delete all existing overrides for this escola, then insert fresh
+  await ctx.sb.from("escola_modulos").delete().eq("escola_id", escola_id);
+
+  // Insert all toggles as explicit overrides
+  const inserts = modulosDb.map((m: any) => ({
+    escola_id,
+    modulo_id: m.id,
+    habilitado: !!moduloToggles[m.slug],
+  }));
+
   if (inserts.length > 0) {
     const { error } = await ctx.sb.from("escola_modulos").insert(inserts);
     if (error) throw new AppError("BAD_REQUEST", error.message);
   }
-  log.info("Escola módulos atualizados", { metadata: { escola_id, overrides: inserts.length } });
-  return successResponse({ success: true, overrides: inserts.length });
+
+  log.info("Escola módulos atualizados", { metadata: { escola_id, total: inserts.length } });
+  return successResponse({ success: true, modulos_salvos: inserts.length });
 });
 
 router.on("escola_modulos_reset", authAdmin, validateInput(escolaIdSchema), async (ctx) => {

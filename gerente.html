@@ -524,6 +524,24 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Controle de Acesso</a>
       </div>
 
+      <!-- ═══ BIBLIOTECA ═══ -->
+      <div data-modulo="biblioteca">
+      <div class="sb-label" onclick="toggleSbSection(this)">Biblioteca <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('biblioteca',this)"><span class="ic">📚</span> Acervo</a>
+        <a class="nav-item" href="#" onclick="showPanel('bibEmprestimos',this)"><span class="ic">📖</span> Empréstimos</a>
+      </div>
+      </div>
+
+      <!-- ═══ CANTINA ═══ -->
+      <div data-modulo="cantina">
+      <div class="sb-label" onclick="toggleSbSection(this)">Cantina <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('cantina',this)"><span class="ic">🍽️</span> Cardápio</a>
+        <a class="nav-item" href="#" onclick="showPanel('cantCreditos',this)"><span class="ic">💳</span> Créditos</a>
+      </div>
+      </div>
+
       <!-- ═══ OPERACIONAL ═══ -->
       <div data-modulo="almoxarifado">
       <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
@@ -621,6 +639,67 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="notifPanel" style="display:none;position:fixed;top:60px;right:16px;width:340px;max-height:400px;background:#fff;border-radius:12px;border:1px solid #e6ddd3;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:500;overflow-y:auto;">
         <div style="padding:14px 16px;border-bottom:1px solid #e6ddd3;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;">Notificações <button onclick="marcarTodasLidas()" style="background:none;border:none;color:#1a6bb5;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar todas como lidas</button></div>
         <div id="notifList"><div style="padding:24px;text-align:center;color:#7a7169;font-size:13px;">Nenhuma notificação.</div></div>
+      </div>
+
+      <!-- BIBLIOTECA — ACERVO -->
+      <div id="panelBiblioteca" class="panel">
+        <h2 class="panel-title">📚 Biblioteca — Acervo</h2>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <input type="text" id="bibBusca" placeholder="Buscar por título, autor ou ISBN..." oninput="filtrarBiblioteca()" style="flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;">
+          <button onclick="abrirNovoBib()" style="padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">+ Novo Livro</button>
+        </div>
+        <div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:10px;text-align:left;">Título</th><th>Autor</th><th>Categoria</th><th style="text-align:center;">Qtd</th><th style="text-align:center;">Disponível</th><th>Ações</th></tr></thead>
+          <tbody id="bibAcervoBody"><tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Carregando...</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <!-- BIBLIOTECA — EMPRÉSTIMOS -->
+      <div id="panelBibEmprestimos" class="panel">
+        <h2 class="panel-title">📖 Biblioteca — Empréstimos</h2>
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <button onclick="novoEmprestimo()" style="padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">+ Novo Empréstimo</button>
+        </div>
+        <div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:10px;text-align:left;">Livro</th><th>Aluno</th><th>Emprestado</th><th>Devolução</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="bibEmprestimosBody"><tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Carregando...</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <!-- CANTINA — CARDÁPIO -->
+      <div id="panelCantina" class="panel">
+        <h2 class="panel-title">🍽️ Cantina — Cardápio</h2>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <input type="date" id="cantData" value="" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;" onchange="loadCardapio()">
+          <button onclick="salvarCardapio()" style="padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Salvar Cardápio</button>
+        </div>
+        <div id="cantCardapioGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div style="background:var(--bg);border-radius:10px;padding:16px;">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;">☀️ Almoço</h4>
+            <textarea id="cantAlmoco" rows="4" placeholder="Itens do almoço..." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:16px;">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;">🌙 Lanche</h4>
+            <textarea id="cantLanche" rows="4" placeholder="Itens do lanche..." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+          </div>
+        </div>
+        <div id="cantObs" style="margin-top:12px;">
+          <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);">Observações</label>
+          <input type="text" id="cantObsInput" placeholder="Ex: menu sem glúten disponível" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-top:4px;">
+        </div>
+      </div>
+
+      <!-- CANTINA — CRÉDITOS -->
+      <div id="panelCantCreditos" class="panel">
+        <h2 class="panel-title">💳 Cantina — Créditos dos Alunos</h2>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <input type="text" id="cantCreditoBusca" placeholder="Buscar aluno..." oninput="filtrarCreditos()" style="flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;">
+          <button onclick="novoCredito()" style="padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">+ Adicionar Crédito</button>
+        </div>
+        <div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:10px;text-align:left;">Aluno</th><th style="text-align:right;">Saldo</th><th>Última Recarga</th><th>Ações</th></tr></thead>
+          <tbody id="cantCreditosBody"><tr><td colspan="4" style="padding:40px;text-align:center;color:var(--muted);">Carregando...</td></tr></tbody>
+        </table></div>
       </div>
 
       <!-- ALUNOS -->
@@ -2778,11 +2857,15 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
     if(id==='alunos')      loadAlunos();
+    if(id==='biblioteca')  loadBibAcervo();
+    if(id==='bibEmprestimos') loadBibEmprestimos();
+    if(id==='cantina')     { if(!document.getElementById('cantData').value) document.getElementById('cantData').value = new Date().toISOString().split('T')[0]; loadCardapio(); }
+    if(id==='cantCreditos') loadCantCreditos();
     if(id==='series')      loadSeries();
     if(id==='atividades')  loadAtividadesPanel();
     if(id==='dashAtiv')    loadAtivDashboard();
@@ -3482,6 +3565,151 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('btnRemoveLogo').style.display='none';
     document.getElementById('sidebarLogo').style.display='none'; document.getElementById('sidebarLeaf').style.display='block';
     showAlert('logo','success','Logotipo removido.');
+  }
+
+  // ── BIBLIOTECA ─────────────────────────────────────────
+  let bibAcervo = [];
+  const OP_URL = CONFIG.SUPABASE_URL + '/functions/v1/operacional';
+  async function opApi(body) {
+    const r = await fetch(OP_URL, { method:'POST', headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON,'Authorization':'Bearer '+CONFIG.SUPABASE_ANON}, body:JSON.stringify({...body,_token:getToken()}) });
+    return r.json();
+  }
+
+  async function loadBibAcervo() {
+    const d = await opApi({ action:'biblioteca_acervo_list' });
+    bibAcervo = Array.isArray(d) ? d : (d.data || []);
+    renderBibAcervo(bibAcervo);
+  }
+  function filtrarBiblioteca() {
+    const q = (document.getElementById('bibBusca')?.value || '').toLowerCase();
+    renderBibAcervo(q ? bibAcervo.filter(b => (b.titulo||'').toLowerCase().includes(q) || (b.autor||'').toLowerCase().includes(q) || (b.isbn||'').includes(q)) : bibAcervo);
+  }
+  function renderBibAcervo(lista) {
+    const body = document.getElementById('bibAcervoBody');
+    if (!lista.length) { body.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Nenhum livro no acervo. Adicione o primeiro!</td></tr>'; return; }
+    body.innerHTML = lista.map(b => `<tr style="border-bottom:1px solid #f0ece6;">
+      <td style="padding:10px;"><strong>${esc(b.titulo)}</strong></td>
+      <td style="padding:10px;font-size:12px;">${esc(b.autor||'—')}</td>
+      <td style="padding:10px;font-size:12px;">${esc(b.categoria||'—')}</td>
+      <td style="padding:10px;text-align:center;">${b.quantidade||0}</td>
+      <td style="padding:10px;text-align:center;font-weight:600;color:${(b.disponivel||0)>0?'var(--green)':'var(--red)'};">${b.disponivel||0}</td>
+      <td style="padding:10px;"><button class="action-btn" onclick="deletarLivro('${b.id}')" title="Remover">🗑️</button></td>
+    </tr>`).join('');
+  }
+  async function abrirNovoBib() {
+    const titulo = prompt('Título do livro:'); if (!titulo) return;
+    const autor = prompt('Autor:') || '';
+    const categoria = prompt('Categoria (ficção, didático, infantil, referência):') || 'didático';
+    const qtd = parseInt(prompt('Quantidade:') || '1') || 1;
+    const d = await opApi({ action:'biblioteca_acervo_create', titulo, autor, categoria, quantidade:qtd });
+    if (d.error) return showToast(d.error,'error');
+    showToast('Livro adicionado!','success');
+    loadBibAcervo();
+  }
+  async function deletarLivro(id) {
+    if (!confirm('Remover este livro do acervo?')) return;
+    await opApi({ action:'biblioteca_acervo_update', id, ativo:false });
+    loadBibAcervo();
+  }
+
+  async function loadBibEmprestimos() {
+    const d = await opApi({ action:'biblioteca_emprestimos_list' });
+    const lista = Array.isArray(d) ? d : (d.data || []);
+    const body = document.getElementById('bibEmprestimosBody');
+    if (!lista.length) { body.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Nenhum empréstimo registrado.</td></tr>'; return; }
+    body.innerHTML = lista.map(e => {
+      const livro = e.biblioteca_acervo?.titulo || '—';
+      const status = e.status === 'devolvido' ? '<span style="color:var(--green);">Devolvido</span>' : e.data_devolucao_prevista && new Date(e.data_devolucao_prevista) < new Date() ? '<span style="color:var(--red);">Atrasado</span>' : '<span style="color:var(--blue);">Emprestado</span>';
+      return `<tr style="border-bottom:1px solid #f0ece6;">
+        <td style="padding:10px;"><strong>${esc(livro)}</strong></td>
+        <td style="padding:10px;font-size:12px;">${esc(e.aluno_nome||'—')}</td>
+        <td style="padding:10px;font-size:12px;">${e.data_emprestimo ? new Date(e.data_emprestimo).toLocaleDateString('pt-BR') : '—'}</td>
+        <td style="padding:10px;font-size:12px;">${e.data_devolucao_prevista ? new Date(e.data_devolucao_prevista).toLocaleDateString('pt-BR') : '—'}</td>
+        <td style="padding:10px;">${status}</td>
+        <td style="padding:10px;">${e.status !== 'devolvido' ? `<button class="action-btn" onclick="devolverLivro('${e.id}')" title="Devolver">📥</button>` : ''}</td>
+      </tr>`;
+    }).join('');
+  }
+  async function novoEmprestimo() {
+    const aluno = prompt('Nome do aluno:'); if (!aluno) return;
+    const email = prompt('Email do aluno:') || '';
+    if (!bibAcervo.length) await loadBibAcervo();
+    const disponiveis = bibAcervo.filter(b => (b.disponivel||0) > 0);
+    if (!disponiveis.length) return showToast('Nenhum livro disponível','error');
+    const livro = prompt('ID do livro (ou título):\n' + disponiveis.map(b => `${b.id.substring(0,8)}... ${b.titulo} (${b.disponivel} disp.)`).join('\n'));
+    if (!livro) return;
+    const acervoId = disponiveis.find(b => b.id.startsWith(livro) || b.titulo.toLowerCase().includes(livro.toLowerCase()))?.id;
+    if (!acervoId) return showToast('Livro não encontrado','error');
+    const d = await opApi({ action:'biblioteca_emprestar', acervo_id:acervoId, aluno_nome:aluno, aluno_email:email });
+    if (d.error) return showToast(d.error,'error');
+    showToast('Empréstimo registrado!','success');
+    loadBibEmprestimos();
+  }
+  async function devolverLivro(id) {
+    const d = await opApi({ action:'biblioteca_devolver', id });
+    if (d.error) return showToast(d.error,'error');
+    showToast('Livro devolvido!','success');
+    loadBibEmprestimos();
+  }
+
+  // ── CANTINA ───────────────────────────────────────────
+  async function loadCardapio() {
+    const data = document.getElementById('cantData').value;
+    if (!data) return;
+    const d = await opApi({ action:'cantina_cardapio_list', data_inicio:data, data_fim:data });
+    const items = Array.isArray(d) ? d : (d.data || []);
+    const almoco = items.find(i => i.refeicao === 'almoco');
+    const lanche = items.find(i => i.refeicao === 'lanche');
+    document.getElementById('cantAlmoco').value = almoco?.itens ? (Array.isArray(almoco.itens) ? almoco.itens.join('\n') : almoco.itens) : '';
+    document.getElementById('cantLanche').value = lanche?.itens ? (Array.isArray(lanche.itens) ? lanche.itens.join('\n') : lanche.itens) : '';
+    document.getElementById('cantObsInput').value = almoco?.observacoes || lanche?.observacoes || '';
+  }
+  async function salvarCardapio() {
+    const data = document.getElementById('cantData').value;
+    if (!data) return showToast('Selecione uma data','error');
+    const almoco = document.getElementById('cantAlmoco').value.split('\n').filter(Boolean);
+    const lanche = document.getElementById('cantLanche').value.split('\n').filter(Boolean);
+    const obs = document.getElementById('cantObsInput').value.trim();
+    await opApi({ action:'cantina_cardapio_upsert', data:data, refeicao:'almoco', itens:almoco, observacoes:obs });
+    await opApi({ action:'cantina_cardapio_upsert', data:data, refeicao:'lanche', itens:lanche, observacoes:obs });
+    showToast('Cardápio salvo!','success');
+  }
+
+  let cantCreditos = [];
+  async function loadCantCreditos() {
+    const d = await opApi({ action:'cantina_creditos_list' });
+    cantCreditos = Array.isArray(d) ? d : (d.data || []);
+    renderCantCreditos(cantCreditos);
+  }
+  function filtrarCreditos() {
+    const q = (document.getElementById('cantCreditoBusca')?.value || '').toLowerCase();
+    renderCantCreditos(q ? cantCreditos.filter(c => (c.aluno_nome||c.aluno_email||'').toLowerCase().includes(q)) : cantCreditos);
+  }
+  function renderCantCreditos(lista) {
+    const body = document.getElementById('cantCreditosBody');
+    if (!lista.length) { body.innerHTML = '<tr><td colspan="4" style="padding:40px;text-align:center;color:var(--muted);">Nenhum crédito registrado.</td></tr>'; return; }
+    body.innerHTML = lista.map(c => `<tr style="border-bottom:1px solid #f0ece6;">
+      <td style="padding:10px;"><strong>${esc(c.aluno_nome || c.aluno_email)}</strong></td>
+      <td style="padding:10px;text-align:right;font-weight:700;color:${(c.saldo||0)>0?'var(--green)':'var(--red)'};">R$ ${(c.saldo||0).toFixed(2)}</td>
+      <td style="padding:10px;font-size:12px;">${c.atualizado_em ? new Date(c.atualizado_em).toLocaleDateString('pt-BR') : '—'}</td>
+      <td style="padding:10px;"><button class="action-btn" onclick="addCredito('${esc(c.aluno_email)}')" title="Adicionar crédito">💰</button></td>
+    </tr>`).join('');
+  }
+  async function novoCredito() {
+    const email = prompt('Email do aluno:'); if (!email) return;
+    const valor = parseFloat(prompt('Valor do crédito (R$):') || '0');
+    if (!valor || valor <= 0) return showToast('Valor inválido','error');
+    const d = await opApi({ action:'cantina_credito_add', aluno_email:email, valor });
+    if (d.error) return showToast(d.error,'error');
+    showToast('Crédito adicionado!','success');
+    loadCantCreditos();
+  }
+  async function addCredito(email) {
+    const valor = parseFloat(prompt('Valor do crédito (R$):') || '0');
+    if (!valor || valor <= 0) return;
+    await opApi({ action:'cantina_credito_add', aluno_email:email, valor });
+    showToast('Crédito adicionado!','success');
+    loadCantCreditos();
   }
 
   // ── ALUNOS ──────────────────────────────────────────────
