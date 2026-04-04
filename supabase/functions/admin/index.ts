@@ -354,6 +354,246 @@ router.on("ticket_close", authAdmin, async (ctx) => {
   return successResponse({ success: true });
 });
 
+// ═══════════════════════════════════════════════════════════════
+//  LUMIED STAFF — Superusuários (painel central)
+// ═══════════════════════════════════════════════════════════════
+
+// Staff auth middleware
+async function authStaff(ctx: Context, next: () => Promise<Response>): Promise<Response> {
+  const token = (ctx.body._staff_token as string) || null;
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token de staff obrigatório.");
+  const { data } = await ctx.sb.from("lumied_staff_sessoes")
+    .select("staff_id, expira_em, lumied_staff(id, nome, email, cargo, ativo)")
+    .eq("token", token).single();
+  if (!data) throw new AppError("AUTH_INVALID", "Sessão de staff inválida.");
+  if (new Date(data.expira_em) < new Date()) throw new AppError("AUTH_EXPIRED", "Sessão expirada.");
+  // deno-lint-ignore no-explicit-any
+  const staff = (data as any).lumied_staff;
+  if (!staff?.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
+  ctx.user = { ...staff, tipo: 'staff' };
+  return next();
+}
+
+// Staff login
+router.on("staff_login", rateLimit({ windowMs: 60000, maxRequests: 5 }), async (ctx) => {
+  const { email, senha } = ctx.body as { email: string; senha: string };
+  if (!email || !senha) throw new AppError("VALIDATION_FAILED", "Email e senha obrigatórios.");
+  const { data: staff } = await ctx.sb.from("lumied_staff").select("id, nome, email, senha_hash, cargo, ativo").eq("email", email.toLowerCase().trim()).single();
+  if (!staff) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+  if (!staff.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
+  if (!(await verificarSenhaAuto(senha, staff.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+  const tkn = gerarToken();
+  await ctx.sb.from("lumied_staff_sessoes").insert({ staff_id: staff.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
+  await ctx.sb.from("lumied_staff").update({ ultimo_acesso: new Date().toISOString() }).eq("id", staff.id);
+  log.info("Staff login", { staff_id: staff.id, cargo: staff.cargo });
+  return successResponse({ token: tkn, nome: staff.nome, email: staff.email, cargo: staff.cargo });
+});
+
+// Staff perfil
+router.on("staff_perfil", authStaff, async (ctx) => {
+  return successResponse({ nome: ctx.user!.nome, email: ctx.user!.email, cargo: (ctx.user as any).cargo });
+});
+
+// Staff logout
+router.on("staff_logout", authStaff, async (ctx) => {
+  await ctx.sb.from("lumied_staff_sessoes").delete().eq("token", ctx.body._staff_token);
+  return successResponse({ success: true });
+});
+
+// Staff setup (primeiro superusuário)
+router.on("staff_setup_check", async (ctx) => {
+  const { count } = await ctx.sb.from("lumied_staff").select("*", { count: "exact", head: true });
+  return successResponse({ needs_setup: (count ?? 0) === 0 });
+});
+
+router.on("staff_setup", async (ctx) => {
+  const { nome, email, senha } = ctx.body as { nome: string; email: string; senha: string };
+  if (!nome || !email || !senha) throw new AppError("VALIDATION_FAILED", "Dados obrigatórios.");
+  const { count } = await ctx.sb.from("lumied_staff").select("*", { count: "exact", head: true });
+  if ((count ?? 0) > 0) throw new AppError("CONFLICT", "Setup já realizado.");
+  const senha_hash = await hashSenha(senha);
+  const { data: staff } = await ctx.sb.from("lumied_staff").insert({ nome, email: email.toLowerCase().trim(), senha_hash, cargo: 'fundador' }).select("id").single();
+  if (!staff) throw new AppError("BAD_REQUEST", "Erro ao criar staff.");
+  const tkn = gerarToken();
+  await ctx.sb.from("lumied_staff_sessoes").insert({ staff_id: staff.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
+  return successResponse({ token: tkn, nome, email });
+});
+
+// ── Painel Central: KPIs globais ──
+router.on("staff_dashboard", authStaff, async (ctx) => {
+  const [escolas, alunos, tickets, staff] = await Promise.all([
+    ctx.sb.from("escolas").select("id, nome, subdominio, plano, plano_fim, ativo, criado_em", { count: "exact" }),
+    ctx.sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true),
+    ctx.sb.from("tickets").select("*", { count: "exact", head: true }).eq("status", "aberto"),
+    ctx.sb.from("lumied_staff").select("*", { count: "exact", head: true }).eq("ativo", true),
+  ]);
+  const escolasData = escolas.data || [];
+  const ativas = escolasData.filter((e: any) => e.ativo);
+  // MRR simples: sum based on plano
+  const PRECOS: Record<string, number> = { starter: 259, gestao: 649, automacao: 1249, avancado: 2079, rede: 2939 };
+  const mrr = ativas.reduce((s: number, e: any) => s + (PRECOS[e.plano?.toLowerCase()] || 0), 0);
+  return successResponse({
+    escolas_ativas: ativas.length,
+    escolas_total: escolasData.length,
+    total_alunos: alunos.count || 0,
+    mrr,
+    tickets_abertos: tickets.count || 0,
+    staff_count: staff.count || 0,
+    escolas: escolasData.map((e: any) => ({
+      id: e.id, nome: e.nome, subdominio: e.subdominio, plano: e.plano,
+      plano_fim: e.plano_fim, ativo: e.ativo, criado_em: e.criado_em,
+      url_admin: `https://${e.subdominio}.lumied.com.br/admin.html`,
+      url_gerente: `https://${e.subdominio}.lumied.com.br/gerente.html`,
+    })),
+  });
+});
+
+// ── Staff CRUD ──
+router.on("staff_list", authStaff, async (ctx) => {
+  const { data } = await ctx.sb.from("lumied_staff").select("id, nome, email, cargo, ativo, ultimo_acesso, criado_em").order("nome");
+  return successResponse(data ?? []);
+});
+
+router.on("staff_criar", authStaff, async (ctx) => {
+  const { nome, email, senha, cargo } = ctx.body as any;
+  if (!nome || !email || !senha) throw new AppError("VALIDATION_FAILED", "Dados obrigatórios.");
+  const senha_hash = await hashSenha(senha);
+  const { error } = await ctx.sb.from("lumied_staff").insert({ nome, email: email.toLowerCase().trim(), senha_hash, cargo: cargo || 'suporte' });
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  // Audit
+  await ctx.sb.from("lumied_staff_audit").insert({ staff_id: ctx.user!.id, staff_nome: ctx.user!.nome, acao: 'staff_criar', detalhes: { email } });
+  return successResponse({ success: true });
+});
+
+router.on("staff_desativar", authStaff, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (id === ctx.user!.id) throw new AppError("FORBIDDEN", "Não pode desativar a si mesmo.");
+  await ctx.sb.from("lumied_staff").update({ ativo: false }).eq("id", id);
+  await ctx.sb.from("lumied_staff_audit").insert({ staff_id: ctx.user!.id, staff_nome: ctx.user!.nome, acao: 'staff_desativar', detalhes: { target_id: id } });
+  return successResponse({ success: true });
+});
+
+// ── Audit log ──
+router.on("staff_audit_log", authStaff, async (ctx) => {
+  const { data } = await ctx.sb.from("lumied_staff_audit").select("*").order("criado_em", { ascending: false }).limit(100);
+  return successResponse(data ?? []);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  ONBOARDING — Criar novo cliente automaticamente
+// ═══════════════════════════════════════════════════════════════
+
+router.on("staff_criar_escola", authStaff, async (ctx) => {
+  const { nome, subdominio, plano, gerente_nome, gerente_email, gerente_senha,
+    cnpj, telefone, endereco, cor_primaria, escola_icone } = ctx.body as any;
+
+  if (!nome || !subdominio || !gerente_nome || !gerente_email || !gerente_senha) {
+    throw new AppError("VALIDATION_FAILED", "nome, subdominio, gerente_nome, gerente_email e gerente_senha são obrigatórios.");
+  }
+
+  // Validar subdomínio
+  const slug = subdominio.toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (slug.length < 3) throw new AppError("VALIDATION_FAILED", "Subdomínio muito curto (min 3 caracteres).");
+
+  // Verificar se subdomínio já existe
+  const { data: existing } = await ctx.sb.from("escolas").select("id").eq("subdominio", slug).single();
+  if (existing) throw new AppError("CONFLICT", `Subdomínio "${slug}" já está em uso.`);
+
+  const agora = new Date().toISOString();
+  const planoFim = new Date(Date.now() + 365 * 86400000).toISOString(); // 1 ano
+
+  // 1. Criar escola
+  const { data: escola, error: errEscola } = await ctx.sb.from("escolas").insert({
+    nome, subdominio: slug, plano: plano || 'gestao',
+    plano_fim: planoFim, ativo: true,
+    modulo_whatsapp: false,
+    criado_em: agora,
+  }).select("id").single();
+
+  if (errEscola || !escola) throw new AppError("BAD_REQUEST", errEscola?.message || "Erro ao criar escola.");
+
+  // 2. Configurações iniciais da escola
+  const configs: Array<{ chave: string; valor: string }> = [
+    { chave: 'escola_nome', valor: nome },
+    { chave: 'escola_icone', valor: escola_icone || '🏫' },
+    { chave: 'cor_primaria', valor: cor_primaria || '#C8102E' },
+    { chave: 'cor_escura', valor: '#a00d24' },
+    { chave: 'cor_cream', valor: '#f8f5f0' },
+    { chave: 'escola_url', valor: `https://${slug}.lumied.com.br` },
+    { chave: 'escola_email_domain', valor: 'lumied.com.br' },
+    { chave: 'escola_email_sender', valor: 'noreply@lumied.com.br' },
+  ];
+  if (cnpj) configs.push({ chave: 'escola_cnpj', valor: cnpj });
+  if (telefone) configs.push({ chave: 'escola_telefone', valor: telefone });
+  if (endereco) configs.push({ chave: 'escola_endereco', valor: endereco });
+
+  for (const cfg of configs) {
+    await ctx.sb.from("escola_config").insert({ ...cfg, escola_id: escola.id });
+  }
+
+  // 3. Criar primeiro gerente
+  const gerenteSenhaHash = await hashSenha(gerente_senha);
+  await ctx.sb.from("gerentes").insert({ nome: gerente_nome, email: gerente_email.toLowerCase().trim(), senha_hash: gerenteSenhaHash });
+  await ctx.sb.from("usuarios").insert({ nome: gerente_nome, email: gerente_email.toLowerCase().trim(), senha_hash: gerenteSenhaHash, papel: 'gerente' });
+
+  // 4. Config superusuário da escola
+  await ctx.sb.from("escola_config").insert({ chave: 'superusuario_email', valor: gerente_email.toLowerCase().trim(), escola_id: escola.id });
+
+  // 5. Ativar módulos padrão do plano
+  const MODULOS_POR_PLANO: Record<string, string[]> = {
+    starter: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria'],
+    gestao: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao'],
+    automacao: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao', 'whatsapp', 'cobranca', 'pix', 'contratos', 'compliance', 'biblioteca', 'cantina', 'transporte', 'matricula', 'pesquisas'],
+    avancado: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao', 'whatsapp', 'cobranca', 'pix', 'contratos', 'compliance', 'biblioteca', 'cantina', 'transporte', 'matricula', 'pesquisas', 'analytics', 'rh', 'contabil', 'ponto', 'pdi', 'impressoes'],
+    rede: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao', 'whatsapp', 'cobranca', 'pix', 'contratos', 'compliance', 'biblioteca', 'cantina', 'transporte', 'matricula', 'pesquisas', 'analytics', 'rh', 'contabil', 'ponto', 'pdi', 'impressoes', 'app_nativo', 'ead', 'loja', 'multi_escola', 'api_dedicada', 'emergencias'],
+  };
+  const modulos = MODULOS_POR_PLANO[plano || 'gestao'] || MODULOS_POR_PLANO.gestao;
+  for (const mod of modulos) {
+    await ctx.sb.from("escola_modulos").upsert({ escola_id: escola.id, modulo_slug: mod, ativo: true }, { onConflict: "escola_id,modulo_slug" });
+  }
+
+  // 6. Séries padrão
+  const seriesPadrao = ['Bear Care', 'Toddler', 'Nursery', 'Junior Kindergarten (JK)', 'Senior Kindergarten (SK)', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'];
+  for (const serie of seriesPadrao) {
+    await ctx.sb.from("series").insert({ nome: serie, escola_id: escola.id }).catch(() => {});
+  }
+
+  // 7. Audit log
+  await ctx.sb.from("lumied_staff_audit").insert({
+    staff_id: ctx.user!.id, staff_nome: ctx.user!.nome,
+    acao: 'escola_criada',
+    detalhes: { nome, subdominio: slug, plano: plano || 'gestao', gerente_email },
+    escola_id: escola.id,
+  });
+
+  // 8. Checklist de pendências
+  const pendencias = [];
+  pendencias.push('RESEND_API_KEY — Configurar em Supabase Secrets para envio de emails');
+  if (modulos.includes('whatsapp')) {
+    pendencias.push('META_APP_SECRET — Meta Business Manager');
+    pendencias.push('WHATSAPP_TOKEN — Meta Developers');
+    pendencias.push('META_PHONE_NUMBER_ID — WhatsApp API Setup');
+  }
+  if (modulos.includes('financeiro')) {
+    pendencias.push('INTER_CLIENT_ID/SECRET — Banco Inter (se usar boletos)');
+  }
+  pendencias.push('Google OAuth — Adicionar redirect URI do novo Supabase');
+  pendencias.push('Verificar SSL em https://' + slug + '.lumied.com.br');
+
+  log.info("Nova escola criada", { escola_id: escola.id, nome, slug, plano: plano || 'gestao' });
+
+  return successResponse({
+    success: true,
+    escola_id: escola.id,
+    url: `https://${slug}.lumied.com.br`,
+    url_admin: `https://${slug}.lumied.com.br/admin.html`,
+    url_gerente: `https://${slug}.lumied.com.br/gerente.html`,
+    modulos_ativados: modulos.length,
+    gerente_email,
+    pendencias,
+  });
+});
+
 // ═══ SERVE ═══
 serve(async (req: Request) => {
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { autoRefreshToken: false, persistSession: false } });

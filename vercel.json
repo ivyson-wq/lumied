@@ -4,6 +4,12 @@
   "redirects": [
     {
       "source": "/",
+      "has": [{ "type": "host", "value": "admin.lumied.com.br" }],
+      "destination": "/admin-central.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
       "has": [{ "type": "host", "value": "lumied.com.br" }],
       "destination": "/site/",
       "permanent": false

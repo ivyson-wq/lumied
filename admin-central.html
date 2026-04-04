@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="/sentry-init.js"></script>
+<script src="/config.js"></script>
+<title>Lumied — Painel Central</title>
+<meta name="theme-color" content="#1c1712">
+<link rel="icon" href="/icon-apple.png">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--purple:#6b3fa0;--purple-dark:#562f87;--purple-light:rgba(107,63,160,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;--red:#C8102E;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
+
+/* LOGIN — split screen */
+#loginScreen{min-height:100vh;display:flex;}
+.login-photo{flex:1;background:linear-gradient(135deg,#1c1712 0%,#2a1f3d 50%,#1c1712 100%);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.login-photo::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(107,63,160,.25) 0%,transparent 70%);}
+.login-photo-content{position:relative;z-index:1;text-align:center;padding:40px;}
+.login-photo-content h1{font-family:'Lora',serif;font-size:42px;color:#fff;margin-bottom:12px;}
+.login-photo-content p{font-size:16px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase;}
+.login-photo-content .lp-icon{font-size:64px;margin-bottom:24px;display:block;}
+.login-form-side{flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:40px;}
+.login-card{width:100%;max-width:400px;animation:popIn .4s cubic-bezier(.22,.8,.44,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.login-logo{text-align:center;margin-bottom:28px;}.login-logo .leaf{font-size:40px;}
+.login-logo h1{font-family:'Lora',serif;font-size:20px;margin-top:8px;color:var(--text);}
+.login-logo span{font-size:12px;color:var(--muted);}
+.login-card h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:22px;text-align:center;}
+.lf{margin-bottom:16px;}.lf label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px;}
+.lf input,.lf select{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
+.lf input:focus,.lf select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(107,63,160,.1);}
+.login-btn{width:100%;padding:13px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s;box-shadow:0 4px 16px rgba(107,63,160,.3);}
+.login-btn:hover{background:var(--purple-dark);}.login-btn:disabled{opacity:.55;cursor:not-allowed;}
+#loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
+
+/* APP */
+#appShell{display:none;min-height:100vh;}
+.sidebar{position:fixed;top:0;left:0;width:230px;height:100vh;background:var(--sb);display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
+.sb-brand{padding:26px 20px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
+.sb-leaf{font-size:20px;}.sb-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;margin-top:6px;line-height:1.2;}
+.sb-brand span{font-size:11px;color:rgba(255,255,255,.4);}
+.sb-nav{flex:1;padding:14px 12px;}
+.sb-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:14px 12px 7px;font-weight:700;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.85);font-size:13.5px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;margin-bottom:2px;text-decoration:none;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}.nav-item.active{background:rgba(107,63,160,.9);color:#fff;}
+.nav-item .ic{width:18px;text-align:center;font-size:15px;}
+.sb-footer{padding:16px 12px;border-top:1px solid rgba(255,255,255,.07);}
+.user-info{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px;padding:0 10px;}
+.user-info strong{color:rgba(255,255,255,.8);display:block;font-size:13px;}
+.logout-btn{width:100%;padding:9px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;color:rgba(255,255,255,.55);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:background .15s;}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);}
+.main{margin-left:230px;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar h2{font-family:'Lora',serif;font-size:17px;font-weight:600;}
+.content{padding:26px 32px 48px;flex:1;max-width:1400px;}
+.panel{display:none;}.panel.active{display:block;}
+.sec-title{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:12px;}
+.count-badge{background:var(--purple-light);color:var(--purple);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:2px 10px;border-radius:100px;}
+.table-wrap{background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:11px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#faf8f5;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid #f0ece6;transition:background .15s;}tbody tr:last-child{border-bottom:none;}tbody tr:hover{background:#faf8f5;}
+tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
+.action-btn{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all .15s;margin-left:4px;}
+.action-btn:hover{background:#f5f0ea;color:var(--text);}.action-btn.del:hover{background:#fdf0f2;color:var(--red);border-color:rgba(200,16,46,.3);}
+.action-btn.purple:hover{background:var(--purple-light);color:var(--purple);border-color:rgba(107,63,160,.3);}
+.empty-state{text-align:center;padding:40px 24px;color:var(--muted);}
+.status-pill{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;}
+.status-pill.ativo{background:rgba(45,122,58,.1);color:var(--green);}.status-pill.inativo{background:rgba(200,16,46,.1);color:var(--red);}
+
+/* FORM */
+.form-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:20px;}
+.ff{margin-bottom:16px;}.ff label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px;}
+.ff input,.ff select,.ff textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;background:#fdfbf8;transition:border-color .2s;}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--purple);}
+.ff-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.btn-primary{padding:10px 24px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-primary:hover{background:var(--purple-dark);}.btn-primary:disabled{opacity:.55;cursor:not-allowed;}
+.btn-secondary{padding:10px 24px;background:var(--white);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;}
+.btn-secondary:hover{background:#f5f0ea;}
+.btn-bar{display:flex;gap:10px;margin-top:20px;}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.kpi-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.kpi-value{font-family:'Lora',serif;font-size:28px;font-weight:700;color:var(--text);}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-top:4px;}
+.kpi-icon{font-size:22px;margin-bottom:6px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--sb);color:#fff;padding:14px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:999;animation:slideUp .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.toast.success{border-left:4px solid var(--green);}.toast.error{border-left:4px solid var(--red);}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+/* SPINNER */
+.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(107,63,160,.25);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--white);border-radius:16px;padding:30px;width:100%;max-width:600px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;max-height:90vh;overflow-y:auto;}
+.modal h3{font-family:'Lora',serif;font-size:17px;margin-bottom:6px;}.modal .msub{font-size:13px;color:var(--muted);margin-bottom:20px;}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-tab{padding:6px 14px;border-radius:100px;border:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted);}
+.filter-tab:hover{border-color:var(--purple);color:var(--text);}.filter-tab.active{background:var(--purple);color:#fff;border-color:var(--purple);}
+
+/* ESCOLA CARDS */
+.escola-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.escola-card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:transform .15s,box-shadow .15s;}
+.escola-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08);}
+.escola-card h3{font-family:'Lora',serif;font-size:15px;margin-bottom:4px;}
+.escola-card .meta{font-size:12px;color:var(--muted);margin-bottom:10px;}
+.escola-card .meta span{margin-right:12px;}
+.escola-card .ec-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
+
+/* SEARCH */
+.search-bar{margin-bottom:18px;}
+.search-bar input{width:100%;max-width:380px;padding:10px 14px 10px 36px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;background:#fdfbf8 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%237a7169' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E") no-repeat 12px center;transition:border-color .2s;}
+.search-bar input:focus{border-color:var(--purple);}
+
+/* NAV BADGE */
+.nav-badge{background:var(--purple);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:100px;margin-left:auto;}
+
+/* FOOTER */
+.app-footer{text-align:center;padding:20px 32px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);margin-top:auto;}
+
+/* STATUS PILLS EXTRA */
+.status-pill.aberto{background:rgba(194,120,0,.1);color:#c27800;}
+.status-pill.respondido{background:rgba(26,107,181,.1);color:var(--blue);}
+.status-pill.fechado{background:rgba(122,113,105,.1);color:var(--muted);}
+.status-pill.escalado{background:rgba(107,63,160,.1);color:var(--purple);}
+
+/* LINK BUTTONS */
+.link-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--muted);transition:all .15s;text-decoration:none;margin-right:4px;}
+.link-btn:hover{background:var(--purple-light);color:var(--purple);border-color:rgba(107,63,160,.3);}
+
+@media(max-width:900px){
+  .login-photo{display:none;}.login-form-side{flex:none;width:100%;}
+}
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:relative;}.main{margin-left:0;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}.ff-row{grid-template-columns:1fr;}
+  .escola-cards{grid-template-columns:1fr;}
+  .topbar{padding:14px 16px;}.content{padding:18px 16px 40px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-photo">
+    <div class="login-photo-content">
+      <span class="lp-icon">🟣</span>
+      <h1>Lumied</h1>
+      <p>Painel Central</p>
+    </div>
+  </div>
+  <div class="login-form-side">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="leaf">🟣</div>
+        <h1>Lumied</h1>
+        <span>Painel Central &mdash; Staff</span>
+      </div>
+      <div id="setupForm" style="display:none;">
+        <h2>Primeiro Acesso</h2>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Crie a primeira conta de staff da Lumied.</p>
+        <div class="lf"><label>Nome</label><input id="setupNome" type="text" placeholder="Seu nome completo"></div>
+        <div class="lf"><label>Email</label><input id="setupEmail" type="email" placeholder="voce@lumied.com.br"></div>
+        <div class="lf"><label>Senha</label><input id="setupSenha" type="password" placeholder="Minimo 6 caracteres"></div>
+        <div class="lf"><label>Cargo</label>
+          <select id="setupCargo">
+            <option value="fundador">Fundador</option>
+            <option value="cto">CTO</option>
+            <option value="suporte">Suporte</option>
+            <option value="comercial">Comercial</option>
+            <option value="cs">Customer Success</option>
+          </select>
+        </div>
+        <button class="login-btn" onclick="doSetup()">Criar & Entrar</button>
+        <p style="text-align:center;margin-top:12px;"><a href="#" onclick="document.getElementById('setupForm').style.display='none';document.getElementById('loginForm').style.display='block';return false" style="font-size:13px;color:var(--purple);text-decoration:none;padding:8px;">Ja tenho conta? Fazer login</a></p>
+      </div>
+      <div id="loginForm">
+        <h2>Acesso Staff</h2>
+        <div class="lf"><label>Email</label><input id="loginEmail" type="email" placeholder="voce@lumied.com.br"></div>
+        <div class="lf"><label>Senha</label><input id="loginSenha" type="password" placeholder="Sua senha"></div>
+        <button class="login-btn" onclick="doLogin()">Entrar</button>
+      </div>
+      <div id="loginError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-leaf">🟣</div>
+      <h1>Lumied</h1>
+      <span>Painel Central</span>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-label">Overview</div>
+      <a class="nav-item active" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard</a>
+      <a class="nav-item" onclick="showPanel('escolas',this)"><span class="ic">🏫</span> Escolas</a>
+      <div class="sb-label">Gestao</div>
+      <a class="nav-item" onclick="showPanel('staff',this)"><span class="ic">👥</span> Staff Lumied</a>
+      <a class="nav-item" onclick="showPanel('audit',this)"><span class="ic">📋</span> Audit Log</a>
+      <a class="nav-item" onclick="showPanel('tickets',this)"><span class="ic">🎫</span> Tickets <span class="nav-badge" id="ticketsBadge" style="display:none;">0</span></a>
+    </div>
+    <div class="sb-footer">
+      <div class="user-info"><strong id="staffNome">Staff</strong><span id="staffEmail">staff@lumied.com.br</span></div>
+      <button class="logout-btn" onclick="doLogout()">&#8617; Sair</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <h2 id="panelTitle">Dashboard</h2>
+    </div>
+    <div class="content">
+
+      <!-- PAINEL: DASHBOARD -->
+      <div id="panelDashboard" class="panel active">
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-icon">🏫</div><div class="kpi-value" id="kpiEscolas">-</div><div class="kpi-label">Escolas Ativas</div></div>
+          <div class="kpi-card"><div class="kpi-icon">👨‍🎓</div><div class="kpi-value" id="kpiAlunos">-</div><div class="kpi-label">Total Alunos</div></div>
+          <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value" id="kpiMrr">-</div><div class="kpi-label">MRR</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🎫</div><div class="kpi-value" id="kpiTickets">-</div><div class="kpi-label">Tickets Abertos</div></div>
+          <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-value" id="kpiStaff">-</div><div class="kpi-label">Staff Ativo</div></div>
+          <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-value" id="kpiArr">-</div><div class="kpi-label">ARR</div></div>
+        </div>
+        <div class="sec-title">Escolas <span class="count-badge" id="dashEscolasCount">0</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Subdominio</th><th>Plano</th><th>Alunos</th><th>Status</th><th>Acoes</th></tr></thead>
+            <tbody id="dashEscolasBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PAINEL: ESCOLAS -->
+      <div id="panelEscolas" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
+          <div class="sec-title" style="margin-bottom:0;">Todas as Escolas <span class="count-badge" id="escolasCount">0</span></div>
+          <button class="btn-primary" onclick="showNovaEscolaForm()">+ Nova Escola</button>
+        </div>
+        <div class="search-bar"><input id="escolaSearch" type="text" placeholder="Buscar escola por nome ou subdominio..." oninput="filterEscolas()"></div>
+
+        <!-- Formulário de nova escola (oculto por padrão) -->
+        <div id="novaEscolaForm" style="display:none;background:var(--white);border:2px solid var(--purple);border-radius:12px;padding:24px;margin-bottom:24px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="font-family:'Lora',serif;font-size:16px;font-weight:700;color:var(--purple);">Criar Nova Escola</h3>
+            <button onclick="document.getElementById('novaEscolaForm').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="ff"><label>Nome da Escola *</label><input id="neNome" placeholder="Ex: Maple Bear Caxias do Sul"></div>
+            <div class="ff"><label>Subdominio *</label><div style="display:flex;align-items:center;gap:4px;"><input id="neSubdominio" placeholder="maplebearcaxias" style="flex:1;" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')"><span style="font-size:11px;color:var(--muted);">.lumied.com.br</span></div></div>
+            <div class="ff"><label>Plano *</label><select id="nePlano"><option value="starter">Starter</option><option value="gestao" selected>Gestao</option><option value="automacao">Automacao</option><option value="avancado">Avancado</option><option value="rede">Rede</option></select></div>
+            <div class="ff"><label>CNPJ</label><input id="neCnpj" placeholder="00.000.000/0001-00"></div>
+            <div class="ff"><label>Telefone</label><input id="neTelefone" placeholder="(00) 0000-0000"></div>
+            <div class="ff"><label>Cor Primaria</label><input id="neCor" type="color" value="#C8102E" style="height:38px;"></div>
+            <div class="ff"><label>Icone/Emoji</label><input id="neIcone" placeholder="🏫" value="🏫" maxlength="4"></div>
+            <div class="ff"><label>Endereco</label><input id="neEndereco" placeholder="Cidade, Estado"></div>
+          </div>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Primeiro Gerente (acesso ao portal da escola)</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+              <div class="ff"><label>Nome *</label><input id="neGerenteNome" placeholder="Nome completo"></div>
+              <div class="ff"><label>Email *</label><input id="neGerenteEmail" type="email" placeholder="gerente@escola.com.br"></div>
+              <div class="ff"><label>Senha *</label><input id="neGerenteSenha" type="password" placeholder="Min 6 caracteres"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+            <button onclick="document.getElementById('novaEscolaForm').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;">Cancelar</button>
+            <button id="neSubmitBtn" onclick="criarNovaEscola()" style="padding:10px 24px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;">Criar Escola</button>
+          </div>
+          <div id="neResult" style="display:none;margin-top:16px;padding:16px;border-radius:8px;font-size:13px;line-height:1.6;"></div>
+        </div>
+
+        <div class="escola-cards" id="escolasCards"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- PAINEL: STAFF -->
+      <div id="panelStaff" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="sec-title" style="margin-bottom:0;">Staff Lumied <span class="count-badge" id="staffCount">0</span></div>
+          <button class="btn-primary" onclick="showStaffModal()">+ Novo Staff</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Email</th><th>Cargo</th><th>Status</th><th>Criado em</th><th>Acoes</th></tr></thead>
+            <tbody id="staffBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="form-card" style="margin-top:24px;">
+          <h3 style="font-family:'Lora',serif;font-size:15px;margin-bottom:16px;">Adicionar Membro da Equipe</h3>
+          <div class="ff-row">
+            <div class="ff"><label>Nome</label><input id="newStaffNome" placeholder="Nome completo"></div>
+            <div class="ff"><label>Email</label><input id="newStaffEmail" type="email" placeholder="email@lumied.com.br"></div>
+          </div>
+          <div class="ff-row">
+            <div class="ff"><label>Senha</label><input id="newStaffSenha" type="password" placeholder="Minimo 6 caracteres"></div>
+            <div class="ff"><label>Cargo</label>
+              <select id="newStaffCargo">
+                <option value="fundador">Fundador</option>
+                <option value="cto">CTO</option>
+                <option value="suporte">Suporte</option>
+                <option value="comercial">Comercial</option>
+                <option value="cs">Customer Success</option>
+              </select>
+            </div>
+          </div>
+          <div class="btn-bar">
+            <button class="btn-primary" onclick="criarStaff()">Criar Staff</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL: AUDIT LOG -->
+      <div id="panelAudit" class="panel">
+        <div class="sec-title">Audit Log &mdash; Historico de Atividades</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data/Hora</th><th>Staff</th><th>Acao</th><th>Detalhes</th><th>Escola</th></tr></thead>
+            <tbody id="auditBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PAINEL: TICKETS -->
+      <div id="panelTickets" class="panel">
+        <div class="sec-title">Tickets &mdash; Todas as Escolas <span class="count-badge" id="ticketsCount">0</span></div>
+        <div class="filter-tabs" id="ticketFilters">
+          <button class="filter-tab active" onclick="filterTickets('',this)">Todos</button>
+          <button class="filter-tab" onclick="filterTickets('aberto',this)">Abertos</button>
+          <button class="filter-tab" onclick="filterTickets('respondido',this)">Respondidos</button>
+          <button class="filter-tab" onclick="filterTickets('escalado',this)">Escalados</button>
+          <button class="filter-tab" onclick="filterTickets('fechado',this)">Fechados</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Escola</th><th>Email</th><th>Portal</th><th>Tipo</th><th>Descricao</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
+            <tbody id="ticketsBody"><tr><td colspan="8" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    <div class="app-footer">&copy; 2026 Lumied. Painel interno &mdash; acesso restrito.</div>
+  </div>
+</div>
+
+<!-- MODAL: RESPONDER TICKET -->
+<div class="modal-overlay" id="modalResponderTicket">
+  <div class="modal" style="max-width:550px;">
+    <h3>Responder Ticket</h3>
+    <p class="msub" id="ticketResumo"></p>
+    <div class="ff"><label>Resposta</label><textarea id="ticketResposta" rows="4" placeholder="Digite sua resposta..."></textarea></div>
+    <div class="btn-bar">
+      <button class="btn-primary" onclick="enviarRespostaTicket()">Enviar Resposta</button>
+      <button class="btn-secondary" onclick="fecharModal('modalResponderTicket')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════
+const API_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/admin';
+const ANON_KEY = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+const TOKEN_KEY = 'lumied_staff_token';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
+async function api(body) {
+  const token = getToken();
+  const payload = { ...body };
+  if (token) payload._staff_token = token;
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY },
+      body: JSON.stringify(payload)
+    });
+    return r.json();
+  } catch (e) {
+    return { error: 'Erro de conexao: ' + e.message };
+  }
+}
+
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function fmtDate(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtCurrency(v) {
+  return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════
+async function checkSession() {
+  const token = getToken();
+  if (!token) {
+    try {
+      const d = await api({ action: 'staff_setup_check' });
+      if (d.needs_setup) {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('setupForm').style.display = 'block';
+      }
+    } catch (e) {}
+    return;
+  }
+  const d = await api({ action: 'staff_perfil' });
+  if (d.error) { localStorage.removeItem(TOKEN_KEY); location.reload(); return; }
+  showApp(d.nome, d.email);
+}
+
+async function doSetup() {
+  const nome = document.getElementById('setupNome').value.trim();
+  const email = document.getElementById('setupEmail').value.trim();
+  const senha = document.getElementById('setupSenha').value;
+  const cargo = document.getElementById('setupCargo').value;
+  if (!nome || !email || !senha) return showError('Preencha todos os campos.');
+  if (senha.length < 6) return showError('Senha deve ter no minimo 6 caracteres.');
+  const d = await api({ action: 'staff_setup', nome, email, senha, cargo });
+  if (d.error) return showError(d.error);
+  localStorage.setItem(TOKEN_KEY, d.token);
+  showApp(d.nome || nome, d.email || email);
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  if (!email || !senha) return showError('Preencha email e senha.');
+  const d = await api({ action: 'staff_login', email, senha });
+  if (d.error) return showError(d.error);
+  localStorage.setItem(TOKEN_KEY, d.token);
+  showApp(d.nome, d.email);
+}
+
+async function doLogout() {
+  await api({ action: 'staff_logout' });
+  localStorage.removeItem(TOKEN_KEY);
+  location.reload();
+}
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+function showApp(nome, email) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+  document.getElementById('staffNome').textContent = nome || 'Staff';
+  document.getElementById('staffEmail').textContent = email || '';
+  loadDashboard();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') {
+    if (document.getElementById('setupForm').style.display !== 'none') doSetup();
+    else doLogin();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets' };
+
+function showPanel(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const panelId = 'panel' + id.charAt(0).toUpperCase() + id.slice(1);
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('panelTitle').textContent = titles[id] || id;
+  if (id === 'dashboard') loadDashboard();
+  if (id === 'escolas') loadEscolas();
+  if (id === 'staff') loadStaff();
+  if (id === 'audit') loadAudit();
+  if (id === 'tickets') loadTickets();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+let _dashData = null;
+
+async function loadDashboard() {
+  const d = await api({ action: 'staff_dashboard' });
+  if (d.error) { showToast(d.error, 'error'); return; }
+  _dashData = d;
+
+  document.getElementById('kpiEscolas').textContent = d.escolas_ativas || 0;
+  document.getElementById('kpiAlunos').textContent = (d.total_alunos || 0).toLocaleString('pt-BR');
+  const mrr = d.mrr || 0;
+  document.getElementById('kpiMrr').textContent = fmtCurrency(mrr);
+  document.getElementById('kpiTickets').textContent = d.tickets_abertos || 0;
+  document.getElementById('kpiStaff').textContent = d.staff_ativo || 0;
+  document.getElementById('kpiArr').textContent = fmtCurrency(mrr * 12);
+
+  // Tickets badge
+  const badge = document.getElementById('ticketsBadge');
+  if (d.tickets_abertos > 0) { badge.textContent = d.tickets_abertos; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
+
+  // Escolas table
+  const escolas = Array.isArray(d.escolas) ? d.escolas : [];
+  document.getElementById('dashEscolasCount').textContent = escolas.length;
+  const tbody = document.getElementById('dashEscolasBody');
+  if (escolas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma escola cadastrada</td></tr>';
+    return;
+  }
+  tbody.innerHTML = escolas.map(e => {
+    const sub = e.subdominio || e.slug || '';
+    const statusCls = e.ativo !== false ? 'ativo' : 'inativo';
+    const statusTxt = e.ativo !== false ? 'Ativo' : 'Inativo';
+    const adminUrl = sub ? `https://${esc(sub)}.lumied.com.br/admin.html` : '#';
+    const gerenteUrl = sub ? `https://${esc(sub)}.lumied.com.br/gerente.html` : '#';
+    return `<tr>
+      <td><strong>${esc(e.nome)}</strong></td>
+      <td>${sub ? `<span style="font-size:12px;color:var(--blue);">${esc(sub)}.lumied.com.br</span>` : '<span style="color:var(--muted);">-</span>'}</td>
+      <td>${esc(e.plano_nome || e.plano || '-')}</td>
+      <td>${e.total_alunos != null ? e.total_alunos : '-'}</td>
+      <td><span class="status-pill ${statusCls}">${statusTxt}</span></td>
+      <td>
+        <a class="link-btn" href="${adminUrl}" target="_blank">&#128295; Admin</a>
+        <a class="link-btn" href="${gerenteUrl}" target="_blank">&#128202; Gerente</a>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ESCOLAS
+// ═══════════════════════════════════════════════════════════
+let _escolasList = [];
+
+async function loadEscolas() {
+  const d = _dashData || await api({ action: 'staff_dashboard' });
+  if (!_dashData) _dashData = d;
+  _escolasList = Array.isArray(d.escolas) ? d.escolas : [];
+  document.getElementById('escolasCount').textContent = _escolasList.length;
+  renderEscolaCards(_escolasList);
+}
+
+function renderEscolaCards(list) {
+  const container = document.getElementById('escolasCards');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty-state">Nenhuma escola encontrada.</div>';
+    return;
+  }
+  container.innerHTML = list.map(e => {
+    const sub = e.subdominio || e.slug || '';
+    const statusCls = e.ativo !== false ? 'ativo' : 'inativo';
+    const statusTxt = e.ativo !== false ? 'Ativo' : 'Inativo';
+    const adminUrl = sub ? `https://${esc(sub)}.lumied.com.br/admin.html` : '#';
+    const criado = e.criado_em ? new Date(e.criado_em).toLocaleDateString('pt-BR') : '-';
+    return `<div class="escola-card">
+      <h3>${esc(e.nome)}</h3>
+      <div class="meta">
+        <span>&#127760; ${sub ? esc(sub) + '.lumied.com.br' : '-'}</span>
+        <span>&#128197; ${criado}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="status-pill ${statusCls}">${statusTxt}</span>
+        ${e.plano_nome ? `<span class="status-pill" style="background:var(--purple-light);color:var(--purple);">${esc(e.plano_nome)}</span>` : ''}
+      </div>
+      <div class="ec-footer">
+        <span style="font-size:12px;color:var(--muted);">${e.total_alunos != null ? e.total_alunos + ' alunos' : ''}</span>
+        <a class="link-btn" href="${adminUrl}" target="_blank">Abrir Admin &#8599;</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterEscolas() {
+  const q = document.getElementById('escolaSearch').value.trim().toLowerCase();
+  if (!q) { renderEscolaCards(_escolasList); return; }
+  const filtered = _escolasList.filter(e => {
+    const nome = (e.nome || '').toLowerCase();
+    const sub = (e.subdominio || e.slug || '').toLowerCase();
+    return nome.includes(q) || sub.includes(q);
+  });
+  renderEscolaCards(filtered);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NOVA ESCOLA — Onboarding rápido
+// ═══════════════════════════════════════════════════════════
+
+function showNovaEscolaForm() {
+  document.getElementById('novaEscolaForm').style.display = 'block';
+  document.getElementById('neResult').style.display = 'none';
+  document.getElementById('neNome').focus();
+}
+
+async function criarNovaEscola() {
+  const btn = document.getElementById('neSubmitBtn');
+  const resultDiv = document.getElementById('neResult');
+  btn.disabled = true; btn.textContent = 'Criando...';
+  resultDiv.style.display = 'none';
+
+  const dados = {
+    action: 'staff_criar_escola',
+    nome: document.getElementById('neNome').value.trim(),
+    subdominio: document.getElementById('neSubdominio').value.trim(),
+    plano: document.getElementById('nePlano').value,
+    cnpj: document.getElementById('neCnpj').value.trim() || undefined,
+    telefone: document.getElementById('neTelefone').value.trim() || undefined,
+    endereco: document.getElementById('neEndereco').value.trim() || undefined,
+    cor_primaria: document.getElementById('neCor').value,
+    escola_icone: document.getElementById('neIcone').value.trim() || '🏫',
+    gerente_nome: document.getElementById('neGerenteNome').value.trim(),
+    gerente_email: document.getElementById('neGerenteEmail').value.trim(),
+    gerente_senha: document.getElementById('neGerenteSenha').value,
+  };
+
+  if (!dados.nome || !dados.subdominio || !dados.gerente_nome || !dados.gerente_email || !dados.gerente_senha) {
+    btn.disabled = false; btn.textContent = 'Criar Escola';
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#fdf0f2'; resultDiv.style.color = '#a00d24'; resultDiv.style.border = '1px solid rgba(200,16,46,.2)';
+    resultDiv.innerHTML = '⚠️ Preencha todos os campos obrigatórios (*).';
+    return;
+  }
+
+  const d = await api(dados);
+  btn.disabled = false; btn.textContent = 'Criar Escola';
+
+  if (d.error) {
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#fdf0f2'; resultDiv.style.color = '#a00d24'; resultDiv.style.border = '1px solid rgba(200,16,46,.2)';
+    resultDiv.innerHTML = '❌ ' + esc(d.error);
+    return;
+  }
+
+  // Sucesso!
+  resultDiv.style.display = 'block';
+  resultDiv.style.background = '#f0fdf4'; resultDiv.style.color = '#166534'; resultDiv.style.border = '1px solid rgba(22,163,74,.2)';
+  resultDiv.innerHTML = `✅ <strong>Escola criada com sucesso!</strong><br><br>
+    🌐 <a href="${esc(d.url)}" target="_blank">${esc(d.url)}</a><br>
+    🔧 <a href="${esc(d.url_admin)}" target="_blank">${esc(d.url_admin)}</a><br>
+    📊 <a href="${esc(d.url_gerente)}" target="_blank">${esc(d.url_gerente)}</a><br>
+    📦 Módulos ativados: <strong>${d.modulos_ativados}</strong><br>
+    👤 Gerente: <strong>${esc(d.gerente_email)}</strong><br><br>
+    <strong>Pendências manuais:</strong><br>` +
+    (d.pendencias || []).map(p => `• ${esc(p)}`).join('<br>');
+
+  // Refresh dashboard
+  loadDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STAFF
+// ═══════════════════════════════════════════════════════════
+let _staffList = [];
+
+async function loadStaff() {
+  const d = await api({ action: 'staff_list' });
+  _staffList = Array.isArray(d) ? d : (Array.isArray(d.staff) ? d.staff : []);
+  document.getElementById('staffCount').textContent = _staffList.length;
+  const tbody = document.getElementById('staffBody');
+  if (_staffList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum staff cadastrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _staffList.map(s => {
+    const statusCls = s.ativo !== false ? 'ativo' : 'inativo';
+    const statusTxt = s.ativo !== false ? 'Ativo' : 'Inativo';
+    return `<tr>
+      <td><strong>${esc(s.nome)}</strong></td>
+      <td>${esc(s.email)}</td>
+      <td><span style="font-size:12px;text-transform:capitalize;">${esc(s.cargo || '-')}</span></td>
+      <td><span class="status-pill ${statusCls}">${statusTxt}</span></td>
+      <td style="font-size:12px;">${fmtDate(s.criado_em)}</td>
+      <td>${s.ativo !== false ? `<button class="action-btn del" onclick="desativarStaff('${s.id}')">Desativar</button>` : '<span style="font-size:11px;color:var(--muted);">Desativado</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function criarStaff() {
+  const nome = document.getElementById('newStaffNome').value.trim();
+  const email = document.getElementById('newStaffEmail').value.trim();
+  const senha = document.getElementById('newStaffSenha').value;
+  const cargo = document.getElementById('newStaffCargo').value;
+  if (!nome || !email || !senha) return showToast('Preencha todos os campos.', 'error');
+  if (senha.length < 6) return showToast('Senha deve ter no minimo 6 caracteres.', 'error');
+  const d = await api({ action: 'staff_criar', nome, email, senha, cargo });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Staff criado com sucesso!');
+  document.getElementById('newStaffNome').value = '';
+  document.getElementById('newStaffEmail').value = '';
+  document.getElementById('newStaffSenha').value = '';
+  loadStaff();
+}
+
+async function desativarStaff(id) {
+  if (!confirm('Desativar este membro do staff?')) return;
+  const d = await api({ action: 'staff_desativar', staff_id: id });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Staff desativado.');
+  loadStaff();
+}
+
+function showStaffModal() {
+  document.getElementById('newStaffNome').focus();
+  window.scrollTo({ top: document.getElementById('panelStaff').scrollHeight, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUDIT LOG
+// ═══════════════════════════════════════════════════════════
+async function loadAudit() {
+  const d = await api({ action: 'staff_audit_log' });
+  const logs = Array.isArray(d) ? d : (Array.isArray(d.logs) ? d.logs : []);
+  const tbody = document.getElementById('auditBody');
+  if (logs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum registro de auditoria</td></tr>';
+    return;
+  }
+  tbody.innerHTML = logs.map(l => `<tr>
+    <td style="font-size:12px;white-space:nowrap;">${fmtDate(l.criado_em || l.data)}</td>
+    <td><strong>${esc(l.staff_nome || l.staff || '-')}</strong></td>
+    <td><span style="font-size:12px;font-weight:600;">${esc(l.acao || l.action || '-')}</span></td>
+    <td style="font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.detalhes || l.details || '')}">${esc(l.detalhes || l.details || '-')}</td>
+    <td>${esc(l.escola_nome || l.escola || '-')}</td>
+  </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TICKETS
+// ═══════════════════════════════════════════════════════════
+let _ticketsList = [], _ticketFilter = '';
+let _respondingTicketId = null;
+
+async function loadTickets() {
+  const d = await api({ action: 'staff_tickets_list' });
+  _ticketsList = Array.isArray(d) ? d : (Array.isArray(d.tickets) ? d.tickets : []);
+  document.getElementById('ticketsCount').textContent = _ticketsList.length;
+  renderTickets();
+}
+
+function renderTickets() {
+  const filtered = _ticketFilter ? _ticketsList.filter(t => t.status === _ticketFilter) : _ticketsList;
+  const tbody = document.getElementById('ticketsBody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum ticket encontrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(t => {
+    const statusCls = t.status || 'aberto';
+    return `<tr>
+      <td>${esc(t.escola_nome || '-')}</td>
+      <td>${esc(t.email)}</td>
+      <td><span style="font-size:11px;text-transform:capitalize;">${esc(t.portal || '-')}</span></td>
+      <td><span style="font-size:11px;text-transform:capitalize;">${esc(t.tipo || '-')}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(t.descricao)}">${esc(t.descricao)}</td>
+      <td><span class="status-pill ${statusCls}">${esc(t.status || 'aberto')}</span></td>
+      <td style="font-size:12px;white-space:nowrap;">${fmtDate(t.criado_em)}</td>
+      <td>
+        ${t.status !== 'fechado' ? `<button class="action-btn purple" onclick="abrirResponderTicket('${t.id}','${esc(t.descricao || '')}')">Responder</button>` : ''}
+        ${t.status !== 'fechado' ? `<button class="action-btn del" onclick="fecharTicket('${t.id}')">Fechar</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTickets(status, el) {
+  _ticketFilter = status;
+  document.querySelectorAll('#ticketFilters .filter-tab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderTickets();
+}
+
+function abrirResponderTicket(id, desc) {
+  _respondingTicketId = id;
+  document.getElementById('ticketResumo').textContent = desc;
+  document.getElementById('ticketResposta').value = '';
+  document.getElementById('modalResponderTicket').classList.add('show');
+}
+
+async function enviarRespostaTicket() {
+  const resposta = document.getElementById('ticketResposta').value.trim();
+  if (!resposta) return showToast('Digite uma resposta.', 'error');
+  const d = await api({ action: 'staff_ticket_respond', ticket_id: _respondingTicketId, resposta });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Resposta enviada!');
+  fecharModal('modalResponderTicket');
+  loadTickets();
+}
+
+async function fecharTicket(id) {
+  if (!confirm('Fechar este ticket?')) return;
+  const d = await api({ action: 'staff_ticket_close', ticket_id: id });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Ticket fechado.');
+  loadTickets();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+checkSession();
+</script>
+</body>
+</html>
