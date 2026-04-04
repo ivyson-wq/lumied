@@ -569,26 +569,6 @@ async function loadEscolas() {
   const d = _dashData || await api({ action: 'staff_dashboard' });
   if (!_dashData) _dashData = d;
   _escolasList = Array.isArray(d.escolas) ? d.escolas : [];
-
-  // Seed: se não há escolas, cria a Maple Bear Caxias automaticamente
-  if (_escolasList.length === 0 && !loadEscolas._seeding) {
-    loadEscolas._seeding = true;
-    await api({
-      action: 'staff_criar_escola',
-      nome: 'Maple Bear Caxias do Sul',
-      subdominio: 'maplebearcaxias',
-      plano: 'premium',
-      cor_primaria: '#C8102E',
-      escola_icone: '🍁',
-      gerente_nome: 'Direção Maple Bear',
-      gerente_email: 'direcao@maplebearcaxiasdosul.com.br',
-      gerente_senha: 'MapleBear2024!'
-    });
-    loadEscolas._seeding = false;
-    _dashData = null;
-    return loadEscolas();
-  }
-
   document.getElementById('escolasCount').textContent = _escolasList.length;
   renderEscolaCards(_escolasList);
 }
