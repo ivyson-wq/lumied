@@ -497,6 +497,8 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 | `CLAUDE.md` | Documentação técnica completa (este arquivo) |
 | `admin-central.html` | Painel Central Lumied — gestão SaaS global (`admin.lumied.com.br`) |
 | `admin.html` | Painel Admin por escola — config, módulos, keys (só staff Lumied) |
+| `assinar.html` | Página pública de assinatura eletrônica de contratos |
+| `verificar.html` | Verificação de autenticidade de documentos por código |
 | `site/certificacao.html` | Página de certificação Escola Digital (3 níveis: Bronze/Prata/Ouro) |
 | `site/blog/` | Blog com 26 artigos (compliance, LGPD, WhatsApp, inadimplência, IA, etc.) |
 | `NOVO-CLIENTE.md` | Guia passo a passo para deploy de novo cliente |
@@ -579,6 +581,40 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 - Periodicidade: mensal, trimestral, semestral, anual
 - Professora: banner no portal → quiz fullscreen → resultado imediato
 - Cron diário expira quizzes vencidos
+
+---
+
+## Contratos Digitais & Assinatura Eletrônica
+
+### Fluxo
+1. Gerente cria template HTML com variáveis `{{familia_nome}}`, `{{aluno_nome}}`, etc.
+2. Gera contrato preenchido a partir de matrícula
+3. Envia para família (status: `rascunho` → `enviado`)
+4. Família acessa `/assinar.html?id=<uuid>`, lê contrato
+5. Aceita termos (checkbox obrigatório) + desenha assinatura (canvas)
+6. Backend gera hash SHA-256 + código de verificação `LUM-XXXXXXXX`
+7. Registra evidências: IP, user-agent, geolocalização, aceite, timestamp
+8. Status: `assinado` com selo probatório
+
+### Validade Legal
+- **Assinatura eletrônica simples** (Art. 4º, Lei 14.063/2020)
+- Válida para contratos privados (matrícula escolar)
+- Evidências: hash SHA-256, IP, user-agent, geolocation, aceite explícito, timestamp
+- Verificação pública: `/verificar.html?c=LUM-XXXXXXXX`
+
+### Tabelas
+- `contrato_templates` — Templates HTML com variáveis
+- `contratos` — Contratos gerados (status, hash, código, dados)
+- `contrato_assinaturas` — Assinaturas com evidências probatórias
+
+### Endpoints
+- `contrato_templates_list/create/update` — CRUD templates
+- `contrato_gerar` — Gera contrato com variáveis substituídas
+- `contrato_enviar` — Marca como enviado
+- `contratos_list` — Lista todos os contratos
+- `contrato_publico_get` — Público: busca contrato para assinar
+- `contrato_assinar` — Público: registra assinatura com evidências
+- `contrato_verificar` — Público: verifica autenticidade por código
 
 ---
 
