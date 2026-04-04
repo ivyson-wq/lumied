@@ -114,12 +114,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .config-item label{font-size:12px;font-weight:600;color:var(--muted);min-width:180px;text-transform:uppercase;letter-spacing:.3px;}
 .config-item input{flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;}
 /* Modulo row */
-.modulo-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;}
+.modulo-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;transition:opacity .2s;}
+.modulo-row.disabled{opacity:.5;}
 .modulo-row .m-icon{font-size:18px;flex-shrink:0;}
 .modulo-row .m-info{flex:1;}.modulo-row .m-name{font-size:13px;font-weight:600;}
 .modulo-row .m-group{font-size:10px;color:var(--muted);}
 .modulos-section{margin-bottom:20px;}
 .modulos-section h4{font-family:'Lora',serif;font-size:14px;font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+/* Toggle switch */
+.toggle-switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:22px;transition:.25s;}
+.toggle-slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:var(--white);border-radius:50%;transition:.25s;}
+.toggle-switch input:checked+.toggle-slider{background:var(--green);}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(18px);}
+.modulos-actions{display:flex;gap:10px;margin-bottom:16px;}
 /* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 .modal-overlay.show{display:flex;}
@@ -208,6 +217,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <!-- MODULOS -->
       <div id="panelModulos" class="panel">
         <div class="sec-title">Modulos Ativos <span class="count-badge" id="modulosCount">0</span></div>
+        <div class="modulos-actions">
+          <button class="action-btn" onclick="saveModulos()">Salvar Alteracoes</button>
+          <button class="action-btn" style="background:var(--bg);color:var(--text);" onclick="resetModulos()">Restaurar Padrao do Plano</button>
+        </div>
         <div id="modulosGrid"></div>
       </div>
 
@@ -471,12 +484,13 @@ async function cancelarExtra(id) {
 }
 
 // ═══ MODULOS ═══
+let _modulosList = [];
 async function loadModulos() {
   if (!ESCOLA_ID) { const dash = await api({ action: 'escola_dashboard' }); ESCOLA_ID = dash.escola?.id; }
   const d = await api({ action: 'escola_modulos_get', escola_id: ESCOLA_ID });
   if (!Array.isArray(d)) return;
-  const ativos = d.filter(m => m.habilitado);
-  document.getElementById('modulosCount').textContent = ativos.length;
+  _modulosList = d;
+  updateModulosCount();
   const grupos = {};
   const grupoNomes = { existente:'Existentes', academico:'Academico', comunicacao:'Comunicacao', administrativo:'Administrativo', financeiro:'Financeiro', operacional:'Operacional', avancado:'Avancado' };
   for (const m of d) { if (!grupos[m.grupo]) grupos[m.grupo] = []; grupos[m.grupo].push(m); }
@@ -484,12 +498,43 @@ async function loadModulos() {
   for (const [grupo, mods] of Object.entries(grupos)) {
     html += `<div class="modulos-section"><h4>${grupoNomes[grupo] || grupo}</h4>`;
     for (const m of mods) {
-      const st = m.habilitado ? '<span class="status-pill ativo">Ativo</span>' : '<span class="status-pill inativo">Inativo</span>';
-      html += `<div class="modulo-row"><span class="m-icon">${m.icone}</span><div class="m-info"><div class="m-name">${esc(m.nome)}</div><div class="m-group">${(m.portais || []).join(', ')}</div></div>${st}</div>`;
+      const checked = m.habilitado ? 'checked' : '';
+      const rowClass = m.habilitado ? '' : ' disabled';
+      html += `<div class="modulo-row${rowClass}" id="mrow-${esc(m.slug)}"><span class="m-icon">${m.icone}</span><div class="m-info"><div class="m-name">${esc(m.nome)}</div><div class="m-group">${(m.portais || []).join(', ')}</div></div><label class="toggle-switch"><input type="checkbox" data-slug="${esc(m.slug)}" ${checked} onchange="onModuloToggle(this)"><span class="toggle-slider"></span></label></div>`;
     }
     html += '</div>';
   }
   document.getElementById('modulosGrid').innerHTML = html;
+}
+function updateModulosCount() {
+  const checks = document.querySelectorAll('#modulosGrid .toggle-switch input');
+  if (checks.length === 0) {
+    document.getElementById('modulosCount').textContent = _modulosList.filter(m => m.habilitado).length;
+  } else {
+    document.getElementById('modulosCount').textContent = [...checks].filter(c => c.checked).length;
+  }
+}
+function onModuloToggle(el) {
+  const row = document.getElementById('mrow-' + el.dataset.slug);
+  if (row) { el.checked ? row.classList.remove('disabled') : row.classList.add('disabled'); }
+  updateModulosCount();
+}
+async function saveModulos() {
+  const checks = document.querySelectorAll('#modulosGrid .toggle-switch input');
+  if (checks.length === 0) return;
+  const modulos = {};
+  checks.forEach(c => { modulos[c.dataset.slug] = c.checked; });
+  const d = await api({ action: 'escola_modulos_set', escola_id: ESCOLA_ID, modulos });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Modulos atualizados!');
+  loadModulos();
+}
+async function resetModulos() {
+  if (!confirm('Restaurar modulos ao padrao do plano? Todas as personalizacoes serao removidas.')) return;
+  const d = await api({ action: 'escola_modulos_reset', escola_id: ESCOLA_ID });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Modulos restaurados ao padrao do plano');
+  loadModulos();
 }
 
 // ═══ TICKETS ═══
