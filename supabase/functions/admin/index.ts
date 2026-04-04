@@ -558,7 +558,27 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
     await ctx.sb.from("series").insert({ nome: serie, escola_id: escola.id }).catch(() => {});
   }
 
-  // 7. Audit log
+  // 7. Registrar subdomínio no Vercel (SSL automático)
+  const VERCEL_TOKEN = Deno.env.get("VERCEL_API_TOKEN");
+  const VERCEL_PROJECT = Deno.env.get("VERCEL_PROJECT_ID") || "prj_6uDL0URPHd5DiMj5ahaZcEltRfSL";
+  const VERCEL_TEAM = Deno.env.get("VERCEL_TEAM_ID") || "team_k3kAHF00rep1GFrBRA53OmGg";
+  if (VERCEL_TOKEN) {
+    try {
+      const domainRes = await fetch(`https://api.vercel.com/v10/projects/${VERCEL_PROJECT}/domains?teamId=${VERCEL_TEAM}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: `${slug}.lumied.com.br` }),
+      });
+      const domainData = await domainRes.json();
+      log.info("Vercel domain added", { domain: `${slug}.lumied.com.br`, verified: domainData.verified });
+    } catch (e) {
+      log.error("Vercel domain error", { error: (e as Error).message });
+    }
+  } else {
+    log.warn("VERCEL_API_TOKEN not set — subdomínio não registrado automaticamente");
+  }
+
+  // 8. Audit log
   await ctx.sb.from("lumied_staff_audit").insert({
     staff_id: ctx.user!.id, staff_nome: ctx.user!.nome,
     acao: 'escola_criada',
