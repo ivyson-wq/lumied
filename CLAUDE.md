@@ -591,15 +591,22 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 2. Gera contrato preenchido a partir de matrícula
 3. Envia para família (status: `rascunho` → `enviado`)
 4. Família acessa `/assinar.html?id=<uuid>`, lê contrato
-5. Aceita termos (checkbox obrigatório) + desenha assinatura (canvas)
-6. Backend gera hash SHA-256 + código de verificação `LUM-XXXXXXXX`
-7. Registra evidências: IP, user-agent, geolocalização, aceite, timestamp
-8. Status: `assinado` com selo probatório
+5. **Verificação por email**: clica "Enviar Código" → recebe 6 dígitos → digita → verificado ✅
+6. Seção de assinatura desbloqueada → aceita termos (checkbox) + desenha assinatura (canvas)
+7. Backend valida código de email + gera hash SHA-256 + código de verificação `LUM-XXXXXXXX`
+8. Registra evidências: IP, user-agent, geolocalização, aceite, verificação email, timestamp
+9. Status: `assinado` com selo probatório
 
 ### Validade Legal
-- **Assinatura eletrônica simples** (Art. 4º, Lei 14.063/2020)
+- **Assinatura eletrônica simples com 2FA** (Art. 4º, Lei 14.063/2020)
 - Válida para contratos privados (matrícula escolar)
-- Evidências: hash SHA-256, IP, user-agent, geolocation, aceite explícito, timestamp
+- **Evidências probatórias:**
+  - Hash SHA-256 do documento (integridade)
+  - Código de verificação único `LUM-XXXXXXXX` (autenticidade)
+  - Verificação de email com código 6 dígitos (identidade)
+  - Aceite explícito dos termos (checkbox)
+  - Assinatura manuscrita digital (canvas)
+  - IP + User-Agent + Geolocalização + Timestamp
 - Verificação pública: `/verificar.html?c=LUM-XXXXXXXX`
 
 ### Tabelas
@@ -613,8 +620,10 @@ CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUD
 - `contrato_enviar` — Marca como enviado
 - `contratos_list` — Lista todos os contratos
 - `contrato_publico_get` — Público: busca contrato para assinar
-- `contrato_assinar` — Público: registra assinatura com evidências
-- `contrato_verificar` — Público: verifica autenticidade por código
+- `contrato_enviar_codigo` — Público: envia código 6 dígitos por email (expira 15 min)
+- `contrato_validar_codigo` — Público: valida código de email
+- `contrato_assinar` — Público: registra assinatura com evidências (exige código email)
+- `contrato_verificar` — Público: verifica autenticidade por código LUM-XXXXXXXX
 
 ---
 
