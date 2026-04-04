@@ -454,6 +454,13 @@ cd whatsapp-gateway  # ou whatsapp-worker
 CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUDFLARE_ACCOUNT_ID=d0d79afc2b86f65653d10dbef3ceaee7 npx wrangler deploy
 ```
 
+### Vercel
+- Project ID: `prj_6uDL0URPHd5DiMj5ahaZcEltRfSL`
+- Team ID: `team_k3kAHF00rep1GFrBRA53OmGg`
+- API Token: `VERCEL_API_TOKEN` (secret no Supabase — usado pelo onboarding para criar subdomínios)
+- Domínios gerenciados via API: `POST /v10/projects/{id}/domains`
+- SSL: automático ao adicionar domínio (CNAME wildcard `*` → `cname.vercel-dns.com`)
+
 ### DNS (Cloudflare)
 - Zone: `lumied.com.br` (ID: `8b2c34bf85fc32f734de3facd380956d`)
 - Nameservers: `aleena.ns.cloudflare.com`, `yichun.ns.cloudflare.com`
