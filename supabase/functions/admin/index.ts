@@ -528,7 +528,7 @@ router.on("staff_audit_log", authStaff, async (ctx) => {
 
 router.on("staff_criar_escola", authStaff, async (ctx) => {
   const { nome, subdominio, plano, gerente_nome, gerente_email, gerente_senha,
-    cnpj, telefone, endereco, cor_primaria, escola_icone } = ctx.body as any;
+    cnpj, telefone, endereco, cor_primaria, escola_icone, escola_logo_url } = ctx.body as any;
 
   if (!nome || !subdominio || !gerente_nome || !gerente_email || !gerente_senha) {
     throw new AppError("VALIDATION_FAILED", "nome, subdominio, gerente_nome, gerente_email e gerente_senha são obrigatórios.");
@@ -569,6 +569,7 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
   if (cnpj) configs.push({ chave: 'escola_cnpj', valor: cnpj });
   if (telefone) configs.push({ chave: 'escola_telefone', valor: telefone });
   if (endereco) configs.push({ chave: 'escola_endereco', valor: endereco });
+  if (escola_logo_url) configs.push({ chave: 'escola_logo_url', valor: escola_logo_url });
 
   for (const cfg of configs) {
     await ctx.sb.from("escola_config").insert({ ...cfg, escola_id: escola.id });

@@ -269,6 +269,19 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div class="ff"><label>Icone/Emoji</label><input id="neIcone" placeholder="🏫" value="🏫" maxlength="4"></div>
             <div class="ff"><label>Endereco</label><input id="neEndereco" placeholder="Cidade, Estado"></div>
           </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Logo da Escola</div>
+            <div style="display:flex;gap:16px;align-items:flex-start;">
+              <div style="flex:1;">
+                <div class="ff" style="margin-bottom:8px;"><label>URL da Logo</label><input id="neLogoUrl" placeholder="https://exemplo.com/logo.png" oninput="previewLogo()"></div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">ou faça upload de um arquivo:</div>
+                <input type="file" id="neLogoFile" accept="image/*" onchange="uploadLogoPreview()" style="font-size:12px;">
+              </div>
+              <div id="neLogoPreview" style="width:80px;height:80px;border-radius:12px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;background:#faf8f5;flex-shrink:0;">
+                <span style="font-size:11px;color:var(--muted);">Preview</span>
+              </div>
+            </div>
+          </div>
           <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Primeiro Gerente (acesso ao portal da escola)</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
@@ -624,6 +637,24 @@ function showNovaEscolaForm() {
   document.getElementById('neNome').focus();
 }
 
+function previewLogo() {
+  const url = document.getElementById('neLogoUrl').value.trim();
+  const preview = document.getElementById('neLogoPreview');
+  if (url) preview.innerHTML = `<img src="${esc(url)}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:11px;color:var(--muted);\\'>Erro</span>'">`;
+  else preview.innerHTML = '<span style="font-size:11px;color:var(--muted);">Preview</span>';
+}
+function uploadLogoPreview() {
+  const file = document.getElementById('neLogoFile').files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('Arquivo muito grande (max 2MB)', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('neLogoUrl').value = e.target.result;
+    document.getElementById('neLogoPreview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain;">`;
+  };
+  reader.readAsDataURL(file);
+}
+
 async function criarNovaEscola() {
   const btn = document.getElementById('neSubmitBtn');
   const resultDiv = document.getElementById('neResult');
@@ -640,6 +671,7 @@ async function criarNovaEscola() {
     endereco: document.getElementById('neEndereco').value.trim() || undefined,
     cor_primaria: document.getElementById('neCor').value,
     escola_icone: document.getElementById('neIcone').value.trim() || '🏫',
+    escola_logo_url: document.getElementById('neLogoUrl').value.trim() || undefined,
     gerente_nome: document.getElementById('neGerenteNome').value.trim(),
     gerente_email: document.getElementById('neGerenteEmail').value.trim(),
     gerente_senha: document.getElementById('neGerenteSenha').value,
