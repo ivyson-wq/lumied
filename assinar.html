@@ -89,7 +89,29 @@ canvas{width:100%;height:180px;cursor:crosshair;display:block;touch-action:none;
       </div>
     </div>
 
-    <div class="sign-section" id="signSection">
+    <!-- ETAPA 1: Verificação por email -->
+    <div class="sign-section" id="emailVerifySection">
+      <h3>🔐 Verificação de Identidade</h3>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:16px;">Para garantir a autenticidade da assinatura, enviaremos um código de 6 dígitos para o e-mail cadastrado no contrato.</p>
+      <div style="display:flex;gap:10px;margin-bottom:12px;">
+        <button onclick="enviarCodigoEmail()" id="btnEnviarCodigo" style="flex:1;padding:13px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">Enviar Código por E-mail</button>
+      </div>
+      <div id="codigoEnviado" style="display:none;">
+        <p style="font-size:13px;color:#2d7a3a;margin-bottom:12px;" id="codigoMsg">Código enviado!</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input type="text" id="codigoEmailInput" placeholder="000000" maxlength="6" style="flex:1;padding:12px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:monospace;font-size:24px;text-align:center;letter-spacing:8px;outline:none;" oninput="this.value=this.value.replace(/\D/g,'')">
+          <button onclick="validarCodigoEmail()" id="btnValidarCodigo" style="padding:12px 24px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">Verificar</button>
+        </div>
+        <p style="font-size:11px;color:#7a7169;">O código expira em 15 minutos. <a href="#" onclick="enviarCodigoEmail();return false;" style="color:#C8102E;">Reenviar código</a></p>
+        <div id="codigoErro" style="display:none;font-size:13px;color:#a00d24;margin-top:8px;padding:8px;background:#fdf0f2;border-radius:6px;"></div>
+      </div>
+    </div>
+
+    <!-- ETAPA 2: Assinatura (oculta até verificar email) -->
+    <div class="sign-section" id="signSection" style="display:none;">
+      <div style="background:#D4EDDA;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#155724;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">✅</span> E-mail verificado com sucesso. Agora assine o contrato abaixo.
+      </div>
       <h3>Assinatura Eletrônica</h3>
       <p style="font-size:13px;color:#7a7169;margin-bottom:16px;">Preencha os campos abaixo para assinar este contrato digitalmente.</p>
       <input type="text" class="sign-name" id="signName" placeholder="Nome completo do signatário">
@@ -158,8 +180,19 @@ async function loadContrato() {
     statusEl.className = 'contract-status ' + st[1];
 
     if (d.status === 'assinado') {
+      document.getElementById('emailVerifySection').style.display = 'none';
       document.getElementById('signSection').style.display = 'none';
       document.getElementById('successMsg').style.display = 'block';
+      // Preencher selo com dados existentes
+      if (d.contrato_assinaturas?.[0]) {
+        const ass = d.contrato_assinaturas[0];
+        document.getElementById('seloNome').textContent = ass.nome_signatario || '—';
+        document.getElementById('seloData').textContent = d.assinado_em ? new Date(d.assinado_em).toLocaleString('pt-BR') : '—';
+      }
+      if (d.codigo_verificacao) {
+        document.getElementById('seloCodigo').textContent = d.codigo_verificacao;
+        document.getElementById('seloCodigoLink').textContent = d.codigo_verificacao;
+      }
     }
 
     document.getElementById('signName').value = d.familia_nome || '';
@@ -208,6 +241,61 @@ function clearCanvas() {
   hasDrawn = false;
 }
 
+// ── Verificação por email ──
+let emailVerificado = false;
+let codigoEmailValidado = '';
+
+async function enviarCodigoEmail() {
+  const btn = document.getElementById('btnEnviarCodigo');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
+    const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
+      body: JSON.stringify({ action: 'contrato_enviar_codigo', contrato_id: contratoId }),
+    });
+    const d = await r.json();
+    btn.disabled = false; btn.textContent = 'Reenviar Código';
+    if (d.error) { alert(d.error); return; }
+    document.getElementById('codigoEnviado').style.display = 'block';
+    document.getElementById('codigoMsg').textContent = 'Código enviado para ' + (d.email_enviado || 'seu e-mail') + '. Verifique sua caixa de entrada.';
+    document.getElementById('codigoEmailInput').focus();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Enviar Código por E-mail';
+    alert('Erro ao enviar código. Tente novamente.');
+  }
+}
+
+async function validarCodigoEmail() {
+  const codigo = document.getElementById('codigoEmailInput').value.trim();
+  if (codigo.length !== 6) return alert('Informe o código de 6 dígitos.');
+  const errDiv = document.getElementById('codigoErro');
+  const btn = document.getElementById('btnValidarCodigo');
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  errDiv.style.display = 'none';
+  try {
+    const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
+    const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
+      body: JSON.stringify({ action: 'contrato_validar_codigo', contrato_id: contratoId, codigo }),
+    });
+    const d = await r.json();
+    btn.disabled = false; btn.textContent = 'Verificar';
+    if (d.error) { errDiv.style.display = 'block'; errDiv.textContent = d.error; return; }
+    emailVerificado = true;
+    codigoEmailValidado = codigo;
+    document.getElementById('emailVerifySection').style.display = 'none';
+    document.getElementById('signSection').style.display = 'block';
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Verificar';
+    errDiv.style.display = 'block'; errDiv.textContent = 'Erro de conexão. Tente novamente.';
+  }
+}
+
 // Tentar obter geolocalização
 let userGeo = null;
 if (navigator.geolocation) {
@@ -242,6 +330,7 @@ async function assinarContrato() {
         assinatura_base64: assinatura,
         aceite_termos: true,
         geolocation: userGeo,
+        codigo_email: codigoEmailValidado,
       }),
     });
     const d = await r.json();

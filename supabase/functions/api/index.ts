@@ -370,15 +370,91 @@ serve(async (req: Request) => {
     return ok({ valido: data.status === 'assinado', contrato: data });
   }
 
+  // Enviar código de verificação por email antes de assinar
+  if (action === "contrato_enviar_codigo") {
+    const { contrato_id } = body as any;
+    if (!contrato_id) return err("contrato_id obrigatório.");
+    const { data: contrato } = await admin.from("contratos").select("familia_email, familia_nome, status").eq("id", contrato_id).single();
+    if (!contrato) return err("Contrato não encontrado.", 404);
+    if (contrato.status === 'assinado') return err("Contrato já foi assinado.");
+
+    // Gerar código de 6 dígitos
+    const codigo = Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => (b % 10).toString()).join('') +
+                   Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => (b % 10).toString()).join('');
+
+    // Salvar código temporariamente (expira em 15 min)
+    await admin.from("contratos").update({
+      dados_preenchidos: {
+        ...(typeof contrato === 'object' ? {} : {}),
+        _codigo_email: codigo,
+        _codigo_expira: new Date(Date.now() + 15 * 60000).toISOString(),
+      }
+    }).eq("id", contrato_id);
+
+    // Enviar por email via Resend
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (resendKey) {
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "Lumied Contratos <noreply@lumied.com.br>",
+            to: [contrato.familia_email],
+            subject: `Código de verificação: ${codigo}`,
+            html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;">
+              <h2 style="color:#C8102E;margin-bottom:16px;">Código de Verificação</h2>
+              <p style="font-size:15px;margin-bottom:20px;">Olá, ${contrato.familia_nome || ''}! Para assinar o contrato, use o código abaixo:</p>
+              <div style="background:#f5f3ee;border:2px solid #C8102E;border-radius:12px;padding:24px;text-align:center;margin-bottom:20px;">
+                <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#C8102E;font-family:monospace;">${codigo}</span>
+              </div>
+              <p style="font-size:13px;color:#7a7169;">Este código expira em <strong>15 minutos</strong>.</p>
+              <p style="font-size:12px;color:#999;margin-top:20px;">Se você não solicitou este código, ignore este e-mail.</p>
+              <hr style="border:none;border-top:1px solid #e2dbd1;margin:20px 0;">
+              <p style="font-size:10px;color:#999;">Lumied Gestão Escolar — Assinatura Eletrônica</p>
+            </div>`,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+      } catch (e) { console.error("[CONTRATO] Email error:", e); }
+    }
+
+    // Ofuscar email para o frontend
+    const emailParts = contrato.familia_email.split('@');
+    const maskedEmail = emailParts[0].substring(0, 2) + '***@' + emailParts[1];
+
+    return ok({ success: true, email_enviado: maskedEmail });
+  }
+
+  // Validar código de email antes de assinar
+  if (action === "contrato_validar_codigo") {
+    const { contrato_id, codigo } = body as any;
+    if (!contrato_id || !codigo) return err("contrato_id e codigo obrigatórios.");
+    const { data: contrato } = await admin.from("contratos").select("dados_preenchidos").eq("id", contrato_id).single();
+    if (!contrato) return err("Contrato não encontrado.", 404);
+    const dados = contrato.dados_preenchidos || {};
+    if (!dados._codigo_email) return err("Nenhum código foi enviado. Solicite um novo.");
+    if (new Date(dados._codigo_expira) < new Date()) return err("Código expirado. Solicite um novo.");
+    if (dados._codigo_email !== codigo.trim()) return err("Código incorreto.");
+    return ok({ success: true, verificado: true });
+  }
+
   if (action === "contrato_assinar") {
-    const { contrato_id, nome_signatario, assinatura_base64, aceite_termos, geolocation } = body as any;
+    const { contrato_id, nome_signatario, assinatura_base64, aceite_termos, geolocation, codigo_email } = body as any;
     if (!contrato_id || !nome_signatario || !assinatura_base64) return err("contrato_id, nome_signatario e assinatura_base64 obrigatórios.");
     if (!aceite_termos) return err("É necessário aceitar os termos para assinar.");
+    if (!codigo_email) return err("Código de verificação por e-mail obrigatório.");
 
-    const { data: contrato } = await admin.from("contratos").select("status, html_renderizado").eq("id", contrato_id).single();
+    const { data: contrato } = await admin.from("contratos").select("status, html_renderizado, dados_preenchidos").eq("id", contrato_id).single();
     if (!contrato) return err("Contrato não encontrado.", 404);
     if (contrato.status === 'assinado') return err("Contrato já foi assinado.");
     if (contrato.status === 'cancelado') return err("Contrato foi cancelado.");
+
+    // Validar código de email
+    const dados = contrato.dados_preenchidos || {};
+    if (!dados._codigo_email) return err("Código de e-mail não enviado. Solicite um novo.");
+    if (new Date(dados._codigo_expira) < new Date()) return err("Código expirado. Solicite um novo.");
+    if (dados._codigo_email !== codigo_email.trim()) return err("Código de e-mail incorreto.");
 
     // Gerar hash SHA-256 do documento para garantir integridade
     const docBytes = new TextEncoder().encode(contrato.html_renderizado || '');
