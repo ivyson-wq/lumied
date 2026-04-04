@@ -13,8 +13,37 @@ import type { Schema } from "../_shared/validation.ts";
 
 const log = createLogger("admin");
 
-// ── Admin auth middleware ──
-const authAdmin = auth("admin_sessoes", "admins", "id, nome, email");
+// ── Admin auth middleware (also accepts staff tokens as fundador override) ──
+async function authAdmin(ctx: Context, next: () => Promise<Response>): Promise<Response> {
+  // 1. Try normal admin token
+  const token = (ctx.body._token as string) || null;
+  if (token) {
+    const { data } = await ctx.sb.from("admin_sessoes")
+      .select("*, admins(id, nome, email)")
+      .eq("token", token).single();
+    if (data && new Date(data.expira_em) >= new Date()) {
+      // deno-lint-ignore no-explicit-any
+      ctx.user = { ...(data as any).admins, tipo: 'admin' };
+      return next();
+    }
+  }
+  // 2. Fallback: accept staff token (fundador can access any admin panel)
+  const staffToken = (ctx.body._staff_token as string) || token;
+  if (staffToken) {
+    const { data } = await ctx.sb.from("lumied_staff_sessoes")
+      .select("staff_id, expira_em, lumied_staff(id, nome, email, cargo, ativo)")
+      .eq("token", staffToken).single();
+    if (data && new Date(data.expira_em) >= new Date()) {
+      // deno-lint-ignore no-explicit-any
+      const staff = (data as any).lumied_staff;
+      if (staff?.ativo) {
+        ctx.user = { ...staff, tipo: 'staff' };
+        return next();
+      }
+    }
+  }
+  throw new AppError("AUTH_INVALID", "Sessão inválida.");
+}
 
 // ── Validation schemas ──
 const loginSchema: Schema = { email: { required: true, type: 'email' }, senha: { required: true, type: 'string', minLength: 6 } };
@@ -46,17 +75,31 @@ router.on("admin_setup", validateInput(setupSchema), async (ctx) => {
   return successResponse({ token: tkn, nome, email });
 });
 
-// ── Public: Login ──
+// ── Public: Login (admins table + staff fallback) ──
 router.on("admin_login", rateLimit({ windowMs: 60000, maxRequests: 5 }), validateInput(loginSchema), async (ctx) => {
   const { email, senha } = ctx.body as { email: string; senha: string };
+
+  // 1. Try admins table
   const { data: admin } = await ctx.sb.from("admins").select("id, nome, email, senha_hash, ativo").eq("email", email).single();
-  if (!admin) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
-  if (!admin.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
-  if (!(await verificarSenhaAuto(senha, admin.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+  if (admin) {
+    if (!admin.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
+    if (!(await verificarSenhaAuto(senha, admin.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+    const tkn = gerarToken();
+    await ctx.sb.from("admin_sessoes").insert({ admin_id: admin.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
+    log.info("Admin login", { user_id: admin.id, action: "admin_login" });
+    return successResponse({ token: tkn, nome: admin.nome, email: admin.email });
+  }
+
+  // 2. Fallback: try staff (fundador) credentials
+  const { data: staff } = await ctx.sb.from("lumied_staff").select("id, nome, email, senha_hash, cargo, ativo").eq("email", email.toLowerCase().trim()).single();
+  if (!staff) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+  if (!staff.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
+  if (!(await verificarSenhaAuto(senha, staff.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
   const tkn = gerarToken();
-  await ctx.sb.from("admin_sessoes").insert({ admin_id: admin.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
-  log.info("Admin login", { user_id: admin.id, action: "admin_login" });
-  return successResponse({ token: tkn, nome: admin.nome, email: admin.email });
+  await ctx.sb.from("lumied_staff_sessoes").insert({ staff_id: staff.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
+  log.info("Staff login via admin panel", { user_id: staff.id, action: "admin_login_staff" });
+  // Return _staff_token so frontend stores it and authAdmin can find it
+  return successResponse({ token: tkn, nome: staff.nome, email: staff.email, _is_staff: true });
 });
 
 // ── Auth: Logout ──
