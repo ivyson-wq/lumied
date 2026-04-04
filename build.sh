@@ -6,13 +6,11 @@
 
 if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$NEXT_PUBLIC_SUPABASE_ANON" ]; then
   echo ">> Gerando config.js a partir das env vars..."
-  cat > config.js << EOF
-const CONFIG = {
-  SUPABASE_URL:  '${NEXT_PUBLIC_SUPABASE_URL}',
-  SUPABASE_ANON: '${NEXT_PUBLIC_SUPABASE_ANON}',
-};
-EOF
+  echo "const CONFIG = { SUPABASE_URL: '${NEXT_PUBLIC_SUPABASE_URL}', SUPABASE_ANON: '${NEXT_PUBLIC_SUPABASE_ANON}' };" > config.js
   echo ">> config.js gerado para: ${NEXT_PUBLIC_SUPABASE_URL}"
 else
   echo ">> Env vars não definidas. Usando config.js existente."
 fi
+
+echo ">> Build concluído."
+exit 0
