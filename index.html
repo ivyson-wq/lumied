@@ -305,16 +305,7 @@ body.has-bottomnav{padding-bottom:0;}
 </head>
 <body>
 
-<div class="site-header">
-  <a href="area-restrita.html" class="top-link">Área Restrita →</a>
-  <div class="header-inner">
-    <div class="brand">
-      <img id="logoImg" alt="Maple Bear">
-      <div id="logoFallback"><div class="brand-leaf">🍁</div><div class="brand-name"><h1>Maple Bear</h1></div></div>
-    </div>
-    <div class="header-sub">Portal do Responsavel</div>
-  </div>
-</div>
+<!-- Header removido — logo fica no card de login -->
 
 
 <!-- BANNER iOS -->
@@ -366,12 +357,16 @@ body.has-bottomnav{padding-bottom:0;}
       <div style="font-size:13px;opacity:.8;line-height:1.5;">Notas, agenda digital, boletos e pickup — tudo na palma da mão.</div>
     </div>
   </div>
-  <div style="width:520px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px 24px;overflow-y:auto;">
+  <div style="width:520px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px 24px;overflow-y:auto;position:relative;">
+    <a href="area-restrita.html" style="position:absolute;top:16px;right:20px;color:var(--muted);font-size:12px;text-decoration:none;padding:5px 12px;border:1px solid var(--border);border-radius:100px;transition:all .2s;">Area Restrita →</a>
 <div id="loginWall">
   <div class="login-card">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
-      <div style="font-size:28px;">🍁</div>
-      <div><div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Portal dos Pais</div></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <img id="logoImg" alt="" style="max-height:48px;max-width:160px;object-fit:contain;display:none;">
+      <div id="logoFallback" style="display:flex;align-items:center;gap:10px;">
+        <div style="width:44px;height:44px;background:rgba(200,16,46,.08);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:1.5px solid rgba(200,16,46,.15);">🍁</div>
+        <div><div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Portal dos Pais</div></div>
+      </div>
     </div>
     <div class="lw-icon">🔐</div>
     <div class="lw-title">Identifique-se para continuar</div>
@@ -1301,7 +1296,7 @@ body.has-bottomnav{padding-bottom:0;}
     document.getElementById('bioRegBanner').style.display = 'none';
     document.getElementById('accessPending').style.display = 'none';
     document.body.classList.remove('has-bottomnav');
-    document.querySelector('.site-header').classList.remove('compact');
+    document.querySelector('.site-header')?.classList.remove('compact');
     document.getElementById('emailState').style.display = 'block';
     document.getElementById('sentState').style.display = 'none';
     // Show biometric login button if registered
@@ -1335,7 +1330,7 @@ body.has-bottomnav{padding-bottom:0;}
           document.getElementById('loginWall').style.display = 'none';
           document.getElementById('formWrap').style.display = 'none';
           document.getElementById('accessPending').style.display = 'block';
-          document.querySelector('.site-header').classList.add('compact');
+          document.querySelector('.site-header')?.classList.add('compact');
           return;
         }
       }
@@ -1372,7 +1367,7 @@ body.has-bottomnav{padding-bottom:0;}
     document.getElementById('boletosCard').style.display = 'block';
 
     // Header compacto + greeting
-    document.querySelector('.site-header').classList.add('compact');
+    document.querySelector('.site-header')?.classList.add('compact');
     const firstName = (name || email).split(/[\s@]/)[0];
     document.getElementById('greetingName').textContent = 'Olá, ' + firstName;
     const hoje = new Date();
