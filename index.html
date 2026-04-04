@@ -40,7 +40,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 .aviso-strip{background:#fff3cd;border-bottom:1px solid #ead980;padding:11px 24px;text-align:center;font-size:13px;color:#7a5e00;font-weight:500;}
 
 /* LOGIN WALL */
-#loginWall{max-width:460px;margin:48px auto 64px;padding:0 24px;}
+#loginWall{width:100%;max-width:100%;}
 .login-card{background:var(--white);border-radius:16px;border:1px solid var(--border);padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,.07);animation:rise .4s ease;}
 @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .lw-icon{font-size:44px;margin-bottom:14px;text-align:center;}
@@ -289,7 +289,7 @@ body.has-bottomnav{padding-bottom:72px;}
 .qbadge-value{font-size:14px;font-weight:700;color:var(--text);margin-top:1px;}
 
 /* DESKTOP: login card wider */
-@media(min-width:768px){#loginWall{max-width:520px;}.login-card{padding:48px 44px;}}
+@media(min-width:768px){#loginWall{max-width:400px;}.login-card{padding:48px 44px;}}
 
 /* DESKTOP: bottom nav becomes top nav bar */
 @media(min-width:900px){
@@ -359,8 +359,21 @@ body.has-bottomnav{padding-bottom:0;}
 </div>
 
 <!-- TELA DE LOGIN -->
+<div id="loginScreenWrap" style="min-height:100vh;display:flex;">
+  <div style="flex:1;background:url('https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80') center/cover;position:relative;display:flex;align-items:flex-end;padding:40px;" class="login-photo-side">
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),transparent 60%);"></div>
+    <div style="position:relative;color:#fff;max-width:360px;">
+      <div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:6px;">Acompanhe cada momento</div>
+      <div style="font-size:13px;opacity:.8;line-height:1.5;">Notas, agenda digital, boletos e pickup — tudo na palma da mão.</div>
+    </div>
+  </div>
+  <div style="width:520px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px 24px;overflow-y:auto;">
 <div id="loginWall">
   <div class="login-card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+      <div style="font-size:28px;">🍁</div>
+      <div><div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Portal dos Pais</div></div>
+    </div>
     <div class="lw-icon">🔐</div>
     <div class="lw-title">Identifique-se para continuar</div>
     <p class="lw-sub">Para garantir a autenticidade das solicitações, confirme sua identidade antes de preencher o formulário.</p>
@@ -486,8 +499,15 @@ body.has-bottomnav{padding-bottom:0;}
       </div>
     </div>
 
+    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
+      <img src="/icon-lumied-48.png" style="height:14px;opacity:.4;" alt="Lumied">
+      <span style="font-size:10px;color:#a89f95;">Powered by Lumied</span>
+    </div>
   </div>
 </div>
+  </div>
+</div>
+<style>@media(max-width:768px){.login-photo-side{display:none !important;}#loginScreenWrap>div:last-child{width:100% !important;}}</style>
 
 <!-- FORMULÁRIO -->
 <!-- ACESSO PENDENTE -->
