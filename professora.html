@@ -274,6 +274,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .prof-sidebar .ps-item.active{background:rgba(200,16,46,.9);color:#fff;}
 .prof-sidebar .ps-icon{font-size:16px;width:20px;text-align:center;}
 
+/* Module config toggles */
+.mc-section{margin-bottom:20px;}
+.mc-section h4{font-family:'Lora',serif;font-size:14px;font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.mc-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;transition:opacity .2s;}
+.mc-row.disabled{opacity:.5;}
+.mc-row .mc-icon{font-size:18px;flex-shrink:0;}
+.mc-row .mc-info{flex:1;min-width:0;}.mc-row .mc-name{font-size:13px;font-weight:600;}.mc-row .mc-portals{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mc-toggle{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.mc-toggle input{opacity:0;width:0;height:0;}
+.mc-toggle-slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:22px;transition:.25s;}
+.mc-toggle-slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:var(--white);border-radius:50%;transition:.25s;}
+.mc-toggle input:checked+.mc-toggle-slider{background:var(--green);}
+.mc-toggle input:checked+.mc-toggle-slider:before{transform:translateX(18px);}
+
 @media(max-width:640px){
   .stats-row{grid-template-columns:1fr 1fr;}
   .stat-card:first-child{grid-column:1 / -1;}
@@ -282,6 +296,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   .comp-item{grid-template-columns:1fr 22px 22px;}.comp-item .comp-label{grid-column:1/-1;}
   .pickup-card{flex-wrap:wrap;}
   #almModal > div > div[style*="grid-template-columns"]{grid-template-columns:1fr !important;}
+  .mc-row{gap:8px;padding:8px 10px;}
 }
 @media(min-width:960px){
   .prof-bnav{display:none !important;}
@@ -359,6 +374,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> Notas</button>
     <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> Chamada</button>
     <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> Diário</button>
+    <button class="ps-item" onclick="switchProfPage('modulosConfig',this)" data-page="modulosConfig" id="sidebarModulosBtn" style="display:none;border-top:1px solid rgba(255,255,255,.1);margin-top:8px;"><span class="ps-icon">⚙️</span> Modulos</button>
   </div>
 
   <div class="greeting-bar" id="greetingBar">
@@ -837,6 +853,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <button style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;" onclick="salvarDiario()">Salvar Registro</button>
     </div>
 
+    <!-- ═══ PAGE: MODULOS CONFIG (gerente only) ═══ -->
+    <div class="prof-page" id="pageModulosConfig">
+      <div class="sec-title">⚙️ Modulos do Tier
+        <button onclick="loadModulosConfig()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <button style="padding:8px 16px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="saveModulosConfig()">Salvar Alteracoes</button>
+        <button style="padding:8px 16px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;" onclick="resetModulosConfig()">Restaurar Padrao do Plano</button>
+      </div>
+      <div id="modulosConfigCount" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+      <div id="modulosConfigGrid"></div>
+    </div>
+
   </div><!-- /content -->
 
 <!-- BOTTOM NAV PROFESSORAS -->
@@ -877,6 +906,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="pbnav-more-item" onclick="switchProfPage('impressoes',this);closeProfMore()" data-modulo="impressoes"><span>🖨️</span>Impressões</button>
     <button class="pbnav-more-item" onclick="switchProfPage('achados',this);closeProfMore()" data-modulo="achados"><span>🔍</span>Achados</button>
     <button class="pbnav-more-item" onclick="switchProfPage('diario',this);closeProfMore()" data-modulo="diario_classe"><span>📖</span>Diário</button>
+    <button class="pbnav-more-item" onclick="switchProfPage('modulosConfig',this);closeProfMore()" id="bnavModulosBtn" style="display:none;"><span>⚙️</span>Modulos</button>
   </div>
 </div>
 
@@ -1075,6 +1105,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     loadAll();
     showBioRegisterButton();
     loadModulosHabilitadosProf().then(() => showCameraFab());
+    checkGerenteAccess();
     verificarCienciasPendentes();
     verificarQuizPendente();
   }
@@ -1354,7 +1385,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   window._enabledModules = null;
   async function loadModulosHabilitadosProf() {
     try {
-      const d = await callDiplomas({ action: 'modulos_habilitados' });
+      const d = await callApi({ action: 'modulos_habilitados' });
       if (d && Array.isArray(d.modulos)) {
         window._enabledModules = new Set(d.modulos);
         document.querySelectorAll('[data-modulo]').forEach(el => {
@@ -1362,6 +1393,70 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         });
       }
     } catch(e) { console.warn('Feature gating não disponível:', e); }
+  }
+
+  // ── Módulos config (gerente only) ──
+  let _isGerente = false;
+  async function checkGerenteAccess() {
+    const d = await callApi({ action: 'escola_modulos_get_all' });
+    if (d && Array.isArray(d) && !d.error) {
+      _isGerente = true;
+      document.getElementById('sidebarModulosBtn').style.display = '';
+      // Also show in bottom nav more menu
+      const moreItem = document.getElementById('bnavModulosBtn');
+      if (moreItem) moreItem.style.display = '';
+    }
+  }
+
+  async function loadModulosConfig() {
+    const d = await callApi({ action: 'escola_modulos_get_all' });
+    if (!Array.isArray(d)) { showToast(d?.error || 'Erro ao carregar modulos', 'error'); return; }
+    const ativos = d.filter(m => m.habilitado);
+    document.getElementById('modulosConfigCount').textContent = ativos.length + ' de ' + d.length + ' modulos ativos';
+    const grupos = {};
+    const grupoNomes = { existente:'Existentes', academico:'Academico', comunicacao:'Comunicacao', administrativo:'Administrativo', financeiro:'Financeiro', operacional:'Operacional', avancado:'Avancado' };
+    for (const m of d) { if (!grupos[m.grupo]) grupos[m.grupo] = []; grupos[m.grupo].push(m); }
+    let html = '';
+    for (const [grupo, mods] of Object.entries(grupos)) {
+      html += `<div class="mc-section"><h4>${grupoNomes[grupo] || grupo}</h4>`;
+      for (const m of mods) {
+        const checked = m.habilitado ? 'checked' : '';
+        const rowClass = m.habilitado ? '' : ' disabled';
+        html += `<div class="mc-row${rowClass}" id="mcrow-${esc(m.slug)}"><span class="mc-icon">${m.icone}</span><div class="mc-info"><div class="mc-name">${esc(m.nome)}</div><div class="mc-portals">${(m.portais || []).join(', ')}</div></div><label class="mc-toggle"><input type="checkbox" data-slug="${esc(m.slug)}" ${checked} onchange="onMcToggle(this)"><span class="mc-toggle-slider"></span></label></div>`;
+      }
+      html += '</div>';
+    }
+    document.getElementById('modulosConfigGrid').innerHTML = html;
+  }
+
+  function onMcToggle(el) {
+    const row = document.getElementById('mcrow-' + el.dataset.slug);
+    if (row) { el.checked ? row.classList.remove('disabled') : row.classList.add('disabled'); }
+    const checks = document.querySelectorAll('#modulosConfigGrid .mc-toggle input');
+    const total = checks.length;
+    const ativos = [...checks].filter(c => c.checked).length;
+    document.getElementById('modulosConfigCount').textContent = ativos + ' de ' + total + ' modulos ativos';
+  }
+
+  async function saveModulosConfig() {
+    const checks = document.querySelectorAll('#modulosConfigGrid .mc-toggle input');
+    if (checks.length === 0) return;
+    const modulos = {};
+    checks.forEach(c => { modulos[c.dataset.slug] = c.checked; });
+    const d = await callApi({ action: 'escola_modulos_set', modulos });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Modulos atualizados!', 'success');
+    loadModulosConfig();
+    loadModulosHabilitadosProf();
+  }
+
+  async function resetModulosConfig() {
+    if (!confirm('Restaurar modulos ao padrao do plano? Todas as personalizacoes serao removidas.')) return;
+    const d = await callApi({ action: 'escola_modulos_reset' });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Modulos restaurados ao padrao do plano', 'success');
+    loadModulosConfig();
+    loadModulosHabilitadosProf();
   }
 
   function switchProfPage(page, btn) {
@@ -1373,6 +1468,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.querySelectorAll('.ps-item').forEach(b => b.classList.toggle('active', b.dataset.page === page));
     window.scrollTo({ top: 0, behavior: 'smooth' });
     closeProfMore();
+    if (page === 'modulosConfig') loadModulosConfig();
   }
 
   // ── CAMERA FAB ──
