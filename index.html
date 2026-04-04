@@ -350,23 +350,23 @@ body.has-bottomnav{padding-bottom:0;}
 
 <!-- TELA DE LOGIN -->
 <div id="loginScreenWrap" style="min-height:100vh;display:flex;">
-  <div style="flex:1;background:url('https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80') center/cover;position:relative;display:flex;align-items:flex-end;padding:40px;" class="login-photo-side">
-    <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),transparent 60%);"></div>
-    <div style="position:relative;color:#fff;max-width:360px;">
-      <div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:6px;">Acompanhe cada momento</div>
-      <div style="font-size:13px;opacity:.8;line-height:1.5;">Notas, agenda digital, boletos e pickup — tudo na palma da mão.</div>
+  <div style="flex:1;background:var(--red);position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;" class="login-photo-side">
+    <div style="position:absolute;inset:0;background:url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cpath d=&quot;M30 5C20 15,10 20,15 30C20 40,28 35,30 45C32 35,40 40,45 30C50 20,40 15,30 5Z&quot; fill=&quot;rgba(255,255,255,0.04)&quot;/%3E%3C/svg%3E') repeat;"></div>
+    <div style="position:relative;text-align:center;padding:40px;">
+      <img id="logoImg" alt="" style="max-height:120px;max-width:280px;object-fit:contain;display:none;margin:0 auto 24px;">
+      <div id="logoFallback">
+        <div style="font-family:'Lora',serif;font-size:36px;font-weight:700;color:#fff;margin-bottom:8px;">Maple Bear</div>
+      </div>
+      <div style="font-size:14px;color:rgba(255,255,255,.7);line-height:1.6;">Notas, agenda digital, boletos e pickup<br>— tudo na palma da mao.</div>
     </div>
   </div>
   <div style="width:520px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px 24px;overflow-y:auto;position:relative;">
     <a href="area-restrita.html" style="position:absolute;top:16px;right:20px;color:var(--muted);font-size:12px;text-decoration:none;padding:5px 12px;border:1px solid var(--border);border-radius:100px;transition:all .2s;">Area Restrita →</a>
 <div id="loginWall">
   <div class="login-card">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
-      <img id="logoImg" alt="" style="max-height:48px;max-width:160px;object-fit:contain;display:none;">
-      <div id="logoFallback" style="display:flex;align-items:center;gap:10px;">
-        <div style="width:44px;height:44px;background:rgba(200,16,46,.08);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;border:1.5px solid rgba(200,16,46,.15);">🍁</div>
-        <div><div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Portal dos Pais</div></div>
-      </div>
+    <div style="margin-bottom:24px;">
+      <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Portal dos Pais</div>
+      <div style="font-size:11px;color:#7a7169;">Lumied</div>
     </div>
     <div class="lw-icon">🔐</div>
     <div class="lw-title">Identifique-se para continuar</div>
