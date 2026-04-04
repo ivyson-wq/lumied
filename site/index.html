@@ -601,7 +601,19 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   img, video { max-width: 100%; height: auto; }
   .why-grid { grid-template-columns: 1fr; }
   .impl-grid { grid-template-columns: 1fr; }
+  /* Fix mobile horizontal dance */
+  .hero::before, .hero::after { display: none; }
+  .cta-final::before, .cta-final::after { display: none; }
+  .hero-badge { font-size: 11px; padding: 5px 12px; }
+  .stat-number { font-size: 32px; }
+  .plan-card { padding: 24px 16px; }
+  .testimonial-card { padding: 20px; }
+  .roi-result-total { font-size: 36px; }
+  .roi-results-grid { grid-template-columns: 1fr; }
 }
+/* Global overflow prevention */
+*, *::before, *::after { max-width: 100vw; }
+section, .section, .hero, .cta-final { overflow-x: clip; }
 </style>
 </head>
 <body>

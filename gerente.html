@@ -2128,6 +2128,33 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <!-- LOGOTIPO -->
       <div id="panelLogo" class="panel">
         <div style="max-width:650px;">
+          <!-- TEMA VISUAL -->
+          <div class="sec-title">Tema Visual</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Escolha o estilo visual dos portais da sua escola.</p>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:32px;" id="themeGrid">
+            <div class="theme-option" data-theme="" onclick="selecionarTema('',this)">
+              <div style="height:60px;background:linear-gradient(135deg,#C8102E,#a00d24);border-radius:8px 8px 0 0;"></div>
+              <div style="padding:10px;"><strong style="font-size:13px;">Corporativo</strong><br><span style="font-size:11px;color:var(--muted);">Padrão · Vermelho elegante</span></div>
+            </div>
+            <div class="theme-option" data-theme="theme-ludico" onclick="selecionarTema('theme-ludico',this)">
+              <div style="height:60px;background:linear-gradient(135deg,#FF6B35,#FFC107);border-radius:8px 8px 0 0;"></div>
+              <div style="padding:10px;"><strong style="font-size:13px;">Lúdico</strong><br><span style="font-size:11px;color:var(--muted);">Infantil · Cores vibrantes</span></div>
+            </div>
+            <div class="theme-option" data-theme="theme-serio" onclick="selecionarTema('theme-serio',this)">
+              <div style="height:60px;background:linear-gradient(135deg,#1B365D,#2C5282);border-radius:8px 8px 0 0;"></div>
+              <div style="padding:10px;"><strong style="font-size:13px;">Sério</strong><br><span style="font-size:11px;color:var(--muted);">Ensino Médio · Azul formal</span></div>
+            </div>
+            <div class="theme-option" data-theme="theme-interativo" onclick="selecionarTema('theme-interativo',this)">
+              <div style="height:60px;background:linear-gradient(135deg,#6B3FA0,#9F7AEA);border-radius:8px 8px 0 0;"></div>
+              <div style="padding:10px;"><strong style="font-size:13px;">Interativo</strong><br><span style="font-size:11px;color:var(--muted);">Moderno · Roxo tech</span></div>
+            </div>
+          </div>
+          <style>
+            .theme-option{background:var(--white);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;overflow:hidden;}
+            .theme-option:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08);}
+            .theme-option.active{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.15);}
+          </style>
+
           <div class="sec-title">Logotipo</div>
           <div class="logo-preview-area" id="logoPreviewArea">
             <img id="logoPreviewImg" alt="Logo atual">
@@ -3388,7 +3415,32 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const d = await api({ action:'config_get', chave:'logo_url' });
     if(d.valor){ document.getElementById('sidebarLogo').src=d.valor; document.getElementById('sidebarLogo').style.display='block'; document.getElementById('sidebarLeaf').style.display='none'; }
   }
+  // ── TEMA VISUAL ──
+  async function loadTemaAtual() {
+    const d = await api({ action: 'config_get', chave: 'tema_visual' });
+    const tema = d?.valor || '';
+    // Highlight active theme card
+    document.querySelectorAll('.theme-option').forEach(el => {
+      el.classList.toggle('active', el.dataset.theme === tema);
+    });
+    // Apply theme to body
+    document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
+    if (tema) document.body.classList.add(tema);
+  }
+
+  async function selecionarTema(tema, el) {
+    document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
+    if (el) el.classList.add('active');
+    await api({ action: 'config_set', chave: 'tema_visual', valor: tema });
+    // Apply immediately
+    document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
+    if (tema) document.body.classList.add(tema);
+    showToast('Tema atualizado! Os portais usarão este tema.', 'success');
+  }
+  window.selecionarTema = selecionarTema;
+
   async function loadLogoPanel() {
+    loadTemaAtual();
     const d = await api({ action:'config_get', chave:'logo_url' });
     const img=document.getElementById('logoPreviewImg'), noImg=document.getElementById('logoNoImg'), removeBtn=document.getElementById('btnRemoveLogo');
     if(d.valor){ img.src=d.valor; img.style.display='block'; noImg.style.display='none'; removeBtn.style.display='block'; }
