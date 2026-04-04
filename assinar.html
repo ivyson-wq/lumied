@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assinar Contrato — Lumied</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#f5f3ee;color:#1a1a1a;min-height:100vh;}
+.topbar{background:#1c1712;padding:14px 24px;display:flex;align-items:center;gap:10px;}
+.topbar .leaf{font-size:20px;}.topbar h1{font-family:'Lora',serif;font-size:15px;color:#fff;}
+.topbar span{font-size:11px;color:rgba(255,255,255,.4);}
+.container{max-width:800px;margin:24px auto;padding:0 16px;}
+.contract-card{background:#fff;border-radius:12px;border:1px solid #e2dbd1;box-shadow:0 4px 16px rgba(0,0,0,.06);overflow:hidden;margin-bottom:24px;}
+.contract-header{padding:20px 24px;border-bottom:1px solid #e2dbd1;display:flex;justify-content:space-between;align-items:center;}
+.contract-header h2{font-family:'Lora',serif;font-size:17px;}
+.contract-status{font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px;}
+.status-enviado{background:#EBF5FF;color:#1a6bb5;}
+.status-visualizado{background:#FFF3CD;color:#856404;}
+.status-assinado{background:#D4EDDA;color:#155724;}
+.contract-body{padding:24px;font-size:14px;line-height:1.7;}
+.contract-body h1,.contract-body h2,.contract-body h3{font-family:'Lora',serif;margin:16px 0 8px;}
+.sign-section{background:#fff;border-radius:12px;border:1px solid #e2dbd1;padding:24px;margin-bottom:24px;}
+.sign-section h3{font-family:'Lora',serif;font-size:16px;margin-bottom:16px;}
+.sign-name{width:100%;padding:12px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:inherit;font-size:14px;margin-bottom:16px;outline:none;}
+.sign-name:focus{border-color:#C8102E;}
+.canvas-wrap{border:2px dashed #e2dbd1;border-radius:8px;padding:4px;margin-bottom:8px;position:relative;background:#fdfbf8;}
+canvas{width:100%;height:180px;cursor:crosshair;display:block;touch-action:none;}
+.canvas-hint{text-align:center;font-size:12px;color:#7a7169;margin-bottom:12px;}
+.btn-row{display:flex;gap:10px;}
+.btn-clear{padding:10px 20px;background:#f5f5f5;border:1px solid #e2dbd1;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;}
+.btn-sign{flex:1;padding:13px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+.btn-sign:disabled{opacity:.5;cursor:not-allowed;}
+.success-msg{text-align:center;padding:40px;background:#D4EDDA;border-radius:12px;border:1px solid #C3E6CB;}
+.success-msg .icon{font-size:48px;margin-bottom:12px;}
+.success-msg h3{font-family:'Lora',serif;font-size:20px;color:#155724;margin-bottom:8px;}
+.success-msg p{font-size:14px;color:#155724;}
+.error-msg{text-align:center;padding:40px;color:#a00d24;font-size:15px;}
+.loading{text-align:center;padding:60px;color:#7a7169;font-size:14px;}
+.footer{text-align:center;font-size:11px;color:#7a7169;padding:24px;border-top:1px solid #e2dbd1;margin-top:24px;}
+@media(max-width:600px){canvas{height:140px;}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="leaf">🍁</div>
+  <div><h1>Maple Bear</h1><span>Assinatura de Contrato</span></div>
+</div>
+
+<div class="container">
+  <div id="loading" class="loading">Carregando contrato...</div>
+  <div id="errorMsg" class="error-msg" style="display:none;"></div>
+  <div id="successMsg" class="success-msg" style="display:none;">
+    <div class="icon">&#10004;</div>
+    <h3>Contrato assinado com sucesso!</h3>
+    <p>Uma copia sera enviada para seu e-mail. Obrigado!</p>
+  </div>
+
+  <div id="contractWrap" style="display:none;">
+    <div class="contract-card">
+      <div class="contract-header">
+        <h2 id="contractTitle">Contrato</h2>
+        <span class="contract-status" id="contractStatus"></span>
+      </div>
+      <div class="contract-body" id="contractBody"></div>
+    </div>
+
+    <div class="sign-section" id="signSection">
+      <h3>Assinatura Eletronica</h3>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:16px;">Ao assinar abaixo, voce concorda com os termos deste contrato. A assinatura e juridicamente valida conforme MP 2.200-2/2001 e Lei 14.063/2020.</p>
+      <input type="text" class="sign-name" id="signName" placeholder="Nome completo do signatario">
+      <div class="canvas-wrap">
+        <canvas id="signCanvas"></canvas>
+      </div>
+      <div class="canvas-hint">Desenhe sua assinatura acima com o mouse ou dedo</div>
+      <div class="btn-row">
+        <button class="btn-clear" onclick="clearCanvas()">Limpar</button>
+        <button class="btn-sign" id="btnSign" onclick="assinarContrato()">Assinar Contrato</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Documento eletronico — Lumied Gestao Escolar<br>
+  Assinatura eletronica valida conforme legislacao brasileira (MP 2.200-2/2001)
+</div>
+
+<script src="/config.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const contratoId = params.get('id');
+
+if (!contratoId) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('errorMsg').style.display = 'block';
+  document.getElementById('errorMsg').textContent = 'Contrato nao encontrado. Verifique o link recebido.';
+} else {
+  loadContrato();
+}
+
+async function loadContrato() {
+  try {
+    const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
+    const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
+      body: JSON.stringify({ action: 'contrato_publico_get', contrato_id: contratoId }),
+    });
+    const d = await r.json();
+    document.getElementById('loading').style.display = 'none';
+
+    if (d.error) {
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('errorMsg').textContent = d.error;
+      return;
+    }
+
+    document.getElementById('contractWrap').style.display = 'block';
+    document.getElementById('contractTitle').textContent = d.contrato_templates?.nome || 'Contrato';
+    document.getElementById('contractBody').innerHTML = d.html_renderizado || '';
+
+    const statusEl = document.getElementById('contractStatus');
+    const statusMap = { enviado: ['Pendente', 'status-enviado'], visualizado: ['Visualizado', 'status-visualizado'], assinado: ['Assinado', 'status-assinado'] };
+    const st = statusMap[d.status] || ['Pendente', 'status-enviado'];
+    statusEl.textContent = st[0];
+    statusEl.className = 'contract-status ' + st[1];
+
+    if (d.status === 'assinado') {
+      document.getElementById('signSection').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'block';
+    }
+
+    document.getElementById('signName').value = d.familia_nome || '';
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'block';
+    document.getElementById('errorMsg').textContent = 'Erro ao carregar contrato. Tente novamente.';
+  }
+}
+
+// Canvas signature
+const canvas = document.getElementById('signCanvas');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+let hasDrawn = false;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches ? e.touches[0] : e;
+  return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+canvas.addEventListener('mousemove', e => { if (!drawing) return; hasDrawn = true; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+canvas.addEventListener('mouseup', () => { drawing = false; });
+canvas.addEventListener('mouseleave', () => { drawing = false; });
+
+canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; hasDrawn = true; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }, { passive: false });
+canvas.addEventListener('touchend', () => { drawing = false; });
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasDrawn = false;
+}
+
+async function assinarContrato() {
+  const nome = document.getElementById('signName').value.trim();
+  if (!nome) return alert('Informe seu nome completo.');
+  if (!hasDrawn) return alert('Desenhe sua assinatura no campo acima.');
+
+  const btn = document.getElementById('btnSign');
+  btn.disabled = true; btn.textContent = 'Assinando...';
+
+  const assinatura = canvas.toDataURL('image/png');
+
+  try {
+    const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
+    const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
+      body: JSON.stringify({ action: 'contrato_assinar', contrato_id: contratoId, nome_signatario: nome, assinatura_base64: assinatura }),
+    });
+    const d = await r.json();
+
+    if (d.error) { btn.disabled = false; btn.textContent = 'Assinar Contrato'; return alert(d.error); }
+
+    document.getElementById('signSection').style.display = 'none';
+    document.getElementById('successMsg').style.display = 'block';
+    document.getElementById('contractStatus').textContent = 'Assinado';
+    document.getElementById('contractStatus').className = 'contract-status status-assinado';
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Assinar Contrato';
+    alert('Erro ao assinar. Tente novamente.');
+  }
+}
+</script>
+</body>
+</html>

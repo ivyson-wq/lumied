@@ -488,6 +488,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries / Idade</a>
         <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> Formulários Online</a>
         <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> Status Matrículas</a>
+        <a class="nav-item" href="#" onclick="showPanel('contratos',this)"><span class="ic">📜</span> Contratos</a>
       </div>
       </div>
 
@@ -700,6 +701,49 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:10px;text-align:left;">Aluno</th><th style="text-align:right;">Saldo</th><th>Última Recarga</th><th>Ações</th></tr></thead>
           <tbody id="cantCreditosBody"><tr><td colspan="4" style="padding:40px;text-align:center;color:var(--muted);">Carregando...</td></tr></tbody>
         </table></div>
+      </div>
+
+      <!-- CONTRATOS DIGITAIS -->
+      <div id="panelContratos" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h2 class="panel-title" style="margin:0;">📜 Contratos Digitais</h2>
+            <p style="font-size:12px;color:var(--muted);margin-top:4px;">Gere, envie e acompanhe assinaturas eletronicas.</p>
+          </div>
+          <button onclick="novoContratoModal()" class="btn-create" style="width:auto;padding:10px 20px;">+ Novo Contrato</button>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <input type="text" id="contratosBusca" placeholder="Buscar por nome ou email..." oninput="filtrarContratos()" style="flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;background:var(--white);">
+          <select id="contratosFiltroStatus" onchange="filtrarContratos()" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--white);">
+            <option value="">Todos os status</option>
+            <option value="rascunho">Rascunho</option>
+            <option value="enviado">Enviado</option>
+            <option value="visualizado">Visualizado</option>
+            <option value="assinado">Assinado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div id="contratosListContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- MODAL NOVO CONTRATO -->
+      <div id="modalNovoContrato" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:none;align-items:center;justify-content:center;">
+        <div style="background:var(--white);border-radius:14px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 style="font-family:'Lora',serif;font-size:17px;">Novo Contrato</h3>
+            <button onclick="fecharModalContrato()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
+          </div>
+          <div class="ff"><label>Template *</label><select id="ncTemplate" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"><option value="">Selecione...</option></select></div>
+          <div class="ff"><label>Email da Familia *</label><input type="email" id="ncEmail" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+          <div class="ff"><label>Nome da Familia</label><input type="text" id="ncNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+          <div class="ff"><label>Nome do Aluno</label><input type="text" id="ncAluno" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+          <div class="ff"><label>Serie / Turma</label><input type="text" id="ncTurma" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+          <div class="ff"><label>Valor Mensalidade</label><input type="text" id="ncValor" placeholder="R$ 0,00" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+          <div style="display:flex;gap:10px;margin-top:16px;">
+            <button onclick="gerarContrato(false)" style="flex:1;padding:12px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Salvar Rascunho</button>
+            <button onclick="gerarContrato(true)" style="flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Gerar e Enviar</button>
+          </div>
+        </div>
       </div>
 
       <!-- ALUNOS -->
@@ -2857,7 +2901,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
@@ -2925,6 +2969,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='compCalendario') loadCompCalendario();
     if(id==='contaFinanceiro') loadContaFinanceiro();
     if(id==='roi') loadRoiDashboard();
+    if(id==='contratos') loadContratos();
     // Track usage for recents & smart ordering
     if(id !== 'analytics') trackPanelUsage(id);
     updateBottomBarActive(id);
@@ -9443,6 +9488,122 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function solicitarExtra(extraId){if(!confirm('Solicitar este extra? O responsável financeiro será notificado para aprovação.'))return;const d=await api({action:'financeiro_solicitar_extra',extra_id:extraId});if(d.error)return showToast(d.error,'error');showToast('Solicitação enviada ao responsável financeiro.','success');loadContaFinanceiro();}
   // ═══ ROI DASHBOARD ═══
   async function loadRoiDashboard(){try{const d=await fetch(CONFIG.SUPABASE_URL+'/functions/v1/lumied-ai',{method:'POST',headers:{'Content-Type':'application/json','apikey':CONFIG.SUPABASE_ANON,'Authorization':'Bearer '+CONFIG.SUPABASE_ANON},body:JSON.stringify({action:'roi_dashboard',_token:getToken()})}).then(r=>r.json());if(d.error)return;const r=d.data?.roi_estimado||{};const m=d.data?.metricas_reais||{};const fmt=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');document.getElementById('roiEconMes').textContent=fmt(r.total_economia_mes||0);document.getElementById('roiEconAnual').textContent=fmt(r.total_economia_anual||0);document.getElementById('roiHoras').textContent=(r.horas_economizadas_mes||0)+'h';document.getElementById('roiRetidos').textContent=r.alunos_retidos_mes||0;document.getElementById('roiOpText').textContent=fmt(r.economia_operacional_mes||0)+'/mês — '+r.horas_economizadas_mes+'h de trabalho admin economizadas';document.getElementById('roiEvasaoText').textContent=fmt(r.evasao_evitada_mes||0)+'/mês — '+r.alunos_retidos_mes+' alunos que teriam saído foram retidos';document.getElementById('roiInadText').textContent=fmt(r.inadimplencia_evitada_mes||0)+'/mês em boletos que seriam perdidos';document.getElementById('roiResumo').textContent='Sua escola economiza '+fmt(r.total_economia_mes||0)+' por mês com o Lumied';document.getElementById('roiResumoSub').textContent='Isso equivale a '+fmt(r.total_economia_anual||0)+' por ano — com base nos dados reais da escola.';}catch(e){console.log('[ROI]',e);}}
+
+  // ═══ CONTRATOS DIGITAIS ═══
+  let contratosData = [];
+  async function loadContratos() {
+    const el = document.getElementById('contratosListContent');
+    el.innerHTML = '<div class="empty-state">Carregando...</div>';
+    const d = await api({ action: 'contratos_list' });
+    if (d.error) { el.innerHTML = '<div class="empty-state">Erro: ' + d.error + '</div>'; return; }
+    contratosData = Array.isArray(d) ? d : [];
+    renderContratos();
+  }
+
+  function filtrarContratos() {
+    renderContratos();
+  }
+
+  function renderContratos() {
+    const el = document.getElementById('contratosListContent');
+    const busca = (document.getElementById('contratosBusca').value || '').toLowerCase();
+    const status = document.getElementById('contratosFiltroStatus').value;
+    let list = contratosData;
+    if (busca) list = list.filter(c => (c.familia_nome || '').toLowerCase().includes(busca) || (c.familia_email || '').toLowerCase().includes(busca));
+    if (status) list = list.filter(c => c.status === status);
+    if (!list.length) { el.innerHTML = '<div class="empty-state">Nenhum contrato encontrado.</div>'; return; }
+    const statusBadge = s => {
+      const map = { rascunho: ['Rascunho', '#f5f0ea', '#7a7169'], enviado: ['Enviado', '#EBF5FF', '#1a6bb5'], visualizado: ['Visualizado', '#FFF3CD', '#856404'], assinado: ['Assinado', '#D4EDDA', '#155724'], cancelado: ['Cancelado', '#fdf0f2', '#a00d24'] };
+      const [label, bg, color] = map[s] || [s, '#f5f0ea', '#7a7169'];
+      return '<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;background:' + bg + ';color:' + color + ';">' + label + '</span>';
+    };
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('pt-BR') + ' ' + new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);text-align:left;">';
+    html += '<th style="padding:10px;">Familia</th><th>Template</th><th>Status</th><th>Enviado</th><th>Assinaturas</th><th style="text-align:right;">Acoes</th></tr></thead><tbody>';
+    list.forEach(c => {
+      const tplName = c.contrato_templates?.nome || '—';
+      const sigs = (c.contrato_assinaturas || []).length;
+      html += '<tr style="border-bottom:1px solid var(--border);">';
+      html += '<td style="padding:10px;"><strong>' + (c.familia_nome || '—') + '</strong><br><span style="font-size:11px;color:var(--muted);">' + (c.familia_email || '') + '</span></td>';
+      html += '<td>' + tplName + '</td>';
+      html += '<td>' + statusBadge(c.status) + '</td>';
+      html += '<td style="font-size:12px;">' + fmtDate(c.enviado_em) + '</td>';
+      html += '<td style="text-align:center;">' + sigs + '</td>';
+      html += '<td style="text-align:right;white-space:nowrap;">';
+      if (c.status === 'rascunho') html += '<button onclick="enviarContrato(\'' + c.id + '\')" style="padding:5px 10px;background:#EBF5FF;color:#1a6bb5;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;">Enviar</button>';
+      if (c.status !== 'assinado' && c.status !== 'cancelado') html += '<button onclick="copiarLinkAssinatura(\'' + c.id + '\')" style="padding:5px 10px;background:#f5f0ea;color:var(--text);border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;">Link</button>';
+      if (c.status !== 'assinado') html += '<button onclick="excluirContrato(\'' + c.id + '\')" style="padding:5px 10px;background:#fdf0f2;color:#a00d24;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">Excluir</button>';
+      html += '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  async function novoContratoModal() {
+    // Load templates
+    const d = await api({ action: 'contrato_templates_list' });
+    const tpls = Array.isArray(d) ? d : [];
+    const sel = document.getElementById('ncTemplate');
+    sel.innerHTML = '<option value="">Selecione...</option>';
+    tpls.forEach(t => { sel.innerHTML += '<option value="' + t.id + '">' + t.nome + '</option>'; });
+    document.getElementById('ncEmail').value = '';
+    document.getElementById('ncNome').value = '';
+    document.getElementById('ncAluno').value = '';
+    document.getElementById('ncTurma').value = '';
+    document.getElementById('ncValor').value = '';
+    document.getElementById('modalNovoContrato').style.display = 'flex';
+  }
+
+  function fecharModalContrato() {
+    document.getElementById('modalNovoContrato').style.display = 'none';
+  }
+
+  async function gerarContrato(enviar) {
+    const template_id = document.getElementById('ncTemplate').value;
+    const familia_email = document.getElementById('ncEmail').value.trim();
+    const familia_nome = document.getElementById('ncNome').value.trim();
+    const nome_aluno = document.getElementById('ncAluno').value.trim();
+    const turma = document.getElementById('ncTurma').value.trim();
+    const valor = document.getElementById('ncValor').value.trim();
+    if (!template_id) return showToast('Selecione um template.', 'error');
+    if (!familia_email) return showToast('Informe o email da familia.', 'error');
+    const dados = {};
+    if (nome_aluno) dados.nome_aluno = nome_aluno;
+    if (turma) dados.turma = turma;
+    if (valor) dados.valor_mensalidade = valor;
+    const d = await api({ action: 'contrato_gerar', template_id, familia_email, familia_nome, dados });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Contrato gerado com sucesso!', 'success');
+    if (enviar && d.id) {
+      await api({ action: 'contrato_enviar', id: d.id });
+      showToast('Contrato enviado para ' + familia_email, 'success');
+    }
+    fecharModalContrato();
+    loadContratos();
+  }
+
+  async function enviarContrato(id) {
+    if (!confirm('Enviar contrato para a familia?')) return;
+    const d = await api({ action: 'contrato_enviar', id });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Contrato enviado!', 'success');
+    loadContratos();
+  }
+
+  function copiarLinkAssinatura(id) {
+    const url = location.origin + '/assinar.html?id=' + id;
+    navigator.clipboard.writeText(url).then(() => showToast('Link copiado!', 'success')).catch(() => {
+      prompt('Copie o link:', url);
+    });
+  }
+
+  async function excluirContrato(id) {
+    if (!confirm('Excluir este contrato?')) return;
+    const d = await api({ action: 'contrato_delete', id });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Contrato excluido.', 'success');
+    loadContratos();
+  }
 </script>
 <script src="/lumied-ux.js" defer></script>
 <script src="/ticket-widget.js"></script>

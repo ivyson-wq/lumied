@@ -348,6 +348,42 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Contratos PÚBLICOS (família acessa sem login) ──
+  if (action === "contrato_publico_get") {
+    const { contrato_id } = body as any;
+    if (!contrato_id) return err("contrato_id obrigatório.");
+    const { data } = await admin.from("contratos").select("id, familia_nome, familia_email, html_renderizado, status, contrato_templates(nome, tipo)").eq("id", contrato_id).single();
+    if (!data) return err("Contrato não encontrado.", 404);
+    if (data.status === 'rascunho') return err("Contrato ainda não foi enviado.");
+    // Mark as viewed
+    if (data.status === 'enviado') {
+      await admin.from("contratos").update({ status: 'visualizado', visualizado_em: new Date().toISOString() }).eq("id", contrato_id);
+    }
+    return ok(data);
+  }
+
+  if (action === "contrato_assinar") {
+    const { contrato_id, nome_signatario, assinatura_base64 } = body as any;
+    if (!contrato_id || !nome_signatario || !assinatura_base64) return err("contrato_id, nome_signatario e assinatura_base64 obrigatórios.");
+
+    const { data: contrato } = await admin.from("contratos").select("status").eq("id", contrato_id).single();
+    if (!contrato) return err("Contrato não encontrado.", 404);
+    if (contrato.status === 'assinado') return err("Contrato já foi assinado.");
+    if (contrato.status === 'cancelado') return err("Contrato foi cancelado.");
+
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const ua = req.headers.get('user-agent') || '';
+
+    await admin.from("contrato_assinaturas").insert({
+      contrato_id, tipo: 'responsavel', nome_signatario,
+      assinatura_base64, ip, user_agent: ua,
+    });
+
+    await admin.from("contratos").update({ status: 'assinado' }).eq("id", contrato_id);
+
+    return ok({ success: true, message: "Contrato assinado com sucesso!" });
+  }
+
   // ════════════════════════════════════════════════════════════
   //  AÇÕES AUTENTICADAS
   // ════════════════════════════════════════════════════════════
@@ -2019,6 +2055,83 @@ serve(async (req: Request) => {
     const { data } = await admin.from("wa_consumo_mensal").select("*").eq("mes", mes).eq("ano", ano).limit(1).single();
     const { data: alertas } = await admin.from("wa_consumo_alertas").select("*").order("criado_em", { ascending: false }).limit(10);
     return ok({ consumo: data, alertas: alertas ?? [] });
+  }
+
+  // ── Contratos Digitais ──────────────────────────────────────
+  if (action === "contrato_templates_list") {
+    const { data } = await admin.from("contrato_templates").select("*").eq("ativo", true).order("nome");
+    return ok(data ?? []);
+  }
+
+  if (action === "contrato_template_create") {
+    const { nome, tipo, html_template, variaveis } = body as any;
+    if (!nome || !html_template) return err("nome e html_template obrigatórios.");
+    const { data, error } = await admin.from("contrato_templates").insert({ nome, tipo: tipo || 'matricula', html_template, variaveis: variaveis || [] }).select().single();
+    if (error) return err(error.message);
+    return ok(data);
+  }
+
+  if (action === "contrato_template_update") {
+    const { id, nome, html_template, variaveis, ativo } = body as any;
+    if (!id) return err("id obrigatório.");
+    const fields: any = {};
+    if (nome !== undefined) fields.nome = nome;
+    if (html_template !== undefined) fields.html_template = html_template;
+    if (variaveis !== undefined) fields.variaveis = variaveis;
+    if (ativo !== undefined) fields.ativo = ativo;
+    const { error } = await admin.from("contrato_templates").update(fields).eq("id", id);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+
+  if (action === "contrato_gerar") {
+    const { template_id, familia_email, familia_nome, dados, matricula_id } = body as any;
+    if (!template_id || !familia_email) return err("template_id e familia_email obrigatórios.");
+
+    // Get template
+    const { data: tpl } = await admin.from("contrato_templates").select("*").eq("id", template_id).single();
+    if (!tpl) return err("Template não encontrado.", 404);
+
+    // Render HTML with variables
+    let html = tpl.html_template;
+    const vars = dados || {};
+    vars.familia_nome = familia_nome || vars.familia_nome || '';
+    vars.familia_email = familia_email;
+    vars.data_hoje = new Date().toLocaleDateString('pt-BR');
+    vars.ano_letivo = new Date().getFullYear().toString();
+    for (const [key, val] of Object.entries(vars)) {
+      html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(val));
+    }
+
+    const { data: contrato, error } = await admin.from("contratos").insert({
+      template_id, familia_email: familia_email.toLowerCase().trim(),
+      familia_nome: familia_nome || '', matricula_id: matricula_id || null,
+      dados_preenchidos: vars, html_renderizado: html, status: 'rascunho',
+    }).select().single();
+    if (error) return err(error.message);
+    return ok(contrato);
+  }
+
+  if (action === "contrato_enviar") {
+    const { id } = body as any;
+    if (!id) return err("id obrigatório.");
+    const { error } = await admin.from("contratos").update({ status: 'enviado', enviado_em: new Date().toISOString() }).eq("id", id);
+    if (error) return err(error.message);
+    // TODO: send email notification to familia
+    return ok({ success: true });
+  }
+
+  if (action === "contratos_list") {
+    const { data } = await admin.from("contratos").select("*, contrato_templates(nome, tipo), contrato_assinaturas(id, tipo, nome_signatario, assinado_em)").order("criado_em", { ascending: false });
+    return ok(data ?? []);
+  }
+
+  if (action === "contrato_delete") {
+    const { id } = body as any;
+    const { data: c } = await admin.from("contratos").select("status").eq("id", id).single();
+    if (c?.status === 'assinado') return err("Contrato assinado não pode ser excluído.");
+    await admin.from("contratos").delete().eq("id", id);
+    return ok({ success: true });
   }
 
   return err("Ação desconhecida.");
