@@ -567,7 +567,7 @@ serve(async (req: Request) => {
   if (action === "alunos_list") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
-    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, ativo, criado_em").order("nome");
+    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, criado_em").order("nome");
     return ok(data ?? []);
   }
 
