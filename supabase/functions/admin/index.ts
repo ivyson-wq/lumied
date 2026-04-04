@@ -657,6 +657,209 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════
+//  PER-SCHOOL ADMIN PANEL — Actions for escola-scoped admin.html
+// ═══════════════════════════════════════════════════════════════
+
+// deno-lint-ignore no-explicit-any
+async function resolveEscola(sb: any, subdominio: string) {
+  const { data } = await sb.from("escolas")
+    .select("id, nome, subdominio, slug, plano, plano_id, plano_fim, ativo, supabase_url, supabase_anon_key, planos(id, slug, nome, preco_mensal, preco_anual)")
+    .eq("subdominio", subdominio).single();
+  if (!data) throw new AppError("NOT_FOUND", "Escola não encontrada: " + subdominio);
+  return data;
+}
+
+// ── School Dashboard ──
+router.on("escola_dashboard", authAdmin, async (ctx) => {
+  const { subdominio } = ctx.body as { subdominio: string };
+  if (!subdominio) throw new AppError("VALIDATION_FAILED", "subdominio obrigatório.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const [usoRes, limitesRes, ticketsRes, modulosRes, decisoesRes] = await Promise.all([
+    ctx.sb.from("escola_uso").select("recurso, uso_atual").eq("escola_id", escola.id),
+    escola.plano_id ? ctx.sb.from("plano_limites").select("recurso, limite").eq("plano_id", escola.plano_id) : Promise.resolve({ data: [] }),
+    ctx.sb.from("tickets").select("id", { count: "exact", head: true }).eq("escola_id", escola.id).eq("status", "aberto"),
+    ctx.sb.from("escola_modulos").select("modulo_id").eq("escola_id", escola.id).eq("habilitado", true),
+    ctx.sb.from("escola_decisoes_financeiras").select("id", { count: "exact", head: true }).eq("escola_id", escola.id).eq("status", "pendente"),
+  ]);
+  const uso: Record<string, number> = {};
+  for (const u of (usoRes.data || [])) uso[u.recurso] = u.uso_atual;
+  const limites: Record<string, number> = {};
+  for (const l of (limitesRes.data || [])) limites[l.recurso] = l.limite;
+  const alerts: Array<{type: string; msg: string}> = [];
+  if (escola.plano_fim) {
+    const dias = Math.ceil((new Date(escola.plano_fim).getTime() - Date.now()) / 86400000);
+    if (dias < 0) alerts.push({ type: "error", msg: "Plano expirado!" });
+    else if (dias <= 30) alerts.push({ type: "warn", msg: `Plano expira em ${dias} dias` });
+  }
+  if (limites.max_alunos && limites.max_alunos > 0) {
+    const pct = ((uso.max_alunos || 0) / limites.max_alunos) * 100;
+    if (pct >= 90) alerts.push({ type: "warn", msg: `${Math.round(pct)}% do limite de alunos` });
+  }
+  return successResponse({
+    escola: { id: escola.id, nome: escola.nome, subdominio: escola.subdominio },
+    plano: escola.planos, plano_fim: escola.plano_fim, uso, limites, alerts,
+    tickets_abertos: ticketsRes.count || 0,
+    modulos_ativos: (modulosRes.data || []).length,
+    decisoes_pendentes: decisoesRes.count || 0,
+  });
+});
+
+// ── Plan Info ──
+router.on("escola_plano_info", authAdmin, async (ctx) => {
+  const { subdominio } = ctx.body as { subdominio: string };
+  if (!subdominio) throw new AppError("VALIDATION_FAILED", "subdominio obrigatório.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const [usoRes, limitesRes, extrasRes, decisoesRes, planosRes] = await Promise.all([
+    ctx.sb.from("escola_uso").select("recurso, uso_atual").eq("escola_id", escola.id),
+    escola.plano_id ? ctx.sb.from("plano_limites").select("recurso, limite").eq("plano_id", escola.plano_id) : Promise.resolve({ data: [] }),
+    ctx.sb.from("escola_extras_contratados").select("*, escola_extras(nome, slug, unidade, quantidade, preco)").eq("escola_id", escola.id).eq("ativo", true),
+    ctx.sb.from("escola_decisoes_financeiras").select("*").eq("escola_id", escola.id).eq("status", "pendente"),
+    ctx.sb.from("planos").select("id, slug, nome, descricao, preco_mensal, preco_anual, ordem").eq("ativo", true).order("ordem"),
+  ]);
+  const uso: Record<string, number> = {};
+  for (const u of (usoRes.data || [])) uso[u.recurso] = u.uso_atual;
+  const limites: Record<string, number> = {};
+  for (const l of (limitesRes.data || [])) limites[l.recurso] = l.limite;
+  return successResponse({
+    escola_id: escola.id, nome: escola.nome,
+    plano: escola.planos, plano_fim: escola.plano_fim,
+    uso, limites,
+    extras_ativos: extrasRes.data || [],
+    decisoes_pendentes: decisoesRes.data || [],
+    todos_planos: planosRes.data || [],
+  });
+});
+
+// ─�� Upgrade/Downgrade ──
+router.on("escola_solicitar_upgrade", authAdmin, async (ctx) => {
+  const { subdominio, plano_solicitado } = ctx.body as { subdominio: string; plano_solicitado: string };
+  if (!subdominio || !plano_solicitado) throw new AppError("VALIDATION_FAILED", "subdominio e plano_solicitado obrigatórios.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const { data: planoNovo } = await ctx.sb.from("planos").select("slug, nome, preco_mensal").eq("slug", plano_solicitado).single();
+  if (!planoNovo) throw new AppError("NOT_FOUND", "Plano não encontrado.");
+  const { error } = await ctx.sb.from("escola_decisoes_financeiras").insert({
+    escola_id: escola.id, tipo: "upgrade_tier",
+    descricao: `Upgrade de ${escola.planos?.nome || "?"} para ${planoNovo.nome}`,
+    valor_estimado: planoNovo.preco_mensal, recorrente: true,
+    plano_atual: escola.planos?.slug, plano_solicitado: planoNovo.slug,
+    solicitado_por: ctx.user!.nome,
+  });
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+router.on("escola_solicitar_downgrade", authAdmin, async (ctx) => {
+  const { subdominio, plano_solicitado } = ctx.body as { subdominio: string; plano_solicitado: string };
+  if (!subdominio || !plano_solicitado) throw new AppError("VALIDATION_FAILED", "subdominio e plano_solicitado obrigatórios.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const { data: planoNovo } = await ctx.sb.from("planos").select("slug, nome, preco_mensal").eq("slug", plano_solicitado).single();
+  if (!planoNovo) throw new AppError("NOT_FOUND", "Plano não encontrado.");
+  const { error } = await ctx.sb.from("escola_decisoes_financeiras").insert({
+    escola_id: escola.id, tipo: "downgrade_tier",
+    descricao: `Downgrade de ${escola.planos?.nome || "?"} para ${planoNovo.nome}`,
+    valor_estimado: planoNovo.preco_mensal, recorrente: true,
+    plano_atual: escola.planos?.slug, plano_solicitado: planoNovo.slug,
+    solicitado_por: ctx.user!.nome,
+  });
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+// ── Extras ──
+router.on("escola_extras_list", authAdmin, async (ctx) => {
+  const { subdominio } = ctx.body as { subdominio: string };
+  if (!subdominio) throw new AppError("VALIDATION_FAILED", "subdominio obrigatório.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const [extrasRes, contratadosRes] = await Promise.all([
+    ctx.sb.from("escola_extras").select("*").eq("ativo", true).order("slug"),
+    ctx.sb.from("escola_extras_contratados").select("*, escola_extras(slug, nome, preco, unidade)").eq("escola_id", escola.id).eq("ativo", true),
+  ]);
+  return successResponse({ disponiveis: extrasRes.data || [], contratados: contratadosRes.data || [] });
+});
+
+router.on("escola_extra_contratar", authAdmin, async (ctx) => {
+  const { subdominio, extra_id } = ctx.body as { subdominio: string; extra_id: string };
+  if (!subdominio || !extra_id) throw new AppError("VALIDATION_FAILED", "subdominio e extra_id obrigatórios.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const { data: extra } = await ctx.sb.from("escola_extras").select("*").eq("id", extra_id).single();
+  if (!extra) throw new AppError("NOT_FOUND", "Extra não encontrado.");
+  await ctx.sb.from("escola_decisoes_financeiras").insert({
+    escola_id: escola.id, tipo: `addon_${extra.unidade || "outro"}`,
+    descricao: `Contratar ${extra.nome} (R$ ${extra.preco}/mês)`,
+    valor_estimado: extra.preco, recorrente: extra.recorrente,
+    solicitado_por: ctx.user!.nome,
+  });
+  return successResponse({ success: true });
+});
+
+router.on("escola_extra_cancelar", authAdmin, async (ctx) => {
+  const { subdominio, contratado_id } = ctx.body as { subdominio: string; contratado_id: string };
+  if (!subdominio || !contratado_id) throw new AppError("VALIDATION_FAILED", "subdominio e contratado_id obrigatórios.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const { error } = await ctx.sb.from("escola_extras_contratados")
+    .update({ ativo: false, cancelado_em: new Date().toISOString() })
+    .eq("id", contratado_id).eq("escola_id", escola.id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+// ─�� Config ──
+router.on("escola_config_list", authAdmin, async (ctx) => {
+  const { subdominio } = ctx.body as { subdominio: string };
+  if (!subdominio) throw new AppError("VALIDATION_FAILED", "subdominio obrigatório.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const { data } = await ctx.sb.from("escola_config").select("chave, valor, descricao, categoria").eq("escola_id", escola.id).order("chave");
+  return successResponse(data || []);
+});
+
+router.on("escola_config_update", authAdmin, async (ctx) => {
+  const { subdominio, chave, valor } = ctx.body as { subdominio: string; chave: string; valor: string };
+  if (!subdominio || !chave) throw new AppError("VALIDATION_FAILED", "subdominio e chave obrigatórios.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const { error } = await ctx.sb.from("escola_config").upsert({ chave, valor, escola_id: escola.id }, { onConflict: "chave,escola_id" });
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+// ── API & Integration Info ──
+router.on("escola_api_info", authAdmin, async (ctx) => {
+  const { subdominio } = ctx.body as { subdominio: string };
+  if (!subdominio) throw new AppError("VALIDATION_FAILED", "subdominio obrigatório.");
+  // deno-lint-ignore no-explicit-any
+  const escola = await resolveEscola(ctx.sb, subdominio) as any;
+  const baseUrl = escola.supabase_url || Deno.env.get("SUPABASE_URL");
+  return successResponse({
+    escola_id: escola.id, nome: escola.nome, subdominio: escola.subdominio,
+    supabase_url: baseUrl,
+    supabase_anon_key: escola.supabase_anon_key || "(use a anon key do projeto)",
+    edge_functions: {
+      admin: `${baseUrl}/functions/v1/admin`,
+      api: `${baseUrl}/functions/v1/api`,
+      academico: `${baseUrl}/functions/v1/academico`,
+      comunicacao: `${baseUrl}/functions/v1/comunicacao`,
+      diplomas: `${baseUrl}/functions/v1/diplomas`,
+      health: `${baseUrl}/functions/v1/health`,
+    },
+    portal_urls: {
+      admin: `https://${escola.subdominio}.lumied.com.br/admin.html`,
+      gerente: `https://${escola.subdominio}.lumied.com.br/gerente.html`,
+      professora: `https://${escola.subdominio}.lumied.com.br/professora.html`,
+      pais: `https://${escola.subdominio}.lumied.com.br/`,
+      aluno: `https://${escola.subdominio}.lumied.com.br/aluno.html`,
+    },
+  });
+});
+
 // ═══ SERVE ═══
 serve(async (req: Request) => {
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { autoRefreshToken: false, persistSession: false } });
