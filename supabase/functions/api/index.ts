@@ -442,7 +442,6 @@ serve(async (req: Request) => {
   if (action === "contrato_assinar") {
     const { contrato_id, nome_signatario, assinatura_base64, aceite_termos, geolocation, codigo_email } = body as any;
     if (!contrato_id || !nome_signatario || !assinatura_base64) return err("contrato_id, nome_signatario e assinatura_base64 obrigatórios.");
-    if (!aceite_termos) return err("É necessário aceitar os termos para assinar.");
     if (!codigo_email) return err("Código de verificação por e-mail obrigatório.");
 
     const { data: contrato } = await admin.from("contratos").select("status, html_renderizado, dados_preenchidos").eq("id", contrato_id).single();
@@ -469,25 +468,82 @@ serve(async (req: Request) => {
     const ua = req.headers.get('user-agent') || '';
     const agora = new Date().toISOString();
 
+    // Determinar tipo do signatário baseado em quantas assinaturas já existem
+    // Ordem: contratante (família) → contratado (escola) → testemunha 1 → testemunha 2
+    const { data: existingSignatures } = await admin.from("contrato_assinaturas").select("id").eq("contrato_id", contrato_id);
+    const sigCount = (existingSignatures || []).length;
+    const tipoMap = ['contratante', 'contratado', 'testemunha1', 'testemunha2'];
+    const tipoSig = tipoMap[sigCount] || 'testemunha';
+
     // Registrar assinatura com evidências probatórias
     await admin.from("contrato_assinaturas").insert({
-      contrato_id, tipo: 'responsavel', nome_signatario,
+      contrato_id, tipo: tipoSig, nome_signatario,
       assinatura_base64, ip, user_agent: ua,
       documento_hash: docHash, aceite_termos: true,
       geolocation: geolocation || null,
     });
 
-    // Atualizar contrato com hash, código e status
-    await admin.from("contratos").update({
-      status: 'assinado',
-      assinado_em: agora,
-      documento_hash: docHash,
-      codigo_verificacao: codigoVerificacao,
-    }).eq("id", contrato_id);
+    // Verificar se todos assinaram (contratante + contratado + 2 testemunhas = 4)
+    const totalAssinaturas = sigCount + 1;
+    const totalNecessario = 4;
+    const completo = totalAssinaturas >= totalNecessario;
+
+    if (completo) {
+      // Atualizar contrato como ASSINADO
+      await admin.from("contratos").update({
+        status: 'assinado',
+        assinado_em: agora,
+        documento_hash: docHash,
+        codigo_verificacao: codigoVerificacao,
+      }).eq("id", contrato_id);
+
+      // Enviar cópia do contrato por email a todas as partes
+      const resendKey = Deno.env.get("RESEND_API_KEY");
+      if (resendKey) {
+        try {
+          const { data: contratoFull } = await admin.from("contratos").select("familia_email, familia_nome, html_renderizado, contrato_assinaturas(nome_signatario, tipo, assinado_em)").eq("id", contrato_id).single();
+          if (contratoFull) {
+            const signatarios = (contratoFull.contrato_assinaturas || []).map((s: any) => `${s.nome_signatario} (${s.tipo}) — ${new Date(s.assinado_em).toLocaleString('pt-BR')}`).join('<br>');
+            const emailHtml = `<div style="font-family:sans-serif;max-width:700px;margin:0 auto;">
+              <h2 style="color:#2d7a3a;">✅ Contrato Assinado</h2>
+              <p>Todas as partes assinaram o contrato eletronicamente.</p>
+              <div style="background:#f5f3ee;border:1px solid #e2dbd1;border-radius:8px;padding:16px;margin:16px 0;">
+                <strong>Código de Verificação:</strong> <code style="font-size:16px;color:#C8102E;">${codigoVerificacao}</code><br>
+                <strong>Hash SHA-256:</strong> <code style="font-size:10px;">${docHash}</code><br><br>
+                <strong>Signatários:</strong><br>${signatarios}
+              </div>
+              <div style="border:1px solid #e2dbd1;border-radius:8px;padding:16px;margin-top:16px;">
+                ${contratoFull.html_renderizado || ''}
+              </div>
+              <p style="font-size:11px;color:#999;margin-top:16px;">Verifique a autenticidade em: lumied.com.br/verificar?c=${codigoVerificacao}<br>Assinatura eletrônica válida conforme Lei 14.063/2020 e MP 2.200-2/2001.</p>
+            </div>`;
+            // Coletar emails de todos os signatários (se tiverem)
+            const destinatarios = [contratoFull.familia_email];
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                from: "Lumied Contratos <noreply@lumied.com.br>",
+                to: destinatarios,
+                subject: `Contrato Assinado — ${codigoVerificacao}`,
+                html: emailHtml,
+              }),
+              signal: AbortSignal.timeout(8000),
+            });
+          }
+        } catch (e) { console.error("[CONTRATO] Email error:", e); }
+      }
+    } else {
+      // Parcialmente assinado — atualizar hash mas manter status como 'visualizado'
+      await admin.from("contratos").update({ documento_hash: docHash }).eq("id", contrato_id);
+    }
 
     return ok({
       success: true,
-      message: "Contrato assinado com sucesso!",
+      message: completo ? "Contrato assinado por todas as partes!" : `Assinatura registrada! Faltam ${totalNecessario - totalAssinaturas} assinatura(s).`,
+      completo,
+      assinaturas_registradas: totalAssinaturas,
+      assinaturas_necessarias: totalNecessario,
       codigo_verificacao: codigoVerificacao,
       documento_hash: docHash,
       assinado_em: agora,

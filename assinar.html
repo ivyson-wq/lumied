@@ -89,46 +89,50 @@ canvas{width:100%;height:180px;cursor:crosshair;display:block;touch-action:none;
       </div>
     </div>
 
-    <!-- ETAPA 1: Verificação por email -->
-    <div class="sign-section" id="emailVerifySection">
-      <h3>🔐 Verificação de Identidade</h3>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:16px;">Para garantir a autenticidade da assinatura, enviaremos um código de 6 dígitos para o e-mail cadastrado no contrato.</p>
-      <div style="display:flex;gap:10px;margin-bottom:12px;">
-        <button onclick="enviarCodigoEmail()" id="btnEnviarCodigo" style="flex:1;padding:13px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">Enviar Código por E-mail</button>
-      </div>
-      <div id="codigoEnviado" style="display:none;">
-        <p style="font-size:13px;color:#2d7a3a;margin-bottom:12px;" id="codigoMsg">Código enviado!</p>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <input type="text" id="codigoEmailInput" placeholder="000000" maxlength="6" style="flex:1;padding:12px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:monospace;font-size:24px;text-align:center;letter-spacing:8px;outline:none;" oninput="this.value=this.value.replace(/\D/g,'')">
-          <button onclick="validarCodigoEmail()" id="btnValidarCodigo" style="padding:12px 24px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;">Verificar</button>
-        </div>
-        <p style="font-size:11px;color:#7a7169;">O código expira em 15 minutos. <a href="#" onclick="enviarCodigoEmail();return false;" style="color:#C8102E;">Reenviar código</a></p>
-        <div id="codigoErro" style="display:none;font-size:13px;color:#a00d24;margin-top:8px;padding:8px;background:#fdf0f2;border-radius:6px;"></div>
-      </div>
+    <!-- Assinaturas já realizadas -->
+    <div id="assinaturasExistentes" style="display:none;margin-bottom:24px;"></div>
+
+    <!-- ETAPA 1: Botão Assinar (envia código automaticamente) -->
+    <div class="sign-section" id="step1Section">
+      <h3>Assinar este Contrato</h3>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:8px;">Ao clicar em "Assinar", enviaremos um código de verificação para o e-mail cadastrado. Você precisará do código para confirmar sua assinatura.</p>
+      <p style="font-size:12px;color:#7a7169;margin-bottom:16px;font-style:italic;">Validade legal conforme Lei 14.063/2020 e MP 2.200-2/2001.</p>
+      <button onclick="iniciarAssinatura()" id="btnIniciar" style="width:100%;padding:15px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;">Assinar</button>
     </div>
 
-    <!-- ETAPA 2: Assinatura (oculta até verificar email) -->
-    <div class="sign-section" id="signSection" style="display:none;">
-      <div style="background:#D4EDDA;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#155724;display:flex;align-items:center;gap:8px;">
-        <span style="font-size:16px;">✅</span> E-mail verificado com sucesso. Agora assine o contrato abaixo.
+    <!-- ETAPA 2: Código + Nome + Assinatura (tudo junto) -->
+    <div class="sign-section" id="step2Section" style="display:none;">
+      <h3>Confirmar Assinatura</h3>
+
+      <!-- Código -->
+      <div style="margin-bottom:20px;">
+        <p style="font-size:13px;color:#2d7a3a;margin-bottom:10px;" id="codigoMsg">Código enviado para seu e-mail.</p>
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;color:#7a7169;margin-bottom:5px;">Código de verificação (6 dígitos)</label>
+        <input type="text" id="codigoEmailInput" placeholder="000000" maxlength="6" style="width:100%;padding:14px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:monospace;font-size:24px;text-align:center;letter-spacing:8px;outline:none;" oninput="this.value=this.value.replace(/\D/g,'')">
+        <p style="font-size:11px;color:#7a7169;margin-top:6px;">Não recebeu? <a href="#" onclick="reenviarCodigo();return false;" style="color:#C8102E;">Reenviar código</a> · Expira em 15 minutos</p>
       </div>
-      <h3>Assinatura Eletrônica</h3>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:16px;">Preencha os campos abaixo para assinar este contrato digitalmente.</p>
-      <input type="text" class="sign-name" id="signName" placeholder="Nome completo do signatário">
-      <div class="canvas-wrap">
-        <canvas id="signCanvas"></canvas>
+
+      <!-- Nome -->
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;color:#7a7169;margin-bottom:5px;">Nome completo do signatário</label>
+        <input type="text" class="sign-name" id="signName" placeholder="Nome completo" style="margin-bottom:0;">
       </div>
-      <div class="canvas-hint">Desenhe sua assinatura acima com o mouse ou dedo</div>
-      <div style="margin-bottom:16px;">
-        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:#1a1a1a;line-height:1.5;">
-          <input type="checkbox" id="aceiteTermos" style="width:20px;height:20px;margin-top:2px;accent-color:#C8102E;flex-shrink:0;cursor:pointer;">
-          <span>Declaro que li integralmente o contrato acima, concordo com todos os seus termos e condições, e confirmo que esta assinatura eletrônica tem validade jurídica conforme a legislação brasileira (Lei 14.063/2020, MP 2.200-2/2001).</span>
-        </label>
+
+      <!-- Assinatura Canvas -->
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;color:#7a7169;margin-bottom:5px;">Sua assinatura</label>
+        <div class="canvas-wrap">
+          <canvas id="signCanvas"></canvas>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <span class="canvas-hint" style="margin:0;">Desenhe com o mouse ou dedo</span>
+          <button class="btn-clear" onclick="clearCanvas()" style="font-size:11px;padding:4px 10px;">Limpar</button>
+        </div>
       </div>
-      <div class="btn-row">
-        <button class="btn-clear" onclick="clearCanvas()">Limpar</button>
-        <button class="btn-sign" id="btnSign" onclick="assinarContrato()">Assinar Contrato</button>
-      </div>
+
+      <!-- Botão final -->
+      <button class="btn-sign" id="btnSign" onclick="assinarContrato()" style="width:100%;">Assinar Contrato</button>
+      <div id="signError" style="display:none;font-size:13px;color:#a00d24;margin-top:10px;padding:10px;background:#fdf0f2;border-radius:6px;text-align:center;"></div>
     </div>
   </div>
 </div>
@@ -179,20 +183,44 @@ async function loadContrato() {
     statusEl.textContent = st[0];
     statusEl.className = 'contract-status ' + st[1];
 
-    if (d.status === 'assinado') {
-      document.getElementById('emailVerifySection').style.display = 'none';
-      document.getElementById('signSection').style.display = 'none';
+    // Mostrar assinaturas já realizadas
+    const assinaturas = d.contrato_assinaturas || [];
+    if (assinaturas.length > 0) {
+      const container = document.getElementById('assinaturasExistentes');
+      container.style.display = 'block';
+      container.innerHTML = '<h4 style="font-family:Lora,serif;font-size:14px;margin-bottom:10px;">Assinaturas realizadas</h4>' +
+        assinaturas.map(a => `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#D4EDDA;border-radius:8px;margin-bottom:6px;font-size:12px;color:#155724;">
+          <span>✅</span><strong>${a.nome_signatario || '—'}</strong><span style="color:#7a7169;">· ${a.assinado_em ? new Date(a.assinado_em).toLocaleString('pt-BR') : ''}</span>
+        </div>`).join('');
+    }
+
+    // Assinaturas necessárias: contratante + contratado + 2 testemunhas = 4
+    const totalNecessario = 4;
+    const faltam = totalNecessario - assinaturas.length;
+
+    if (d.status === 'assinado' || faltam <= 0) {
+      document.getElementById('step1Section').style.display = 'none';
+      document.getElementById('step2Section').style.display = 'none';
       document.getElementById('successMsg').style.display = 'block';
-      // Preencher selo com dados existentes
-      if (d.contrato_assinaturas?.[0]) {
-        const ass = d.contrato_assinaturas[0];
-        document.getElementById('seloNome').textContent = ass.nome_signatario || '—';
+      if (assinaturas[0]) {
+        document.getElementById('seloNome').textContent = assinaturas.map(a => a.nome_signatario).join(', ');
         document.getElementById('seloData').textContent = d.assinado_em ? new Date(d.assinado_em).toLocaleString('pt-BR') : '—';
       }
       if (d.codigo_verificacao) {
         document.getElementById('seloCodigo').textContent = d.codigo_verificacao;
         document.getElementById('seloCodigoLink').textContent = d.codigo_verificacao;
       }
+    } else {
+      // Mostrar quem falta assinar
+      const tiposNecessarios = ['Contratante', 'Contratado (Escola)', 'Testemunha 1', 'Testemunha 2'];
+      const jaAssinou = assinaturas.length;
+      const proximoTipo = tiposNecessarios[jaAssinou] || 'Signatário';
+      document.getElementById('btnIniciar').textContent = `Assinar como ${proximoTipo}`;
+      // Mostrar quantas assinaturas faltam
+      const info = document.createElement('p');
+      info.style.cssText = 'font-size:12px;color:#7a7169;margin-top:10px;';
+      info.textContent = `${jaAssinou} de ${totalNecessario} assinaturas realizadas. Faltam: ${faltam}.`;
+      document.getElementById('step1Section').appendChild(info);
     }
 
     document.getElementById('signName').value = d.familia_nome || '';
@@ -241,59 +269,39 @@ function clearCanvas() {
   hasDrawn = false;
 }
 
-// ── Verificação por email ──
-let emailVerificado = false;
-let codigoEmailValidado = '';
+// ── Fluxo de assinatura ──
 
-async function enviarCodigoEmail() {
-  const btn = document.getElementById('btnEnviarCodigo');
-  btn.disabled = true; btn.textContent = 'Enviando...';
+async function iniciarAssinatura() {
+  const btn = document.getElementById('btnIniciar');
+  btn.disabled = true; btn.textContent = 'Enviando código...';
   try {
-    const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
-    const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
-      body: JSON.stringify({ action: 'contrato_enviar_codigo', contrato_id: contratoId }),
-    });
-    const d = await r.json();
-    btn.disabled = false; btn.textContent = 'Reenviar Código';
-    if (d.error) { alert(d.error); return; }
-    document.getElementById('codigoEnviado').style.display = 'block';
-    document.getElementById('codigoMsg').textContent = 'Código enviado para ' + (d.email_enviado || 'seu e-mail') + '. Verifique sua caixa de entrada.';
+    const r = await apiCall({ action: 'contrato_enviar_codigo', contrato_id: contratoId });
+    btn.disabled = false; btn.textContent = 'Assinar';
+    if (r.error) return alert(r.error);
+    document.getElementById('step1Section').style.display = 'none';
+    document.getElementById('step2Section').style.display = 'block';
+    document.getElementById('codigoMsg').textContent = 'Código enviado para ' + (r.email_enviado || 'seu e-mail') + '. Verifique sua caixa de entrada (e spam).';
     document.getElementById('codigoEmailInput').focus();
   } catch (e) {
-    btn.disabled = false; btn.textContent = 'Enviar Código por E-mail';
-    alert('Erro ao enviar código. Tente novamente.');
+    btn.disabled = false; btn.textContent = 'Assinar';
+    alert('Erro ao enviar código.');
   }
 }
 
-async function validarCodigoEmail() {
-  const codigo = document.getElementById('codigoEmailInput').value.trim();
-  if (codigo.length !== 6) return alert('Informe o código de 6 dígitos.');
-  const errDiv = document.getElementById('codigoErro');
-  const btn = document.getElementById('btnValidarCodigo');
-  btn.disabled = true; btn.textContent = 'Verificando...';
-  errDiv.style.display = 'none';
-  try {
-    const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
-    const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
-      body: JSON.stringify({ action: 'contrato_validar_codigo', contrato_id: contratoId, codigo }),
-    });
-    const d = await r.json();
-    btn.disabled = false; btn.textContent = 'Verificar';
-    if (d.error) { errDiv.style.display = 'block'; errDiv.textContent = d.error; return; }
-    emailVerificado = true;
-    codigoEmailValidado = codigo;
-    document.getElementById('emailVerifySection').style.display = 'none';
-    document.getElementById('signSection').style.display = 'block';
-  } catch (e) {
-    btn.disabled = false; btn.textContent = 'Verificar';
-    errDiv.style.display = 'block'; errDiv.textContent = 'Erro de conexão. Tente novamente.';
-  }
+async function reenviarCodigo() {
+  const r = await apiCall({ action: 'contrato_enviar_codigo', contrato_id: contratoId });
+  if (r.error) return alert(r.error);
+  document.getElementById('codigoMsg').textContent = 'Novo código enviado para ' + (r.email_enviado || 'seu e-mail') + '.';
+}
+
+function apiCall(body) {
+  const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
+  const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
+    body: JSON.stringify(body),
+  }).then(r => r.json());
 }
 
 // Tentar obter geolocalização
@@ -307,10 +315,13 @@ if (navigator.geolocation) {
 }
 
 async function assinarContrato() {
+  const codigo = document.getElementById('codigoEmailInput').value.trim();
   const nome = document.getElementById('signName').value.trim();
-  if (!nome) return alert('Informe seu nome completo.');
-  if (!hasDrawn) return alert('Desenhe sua assinatura no campo acima.');
-  if (!document.getElementById('aceiteTermos').checked) return alert('Você precisa aceitar os termos para assinar.');
+  const errDiv = document.getElementById('signError');
+  errDiv.style.display = 'none';
+  if (!codigo || codigo.length !== 6) { errDiv.style.display = 'block'; errDiv.textContent = 'Informe o código de 6 dígitos recebido por e-mail.'; return; }
+  if (!nome) { errDiv.style.display = 'block'; errDiv.textContent = 'Informe seu nome completo.'; return; }
+  if (!hasDrawn) { errDiv.style.display = 'block'; errDiv.textContent = 'Desenhe sua assinatura no campo acima.'; return; }
 
   const btn = document.getElementById('btnSign');
   btn.disabled = true; btn.textContent = 'Assinando...';
@@ -330,45 +341,59 @@ async function assinarContrato() {
         assinatura_base64: assinatura,
         aceite_termos: true,
         geolocation: userGeo,
-        codigo_email: codigoEmailValidado,
+        codigo_email: codigo,
       }),
     });
     const d = await r.json();
 
-    if (d.error) { btn.disabled = false; btn.textContent = 'Assinar Contrato'; return alert(d.error); }
+    if (d.error) {
+      btn.disabled = false; btn.textContent = 'Assinar Contrato';
+      const errDiv = document.getElementById('signError');
+      errDiv.style.display = 'block'; errDiv.textContent = d.error;
+      return;
+    }
 
-    // Mostrar selo de assinatura com evidências
-    document.getElementById('signSection').style.display = 'none';
-    document.getElementById('successMsg').style.display = 'block';
-    document.getElementById('contractStatus').textContent = 'Assinado';
-    document.getElementById('contractStatus').className = 'contract-status status-assinado';
+    document.getElementById('step2Section').style.display = 'none';
 
-    // Preencher selo probatório
-    document.getElementById('seloNome').textContent = nome;
-    document.getElementById('seloData').textContent = d.assinado_em ? new Date(d.assinado_em).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
-    document.getElementById('seloCodigo').textContent = d.codigo_verificacao || '—';
-    document.getElementById('seloCodigoLink').textContent = d.codigo_verificacao || '—';
-    document.getElementById('seloHash').textContent = d.documento_hash || '—';
+    if (d.completo) {
+      // Todas as partes assinaram
+      document.getElementById('successMsg').style.display = 'block';
+      document.getElementById('contractStatus').textContent = 'Assinado';
+      document.getElementById('contractStatus').className = 'contract-status status-assinado';
 
-    // Adicionar selo também no corpo do contrato
-    const contractBody = document.getElementById('contractBody');
-    if (contractBody) {
-      contractBody.innerHTML += `
-        <div style="margin-top:32px;border-top:2px solid #2d7a3a;padding-top:16px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-            <span style="font-size:24px;">🔒</span>
-            <strong style="color:#2d7a3a;font-size:14px;">Documento Assinado Eletronicamente</strong>
-          </div>
-          <div style="font-size:11px;color:#555;line-height:1.8;">
-            <strong>Signatário:</strong> ${nome}<br>
-            <strong>Data/Hora:</strong> ${new Date(d.assinado_em || Date.now()).toLocaleString('pt-BR')}<br>
-            <strong>Código de Verificação:</strong> <span style="font-family:monospace;color:#2d7a3a;font-weight:700;">${d.codigo_verificacao || '—'}</span><br>
-            <strong>Hash SHA-256:</strong> <span style="font-family:monospace;font-size:9px;">${d.documento_hash || '—'}</span><br>
-            <strong>IP:</strong> ${d.evidencias?.ip || '—'}<br>
-            <strong>Aceite dos Termos:</strong> Sim<br>
-            <strong>Validade Legal:</strong> Lei 14.063/2020 · MP 2.200-2/2001
-          </div>
-        </div>`;
+      // Preencher selo probatório
+      document.getElementById('seloNome').textContent = nome;
+      document.getElementById('seloData').textContent = d.assinado_em ? new Date(d.assinado_em).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
+      document.getElementById('seloCodigo').textContent = d.codigo_verificacao || '—';
+      document.getElementById('seloCodigoLink').textContent = d.codigo_verificacao || '—';
+      document.getElementById('seloHash').textContent = d.documento_hash || '—';
+
+      // Adicionar selo no corpo do contrato
+      const contractBody = document.getElementById('contractBody');
+      if (contractBody) {
+        contractBody.innerHTML += `
+          <div style="margin-top:32px;border-top:2px solid #2d7a3a;padding-top:16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="font-size:24px;">🔒</span>
+              <strong style="color:#2d7a3a;font-size:14px;">Documento Assinado Eletronicamente</strong>
+            </div>
+            <div style="font-size:11px;color:#555;line-height:1.8;">
+              <strong>Código de Verificação:</strong> <span style="font-family:monospace;color:#2d7a3a;font-weight:700;">${d.codigo_verificacao || '—'}</span><br>
+              <strong>Hash SHA-256:</strong> <span style="font-family:monospace;font-size:9px;">${d.documento_hash || '—'}</span><br>
+              <strong>Assinaturas:</strong> ${d.assinaturas_registradas}/${d.assinaturas_necessarias}<br>
+              <strong>Validade Legal:</strong> Lei 14.063/2020 · MP 2.200-2/2001
+            </div>
+          </div>`;
+      }
+    } else {
+      // Assinatura parcial — mostrar progresso
+      const parcialDiv = document.createElement('div');
+      parcialDiv.style.cssText = 'background:#FFF3CD;border:1px solid #FFEEBA;border-radius:10px;padding:20px;text-align:center;margin-top:16px;';
+      parcialDiv.innerHTML = `<span style="font-size:32px;">✍️</span><h3 style="font-family:Lora,serif;font-size:17px;color:#856404;margin:8px 0;">Assinatura Registrada!</h3>
+        <p style="font-size:14px;color:#856404;">${d.message}</p>
+        <p style="font-size:12px;color:#7a7169;margin-top:8px;">Compartilhe o link deste contrato com as demais partes para que também assinem.</p>
+        <button onclick="navigator.clipboard.writeText(location.href);this.textContent='Copiado!'" style="margin-top:12px;padding:10px 20px;background:#856404;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Copiar Link do Contrato</button>`;
+      document.getElementById('contractWrap').appendChild(parcialDiv);
     }
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Assinar Contrato';
