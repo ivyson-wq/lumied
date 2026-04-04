@@ -16,8 +16,15 @@
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);padding-bottom:80px;}
-.site-header{background:var(--red);padding:20px 24px;text-align:center;color:#fff;}
-.site-header h1{font-family:'Lora',serif;font-size:18px;}.site-header span{font-size:12px;opacity:.7;}
+.topbar{background:#1c1712;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-brand{display:flex;align-items:center;gap:10px;}
+.topbar-brand .leaf{font-size:20px;}
+.topbar-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;line-height:1.2;margin:0;}
+.topbar-brand span{font-size:11px;color:rgba(255,255,255,.4);}
+.topbar-user{display:flex;align-items:center;gap:12px;}
+.topbar-user .user-name{font-size:12px;color:rgba(255,255,255,.7);}
+.topbar .logout-btn{background:rgba(255,255,255,.08);border:none;color:rgba(255,255,255,.6);padding:7px 14px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.topbar .logout-btn:hover{background:rgba(255,255,255,.15);color:#fff;}
 .greeting{padding:16px 20px;font-size:14px;color:var(--text);}
 .greeting strong{display:block;font-family:'Lora',serif;font-size:17px;margin-bottom:2px;}
 .tab-panel{display:none;padding:0 16px;}.tab-panel.active{display:block;animation:fadeIn .2s ease;}
@@ -44,7 +51,7 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
 .lf input:focus{border-color:var(--red);}
 .login-btn{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;}
 #loginError{display:none;font-size:12px;color:var(--red);margin-top:10px;padding:8px;background:#fdf0f2;border-radius:6px;}
-.logout-btn{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;}
+/* logout-btn is now styled inside .topbar */
 </style>
 </head>
 <body>
@@ -85,10 +92,15 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
 <style>@media(max-width:768px){.login-photo-side{display:none !important;}#loginWall>div:last-child{width:100% !important;}}</style>
 
 <div id="appWrap" style="display:none;">
-  <div class="site-header" style="position:relative;">
-    <h1>🍁 Portal do Aluno</h1>
-    <span id="alunoNome"></span>
-    <button class="logout-btn" onclick="doLogout()">Sair</button>
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="leaf">🍁</div>
+      <div><h1>Maple Bear</h1><span>Portal do Aluno</span></div>
+    </div>
+    <div class="topbar-user">
+      <span class="user-name" id="alunoNome"></span>
+      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+    </div>
   </div>
   <div class="greeting" id="greetingBar"></div>
 
