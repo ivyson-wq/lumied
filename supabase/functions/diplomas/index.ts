@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode, b64urlDecode } from '../_shared/webauthn.ts'
-import { getModulosHabilitados, getEscolaPadrao } from '../_shared/modulos.ts'
+import { getModulosHabilitados, getModulosResolvidos, getEscolaPadrao } from '../_shared/modulos.ts'
 import { getCorsHeaders } from '../_shared/cors.ts'
 import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
 import { sanitizeBody } from '../_shared/validation.ts'
@@ -2398,6 +2398,56 @@ Deno.serve(async (req) => {
       const modulos = await getModulosHabilitados(sb, escolaId)
       return json({ modulos: [...modulos] })
     } catch { return json({ modulos: [] }) }
+  }
+
+  // ── Módulos: gestão pelo gerente ──
+  if (action === 'escola_modulos_get_all') {
+    const gerente = await getGerente(sb, token)
+    if (!gerente) return json({ error: 'Acesso restrito a gerentes.' }, 403)
+    const escolaId = await getEscolaPadrao(sb)
+    if (!escolaId) return json({ error: 'Escola não encontrada.' }, 404)
+    const resolvidos = await getModulosResolvidos(sb, escolaId)
+    return json(resolvidos)
+  }
+
+  if (action === 'escola_modulos_set') {
+    const gerente = await getGerente(sb, token)
+    if (!gerente) return json({ error: 'Acesso restrito a gerentes.' }, 403)
+    const { modulos: moduloToggles } = body as { modulos: Record<string, boolean> }
+    if (!moduloToggles) return json({ error: 'modulos obrigatório.' }, 400)
+    const escolaId = await getEscolaPadrao(sb)
+    if (!escolaId) return json({ error: 'Escola não encontrada.' }, 404)
+    const slugs = Object.keys(moduloToggles)
+    const { data: modulosDb } = await sb.from('modulos').select('id, slug').in('slug', slugs)
+    if (!modulosDb) return json({ error: 'Nenhum módulo encontrado.' }, 404)
+    const { data: escola } = await sb.from('escolas').select('plano_id').eq('id', escolaId).single()
+    let planoSlugs = new Set<string>()
+    if (escola?.plano_id) {
+      const { data: pm } = await sb.from('plano_modulos').select('modulos(slug)').eq('plano_id', escola.plano_id)
+      planoSlugs = new Set((pm || []).map((r: any) => r.modulos?.slug).filter(Boolean))
+    }
+    const moduloIds = modulosDb.map((m: any) => m.id)
+    await sb.from('escola_modulos').delete().eq('escola_id', escolaId).in('modulo_id', moduloIds)
+    const inserts: Array<{ escola_id: string; modulo_id: string; habilitado: boolean }> = []
+    for (const m of modulosDb) {
+      if (moduloToggles[m.slug] !== planoSlugs.has(m.slug)) {
+        inserts.push({ escola_id: escolaId, modulo_id: m.id, habilitado: moduloToggles[m.slug] })
+      }
+    }
+    if (inserts.length > 0) {
+      const { error } = await sb.from('escola_modulos').insert(inserts)
+      if (error) return json({ error: error.message }, 400)
+    }
+    return json({ success: true, overrides: inserts.length })
+  }
+
+  if (action === 'escola_modulos_reset') {
+    const gerente = await getGerente(sb, token)
+    if (!gerente) return json({ error: 'Acesso restrito a gerentes.' }, 403)
+    const escolaId = await getEscolaPadrao(sb)
+    if (!escolaId) return json({ error: 'Escola não encontrada.' }, 404)
+    await sb.from('escola_modulos').delete().eq('escola_id', escolaId)
+    return json({ success: true })
   }
 
   return json({ error: 'Ação desconhecida' }, 400)
