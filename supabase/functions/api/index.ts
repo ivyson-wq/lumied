@@ -563,6 +563,50 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Alunos ─────────────────────────────────────────────────
+  if (action === "alunos_list") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, ativo, criado_em").order("nome");
+    return ok(data ?? []);
+  }
+
+  if (action === "aluno_documentos_list") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { aluno_email } = body as { aluno_email: string };
+    if (!aluno_email) return err("aluno_email obrigatório.");
+    const { data } = await admin.from("matricula_documentos").select("*").ilike("aluno_email", aluno_email).order("criado_em", { ascending: false });
+    return ok(data ?? []);
+  }
+
+  if (action === "aluno_historico_list") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { aluno_nome, aluno_email } = body as { aluno_nome?: string; aluno_email?: string };
+    let q = admin.from("aluno_historico").select("*").order("criado_em", { ascending: false });
+    if (aluno_email) q = q.ilike("aluno_email", aluno_email);
+    else if (aluno_nome) q = q.ilike("aluno_nome", `%${aluno_nome}%`);
+    else return err("aluno_nome ou aluno_email obrigatório.");
+    const { data } = await q;
+    return ok(data ?? []);
+  }
+
+  if (action === "aluno_historico_create") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { aluno_nome, aluno_email, turma, tipo, titulo, descricao } = body as any;
+    if (!aluno_nome || !titulo || !tipo) return err("aluno_nome, titulo e tipo obrigatórios.");
+    const escolaId = await getEscolaPadrao(admin);
+    const { error } = await admin.from("aluno_historico").insert({
+      escola_id: escolaId, aluno_nome, aluno_email: aluno_email || null,
+      turma: turma || null, tipo, titulo, descricao: descricao || null,
+      registrado_por: gerente.nome, registrado_por_papel: 'coordenacao',
+    });
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+
   // ── Configurações ────────────────────────────────────────────
   if (action === "config_set") {
     const { chave, valor } = body as { chave: string; valor: string };

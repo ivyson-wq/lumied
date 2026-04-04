@@ -446,6 +446,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <!-- ═══ DIA A DIA ═══ -->
       <div class="sb-label" onclick="toggleSbSection(this)" style="color:rgba(255,255,255,.45);">Dia a Dia <span class="sb-arrow">▼</span></div>
       <div class="sb-section">
+        <a class="nav-item" href="#" onclick="showPanel('alunos',this)"><span class="ic">🎓</span> Alunos</a>
         <div data-modulo="notas">
         <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> Notas & Boletim</a>
         </div>
@@ -621,6 +622,120 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="notifPanel" style="display:none;position:fixed;top:60px;right:16px;width:340px;max-height:400px;background:#fff;border-radius:12px;border:1px solid #e6ddd3;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:500;overflow-y:auto;">
         <div style="padding:14px 16px;border-bottom:1px solid #e6ddd3;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;">Notificações <button onclick="marcarTodasLidas()" style="background:none;border:none;color:#1a6bb5;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Marcar todas como lidas</button></div>
         <div id="notifList"><div style="padding:24px;text-align:center;color:#7a7169;font-size:13px;">Nenhuma notificação.</div></div>
+      </div>
+
+      <!-- ALUNOS -->
+      <div id="panelAlunos" class="panel">
+        <h2 class="panel-title">🎓 Alunos</h2>
+        <p class="panel-sub">Cadastro, documentação, atas e acompanhamento individual.</p>
+
+        <!-- Busca + Filtros -->
+        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+          <input type="text" id="alunosBusca" placeholder="Buscar por nome, e-mail ou turma..." oninput="filtrarAlunos()" style="flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none;background:var(--white);">
+          <select id="alunosFiltroTurma" onchange="filtrarAlunos()" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--white);">
+            <option value="">Todas as turmas</option>
+          </select>
+          <button onclick="abrirCadastroAluno()" style="padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Novo Aluno</button>
+        </div>
+
+        <!-- Tabela de Alunos -->
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:var(--bg);border-bottom:2px solid var(--border);">
+                <th style="padding:10px 12px;text-align:left;font-weight:700;">Nome</th>
+                <th style="padding:10px 12px;text-align:left;">Turma</th>
+                <th style="padding:10px 12px;text-align:center;">Frequência</th>
+                <th style="padding:10px 12px;text-align:center;">Média</th>
+                <th style="padding:10px 12px;text-align:center;">Docs</th>
+                <th style="padding:10px 12px;text-align:center;">Atas</th>
+                <th style="padding:10px 12px;text-align:right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="alunosBody">
+              <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Carregando alunos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ALUNO DETALHE (ficha individual) -->
+      <div id="panelAlunoDetalhe" class="panel">
+        <button onclick="showPanel('alunos')" style="background:none;border:none;font-size:13px;color:var(--blue);cursor:pointer;margin-bottom:16px;font-family:inherit;">← Voltar para lista</button>
+        <div id="alunoDetHeader" style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+          <div style="width:64px;height:64px;border-radius:50%;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--red);flex-shrink:0;" id="alunoDetAvatar">—</div>
+          <div>
+            <h2 id="alunoDetNome" style="font-family:'Lora',serif;font-size:20px;font-weight:700;margin-bottom:2px;">—</h2>
+            <span id="alunoDetTurma" style="font-size:13px;color:var(--muted);">—</span>
+          </div>
+        </div>
+
+        <!-- Tabs do aluno -->
+        <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0;" id="alunoDetTabs">
+          <button class="aluno-tab active" onclick="switchAlunoTab('info',this)">Dados</button>
+          <button class="aluno-tab" onclick="switchAlunoTab('notas',this)">Notas</button>
+          <button class="aluno-tab" onclick="switchAlunoTab('frequencia',this)">Frequência</button>
+          <button class="aluno-tab" onclick="switchAlunoTab('docs',this)">Documentos</button>
+          <button class="aluno-tab" onclick="switchAlunoTab('atas',this)">Atas</button>
+        </div>
+
+        <style>
+          .aluno-tab{padding:10px 18px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;}
+          .aluno-tab:hover{color:var(--text);}
+          .aluno-tab.active{color:var(--red);border-bottom-color:var(--red);}
+          .aluno-tab-panel{display:none;}
+          .aluno-tab-panel.active{display:block;}
+        </style>
+
+        <!-- Tab: Dados -->
+        <div class="aluno-tab-panel active" id="alunoTabInfo">
+          <div id="alunoDetInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="padding:16px;background:var(--bg);border-radius:10px;">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">E-mail</div>
+              <div id="alunoDetEmail" style="font-size:14px;font-weight:600;">—</div>
+            </div>
+            <div style="padding:16px;background:var(--bg);border-radius:10px;">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Data de Nascimento</div>
+              <div id="alunoDetNasc" style="font-size:14px;font-weight:600;">—</div>
+            </div>
+            <div style="padding:16px;background:var(--bg);border-radius:10px;">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Responsável</div>
+              <div id="alunoDetResp" style="font-size:14px;font-weight:600;">—</div>
+            </div>
+            <div style="padding:16px;background:var(--bg);border-radius:10px;">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Status</div>
+              <div id="alunoDetStatus" style="font-size:14px;font-weight:600;">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Notas -->
+        <div class="aluno-tab-panel" id="alunoTabNotas">
+          <div id="alunoDetNotas" style="font-size:13px;color:var(--muted);padding:20px;text-align:center;">Carregando notas...</div>
+        </div>
+
+        <!-- Tab: Frequência -->
+        <div class="aluno-tab-panel" id="alunoTabFrequencia">
+          <div id="alunoDetFreq" style="font-size:13px;color:var(--muted);padding:20px;text-align:center;">Carregando frequência...</div>
+        </div>
+
+        <!-- Tab: Documentos -->
+        <div class="aluno-tab-panel" id="alunoTabDocs">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <span style="font-size:14px;font-weight:700;color:var(--text);">Documentos do Aluno</span>
+            <button onclick="alunoUploadDoc()" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">+ Upload</button>
+          </div>
+          <div id="alunoDetDocs" style="font-size:13px;color:var(--muted);padding:20px;text-align:center;">Nenhum documento.</div>
+        </div>
+
+        <!-- Tab: Atas -->
+        <div class="aluno-tab-panel" id="alunoTabAtas">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <span style="font-size:14px;font-weight:700;color:var(--text);">Histórico de Atas & Ocorrências</span>
+            <button onclick="alunoNovaAta()" style="padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">+ Nova Ata</button>
+          </div>
+          <div id="alunoDetAtas" style="font-size:13px;color:var(--muted);padding:20px;text-align:center;">Nenhuma ata registrada.</div>
+        </div>
       </div>
 
       <!-- DASHBOARD -->
@@ -2637,10 +2752,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
+    if(id==='alunos')      loadAlunos();
     if(id==='series')      loadSeries();
     if(id==='atividades')  loadAtividadesPanel();
     if(id==='dashAtiv')    loadAtivDashboard();
@@ -3316,6 +3432,214 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('sidebarLogo').style.display='none'; document.getElementById('sidebarLeaf').style.display='block';
     showAlert('logo','success','Logotipo removido.');
   }
+
+  // ── ALUNOS ──────────────────────────────────────────────
+  let alunosData = [], alunoAtual = null;
+
+  async function loadAlunos() {
+    const d = await api({ action: 'alunos_list' });
+    alunosData = Array.isArray(d) ? d : (d.data || []);
+    // Populate turma filter
+    const turmas = [...new Set(alunosData.map(a => a.serie || a.turma || '').filter(Boolean))].sort();
+    const sel = document.getElementById('alunosFiltroTurma');
+    if (sel) sel.innerHTML = '<option value="">Todas as turmas</option>' + turmas.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    renderAlunos();
+  }
+
+  function filtrarAlunos() {
+    renderAlunos();
+  }
+
+  function renderAlunos() {
+    const busca = (document.getElementById('alunosBusca')?.value || '').toLowerCase();
+    const turmaFiltro = document.getElementById('alunosFiltroTurma')?.value || '';
+    const filtered = alunosData.filter(a => {
+      const nome = (a.nome || '').toLowerCase();
+      const email = (a.email || '').toLowerCase();
+      const turma = a.serie || a.turma || '';
+      if (busca && !nome.includes(busca) && !email.includes(busca)) return false;
+      if (turmaFiltro && turma !== turmaFiltro) return false;
+      return true;
+    });
+    const body = document.getElementById('alunosBody');
+    if (!body) return;
+    if (filtered.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Nenhum aluno encontrado.</td></tr>';
+      return;
+    }
+    body.innerHTML = filtered.map(a => {
+      const initials = (a.nome || '??').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+      const freq = a.frequencia_pct != null ? a.frequencia_pct + '%' : '—';
+      const media = a.media_geral != null ? Number(a.media_geral).toFixed(1) : '—';
+      const freqColor = a.frequencia_pct >= 75 ? 'var(--green)' : a.frequencia_pct != null ? 'var(--red)' : 'var(--muted)';
+      const mediaColor = a.media_geral >= 7 ? 'var(--green)' : a.media_geral != null ? 'var(--red)' : 'var(--muted)';
+      return `<tr style="border-bottom:1px solid #f0ece6;cursor:pointer;" onclick="abrirFichaAluno('${a.id || a.email}')">
+        <td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--red);flex-shrink:0;">${initials}</div>
+          <div><strong>${esc(a.nome)}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(a.email || '')}</span></div>
+        </div></td>
+        <td style="padding:10px 12px;font-size:12px;">${esc(a.serie || a.turma || '—')}</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:600;color:${freqColor};">${freq}</td>
+        <td style="padding:10px 12px;text-align:center;font-weight:600;color:${mediaColor};">${media}</td>
+        <td style="padding:10px 12px;text-align:center;font-size:12px;">${a.docs_count || 0}</td>
+        <td style="padding:10px 12px;text-align:center;font-size:12px;">${a.atas_count || 0}</td>
+        <td style="padding:10px 12px;text-align:right;">
+          <button class="action-btn" onclick="event.stopPropagation();abrirFichaAluno('${a.id || a.email}')" title="Ver ficha">📋</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function abrirFichaAluno(idOrEmail) {
+    const a = alunosData.find(x => x.id === idOrEmail || x.email === idOrEmail);
+    if (!a) return showToast('Aluno não encontrado', 'error');
+    alunoAtual = a;
+    const initials = (a.nome || '??').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    document.getElementById('alunoDetAvatar').textContent = initials;
+    document.getElementById('alunoDetNome').textContent = a.nome || '—';
+    document.getElementById('alunoDetTurma').textContent = a.serie || a.turma || '—';
+    document.getElementById('alunoDetEmail').textContent = a.email || '—';
+    document.getElementById('alunoDetNasc').textContent = a.data_nascimento ? new Date(a.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    document.getElementById('alunoDetResp').textContent = a.responsavel_nome || a.resp_nome || '—';
+    document.getElementById('alunoDetStatus').textContent = a.ativo !== false ? '✅ Ativo' : '❌ Inativo';
+    showPanel('alunoDetalhe');
+    switchAlunoTab('info', document.querySelector('.aluno-tab'));
+    // Load notas
+    loadAlunoNotas(a);
+    loadAlunoFreq(a);
+    loadAlunoDocs(a);
+    loadAlunoAtas(a);
+  }
+
+  function switchAlunoTab(tab, btn) {
+    document.querySelectorAll('.aluno-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.aluno-tab-panel').forEach(p => p.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const panelMap = { info: 'alunoTabInfo', notas: 'alunoTabNotas', frequencia: 'alunoTabFrequencia', docs: 'alunoTabDocs', atas: 'alunoTabAtas' };
+    const panel = document.getElementById(panelMap[tab]);
+    if (panel) panel.classList.add('active');
+  }
+
+  async function loadAlunoNotas(a) {
+    const el = document.getElementById('alunoDetNotas');
+    el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
+    try {
+      const d = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON }, body: JSON.stringify({ action: 'boletim_aluno', aluno_email: a.email, ano: new Date().getFullYear(), _token: getToken() }) }).then(r => r.json());
+      const discs = Array.isArray(d) ? d : (d.disciplinas || []);
+      if (!discs.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Nenhuma nota registrada.</div>'; return; }
+      el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px;text-align:left;">Disciplina</th><th style="padding:8px;text-align:center;">Média</th><th style="padding:8px;text-align:center;">Status</th></tr></thead><tbody>' +
+        discs.map(disc => {
+          const m = disc.media != null ? Number(disc.media).toFixed(1) : '—';
+          const cor = disc.media >= 7 ? 'var(--green)' : disc.media != null ? 'var(--red)' : 'var(--muted)';
+          const st = disc.media >= 7 ? 'Aprovado' : disc.media != null ? 'Recuperação' : '—';
+          return `<tr style="border-bottom:1px solid #f0ece6;"><td style="padding:8px;">${esc(disc.nome)}</td><td style="padding:8px;text-align:center;font-weight:700;color:${cor};">${m}</td><td style="padding:8px;text-align:center;font-size:12px;">${st}</td></tr>`;
+        }).join('') + '</tbody></table>';
+    } catch { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar notas.</div>'; }
+  }
+
+  async function loadAlunoFreq(a) {
+    const el = document.getElementById('alunoDetFreq');
+    el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
+    try {
+      const d = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON }, body: JSON.stringify({ action: 'frequencia_aluno', aluno_email: a.email, _token: getToken() }) }).then(r => r.json());
+      const pct = d.percent_presenca ?? d.pct ?? null;
+      const total = d.total_aulas ?? 0;
+      const faltas = d.total_faltas ?? 0;
+      if (pct == null) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Sem dados de frequência.</div>'; return; }
+      const cor = pct >= 75 ? 'var(--green)' : 'var(--red)';
+      el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">
+        <div style="padding:20px;background:var(--bg);border-radius:10px;text-align:center;"><div style="font-size:28px;font-weight:800;color:${cor};">${pct}%</div><div style="font-size:11px;color:var(--muted);">Presença</div></div>
+        <div style="padding:20px;background:var(--bg);border-radius:10px;text-align:center;"><div style="font-size:28px;font-weight:800;">${total}</div><div style="font-size:11px;color:var(--muted);">Total de Aulas</div></div>
+        <div style="padding:20px;background:var(--bg);border-radius:10px;text-align:center;"><div style="font-size:28px;font-weight:800;color:var(--red);">${faltas}</div><div style="font-size:11px;color:var(--muted);">Faltas</div></div>
+      </div>`;
+    } catch { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar frequência.</div>'; }
+  }
+
+  async function loadAlunoDocs(a) {
+    const el = document.getElementById('alunoDetDocs');
+    el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
+    try {
+      const d = await api({ action: 'aluno_documentos_list', aluno_email: a.email });
+      const docs = Array.isArray(d) ? d : (d.data || []);
+      if (!docs.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Nenhum documento.</div>'; return; }
+      el.innerHTML = docs.map(doc => `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <div><strong style="font-size:13px;">${esc(doc.tipo || doc.nome_arquivo || 'Documento')}</strong><br><span style="font-size:11px;color:var(--muted);">${doc.criado_em ? new Date(doc.criado_em).toLocaleDateString('pt-BR') : ''} ${doc.validado ? '✅ Validado' : '⏳ Pendente'}</span></div>
+        ${doc.arquivo_url ? `<a href="${esc(doc.arquivo_url)}" target="_blank" style="font-size:12px;color:var(--blue);text-decoration:none;">📎 Ver</a>` : ''}
+      </div>`).join('');
+    } catch { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar documentos.</div>'; }
+  }
+
+  async function loadAlunoAtas(a) {
+    const el = document.getElementById('alunoDetAtas');
+    el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
+    try {
+      const d = await api({ action: 'aluno_historico_list', aluno_nome: a.nome, aluno_email: a.email });
+      const atas = Array.isArray(d) ? d : (d.data || []);
+      if (!atas.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Nenhuma ata registrada.</div>'; return; }
+      const tipoIcons = { ata_ocorrencia: '⚠️', acompanhamento_pedagogico: '📝', reuniao_responsaveis: '🤝', encaminhamento: '🏥', observacao: '💬', documento_whatsapp: '📱' };
+      const tipoLabels = { ata_ocorrencia: 'Ocorrência', acompanhamento_pedagogico: 'Acompanhamento', reuniao_responsaveis: 'Reunião c/ Responsáveis', encaminhamento: 'Encaminhamento', observacao: 'Observação', documento_whatsapp: 'Doc WhatsApp' };
+      el.innerHTML = atas.map(at => `<div style="border-left:3px solid ${at.tipo === 'ata_ocorrencia' ? 'var(--red)' : at.tipo === 'reuniao_responsaveis' ? 'var(--blue)' : 'var(--green)'};padding:12px 16px;margin-bottom:12px;background:var(--bg);border-radius:0 8px 8px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:13px;font-weight:700;">${tipoIcons[at.tipo] || '📋'} ${esc(at.titulo)}</span>
+          <span style="font-size:11px;color:var(--muted);">${at.criado_em ? new Date(at.criado_em).toLocaleDateString('pt-BR') : ''}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text);line-height:1.6;">${esc(at.descricao || '')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Por: ${esc(at.registrado_por || '—')} ${at.arquivo_url ? `· <a href="${esc(at.arquivo_url)}" target="_blank" style="color:var(--blue);">📎 Anexo</a>` : ''}</div>
+      </div>`).join('');
+    } catch { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar atas.</div>'; }
+  }
+
+  async function alunoNovaAta() {
+    if (!alunoAtual) return;
+    let overlay = document.getElementById('ataModal');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'ataModal';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `<div style="background:#fff;border-radius:12px;padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">Nova Ata — ${esc(alunoAtual.nome)}</h3>
+      <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Tipo</label>
+        <select id="ataTipo" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;">
+          <option value="ata_ocorrencia">Ata de Ocorrência</option>
+          <option value="acompanhamento_pedagogico">Acompanhamento Pedagógico</option>
+          <option value="reuniao_responsaveis">Reunião com Responsáveis</option>
+          <option value="encaminhamento">Encaminhamento</option>
+          <option value="observacao">Observação</option>
+        </select></div>
+      <div style="margin-bottom:12px;"><label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Título</label>
+        <input type="text" id="ataTitulo" placeholder="Resumo da ata..." style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;"></div>
+      <div style="margin-bottom:16px;"><label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">Descrição</label>
+        <textarea id="ataDesc" rows="4" placeholder="Detalhes..." style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;"></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="document.getElementById('ataModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;">Cancelar</button>
+        <button onclick="salvarAta()" style="padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">Salvar</button>
+      </div>
+    </div>`;
+    overlay.style.display = 'flex';
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
+  }
+
+  async function salvarAta() {
+    if (!alunoAtual) return;
+    const tipo = document.getElementById('ataTipo').value;
+    const titulo = document.getElementById('ataTitulo').value.trim();
+    const descricao = document.getElementById('ataDesc').value.trim();
+    if (!titulo) return showToast('Título obrigatório', 'error');
+    const d = await api({ action: 'aluno_historico_create', aluno_nome: alunoAtual.nome, aluno_email: alunoAtual.email, turma: alunoAtual.serie || alunoAtual.turma || '', tipo, titulo, descricao });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Ata registrada!', 'success');
+    document.getElementById('ataModal').style.display = 'none';
+    loadAlunoAtas(alunoAtual);
+  }
+
+  function abrirCadastroAluno() { showToast('Em desenvolvimento — cadastro de alunos', 'info'); }
+  function alunoUploadDoc() { showToast('Em desenvolvimento — upload de documentos', 'info'); }
+
+  // Load on panel show
+  const _origShowPanel = window.showPanel || function(){};
+  // Will be handled by existing showPanel — load data when panel opens
 
   // ── EQUIPE UNIFICADA ──────────────────────────────────
   let equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
