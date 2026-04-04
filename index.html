@@ -360,8 +360,9 @@ body.has-bottomnav{padding-bottom:0;}
       <div style="font-size:14px;color:rgba(255,255,255,.7);line-height:1.6;">Notas, agenda digital, boletos e pickup<br>— tudo na palma da mao.</div>
     </div>
   </div>
-  <div style="width:520px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px 24px;overflow-y:auto;position:relative;">
-    <a href="area-restrita.html" style="position:absolute;top:16px;right:20px;color:var(--muted);font-size:12px;text-decoration:none;padding:5px 12px;border:1px solid var(--border);border-radius:100px;transition:all .2s;">Area Restrita →</a>
+  <div style="width:520px;max-width:100%;display:flex;flex-direction:column;background:#fff;overflow-y:auto;">
+    <div style="display:flex;justify-content:flex-end;padding:12px 20px 0;"><a href="area-restrita.html" style="color:var(--muted);font-size:12px;text-decoration:none;padding:5px 12px;border:1px solid var(--border);border-radius:100px;transition:all .2s;">Area Restrita →</a></div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px 24px 40px;">
 <div id="loginWall">
   <div class="login-card">
     <div style="margin-bottom:24px;">
@@ -499,6 +500,7 @@ body.has-bottomnav{padding-bottom:0;}
     </div>
   </div>
 </div>
+    </div>
   </div>
 </div>
 <style>@media(max-width:768px){.login-photo-side{display:none !important;}#loginScreenWrap>div:last-child{width:100% !important;}}</style>
