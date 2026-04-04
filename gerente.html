@@ -443,43 +443,98 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div class="fav-section" id="favSection"></div>
       <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
 
-      <div data-modulo="turno">
-      <div class="sb-label" onclick="toggleSbSection(this)">Turnos Alunos <span class="sb-arrow collapsed">▼</span></div>
+      <!-- ═══ DIA A DIA ═══ -->
+      <div class="sb-label" onclick="toggleSbSection(this)" style="color:rgba(255,255,255,.45);">Dia a Dia <span class="sb-arrow">▼</span></div>
+      <div class="sb-section">
+        <div data-modulo="notas">
+        <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> Notas & Boletim</a>
+        </div>
+        <div data-modulo="frequencia">
+        <a class="nav-item" href="#" onclick="showPanel('frequencia',this)"><span class="ic">✅</span> Frequência</a>
+        </div>
+        <div data-modulo="chat">
+        <a class="nav-item" href="#" onclick="showPanel('chatConversas',this)"><span class="ic">💬</span> Chat Famílias</a>
+        </div>
+        <div data-modulo="calendario">
+        <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário</a>
+        </div>
+        <div data-modulo="turno">
+        <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries & Turmas</a>
+        </div>
+      </div>
+
+      <!-- ═══ ACADÊMICO ═══ -->
+      <div data-modulo="notas">
+      <div class="sb-label" onclick="toggleSbSection(this)">Acadêmico <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard Turnos</a>
-        <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasDisciplinas',this)"><span class="ic">📚</span> Disciplinas</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasPeriodos',this)"><span class="ic">📅</span> Períodos</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasConfig',this)"><span class="ic">⚙️</span> Config Notas</a>
+        <a class="nav-item" href="#" data-modulo="diario_classe" onclick="showPanel('diarioClasse',this)"><span class="ic">📖</span> Diário de Classe</a>
+        <a class="nav-item" href="#" data-modulo="pesquisas" onclick="showPanel('pesquisas',this)"><span class="ic">📊</span> Pesquisas</a>
       </div>
       </div>
 
-      <div data-modulo="atividades">
-      <div class="sb-label" onclick="toggleSbSection(this)">Atv. Extracurriculares <span class="sb-arrow collapsed">▼</span></div>
+      <!-- ═══ CRM & MATRÍCULAS ═══ -->
+      <div data-modulo="crm">
+      <div class="sb-label" onclick="toggleSbSection(this)">CRM & Matrículas <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> Matrículas</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> Vagas</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates WhatsApp</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries / Idade</a>
+        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> Formulários Online</a>
+        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> Status Matrículas</a>
       </div>
       </div>
 
-      <div data-modulo="diplomas">
-      <div class="sb-label" onclick="toggleSbSection(this)">Professoras <span class="sb-arrow collapsed">▼</span></div>
+      <!-- ═══ FINANCEIRO ═══ -->
+      <div data-modulo="financeiro">
+      <div class="sb-label" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
+        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard</a>
+        <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
+        <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos</a>
+        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
+        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> DRE</a>
+        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço</a>
+        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🏦</span> Conciliação</a>
+        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> Plano de Contas</a>
+      </div>
+      </div>
+
+      <!-- ═══ EQUIPE ═══ -->
+      <div class="sb-label" onclick="toggleSbSection(this)">Equipe & Professoras <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
+        <a class="nav-item" href="#" data-modulo="diplomas" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
         <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
         <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
         <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
-      </div>
+        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       </div>
 
+      <!-- ═══ FAMÍLIAS ═══ -->
+      <div class="sb-label" onclick="toggleSbSection(this)">Famílias & Acesso <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
+        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Controle de Acesso</a>
+      </div>
+
+      <!-- ═══ OPERACIONAL ═══ -->
       <div data-modulo="almoxarifado">
       <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
         <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
         <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
+        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
         <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
-        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Turmas</a>
+        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Por Turma</a>
         <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
         <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
-        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
       </div>
       </div>
 
@@ -488,105 +543,43 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
         <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
+        <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Turnos & Horários</a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Atividades Extra</a>
       </div>
       </div>
 
-      <div data-modulo="financeiro">
-      <div class="sb-label" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
-        <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
-        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> Plano de Contas</a>
-        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> DRE</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço</a>
-        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🏦</span> Conciliação</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos</a>
-      </div>
-      </div>
-
-      <div data-modulo="crm">
-      <div class="sb-label" onclick="toggleSbSection(this)">CRM <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> Vagas</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> Matrículas</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries/Idade</a>
-      </div>
-      </div>
-
-      <div data-modulo="notas">
-      <div class="sb-label" onclick="toggleSbSection(this)">Acadêmico <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('notasConfig',this)"><span class="ic">⚙️</span> Config Notas</a>
-        <a class="nav-item" href="#" onclick="showPanel('notasDisciplinas',this)"><span class="ic">📚</span> Disciplinas</a>
-        <a class="nav-item" href="#" onclick="showPanel('notasPeriodos',this)"><span class="ic">📅</span> Períodos</a>
-        <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> Visão Geral</a>
-        <a class="nav-item" href="#" data-modulo="frequencia" onclick="showPanel('frequencia',this)"><span class="ic">✅</span> Frequência</a>
-        <a class="nav-item" href="#" data-modulo="diario_classe" onclick="showPanel('diarioClasse',this)"><span class="ic">📖</span> Diário de Classe</a>
-      </div>
-      </div>
-
-      <div data-modulo="calendario">
-      <div class="sb-label" onclick="toggleSbSection(this)">Agenda Escolar <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário</a>
-      </div>
-      </div>
-
-      <div data-modulo="chat">
-      <div class="sb-label" onclick="toggleSbSection(this)">Comunicação <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('chatConversas',this)"><span class="ic">💬</span> Conversas</a>
-        <a class="nav-item" href="#" data-modulo="pesquisas" onclick="showPanel('pesquisas',this)"><span class="ic">📊</span> Pesquisas</a>
-      </div>
-      </div>
-
-      <div data-modulo="matricula">
-      <div class="sb-label" onclick="toggleSbSection(this)">Matrícula Online <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> Formulários</a>
-        <a class="nav-item" href="#" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> Status</a>
-      </div>
-      </div>
-
-      <div class="sb-label" onclick="toggleSbSection(this)">Configurações <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
-        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
-        <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
-        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔒</span> Acesso</a>
-        <a class="nav-item" href="#" onclick="return showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
-      </div>
-
-      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
-        <a class="nav-item" href="index.html" target="_blank"><span class="ic">📝</span> Portal Pais</a>
-        <a class="nav-item" href="professora.html" target="_blank"><span class="ic">👩‍🎓</span> Portal Profs</a>
-        <a class="nav-item" href="secretaria.html" target="_blank"><span class="ic">📋</span> Secretaria</a>
-      </div>
+      <!-- ═══ COMPLIANCE ═══ -->
       <div data-modulo="compliance">
       <div class="sb-label" onclick="toggleSbSection(this)">Compliance <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> Painel Geral</a>
-        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> Horários Profs</a>
-        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> Importar Ponto</a>
-        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> Hora Extra</a>
-        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> Incidentes</a>
         <a class="nav-item" href="#" onclick="showPanel('compCertificacoes',this)"><span class="ic">🎓</span> Certificações</a>
         <a class="nav-item" href="#" onclick="showPanel('compInspecoes',this)"><span class="ic">📋</span> Inspeções</a>
         <a class="nav-item" href="#" onclick="showPanel('compPoliticas',this)"><span class="ic">📄</span> Políticas</a>
-        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> Calendário</a>
+        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> Calendário Regulatório</a>
+        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> Incidentes</a>
+        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> Horários Profs</a>
+        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> Importar Ponto</a>
+        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> Hora Extra</a>
         <a class="nav-item" href="#" onclick="showPanel('compAlertas',this)"><span class="ic">📧</span> Alertas</a>
       </div>
       </div>
 
-      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
+      <!-- ═══ CONFIGURAÇÃO ═══ -->
+      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:12px;padding-top:8px;">
         <a class="nav-item" href="#" onclick="showPanel('contaFinanceiro',this)"><span class="ic">💳</span> Conta & Plano</a>
         <a class="nav-item" href="#" onclick="showPanel('roi',this)"><span class="ic">📈</span> ROI & Economia</a>
+        <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
       </div>
 
+      <!-- ═══ PORTAIS ═══ -->
+      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
+        <a class="nav-item" href="index.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👨‍👩‍👧</span> Portal Pais</a>
+        <a class="nav-item" href="professora.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👩‍🏫</span> Portal Professoras</a>
+        <a class="nav-item" href="secretaria.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">📋</span> Portal Secretaria</a>
+      </div>
+
+      <!-- ═══ EMERGÊNCIA ═══ -->
       <div data-modulo="emergencias" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
         <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
       </div>
