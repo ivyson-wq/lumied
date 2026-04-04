@@ -60,7 +60,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; colo
   border-bottom: 1px solid var(--border-dark); box-shadow: 0 4px 30px rgba(0,0,0,0.3);
 }
 .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo-icon { width: 34px; height: 34px; flex-shrink: 0; }
+.logo-icon { flex-shrink: 0; }
 .logo-text { font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.5px; }
 .nav { display: flex; align-items: center; gap: 32px; }
 .nav a { color: var(--text-white-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
@@ -621,11 +621,7 @@ section, .section, .hero, .cta-final { overflow-x: clip; }
 <!-- ── HEADER ── -->
 <header class="header" id="mainHeader">
   <a href="#" class="logo">
-    <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="32" height="32" rx="8" fill="#6C63FF"/>
-      <path d="M16 7L9 16h14L16 7z" fill="#fff"/>
-      <rect x="10" y="18" width="12" height="7" rx="1.5" fill="#fff" opacity=".8"/>
-    </svg>
+    <img src="/lumied-logo-branco.png" class="logo-icon" style="height:32px;object-fit:contain;" alt="Lumied">
     <div class="logo-text">Lumied</div>
   </a>
   <nav class="nav" id="mainNav">
@@ -1400,11 +1396,7 @@ calcularROI();
   <div class="footer-grid">
     <div class="footer-brand">
       <a href="#" class="logo" style="margin-bottom:8px;">
-        <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="32" height="32" rx="8" fill="#6C63FF"/>
-          <path d="M16 7L9 16h14L16 7z" fill="#fff"/>
-          <rect x="10" y="18" width="12" height="7" rx="1.5" fill="#fff" opacity=".8"/>
-        </svg>
+        <img src="/lumied-logo-branco.png" class="logo-icon" style="height:32px;object-fit:contain;" alt="Lumied">
         <div class="logo-text">Lumied</div>
       </a>
       <p>Plataforma completa de gestão escolar inteligente. Feita para escolas bilíngues que querem crescer.</p>
