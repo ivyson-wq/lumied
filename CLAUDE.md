@@ -6,8 +6,11 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 
 **Domínios:**
 - `lumied.com.br` — Landing page comercial (redirect para `/site/`)
+- `admin.lumied.com.br` — Painel Central Lumied (redirect para `/admin-central.html`)
 - `escola.lumied.com.br` — Padrão SaaS (ex: `maplebearcaxias.lumied.com.br`)
+- `escola.lumied.com.br/admin.html` — Config da escola (só staff Lumied, sem link visível)
 - DNS gerido pelo **Cloudflare** (nameservers: `aleena.ns.cloudflare.com`, `yichun.ns.cloudflare.com`)
+- Subdomínios criados automaticamente via Vercel API no onboarding
 
 **Stack:**
 - Frontend: HTML/CSS/JS + ES Modules, bundled com **esbuild**, hospedado no **Vercel**
@@ -407,24 +410,40 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → e
                      └──> Vercel Projeto B (env: SUPABASE_URL=yyy) → escola-b.lumied.com.br
 ```
 
-### Novo Cliente (9 passos, ~15 min)
-1. **Supabase**: criar projeto → anotar REF + Anon Key
-2. **Script**: `bash deploy-novo-cliente.sh <REF> <TOKEN>` (migrations + Edge Functions)
-3. **Supabase Auth**: Site URL + Redirect URLs + Google Provider
-4. **Vercel**: import repo + env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON`)
-5. **DNS (Cloudflare)**: CNAME `escola` → `cname.vercel-dns.com` (wildcard `*` já configurado)
-6. **Google OAuth**: adicionar redirect URI do novo Supabase
-7. **setup.html**: wizard (nome, cores, módulos, primeiro gerente)
-8. **admin.html**: configurar secrets (RESEND obrigatório, ML/Inter/Google opcionais)
-9. **Testar** todos os portais
+### Novo Cliente — Onboarding Automático (~2 min)
 
-> Guia detalhado: `NOVO-CLIENTE.md`
+**Via Painel Central (`admin.lumied.com.br` → Escolas → + Nova Escola):**
+
+O formulário pede: nome, subdomínio, plano, CNPJ, gerente (nome/email/senha).
+
+O sistema cria automaticamente:
+1. Registro na tabela `escolas` (com plano e data de expiração 1 ano)
+2. 8 configs em `escola_config` (nome, cor, URL, email, ícone)
+3. Primeiro gerente (tabelas `gerentes` + `usuarios`)
+4. Config `superusuario_email` (acesso admin da escola)
+5. Módulos do plano ativados em `escola_modulos` (6 a 40+ conforme tier)
+6. 10 séries padrão em `series`
+7. **Subdomínio no Vercel** via API (SSL automático em ~1 min)
+8. Audit log da criação
+
+**Retorna:** URLs (site, admin, gerente) + checklist de pendências manuais
+
+**Pendências manuais pós-criação:**
+- `RESEND_API_KEY` — para envio de emails
+- Google OAuth — adicionar redirect URI
+- Banco Inter (se usar boletos) — `INTER_CLIENT_ID/SECRET`
+- WhatsApp (se no plano) — `META_APP_SECRET`, `WHATSAPP_TOKEN`
+- Testar acesso em `https://escola.lumied.com.br`
+
+> Guia detalhado legado: `NOVO-CLIENTE.md`
 
 ---
 
 ## Credenciais e Secrets
 
 ### Supabase Edge Functions Secrets
+- `ANTHROPIC_API_KEY` — API Anthropic para Lumi (Claude Haiku). **PENDENTE — precisa configurar**
+- `VERCEL_API_TOKEN` — Vercel API para criar subdomínios no onboarding. **Configurado**
 - `RESEND_API_KEY` — API do Resend para envio de emails
 - `APP_URL` — URL pública do portal (ex: `https://maplebearcaxias.lumied.com.br`)
 - `ML_CLIENT_ID`, `ML_CLIENT_SECRET` — Mercado Livre OAuth
