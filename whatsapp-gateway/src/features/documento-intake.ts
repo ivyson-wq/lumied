@@ -133,34 +133,43 @@ async function classificarDocumento(
 Responda APENAS em JSON válido:
 {"classificacao":"<categoria>","confianca":<0.0-1.0>,"motivo":"<explicação curta>","contexto":{"pessoa":"<nome se visível>","tipo_especifico":"<detalhe>","data":"<data se visível>","validade":"<validade se aplicável>"}}`;
 
-  const parts: any[] = [];
+  const userContent: any[] = [];
 
   if (isImage) {
-    parts.push({ inlineData: { mimeType: mime, data: bufferBase64 } });
+    userContent.push({
+      type: 'image',
+      source: { type: 'base64', media_type: mime, data: bufferBase64 },
+    });
   }
 
-  parts.push({
-    text: `${systemPrompt}\n\nArquivo: ${filename} (${mime})${contexto ? `\nMensagem do remetente: "${contexto}"` : ''}\n\nClassifique este documento.`,
+  userContent.push({
+    type: 'text',
+    text: `Arquivo: ${filename} (${mime})${contexto ? `\nMensagem do remetente: "${contexto}"` : ''}\n\nClassifique este documento.`,
   });
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`, {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: { maxOutputTokens: 300, temperature: 0.2 },
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userContent }],
       }),
     });
 
     if (!res.ok) {
-      console.error('[DOC] Gemini API error:', await res.text());
+      console.error('[DOC] Claude API error:', await res.text());
       return { classificacao: 'outro', confianca: 0, motivo: 'Erro na classificação automática', contextoExtraido: {} };
     }
 
     const data = await res.json() as any;
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    // Extract JSON from possible markdown code block
+    const rawText = data.content?.[0]?.text || '{}';
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
 

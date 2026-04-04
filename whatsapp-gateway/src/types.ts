@@ -4,7 +4,7 @@ export interface Env {
   META_APP_SECRET?: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_KEY: string;
-  GEMINI_API_KEY: string;
+  ANTHROPIC_API_KEY: string;
   OPENAI_API_KEY: string;
   APP_INTERNAL_SECRET: string;
   APP_BASE_URL: string;
