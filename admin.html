@@ -45,7 +45,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .user-info strong{color:rgba(255,255,255,.8);display:block;font-size:13px;}
 .logout-btn{width:100%;padding:9px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;color:rgba(255,255,255,.55);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:background .15s;}
 .logout-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);}
-.main{margin-left:230px;min-height:100vh;display:flex;flex-direction:column;}
+.main{margin-left:230px;min-height:100vh;display:flex;flex-direction:column;flex:1;}
 .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
 .topbar h2{font-family:'Lora',serif;font-size:17px;font-weight:600;}
 .content{padding:26px 32px 48px;flex:1;max-width:1400px;}
@@ -658,6 +658,25 @@ async function loadEscolas() {
   _escolas = Array.isArray(eRes) ? eRes : [];
   _planos = Array.isArray(pRes) ? pRes : [];
   _escolaUso = Array.isArray(usoRes) ? usoRes : [];
+
+  // Seed: se não há escolas, cria a Maple Bear Caxias automaticamente
+  if (_escolas.length === 0 && !loadEscolas._seeding) {
+    loadEscolas._seeding = true;
+    const planoDefault = _planos.length > 0 ? _planos[_planos.length - 1].id : null;
+    await api({
+      action: 'escolas_create',
+      nome: 'Maple Bear Caxias do Sul',
+      slug: 'maple-bear-caxias',
+      cnpj: null,
+      plano_id: planoDefault,
+      contato_nome: null,
+      contato_email: null,
+      contato_telefone: null,
+      tema: 'corporativo'
+    });
+    loadEscolas._seeding = false;
+    return loadEscolas();
+  }
   document.getElementById('escolasCount').textContent = _escolas.length;
 
   const sel = document.getElementById('escolaPlano');
