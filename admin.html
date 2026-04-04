@@ -122,8 +122,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .modulos-section{margin-bottom:20px;}
 .modulos-section h4{font-family:'Lora',serif;font-size:14px;font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
 /* Toggle switch */
-.toggle-switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
-.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;cursor:pointer;}
+.toggle-switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2;}
 .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:22px;transition:.25s;}
 .toggle-slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:var(--white);border-radius:50%;transition:.25s;}
 .toggle-switch input:checked+.toggle-slider{background:var(--green);}
