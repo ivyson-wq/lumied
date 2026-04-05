@@ -112,7 +112,8 @@ export function sanitize(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
     .replace(/`/g, '&#96;')   // Prevent template literal injection
-    .replace(/\x00/g, '')     // Strip null bytes
+    // deno-lint-ignore no-control-regex
+    .replace(/\x00/g, '')     // Strip null bytes (intentional control char)
     .trim();
 }
 

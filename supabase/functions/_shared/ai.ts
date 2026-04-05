@@ -25,6 +25,7 @@ export async function askClaude(
   if (!key) { console.log("[AI] ANTHROPIC_API_KEY não configurada"); return null; }
 
   const model = options.model || "claude-haiku-4-5-20251001";
+  // deno-lint-ignore no-explicit-any
   const body: any = {
     model,
     max_tokens: options.maxTokens || 500,
@@ -49,6 +50,7 @@ export async function askClaude(
       return null;
     }
 
+    // deno-lint-ignore no-explicit-any
     const data = await res.json() as any;
     const text = data.content?.[0]?.text || "";
     const tokensIn = data.usage?.input_tokens || 0;
@@ -75,6 +77,7 @@ export async function askWithImage(
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) { console.log("[AI] ANTHROPIC_API_KEY não configurada"); return null; }
 
+  // deno-lint-ignore no-explicit-any
   const body: any = {
     model: "claude-haiku-4-5-20251001",
     max_tokens: options.maxTokens || 300,
@@ -104,6 +107,7 @@ export async function askWithImage(
       return null;
     }
 
+    // deno-lint-ignore no-explicit-any
     const data = await res.json() as any;
     const text = data.content?.[0]?.text || "";
     const tokensIn = data.usage?.input_tokens || 0;
@@ -140,6 +144,7 @@ Foco em dados, tendências e recomendações estratégicas.
 Responda em português brasileiro.`,
 };
 
+// deno-lint-ignore no-explicit-any
 export function buildContextFromData(data: Record<string, any>): string {
   return Object.entries(data)
     .filter(([, v]) => v !== null && v !== undefined)
