@@ -65,8 +65,16 @@ html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text-body); line-height: 1.6; background: var(--bg-dark); overflow-x: hidden; width: 100%; }
 
 /* ── ANIMATIONS ── */
-.fade-up { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-up { opacity: 0; transform: translateY(30px); transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1); }
 .fade-up.visible { opacity: 1; transform: translateY(0); }
+.slide-left { opacity: 0; transform: translateX(-40px); transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1); }
+.slide-left.visible { opacity: 1; transform: translateX(0); }
+.slide-right { opacity: 0; transform: translateX(40px); transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1); }
+.slide-right.visible { opacity: 1; transform: translateX(0); }
+.zoom-in { opacity: 0; transform: scale(0.92); transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1); }
+.zoom-in.visible { opacity: 1; transform: scale(1); }
+.stagger-item { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.stagger-item.visible { opacity: 1; transform: translateY(0); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.8; } }
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
@@ -665,9 +673,9 @@ section, .section, .hero, .cta-final { overflow-x: clip; }
 <section class="hero">
   <div class="hero-inner">
     <div>
-      <div class="hero-badge">Plataforma #1 para escolas bilíngues</div>
-      <h1>A gestão escolar que pensa por você</h1>
-      <p>O Lumied cuida da gestão para que você cuide da educação. Comunicação com famílias, financeiro, matrículas, pedagógico — tudo num lugar só. E com uma assistente inteligente que avisa quando algo precisa da sua atenção.</p>
+      <div class="hero-badge">✨ O Tesla das gestões escolares</div>
+      <h1>Sua escola com<br>superpoderes.</h1>
+      <p>A única plataforma de gestão escolar com <strong style="color:#fff;">IA nativa</strong>, WhatsApp oficial, compliance automatizado e assinatura eletrônica. <strong style="color:#fff;">23 módulos integrados</strong> feitos para escolas que querem crescer.</p>
       <div class="hero-ctas">
         <a href="#contact" class="btn-primary">Agendar Demo Gratuita</a>
         <a href="#videos" class="btn-ghost">Ver em Ação ▶</a>
@@ -688,6 +696,134 @@ section, .section, .hero, .cta-final { overflow-x: clip; }
     </div>
   </div>
 </section>
+
+<!-- ── TABS SEGMENTADAS: Para cada perfil ── -->
+<section class="section" style="background:var(--bg-dark);padding:80px 24px;">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Feito para todos</div>
+      <h2 class="section-title section-title-dark">Um sistema. Quatro experiências.</h2>
+      <p class="section-sub section-sub-dark">Cada perfil tem seu portal dedicado, otimizado para suas necessidades.</p>
+    </div>
+    <div class="profile-tabs fade-up">
+      <button class="ptab active" data-tab="diretoria" onclick="showProfileTab('diretoria',this)">👔 Direção</button>
+      <button class="ptab" data-tab="professor" onclick="showProfileTab('professor',this)">👩‍🏫 Professor</button>
+      <button class="ptab" data-tab="pais" onclick="showProfileTab('pais',this)">👨‍👩‍👧 Pais</button>
+      <button class="ptab" data-tab="aluno" onclick="showProfileTab('aluno',this)">🎓 Aluno</button>
+    </div>
+    <div class="profile-content fade-up">
+      <div class="pcontent active" id="pc-diretoria">
+        <div class="pc-grid">
+          <div>
+            <div class="pc-eyebrow">Para Direção e Coordenação</div>
+            <h3 class="pc-title">Visão 360° da sua escola em tempo real</h3>
+            <ul class="pc-list">
+              <li>✓ Dashboard com KPIs estratégicos (MRR, inadimplência, evasão)</li>
+              <li>✓ IA que analisa dados e sugere ações diariamente</li>
+              <li>✓ CRM completo de matrículas com pipeline Kanban</li>
+              <li>✓ Financeiro com DRE, balanço, boletos e PIX integrados</li>
+              <li>✓ Compliance automatizado (hora extra, certificações, LGPD)</li>
+              <li>✓ Comunicação WhatsApp oficial com famílias</li>
+            </ul>
+            <a href="#contact" class="btn-primary" style="margin-top:16px;">Quero para minha escola →</a>
+          </div>
+          <div class="pc-visual">
+            <img src="screenshots/mockup-dashboard.png" alt="Dashboard do gerente" loading="lazy">
+          </div>
+        </div>
+      </div>
+      <div class="pcontent" id="pc-professor">
+        <div class="pc-grid">
+          <div>
+            <div class="pc-eyebrow">Para Professores</div>
+            <h3 class="pc-title">Menos burocracia, mais tempo em sala</h3>
+            <ul class="pc-list">
+              <li>✓ Chamada rápida com barra de progresso visual</li>
+              <li>✓ Agenda digital com fotos, humor, alimentação</li>
+              <li>✓ Lançamento de notas em grid estilo planilha</li>
+              <li>✓ Diário de classe digital com geração de relatórios BNCC</li>
+              <li>✓ Comunicação direta com famílias integrada</li>
+              <li>✓ Login biométrico (Face ID) para acesso rápido</li>
+            </ul>
+            <a href="#contact" class="btn-primary" style="margin-top:16px;">Conhecer Portal da Professora →</a>
+          </div>
+          <div class="pc-visual">
+            <img src="screenshots/professora-login.png" alt="Portal da Professora" loading="lazy">
+          </div>
+        </div>
+      </div>
+      <div class="pcontent" id="pc-pais">
+        <div class="pc-grid">
+          <div>
+            <div class="pc-eyebrow">Para Pais e Responsáveis</div>
+            <h3 class="pc-title">Acompanhe cada momento do seu filho</h3>
+            <ul class="pc-list">
+              <li>✓ Notas, frequência e boletim em tempo real</li>
+              <li>✓ Agenda digital com fotos do dia e atividades</li>
+              <li>✓ Pickup com GPS (avise quando está chegando)</li>
+              <li>✓ Boletos e pagamentos via PIX integrado</li>
+              <li>✓ Comunicação direta com professores e escola</li>
+              <li>✓ Login Google, Magic Link ou biometria</li>
+            </ul>
+            <a href="#contact" class="btn-primary" style="margin-top:16px;">Ver Portal dos Pais →</a>
+          </div>
+          <div class="pc-visual">
+            <img src="screenshots/mockup-mobile-pais.png" alt="App dos Pais" loading="lazy">
+          </div>
+        </div>
+      </div>
+      <div class="pcontent" id="pc-aluno">
+        <div class="pc-grid">
+          <div>
+            <div class="pc-eyebrow">Para Alunos</div>
+            <h3 class="pc-title">Sua vida escolar na palma da mão</h3>
+            <ul class="pc-list">
+              <li>✓ Notas e média por disciplina</li>
+              <li>✓ Frequência e faltas em tempo real</li>
+              <li>✓ Calendário de provas e eventos</li>
+              <li>✓ Banco de provas online com resolução</li>
+              <li>✓ Materiais didáticos digitais</li>
+              <li>✓ Interface mobile-first, 100% responsiva</li>
+            </ul>
+            <a href="#contact" class="btn-primary" style="margin-top:16px;">Ver Portal do Aluno →</a>
+          </div>
+          <div class="pc-visual">
+            <img src="screenshots/mobile-professora.png" alt="Portal do Aluno" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+.profile-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:40px;flex-wrap:wrap;}
+.ptab{padding:12px 24px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text-white-muted);border-radius:100px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .3s;backdrop-filter:blur(20px);}
+.ptab:hover{color:#fff;border-color:var(--primary);transform:translateY(-2px);}
+.ptab.active{background:linear-gradient(135deg,var(--primary),#3B82F6);color:#fff;border-color:transparent;box-shadow:0 8px 24px var(--primary-glow);}
+.profile-content{max-width:1100px;margin:0 auto;}
+.pcontent{display:none;animation:pcFadeIn .4s ease;}
+.pcontent.active{display:block;}
+@keyframes pcFadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.pc-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.pc-eyebrow{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--primary);margin-bottom:12px;}
+.pc-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:20px;}
+.pc-list{list-style:none;padding:0;margin-bottom:24px;}
+.pc-list li{font-size:15px;color:var(--text-white-muted);line-height:2;padding-left:4px;}
+.pc-visual{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;overflow:hidden;backdrop-filter:blur(20px);padding:12px;}
+.pc-visual img{width:100%;border-radius:12px;display:block;}
+@media(max-width:768px){.pc-grid{grid-template-columns:1fr;gap:24px;}.pc-title{font-size:24px;}.ptab{padding:10px 18px;font-size:13px;}}
+</style>
+
+<script>
+function showProfileTab(tab, btn) {
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pcontent').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pc-' + tab).classList.add('active');
+  if (typeof gtag === 'function') gtag('event', 'profile_tab_click', { tab: tab });
+}
+</script>
 
 <!-- ── ANIMATED STATS BAR ── -->
 <div class="stats-bar">
@@ -1171,6 +1307,36 @@ calcularROI();
 </section>
 
 <!-- ── PRICING (LIGHT) ── -->
+<!-- ── INTEGRAÇÕES ── -->
+<section class="section" style="background:var(--bg-dark);padding:80px 24px;">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Ecossistema</div>
+      <h2 class="section-title section-title-dark">Integrado com as ferramentas que você já usa</h2>
+      <p class="section-sub section-sub-dark">O Lumied conversa com as principais plataformas do mercado brasileiro.</p>
+    </div>
+    <div class="integrations-grid fade-up">
+      <div class="int-card"><div class="int-icon" style="background:#25D366;">💬</div><div class="int-name">WhatsApp Business</div><div class="int-desc">API oficial Meta</div></div>
+      <div class="int-card"><div class="int-icon" style="background:#FF7A00;">🏦</div><div class="int-name">Banco Inter</div><div class="int-desc">Boletos + PIX</div></div>
+      <div class="int-card"><div class="int-icon" style="background:#4285F4;">G</div><div class="int-name">Google Workspace</div><div class="int-desc">Login + Calendar</div></div>
+      <div class="int-card"><div class="int-icon" style="background:#FFE600;">📊</div><div class="int-name">Mercado Livre</div><div class="int-desc">Busca de preços</div></div>
+      <div class="int-card"><div class="int-icon" style="background:#00A95C;">✉️</div><div class="int-name">Resend</div><div class="int-desc">Email transacional</div></div>
+      <div class="int-card"><div class="int-icon" style="background:#000;">🤖</div><div class="int-name">Claude AI</div><div class="int-desc">Inteligência operacional</div></div>
+      <div class="int-card"><div class="int-icon" style="background:#6366F1;">🔐</div><div class="int-name">WebAuthn</div><div class="int-desc">Face ID / Digital</div></div>
+      <div class="int-card"><div class="int-icon" style="background:#FF0000;">🎥</div><div class="int-name">YouTube</div><div class="int-desc">Vídeos embedados</div></div>
+    </div>
+  </div>
+</section>
+
+<style>
+.integrations-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;max-width:960px;margin:0 auto;}
+.int-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:24px 16px;text-align:center;backdrop-filter:blur(20px);transition:all .3s;}
+.int-card:hover{transform:translateY(-4px);border-color:var(--primary);box-shadow:0 8px 24px var(--primary-glow);}
+.int-icon{width:48px;height:48px;border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;}
+.int-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;}
+.int-desc{font-size:11px;color:var(--text-white-muted);}
+</style>
+
 <section class="section section-light" id="pricing" style="padding-bottom:60px;">
   <div class="container">
     <div class="section-header fade-up">
@@ -1595,7 +1761,7 @@ const fadeObserver = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
-document.querySelectorAll('.fade-up').forEach(el => fadeObserver.observe(el));
+document.querySelectorAll('.fade-up, .slide-left, .slide-right, .zoom-in, .stagger-item').forEach(el => fadeObserver.observe(el));
 
 // ── ANIMATED COUNTERS ──
 const counterObserver = new IntersectionObserver((entries) => {
