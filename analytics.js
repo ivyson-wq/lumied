@@ -4,7 +4,7 @@
 //  Trocar GA_ID abaixo quando tiver o ID real
 // ═══════════════════════════════════════════════════════
 (function() {
-  var GA_ID = 'G-LUMIED'; // TODO: substituir pelo ID real do GA4
+  var GA_ID = 'G-QDFKQEVV4P';
 
   // Não rastrear em localhost
   if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
