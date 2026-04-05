@@ -1364,42 +1364,34 @@ calcularROI();
 <section class="section section-dark">
   <div class="container">
     <div class="section-header fade-up">
-      <div class="section-badge section-badge-dark">Depoimentos</div>
-      <h2 class="section-title section-title-dark">O que dizem nossos parceiros</h2>
+      <div class="section-badge section-badge-dark">Perguntas Frequentes</div>
+      <h2 class="section-title section-title-dark">Dúvidas antes de começar?</h2>
     </div>
-    <div class="testimonials-grid">
-      <div class="testimonial-card fade-up">
-        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <div class="testimonial-text">"O Lumied substituiu 4 sistemas que usávamos. Hoje tudo está em um lugar só. As famílias adoram o portal e a secretaria finalmente respira."</div>
-        <div class="testimonial-author">
-          <div class="testimonial-avatar">DP</div>
-          <div><div class="testimonial-name">Diretora Pedagógica</div><div class="testimonial-role">Escola Bilíngue, Caxias do Sul</div></div>
-        </div>
-      </div>
-      <div class="testimonial-card fade-up">
-        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <div class="testimonial-text">"A régua de cobrança automática reduziu nossa inadimplência de 8% para 2.5%. O financeiro agora roda praticamente sozinho."</div>
-        <div class="testimonial-author">
-          <div class="testimonial-avatar">GF</div>
-          <div><div class="testimonial-name">Gestor Financeiro</div><div class="testimonial-role">Escola Internacional, Porto Alegre</div></div>
-        </div>
-      </div>
-      <div class="testimonial-card fade-up">
-        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <div class="testimonial-text">"O CRM de matrículas com cálculo automático de série por idade da criança economiza horas do nosso time comercial. Genial."</div>
-        <div class="testimonial-author">
-          <div class="testimonial-avatar">CM</div>
-          <div><div class="testimonial-name">Coordenadora de Matrículas</div><div class="testimonial-role">Maple Bear, Bento Gonçalves</div></div>
-        </div>
-      </div>
-      <div class="testimonial-card fade-up">
-        <div class="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <div class="testimonial-text">"As professoras amaram a agenda digital. Registram o dia em 5 minutos e os pais veem as fotos em tempo real. Virou nosso diferencial."</div>
-        <div class="testimonial-author">
-          <div class="testimonial-avatar">PR</div>
-          <div><div class="testimonial-name">Professora</div><div class="testimonial-role">Ed. Infantil, Escola Bilíngue</div></div>
-        </div>
-      </div>
+    <div style="max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:12px;">
+      <details class="fade-up" style="background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:20px 24px;backdrop-filter:blur(20px);cursor:pointer;">
+        <summary style="font-weight:700;color:#fff;font-size:15px;">Quanto tempo leva para implantar?</summary>
+        <p style="color:var(--text-white-muted);font-size:14px;line-height:1.7;margin-top:12px;">Entre 7 e 15 dias úteis. Nossa implantação inclui: migração de dados da sua planilha/sistema atual, configuração dos módulos, treinamento da equipe (3 sessões) e suporte prioritário nos primeiros 30 dias.</p>
+      </details>
+      <details class="fade-up" style="background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:20px 24px;backdrop-filter:blur(20px);cursor:pointer;">
+        <summary style="font-weight:700;color:#fff;font-size:15px;">Preciso de equipe técnica na escola?</summary>
+        <p style="color:var(--text-white-muted);font-size:14px;line-height:1.7;margin-top:12px;">Não. O Lumied é 100% em nuvem e funciona em qualquer navegador (computador, celular, tablet). Nós cuidamos de toda a parte técnica, backups, segurança e atualizações.</p>
+      </details>
+      <details class="fade-up" style="background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:20px 24px;backdrop-filter:blur(20px);cursor:pointer;">
+        <summary style="font-weight:700;color:#fff;font-size:15px;">Posso trocar de plano depois?</summary>
+        <p style="color:var(--text-white-muted);font-size:14px;line-height:1.7;margin-top:12px;">Sim, a qualquer momento. Upgrade é imediato. Downgrade ocorre no próximo ciclo de cobrança. Os dados da sua escola nunca são perdidos.</p>
+      </details>
+      <details class="fade-up" style="background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:20px 24px;backdrop-filter:blur(20px);cursor:pointer;">
+        <summary style="font-weight:700;color:#fff;font-size:15px;">Meus dados ficam seguros?</summary>
+        <p style="color:var(--text-white-muted);font-size:14px;line-height:1.7;margin-top:12px;">Totalmente. Usamos infraestrutura Supabase (AWS/São Paulo), criptografia em trânsito e em repouso, backups diários, RLS em todas as tabelas sensíveis. Estamos em conformidade com a LGPD e oferecemos ferramentas nativas de consentimento, exportação e anonimização de dados.</p>
+      </details>
+      <details class="fade-up" style="background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:20px 24px;backdrop-filter:blur(20px);cursor:pointer;">
+        <summary style="font-weight:700;color:#fff;font-size:15px;">Posso testar antes de contratar?</summary>
+        <p style="color:var(--text-white-muted);font-size:14px;line-height:1.7;margin-top:12px;">Sim! Agende uma demonstração gratuita de 30 minutos. Apresentamos a plataforma completa com os dados reais da sua escola e respondemos todas as dúvidas.</p>
+      </details>
+      <details class="fade-up" style="background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:20px 24px;backdrop-filter:blur(20px);cursor:pointer;">
+        <summary style="font-weight:700;color:#fff;font-size:15px;">Como funciona o WhatsApp integrado?</summary>
+        <p style="color:var(--text-white-muted);font-size:14px;line-height:1.7;margin-top:12px;">Usamos a API oficial do WhatsApp Business (Meta). Sua escola tem um número dedicado, templates aprovados e envio automatizado de comunicados, lembretes e confirmações. Famílias respondem e a escola recebe tudo organizado no painel.</p>
+      </details>
     </div>
   </div>
 </section>
@@ -1408,12 +1400,51 @@ calcularROI();
 <section class="cta-section" id="contact">
   <h2 class="fade-up">Pronto para transformar sua escola?</h2>
   <p class="fade-up">Agende uma demonstração gratuita de 30 minutos. Sem compromisso.</p>
-  <form class="cta-form fade-up" onsubmit="event.preventDefault();alert('Obrigado! Entraremos em contato em até 24h.');">
-    <input type="text" placeholder="Nome da escola" required>
-    <input type="email" placeholder="Seu melhor email" required>
-    <input type="tel" placeholder="WhatsApp" required>
-    <button type="submit">Agendar Demo Gratuita &rarr;</button>
+  <form class="cta-form fade-up" id="leadForm" onsubmit="enviarLead(event)">
+    <input type="text" id="leadNome" placeholder="Nome da escola" required>
+    <input type="email" id="leadEmail" placeholder="Seu melhor email" required>
+    <input type="tel" id="leadTel" placeholder="WhatsApp" required>
+    <button type="submit" id="leadBtn">Agendar Demo Gratuita &rarr;</button>
   </form>
+  <div id="leadSuccess" style="display:none;max-width:520px;margin:24px auto 0;padding:20px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:12px;color:#fff;text-align:center;">
+    <div style="font-size:32px;margin-bottom:8px;">✅</div>
+    <strong style="font-size:16px;">Obrigado! Recebemos sua solicitação.</strong><br>
+    <span style="font-size:13px;opacity:0.85;">Entraremos em contato em até 24h via WhatsApp.</span>
+  </div>
+  <script>
+    async function enviarLead(e) {
+      e.preventDefault();
+      const btn = document.getElementById('leadBtn');
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      const urlParams = new URLSearchParams(location.search);
+      try {
+        const r = await fetch('https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE',
+          },
+          body: JSON.stringify({
+            action: 'lead_submit',
+            nome_escola: document.getElementById('leadNome').value,
+            email: document.getElementById('leadEmail').value,
+            telefone: document.getElementById('leadTel').value,
+            utm_source: urlParams.get('utm_source'),
+            utm_medium: urlParams.get('utm_medium'),
+            utm_campaign: urlParams.get('utm_campaign'),
+          }),
+        });
+        const d = await r.json();
+        if (d.error) { btn.disabled = false; btn.textContent = 'Agendar Demo Gratuita →'; alert(d.error); return; }
+        document.getElementById('leadForm').style.display = 'none';
+        document.getElementById('leadSuccess').style.display = 'block';
+        if (typeof gtag === 'function') gtag('event', 'generate_lead', { event_category: 'engagement' });
+      } catch (err) {
+        btn.disabled = false; btn.textContent = 'Agendar Demo Gratuita →';
+        alert('Erro ao enviar. Tente novamente ou entre em contato via WhatsApp.');
+      }
+    }
+  </script>
 </section>
 
 <!-- ── FOOTER ── -->

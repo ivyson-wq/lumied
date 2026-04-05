@@ -55,6 +55,64 @@ const escolaIdSchema: Schema = { escola_id: { required: true, type: 'uuid' } };
 const router = new Router("admin");
 router.useGlobal(rateLimit());
 
+// ── Public: Capturar lead do site comercial ──
+router.on("lead_submit", rateLimit({ windowMs: 60000, maxRequests: 5 }), async (ctx) => {
+  const { nome_escola, email, telefone, mensagem, utm_source, utm_medium, utm_campaign } = ctx.body as any;
+  if (!nome_escola || !email) throw new AppError("VALIDATION_FAILED", "Nome da escola e email são obrigatórios.");
+
+  const ip = ctx.req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const ua = ctx.req.headers.get('user-agent') || '';
+
+  // Salvar lead
+  const { data: lead, error } = await ctx.sb.from("leads_comerciais").insert({
+    nome_escola, email: email.toLowerCase().trim(), telefone: telefone || null,
+    mensagem: mensagem || null, utm_source, utm_medium, utm_campaign,
+    ip, user_agent: ua, origem: 'site', status: 'novo',
+  }).select("id").single();
+
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  // Notificar equipe Lumied por email via Resend
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (resendKey) {
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Lumied Leads <noreply@lumied.com.br>",
+          to: ["ivyson@gmail.com"],
+          subject: `🔔 Novo Lead: ${nome_escola}`,
+          html: `<div style="font-family:sans-serif;max-width:600px;">
+            <h2 style="color:#6C63FF;">Novo Lead Comercial</h2>
+            <table style="width:100%;border-collapse:collapse;">
+              <tr><td style="padding:8px;font-weight:bold;">Escola:</td><td style="padding:8px;">${nome_escola}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Email:</td><td style="padding:8px;">${email}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">WhatsApp:</td><td style="padding:8px;">${telefone || '—'}</td></tr>
+              ${mensagem ? `<tr><td style="padding:8px;font-weight:bold;">Mensagem:</td><td style="padding:8px;">${mensagem}</td></tr>` : ''}
+              <tr><td style="padding:8px;font-weight:bold;">Origem:</td><td style="padding:8px;">${utm_source || 'site'}</td></tr>
+            </table>
+            <p style="margin-top:16px;"><a href="https://admin.lumied.com.br" style="background:#6C63FF;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Abrir Painel Central</a></p>
+          </div>`,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (e) { console.error("[LEAD] Email error:", e); }
+  }
+
+  return successResponse({ success: true, lead_id: lead?.id, message: "Obrigado! Entraremos em contato em até 24h." });
+});
+
+// ── Staff: listar leads ──
+router.on("leads_list", async (ctx) => {
+  const token = (ctx.body._staff_token as string) || null;
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token obrigatório.");
+  const { data: sess } = await ctx.sb.from("lumied_staff_sessoes").select("expira_em").eq("token", token).single();
+  if (!sess || new Date(sess.expira_em) < new Date()) throw new AppError("AUTH_INVALID", "Sessão inválida.");
+  const { data } = await ctx.sb.from("leads_comerciais").select("*").order("criado_em", { ascending: false }).limit(100);
+  return successResponse(data ?? []);
+});
+
 // ── Public: Setup check ──
 router.on("admin_setup_check", async (ctx) => {
   const { count } = await ctx.sb.from("admins").select("*", { count: "exact", head: true });

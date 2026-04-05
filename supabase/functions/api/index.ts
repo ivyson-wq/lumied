@@ -795,6 +795,21 @@ serve(async (req: Request) => {
     return ok(data ?? []);
   }
 
+  if (action === "aluno_criar") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { nome, email, serie, data_nascimento, responsavel_nome } = body as any;
+    if (!nome) return err("Nome obrigatório.");
+    const { data, error } = await admin.from("alunos").insert({
+      nome, email: email || null, serie: serie || null,
+      data_nascimento: data_nascimento || null,
+      responsavel_nome: responsavel_nome || null,
+      ativo: true,
+    }).select("id").single();
+    if (error) return err(error.message);
+    return ok({ success: true, id: data?.id });
+  }
+
   if (action === "aluno_historico_create") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);

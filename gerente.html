@@ -758,6 +758,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <option value="">Todas as turmas</option>
           </select>
           <button onclick="abrirCadastroAluno()" style="padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Novo Aluno</button>
+          <button onclick="importarAlunosCSV()" style="padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📁 Importar CSV</button>
         </div>
 
         <!-- Tabela de Alunos -->
@@ -2860,6 +2861,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadNotificacoes();
     loadSidebarLogo();
     showBioRegisterButton();
+    checkPrimeiroAcesso();
     loadModulosHabilitados();
     loadTemaEscola();
     showExportButtons(false);
@@ -3539,9 +3541,70 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     }
   }
 
+  // ── Wizard de primeiro acesso ──
+  async function checkPrimeiroAcesso() {
+    if (localStorage.getItem('lumied_wizard_done')) return;
+    // Verificar se há alunos cadastrados
+    const alunos = await api({ action: 'alunos_list' });
+    const total = Array.isArray(alunos) ? alunos.length : (alunos?.data?.length || 0);
+    if (total > 0) { localStorage.setItem('lumied_wizard_done', '1'); return; }
+    // Mostrar wizard
+    setTimeout(mostrarWizard, 1500);
+  }
+
+  function mostrarWizard() {
+    const overlay = document.createElement('div');
+    overlay.id = 'wizardOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:540px;width:100%;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.25);">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+        <h2 style="font-family:'Lora',serif;font-size:22px;margin-bottom:6px;">Bem-vindo ao Lumied!</h2>
+        <p style="font-size:14px;color:var(--muted);">Vamos configurar sua escola em 3 passos simples.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:10px;cursor:pointer;" onclick="wizardGo('logo')">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">1</div>
+          <div style="flex:1;"><strong style="font-size:14px;">Personalizar aparência</strong><br><span style="font-size:12px;color:var(--muted);">Logo, cores e tema visual</span></div>
+          <span style="font-size:18px;">→</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:10px;cursor:pointer;" onclick="wizardGo('equipe')">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">2</div>
+          <div style="flex:1;"><strong style="font-size:14px;">Cadastrar equipe</strong><br><span style="font-size:12px;color:var(--muted);">Professoras, secretaria, coordenação</span></div>
+          <span style="font-size:18px;">→</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:10px;cursor:pointer;" onclick="wizardGo('alunos')">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">3</div>
+          <div style="flex:1;"><strong style="font-size:14px;">Importar alunos</strong><br><span style="font-size:12px;color:var(--muted);">CSV em massa ou cadastro individual</span></div>
+          <span style="font-size:18px;">→</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="fecharWizard(true)" style="flex:1;padding:12px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;">Não mostrar novamente</button>
+        <button onclick="fecharWizard(false)" style="flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">Fazer depois</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  }
+  window.wizardGo = function(panel) {
+    fecharWizard(true);
+    showPanel(panel);
+  };
+  window.fecharWizard = function(permanent) {
+    if (permanent) localStorage.setItem('lumied_wizard_done', '1');
+    document.getElementById('wizardOverlay')?.remove();
+  };
+
   async function loadSidebarLogo() {
     const d = await api({ action:'config_get', chave:'logo_url' });
     if(d.valor){ document.getElementById('sidebarLogo').src=d.valor; document.getElementById('sidebarLogo').style.display='block'; document.getElementById('sidebarLeaf').style.display='none'; }
+    // Carregar nome da escola
+    const nome = await api({ action:'config_get', chave:'escola_nome' });
+    if(nome?.valor) {
+      const cleanNome = String(nome.valor).replace(/^"|"$/g, '');
+      document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = cleanNome);
+      document.title = cleanNome + ' — Painel do Gerente';
+    }
   }
   // ── TEMA VISUAL ──
   async function loadTemaAtual() {
@@ -3958,7 +4021,54 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAlunoAtas(alunoAtual);
   }
 
-  function abrirCadastroAluno() { showToast('Em desenvolvimento — cadastro de alunos', 'info'); }
+  async function abrirCadastroAluno() {
+    const nome = prompt('Nome completo do aluno:'); if (!nome) return;
+    const email = prompt('Email do aluno (opcional):') || '';
+    const serie = prompt('Série/Turma:') || '';
+    const nascimento = prompt('Data de nascimento (DD/MM/AAAA):') || '';
+    const responsavel = prompt('Nome do responsável:') || '';
+    let dataFmt = null;
+    if (nascimento) {
+      const [d, m, y] = nascimento.split('/');
+      if (d && m && y) dataFmt = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    }
+    const d = await api({ action:'aluno_criar', nome, email, serie, data_nascimento:dataFmt, responsavel_nome:responsavel });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Aluno cadastrado!', 'success');
+    loadAlunos();
+  }
+
+  function importarAlunosCSV() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.txt';
+    input.onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const text = await file.text();
+      const linhas = text.split('\n').filter(l => l.trim());
+      if (linhas.length < 2) return showToast('CSV vazio ou inválido', 'error');
+      // Skip header
+      const header = linhas[0].toLowerCase();
+      if (!header.includes('nome')) return showToast('CSV deve ter cabeçalho com colunas: nome, email, serie, data_nascimento, responsavel', 'error');
+      if (!confirm(`Importar ${linhas.length - 1} alunos? Formato esperado: nome,email,serie,data_nascimento,responsavel`)) return;
+      let sucesso = 0, erro = 0;
+      for (let i = 1; i < linhas.length; i++) {
+        const cols = linhas[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        const [nome, email, serie, nasc, resp] = cols;
+        if (!nome) { erro++; continue; }
+        let dataFmt = null;
+        if (nasc) {
+          if (nasc.includes('/')) { const [d,m,y] = nasc.split('/'); if (d&&m&&y) dataFmt = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+          else dataFmt = nasc;
+        }
+        const r = await api({ action:'aluno_criar', nome, email:email||null, serie:serie||null, data_nascimento:dataFmt, responsavel_nome:resp||null });
+        if (r.error) erro++; else sucesso++;
+      }
+      showToast(`Importação: ${sucesso} sucesso, ${erro} erro`, sucesso > 0 ? 'success' : 'error');
+      loadAlunos();
+    };
+    input.click();
+  }
   function alunoUploadDoc() { showToast('Em desenvolvimento — upload de documentos', 'info'); }
 
   // Load on panel show
