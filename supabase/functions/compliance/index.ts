@@ -626,12 +626,14 @@ interface ProcessamentoResult {
   hora_extra_50_min: number;
   hora_extra_100_min: number;
   hora_noturna_min: number;
+  adicional_noturno_pct: number; // 20% CLT art. 73
   atraso_min: number;
   falta: boolean;
   tipo_dia: string;
   banco_horas_min: number;
   minutos_excedentes: number;
   dentro_horario: boolean;
+  alertas: string[]; // alertas de conformidade
 }
 
 /**
@@ -659,12 +661,19 @@ function processarRegistroPonto(
 
   const jornadaDiaria = config.jornada_diaria_min || jornadaPorTipo(config.tipo_jornada);
 
+  const alertas: string[] = [];
+
+  // CLT Art. 319: Proibição de trabalho aos domingos para professores
+  if (tipoDia === "domingo") {
+    alertas.push("⚠️ CLT Art. 319: É vedado aos professores regência de aulas e trabalho em exames aos domingos.");
+  }
+
   // If no hora_saida, mark as falta
   if (!reg.hora_saida) {
     return {
       intervalo_minutos: 0, horas_normais_min: 0, hora_extra_50_min: 0, hora_extra_100_min: 0,
-      hora_noturna_min: 0, atraso_min: 0, falta: true, tipo_dia: tipoDia,
-      banco_horas_min: 0, minutos_excedentes: 0, dentro_horario: true,
+      hora_noturna_min: 0, adicional_noturno_pct: 0, atraso_min: 0, falta: true, tipo_dia: tipoDia,
+      banco_horas_min: 0, minutos_excedentes: 0, dentro_horario: true, alertas,
     };
   }
 
@@ -710,13 +719,32 @@ function processarRegistroPonto(
     he50 = totalExtra;
   }
 
-  // Hora noturna (CLT art. 73)
+  // Hora noturna (CLT art. 73) — adicional de 20%
   const horaNot = calcularHorasNoturnas(entradaReal, saidaReal, noturnInicio, noturnFim);
+  const adicionalNoturnoPct = horaNot > 0 ? 20 : 0; // CLT Art. 73 — 20% adicional noturno
+
+  // Hora noturna reduzida: 52:30 = cada hora noturna vale 52min30s
+  // Isso significa que quem trabalha 7h noturnas efetivas = 8h para fins de remuneração
+  // A diferença já está computada no horaNot via a config hora_noturna_reducao
 
   // Banco de horas
   const bancoMin = bancoHorasAtivo ? totalExtra : 0;
 
   const dentroHorario = totalExtra === 0;
+
+  // Alertas de conformidade
+  if (totalExtra > 0 && tipoDia === "domingo") {
+    alertas.push("⚠️ CLT Art. 319 + Art. 59-A: Hora extra em domingo — adicional de 100% obrigatório. Verificar se havia autorização.");
+  }
+  if (totalExtra > 120) {
+    alertas.push(`⚠️ CLT Art. 59: Limite de 2h extras/dia excedido (${totalExtra}min). Excedente acima de 120min foi descartado.`);
+  }
+  if (brutoMin > jornadaMaxDiaria + intervalo) {
+    alertas.push(`⚠️ CLT Art. 59: Jornada bruta (${brutoMin}min) excede máximo de ${jornadaMaxDiaria}min + intervalo.`);
+  }
+  if (atraso > 30) {
+    alertas.push(`⚠️ Atraso significativo: ${atraso}min. Verificar justificativa.`);
+  }
 
   return {
     intervalo_minutos: intervalo,
@@ -724,12 +752,14 @@ function processarRegistroPonto(
     hora_extra_50_min: he50,
     hora_extra_100_min: he100,
     hora_noturna_min: horaNot,
+    adicional_noturno_pct: adicionalNoturnoPct,
     atraso_min: atraso,
     falta: false,
     tipo_dia: tipoDia,
     banco_horas_min: bancoMin,
     minutos_excedentes: totalExtra,
     dentro_horario: dentroHorario,
+    alertas,
   };
 }
 
@@ -822,6 +852,8 @@ async function verificarPonto(
       processado: true,
       dentro_horario: result.dentro_horario,
       hora_extra_minutos: result.minutos_excedentes,
+      adicional_noturno_pct: result.adicional_noturno_pct,
+      alertas: result.alertas.length ? result.alertas : null,
     }).eq("id", reg.id);
 
     processados++;
