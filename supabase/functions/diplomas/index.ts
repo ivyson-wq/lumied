@@ -48,8 +48,12 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
       .from('professoras').select('id, nome, email')
       .ilike('email', user.email).maybeSingle()
     if (profByEmail) return profByEmail
-    // Se não existe na tabela professoras, retorna dados do usuario
-    return { id: user.id, nome: user.nome, email: user.email }
+    // Cria registro na tabela professoras se não existe (auto-provision)
+    const { data: novaProfessora } = await sb
+      .from('professoras').insert({ nome: user.nome, email: user.email })
+      .select('id, nome, email').single()
+    if (novaProfessora) return novaProfessora
+    return null
   }
   return null
 }
