@@ -347,6 +347,7 @@ Deno.serve(async (req) => {
   const isTeacherAction = [
     'professora_logout', 'diploma_submit', 'meus_diplomas',
     'atestado_submit', 'meus_atestados',
+    'minhas_impressoes',
     'pdi_meu_status', 'pdi_autoavaliacao', 'pdi_metas_submit',
     'pdi_meta_progresso', 'pdi_checkin',
   ].includes(action)
@@ -419,6 +420,13 @@ Deno.serve(async (req) => {
         await criarNotif(sb, 'secretaria', s.email, 'Novo atestado', `${prof.nome} enviou um atestado (${data_inicio} a ${data_fim}) para validação.`, 'info')
       }
       return json({ ok: true })
+    }
+
+    if (action === 'minhas_impressoes') {
+      const { data } = await sb
+        .from('impressoes').select('*')
+        .eq('professora_id', prof.id).order('criado_em', { ascending: false })
+      return json({ data: data ?? [] })
     }
 
     // ── PDI: professora ─────────────────────────────────────
@@ -663,16 +671,8 @@ Deno.serve(async (req) => {
       return json(data ?? [])
     }
 
-    // ── CRM: Leads (meus) ──
-    if (action === 'sec_crm_leads_list') {
-      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
-      const { data } = await sb.from('crm_leads').select('*, crm_estagios(nome, cor, ordem)')
-        .eq('responsavel_id', sec.id).order('atualizado_em', { ascending: false })
-      return json(data ?? [])
-    }
-
-    // ── CRM: Leads (todos) ──
-    if (action === 'sec_crm_leads_all') {
+    // ── CRM: Leads (todos — visibilidade completa como gerente) ──
+    if (action === 'sec_crm_leads_list' || action === 'sec_crm_leads_all') {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
       const { data } = await sb.from('crm_leads').select('*, crm_estagios(nome, cor, ordem), secretarias(nome)')
         .order('atualizado_em', { ascending: false })
@@ -728,7 +728,6 @@ Deno.serve(async (req) => {
     if (action === 'sec_crm_dashboard') {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
       const { data: leads } = await sb.from('crm_leads').select('estagio_id, origem, valor_mensalidade, criado_em, responsavel_id, crm_estagios(nome)')
-        .eq('responsavel_id', sec.id)
       const porEstagio: Record<string, number> = {}
       const porOrigem: Record<string, number> = {}
       let valorPipeline = 0

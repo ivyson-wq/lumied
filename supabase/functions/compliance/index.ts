@@ -12,11 +12,53 @@ router.useGlobal(rateLimit());
 
 const feat = requireFeature("compliance");
 
+/**
+ * Auth middleware that accepts BOTH gerente (legacy) and secretaria/equipe (unified) sessions.
+ * 1. Tries gerente_sessoes → gerentes (original authGerente logic)
+ * 2. If that fails, tries sessoes → usuarios (unified table), checks allowed papeis
+ */
+const authGerenteOrSecretaria: import("../_shared/router.ts").Middleware = async (ctx, next) => {
+  const token = (ctx.body._token as string) || null;
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
+
+  // Try 1: gerente_sessoes → gerentes
+  const { data: gerenteSessao } = await ctx.sb
+    .from("gerente_sessoes")
+    .select("*, gerentes(id, nome, email)")
+    .eq("token", token)
+    .single();
+
+  if (gerenteSessao && new Date(gerenteSessao.expira_em) >= new Date()) {
+    const user = (gerenteSessao as any).gerentes;
+    ctx.user = { ...user, tipo: "gerente" };
+    return next();
+  }
+
+  // Try 2: sessoes → usuarios (unified sessions for secretaria/comercial/etc.)
+  const { data: sessaoUnificada } = await ctx.sb
+    .from("sessoes")
+    .select("*, usuarios(id, nome, email, papeis)")
+    .eq("token", token)
+    .single();
+
+  if (sessaoUnificada && new Date(sessaoUnificada.expira_em) >= new Date()) {
+    const usuario = (sessaoUnificada as any).usuarios;
+    const papeisPermitidos = ["gerente", "diretor", "secretaria", "comercial", "financeiro"];
+    const papeis: string[] = usuario?.papeis || [];
+    if (papeis.some((p: string) => papeisPermitidos.includes(p))) {
+      ctx.user = { ...usuario, tipo: papeis[0] };
+      return next();
+    }
+  }
+
+  throw new AppError("AUTH_INVALID", "Sessão inválida ou sem permissão para compliance.");
+};
+
 // ═══════════════════════════════════════════════════════════════
 //  Horários pré-configurados das professoras
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_horarios_list", authGerente, feat, async (ctx) => {
+router.on("compliance_horarios_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id } = ctx.body as any;
   let q = ctx.sb
     .from("compliance_horarios")
@@ -28,7 +70,7 @@ router.on("compliance_horarios_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("compliance_horarios_upsert", authGerente, feat, async (ctx) => {
+router.on("compliance_horarios_upsert", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id, dia_semana, hora_entrada, hora_saida, tolerancia_minutos } = ctx.body as any;
   if (!professora_id || !dia_semana || !hora_entrada || !hora_saida) {
     throw new AppError("VALIDATION_FAILED", "professora_id, dia_semana, hora_entrada e hora_saida são obrigatórios.");
@@ -45,7 +87,7 @@ router.on("compliance_horarios_upsert", authGerente, feat, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("compliance_horarios_bulk", authGerente, feat, async (ctx) => {
+router.on("compliance_horarios_bulk", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id, horarios } = ctx.body as any;
   if (!professora_id || !Array.isArray(horarios)) {
     throw new AppError("VALIDATION_FAILED", "professora_id e horarios[] obrigatórios.");
@@ -64,7 +106,7 @@ router.on("compliance_horarios_bulk", authGerente, feat, async (ctx) => {
   return successResponse({ success: true, total: rows.length });
 });
 
-router.on("compliance_horarios_delete", authGerente, feat, async (ctx) => {
+router.on("compliance_horarios_delete", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   const { error } = await ctx.sb.from("compliance_horarios").update({ ativo: false }).eq("id", id);
@@ -76,7 +118,7 @@ router.on("compliance_horarios_delete", authGerente, feat, async (ctx) => {
 //  Importação manual de arquivo de ponto
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_importar_ponto", authGerente, feat, async (ctx) => {
+router.on("compliance_importar_ponto", authGerenteOrSecretaria, feat, async (ctx) => {
   const { nome_arquivo, registros } = ctx.body as any;
   if (!nome_arquivo || !Array.isArray(registros) || registros.length === 0) {
     throw new AppError("VALIDATION_FAILED", "nome_arquivo e registros[] obrigatórios.");
@@ -129,7 +171,7 @@ router.on("compliance_importar_ponto", authGerente, feat, async (ctx) => {
   });
 });
 
-router.on("compliance_importacoes_list", authGerente, feat, async (ctx) => {
+router.on("compliance_importacoes_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data } = await ctx.sb
     .from("compliance_ponto_importacoes")
     .select("*")
@@ -142,7 +184,7 @@ router.on("compliance_importacoes_list", authGerente, feat, async (ctx) => {
 //  Verificação de ponto — detectar hora extra não autorizada
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_verificar_ponto", authGerente, feat, async (ctx) => {
+router.on("compliance_verificar_ponto", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data_inicio, data_fim } = ctx.body as any;
   const resultado = await verificarPonto(ctx.sb, data_inicio, data_fim);
   return successResponse(resultado);
@@ -162,7 +204,7 @@ router.on("compliance_verificar_ponto_auto", async (ctx) => {
 //  Ocorrências
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_ocorrencias_list", authGerente, feat, async (ctx) => {
+router.on("compliance_ocorrencias_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { status, professora_id, data_inicio, data_fim } = ctx.body as any;
   let q = ctx.sb
     .from("compliance_ocorrencias")
@@ -176,7 +218,7 @@ router.on("compliance_ocorrencias_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("compliance_confirmar_ocorrencia", authGerente, feat, async (ctx) => {
+router.on("compliance_confirmar_ocorrencia", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID da ocorrência obrigatório.");
 
@@ -220,7 +262,7 @@ router.on("compliance_confirmar_ocorrencia", authGerente, feat, async (ctx) => {
   return successResponse({ confirmada: true, alerta_enviado: alertaEnviado, ciencia_criada: true });
 });
 
-router.on("compliance_justificar_ocorrencia", authGerente, feat, async (ctx) => {
+router.on("compliance_justificar_ocorrencia", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id, justificativa, status } = ctx.body as any;
   if (!id || !justificativa) throw new AppError("VALIDATION_FAILED", "ID e justificativa obrigatórios.");
   const novoStatus = status === "descartada" ? "descartada" : "justificada";
@@ -238,7 +280,7 @@ router.on("compliance_justificar_ocorrencia", authGerente, feat, async (ctx) => 
 //  Alertas enviados
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_alertas_list", authGerente, feat, async (ctx) => {
+router.on("compliance_alertas_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id } = ctx.body as any;
   let q = ctx.sb
     .from("compliance_alertas")
@@ -253,7 +295,7 @@ router.on("compliance_alertas_list", authGerente, feat, async (ctx) => {
 //  Dashboard
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_dashboard", authGerente, feat, async (ctx) => {
+router.on("compliance_dashboard", authGerenteOrSecretaria, feat, async (ctx) => {
   const { mes, ano } = ctx.body as any;
   const anoAtual = ano || new Date().getFullYear();
   const mesAtual = mes || new Date().getMonth() + 1;
@@ -319,7 +361,7 @@ router.on("compliance_dashboard", authGerente, feat, async (ctx) => {
 //  INCIDENTES / PROTEÇÃO AO ALUNO
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_incidentes_list", authGerente, feat, async (ctx) => {
+router.on("compliance_incidentes_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { tipo, gravidade, status } = ctx.body as any;
   let q = ctx.sb.from("compliance_incidentes").select("*").order("data_ocorrencia", { ascending: false });
   if (tipo) q = q.eq("tipo", tipo);
@@ -329,7 +371,7 @@ router.on("compliance_incidentes_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("compliance_incidente_criar", authGerente, feat, async (ctx) => {
+router.on("compliance_incidente_criar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { tipo, gravidade, descricao, data_ocorrencia, local_ocorrencia, vitima_nome, agressor_nome, testemunhas, anonimo } = ctx.body as any;
   if (!tipo || !descricao || !data_ocorrencia) throw new AppError("VALIDATION_FAILED", "tipo, descricao e data_ocorrencia obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_incidentes").insert({
@@ -344,7 +386,7 @@ router.on("compliance_incidente_criar", authGerente, feat, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("compliance_incidente_atualizar", authGerente, feat, async (ctx) => {
+router.on("compliance_incidente_atualizar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id, status, medidas_tomadas, parecer_final, encaminhamento_externo, pais_notificados, investigador } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   const fields: Record<string, unknown> = {};
@@ -364,7 +406,7 @@ router.on("compliance_incidente_atualizar", authGerente, feat, async (ctx) => {
   return successResponse({ success: true });
 });
 
-router.on("compliance_incidente_historico", authGerente, feat, async (ctx) => {
+router.on("compliance_incidente_historico", authGerenteOrSecretaria, feat, async (ctx) => {
   const { incidente_id } = ctx.body as any;
   if (!incidente_id) throw new AppError("VALIDATION_FAILED", "incidente_id obrigatório.");
   const { data } = await ctx.sb.from("compliance_incidentes_historico").select("*").eq("incidente_id", incidente_id).order("criado_em");
@@ -375,12 +417,12 @@ router.on("compliance_incidente_historico", authGerente, feat, async (ctx) => {
 //  CERTIFICAÇÕES E TREINAMENTOS
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_cert_tipos_list", authGerente, feat, async (ctx) => {
+router.on("compliance_cert_tipos_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data } = await ctx.sb.from("compliance_certificacoes_tipos").select("*").eq("ativo", true).order("nome");
   return successResponse(data ?? []);
 });
 
-router.on("compliance_cert_list", authGerente, feat, async (ctx) => {
+router.on("compliance_cert_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { funcionario_id, status } = ctx.body as any;
   let q = ctx.sb.from("compliance_certificacoes").select("*, rh_funcionarios(nome, cargo, departamento), compliance_certificacoes_tipos(nome)").order("data_vencimento");
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
@@ -389,7 +431,7 @@ router.on("compliance_cert_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("compliance_cert_criar", authGerente, feat, async (ctx) => {
+router.on("compliance_cert_criar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { funcionario_id, tipo_id, data_obtencao, instituicao, numero_certificado, arquivo_url } = ctx.body as any;
   if (!funcionario_id || !tipo_id || !data_obtencao) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios ausentes.");
   const { data: tipo } = await ctx.sb.from("compliance_certificacoes_tipos").select("validade_meses").eq("id", tipo_id).single();
@@ -406,7 +448,7 @@ router.on("compliance_cert_criar", authGerente, feat, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("compliance_treinamentos_list", authGerente, feat, async (ctx) => {
+router.on("compliance_treinamentos_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { status } = ctx.body as any;
   let q = ctx.sb.from("compliance_treinamentos").select("*, compliance_certificacoes_tipos(nome)").order("data_prevista", { ascending: false });
   if (status) q = q.eq("status", status);
@@ -414,7 +456,7 @@ router.on("compliance_treinamentos_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("compliance_treinamento_criar", authGerente, feat, async (ctx) => {
+router.on("compliance_treinamento_criar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { tipo_id, titulo, descricao, data_prevista, hora_inicio, hora_fim, local, instrutor, max_participantes } = ctx.body as any;
   if (!tipo_id || !titulo || !data_prevista) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_treinamentos").insert({
@@ -428,12 +470,12 @@ router.on("compliance_treinamento_criar", authGerente, feat, async (ctx) => {
 //  INSPEÇÕES
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_inspecao_templates_list", authGerente, feat, async (ctx) => {
+router.on("compliance_inspecao_templates_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data } = await ctx.sb.from("compliance_inspecao_templates").select("*").eq("ativo", true).order("nome");
   return successResponse(data ?? []);
 });
 
-router.on("compliance_inspecao_realizar", authGerente, feat, async (ctx) => {
+router.on("compliance_inspecao_realizar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { template_id, data_inspecao, respostas, observacoes } = ctx.body as any;
   if (!template_id || !respostas) throw new AppError("VALIDATION_FAILED", "template_id e respostas obrigatórios.");
   const respostasArr = respostas as Array<{ item: string; resposta: unknown; obrigatorio?: boolean }>;
@@ -451,7 +493,7 @@ router.on("compliance_inspecao_realizar", authGerente, feat, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("compliance_inspecoes_list", authGerente, feat, async (ctx) => {
+router.on("compliance_inspecoes_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { template_id } = ctx.body as any;
   let q = ctx.sb.from("compliance_inspecoes").select("*, compliance_inspecao_templates(nome, categoria)").order("data_inspecao", { ascending: false });
   if (template_id) q = q.eq("template_id", template_id);
@@ -463,12 +505,12 @@ router.on("compliance_inspecoes_list", authGerente, feat, async (ctx) => {
 //  POLÍTICAS E DOCUMENTOS
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_politicas_list", authGerente, feat, async (ctx) => {
+router.on("compliance_politicas_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data } = await ctx.sb.from("compliance_politicas").select("*").order("titulo");
   return successResponse(data ?? []);
 });
 
-router.on("compliance_politica_criar", authGerente, feat, async (ctx) => {
+router.on("compliance_politica_criar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { titulo, categoria, conteudo_html, arquivo_url, aceite_obrigatorio, aplica_a, vigente_desde, revisao_proxima } = ctx.body as any;
   if (!titulo || !categoria) throw new AppError("VALIDATION_FAILED", "titulo e categoria obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_politicas").insert({
@@ -479,7 +521,7 @@ router.on("compliance_politica_criar", authGerente, feat, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("compliance_politica_aceites", authGerente, feat, async (ctx) => {
+router.on("compliance_politica_aceites", authGerenteOrSecretaria, feat, async (ctx) => {
   const { politica_id } = ctx.body as any;
   if (!politica_id) throw new AppError("VALIDATION_FAILED", "politica_id obrigatório.");
   const { data } = await ctx.sb.from("compliance_politicas_aceites").select("*").eq("politica_id", politica_id).order("aceito_em", { ascending: false });
@@ -490,7 +532,7 @@ router.on("compliance_politica_aceites", authGerente, feat, async (ctx) => {
 //  CALENDÁRIO DE COMPLIANCE
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_calendario_list", authGerente, feat, async (ctx) => {
+router.on("compliance_calendario_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { categoria, status } = ctx.body as any;
   let q = ctx.sb.from("compliance_calendario").select("*").order("data_limite");
   if (categoria) q = q.eq("categoria", categoria);
@@ -499,7 +541,7 @@ router.on("compliance_calendario_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("compliance_calendario_concluir", authGerente, feat, async (ctx) => {
+router.on("compliance_calendario_concluir", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id, evidencia_url, observacoes } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   const { error } = await ctx.sb.from("compliance_calendario").update({
@@ -523,7 +565,7 @@ router.on("compliance_verificar_prazos_auto", async (ctx) => {
 //  DASHBOARD EXPANDIDO
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_dashboard_completo", authGerente, feat, async (ctx) => {
+router.on("compliance_dashboard_completo", authGerenteOrSecretaria, feat, async (ctx) => {
   const [incidentes, certVencidas, calAtrasados, inspecoes, ocorrencias] = await Promise.all([
     ctx.sb.from("compliance_incidentes").select("*", { count: "exact", head: true }).in("status", ["registrado", "em_investigacao"]),
     ctx.sb.from("compliance_certificacoes").select("*", { count: "exact", head: true }).eq("status", "vencida"),
@@ -1095,7 +1137,7 @@ router.on("compliance_ciencia_confirmar", authProfessora, async (ctx) => {
 });
 
 // Gerente: criar ciência para professora (ao confirmar ocorrência)
-router.on("compliance_ciencia_criar", authGerente, feat, async (ctx) => {
+router.on("compliance_ciencia_criar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id, ocorrencia_id, tipo, titulo, descricao, data_referencia } = ctx.body as any;
   if (!professora_id || !titulo || !descricao) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_ciencias").insert({
@@ -1106,7 +1148,7 @@ router.on("compliance_ciencia_criar", authGerente, feat, async (ctx) => {
 });
 
 // Gerente: listar ciências (com filtros)
-router.on("compliance_ciencias_list", authGerente, feat, async (ctx) => {
+router.on("compliance_ciencias_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id, status } = ctx.body as any;
   let q = ctx.sb.from("compliance_ciencias")
     .select("*, professoras(id, nome, email)")
@@ -1118,7 +1160,7 @@ router.on("compliance_ciencias_list", authGerente, feat, async (ctx) => {
 });
 
 // Gerente: ver selfie de ciência específica
-router.on("compliance_ciencia_detalhe", authGerente, feat, async (ctx) => {
+router.on("compliance_ciencia_detalhe", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   const { data } = await ctx.sb.from("compliance_ciencias")
@@ -1134,7 +1176,7 @@ router.on("compliance_ciencia_detalhe", authGerente, feat, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 // Gerente: criar quiz e gerar perguntas via Claude
-router.on("compliance_quiz_criar", authGerente, feat, async (ctx) => {
+router.on("compliance_quiz_criar", authGerenteOrSecretaria, feat, async (ctx) => {
   const { titulo, descricao, politica_id, tema, total_perguntas, nota_minima, tempo_limite_minutos, recorrencia, aplica_a, prompt_contexto } = ctx.body as any;
   if (!titulo || !tema) throw new AppError("VALIDATION_FAILED", "titulo e tema obrigatórios.");
 
@@ -1212,7 +1254,7 @@ Onde resposta_correta é o índice (0-3) da opção correta. Varie a dificuldade
 });
 
 // Gerente: atribuir quiz a funcionários
-router.on("compliance_quiz_atribuir", authGerente, feat, async (ctx) => {
+router.on("compliance_quiz_atribuir", authGerenteOrSecretaria, feat, async (ctx) => {
   const { quiz_id, professora_ids, prazo_dias } = ctx.body as any;
   if (!quiz_id || !Array.isArray(professora_ids)) throw new AppError("VALIDATION_FAILED", "quiz_id e professora_ids[] obrigatórios.");
   const prazo = new Date(); prazo.setDate(prazo.getDate() + (prazo_dias || 7));
@@ -1231,13 +1273,13 @@ router.on("compliance_quiz_atribuir", authGerente, feat, async (ctx) => {
 });
 
 // Gerente: listar quizzes
-router.on("compliance_quizzes_list", authGerente, feat, async (ctx) => {
+router.on("compliance_quizzes_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data } = await ctx.sb.from("compliance_quizzes").select("*, compliance_politicas(titulo)").eq("ativo", true).order("criado_em", { ascending: false });
   return successResponse(data ?? []);
 });
 
 // Gerente: ver resultados de um quiz
-router.on("compliance_quiz_resultados", authGerente, feat, async (ctx) => {
+router.on("compliance_quiz_resultados", authGerenteOrSecretaria, feat, async (ctx) => {
   const { quiz_id } = ctx.body as any;
   if (!quiz_id) throw new AppError("VALIDATION_FAILED", "quiz_id obrigatório.");
   const { data: atribuicoes } = await ctx.sb.from("compliance_quiz_atribuicoes").select("*").eq("quiz_id", quiz_id).order("nome");
@@ -1345,7 +1387,7 @@ router.on("compliance_quiz_responder", authProfessora, async (ctx) => {
 //  RESUMO MENSAL CLT — Ponto por professora
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_ponto_resumo_mensal", authGerente, feat, async (ctx) => {
+router.on("compliance_ponto_resumo_mensal", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id, mes, ano } = ctx.body as any;
   const anoAtual = ano || new Date().getFullYear();
   const mesAtual = mes || new Date().getMonth() + 1;
@@ -1433,7 +1475,7 @@ router.on("compliance_ponto_resumo_mensal", authGerente, feat, async (ctx) => {
 //  FERIADOS — CRUD
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_feriados_list", authGerente, feat, async (ctx) => {
+router.on("compliance_feriados_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { ano } = ctx.body as any;
   let q = ctx.sb.from("compliance_feriados").select("*").order("data");
   if (ano) {
@@ -1443,7 +1485,7 @@ router.on("compliance_feriados_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("compliance_feriados_save", authGerente, feat, async (ctx) => {
+router.on("compliance_feriados_save", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id, data, descricao, tipo } = ctx.body as any;
   if (!data || !descricao) throw new AppError("VALIDATION_FAILED", "data e descricao obrigatorios.");
   if (id) {
@@ -1460,7 +1502,7 @@ router.on("compliance_feriados_save", authGerente, feat, async (ctx) => {
   return successResponse(created);
 });
 
-router.on("compliance_feriados_delete", authGerente, feat, async (ctx) => {
+router.on("compliance_feriados_delete", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatorio.");
   const { error } = await ctx.sb.from("compliance_feriados").delete().eq("id", id);
@@ -1472,12 +1514,12 @@ router.on("compliance_feriados_delete", authGerente, feat, async (ctx) => {
 //  CONFIG PONTO — Read/Update
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_config_ponto_list", authGerente, feat, async (ctx) => {
+router.on("compliance_config_ponto_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data } = await ctx.sb.from("compliance_config_ponto").select("*").order("chave");
   return successResponse(data ?? []);
 });
 
-router.on("compliance_config_ponto_save", authGerente, feat, async (ctx) => {
+router.on("compliance_config_ponto_save", authGerenteOrSecretaria, feat, async (ctx) => {
   const { configs } = ctx.body as any;
   if (!Array.isArray(configs)) throw new AppError("VALIDATION_FAILED", "configs[] obrigatorio.");
   let updated = 0;
@@ -1495,7 +1537,7 @@ router.on("compliance_config_ponto_save", authGerente, feat, async (ctx) => {
 //  BANCO DE HORAS — List
 // ═══════════════════════════════════════════════════════════════
 
-router.on("compliance_banco_horas_list", authGerente, feat, async (ctx) => {
+router.on("compliance_banco_horas_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { professora_id, ano } = ctx.body as any;
   const anoFiltro = ano || new Date().getFullYear();
   let q = ctx.sb
