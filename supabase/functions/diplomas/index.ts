@@ -35,7 +35,9 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
   }
   // Fallback: sessão unificada (tabela sessoes/usuarios)
   const user = await getUsuario(sb, token)
-  if (user && user.papel === 'professora') {
+  if (!user) return null
+  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
+  if (roles.includes('professora') || roles.includes('professora_assistente')) {
     // Busca dados da professora pelo mesmo ID ou email
     const { data: prof } = await sb
       .from('professoras').select('id, nome, email')
@@ -66,7 +68,9 @@ async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
   }
   // Fallback: sessão unificada
   const user = await getUsuario(sb, token)
-  if (user && user.papel === 'gerente') {
+  if (!user) return null
+  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
+  if (roles.includes('gerente') || roles.includes('diretor') || roles.includes('financeiro')) {
     const { data: ger } = await sb
       .from('gerentes').select('id, nome, email')
       .ilike('email', user.email).maybeSingle()

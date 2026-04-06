@@ -1014,7 +1014,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const headers = { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
     const r = await fetch(DIPLOMAS_API, { method: 'POST', headers, body: JSON.stringify({ ...body, _prof_token: token }) });
     const d = await r.json();
-    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.') { doLogout(); }
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'unified_login' && body.action !== 'professora_login' && body.action !== 'compliance_ciencias_pendentes') { doLogout(); }
     return d;
   }
 
