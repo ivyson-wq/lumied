@@ -30,9 +30,9 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 
 | Portal | Arquivo | Público | Descrição |
 |--------|---------|---------|-----------|
-| Pais | `index.html` | Famílias | Login split-screen (logo à esquerda em fundo vermelho + form à direita). Google/Magic Link/biometria. Pickup, boletim, agenda digital, boletos |
-| Gerente | `gerente.html` | Direção | ~45 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação |
-| Professora | `professora.html` | Docentes | Dashboard com stats + alertas compliance, chamada, notas, agenda digital, diplomas, PDI/growth plan, materiais, atestados, manutenção, impressões, achados, diário. Feature-gated por módulos (carrega módulos antes dos dados). 13 páginas, bottom nav mobile |
+| Pais | `index.html` | Famílias | Login split-screen. Google/Magic Link/biometria. Pickup, boletim, agenda, boletos, **acesso** (minha face, presença filhos, gerenciar autorizados para retirada com foto + validação qualidade, períodos 7/30/60 dias ou permanente) |
+| Gerente | `gerente.html` | Direção | ~55 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação, **controle de acesso** (6 painéis: dashboard live, dispositivos, faces, RFID, permissões retirada, log eventos). Breadcrumbs, confirm() estilizado, SRI em CDN scripts |
+| Professora | `professora.html` | Docentes | Dashboard com stats + alertas compliance + **alertas acesso real-time** (polling 10s — "Maria chegou para buscar João"). Chamada, notas, agenda, diplomas, PDI, materiais, atestados, manutenção, impressões, achados, diário. Feature-gated por módulos (carrega módulos antes dos dados). 14 páginas, bottom nav mobile |
 | Equipe | `secretaria.html` | Secretaria + Comercial + Financeiro + Manutenção | Feature-gated com sidebar agrupada e colapsável. 7 grupos: Secretaria (atestados, diplomas, PDI, impressões), Comercial (dashboard, leads, kanban, matrículas, vagas, contratos, templates, metas), Financeiro (dashboard, mensalidades, lançamentos, boletos), Infraestrutura (chamados, achados, biblioteca, cantina, transporte), Compliance (painel, certificações, inspeções, políticas, calendário, incidentes, horários, importar ponto, hora extra, alertas, feriados, config ponto) |
 | Admin Escola | `admin.html` | Staff Lumied + Admin Escola | Dashboard escola, meu plano, adicionais, módulos, tickets, LGPD, config, API, admins |
 | Admin Central | `admin-central.html` | Staff Lumied | Dashboard SaaS, escolas, staff, audit log, tickets, onboarding |
@@ -47,7 +47,8 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 |----------|--------|-----------|
 | `admin` | **Router v2** | SaaS admin: escolas, planos, módulos, dashboard stats, tickets, LGPD, system health |
 | `api` | **Hybrid** | Gerente: 160+ actions. Inclui indicações B2C/B2B, suporte FAQ, WhatsApp SaaS endpoints |
-| `compliance` | **Router v2** | Compliance: hora extra, incidentes/bullying, certificações, inspeções, políticas, calendário regulatório, score |
+| `acesso` | **Router v2** | Controle de acesso: Face Control ID (iDFace) + RFID. Dispositivos, faces, permissões retirada, eventos, presença, alertas. Cadastro público de face com validação de qualidade. Protocolo Control iD API |
+| `compliance` | **Router v2** | Compliance CLT: ponto com HE 50%/100%, hora noturna, banco de horas, feriados, config. Incidentes/bullying, certificações, inspeções, políticas, calendário regulatório, score |
 | `ponto` | **Router v2** | Parser AFD (Portaria 671), espelho de ponto, dashboard, justificativas |
 | `diplomas` | **Hybrid** | Professora/pais: 108 actions |
 | `academico` | Legado | Notas, frequência, diário, documentos, relatórios BNCC, portal aluno, provas |
@@ -357,6 +358,46 @@ Excluída da CCT estadual SINPRO/RS. Tem sindicato próprio: **SINPRO Caxias** (
 
 ---
 
+## Controle de Acesso (Face Control ID + RFID)
+
+**Edge function:** `acesso` | **Dispositivos:** 6 Control iD iDFace (2 em catracas) | **Migration:** 113 (8 tabelas) + 114 (tokens cadastro público)
+
+### Fluxo Principal
+```
+Face Control ID reconhece face/RFID → HTTP POST callback → /acesso
+  ├─ Aluno entrada → acesso_presenca.hora_entrada
+  ├─ Aluno saída → acesso_presenca.hora_saida
+  ├─ Responsável → verifica permissões → alerta recepção + professora da turma
+  └─ Desconhecido → alerta recepção
+```
+
+### Tabelas
+`acesso_dispositivos`, `acesso_faces`, `acesso_rfid`, `acesso_eventos`, `acesso_presenca`, `acesso_permissoes_retirada`, `acesso_alertas`, `acesso_config`, `acesso_cadastro_tokens`
+
+### Protocolo Control iD API
+- Auth: `POST /login.fcgi` → `{session}`
+- Face: `POST /user_set_image.fcgi?session=S&user_id=N` (binary photo)
+- Validação: `POST /user_test_image.fcgi` → scores qualidade (centralização, nitidez, pose)
+- RFID: `POST /create_objects.fcgi` → `{object:"cards"}`
+- Heartbeat: `GET /system_information.fcgi`
+
+### Cadastro Público de Face (`cadastro-face.html`)
+- Link único por pessoa (token 64 chars, 7 dias validade)
+- Câmera do celular ou upload de foto
+- Validação de qualidade em tempo real via Control iD
+- Status "aguardando_aprovação" até gerente aprovar
+- Aprovação sincroniza face para todos os 6 dispositivos
+
+### Portal dos Pais — Tab "Acesso"
+- Minha face (read-only após aprovação)
+- Presença dos filhos hoje (entrada/saída em tempo real)
+- Gerenciar autorizados (adicionar/cancelar): nome, parentesco, foto obrigatória com validação, período (7/30/60 dias ou permanente)
+
+### Portal da Professora — Alertas Real-Time
+- Polling 10s: banner flutuante com alertas de chegada de responsável
+
+---
+
 ## Chrome Extension (Lumied CRM WhatsApp)
 
 Extensão Manifest V3 para enviar templates CRM no WhatsApp Web. Pronta para publicação na Chrome Web Store.
@@ -371,16 +412,26 @@ Extensão Manifest V3 para enviar templates CRM no WhatsApp Web. Pronta para pub
 
 - **RLS** habilitado em 20+ tabelas com policies restritivas
 - **Rate Limiting** em todas as edge functions (Router v2 + legacy via `checkRateLimit`)
-- **Input Validation** com schemas + sanitização XSS (`sanitize()`: HTML entities, backtick, null bytes, ampersand)
-- **CORS Whitelist** dinâmico por request — aceita `*.lumied.com.br` + whitelist + Vercel previews (rejeita origins desconhecidos)
-- **PBKDF2** 100k-120k iterações para senhas — centralizado em `_shared/auth.ts` com `verificarSenhaAuto()` (auto-detect hex vs base64)
+- **Input Validation** com schemas + sanitização XSS recursiva (`sanitizeBody`: nested objects/arrays)
+- **CORS Whitelist** dinâmico por request — aceita `*.lumied.com.br` + whitelist + Vercel previews
+- **PBKDF2** 100k-120k iterações para senhas — `_shared/auth.ts` com `verificarSenhaAuto()`
 - **WebAuthn/Face ID** nos portais principais
 - **CSP** Content-Security-Policy header no Vercel (script-src, connect-src, frame-ancestors none)
+- **SRI** (Subresource Integrity) sha384 em todos os scripts CDN (Supabase JS, SheetJS, jsPDF, html2canvas)
 - **HSTS** + X-Frame DENY + Permissions-Policy + nosniff + Referrer-Policy
+- **Webhook Auth**: inter-webhook verifica `RELAY_SECRET`; ticket-resolver/daily-digest verificam `service_role_key`
+- **Role-based access**: ações financeiras sensíveis (aprovar decisão, alterar resp. financeiro) bloqueadas para secretaria/comercial — só gerente/diretor
 - **Meta Webhook Signature** — HMAC-SHA256 (X-Hub-Signature-256) nos WhatsApp Workers
-- **Sentry** em todas as edge functions (Router v2 via middleware + legacy via try/catch + `captureException`)
+- **Sentry** padronizado: `sentry-init.js` em todos os portais (substituído CDN inline em aluno/hub)
 - **PIX txid** gerado com `crypto.getRandomValues()` (não Math.random)
 - **LGPD**: consentimento, export (`lgpd_exportar_dados()`), anonimização (`lgpd_anonimizar()`), audit log
+
+### Acessibilidade (WCAG)
+- **ARIA**: `role="navigation/dialog/main/banner/alert"`, `aria-label`, `aria-modal` em todos os portais
+- **Focus trap**: Tab cycles dentro de modais abertos, Escape fecha
+- **Contraste**: `--muted` aumentado para `#5a5249` (4.5:1 WCAG AA)
+- **Touch targets**: mín 44×44px em mobile via `lumied-ux.js`
+- **Offline detection**: banner global "Sem conexão" via `lumied-ux.js`
 
 ### Hardening realizado (2026-04-03)
 - Eliminada duplicação de `hashSenha`/`gerarToken`/`validarSessao` em 4 arquivos → centralizado em `_shared/auth.ts`
@@ -461,7 +512,7 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 
 ## Banco de Dados
 
-- **111 migrations** (009-111)
+- **114 migrations** (009-114)
 - Migrations relevantes:
   - `048_planos_modulos.sql` — escolas, planos, modulos, admins
   - `075_multitenancy_limites.sql` — plano_limites, escola_uso
@@ -493,6 +544,9 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
   - `109` — Sync familias → alunos (trigger automático `trg_sync_familia_aluno`)
   - `110` — Unificação de usuários: gerentes/professoras/secretarias → usuarios, sessões unificadas, triggers bidirecionais
   - `111` — Ponto CLT: cálculos trabalhistas completos (HE 50%/100%, hora noturna, banco de horas, feriados, config)
+  - `112` — View unificada `vw_ponto_unificado` (consolida compliance_ponto + AFD/ponto_daily_summary)
+  - `113` — Controle de acesso: 8 tabelas (dispositivos, faces, rfid, eventos, presença, permissões, alertas, config)
+  - `114` — Cadastro público de face: tokens, qualidade_scores, status aguardando_aprovacao
 
 ---
 
