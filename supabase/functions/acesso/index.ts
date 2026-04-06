@@ -882,6 +882,112 @@ router.on("acesso_presenca_turma", authProfessora, async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  Actions PÚBLICAS para portal dos pais (auth via email)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_minha_face", async (ctx) => {
+  const { email } = ctx.body as Any;
+  if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
+  // Buscar familia por email
+  const { data: familia } = await ctx.sb.from("familias").select("id, nome_resp").ilike("email", email).maybeSingle();
+  if (!familia) return successResponse(null);
+  const { data: face } = await ctx.sb.from("acesso_faces")
+    .select("*").eq("pessoa_tipo", "responsavel").eq("pessoa_id", familia.id).eq("ativo", true).maybeSingle();
+  return successResponse(face);
+});
+
+router.on("acesso_presenca_filhos", async (ctx) => {
+  const { email } = ctx.body as Any;
+  if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
+  const hoje = new Date().toISOString().split("T")[0];
+  // Buscar alunos vinculados a esta familia
+  const { data: familia } = await ctx.sb.from("familias").select("id, filhos").ilike("email", email).maybeSingle();
+  if (!familia) return successResponse([]);
+  // filhos pode ser array de objetos com nome, ou buscar na tabela alunos
+  const { data: alunos } = await ctx.sb.from("alunos").select("id, nome, serie").eq("familia_id", familia.id);
+  if (!alunos?.length) return successResponse([]);
+  // Buscar presença de cada aluno hoje
+  const result = [];
+  for (const a of alunos) {
+    const { data: p } = await ctx.sb.from("acesso_presenca")
+      .select("*").eq("aluno_id", a.id).eq("data", hoje).maybeSingle();
+    result.push({
+      aluno_id: a.id, aluno_nome: a.nome, serie: a.serie,
+      status: p?.status || "ausente", hora_entrada: p?.hora_entrada, hora_saida: p?.hora_saida,
+    });
+  }
+  return successResponse(result);
+});
+
+router.on("acesso_meus_autorizados", async (ctx) => {
+  const { email } = ctx.body as Any;
+  if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
+  const { data: familia } = await ctx.sb.from("familias").select("id").ilike("email", email).maybeSingle();
+  if (!familia) return successResponse([]);
+  const { data } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("*").eq("responsavel_id", familia.id).order("criado_em", { ascending: false });
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_adicionar_autorizado", async (ctx) => {
+  const { email_responsavel, aluno_id, aluno_nome, responsavel_nome, parentesco, foto, validade } = ctx.body as Any;
+  if (!email_responsavel || !aluno_id || !responsavel_nome || !parentesco) {
+    throw new AppError("VALIDATION_FAILED", "Campos obrigatórios: email, aluno_id, nome, parentesco.");
+  }
+  const { data: familia } = await ctx.sb.from("familias").select("id").ilike("email", email_responsavel).maybeSingle();
+  if (!familia) throw new AppError("NOT_FOUND", "Família não encontrada.");
+
+  // Processar foto se fornecida
+  let fotoUrl: string | null = null;
+  let fotoBinary: Uint8Array | null = null;
+  if (foto) {
+    const raw = atob(foto.replace(/^data:image\/\w+;base64,/, ""));
+    fotoBinary = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) fotoBinary[i] = raw.charCodeAt(i);
+    if (fotoBinary.length > 2 * 1024 * 1024) throw new AppError("VALIDATION_FAILED", "Foto deve ter no máximo 2MB.");
+
+    // Validar qualidade
+    const qualidade = await validarQualidadeFoto(ctx.sb, fotoBinary);
+    if (!qualidade.ok) {
+      return successResponse({ ok: false, qualidade_erros: qualidade.errors });
+    }
+
+    // Salvar no storage
+    const path = `acesso/autorizados/${aluno_id}_${Date.now()}.jpg`;
+    await ctx.sb.storage.from("wa-documentos").upload(path, fotoBinary, { contentType: "image/jpeg", upsert: true });
+    const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
+    fotoUrl = urlData?.publicUrl || null;
+  }
+
+  // Criar permissão de retirada
+  const { error: permErr } = await ctx.sb.from("acesso_permissoes_retirada").insert({
+    aluno_id, aluno_nome: aluno_nome || "", responsavel_id: familia.id,
+    responsavel_nome, responsavel_email: email_responsavel,
+    responsavel_foto_url: fotoUrl, parentesco, validade: validade || null,
+    autorizado: true, autorizado_por: "auto (portal pais)",
+  });
+  if (permErr) throw new AppError("BAD_REQUEST", permErr.message);
+
+  // Criar face com status aguardando_aprovacao (gera ID único para o autorizado)
+  const pessoaId = crypto.randomUUID();
+  const deviceUserId = uuidToDeviceId(pessoaId);
+  await ctx.sb.from("acesso_faces").insert({
+    pessoa_tipo: "responsavel", pessoa_id: pessoaId,
+    pessoa_nome: responsavel_nome, foto_url: fotoUrl,
+    device_user_id: deviceUserId, sync_status: "aguardando_aprovacao",
+  });
+
+  return successResponse({ ok: true });
+});
+
+router.on("acesso_cancelar_autorizado", async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
+  await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
+  return successResponse({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Validação de qualidade de foto (Control iD)
 // ═══════════════════════════════════════════════════════════════
 

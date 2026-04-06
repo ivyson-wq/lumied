@@ -811,6 +811,64 @@ body.has-bottomnav{padding-bottom:56px;}
     </div>
   </div>
 
+  <!-- TAB: ACESSO / RETIRADA -->
+  <div class="tab-panel" id="tabAcesso" data-modulo="controle_acesso">
+
+    <!-- Minha Face -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:12px;">👤 Meu Cadastro Facial</div>
+      <div id="minhaFaceContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+    </div>
+
+    <!-- Filhos na escola -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:12px;">👶 Meus Filhos — Presença Hoje</div>
+      <div id="meusFilhosPresenca"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+    </div>
+
+    <!-- Pessoas autorizadas -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:4px;">🔐 Pessoas Autorizadas para Retirada</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Gerencie quem pode retirar seus filhos da escola. Cada pessoa autorizada precisa ter uma foto cadastrada para reconhecimento facial.</p>
+      <div id="autorizadosLista" style="margin-bottom:16px;"></div>
+
+      <div id="formNovoAutorizado" style="background:#f8f5f0;border-radius:12px;padding:16px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">+ Adicionar pessoa autorizada</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Nome completo *</label><input type="text" id="autNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+          <div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parentesco *</label>
+            <select id="autParentesco" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fff;">
+              <option value="">Selecione</option><option value="pai">Pai</option><option value="mae">Mãe</option><option value="avo">Avô/Avó</option><option value="tio">Tio/Tia</option><option value="motorista">Motorista</option><option value="outro">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Selecione o(s) filho(s) *</label>
+          <div id="autFilhosCheck" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Foto do rosto (para reconhecimento facial) *</label>
+          <div style="display:flex;gap:8px;">
+            <button onclick="autAbrirCamera()" style="padding:8px 14px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Câmera</button>
+            <button onclick="document.getElementById('autFileInput').click()" style="padding:8px 14px;background:#f0ece6;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📁 Arquivo</button>
+            <input type="file" id="autFileInput" accept="image/*" capture="user" style="display:none;" onchange="autFileSelect(event)">
+          </div>
+          <div id="autFotoPreview" style="display:none;margin-top:10px;">
+            <img id="autFotoImg" style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:2px solid var(--border);">
+            <button onclick="autLimparFoto()" style="display:block;margin-top:4px;background:none;border:none;color:#C8102E;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Remover foto</button>
+          </div>
+          <div id="autQualidade" style="display:none;margin-top:8px;font-size:12px;padding:8px 12px;border-radius:8px;"></div>
+        </div>
+        <div style="margin-top:12px;">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Validade (opcional — deixe vazio para permanente)</label>
+          <input type="date" id="autValidade" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+        </div>
+        <button onclick="salvarAutorizado()" id="autSalvarBtn" style="margin-top:14px;width:100%;padding:12px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Adicionar Autorizado</button>
+        <div id="autFeedback" style="display:none;margin-top:8px;font-size:13px;padding:10px;border-radius:8px;"></div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /formWrap -->
 
 <!-- BOTTOM NAV -->
@@ -925,6 +983,7 @@ body.has-bottomnav{padding-bottom:56px;}
     if (tab === 'diaadia') carregarDiaADia();
     if (tab === 'boletim') carregarBoletim();
     if (tab === 'achados') carregarAchados();
+    if (tab === 'acesso') carregarAcesso();
   }
 
   // ── ATALHOS PERSONALIZÁVEIS ──────────────────────────────
@@ -936,7 +995,8 @@ body.has-bottomnav{padding-bottom:56px;}
     boletos: { icon: '💰', label: 'Boletos' },
     solicitar: { icon: '🕐', label: 'Turno' },
     atividades: { icon: '🎯', label: 'Atividades' },
-    achados: { icon: '🔍', label: 'Achados' }
+    achados: { icon: '🔍', label: 'Achados' },
+    acesso: { icon: '🔐', label: 'Acesso' }
   };
   let paisEditMode = false;
 
@@ -2766,6 +2826,215 @@ body.has-bottomnav{padding-bottom:56px;}
         </div>
       </div>`;
     }).join('');
+  }
+
+  // ── ACESSO / CONTROLE DE RETIRADA ─────────────
+  const ACESSO_API = CONFIG.SUPABASE_URL + '/functions/v1/acesso';
+  let autFotoBase64 = null;
+  let autCameraStream = null;
+  let meusFilhosData = [];
+
+  async function callAcesso(body) {
+    const token = sb ? (await sb.auth.getSession()).data?.session?.access_token : null;
+    const r = await fetch(ACESSO_API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON }, body: JSON.stringify({ ...body, _pais_email: currentUser?.email, _pais_token: token }) });
+    return r.json();
+  }
+
+  async function carregarAcesso() {
+    if (!currentUser?.email) return;
+    await Promise.all([carregarMinhaFace(), carregarPresencaFilhos(), carregarAutorizados()]);
+  }
+
+  // Minha face
+  async function carregarMinhaFace() {
+    const el = document.getElementById('minhaFaceContent');
+    try {
+      const d = await callAcesso({ action: 'acesso_minha_face', email: currentUser.email });
+      const face = d.data || d;
+      if (face && face.foto_url) {
+        const statusLabel = { sincronizado: '✅ Ativo', aguardando_aprovacao: '⏳ Aguardando aprovação', pendente: '🔄 Sincronizando', erro: '❌ Erro' };
+        el.innerHTML = `<div style="display:flex;align-items:center;gap:16px;">
+          <img src="${face.foto_url}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:2px solid var(--border);">
+          <div>
+            <div style="font-weight:600;">${esc(face.pessoa_nome || currentUser.email)}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">Status: ${statusLabel[face.sync_status] || face.sync_status}</div>
+          </div>
+        </div>`;
+      } else {
+        el.innerHTML = `<p style="font-size:13px;color:var(--muted);">Nenhuma foto cadastrada. Solicite à escola o link de cadastro facial ou peça para cadastrar na recepção.</p>`;
+      }
+    } catch(_) {
+      el.innerHTML = '<p style="font-size:13px;color:var(--muted);">Não foi possível carregar.</p>';
+    }
+  }
+
+  // Presença dos filhos
+  async function carregarPresencaFilhos() {
+    const el = document.getElementById('meusFilhosPresenca');
+    try {
+      const d = await callAcesso({ action: 'acesso_presenca_filhos', email: currentUser.email });
+      const filhos = Array.isArray(d.data || d) ? (d.data || d) : [];
+      meusFilhosData = filhos;
+      if (!filhos.length) { el.innerHTML = '<p style="font-size:13px;color:var(--muted);">Nenhum filho vinculado.</p>'; return; }
+      el.innerHTML = filhos.map(f => {
+        const st = f.status || 'ausente';
+        const icon = st === 'presente' ? '🟢' : st === 'saiu' ? '🔵' : '🔴';
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0ece6;">
+          <span style="font-size:20px;">${icon}</span>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;">${esc(f.aluno_nome || f.nome)}</div>
+            <div style="font-size:12px;color:var(--muted);">${st === 'presente' ? 'Na escola desde ' + (f.hora_entrada || '—') : st === 'saiu' ? 'Saiu às ' + (f.hora_saida || '—') : 'Ausente hoje'}</div>
+          </div>
+        </div>`;
+      }).join('');
+      // Preencher checkboxes do form de autorizado
+      document.getElementById('autFilhosCheck').innerHTML = filhos.map(f =>
+        `<label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;">
+          <input type="checkbox" name="autFilho" value="${f.aluno_id || f.id}"> ${esc(f.aluno_nome || f.nome)}
+        </label>`
+      ).join('');
+    } catch(_) {
+      el.innerHTML = '<p style="font-size:13px;color:var(--muted);">Não foi possível carregar.</p>';
+    }
+  }
+
+  // Autorizados
+  async function carregarAutorizados() {
+    const el = document.getElementById('autorizadosLista');
+    try {
+      const d = await callAcesso({ action: 'acesso_meus_autorizados', email: currentUser.email });
+      const lista = Array.isArray(d.data || d) ? (d.data || d) : [];
+      if (!lista.length) { el.innerHTML = '<p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Nenhuma pessoa autorizada cadastrada ainda.</p>'; return; }
+      el.innerHTML = lista.map(a => `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#f8f5f0;border-radius:10px;margin-bottom:8px;">
+        ${a.responsavel_foto_url ? `<img src="${a.responsavel_foto_url}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--border);">` : '<div style="width:48px;height:48px;border-radius:10px;background:#e2dbd1;display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>'}
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:14px;">${esc(a.responsavel_nome)}</div>
+          <div style="font-size:12px;color:var(--muted);">${esc(a.parentesco || '—')} · ${esc(a.aluno_nome || '')}</div>
+          ${a.validade ? `<div style="font-size:11px;color:var(--muted);">Válido até ${new Date(a.validade).toLocaleDateString('pt-BR')}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${a.autorizado ? 'rgba(45,122,58,.12);color:#2d7a3a' : 'rgba(200,16,46,.12);color:#C8102E'};">${a.autorizado ? 'Ativo' : 'Cancelado'}</span>
+          ${a.autorizado ? `<button onclick="cancelarAutorizado('${a.id}')" style="background:none;border:none;color:#C8102E;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>` : ''}
+        </div>
+      </div>`).join('');
+    } catch(_) {
+      el.innerHTML = '<p style="font-size:13px;color:var(--muted);">Não foi possível carregar.</p>';
+    }
+  }
+
+  async function cancelarAutorizado(id) {
+    if (!await _lumiedConfirm('Deseja cancelar a autorização desta pessoa?')) return;
+    await callAcesso({ action: 'acesso_cancelar_autorizado', id });
+    carregarAutorizados();
+  }
+
+  // Foto do autorizado
+  function autAbrirCamera() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*'; input.capture = 'user';
+    input.onchange = (e) => autFileSelect(e);
+    input.click();
+  }
+
+  function autFileSelect(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      autFotoBase64 = ev.target.result;
+      document.getElementById('autFotoImg').src = autFotoBase64;
+      document.getElementById('autFotoPreview').style.display = 'block';
+      autValidarFoto();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function autLimparFoto() {
+    autFotoBase64 = null;
+    document.getElementById('autFotoPreview').style.display = 'none';
+    document.getElementById('autQualidade').style.display = 'none';
+  }
+
+  async function autValidarFoto() {
+    const q = document.getElementById('autQualidade');
+    q.style.display = 'block'; q.style.background = '#fff8e1'; q.style.color = '#b07d00';
+    q.textContent = 'Verificando qualidade...';
+    try {
+      const d = await callAcesso({ action: 'acesso_validar_foto', foto: autFotoBase64 });
+      if (d.ok || d.data?.ok) {
+        q.style.background = '#edf7ef'; q.style.color = '#2d7a3a';
+        q.innerHTML = '✅ Foto aprovada para reconhecimento facial.';
+      } else {
+        const erros = d.errors || d.data?.errors || [];
+        if (erros.length && !erros[0].includes('offline')) {
+          q.style.background = '#fdf0f2'; q.style.color = '#C8102E';
+          q.innerHTML = '❌ ' + erros.join('<br>• ');
+        } else {
+          q.style.background = '#fff8e1'; q.style.color = '#b07d00';
+          q.innerHTML = '⚠️ Validação offline. A escola verificará a foto.';
+        }
+      }
+    } catch(_) {
+      q.style.background = '#fff8e1'; q.style.color = '#b07d00';
+      q.textContent = '⚠️ Não foi possível validar.';
+    }
+  }
+
+  async function salvarAutorizado() {
+    const nome = document.getElementById('autNome').value.trim();
+    const parentesco = document.getElementById('autParentesco').value;
+    const filhos = [...document.querySelectorAll('input[name="autFilho"]:checked')].map(c => c.value);
+    const validade = document.getElementById('autValidade').value || null;
+    const fb = document.getElementById('autFeedback');
+    fb.style.display = 'none';
+
+    if (!nome || !parentesco || !filhos.length) {
+      fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+      fb.textContent = 'Preencha nome, parentesco e selecione pelo menos um filho.';
+      return;
+    }
+    if (!autFotoBase64) {
+      fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+      fb.textContent = 'A foto é obrigatória para o reconhecimento facial.';
+      return;
+    }
+
+    const btn = document.getElementById('autSalvarBtn');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+
+    try {
+      for (const alunoId of filhos) {
+        const aluno = meusFilhosData.find(f => (f.aluno_id || f.id) === alunoId);
+        const d = await callAcesso({
+          action: 'acesso_adicionar_autorizado',
+          email_responsavel: currentUser.email,
+          aluno_id: alunoId,
+          aluno_nome: aluno?.aluno_nome || aluno?.nome || '',
+          responsavel_nome: nome,
+          parentesco,
+          foto: autFotoBase64,
+          validade,
+        });
+        if (d.error) {
+          fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+          fb.textContent = d.error;
+          btn.disabled = false; btn.textContent = 'Adicionar Autorizado';
+          return;
+        }
+      }
+
+      fb.style.display = 'block'; fb.style.background = '#edf7ef'; fb.style.color = '#2d7a3a';
+      fb.textContent = '✅ Autorizado adicionado! A escola irá aprovar o cadastro facial.';
+      document.getElementById('autNome').value = '';
+      document.getElementById('autParentesco').value = '';
+      document.querySelectorAll('input[name="autFilho"]').forEach(c => c.checked = false);
+      document.getElementById('autValidade').value = '';
+      autLimparFoto();
+      carregarAutorizados();
+    } catch(e) {
+      fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+      fb.textContent = 'Erro ao salvar. Tente novamente.';
+    }
+    btn.disabled = false; btn.textContent = 'Adicionar Autorizado';
   }
 
   // ── WEBAUTHN / BIOMETRIA (portal dos pais) ─────────────
