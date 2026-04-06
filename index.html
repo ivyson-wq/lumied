@@ -1021,11 +1021,19 @@ body.has-bottomnav{padding-bottom:56px;}
 
   // ── AUTH ──────────────────────────────────────────────
   async function initAuth() {
-    // Detecta erros de OAuth retornados na URL (ex: Google login falhou)
+    // Debug: mostra URL de retorno para diagnóstico
+    const fullUrl = window.location.href;
+    const hasCode = fullUrl.includes('code=');
+    const hasToken = fullUrl.includes('access_token');
+    const hasHash = window.location.hash.length > 1;
+    const hasError = fullUrl.includes('error');
+    console.log('[Auth Debug] URL:', fullUrl);
+    console.log('[Auth Debug] code:', hasCode, 'token:', hasToken, 'hash:', hasHash, 'error:', hasError);
+
+    // Detecta erros de OAuth retornados na URL
     const urlParams = new URLSearchParams(window.location.search);
     const oauthError = urlParams.get('error_description') || urlParams.get('error');
     if (oauthError) {
-      // Limpa os parâmetros de erro da URL
       window.history.replaceState({}, '', window.location.pathname);
       showLoginWall();
       setTimeout(() => showToast('Erro no login Google: ' + decodeURIComponent(oauthError), 'error', 6000), 300);
@@ -1043,9 +1051,29 @@ body.has-bottomnav{padding-bottom:56px;}
       }
     }
 
-    // getSession() detecta automaticamente tokens no hash (implicit flow)
+    // Se voltou do OAuth com ?code= (server ainda usa PKCE), tenta trocar
+    const authCode = urlParams.get('code');
+    if (authCode) {
+      console.log('[Auth Debug] Tentando exchangeCodeForSession com code:', authCode.substring(0, 8) + '...');
+      try {
+        const { data, error: exchangeError } = await sb.auth.exchangeCodeForSession(authCode);
+        window.history.replaceState({}, '', window.location.pathname);
+        if (!exchangeError && data?.session?.user) {
+          console.log('[Auth Debug] Exchange OK, user:', data.session.user.email);
+          currentUser = data.session.user;
+          await showForm(data.session.user);
+          return;
+        }
+        if (exchangeError) console.error('[Auth Debug] Exchange error:', exchangeError);
+      } catch (e) {
+        console.error('[Auth Debug] Exchange exception:', e);
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+
+    // getSession() detecta tokens no hash (implicit) ou sessão existente
     const { data: { session }, error: sessionError } = await sb.auth.getSession();
-    if (sessionError) console.error('getSession error:', sessionError);
+    console.log('[Auth Debug] getSession result:', session ? 'user=' + session.user.email : 'null', 'error:', sessionError);
     if (session?.user) {
       currentUser = session.user; await showForm(session.user);
     } else {
