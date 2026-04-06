@@ -347,7 +347,10 @@ body.has-bottomnav{padding-bottom:56px;}
         <div class="ub-email" id="ubEmail">—</div>
       </div>
     </div>
-    <button class="ub-signout" onclick="doSignOut()">Sair ↩</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="ub-signout" onclick="switchTab('perfil')" style="color:var(--text);font-weight:500;">⚙ Perfil</button>
+      <button class="ub-signout" onclick="doSignOut()">Sair ↩</button>
+    </div>
   </div>
 </div>
 
@@ -868,6 +871,41 @@ body.has-bottomnav{padding-bottom:56px;}
     </div>
   </div>
 
+  <!-- TAB: MEU PERFIL -->
+  <div class="tab-panel" id="tabPerfil">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:16px;">👤 Meus Dados</div>
+      <div class="ml-field">
+        <label>Nome completo</label>
+        <input type="text" id="perfilNome" placeholder="Seu nome">
+      </div>
+      <div class="ml-field">
+        <label>E-mail</label>
+        <input type="email" id="perfilEmail" readonly style="background:#f5f3ef;color:var(--muted);cursor:not-allowed;">
+      </div>
+      <div class="ml-field">
+        <label>Telefone</label>
+        <input type="tel" id="perfilTelefone" placeholder="(00) 00000-0000">
+      </div>
+      <div id="perfilMsg" style="display:none;font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:10px;"></div>
+      <button class="btn-magic" id="btnSalvarPerfil" onclick="salvarPerfil()">Salvar alterações</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px;">🔑 Alterar Senha</div>
+      <div class="ml-field">
+        <label>Nova senha (mínimo 6 caracteres)</label>
+        <input type="password" id="perfilSenhaNova" placeholder="Digite a nova senha" autocomplete="new-password">
+      </div>
+      <div class="ml-field">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="perfilSenhaConf" placeholder="Repita a nova senha" autocomplete="new-password">
+      </div>
+      <div id="senhaMsg" style="display:none;font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:10px;"></div>
+      <button class="btn-magic" id="btnAlterarSenha" onclick="alterarSenha()" style="background:#1a6bb5;">Alterar senha</button>
+    </div>
+  </div>
+
 </div><!-- /formWrap -->
 
 <!-- BOTTOM NAV -->
@@ -983,6 +1021,54 @@ body.has-bottomnav{padding-bottom:56px;}
     if (tab === 'boletim') carregarBoletim();
     if (tab === 'achados') carregarAchados();
     if (tab === 'acesso') carregarAcesso();
+    if (tab === 'perfil') carregarPerfil();
+  }
+
+  // ── PERFIL DO PAI ──────────────────────────────────────
+  function carregarPerfil() {
+    if (!currentUser) return;
+    const meta = currentUser.user_metadata || {};
+    document.getElementById('perfilNome').value = meta.full_name || meta.name || '';
+    document.getElementById('perfilEmail').value = currentUser.email || '';
+    document.getElementById('perfilTelefone').value = meta.phone || meta.telefone || '';
+    document.getElementById('perfilMsg').style.display = 'none';
+    document.getElementById('senhaMsg').style.display = 'none';
+    document.getElementById('perfilSenhaNova').value = '';
+    document.getElementById('perfilSenhaConf').value = '';
+  }
+
+  async function salvarPerfil() {
+    const nome = document.getElementById('perfilNome').value.trim();
+    const telefone = document.getElementById('perfilTelefone').value.trim();
+    const msg = document.getElementById('perfilMsg');
+    if (!nome) { msg.textContent = 'Nome é obrigatório.'; msg.style.background = '#fdf0f2'; msg.style.color = '#a00d24'; msg.style.display = 'block'; return; }
+    const btn = document.getElementById('btnSalvarPerfil');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const { error } = await sb.auth.updateUser({ data: { full_name: nome, telefone } });
+    btn.disabled = false; btn.textContent = 'Salvar alterações';
+    if (error) { msg.textContent = 'Erro: ' + error.message; msg.style.background = '#fdf0f2'; msg.style.color = '#a00d24'; msg.style.display = 'block'; return; }
+    currentUser.user_metadata = { ...currentUser.user_metadata, full_name: nome, telefone };
+    document.getElementById('ubName').textContent = nome;
+    msg.textContent = 'Dados atualizados com sucesso!';
+    msg.style.background = '#edf7f0'; msg.style.color = '#2d7a3a'; msg.style.display = 'block';
+  }
+
+  async function alterarSenha() {
+    const nova = document.getElementById('perfilSenhaNova').value;
+    const conf = document.getElementById('perfilSenhaConf').value;
+    const msg = document.getElementById('senhaMsg');
+    msg.style.display = 'none';
+    if (!nova || nova.length < 6) { msg.textContent = 'A senha deve ter no mínimo 6 caracteres.'; msg.style.background = '#fdf0f2'; msg.style.color = '#a00d24'; msg.style.display = 'block'; return; }
+    if (nova !== conf) { msg.textContent = 'As senhas não coincidem.'; msg.style.background = '#fdf0f2'; msg.style.color = '#a00d24'; msg.style.display = 'block'; return; }
+    const btn = document.getElementById('btnAlterarSenha');
+    btn.disabled = true; btn.textContent = 'Alterando...';
+    const { error } = await sb.auth.updateUser({ password: nova });
+    btn.disabled = false; btn.textContent = 'Alterar senha';
+    if (error) { msg.textContent = 'Erro: ' + error.message; msg.style.background = '#fdf0f2'; msg.style.color = '#a00d24'; msg.style.display = 'block'; return; }
+    document.getElementById('perfilSenhaNova').value = '';
+    document.getElementById('perfilSenhaConf').value = '';
+    msg.textContent = 'Senha alterada com sucesso!';
+    msg.style.background = '#edf7f0'; msg.style.color = '#2d7a3a'; msg.style.display = 'block';
   }
 
   // ── ATALHOS PERSONALIZÁVEIS ──────────────────────────────
