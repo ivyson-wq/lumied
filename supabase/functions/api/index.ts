@@ -150,6 +150,81 @@ serve(async (req: Request) => {
     return ok({ logged: false });
   }
 
+  // ── Magic Link customizado (com branding da escola) ──
+  if (action === "send_magic_link") {
+    const email = ((body.email as string) || "").toLowerCase().trim();
+    const redirectTo = (body.redirect_to as string) || "";
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err("E-mail inválido.");
+
+    // Rate limit
+    const rlMagic = checkRateLimit(ip, "login");
+    if (!rlMagic.allowed) return err(`Tente novamente em ${rlMagic.retryAfterSeconds}s.`, 429);
+
+    // Busca config da escola
+    const { data: cfgRows } = await admin.from("escola_config").select("chave, valor");
+    const cfg: Record<string, string> = {};
+    for (const r of cfgRows ?? []) cfg[r.chave] = typeof r.valor === "string" ? r.valor.replace(/^"|"$/g, "") : (r.valor ?? "");
+    const escolaNome = cfg.escola_nome || "Escola";
+    const logoUrl = cfg.escola_logo_url || "";
+    const cor = cfg.cor_primaria || "#C8102E";
+
+    // Gera magic link via Supabase Auth Admin
+    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo },
+    });
+    if (linkErr) return err("Erro ao gerar link: " + linkErr.message);
+    const magicUrl = linkData?.properties?.action_link || "";
+    if (!magicUrl) return err("Erro interno: link não gerado.");
+
+    // Envia email via Resend com branding da escola
+    const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_KEY) return err("Serviço de e-mail não configurado.");
+
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${escolaNome}" style="max-height:60px;max-width:200px;object-fit:contain;margin-bottom:16px;">`
+      : `<div style="font-size:32px;margin-bottom:16px;">${cfg.escola_icone || "🎓"}</div>`;
+
+    const html = `
+      <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fff;">
+        <div style="text-align:center;margin-bottom:24px;">
+          ${logoHtml}
+          <h2 style="color:${cor};margin:0;font-size:20px;">${escolaNome}</h2>
+          <p style="color:#888;font-size:12px;margin:4px 0 0;">by <strong>Lumied</strong></p>
+        </div>
+        <div style="background:#f8f5f0;border-radius:12px;padding:24px;text-align:center;">
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Clique no botão abaixo para acessar o portal:</p>
+          <a href="${magicUrl}" style="display:inline-block;padding:14px 32px;background:${cor};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Acessar Portal</a>
+        </div>
+        <p style="font-size:12px;color:#999;text-align:center;margin-top:20px;line-height:1.5;">
+          Se você não solicitou este acesso, ignore este e-mail.<br>
+          Este link expira em 1 hora.
+        </p>
+        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+        <p style="font-size:11px;color:#bbb;text-align:center;">
+          Sistema ${escolaNome} by Lumied
+        </p>
+      </div>`;
+
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_KEY}` },
+      body: JSON.stringify({
+        from: `${escolaNome} <noreply@lumied.com.br>`,
+        to: [email],
+        subject: `Seu acesso ao ${escolaNome}`,
+        html,
+      }),
+    });
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      console.error("[magic-link] Resend error:", resp.status, errBody);
+      return err("Erro ao enviar e-mail. Tente novamente.");
+    }
+    return ok({ sent: true });
+  }
+
   // ── Config pública da escola (carregada por todos os portais) ──
   if (action === "config_publica") {
     const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria")

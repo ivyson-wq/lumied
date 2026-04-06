@@ -1374,16 +1374,19 @@ body.has-bottomnav{padding-bottom:56px;}
 
     const redirectTo = window.location.origin + window.location.pathname;
 
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo, shouldCreateUser: true }
-    });
-
-    if (error) {
+    try {
+      const res = await fetch(SUPABASE_URL + '/functions/v1/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+        body: JSON.stringify({ action: 'send_magic_link', email, redirect_to: redirectTo })
+      });
+      const d = await res.json();
+      if (d.error) throw new Error(d.error);
+    } catch (error) {
       console.error('Magic link error:', error);
       btn.disabled = false;
       btn.innerHTML = '✉️ Enviar link de acesso';
-      errEl.textContent = 'Erro: ' + error.message;
+      errEl.textContent = 'Erro: ' + (error.message || error);
       errEl.classList.add('show');
       return;
     }
@@ -1414,7 +1417,11 @@ body.has-bottomnav{padding-bottom:56px;}
   async function resendLink() {
     const email = document.getElementById('sentEmailBadge').textContent;
     document.getElementById('btnResend').disabled = true;
-    await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+    await fetch(SUPABASE_URL + '/functions/v1/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+      body: JSON.stringify({ action: 'send_magic_link', email, redirect_to: window.location.href })
+    });
     startResendCooldown();
   }
 
