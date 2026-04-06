@@ -4180,7 +4180,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         ${turmaSelect}
         <div style="display:flex;gap:4px;flex-wrap:wrap;">${badges}</div>
         <button class="action-btn" onclick="openPermissoes('${u.id}','${esc(u.nome||u.email)}','${u.papeis?u.papeis[0]:u.papel}')" title="Permissões" style="font-size:14px;">🔐</button>
-        ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn" onclick="openEditPapeis('${u.id}')" title="Editar papéis" style="font-size:14px;">✏️</button><button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
+        <button class="action-btn" onclick="openEditPapeis('${u.id}')" title="Editar papéis" style="font-size:14px;">✏️</button>
+        ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
       </div>`;
     }).join('');
     // Seta valores dos selects de turma
