@@ -998,20 +998,36 @@ body.has-bottomnav{padding-bottom:56px;}
 
   let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
   let resendCooldown = null;
+  let _accessDeniedActive = false; // flag para evitar loop com onAuthStateChange
+
+  // ── AUTO-LOGOUT POR INATIVIDADE (30 min) ──────────────
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos
+  let _inactivityTimer = null;
+  function resetInactivityTimer() {
+    if (_inactivityTimer) clearTimeout(_inactivityTimer);
+    if (!currentUser) return;
+    _inactivityTimer = setTimeout(async () => {
+      if (currentUser) {
+        showToast('Sessão expirada por inatividade.', 'warning', 5000);
+        await doSignOut();
+      }
+    }, INACTIVITY_TIMEOUT);
+  }
+  ['click','keydown','scroll','touchstart','mousemove'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
 
   // ── AUTH ──────────────────────────────────────────────
   async function initAuth() {
     const { data: { session } } = await sb.auth.getSession();
     if (session?.user) {
-      currentUser = session.user; showForm(session.user);
+      currentUser = session.user; await showForm(session.user);
     } else {
       // Tenta auto-login biométrico se tem credencial salva
       const bioEmail = localStorage.getItem('pais_bio_email');
       if (bioEmail && typeof WebAuthnClient !== 'undefined') {
         const available = await WebAuthnClient.isPlatformAvailable();
         if (available) {
-          // Mobile (iOS/Android): tenta automático
-          // Desktop: mostra login wall com botão bio visível
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
           if (isMobile) {
             try {
@@ -1021,7 +1037,7 @@ body.has-bottomnav{padding-bottom:56px;}
                 const d = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname }) }).then(r=>r.json());
                 if (!d.error) {
                   currentUser = { email: bioEmail, user_metadata: { full_name: localStorage.getItem('pais_bio_nome')||'', avatar_url: localStorage.getItem('pais_bio_avatar')||'' } };
-                  showForm(currentUser);
+                  await showForm(currentUser);
                   return;
                 }
               }
@@ -1033,10 +1049,12 @@ body.has-bottomnav{padding-bottom:56px;}
     }
 
     sb.auth.onAuthStateChange(async (_e, session) => {
+      if (_accessDeniedActive) return; // não interferir quando acesso foi negado
       if (session?.user) {
         if (currentUser && currentUser.email === session.user.email) return;
-        currentUser = session.user; showForm(session.user);
+        currentUser = session.user; await showForm(session.user);
       } else {
+        currentUser = null;
         showLoginWall();
       }
     });
@@ -1287,7 +1305,10 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   function showLoginWall() {
+    _accessDeniedActive = false; // resetar flag
+    if (_inactivityTimer) clearTimeout(_inactivityTimer);
     document.getElementById('loginScreenWrap').style.display = 'flex';
+    document.getElementById('accessPending').style.display = 'none';
     document.getElementById('loginWall').style.display = 'block';
     document.getElementById('userBar').style.display = 'none';
     document.getElementById('formWrap').style.display = 'none';
@@ -1330,14 +1351,15 @@ body.has-bottomnav{padding-bottom:56px;}
         });
         const sols = await r2.json();
         if (!sols.length) {
-          // Email não cadastrado — mostrar tela de acesso negado/solicitação
-          // SignOut para evitar loop (onAuthStateChange redetectaria sessão)
-          await sb.auth.signOut();
+          // Email não cadastrado — mostrar acesso negado
+          _accessDeniedActive = true; // bloqueia onAuthStateChange
           currentUser = null;
+          try { await sb.auth.signOut(); } catch(_) {}
           showAccessDenied(email);
           document.getElementById('loginScreenWrap').style.display = 'none';
           document.getElementById('loginWall').style.display = 'none';
           document.getElementById('formWrap').style.display = 'none';
+          document.getElementById('userBar').style.display = 'none';
           document.getElementById('accessPending').style.display = 'block';
           return;
         }
@@ -1368,12 +1390,15 @@ body.has-bottomnav{padding-bottom:56px;}
       document.getElementById('nomeResp').nextElementSibling.style.display = 'none';
     }
 
+    _accessDeniedActive = false;
     document.getElementById('loginScreenWrap').style.display = 'none';
+    document.getElementById('accessPending').style.display = 'none';
     document.getElementById('loginWall').style.display   = 'none';
     document.getElementById('formWrap').style.display    = 'block';
     document.getElementById('pickupCard').style.display  = 'block';
     document.getElementById('agendaCard').style.display  = 'block';
     document.getElementById('boletosCard').style.display = 'block';
+    resetInactivityTimer();
 
     // Header compacto + greeting
     document.querySelector('.site-header')?.classList.add('compact');
