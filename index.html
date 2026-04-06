@@ -292,15 +292,15 @@ body.has-bottomnav{padding-bottom:72px;}
 /* DESKTOP: login card wider */
 @media(min-width:768px){#loginWall{max-width:400px;}.login-card{padding:48px 44px;}}
 
-/* DESKTOP: bottom nav becomes top nav bar */
+/* DESKTOP: bottom nav stays fixed at bottom */
 @media(min-width:900px){
-.bottom-nav{position:static;border-top:none;box-shadow:none;border-bottom:1px solid var(--border);padding:0;justify-content:center;gap:0;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;border-top:1px solid var(--border);box-shadow:0 -2px 12px rgba(0,0,0,.06);padding:0;justify-content:center;gap:0;background:#fff;z-index:200;}
 .bottom-nav.visible{display:flex;}
-.bnav-item{flex:none;flex-direction:row;gap:6px;padding:12px 20px;border-bottom:2.5px solid transparent;}
-.bnav-item.active{border-bottom-color:var(--red);color:var(--red);}
+.bnav-item{flex:none;flex-direction:row;gap:6px;padding:14px 24px;border-top:2.5px solid transparent;}
+.bnav-item.active{border-top-color:var(--red);color:var(--red);}
 .bnav-label{font-size:12px;}
 .bnav-icon{font-size:16px;}
-body.has-bottomnav{padding-bottom:0;}
+body.has-bottomnav{padding-bottom:56px;}
 }
 </style>
 </head>
