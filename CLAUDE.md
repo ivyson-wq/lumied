@@ -514,7 +514,8 @@ O sistema cria automaticamente:
 - `SENTRY_DSN` — Sentry event ingestion
 
 ### Google OAuth
-- Client ID: `88100226947-3i672iq8v2uk1ijjp11ba25p893gp6nu.apps.googleusercontent.com`
+- Client ID: configurado no Supabase Auth (Google Cloud Console)
+- Client Secret: configurado no Supabase Auth
 - Authorized JS origins: `https://maplebearcaxias.lumied.com.br`
 - Redirect URI: `https://brgorknbrjlfwvrrlwxj.supabase.co/auth/v1/callback`
 
