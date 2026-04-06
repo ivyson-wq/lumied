@@ -551,6 +551,17 @@ serve(async (req: Request) => {
     });
   }
 
+  // ── Módulos habilitados (público — usado por todos os portais) ──
+  if (action === "modulos_habilitados") {
+    try {
+      const escolaId = await getEscolaPadrao(admin);
+      if (!escolaId) return ok({ modulos: [], tema: 'corporativo' });
+      const modulos = await getModulosHabilitados(admin, escolaId);
+      const { data: escola } = await admin.from("escolas").select("tema").eq("id", escolaId).single();
+      return ok({ modulos: [...modulos], tema: escola?.tema || 'corporativo' });
+    } catch { return ok({ modulos: [], tema: 'corporativo' }); }
+  }
+
   // ════════════════════════════════════════════════════════════
   //  AÇÕES AUTENTICADAS
   // ════════════════════════════════════════════════════════════
@@ -1950,17 +1961,6 @@ serve(async (req: Request) => {
   }
 
   // ── Módulos habilitados (feature gating) ──
-  if (action === "modulos_habilitados") {
-    try {
-      const escolaId = await getEscolaPadrao(admin);
-      if (!escolaId) return ok({ modulos: [], tema: 'corporativo' });
-      const modulos = await getModulosHabilitados(admin, escolaId);
-      // Buscar tema da escola
-      const { data: escola } = await admin.from("escolas").select("tema").eq("id", escolaId).single();
-      return ok({ modulos: [...modulos], tema: escola?.tema || 'corporativo' });
-    } catch { return ok({ modulos: [], tema: 'corporativo' }); }
-  }
-
   // ── Ticket de suporte (público) ──
   if (action === "ticket_create") {
     const { email, nome, portal, tipo, descricao, url_pagina, user_agent, resolucao_tela } = body as any;
