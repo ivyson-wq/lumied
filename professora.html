@@ -362,7 +362,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   </div>
 
   <div class="prof-sidebar" id="profSidebar">
-    <button class="ps-item active" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup"><span class="ps-icon">🚗</span> Fila de Retirada</button>
+    <button class="ps-item active" onclick="switchProfPage('dashboard',this)" data-page="dashboard"><span class="ps-icon">🏠</span> Dashboard</button>
+    <button class="ps-item" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup"><span class="ps-icon">🚗</span> Fila de Retirada</button>
     <button class="ps-item" onclick="switchProfPage('diplomas',this)" data-page="diplomas" data-modulo="diplomas"><span class="ps-icon">🏆</span> Diplomas & Ranking</button>
     <button class="ps-item" onclick="switchProfPage('pdi',this)" data-page="pdi" data-modulo="pdi"><span class="ps-icon">📈</span> Annual Growth Plan</button>
     <button class="ps-item" onclick="switchProfPage('almox',this)" data-page="almox" data-modulo="almoxarifado"><span class="ps-icon">📦</span> Materiais</button>
@@ -389,8 +390,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   <div class="content">
 
+    <!-- ═══ PAGE: DASHBOARD ═══ -->
+    <div class="prof-page active" id="pageDashboard">
+      <div class="sec-title">🏠 Meu Painel</div>
+      <div id="profDashStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;"></div>
+      <div id="profDashCards" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div id="profDashAgenda" class="upload-card" style="cursor:pointer;" onclick="switchProfPage('agenda',document.querySelector('[data-page=agenda]'))">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">📅 Agenda de Hoje</div>
+          <div id="profDashAgendaContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
+        </div>
+        <div id="profDashFila" class="upload-card" style="cursor:pointer;" onclick="switchProfPage('fila',document.querySelector('[data-page=fila]'))">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">🚗 Fila de Retirada</div>
+          <div id="profDashFilaContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
+        </div>
+        <div id="profDashNotif" class="upload-card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">🔔 Notificações</div>
+          <div id="profDashNotifContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
+        </div>
+        <div id="profDashManut" class="upload-card" data-modulo="manutencao" style="cursor:pointer;" onclick="switchProfPage('manut',document.querySelector('[data-page=manut]'))">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">🔧 Manutenção</div>
+          <div id="profDashManutContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
+        </div>
+      </div>
+      <div id="profDashAlerts" style="margin-top:16px;"></div>
+    </div>
+
     <!-- ═══ PAGE: FILA ═══ -->
-    <div class="prof-page active" id="pageFila">
+    <div class="prof-page" id="pageFila">
     <div class="sec-title">🚗 Fila de Retirada
       <button onclick="loadPickupFila()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
     </div>
@@ -870,7 +896,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
 <!-- BOTTOM NAV PROFESSORAS -->
 <nav class="prof-bnav" id="profBottomNav">
-  <button class="pbnav-item active" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup">
+  <button class="pbnav-item active" onclick="switchProfPage('dashboard',this)" data-page="dashboard">
+    <span class="pbnav-icon">🏠</span>
+    <span class="pbnav-label">Painel</span>
+  </button>
+  <button class="pbnav-item" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup">
     <span class="pbnav-icon">🚗</span>
     <span class="pbnav-label">Fila</span>
   </button>
@@ -1091,7 +1121,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     showApp({ nome, email });
   }
 
-  function showApp(user) {
+  async function showApp(user) {
     currentProf = user;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display = 'block';
@@ -1102,9 +1132,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('greetingDate').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     document.getElementById('profBottomNav').classList.add('visible');
     document.body.classList.add('has-prof-bnav');
+    // Carregar módulos PRIMEIRO para esconder features desabilitadas antes de carregar dados
+    await loadModulosHabilitadosProf();
+    showCameraFab();
+    // Agora navegar para o dashboard (primeira página visível)
+    switchProfPage('dashboard', document.querySelector('[data-page="dashboard"]'));
     loadAll();
     showBioRegisterButton();
-    loadModulosHabilitadosProf().then(() => showCameraFab());
     checkGerenteAccess();
     verificarCienciasPendentes();
     verificarQuizPendente();
@@ -1665,13 +1699,119 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   // ── DATA ──────────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([ loadRanking(), loadMeusDiplomas(), loadMeusAtestados(), loadMeuPdi() ]);
-    initPickupPanel();
-    almLoadAll();
-    loadMeusManut();
-    loadNotificacoes();
-    loadAchados();
-    loadImpressoes();
+    const m = window._enabledModules || new Set();
+    // Só carrega dados de módulos habilitados
+    const tasks = [];
+    if (m.has('diplomas')) tasks.push(loadRanking(), loadMeusDiplomas());
+    if (m.has('atestados')) tasks.push(loadMeusAtestados());
+    if (m.has('pdi')) tasks.push(loadMeuPdi());
+    if (m.has('pickup')) tasks.push(Promise.resolve().then(() => initPickupPanel()));
+    if (m.has('almoxarifado')) tasks.push(Promise.resolve().then(() => almLoadAll()));
+    if (m.has('manutencao')) tasks.push(Promise.resolve().then(() => loadMeusManut()));
+    if (m.has('achados')) tasks.push(Promise.resolve().then(() => loadAchados()));
+    if (m.has('impressoes')) tasks.push(Promise.resolve().then(() => loadImpressoes()));
+    tasks.push(loadNotificacoes());
+    await Promise.all(tasks);
+    loadDashboardProf();
+  }
+
+  async function loadDashboardProf() {
+    const m = window._enabledModules || new Set();
+    const stats = [];
+
+    // Diplomas stat
+    if (m.has('diplomas') && typeof rankingData !== 'undefined') {
+      const me = rankingData.find(r => r.nome === currentProf?.nome);
+      stats.push({ label: 'Pontos Diplomas', value: me?.pontuacao ?? 0, color: '#d4830a' });
+    }
+
+    // Atestados stat
+    if (m.has('atestados')) {
+      try {
+        const d = await callApi({ action: 'meus_atestados' });
+        const arr = d.data || [];
+        const pend = arr.filter(a => a.status === 'pendente').length;
+        stats.push({ label: 'Atestados Pendentes', value: pend, color: pend > 0 ? '#C8102E' : '#2d7a3a' });
+      } catch(_) {}
+    }
+
+    // Impressões stat
+    if (m.has('impressoes')) {
+      try {
+        const d = await callApi({ action: 'minhas_impressoes' });
+        const arr = Array.isArray(d) ? d : (d.data || []);
+        const pend = arr.filter(i => i.status === 'pendente' || i.status === 'aprovado').length;
+        stats.push({ label: 'Impressões', value: pend + ' pendentes', color: '#1a6bb5' });
+      } catch(_) {}
+    }
+
+    // PDI stat
+    if (m.has('pdi')) {
+      try {
+        const d = await callApi({ action: 'pdi_meu_status' });
+        if (d && !d.error) {
+          stats.push({ label: 'Growth Plan', value: d.status || 'ativo', color: '#2d7a3a' });
+        }
+      } catch(_) {}
+    }
+
+    // Render stats
+    document.getElementById('profDashStats').innerHTML = stats.map(s =>
+      `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${s.color};border-radius:12px 12px 0 0;"></div>
+        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">${s.label}</div>
+        <div style="font-size:24px;font-weight:700;margin-top:4px;">${s.value}</div>
+      </div>`
+    ).join('') || '<div style="color:var(--muted);font-size:13px;">Carregando informações...</div>';
+
+    // Agenda de hoje
+    if (m.has('agenda_digital')) {
+      document.getElementById('profDashAgendaContent').textContent = 'Toque para ver a agenda de hoje';
+      document.getElementById('profDashAgenda').style.display = '';
+    } else {
+      document.getElementById('profDashAgenda').style.display = 'none';
+    }
+
+    // Fila
+    if (m.has('pickup')) {
+      document.getElementById('profDashFilaContent').textContent = 'Toque para ver a fila de retirada';
+      document.getElementById('profDashFila').style.display = '';
+    } else {
+      document.getElementById('profDashFila').style.display = 'none';
+    }
+
+    // Notificações
+    const notifData = window._profNotifData || [];
+    const unread = notifData.filter(n => !n.lida).length;
+    document.getElementById('profDashNotifContent').textContent = unread > 0
+      ? unread + ' notificação(ões) não lida(s)'
+      : 'Nenhuma notificação pendente';
+
+    // Manutenção
+    if (m.has('manutencao')) {
+      document.getElementById('profDashManut').style.display = '';
+      document.getElementById('profDashManutContent').textContent = 'Toque para ver chamados';
+    }
+
+    // Alertas de compliance
+    let alertsHtml = '';
+    try {
+      const quiz = await callApiCompliance({ action: 'compliance_quiz_pendentes' }).catch(() => null);
+      if (quiz && !quiz.error && Array.isArray(quiz) && quiz.length > 0) {
+        alertsHtml += `<div style="background:#fdf0f2;border:1px solid rgba(200,16,46,.2);border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:13px;">
+          <strong style="color:#C8102E;">📋 Quiz de Compliance pendente:</strong> ${quiz[0].titulo || 'Responder quiz'}
+        </div>`;
+      }
+    } catch(_) {}
+    try {
+      const ci = await callApiCompliance({ action: 'compliance_ciencias_pendentes' }).catch(() => null);
+      if (ci && !ci.error && Array.isArray(ci) && ci.length > 0) {
+        alertsHtml += `<div style="background:#fdf0f2;border:1px solid rgba(200,16,46,.2);border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:13px;">
+          <strong style="color:#C8102E;">⚠️ Ciência pendente:</strong> ${ci[0].titulo || 'Confirmar ciência'}
+        </div>`;
+      }
+    } catch(_) {}
+    document.getElementById('profDashAlerts').innerHTML = alertsHtml;
   }
 
   async function loadRanking() {
@@ -2880,6 +3020,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (!currentProf) return;
     const d = await callApi({ action: 'notif_list', portal: 'professora', email: currentProf.email });
     notifData = Array.isArray(d?.data) ? d.data : [];
+    window._profNotifData = notifData;
     renderNotif();
   }
   function renderNotif() {
