@@ -32,7 +32,7 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 |--------|---------|---------|-----------|
 | Pais | `index.html` | Famílias | Login split-screen (logo à esquerda em fundo vermelho + form à direita). Google/Magic Link/biometria. Pickup, boletim, agenda digital, boletos |
 | Gerente | `gerente.html` | Direção | ~45 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação |
-| Professora | `professora.html` | Docentes | Chamada, notas, agenda digital, diplomas, materiais, growth plan |
+| Professora | `professora.html` | Docentes | Dashboard com stats + alertas compliance, chamada, notas, agenda digital, diplomas, PDI/growth plan, materiais, atestados, manutenção, impressões, achados, diário. Feature-gated por módulos (carrega módulos antes dos dados). 13 páginas, bottom nav mobile |
 | Equipe | `secretaria.html` | Secretaria + Comercial + Financeiro + Manutenção | Feature-gated com sidebar agrupada e colapsável. 7 grupos: Secretaria (atestados, diplomas, PDI, impressões), Comercial (dashboard, leads, kanban, matrículas, vagas, contratos, templates, metas), Financeiro (dashboard, mensalidades, lançamentos, boletos), Infraestrutura (chamados, achados, biblioteca, cantina, transporte), Compliance (painel, certificações, inspeções, políticas, calendário, incidentes, horários, importar ponto, hora extra, alertas, feriados, config ponto) |
 | Admin Escola | `admin.html` | Staff Lumied + Admin Escola | Dashboard escola, meu plano, adicionais, módulos, tickets, LGPD, config, API, admins |
 | Admin Central | `admin-central.html` | Staff Lumied | Dashboard SaaS, escolas, staff, audit log, tickets, onboarding |
