@@ -905,9 +905,7 @@ body.has-bottomnav{padding-bottom:56px;}
   const DIPLOMAS = SUPABASE_URL + '/functions/v1/diplomas';
 
   const { createClient } = supabase;
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
-    auth: { flowType: 'implicit' }
-  });
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
   // ── TAB NAVIGATION ──────────────────────────────────────
   let currentTab = 'inicio';

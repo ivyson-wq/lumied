@@ -515,9 +515,12 @@ O sistema cria automaticamente:
 
 ### Google OAuth
 - Client ID: configurado no Supabase Auth (Google Cloud Console)
-- Client Secret: configurado no Supabase Auth
+- Client Secret: configurado no Supabase Auth (atualizado 2026-04-06)
 - Authorized JS origins: `https://maplebearcaxias.lumied.com.br`
 - Redirect URI: `https://brgorknbrjlfwvrrlwxj.supabase.co/auth/v1/callback`
+- URI Allow List (Supabase Auth): `https://maple-bear-rs.vercel.app`, `https://maplebearcaxias.lumied.com.br`, `https://*.lumied.com.br`
+- **Flow**: Supabase JS v2 sem `flowType` explícito → server retorna `#access_token` no hash (implicit). **NÃO usar `flowType: 'implicit'` ou `'pkce'` no `createClient()`** — causa TDZ error ao processar hash na inicialização. `getSession()` detecta tokens automaticamente.
+- **IMPORTANTE**: `createClient()` em `index.html` DEVE ser chamado sem opções de `auth` — qualquer opção custom causa crash quando há `#access_token` ou `?code=` na URL de retorno do OAuth.
 
 ### Cloudflare Workers
 - Account ID: `d0d79afc2b86f65653d10dbef3ceaee7`
