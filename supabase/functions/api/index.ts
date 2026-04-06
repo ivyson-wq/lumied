@@ -1157,6 +1157,7 @@ serve(async (req: Request) => {
     }
     const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url };
     if (usuario_id) insert.usuario_id = usuario_id;
+    else if (gerente?.id) insert.usuario_id = gerente.id;
     const { error } = await admin.from("manutencoes").insert(insert);
     if (error) return err(error.message);
     return ok({ success: true });
