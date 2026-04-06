@@ -905,15 +905,9 @@ body.has-bottomnav{padding-bottom:56px;}
   const DIPLOMAS = SUPABASE_URL + '/functions/v1/diplomas';
 
   const { createClient } = supabase;
-  let sb;
-  try {
-    sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
-      auth: { detectSessionInUrl: true }
-    });
-  } catch(e) {
-    console.error('Supabase init error:', e);
-    sb = createClient(SUPABASE_URL, SUPABASE_ANON);
-  }
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { flowType: 'implicit' }
+  });
 
   // ── TAB NAVIGATION ──────────────────────────────────────
   let currentTab = 'inicio';
@@ -1037,7 +1031,7 @@ body.has-bottomnav{padding-bottom:56px;}
       setTimeout(() => showToast('Erro no login Google: ' + decodeURIComponent(oauthError), 'error', 6000), 300);
       return;
     }
-    // Também checa fragmento hash (implicit flow)
+    // Checa fragmento hash para erros (implicit flow)
     if (window.location.hash) {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const hashError = hashParams.get('error_description') || hashParams.get('error');
@@ -1049,30 +1043,7 @@ body.has-bottomnav{padding-bottom:56px;}
       }
     }
 
-    // Se voltou do OAuth com code na URL, troca por sessão (PKCE flow)
-    const authCode = urlParams.get('code');
-    if (authCode) {
-      try {
-        const { data, error: exchangeError } = await sb.auth.exchangeCodeForSession(authCode);
-        // Limpa code da URL
-        window.history.replaceState({}, '', window.location.pathname);
-        if (exchangeError) {
-          console.error('OAuth code exchange error:', exchangeError);
-          showLoginWall();
-          setTimeout(() => showToast('Erro ao finalizar login Google: ' + exchangeError.message, 'error', 6000), 300);
-          return;
-        }
-        if (data?.session?.user) {
-          currentUser = data.session.user;
-          await showForm(data.session.user);
-          return;
-        }
-      } catch (e) {
-        console.error('OAuth exchange exception:', e);
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-
+    // getSession() detecta automaticamente tokens no hash (implicit flow)
     const { data: { session }, error: sessionError } = await sb.auth.getSession();
     if (sessionError) console.error('getSession error:', sessionError);
     if (session?.user) {
