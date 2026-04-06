@@ -756,43 +756,44 @@ serve(async (req: Request) => {
     if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
     // Sincroniza tabelas legadas se papéis mudaram
     if (papeis) {
-      const oldRoles = current.papeis?.length ? current.papeis : (current.papel ? [current.papel] : []);
-      const uEmail = (email || current.email) as string;
-      const uNome = (nome || current.nome) as string;
-      const uHash = current.senha_hash as string;
-      // Gerente: diretor, gerente, financeiro → tabela gerentes
-      const needsGerente = papeis.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
-      const hadGerente = oldRoles.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
-      if (needsGerente && !hadGerente) {
-        await admin.from("gerentes").insert({ nome: uNome, email: uEmail, senha_hash: uHash }).catch(() => {});
-      } else if (!needsGerente && hadGerente) {
-        await admin.from("gerentes").delete().eq("email", uEmail).catch(() => {});
-      }
-      // Professora
-      const needsProf = papeis.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
-      const hadProf = oldRoles.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
-      if (needsProf && !hadProf) {
-        const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
-        await admin.from("professoras").insert({ nome: uNome, email: uEmail, senha_hash: uHash, tipo }).catch(() => {});
-      } else if (!needsProf && hadProf) {
-        await admin.from("professoras").delete().eq("email", uEmail).catch(() => {});
-      }
-      // Secretaria/Comercial
-      const needsSec = papeis.includes("secretaria") || papeis.includes("comercial");
-      const hadSec = oldRoles.includes("secretaria") || oldRoles.includes("comercial");
-      if (needsSec) {
-        let secFeatures = Array.isArray(features) ? features : [];
-        if (!secFeatures.length) {
-          if (papeis.includes("secretaria")) secFeatures.push("atestados");
-          if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
+      try {
+        const oldRoles: string[] = current.papeis?.length ? current.papeis : (current.papel ? [current.papel] : []);
+        const uEmail = (email || current.email) as string;
+        const uNome = (nome || current.nome) as string;
+        const uHash = current.senha_hash as string;
+        // Gerente: diretor, gerente, financeiro → tabela gerentes
+        const needsGerente = papeis.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
+        const hadGerente = oldRoles.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
+        if (needsGerente && !hadGerente) {
+          await admin.from("gerentes").upsert({ nome: uNome, email: uEmail, senha_hash: uHash }, { onConflict: "email" }).catch(() => {});
+        } else if (!needsGerente && hadGerente) {
+          await admin.from("gerentes").delete().eq("email", uEmail).catch(() => {});
         }
-        if (!hadSec) {
-          await admin.from("secretarias").insert({ nome: uNome, email: uEmail, senha_hash: uHash, features: secFeatures }).catch(() => {});
-        } else {
-          await admin.from("secretarias").update({ features: secFeatures }).eq("email", uEmail).catch(() => {});
+        // Professora
+        const needsProf = papeis.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
+        const hadProf = oldRoles.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
+        if (needsProf && !hadProf) {
+          const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
+          await admin.from("professoras").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, tipo }, { onConflict: "email" }).catch(() => {});
+        } else if (!needsProf && hadProf) {
+          await admin.from("professoras").delete().eq("email", uEmail).catch(() => {});
         }
-      } else if (!needsSec && hadSec) {
-        await admin.from("secretarias").update({ ativo: false }).eq("email", uEmail).catch(() => {});
+        // Secretaria/Comercial
+        const needsSec = papeis.includes("secretaria") || papeis.includes("comercial");
+        const hadSec = oldRoles.includes("secretaria") || oldRoles.includes("comercial");
+        if (needsSec) {
+          const secFeatures: string[] = Array.isArray(features) ? features : [];
+          if (!secFeatures.length) {
+            if (papeis.includes("secretaria")) secFeatures.push("atestados");
+            if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
+          }
+          // Upsert: cria se não existe, atualiza features se existe
+          await admin.from("secretarias").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, features: secFeatures, ativo: true }, { onConflict: "email" }).catch(() => {});
+        } else if (!needsSec && hadSec) {
+          await admin.from("secretarias").update({ ativo: false }).eq("email", uEmail).catch(() => {});
+        }
+      } catch (_syncErr) {
+        // Sync com tabelas legadas é best-effort, não falha a operação principal
       }
     }
     return ok({ success: true });
