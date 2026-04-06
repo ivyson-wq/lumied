@@ -19,7 +19,7 @@
   // Check if user is ACTUALLY logged in (verify login screen is hidden)
   function isLoggedIn() {
     // Check if login screen is visible — if so, NOT logged in
-    const loginScreen = document.getElementById('loginScreen') || document.getElementById('loginWall') || document.getElementById('loginCard');
+    const loginScreen = document.getElementById('loginScreen') || document.getElementById('loginScreenWrap') || document.getElementById('loginWall') || document.getElementById('loginCard');
     if (loginScreen && loginScreen.style.display !== 'none' && !loginScreen.classList.contains('hidden')) return false;
     // Also require a token
     return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('mb_aluno_token') || localStorage.getItem('sec_token');
