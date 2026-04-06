@@ -15,7 +15,6 @@
 :root{--red:#C8102E;--cream:#f8f5f0;--sb:#1c1712;--border:#e6ddd3;--text:#1a1a1a;--muted:#7a7169;--white:#fff;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--sb);min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
-body{overflow-x:hidden;}
 body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
 
 .container{max-width:480px;width:90%;position:relative;z-index:1;}
@@ -24,9 +23,11 @@ body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px
 .brand-leaf{width:56px;height:56px;background:rgba(255,255,255,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;border:1.5px solid rgba(255,255,255,.15);}
 .brand h1{font-family:'Lora',serif;font-size:20px;color:#fff;font-weight:700;}
 .brand p{font-size:12px;color:rgba(255,255,255,.5);margin-top:4px;}
+.brand .user-greeting{font-size:13px;color:rgba(255,255,255,.7);margin-top:8px;}
 
 .portal-card{display:flex;align-items:center;gap:16px;background:var(--white);border-radius:14px;padding:20px 24px;margin-bottom:12px;text-decoration:none;color:var(--text);transition:all .2s;box-shadow:0 4px 16px rgba(0,0,0,.08);border:1px solid var(--border);}
 .portal-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12);}
+.portal-card.disabled{opacity:.35;pointer-events:none;transform:none;}
 .portal-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
 .portal-info h3{font-family:'Lora',serif;font-size:15px;font-weight:700;margin-bottom:3px;}
 .portal-info p{font-size:12px;color:var(--muted);line-height:1.4;}
@@ -43,67 +44,102 @@ body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px
     <img src="/lumied-logo-branco.png" id="brandLeaf" class="brand-leaf" style="height:48px;width:auto;object-fit:contain;background:none;border:none;" alt="Lumied">
     <h1 id="brandName"></h1>
     <p>Área Restrita — Equipe Escolar</p>
+    <div class="user-greeting" id="userGreeting"></div>
   </div>
 
-  <a href="gerente.html" class="portal-card">
-    <div class="portal-icon" style="background:rgba(200,16,46,.1);color:var(--red);">👔</div>
-    <div class="portal-info">
-      <h3>Painel do Gerente</h3>
-      <p>Destinado à gestão e administração geral da escola.</p>
-    </div>
-    <span class="portal-arrow">→</span>
-  </a>
-
-  <a href="professora.html" class="portal-card">
-    <div class="portal-icon" style="background:rgba(26,107,181,.1);color:#1a6bb5;">👩‍🏫</div>
-    <div class="portal-info">
-      <h3>Portal das Professoras</h3>
-      <p>Destinado às atividades relativas ao corpo docente da escola.</p>
-    </div>
-    <span class="portal-arrow">→</span>
-  </a>
-
-  <a href="secretaria.html" class="portal-card">
-    <div class="portal-icon" style="background:rgba(45,122,58,.1);color:#2d7a3a;">📋</div>
-    <div class="portal-info">
-      <h3>Portal da Secretaria</h3>
-      <p>Destinado às atividades administrativas da secretaria escolar.</p>
-    </div>
-    <span class="portal-arrow">→</span>
-  </a>
-
-  <a href="aluno.html" class="portal-card">
-    <div class="portal-icon" style="background:rgba(26,107,181,.1);color:#1a6bb5;">🎓</div>
-    <div class="portal-info">
-      <h3>Portal do Aluno</h3>
-      <p>Acesso do aluno a notas, frequência, provas e calendário.</p>
-    </div>
-    <span class="portal-arrow">→</span>
-  </a>
+  <div id="portais"></div>
 
   <a href="index.html" class="back-link">← Voltar ao Portal dos Pais</a>
 </div>
 
 <script src="/config.js"></script>
 <script>
-  (async function() {
+const API = CONFIG.SUPABASE_URL + '/functions/v1/api';
+const H = { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON };
+
+// Definição dos portais com papéis necessários
+const PORTAIS = [
+  { href: 'gerente.html', icon: '👔', iconBg: 'rgba(200,16,46,.1)', iconColor: 'var(--red)',
+    title: 'Painel do Gerente', desc: 'Gestão e administração geral da escola.',
+    roles: ['gerente', 'diretor', 'financeiro'] },
+  { href: 'professora.html', icon: '👩‍🏫', iconBg: 'rgba(26,107,181,.1)', iconColor: '#1a6bb5',
+    title: 'Portal das Professoras', desc: 'Atividades do corpo docente da escola.',
+    roles: ['professora', 'professora_assistente'] },
+  { href: 'secretaria.html', icon: '📋', iconBg: 'rgba(45,122,58,.1)', iconColor: '#2d7a3a',
+    title: 'Portal da Equipe', desc: 'Secretaria, CRM comercial, leads, funil e metas.',
+    roles: ['secretaria', 'comercial'] },
+  { href: 'aluno.html', icon: '🎓', iconBg: 'rgba(26,107,181,.1)', iconColor: '#1a6bb5',
+    title: 'Portal do Aluno', desc: 'Notas, frequência, provas e calendário.',
+    roles: ['aluno'] },
+  { href: 'admin.html', icon: '🔧', iconBg: 'rgba(107,63,160,.1)', iconColor: '#6b3fa0',
+    title: 'Painel Admin', desc: 'Gestão de escolas, planos e módulos. Acesso restrito.',
+    roles: ['admin'] },
+];
+
+function renderPortais(userPapeis) {
+  const el = document.getElementById('portais');
+  // Se não logado ou sem papéis, mostra todos
+  const showAll = !userPapeis || !userPapeis.length;
+
+  el.innerHTML = PORTAIS.map(p => {
+    const hasAccess = showAll || p.roles.some(r => userPapeis.includes(r));
+    return `<a href="${p.href}" class="portal-card${hasAccess ? '' : ' disabled'}">
+      <div class="portal-icon" style="background:${p.iconBg};color:${p.iconColor};">${p.icon}</div>
+      <div class="portal-info">
+        <h3>${p.title}</h3>
+        <p>${p.desc}</p>
+      </div>
+      <span class="portal-arrow">→</span>
+    </a>`;
+  }).join('');
+}
+
+// Tenta detectar sessão ativa de qualquer portal
+async function detectSession() {
+  const tokens = [
+    localStorage.getItem('mb_token'),      // gerente
+    localStorage.getItem('sec_token'),      // secretaria/comercial
+    localStorage.getItem('prof_token'),     // professora
+  ].filter(Boolean);
+
+  if (!tokens.length) {
+    renderPortais(null);
+    return;
+  }
+
+  // Tenta cada token até encontrar um válido
+  for (const token of tokens) {
     try {
-      const res = await fetch(CONFIG.SUPABASE_URL + '/functions/v1/api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON },
-        body: JSON.stringify({ action: 'config_publica' })
-      });
-      const cfg = await res.json();
-      const nome = cfg.escola_nome || 'Escola';
-      const icone = cfg.escola_icone || '🍁';
-      document.getElementById('pageTitle').textContent = nome + ' — Área Restrita';
-      document.getElementById('brandName').textContent = nome;
-      document.getElementById('brandLeaf').textContent = icone;
-      if (cfg.cor_primaria) document.documentElement.style.setProperty('--red', cfg.cor_primaria);
-    } catch(_) {
-      document.getElementById('brandName').textContent = 'Escola';
-    }
-  })();
+      const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'hub_whoami', _token: token }) });
+      const d = await res.json();
+      if (d.logged && d.papeis?.length) {
+        document.getElementById('userGreeting').textContent = `Olá, ${d.nome || d.email}`;
+        renderPortais(d.papeis);
+        return;
+      }
+    } catch(_) {}
+  }
+
+  // Nenhum token válido — mostra todos
+  renderPortais(null);
+}
+
+// Config escola + sessão
+(async function() {
+  try {
+    const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'config_publica' }) });
+    const cfg = await res.json();
+    const nome = cfg.escola_nome || 'Escola';
+    const icone = cfg.escola_icone || '🍁';
+    document.getElementById('pageTitle').textContent = nome + ' — Área Restrita';
+    document.getElementById('brandName').textContent = nome;
+    document.getElementById('brandLeaf').textContent = icone;
+    if (cfg.cor_primaria) document.documentElement.style.setProperty('--red', cfg.cor_primaria);
+  } catch(_) {
+    document.getElementById('brandName').textContent = 'Escola';
+  }
+  detectSession();
+})();
 </script>
 <script src="/lumied-ux.js" defer></script>
 </body>

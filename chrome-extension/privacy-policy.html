@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Politica de Privacidade — Lumied CRM WhatsApp Extension</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', -apple-system, sans-serif; line-height: 1.7; color: #333; max-width: 800px; margin: 0 auto; padding: 40px 20px; background: #fafafa; }
+  h1 { color: #C8102E; font-size: 28px; margin-bottom: 8px; }
+  .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+  h2 { color: #1a1a1a; font-size: 20px; margin: 28px 0 12px; border-bottom: 2px solid #C8102E; padding-bottom: 4px; }
+  p, li { font-size: 15px; margin-bottom: 10px; }
+  ul { padding-left: 24px; }
+  .highlight { background: #fff3f3; border-left: 4px solid #C8102E; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .contact { background: #f0f0f0; padding: 16px; border-radius: 8px; margin-top: 24px; }
+  a { color: #C8102E; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 13px; color: #999; }
+</style>
+</head>
+<body>
+
+<h1>Politica de Privacidade</h1>
+<p class="subtitle">Lumied CRM - WhatsApp Templates (Extensao para Google Chrome)</p>
+
+<h2>1. Informacoes gerais</h2>
+<p>Esta Politica de Privacidade descreve como a extensao <strong>Lumied CRM - WhatsApp Templates</strong> (doravante "Extensao") coleta, utiliza e protege os dados dos usuarios. A Extensao e desenvolvida e mantida pela <strong>Lumied</strong> (<a href="https://lumied.com.br">lumied.com.br</a>).</p>
+
+<h2>2. Dados coletados</h2>
+<div class="highlight">
+  <strong>A Extensao NAO coleta, armazena ou transmite dados pessoais dos usuarios para servidores externos de terceiros.</strong>
+</div>
+<p>Os unicos dados armazenados localmente no navegador do usuario (via <code>chrome.storage.local</code>) sao:</p>
+<ul>
+  <li><strong>URL do sistema</strong> — endereco do servidor Supabase da escola</li>
+  <li><strong>API Key</strong> — chave publica (anon key) do projeto Supabase</li>
+  <li><strong>Token de autenticacao</strong> — token de sessao do gerente escolar</li>
+</ul>
+<p>Esses dados sao inseridos manualmente pelo proprio usuario e permanecem <strong>apenas no dispositivo local</strong>, nunca sendo compartilhados com terceiros.</p>
+
+<h2>3. Dados acessados</h2>
+<p>A Extensao acessa:</p>
+<ul>
+  <li><strong>Templates de mensagens CRM</strong> — buscados do servidor Supabase da propria escola do usuario, mediante autenticacao</li>
+  <li><strong>Campo de texto do WhatsApp Web</strong> — para inserir o template selecionado na conversa ativa (somente quando o usuario clica em "Enviar no chat")</li>
+</ul>
+<p>A Extensao <strong>NAO</strong> le, armazena ou transmite:</p>
+<ul>
+  <li>Mensagens de conversas do WhatsApp</li>
+  <li>Contatos ou listas de contatos</li>
+  <li>Midias, fotos ou documentos</li>
+  <li>Historico de navegacao</li>
+  <li>Dados pessoais de terceiros</li>
+</ul>
+
+<h2>4. Permissoes utilizadas</h2>
+<ul>
+  <li><strong>storage</strong> — para salvar as credenciais de configuracao localmente</li>
+  <li><strong>activeTab</strong> — para interagir com a aba ativa do WhatsApp Web quando o usuario clica em enviar template</li>
+  <li><strong>host_permissions (web.whatsapp.com)</strong> — para injetar o painel de templates na interface do WhatsApp Web</li>
+</ul>
+
+<h2>5. Compartilhamento de dados</h2>
+<p>A Extensao <strong>NAO compartilha nenhum dado com terceiros</strong>. As comunicacoes ocorrem exclusivamente entre o navegador do usuario e o servidor Supabase da escola onde o usuario esta autenticado.</p>
+
+<h2>6. Seguranca</h2>
+<p>Todas as comunicacoes entre a Extensao e o servidor da escola sao realizadas via <strong>HTTPS</strong> com criptografia TLS. As credenciais sao armazenadas na area segura do Chrome (<code>chrome.storage.local</code>), acessivel apenas pela propria extensao.</p>
+
+<h2>7. Retencao de dados</h2>
+<p>Os dados de configuracao permanecem armazenados localmente ate que o usuario:</p>
+<ul>
+  <li>Desinstale a Extensao</li>
+  <li>Limpe os dados da extensao nas configuracoes do Chrome</li>
+  <li>Altere manualmente as configuracoes no popup da extensao</li>
+</ul>
+
+<h2>8. Direitos do usuario (LGPD)</h2>
+<p>Em conformidade com a Lei Geral de Protecao de Dados (Lei 13.709/2018), o usuario pode:</p>
+<ul>
+  <li>Acessar seus dados — todos estao visiveis no popup de configuracao</li>
+  <li>Corrigir seus dados — editando os campos no popup</li>
+  <li>Excluir seus dados — desinstalando a extensao ou limpando os dados</li>
+  <li>Revogar consentimento — desinstalando a extensao a qualquer momento</li>
+</ul>
+
+<h2>9. Uso por menores</h2>
+<p>A Extensao e destinada exclusivamente a profissionais de gestao escolar (gerentes, coordenadores, secretarias). Nao e direcionada a menores de 18 anos.</p>
+
+<h2>10. Alteracoes nesta politica</h2>
+<p>Esta politica pode ser atualizada periodicamente. A versao mais recente estara sempre disponivel nesta pagina e na listagem da Chrome Web Store.</p>
+
+<div class="contact">
+  <h2 style="margin-top:0;border:none;padding:0;">11. Contato</h2>
+  <p>Para duvidas sobre esta politica ou sobre o tratamento de dados:</p>
+  <ul>
+    <li><strong>Email:</strong> <a href="mailto:ivyson@gmail.com">ivyson@gmail.com</a></li>
+    <li><strong>Site:</strong> <a href="https://lumied.com.br">lumied.com.br</a></li>
+  </ul>
+</div>
+
+<footer>
+  <p>Ultima atualizacao: Abril de 2026</p>
+  <p>&copy; 2026 Lumied — Todos os direitos reservados.</p>
+</footer>
+
+</body>
+</html>

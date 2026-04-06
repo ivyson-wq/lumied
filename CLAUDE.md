@@ -33,7 +33,7 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 | Pais | `index.html` | Famílias | Login split-screen (logo à esquerda em fundo vermelho + form à direita). Google/Magic Link/biometria. Pickup, boletim, agenda digital, boletos |
 | Gerente | `gerente.html` | Direção | ~45 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação |
 | Professora | `professora.html` | Docentes | Chamada, notas, agenda digital, diplomas, materiais, growth plan |
-| Secretaria | `secretaria.html` | Secretaria | Validação de atestados |
+| Equipe | `secretaria.html` | Secretaria + Comercial | Feature-gated: atestados, CRM/leads, kanban, templates, metas |
 | Admin Escola | `admin.html` | Staff Lumied + Admin Escola | Dashboard escola, meu plano, adicionais, módulos, tickets, LGPD, config, API, admins |
 | Admin Central | `admin-central.html` | Staff Lumied | Dashboard SaaS, escolas, staff, audit log, tickets, onboarding |
 | Aluno | `aluno.html` | Alunos | Notas, frequência, provas, calendário |
@@ -237,6 +237,10 @@ Landing page em `site/index.html` — marca **Lumied**.
 
 ## Multi-tenancy
 
+- **Multi-papéis**: cada usuário pode ter 1+ papéis (`papeis text[]` em `usuarios`)
+  - Papéis: `gerente`, `diretor`, `financeiro`, `professora`, `professora_assistente`, `secretaria`, `comercial`, `manutencao`
+  - `comercial` e `secretaria` mapeiam para `secretarias` table com feature gating (`features text[]`)
+  - Features disponíveis: `atestados`, `crm`, `templates`, `metas`
 - `escola_id` em 30+ tabelas de dados
 - `plano_limites`: limites por recurso (max_alunos, max_storage_gb, etc.)
 - `check_limite()`: função SQL para verificar limites
@@ -384,6 +388,13 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 
 - **110 migrations** (009-110)
 - Migrations relevantes:
+  - `048_planos_modulos.sql` — escolas, planos, modulos, admins
+  - `075_multitenancy_limites.sql` — plano_limites, escola_uso
+  - `078_lgpd.sql` — consentimentos, solicitações, audit log
+  - `081_tickets.sql` — tabela tickets de suporte
+  - `082_ticket_resolver_cron.sql` — pg_cron job para auto-resposta
+  - `083_papel_comercial.sql` — features por secretária, metas comerciais, responsavel_id em leads
+  - `084_multi_papeis.sql` — coluna papeis text[] em usuarios, suporte a múltiplos papéis por usuário
   - `085-088` — Compliance: hora extra, incidentes, certificações, inspeções, políticas, calendário
   - `086` — Indicações B2C (pais indicam famílias)
   - `089` — Indicações B2B (escolas indicam escolas)

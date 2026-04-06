@@ -84,18 +84,18 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
     .eq('token', token).maybeSingle()
   if (sessao && new Date(sessao.expira_em) >= new Date()) {
     const { data } = await sb
-      .from('secretarias').select('id, nome, email')
+      .from('secretarias').select('id, nome, email, features')
       .eq('id', sessao.secretaria_id).maybeSingle()
-    if (data) return data
+    if (data) return { ...data, features: data.features || ['atestados'] }
   }
   // Fallback: sessão unificada
   const user = await getUsuario(sb, token)
   if (user && user.papel === 'secretaria') {
     const { data: sec } = await sb
-      .from('secretarias').select('id, nome, email')
+      .from('secretarias').select('id, nome, email, features')
       .ilike('email', user.email).maybeSingle()
-    if (sec) return sec
-    return { id: user.id, nome: user.nome, email: user.email }
+    if (sec) return { ...sec, features: sec.features || ['atestados'] }
+    return { id: user.id, nome: user.nome, email: user.email, features: ['atestados'] }
   }
   return null
 }
@@ -571,8 +571,14 @@ Deno.serve(async (req) => {
   // ━━ SECRETARIA ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   const isSecretariaAction = [
-    'secretaria_logout', 'atestados_pendentes', 'atestados_all',
+    'secretaria_logout', 'secretaria_perfil',
+    'atestados_pendentes', 'atestados_all',
     'atestado_aprovar', 'atestado_rejeitar',
+    'sec_crm_estagios_list', 'sec_crm_leads_list', 'sec_crm_leads_all',
+    'sec_crm_lead_save', 'sec_crm_lead_mover',
+    'sec_crm_interacoes_list', 'sec_crm_interacao_save',
+    'sec_crm_templates_list', 'sec_crm_dashboard',
+    'sec_metas_list',
   ].includes(action)
 
   if (isSecretariaAction) {
@@ -632,6 +638,104 @@ Deno.serve(async (req) => {
       if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado rejeitado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error')
       return json({ ok: true })
     }
+
+    // ── Perfil (retorna features habilitadas) ──
+    if (action === 'secretaria_perfil') {
+      return json({ id: sec.id, nome: sec.nome, email: sec.email, features: sec.features })
+    }
+
+    // ── CRM: Estágios ──
+    if (action === 'sec_crm_estagios_list') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { data } = await sb.from('crm_estagios').select('*').eq('ativo', true).order('ordem')
+      return json(data ?? [])
+    }
+
+    // ── CRM: Leads (meus) ──
+    if (action === 'sec_crm_leads_list') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { data } = await sb.from('crm_leads').select('*, crm_estagios(nome, cor, ordem)')
+        .eq('responsavel_id', sec.id).order('atualizado_em', { ascending: false })
+      return json(data ?? [])
+    }
+
+    // ── CRM: Leads (todos) ──
+    if (action === 'sec_crm_leads_all') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { data } = await sb.from('crm_leads').select('*, crm_estagios(nome, cor, ordem), secretarias(nome)')
+        .order('atualizado_em', { ascending: false })
+      return json(data ?? [])
+    }
+
+    // ── CRM: Salvar lead ──
+    if (action === 'sec_crm_lead_save') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { id, nome_responsavel, email: leadEmail, telefone, nome_crianca, data_nascimento, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, data_proximo_contato, data_visita } = body
+      if (!nome_responsavel) return json({ error: 'Nome obrigatório.' }, 400)
+      const leadData: Record<string, unknown> = { nome_responsavel, email: leadEmail, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade as string) : null, observacoes, responsavel_interno: sec.nome, responsavel_id: sec.id, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString() }
+      if (id) { await sb.from('crm_leads').update(leadData).eq('id', id) }
+      else { await sb.from('crm_leads').insert(leadData) }
+      return json({ ok: true })
+    }
+
+    // ── CRM: Mover lead de estágio ──
+    if (action === 'sec_crm_lead_mover') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { id, estagio_id } = body
+      if (!id || !estagio_id) return json({ error: 'id e estagio_id obrigatórios.' }, 400)
+      await sb.from('crm_leads').update({ estagio_id, atualizado_em: new Date().toISOString() }).eq('id', id)
+      return json({ ok: true })
+    }
+
+    // ── CRM: Interações ──
+    if (action === 'sec_crm_interacoes_list') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { lead_id } = body
+      if (!lead_id) return json({ error: 'lead_id obrigatório.' }, 400)
+      const { data } = await sb.from('crm_interacoes').select('*').eq('lead_id', lead_id).order('criado_em', { ascending: false })
+      return json(data ?? [])
+    }
+
+    if (action === 'sec_crm_interacao_save') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { lead_id, tipo, descricao } = body
+      if (!lead_id || !descricao) return json({ error: 'lead_id e descrição obrigatórios.' }, 400)
+      await sb.from('crm_interacoes').insert({ lead_id, tipo: tipo || 'nota', descricao, criado_por: sec.nome })
+      await sb.from('crm_leads').update({ atualizado_em: new Date().toISOString() }).eq('id', lead_id)
+      return json({ ok: true })
+    }
+
+    // ── CRM: Templates ──
+    if (action === 'sec_crm_templates_list') {
+      if (!sec.features?.includes('templates')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { data } = await sb.from('crm_templates').select('*').eq('ativo', true).order('categoria')
+      return json(data ?? [])
+    }
+
+    // ── CRM: Dashboard ──
+    if (action === 'sec_crm_dashboard') {
+      if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const { data: leads } = await sb.from('crm_leads').select('estagio_id, origem, valor_mensalidade, criado_em, responsavel_id, crm_estagios(nome)')
+        .eq('responsavel_id', sec.id)
+      const porEstagio: Record<string, number> = {}
+      const porOrigem: Record<string, number> = {}
+      let valorPipeline = 0
+      for (const l of leads ?? []) {
+        const est = (l as any).crm_estagios?.nome || '?'
+        porEstagio[est] = (porEstagio[est] || 0) + 1
+        if (l.origem) porOrigem[l.origem] = (porOrigem[l.origem] || 0) + 1
+        if (l.valor_mensalidade) valorPipeline += l.valor_mensalidade
+      }
+      return json({ total: (leads ?? []).length, por_estagio: porEstagio, por_origem: porOrigem, valor_pipeline: valorPipeline })
+    }
+
+    // ── Metas ──
+    if (action === 'sec_metas_list') {
+      if (!sec.features?.includes('metas')) return json({ error: 'Recurso não habilitado.' }, 403)
+      const ano = parseInt(body.ano as string) || new Date().getFullYear()
+      const { data } = await sb.from('comercial_metas').select('*').eq('secretaria_id', sec.id).eq('ano', ano).order('mes')
+      return json(data ?? [])
+    }
   }
 
   // ━━ MANAGER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -639,7 +743,8 @@ Deno.serve(async (req) => {
   const isManagerAction = [
     'diplomas_pendentes', 'diplomas_all', 'diploma_aprovar', 'diploma_rejeitar',
     'professora_set_senha',
-    'secretarias_list', 'secretaria_create', 'secretaria_delete',
+    'secretarias_list', 'secretaria_create', 'secretaria_update', 'secretaria_delete',
+    'secretaria_metas_save', 'secretaria_metas_list_all',
     'pdi_ciclos_list', 'pdi_ciclo_criar', 'pdi_painel',
     'pdi_prof_view', 'pdi_aprovar', 'pdi_rejeitar',
     'pdi_competencias_gerente', 'pdi_nota_final', 'pdi_checkin_feedback',
@@ -709,7 +814,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'secretarias_list') {
-      const { data } = await sb.from('secretarias').select('id, nome, email, criado_em').order('nome')
+      const { data } = await sb.from('secretarias').select('id, nome, email, telefone, features, ativo, criado_em').order('nome')
       return json({ data: data ?? [] })
     }
 
@@ -717,19 +822,56 @@ Deno.serve(async (req) => {
       const nome: string = (body.nome || '').trim()
       const email: string = (body.email || '').toLowerCase().trim()
       const senha: string = body.senha || ''
+      const telefone: string = (body.telefone || '').trim()
+      const features: string[] = Array.isArray(body.features) ? body.features : ['atestados']
       if (!nome || !email || !senha) return json({ error: 'Preencha todos os campos.' }, 400)
       if (senha.length < 6) return json({ error: 'Senha mínima de 6 caracteres.' }, 400)
-      const { error } = await sb.from('secretarias').insert({ nome, email, senha_hash: await hashSenha(senha) })
+      const { error } = await sb.from('secretarias').insert({ nome, email, senha_hash: await hashSenha(senha), telefone: telefone || null, features })
       if (error) return json({ error: error.code === '23505' ? 'E-mail já cadastrado.' : error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'secretaria_update') {
+      const { id, nome, email, senha, telefone, features, ativo } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const update: Record<string, unknown> = {}
+      if (nome) update.nome = (nome as string).trim()
+      if (email) update.email = (email as string).toLowerCase().trim()
+      if (telefone !== undefined) update.telefone = (telefone as string || '').trim() || null
+      if (Array.isArray(features)) update.features = features
+      if (ativo !== undefined) update.ativo = ativo
+      if (senha) {
+        if ((senha as string).length < 6) return json({ error: 'Senha mínima de 6 caracteres.' }, 400)
+        update.senha_hash = await hashSenha(senha as string)
+      }
+      const { error } = await sb.from('secretarias').update(update).eq('id', id)
+      if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
 
     if (action === 'secretaria_delete') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('secretarias').delete().eq('id', id)
-      if (error) return json({ error: error.message }, 400)
+      await sb.from('secretarias').update({ ativo: false }).eq('id', id)
       return json({ ok: true })
+    }
+
+    if (action === 'secretaria_metas_save') {
+      const { secretaria_id, mes, ano, meta_leads, meta_matriculas, meta_valor } = body
+      if (!secretaria_id || !mes || !ano) return json({ error: 'secretaria_id, mês e ano obrigatórios.' }, 400)
+      await sb.from('comercial_metas').upsert({
+        secretaria_id, mes: parseInt(mes as string), ano: parseInt(ano as string),
+        meta_leads: parseInt(meta_leads as string) || 0,
+        meta_matriculas: parseInt(meta_matriculas as string) || 0,
+        meta_valor: parseFloat(meta_valor as string) || 0,
+      }, { onConflict: 'secretaria_id,mes,ano' })
+      return json({ ok: true })
+    }
+
+    if (action === 'secretaria_metas_list_all') {
+      const ano = parseInt(body.ano as string) || new Date().getFullYear()
+      const { data } = await sb.from('comercial_metas').select('*, secretarias(nome)').eq('ano', ano).order('mes')
+      return json(data ?? [])
     }
 
     // ── PDI: gestora ────────────────────────────────────────

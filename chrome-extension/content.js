@@ -7,8 +7,10 @@
   // Create toggle button
   const toggle = document.createElement('button');
   toggle.id = 'mb-crm-toggle';
-  toggle.textContent = '🍁';
-  toggle.title = 'CRM WhatsApp';
+  toggle.textContent = 'L';
+  toggle.title = 'Lumied CRM - Templates WhatsApp';
+  toggle.style.fontWeight = 'bold';
+  toggle.style.fontFamily = 'Arial, sans-serif';
   toggle.onclick = () => {
     panelOpen = !panelOpen;
     panel.classList.toggle('hidden', !panelOpen);
@@ -22,7 +24,7 @@
   panel.classList.add('hidden');
   panel.innerHTML = `
     <div class="mb-panel-header">
-      <span>🍁</span> <span id="mb-brand-name">CRM</span>
+      <span style="font-weight:700;">L</span> <span id="mb-brand-name">Lumied CRM</span>
       <button onclick="document.getElementById('mb-crm-panel').classList.add('hidden')" style="margin-left:auto;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">×</button>
     </div>
     <div class="mb-panel-body" id="mb-panel-body">

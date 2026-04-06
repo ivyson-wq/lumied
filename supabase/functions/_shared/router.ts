@@ -147,6 +147,7 @@ export const authGerente: Middleware = auth("gerente_sessoes", "gerentes", "id, 
 /** Professora auth shortcut */
 export const authProfessora: Middleware = auth("professora_sessoes", "professoras", "id, nome, email, serie_id", "_prof_token");
 
+
 /** Feature module check middleware */
 export function requireFeature(slug: string): Middleware {
   return async (ctx, next) => {

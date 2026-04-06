@@ -2313,6 +2313,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <button class="fb" onclick="setEquipeFilter('professora',this)">Professoras</button>
               <button class="fb" onclick="setEquipeFilter('professora_assistente',this)">Assistentes</button>
               <button class="fb" onclick="setEquipeFilter('secretaria',this)">Secretaria</button>
+              <button class="fb" onclick="setEquipeFilter('comercial',this)">Comercial</button>
               <button class="fb" onclick="setEquipeFilter('manutencao',this)">Manutenção</button>
             </div>
             <div class="list-card" id="equipeList"></div>
@@ -2323,17 +2324,17 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <div class="ff"><label>Nome</label><input type="text" id="eqNome" placeholder="Nome completo" autocomplete="off"></div>
               <div class="ff"><label>E-mail</label><input type="email" id="eqEmail" placeholder="email@escola.com.br" autocomplete="off"></div>
               <div class="ff"><label>Senha</label><input type="password" id="eqSenha" placeholder="Mínimo 6 caracteres"></div>
-              <div class="ff"><label>Papel</label>
-                <select id="eqPapel" onchange="toggleEqTurma()" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fdfbf8;">
-                  <option value="">— selecione —</option>
-                  <option value="diretor">Diretor(a)</option>
-                  <option value="gerente">Gerente</option>
-                  <option value="financeiro">Financeiro</option>
-                  <option value="professora">Professora</option>
-                  <option value="professora_assistente">Professora Assistente</option>
-                  <option value="secretaria">Secretaria</option>
-                  <option value="manutencao">Manutenção</option>
-                </select>
+              <div class="ff"><label>Papéis (selecione um ou mais)</label>
+                <div id="eqPapeisWrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;" onchange="toggleEqTurma()">
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="diretor"> Diretor(a)</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="gerente"> Gerente</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="financeiro"> Financeiro</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="professora"> Professora</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="professora_assistente"> Prof. Assistente</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="secretaria"> Secretaria</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="comercial"> Comercial</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="manutencao"> Manutenção</label>
+                </div>
               </div>
               <div class="ff" id="eqTurmaWrap" style="display:none;"><label>Turma / Série</label>
                 <select id="eqTurma" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fdfbf8;">
@@ -2437,6 +2438,35 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div id="famLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando...</div></div>
         </div>
 
+        <!-- Modal editar familia -->
+        <div id="famEditModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
+          <div style="background:var(--white);border-radius:14px;padding:28px;max-width:480px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,.15);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <h3 style="font-size:15px;font-weight:700;font-family:'Lora',serif;">Editar Familia</h3>
+              <button onclick="fecharEditFamilia()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">x</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div class="ff"><label>Nome do Aluno</label><input type="text" id="famEditNomeAluno"></div>
+              <div class="ff"><label>Responsavel</label><input type="text" id="famEditNomeResp"></div>
+              <div class="ff"><label>E-mail</label><input type="email" id="famEditEmail"></div>
+              <div class="ff"><label>CPF</label><input type="text" id="famEditCpf" disabled style="opacity:.6;"></div>
+              <div class="ff"><label>Serie</label><select id="famEditSerie"><option value="">— sem serie —</option></select></div>
+              <div class="ff"><label>Turno</label>
+                <select id="famEditTurno">
+                  <option value="">— sem turno —</option>
+                  <option value="integral_5x">Integral 5x/sem</option><option value="integral_4x">Integral 4x</option><option value="integral_3x">Integral 3x</option><option value="integral_2x">Integral 2x</option><option value="integral_1x">Integral 1x</option>
+                  <option value="semi_5x">Semi-Integral 5x</option><option value="semi_4x">Semi 4x</option><option value="semi_3x">Semi 3x</option><option value="semi_2x">Semi 2x</option><option value="semi_1x">Semi 1x</option>
+                  <option value="tarde">Apenas a Tarde</option><option value="diaria">Diaria</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+              <button onclick="fecharEditFamilia()" style="padding:9px 18px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+              <button onclick="salvarEditFamilia()" class="btn-create" style="width:auto;padding:9px 22px;">Salvar</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Solicitacoes -->
         <div class="sec-title" style="margin-bottom:16px;">Solicitacoes <span class="count-badge" id="cadCount">0</span></div>
         <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
@@ -2476,6 +2506,29 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <button class="btn-cancel" onclick="closeSerieModal()">Cancelar</button>
       <button class="btn-save" onclick="saveSerieEdit()">Salvar</button>
     </div>
+  </div>
+</div>
+
+<!-- EDITAR PAPÉIS MODAL -->
+<div class="modal-overlay" id="editPapeisModal" onclick="if(event.target===this)closeEditPapeis()">
+  <div class="modal" style="max-width:480px;">
+    <h3 id="editPapeisTitle">Editar Papéis</h3>
+    <p id="editPapeisEmail" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></p>
+    <input type="hidden" id="editPapeisId">
+    <div id="editPapeisChecks" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+    <div id="editPapeisFeatures" style="display:none;margin-bottom:16px;">
+      <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:6px;">Features do Portal da Equipe</label>
+      <div id="editFeaturesChecks" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+    <div class="ff" style="margin-bottom:12px;">
+      <label>Nova senha (deixe vazio para manter)</label>
+      <input type="password" id="editPapeisSenha" placeholder="Mínimo 6 caracteres" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;background:#fdfbf8;">
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-cancel" onclick="closeEditPapeis()">Cancelar</button>
+      <button class="btn-save" onclick="saveEditPapeis()">Salvar</button>
+    </div>
+    <div class="f-alert error" id="editPapeisErr" style="margin-top:8px;"></div>
   </div>
 </div>
 
@@ -4077,8 +4130,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   // ── EQUIPE UNIFICADA ──────────────────────────────────
   let equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
-  const PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', manutencao:'Manutenção' };
-  const PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', manutencao:'#d4830a' };
+  const PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção' };
+  const PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a' };
 
   async function loadEquipe() {
     if (!equipeSeriesOpts) {
@@ -4092,8 +4145,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     renderEquipe();
   }
   function toggleEqTurma() {
-    const papel = document.getElementById('eqPapel').value;
-    document.getElementById('eqTurmaWrap').style.display = (papel === 'professora' || papel === 'professora_assistente') ? 'block' : 'none';
+    const checked = [...document.querySelectorAll('input[name="eqPapel"]:checked')].map(c => c.value);
+    document.getElementById('eqTurmaWrap').style.display = (checked.includes('professora') || checked.includes('professora_assistente')) ? 'block' : 'none';
   }
   function setEquipeFilter(f, btn) {
     equipeFilter = f;
@@ -4102,24 +4155,32 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     renderEquipe();
   }
   function renderEquipe() {
-    const list = equipeFilter === 'todos' ? equipeData : equipeData.filter(u => u.papel === equipeFilter);
+    const list = equipeFilter === 'todos' ? equipeData : equipeData.filter(u => {
+      const roles = u.papeis?.length ? u.papeis : [u.papel];
+      return roles.includes(equipeFilter);
+    });
     document.getElementById('equipeCount').textContent = list.length;
     const el = document.getElementById('equipeList');
     if (!list.length) { el.innerHTML = '<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhum membro encontrado.</span></div>'; return; }
     el.innerHTML = list.map(u => {
       const isMe = u.email === currentGerente?.email;
-      const cor = PAPEL_COLORS[u.papel] || '#666';
-      const isProf = u.papel === 'professora' || u.papel === 'professora_assistente';
+      const roles = u.papeis?.length ? u.papeis : [u.papel];
+      const cor = PAPEL_COLORS[roles[0]] || '#666';
+      const isProf = roles.includes('professora') || roles.includes('professora_assistente');
       const turmaSelect = isProf ? `<select onchange="setEquipeSerie('${esc(u.email)}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;background:#fdfbf8;max-width:130px;">
         <option value="">Sem turma</option>${equipeSeriesOpts}
       </select>` : '';
+      const badges = roles.map(r => {
+        const c = PAPEL_COLORS[r] || '#666';
+        return `<span class="role-badge" style="background:${c}15;color:${c};border-color:${c}30;">${PAPEIS[r]||r}</span>`;
+      }).join(' ');
       return `<div class="list-row">
         <div class="list-avatar" style="background:${cor}20;color:${cor};">${(u.nome||'?')[0].toUpperCase()}</div>
         <div class="lr-main"><strong>${esc(u.nome||'—')}</strong><span>${esc(u.email)} · ${new Date(u.criado_em).toLocaleDateString('pt-BR')}${u.serie_nome ? ' · ' + esc(u.serie_nome) : ''}</span></div>
         ${turmaSelect}
-        <span class="role-badge" style="background:${cor}15;color:${cor};border-color:${cor}30;">${PAPEIS[u.papel]||u.papel}</span>
-        <button class="action-btn" onclick="openPermissoes('${u.id}','${esc(u.nome||u.email)}','${u.papel}')" title="Permissões" style="font-size:14px;">🔐</button>
-        ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">${badges}</div>
+        <button class="action-btn" onclick="openPermissoes('${u.id}','${esc(u.nome||u.email)}','${u.papeis?u.papeis[0]:u.papel}')" title="Permissões" style="font-size:14px;">🔐</button>
+        ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn" onclick="openEditPapeis('${u.id}')" title="Editar papéis" style="font-size:14px;">✏️</button><button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
       </div>`;
     }).join('');
     // Seta valores dos selects de turma
@@ -4134,21 +4195,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const nome = document.getElementById('eqNome').value.trim();
     const email = document.getElementById('eqEmail').value.trim();
     const senha = document.getElementById('eqSenha').value;
-    const papel = document.getElementById('eqPapel').value;
+    const papeis = [...document.querySelectorAll('input[name="eqPapel"]:checked')].map(c => c.value);
     const turma = document.getElementById('eqTurma').value;
-    if (!nome || !email || !senha || !papel) return showAlert('eq','error','Preencha todos os campos.');
+    if (!nome || !email || !senha || !papeis.length) return showAlert('eq','error','Preencha todos os campos e selecione pelo menos um papel.');
     if (senha.length < 6) return showAlert('eq','error','Senha mínima de 6 caracteres.');
-    const d = await api({ action:'usuarios_create', nome, email, senha, papel });
+    const d = await api({ action:'usuarios_create', nome, email, senha, papeis });
     if (d.error) return showAlert('eq','error',d.error);
     // Atribui turma se for professora
-    if (turma && (papel === 'professora' || papel === 'professora_assistente')) {
+    if (turma && (papeis.includes('professora') || papeis.includes('professora_assistente'))) {
       await api({ action:'usuarios_set_serie', email, serie_id: turma });
     }
     showAlert('eq','success','Membro "'+nome+'" cadastrado com sucesso!');
     document.getElementById('eqNome').value = '';
     document.getElementById('eqEmail').value = '';
     document.getElementById('eqSenha').value = '';
-    document.getElementById('eqPapel').value = '';
+    document.querySelectorAll('input[name="eqPapel"]').forEach(c => c.checked = false);
     document.getElementById('eqTurma').value = '';
     document.getElementById('eqTurmaWrap').style.display = 'none';
     loadEquipe();
@@ -4274,6 +4335,92 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (d.error) return showToast(d.error, 'error');
     showToast('Permissões restauradas ao padrão.', 'success');
     closePermModal();
+  }
+
+  // ── Editar papéis de membro ──
+  const ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao'];
+  const ALL_FEATURES = ['atestados','crm','templates','metas'];
+  const FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais' };
+
+  function openEditPapeis(id) {
+    const u = equipeData.find(x => x.id === id);
+    if (!u) return;
+    const roles = u.papeis?.length ? u.papeis : (u.papel ? [u.papel] : []);
+    document.getElementById('editPapeisId').value = id;
+    document.getElementById('editPapeisTitle').textContent = 'Editar — ' + (u.nome || u.email);
+    document.getElementById('editPapeisEmail').textContent = u.email;
+    document.getElementById('editPapeisSenha').value = '';
+    document.getElementById('editPapeisErr').style.display = 'none';
+
+    // Render checkboxes de papéis
+    document.getElementById('editPapeisChecks').innerHTML = ALL_PAPEIS.map(p => {
+      const c = PAPEL_COLORS[p] || '#666';
+      const checked = roles.includes(p) ? 'checked' : '';
+      return `<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid ${roles.includes(p)?c+'50':'var(--border)'};border-radius:8px;background:${roles.includes(p)?c+'10':'#fdfbf8'};transition:all .15s;">
+        <input type="checkbox" name="editPapel" value="${p}" ${checked} onchange="toggleEditPapelStyle(this);toggleEditFeatures()"> ${PAPEIS[p]||p}
+      </label>`;
+    }).join('');
+
+    // Render checkboxes de features
+    document.getElementById('editFeaturesChecks').innerHTML = ALL_FEATURES.map(f =>
+      `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;">
+        <input type="checkbox" name="editFeature" value="${f}"> ${FEATURE_LABELS[f]||f}
+      </label>`
+    ).join('');
+
+    toggleEditFeatures();
+    document.getElementById('editPapeisModal').classList.add('show');
+  }
+
+  function toggleEditPapelStyle(cb) {
+    const label = cb.parentElement;
+    const p = cb.value;
+    const c = PAPEL_COLORS[p] || '#666';
+    if (cb.checked) { label.style.borderColor = c+'50'; label.style.background = c+'10'; }
+    else { label.style.borderColor = 'var(--border)'; label.style.background = '#fdfbf8'; }
+  }
+
+  function toggleEditFeatures() {
+    const checked = [...document.querySelectorAll('input[name="editPapel"]:checked')].map(c => c.value);
+    const show = checked.includes('secretaria') || checked.includes('comercial');
+    document.getElementById('editPapeisFeatures').style.display = show ? 'block' : 'none';
+    if (show) {
+      // Auto-check features based on roles
+      const featureCbs = document.querySelectorAll('input[name="editFeature"]');
+      featureCbs.forEach(cb => {
+        if (checked.includes('secretaria') && cb.value === 'atestados') cb.checked = true;
+        if (checked.includes('comercial') && ['crm','templates','metas'].includes(cb.value)) cb.checked = true;
+      });
+    }
+  }
+
+  function closeEditPapeis() { document.getElementById('editPapeisModal').classList.remove('show'); }
+
+  async function saveEditPapeis() {
+    const id = document.getElementById('editPapeisId').value;
+    const papeis = [...document.querySelectorAll('input[name="editPapel"]:checked')].map(c => c.value);
+    const features = [...document.querySelectorAll('input[name="editFeature"]:checked')].map(c => c.value);
+    const senha = document.getElementById('editPapeisSenha').value;
+    const errEl = document.getElementById('editPapeisErr');
+    errEl.style.display = 'none';
+
+    if (!papeis.length) { errEl.textContent = 'Selecione pelo menos um papel.'; errEl.style.display = 'block'; return; }
+    if (senha && senha.length < 6) { errEl.textContent = 'Senha mínima de 6 caracteres.'; errEl.style.display = 'block'; return; }
+
+    const payload = { action: 'usuarios_update', id, papeis };
+    if (features.length) payload.features = features;
+    const d = await api(payload);
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+
+    // Reset senha se informada
+    if (senha) {
+      const r = await api({ action: 'usuarios_reset_senha', id, nova_senha: senha });
+      if (r.error) { errEl.textContent = r.error; errEl.style.display = 'block'; return; }
+    }
+
+    closeEditPapeis();
+    showToast('Papéis atualizados!', 'success');
+    loadEquipe();
   }
 
   // Legacy aliases
@@ -7473,7 +7620,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
                 ${famSeriesOpts}
               </select>
             </td>
-            <td style="padding:11px 14px;border-bottom:1px solid #f5f0ea;text-align:right;">
+            <td style="padding:11px 14px;border-bottom:1px solid #f5f0ea;text-align:right;white-space:nowrap;">
+              <button class="action-btn" onclick="abrirEditFamilia('${esc(r.cpf)}')" style="margin-right:4px;" title="Editar">✏️</button>
               <button class="action-btn del" onclick="deleteFamilia('${esc(r.cpf)}','${esc(r.nome_aluno)}')">🗑</button>
             </td>
           </tr>`).join('')}
@@ -7489,6 +7637,41 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function updateFamSerie(cpf, serie) {
     const d = await api({ action: 'familias_update', cpf, serie: serie || null });
     if (d.error) alert('Erro ao atualizar série: ' + d.error);
+  }
+
+  function abrirEditFamilia(cpf) {
+    const r = famDados.find(f => f.cpf === cpf);
+    if (!r) return;
+    document.getElementById('famEditNomeAluno').value = r.nome_aluno || '';
+    document.getElementById('famEditNomeResp').value = r.nome_responsavel || '';
+    document.getElementById('famEditEmail').value = r.email || '';
+    document.getElementById('famEditCpf').value = r.cpf || '';
+    // Popular series no select
+    const selSerie = document.getElementById('famEditSerie');
+    selSerie.innerHTML = '<option value="">— sem serie —</option>' + famSeriesOpts;
+    if (r.serie) selSerie.value = r.serie;
+    if (r.turno) document.getElementById('famEditTurno').value = r.turno;
+    const modal = document.getElementById('famEditModal');
+    modal.style.display = 'flex';
+  }
+  function fecharEditFamilia() {
+    document.getElementById('famEditModal').style.display = 'none';
+  }
+  async function salvarEditFamilia() {
+    const cpf = document.getElementById('famEditCpf').value;
+    const d = await api({
+      action: 'familias_update',
+      cpf,
+      nome_aluno: document.getElementById('famEditNomeAluno').value.trim(),
+      nome_responsavel: document.getElementById('famEditNomeResp').value.trim(),
+      email: document.getElementById('famEditEmail').value.trim(),
+      serie: document.getElementById('famEditSerie').value || null,
+      turno: document.getElementById('famEditTurno').value || null
+    });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Familia atualizada!', 'success');
+    fecharEditFamilia();
+    await loadFamiliasPanel();
   }
 
   async function deleteFamilia(cpf, nome) {

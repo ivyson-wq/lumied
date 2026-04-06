@@ -95,6 +95,49 @@ serve(async (req: Request) => {
     return ok({ ok: true, saved: configs.length })
   }
 
+  // ── Hub: identifica usuário por qualquer token ativo ──
+  if (action === "hub_whoami") {
+    const hubToken = (body._token as string) || (body._prof_token as string) || req.headers.get("authorization")?.replace("Bearer ", "") || null;
+    if (!hubToken) return ok({ logged: false });
+    // Tenta gerente_sessoes
+    const { data: gs } = await admin.from("gerente_sessoes").select("gerente_id, expira_em, gerentes(email)").eq("token", hubToken).maybeSingle();
+    if (gs && new Date(gs.expira_em) >= new Date()) {
+      const email = (gs as any).gerentes?.email;
+      if (email) {
+        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").ilike("email", email).maybeSingle();
+        if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
+        return ok({ logged: true, email, papeis: ["gerente"] });
+      }
+    }
+    // Tenta secretaria_sessoes
+    const { data: ss } = await admin.from("secretaria_sessoes").select("secretaria_id, expira_em, secretarias(email)").eq("token", hubToken).maybeSingle();
+    if (ss && new Date(ss.expira_em) >= new Date()) {
+      const email = (ss as any).secretarias?.email;
+      if (email) {
+        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").ilike("email", email).maybeSingle();
+        if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
+        return ok({ logged: true, email, papeis: ["secretaria"] });
+      }
+    }
+    // Tenta professora_sessoes
+    const { data: ps } = await admin.from("professora_sessoes").select("professora_id, expira_em, professoras(email)").eq("token", hubToken).maybeSingle();
+    if (ps && new Date(ps.expira_em) >= new Date()) {
+      const email = (ps as any).professoras?.email;
+      if (email) {
+        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").ilike("email", email).maybeSingle();
+        if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
+        return ok({ logged: true, email, papeis: ["professora"] });
+      }
+    }
+    // Tenta sessões unificadas
+    const { data: us } = await admin.from("sessoes").select("usuario_id, expira_em").eq("token", hubToken).maybeSingle();
+    if (us && new Date(us.expira_em) >= new Date()) {
+      const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("id", us.usuario_id).maybeSingle();
+      if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
+    }
+    return ok({ logged: false });
+  }
+
   // ── Config pública da escola (carregada por todos os portais) ──
   if (action === "config_publica") {
     const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria")
@@ -563,7 +606,7 @@ serve(async (req: Request) => {
   }
 
   // ════════════════════════════════════════════════════════════
-  //  AÇÕES AUTENTICADAS
+  //  AÇÕES AUTENTICADAS (Gerente)
   // ════════════════════════════════════════════════════════════
   // Token: prioriza _token do body (evita conflito com JWT Verification do Supabase),
   // fallback para Authorization header
@@ -648,8 +691,8 @@ serve(async (req: Request) => {
 
   // ── Usuários Unificados ──────────────────────────────────────
   if (action === "usuarios_list") {
-    const { data } = await admin.from("usuarios").select("id, nome, email, papel, ativo, criado_em").order("papel").order("nome");
-    const users = data ?? [];
+    const { data } = await admin.from("usuarios").select("id, nome, email, papel, papeis, ativo, criado_em").order("papel").order("nome");
+    const users = (data ?? []).map((u: any) => ({ ...u, papeis: u.papeis?.length ? u.papeis : (u.papel ? [u.papel] : []) }));
     // Enriquece professoras com serie_id
     const profEmails = users.filter(u => u.papel === 'professora' || u.papel === 'professora_assistente').map(u => u.email);
     if (profEmails.length) {
@@ -663,54 +706,113 @@ serve(async (req: Request) => {
     return ok(users);
   }
   if (action === "usuarios_create") {
-    const { nome, email, senha, papel } = body as { nome: string; email: string; senha: string; papel: string };
-    if (!nome || !email || !senha || !papel) return err("Nome, e-mail, senha e papel são obrigatórios.");
-    const papeisValidos = ["gerente", "professora", "professora_assistente", "secretaria", "manutencao"];
-    if (!papeisValidos.includes(papel)) return err("Papel inválido.");
+    const { nome, email, senha, papel, papeis: rawPapeis, features } = body as any;
+    if (!nome || !email || !senha) return err("Nome, e-mail e senha são obrigatórios.");
+    // Aceita papeis (array) ou papel (string legado)
+    let papeis: string[] = Array.isArray(rawPapeis) && rawPapeis.length ? rawPapeis : (papel ? [papel] : []);
+    if (!papeis.length) return err("Selecione pelo menos um papel.");
+    const papeisValidos = ["gerente", "diretor", "financeiro", "professora", "professora_assistente", "secretaria", "comercial", "manutencao"];
+    const invalidos = papeis.filter((p: string) => !papeisValidos.includes(p));
+    if (invalidos.length) return err("Papel inválido: " + invalidos.join(", "));
     if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
-    // Usa hash hex (100k iter) padrão unificado
     const senha_hash = await hashSenhaProf(senha as string);
-    const { error } = await admin.from("usuarios").insert({ nome, email, senha_hash, papel });
+    const primaryPapel = papeis[0]; // para compatibilidade com coluna legada
+    const { error } = await admin.from("usuarios").insert({ nome, email, senha_hash, papel: primaryPapel, papeis });
     if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
-    // Sincroniza com tabela legada correspondente
-    if (papel === "gerente") {
+    // Sincroniza com tabelas legadas para cada papel
+    if (papeis.includes("gerente") || papeis.includes("diretor") || papeis.includes("financeiro")) {
       await admin.from("gerentes").insert({ nome, email, senha_hash: await hashSenha(senha as string) }).catch(() => {});
-    } else if (papel === "professora" || papel === "professora_assistente" || papel === "manutencao") {
-      await admin.from("professoras").insert({ nome, email, senha_hash, tipo: papel === "professora" ? "professora" : papel }).catch(() => {});
-    } else if (papel === "secretaria") {
-      await admin.from("secretarias").insert({ nome, email, senha_hash }).catch(() => {});
+    }
+    if (papeis.some((p: string) => ["professora", "professora_assistente", "manutencao"].includes(p))) {
+      const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
+      await admin.from("professoras").insert({ nome, email, senha_hash, tipo }).catch(() => {});
+    }
+    if (papeis.includes("secretaria") || papeis.includes("comercial")) {
+      // Determina features baseado nos papéis
+      let secFeatures = features || [];
+      if (!secFeatures.length) {
+        if (papeis.includes("secretaria")) secFeatures.push("atestados");
+        if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
+      }
+      await admin.from("secretarias").insert({ nome, email, senha_hash, features: secFeatures }).catch(() => {});
     }
     return ok({ success: true });
   }
   if (action === "usuarios_update") {
-    const { id, nome, email, papel } = body as { id: string; nome: string; email: string; papel: string };
+    const { id, nome, email, papel, papeis: rawPapeis, features } = body as any;
     if (!id) return err("ID obrigatório.");
+    // Busca estado atual
+    const { data: current } = await admin.from("usuarios").select("nome, email, senha_hash, papeis, papel").eq("id", id).single();
+    if (!current) return err("Usuário não encontrado.");
     const update: Record<string, unknown> = {};
     if (nome) update.nome = nome;
     if (email) update.email = email;
-    if (papel) update.papel = papel;
+    const papeis = Array.isArray(rawPapeis) && rawPapeis.length ? rawPapeis : (papel ? [papel] : null);
+    if (papeis) {
+      update.papeis = papeis;
+      update.papel = papeis[0];
+    }
     const { error } = await admin.from("usuarios").update(update).eq("id", id);
     if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    // Sincroniza tabelas legadas se papéis mudaram
+    if (papeis) {
+      const oldRoles = current.papeis?.length ? current.papeis : (current.papel ? [current.papel] : []);
+      const uEmail = (email || current.email) as string;
+      const uNome = (nome || current.nome) as string;
+      const uHash = current.senha_hash as string;
+      // Gerente: diretor, gerente, financeiro → tabela gerentes
+      const needsGerente = papeis.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
+      const hadGerente = oldRoles.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
+      if (needsGerente && !hadGerente) {
+        await admin.from("gerentes").insert({ nome: uNome, email: uEmail, senha_hash: uHash }).catch(() => {});
+      } else if (!needsGerente && hadGerente) {
+        await admin.from("gerentes").delete().eq("email", uEmail).catch(() => {});
+      }
+      // Professora
+      const needsProf = papeis.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
+      const hadProf = oldRoles.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
+      if (needsProf && !hadProf) {
+        const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
+        await admin.from("professoras").insert({ nome: uNome, email: uEmail, senha_hash: uHash, tipo }).catch(() => {});
+      } else if (!needsProf && hadProf) {
+        await admin.from("professoras").delete().eq("email", uEmail).catch(() => {});
+      }
+      // Secretaria/Comercial
+      const needsSec = papeis.includes("secretaria") || papeis.includes("comercial");
+      const hadSec = oldRoles.includes("secretaria") || oldRoles.includes("comercial");
+      if (needsSec) {
+        let secFeatures = Array.isArray(features) ? features : [];
+        if (!secFeatures.length) {
+          if (papeis.includes("secretaria")) secFeatures.push("atestados");
+          if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
+        }
+        if (!hadSec) {
+          await admin.from("secretarias").insert({ nome: uNome, email: uEmail, senha_hash: uHash, features: secFeatures }).catch(() => {});
+        } else {
+          await admin.from("secretarias").update({ features: secFeatures }).eq("email", uEmail).catch(() => {});
+        }
+      } else if (!needsSec && hadSec) {
+        await admin.from("secretarias").update({ ativo: false }).eq("email", uEmail).catch(() => {});
+      }
+    }
     return ok({ success: true });
   }
   if (action === "usuarios_delete") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatório.");
-    // Busca o usuário para saber o papel
-    const { data: u } = await admin.from("usuarios").select("email, papel").eq("id", id).single();
+    const { data: u } = await admin.from("usuarios").select("email, papel, papeis").eq("id", id).single();
     if (!u) return err("Usuário não encontrado.");
-    // Não permite excluir a si mesmo
     if (u.email === gerente.email) return err("Você não pode remover sua própria conta.");
-    // Verifica se é o último gerente
-    if (u.papel === "gerente") {
+    const roles = u.papeis?.length ? u.papeis : [u.papel];
+    if (roles.includes("gerente")) {
       const { count } = await admin.from("usuarios").select("*", { count: "exact", head: true }).eq("papel", "gerente");
       if ((count ?? 0) <= 1) return err("É necessário manter pelo menos um gerente.");
     }
     await admin.from("usuarios").delete().eq("id", id);
-    // Remove da tabela legada correspondente
-    if (u.papel === "gerente") await admin.from("gerentes").delete().eq("email", u.email).catch(() => {});
-    else if (["professora", "professora_assistente", "manutencao"].includes(u.papel)) await admin.from("professoras").delete().eq("email", u.email).catch(() => {});
-    else if (u.papel === "secretaria") await admin.from("secretarias").delete().eq("email", u.email).catch(() => {});
+    // Remove de todas as tabelas legadas
+    await admin.from("gerentes").delete().eq("email", u.email).catch(() => {});
+    await admin.from("professoras").delete().eq("email", u.email).catch(() => {});
+    await admin.from("secretarias").delete().eq("email", u.email).catch(() => {});
     return ok({ success: true });
   }
   if (action === "usuarios_reset_senha") {
@@ -1057,9 +1159,19 @@ serve(async (req: Request) => {
     return ok(data ?? []);
   }
   if (action === "familias_update") {
-    const { cpf, serie } = body as { cpf: string; serie: string | null };
+    const { cpf, nome_aluno, nome_responsavel, email, serie, turno } = body as {
+      cpf: string; nome_aluno?: string; nome_responsavel?: string;
+      email?: string; serie?: string | null; turno?: string | null;
+    };
     if (!cpf) return err("CPF obrigatório.");
-    const { error } = await admin.from("familias").update({ serie }).eq("cpf", cpf);
+    const updates: Record<string, unknown> = {};
+    if (nome_aluno !== undefined) updates.nome_aluno = nome_aluno;
+    if (nome_responsavel !== undefined) updates.nome_responsavel = nome_responsavel;
+    if (email !== undefined) updates.email = email;
+    if (serie !== undefined) updates.serie = serie;
+    if (turno !== undefined) updates.turno = turno;
+    if (!Object.keys(updates).length) return err("Nenhum campo para atualizar.");
+    const { error } = await admin.from("familias").update(updates).eq("cpf", cpf);
     if (error) return err(error.message);
     return ok({ success: true });
   }
