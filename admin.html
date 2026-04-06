@@ -10,9 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-0VpB0wAYDdhWCEv3+IjT0Z9Kgpvszkf70RFX3ro7l4QR5nywxsMaOpmvZKsfRF8I" crossorigin="anonymous"></script>
 <style>
-:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;--purple:#6b3fa0;--orange:#c27800;}
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--blue:#1a6bb5;--purple:#6b3fa0;--orange:#c27800;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sb);position:relative;overflow:hidden;}
@@ -174,7 +174,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
 <!-- APP -->
 <div id="appShell">
-  <nav class="sidebar">
+  <nav class="sidebar" role="navigation" aria-label="Menu principal">
     <div class="sb-brand"><img src="/lumied-logo-branco.png" class="sb-leaf" style="height:28px;object-fit:contain;" alt="Lumied"><h1 id="escolaNome">Escola</h1><span>Admin</span></div>
     <div class="sb-nav">
       <div class="sb-label">Visao Geral</div>
@@ -197,9 +197,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     </div>
   </nav>
 
-  <div class="main">
+  <div class="main" role="main">
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-    <div class="topbar"><button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button><h2 id="panelTitle">Dashboard</h2></div>
+    <div class="topbar" role="banner"><button class="hamburger" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button><h2 id="panelTitle">Dashboard</h2></div>
     <div class="content">
 
       <!-- DASHBOARD -->
@@ -292,7 +292,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 </div>
 
 <!-- MODAL: TICKET RESPOND -->
-<div class="modal-overlay" id="modalTicket">
+<div class="modal-overlay" id="modalTicket" role="dialog" aria-modal="true">
   <div class="modal">
     <h3 id="mtTitle">Ticket</h3>
     <p class="msub" id="mtDesc"></p>
@@ -306,7 +306,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 </div>
 
 <!-- MODAL: NOVO ADMIN -->
-<div class="modal-overlay" id="modalNovoAdmin">
+<div class="modal-overlay" id="modalNovoAdmin" role="dialog" aria-modal="true">
   <div class="modal">
     <h3>Novo Administrador</h3>
     <p class="msub">Adicione um novo admin a esta escola.</p>
@@ -465,14 +465,14 @@ async function loadPlano() {
   document.getElementById('planoAlerts').innerHTML = pendHtml ? '' : '';
 }
 async function solicitarUpgrade(slug) {
-  if (!confirm('Solicitar upgrade para ' + slug + '?')) return;
+  if (!await _lumiedConfirm('Solicitar upgrade para ' + slug + '?')) return;
   const d = await api({ action: 'escola_solicitar_upgrade', plano_solicitado: slug });
   if (d.error) return showToast(d.error, 'error');
   showToast('Solicitacao de upgrade enviada!');
   loadPlano();
 }
 async function solicitarDowngrade(slug) {
-  if (!confirm('Solicitar downgrade para ' + slug + '?')) return;
+  if (!await _lumiedConfirm('Solicitar downgrade para ' + slug + '?')) return;
   const d = await api({ action: 'escola_solicitar_downgrade', plano_solicitado: slug });
   if (d.error) return showToast(d.error, 'error');
   showToast('Solicitacao de downgrade enviada!');
@@ -500,13 +500,13 @@ async function loadAdicionais() {
   </div>`).join('') || '<div class="empty-state">Nenhum adicional disponivel</div>';
 }
 async function contratarExtra(id) {
-  if (!confirm('Solicitar contratacao deste adicional?')) return;
+  if (!await _lumiedConfirm('Solicitar contratacao deste adicional?')) return;
   const d = await api({ action: 'escola_extra_contratar', extra_id: id });
   if (d.error) return showToast(d.error, 'error');
   showToast('Solicitacao enviada!'); loadAdicionais();
 }
 async function cancelarExtra(id) {
-  if (!confirm('Cancelar este adicional?')) return;
+  if (!await _lumiedConfirm('Cancelar este adicional?')) return;
   const d = await api({ action: 'escola_extra_cancelar', contratado_id: id });
   if (d.error) return showToast(d.error, 'error');
   showToast('Adicional cancelado'); loadAdicionais();
@@ -559,7 +559,7 @@ async function saveModulos() {
   loadModulos();
 }
 async function resetModulos() {
-  if (!confirm('Restaurar modulos ao padrao do plano? Todas as personalizacoes serao removidas.')) return;
+  if (!await _lumiedConfirm('Restaurar modulos ao padrao do plano? Todas as personalizacoes serao removidas.')) return;
   const d = await api({ action: 'escola_modulos_reset', escola_id: ESCOLA_ID });
   if (d.error) return showToast(d.error, 'error');
   showToast('Modulos restaurados ao padrao do plano');
@@ -614,7 +614,7 @@ async function loadLgpd() {
   }).join('');
 }
 async function processarLgpd(id, acao) {
-  if (!confirm(acao === 'aprovar' ? 'Aprovar esta solicitacao?' : 'Recusar esta solicitacao?')) return;
+  if (!await _lumiedConfirm(acao === 'aprovar' ? 'Aprovar esta solicitacao?' : 'Recusar esta solicitacao?')) return;
   const d = await api({ action: 'lgpd_solicitacoes_process', id, acao });
   if (d.error) return showToast(d.error, 'error');
   showToast('Solicitacao processada!'); loadLgpd();
@@ -707,5 +707,6 @@ async function criarAdmin() {
 // ═══ INIT ═══
 checkSession();
 </script>
+<script src="/lumied-ux.js" defer></script>
 </body>
 </html>

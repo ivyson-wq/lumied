@@ -121,21 +121,24 @@
   // 3. CONFIRMAÇÃO para ações destrutivas
   // ═══════════════════════════════════════════════════
   window._lumiedConfirm = function (msg, onConfirm) {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;';
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:28px;max-width:380px;width:90%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.2);">
-        <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
-        <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;">Tem certeza?</h3>
-        <p style="font-size:13px;color:#7a7169;line-height:1.5;margin-bottom:20px;">${msg}</p>
-        <div style="display:flex;gap:10px;justify-content:center;">
-          <button onclick="this.closest('div[style]').parentElement.remove()" style="padding:10px 20px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
-          <button id="lumiedConfirmBtn" style="padding:10px 20px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Confirmar</button>
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;';
+      overlay.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:28px;max-width:380px;width:90%;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.2);">
+          <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;">Tem certeza?</h3>
+          <p style="font-size:13px;color:#7a7169;line-height:1.5;margin-bottom:20px;">${msg}</p>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="lumiedConfirmCancelBtn" style="padding:10px 20px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            <button class="lumiedConfirmOkBtn" style="padding:10px 20px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Confirmar</button>
+          </div>
         </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    document.getElementById('lumiedConfirmBtn').onclick = () => { overlay.remove(); onConfirm(); };
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('.lumiedConfirmCancelBtn').onclick = () => { overlay.remove(); resolve(false); };
+      overlay.querySelector('.lumiedConfirmOkBtn').onclick = () => { overlay.remove(); if (onConfirm) onConfirm(); resolve(true); };
+    });
   };
 
   // ═══════════════════════════════════════════════════
@@ -346,4 +349,50 @@
   } else {
     init();
   }
+})();
+
+// ═══════════════════════════════════════════════════════
+//  Focus trap for modals
+// ═══════════════════════════════════════════════════════
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Tab') return;
+  const modal = document.querySelector('.modal-overlay.show, .modal-overlay[style*="flex"]');
+  if (!modal) return;
+  const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+  } else {
+    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  const modal = document.querySelector('.modal-overlay.show, .modal-overlay[style*="flex"]');
+  if (modal) {
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  Offline detection
+// ═══════════════════════════════════════════════════════
+(function() {
+  let banner = null;
+  function showOffline(show) {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#d4830a;color:#fff;text-align:center;padding:12px;font-size:14px;font-weight:600;z-index:99999;font-family:sans-serif;transition:transform .3s;transform:translateY(100%);';
+      banner.textContent = 'Sem conexão com a internet';
+      document.body.appendChild(banner);
+    }
+    banner.style.transform = show ? 'translateY(0)' : 'translateY(100%)';
+  }
+  window.addEventListener('offline', () => showOffline(true));
+  window.addEventListener('online', () => showOffline(false));
+  if (!navigator.onLine) setTimeout(() => showOffline(true), 1000);
 })();

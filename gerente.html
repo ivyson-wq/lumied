@@ -18,13 +18,13 @@
 <link rel="stylesheet" href="/themes.css">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="/dist/gerente/index.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-0VpB0wAYDdhWCEv3+IjT0Z9Kgpvszkf70RFX3ro7l4QR5nywxsMaOpmvZKsfRF8I" crossorigin="anonymous"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 <script src="/webauthn-client.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <style>
-:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;}
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 /* LOGIN */
@@ -51,7 +51,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .sb-brand{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.15);}
 .sb-logo-img{max-height:40px;max-width:160px;object-fit:contain;display:none;margin-bottom:6px;}
 .sb-leaf{font-size:20px;}.sb-brand h1{font-family:'Lora',serif;font-size:15px;color:#fff;margin-top:6px;line-height:1.2;}
-.sb-brand span{font-size:11px;color:rgba(255,255,255,.35);}
+.sb-brand span{font-size:11px;color:rgba(255,255,255,.55);}
 .sb-nav{flex:1;padding:14px 10px;}
 .sb-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.3);padding:16px 14px 6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;font-family:'DM Sans',system-ui,-apple-system,sans-serif;font-weight:700;transition:color .2s;}
 .sb-label:hover{color:rgba(255,255,255,.6);}
@@ -235,7 +235,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 /* FAVORITOS */
 .fav-section{padding:0 0 8px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:4px;}
 .fav-section:empty{display:none;padding:0;border:none;margin:0;}
-.fav-header{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.35);padding:8px 12px 4px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.fav-header{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.55);padding:8px 12px 4px;font-weight:700;display:flex;align-items:center;gap:6px;}
 .fav-header .fh-star{color:#f6a623;font-size:12px;}
 .nav-item .fav-star{margin-left:auto;font-size:11px;opacity:0;transition:opacity .15s;cursor:pointer;padding:2px 4px;flex-shrink:0;}
 .nav-item:hover .fav-star{opacity:.5;}
@@ -440,7 +440,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <img src="/lumied-logo-branco.png" id="sidebarLeaf" class="sb-leaf" style="height:36px;object-fit:contain;" alt="Lumied">
       <h1>Maple Bear</h1><span>Painel do Gerente</span>
     </div>
-    <nav class="sb-nav">
+    <nav class="sb-nav" role="navigation" aria-label="Menu principal">
       <!-- Favoritos (populated by JS) -->
       <div class="fav-section" id="favSection"></div>
       <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
@@ -616,15 +616,15 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
   <!-- MOBILE BOTTOM BAR -->
-  <nav class="ger-bottom-bar" id="gerBottomBar"></nav>
-  <div class="main">
-    <div class="topbar">
-      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <nav class="ger-bottom-bar" id="gerBottomBar" role="navigation" aria-label="Menu principal"></nav>
+  <div class="main" role="main">
+    <div class="topbar" role="banner">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
       <span id="greetingTopbar" style="font-size:14px;font-weight:500;color:var(--muted);margin-right:auto;"></span>
-      <h2 id="topbarTitle">Dashboard Analytics</h2>
+      <div style="min-width:0;"><h2 id="topbarTitle">Dashboard Analytics</h2><div id="breadcrumb" style="font-size:11px;color:var(--muted);margin-top:2px;"></div></div>
       <div class="topbar-nav-pills" id="topbarPills"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <button style="position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()">🔔<span id="notifDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
+        <button style="position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()" aria-label="Notificações">🔔<span id="notifDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
         <div class="live-badge" id="liveBadge"><div class="live-dot"></div>Atualizando…</div>
         <button class="btn-export" id="btnExportPdf" onclick="exportarPDF()" style="display:none;">
           📄 Exportar PDF
@@ -2185,7 +2185,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <!-- Modal Relatório Manutenção -->
-      <div class="modal-overlay" id="manutRelatorioOverlay" onclick="if(event.target===this)closeManutRelatorio()">
+      <div class="modal-overlay" id="manutRelatorioOverlay" role="dialog" aria-modal="true" onclick="if(event.target===this)closeManutRelatorio()">
         <div class="modal" style="max-width:1000px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
             <h3>Relatório de Pendências por Equipe</h3>
@@ -2204,7 +2204,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <!-- Modal Manutenção -->
-      <div class="modal-overlay" id="manutModalOverlay" onclick="if(event.target===this)closeManutModal()">
+      <div class="modal-overlay" id="manutModalOverlay" role="dialog" aria-modal="true" onclick="if(event.target===this)closeManutModal()">
         <div class="modal" style="max-width:650px;">
           <h3 id="manutModalTitle">Gerenciar Chamado</h3>
           <div id="manutModalContent"></div>
@@ -2540,7 +2540,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   </div>
 
 <!-- TURNO MODAL -->
-<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h3>Alterar Turno</h3>
     <div class="msub" id="modalDesc"></div>
@@ -2553,7 +2553,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 </div>
 
 <!-- SÉRIE EDIT MODAL -->
-<div class="modal-overlay" id="serieModal" onclick="if(event.target===this)closeSerieModal()">
+<div class="modal-overlay" id="serieModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeSerieModal()">
   <div class="modal">
     <h3>Editar Série</h3>
     <div class="ff" style="margin-top:16px;"><label>Nome</label><input type="text" id="editSerieNome"></div>
@@ -2566,7 +2566,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 </div>
 
 <!-- EDITAR PAPÉIS MODAL -->
-<div class="modal-overlay" id="editPapeisModal" onclick="if(event.target===this)closeEditPapeis()">
+<div class="modal-overlay" id="editPapeisModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeEditPapeis()">
   <div class="modal" style="max-width:480px;">
     <h3 id="editPapeisTitle">Editar Papéis</h3>
     <p id="editPapeisEmail" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></p>
@@ -2589,7 +2589,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 </div>
 
 <!-- ATIVIDADE EDIT MODAL -->
-<div class="modal-overlay" id="ativModal" onclick="if(event.target===this)closeAtivModal()" style="align-items:flex-start;padding:20px 16px;overflow-y:auto;">
+<div class="modal-overlay" id="ativModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeAtivModal()" style="align-items:flex-start;padding:20px 16px;overflow-y:auto;">
   <div class="modal" style="max-width:725px;margin:auto;">
     <h3>Editar Atividade</h3>
     <div class="ff" style="margin-top:16px;"><label>Nome</label><input type="text" id="editAtivNome"></div>
@@ -2625,7 +2625,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 </div>
 
 <!-- MODAL: observação diploma (aprovar/rejeitar) -->
-<div class="obs-modal-overlay" id="obsModalOverlay">
+<div class="obs-modal-overlay" id="obsModalOverlay" role="dialog" aria-modal="true">
   <div class="obs-modal">
     <h3 id="obsModalTitle">Validar Diploma</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px;" id="obsModalDesc"></p>
@@ -2658,7 +2658,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 </div>
 
 <!-- MODAL: definir senha da professora -->
-<div class="senha-modal-overlay" id="senhaModalOverlay">
+<div class="senha-modal-overlay" id="senhaModalOverlay" role="dialog" aria-modal="true">
   <div class="senha-modal">
     <h3>🔑 Definir Senha</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;" id="senhaModalDesc"></p>
@@ -3014,6 +3014,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
     const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
+    // Breadcrumb
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração'};
+    const sec = panelSections[id] || '';
+    const title = titles[id] || id;
+    const bc = document.getElementById('breadcrumb');
+    if (bc) bc.innerHTML = sec && sec !== title ? '<span style="cursor:pointer;" onclick="showPanel(\'analytics\')">Dashboard</span> <span style="opacity:.5;margin:0 4px;">›</span> ' + sec + ' <span style="opacity:.5;margin:0 4px;">›</span> ' + title : '';
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
     if(id==='alunos')      loadAlunos();
@@ -3579,7 +3585,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeModal(); document.getElementById('btnSave').disabled=false; loadData();
   }
   async function deleteRow(id, nome) {
-    if(!confirm('Remover solicitação de "'+nome+'"?')) return;
+    if(!await _lumiedConfirm('Remover solicitação de "'+nome+'"?')) return;
     await api({ action:'solicitacoes_delete', id }); loadData();
   }
 
@@ -3615,7 +3621,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     await api({ action:'series_update', id:editingSerieId, nome, ordem, ativo:true });
     closeSerieModal(); loadSeries();
   }
-  async function deleteSerie(id,nome){ if(!confirm('Remover "'+nome+'"?')) return; await api({ action:'series_delete', id }); loadSeries(); }
+  async function deleteSerie(id,nome){ if(!await _lumiedConfirm('Remover "'+nome+'"?')) return; await api({ action:'series_delete', id }); loadSeries(); }
 
   // ── LOGO ──────────────────────────────────────────────
   // ── Módulos habilitados (feature gating) ──
@@ -3779,7 +3785,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     reader.readAsDataURL(selectedFile);
   }
   async function removeLogo() {
-    if(!confirm('Remover logotipo?')) return;
+    if(!await _lumiedConfirm('Remover logotipo?')) return;
     await api({ action:'logo_remove' });
     document.getElementById('logoPreviewImg').style.display='none'; document.getElementById('logoNoImg').style.display='flex';
     document.getElementById('btnRemoveLogo').style.display='none';
@@ -3827,7 +3833,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadBibAcervo();
   }
   async function deletarLivro(id) {
-    if (!confirm('Remover este livro do acervo?')) return;
+    if (!await _lumiedConfirm('Remover este livro do acervo?')) return;
     await opApi({ action:'biblioteca_acervo_update', id, ativo:false });
     loadBibAcervo();
   }
@@ -4162,7 +4168,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       // Skip header
       const header = linhas[0].toLowerCase();
       if (!header.includes('nome')) return showToast('CSV deve ter cabeçalho com colunas: nome, email, serie, data_nascimento, responsavel', 'error');
-      if (!confirm(`Importar ${linhas.length - 1} alunos? Formato esperado: nome,email,serie,data_nascimento,responsavel`)) return;
+      if (!await _lumiedConfirm(`Importar ${linhas.length - 1} alunos? Formato esperado: nome,email,serie,data_nascimento,responsavel`)) return;
       let sucesso = 0, erro = 0;
       for (let i = 1; i < linhas.length; i++) {
         const cols = linhas[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
@@ -4279,7 +4285,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (d.error) showToast('Erro: ' + d.error, 'error');
   }
   async function deleteEquipeMember(id, nome) {
-    if (!confirm('Remover "'+nome+'" da equipe?')) return;
+    if (!await _lumiedConfirm('Remover "'+nome+'" da equipe?')) return;
     const d = await api({ action:'usuarios_delete', id });
     if (d.error) { showToast(d.error, 'error'); return; }
     loadEquipe();
@@ -4390,7 +4396,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function resetPermissoes() {
     if (!permUserId) return;
-    if (!confirm('Restaurar permissões para o padrão do papel?')) return;
+    if (!await _lumiedConfirm('Restaurar permissões para o padrão do papel?')) return;
     const d = await api({ action: 'permissoes_reset', usuario_id: permUserId });
     if (d.error) return showToast(d.error, 'error');
     showToast('Permissões restauradas ao padrão.', 'success');
@@ -4678,11 +4684,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAtividadesCRUD();
   }
   async function deleteAtividade(id, nome) {
-    if (!confirm('Remover atividade "'+nome+'"?')) return;
+    if (!await _lumiedConfirm('Remover atividade "'+nome+'"?')) return;
     await api({ action:'atividades_delete', id }); loadAtividadesCRUD();
   }
   async function deleteInscricaoAtiv(id, nome) {
-    if (!confirm('Remover inscrição de "'+nome+'"?')) return;
+    if (!await _lumiedConfirm('Remover inscrição de "'+nome+'"?')) return;
     await api({ action:'inscricoes_atividades_delete', id }); loadInscricoesAtividades();
   }
 
@@ -4990,7 +4996,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deleteInscricaoAtivDash(id, nome) {
-    if (!confirm('Remover inscrição de "'+nome+'"?')) return;
+    if (!await _lumiedConfirm('Remover inscrição de "'+nome+'"?')) return;
     await api({ action:'inscricoes_atividades_delete', id });
     loadAtivDashboard();
   }
@@ -5337,7 +5343,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deleteProfessora(id, nome) {
-    if (!confirm('Remover professora "'+nome+'"?')) return;
+    if (!await _lumiedConfirm('Remover professora "'+nome+'"?')) return;
     await api({ action:'professoras_delete', id });
     loadProfessoras();
   }
@@ -5455,7 +5461,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadManutPanel();
   }
   async function deleteManut(id) {
-    if (!confirm('Remover este chamado?')) return;
+    if (!await _lumiedConfirm('Remover este chamado?')) return;
     const d = await api({ action:'manutencao_delete', id });
     if (d.error) { showToast(d.error, 'error'); return; }
     loadManutPanel();
@@ -5682,13 +5688,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deleteHorario(id) {
-    if (!confirm('Remover este horário?')) return;
+    if (!await _lumiedConfirm('Remover este horário?')) return;
     await callCalendar({ action: 'horarios_delete', id });
     loadHorariosList();
   }
 
   async function cancelarReuniaoGerente(id) {
-    if (!confirm('Cancelar esta reunião?')) return;
+    if (!await _lumiedConfirm('Cancelar esta reunião?')) return;
     await callCalendar({ action: 'cancelar_reuniao', id });
     loadReunioesList();
   }
@@ -5773,7 +5779,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function acRejeitar(id, nome) {
-    if (!confirm('Rejeitar solicitação de ' + nome + '?')) return;
+    if (!await _lumiedConfirm('Rejeitar solicitação de ' + nome + '?')) return;
     const d = await callAcesso({ action: 'rejeitar', id });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     carregarSolicitacoes();
@@ -5832,7 +5838,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function acRemover(id, email) {
-    if (!confirm('Remover acesso de ' + email + '?')) return;
+    if (!await _lumiedConfirm('Remover acesso de ' + email + '?')) return;
     const d = await callAcesso({ action: 'remove', id });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     carregarAutorizados();
@@ -5885,7 +5891,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deleteSecretaria(id, nome) {
-    if (!confirm('Remover "'+nome+'" da secretaria?')) return;
+    if (!await _lumiedConfirm('Remover "'+nome+'" da secretaria?')) return;
     const d = await callDiplomas({ action: 'secretaria_delete', id });
     if (d.error) { showToast(d.error, 'error'); return; }
     loadSecretarias();
@@ -6631,7 +6637,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function almRejeitar() {
     if (!almReviewId) return;
     const nota = document.getElementById('almReviewNota').value.trim();
-    if (!nota && !confirm('Rejeitar sem nota explicativa?')) return;
+    if (!nota && !await _lumiedConfirm('Rejeitar sem nota explicativa?')) return;
     const errEl = document.getElementById('almReviewErr');
     errEl.classList.remove('show');
     const d = await callDiplomas({ action: 'alm_rejeitar', id: almReviewId, nota_gerente: nota });
@@ -7061,7 +7067,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function almDesativarInsumo(id) {
-    if (!confirm('Desativar este insumo?')) return;
+    if (!await _lumiedConfirm('Desativar este insumo?')) return;
     const d = await callDiplomas({ action: 'alm_insumo_del', id });
     if (!d.error) almLoadInsumos();
   }
@@ -7119,7 +7125,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function almDelTurma(id) {
-    if (!confirm('Remover esta turma?')) return;
+    if (!await _lumiedConfirm('Remover esta turma?')) return;
     await callDiplomas({ action: 'alm_turma_del', id });
     almLoadTurmas();
   }
@@ -7168,7 +7174,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function almAplicarOrcPadrao() {
     const valor = parseFloat(document.getElementById('almOrcPadrao').value) || 0;
     const mes = document.getElementById('almOrcMes').value || new Date().toISOString().slice(0,7);
-    if (!confirm('Aplicar R$ ' + valor.toFixed(2).replace('.',',') + ' para TODAS as turmas em ' + mes + '?')) return;
+    if (!await _lumiedConfirm('Aplicar R$ ' + valor.toFixed(2).replace('.',',') + ' para TODAS as turmas em ' + mes + '?')) return;
     const d = await callDiplomas({ action: 'alm_orcamentos_list', mes });
     const turmas = d.data || [];
     for (const t of turmas) {
@@ -7181,7 +7187,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function almAplicarOrcAnual() {
     const valor = parseFloat(document.getElementById('almOrcPadrao').value) || 0;
     const ano = document.getElementById('almOrcAno').value || new Date().getFullYear();
-    if (!confirm('Aplicar R$ ' + valor.toFixed(2).replace('.',',') + ' para TODAS as turmas em TODOS os 12 meses de ' + ano + '?')) return;
+    if (!await _lumiedConfirm('Aplicar R$ ' + valor.toFixed(2).replace('.',',') + ' para TODAS as turmas em TODOS os 12 meses de ' + ano + '?')) return;
     // Busca turmas usando qualquer mês (só precisa da lista)
     const d = await callDiplomas({ action: 'alm_orcamentos_list', mes: ano + '-01' });
     const turmas = d.data || [];
@@ -7735,7 +7741,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deleteFamilia(cpf, nome) {
-    if (!confirm('Remover ' + nome + ' da lista de famílias?')) return;
+    if (!await _lumiedConfirm('Remover ' + nome + ' da lista de famílias?')) return;
     await api({ action: 'familias_delete', cpf });
     await loadFamiliasPanel();
   }
@@ -7852,7 +7858,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function aprovarSolicitacao(id) {
     const sol = cadDados.find(r => r.id === id);
     if (!sol) return;
-    if (!confirm('Aprovar acesso de ' + (sol.nome_resp||sol.email) + ' (' + (sol.nome_crianca||'') + ')?')) return;
+    if (!await _lumiedConfirm('Aprovar acesso de ' + (sol.nome_resp||sol.email) + ' (' + (sol.nome_crianca||'') + ')?')) return;
     // Insere na tabela familias para liberar acesso
     try {
       await fetch(SUPABASE_URL + '/rest/v1/familias', {
@@ -7866,7 +7872,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deleteCadastro(id, nome) {
-    if (!confirm(`Remover cadastro de ${nome}?`)) return;
+    if (!await _lumiedConfirm(`Remover cadastro de ${nome}?`)) return;
     await api({ action: 'solicitacoes_delete', id });
     await loadCadastroPanel();
   }
@@ -8062,7 +8068,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function excluirEvento(id) {
-    if (!confirm('Excluir este evento?')) return;
+    if (!await _lumiedConfirm('Excluir este evento?')) return;
     await api({ action: 'calendario_delete', id });
     loadCalendario();
   }
@@ -8239,7 +8245,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
   async function gerarMensalidades() {
     const mes = document.getElementById('finMensMes').value || new Date().toISOString().slice(0,7);
-    if (!confirm('Gerar mensalidades para ' + mes + '?')) return;
+    if (!await _lumiedConfirm('Gerar mensalidades para ' + mes + '?')) return;
     const d = await api({ action:'fin_gerar_mensalidades', mes });
     showToast(d.geradas + ' mensalidade(s) gerada(s)!','success'); loadFinMensalidades();
   }
@@ -8710,7 +8716,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deleteCrmConfigSerie(id) {
-    if (!confirm('Excluir?')) return;
+    if (!await _lumiedConfirm('Excluir?')) return;
     await api({ action: 'config_series_idade_delete', id });
     loadCrmConfigSeries();
   }
@@ -8719,7 +8725,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const anoOrigem = document.getElementById('csAnoFiltro').value;
     const anoDestino = document.getElementById('csAnoDestino').value;
     if (anoOrigem === anoDestino) { showToast('Ano de origem e destino iguais','error'); return; }
-    if (!confirm('Replicar todas as series de ' + anoOrigem + ' para ' + anoDestino + '?\n\nSeries ja existentes no ano destino serao mantidas.')) return;
+    if (!await _lumiedConfirm('Replicar todas as series de ' + anoOrigem + ' para ' + anoDestino + '?\n\nSeries ja existentes no ano destino serao mantidas.')) return;
     const d = await api({ action: 'config_series_idade_atualizar_ano', ano_origem: parseInt(anoOrigem), ano_destino: parseInt(anoDestino) });
     if (d.error) { showToast(d.error,'error'); return; }
     showToast(d.total + ' series replicadas para ' + anoDestino + '!', 'success');
@@ -8952,7 +8958,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function atualizarMatricula(id, novoStatus) {
     const labels = { matriculado:'matricular', cancelado:'cancelar' };
-    if (!confirm('Deseja ' + (labels[novoStatus]||novoStatus) + ' este registro?')) return;
+    if (!await _lumiedConfirm('Deseja ' + (labels[novoStatus]||novoStatus) + ' este registro?')) return;
     const d = await api({ action:'crm_matricula_atualizar_status', id, status: novoStatus });
     if (d.error) { showToast(d.error,'error'); return; }
     showToast('Status atualizado!','success');
@@ -8981,7 +8987,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       if (!turma) return;
       turma = turma.toUpperCase();
     }
-    const status = confirm('Ja tem contrato assinado?\n\nOK = Matriculado\nCancelar = Reserva') ? 'matriculado' : 'reserva';
+    const status = (await _lumiedConfirm('Ja tem contrato assinado?\n\nConfirmar = Matriculado\nCancelar = Reserva')) ? 'matriculado' : 'reserva';
     const d = await api({
       action: 'crm_matricula_criar',
       lead_id: leadId,
@@ -9115,7 +9121,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function acionarEmergencia(tipo) {
     const msg = prompt('Mensagem adicional (opcional):');
-    if (!confirm('ATENÇÃO: Isso vai notificar TODA a equipe da escola imediatamente. Confirma o alerta de ' + (EMERG_TIPOS[tipo]||tipo) + '?')) return;
+    if (!await _lumiedConfirm('ATENÇÃO: Isso vai notificar TODA a equipe da escola imediatamente. Confirma o alerta de ' + (EMERG_TIPOS[tipo]||tipo) + '?')) return;
     const d = await api({ action: 'emergencia_acionar', tipo, mensagem: msg || null });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('ALERTA DE EMERGÊNCIA ACIONADO! Toda a equipe foi notificada.', 'error', 8000);
@@ -9161,7 +9167,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function resolverEmergencia(id) {
-    if (!confirm('Confirma que a emergência foi resolvida?')) return;
+    if (!await _lumiedConfirm('Confirma que a emergência foi resolvida?')) return;
     await api({ action: 'emergencia_resolver', id });
     showToast('Emergência resolvida.', 'success');
     loadEmergencia();
@@ -9205,7 +9211,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAchadosGerente();
   }
   async function achadoExcluir(id) {
-    if (!confirm('Excluir este item?')) return;
+    if (!await _lumiedConfirm('Excluir este item?')) return;
     await callDiplomas({ action: 'achados_excluir', id });
     loadAchadosGerente();
   }
@@ -9336,7 +9342,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadPesquisasPanel();
   }
 
-  async function deletarPesquisa(id) { if (!confirm('Excluir?')) return; await apiDiplomas({ action:'pesquisa_delete', id }); loadPesquisasPanel(); }
+  async function deletarPesquisa(id) { if (!await _lumiedConfirm('Excluir?')) return; await apiDiplomas({ action:'pesquisa_delete', id }); loadPesquisasPanel(); }
 
   async function verResultadosPesquisa(id) {
     const d = await apiDiplomas({ action:'pesquisa_resultados', pesquisa_id: id });
@@ -9479,7 +9485,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deletarPeriodo(id) {
-    if (!confirm('Excluir este período?')) return;
+    if (!await _lumiedConfirm('Excluir este período?')) return;
     const d = await apiAcademico({ action:'notas_periodos_delete', id });
     if (d.error) return showToast(d.error, 'error');
     showToast('Período excluído');
@@ -9556,7 +9562,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function deletarDisc(id) {
-    if (!confirm('Desativar esta disciplina?')) return;
+    if (!await _lumiedConfirm('Desativar esta disciplina?')) return;
     const d = await apiAcademico({ action:'notas_disciplinas_delete', id });
     if (d.error) return showToast(d.error, 'error');
     showToast('Disciplina desativada');
@@ -9898,7 +9904,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     showToast('Feriado salvo.','success'); document.getElementById('compFeriadoData').value=''; document.getElementById('compFeriadoDesc').value=''; loadCompFeriados();
   }
   async function excluirFeriado(id) {
-    if (!confirm('Excluir este feriado?')) return;
+    if (!await _lumiedConfirm('Excluir este feriado?')) return;
     const d = await compApi({action:'compliance_feriados_delete', id});
     if (d.error) return showToast(d.error,'error');
     showToast('Feriado excluido.','success'); loadCompFeriados();
@@ -9944,9 +9950,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const extrasArr=extras.data||[];document.getElementById('cfExtrasGrid').innerHTML=extrasArr.map(e=>`<div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;"><div style="font-size:14px;font-weight:700;margin-bottom:4px;">${e.nome}</div><div style="font-size:12px;color:#7a7169;margin-bottom:8px;">${e.descricao}</div><div style="font-size:18px;font-weight:900;color:#C8102E;margin-bottom:10px;">R$ ${e.preco.toFixed(2)}<span style="font-size:11px;font-weight:400;color:#7a7169;">${e.recorrente?'/mês':' único'}</span></div><button onclick="solicitarExtra('${e.id}')" style="width:100%;padding:8px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;">Solicitar</button></div>`).join('');
   }
   async function salvarRespFinanceiro(){const d=await api({action:'financeiro_resp_salvar',resp_financeiro_nome:document.getElementById('cfRespNome').value,resp_financeiro_email:document.getElementById('cfRespEmail').value,resp_financeiro_telefone:document.getElementById('cfRespTel').value,resp_financeiro_cargo:document.getElementById('cfRespCargo').value});if(d.error)return showToast(d.error,'error');showToast('Responsável financeiro salvo.','success');}
-  async function aprovarDecisao(id){if(!confirm('Aprovar esta decisão financeira?'))return;const d=await api({action:'financeiro_decisao_aprovar',id});if(d.error)return showToast(d.error,'error');showToast('Decisão aprovada.','success');loadContaFinanceiro();}
+  async function aprovarDecisao(id){if(!await _lumiedConfirm('Aprovar esta decisão financeira?'))return;const d=await api({action:'financeiro_decisao_aprovar',id});if(d.error)return showToast(d.error,'error');showToast('Decisão aprovada.','success');loadContaFinanceiro();}
   async function rejeitarDecisao(id){const motivo=prompt('Motivo da rejeição:');if(!motivo)return;const d=await api({action:'financeiro_decisao_rejeitar',id,motivo});if(d.error)return showToast(d.error,'error');showToast('Decisão rejeitada.','info');loadContaFinanceiro();}
-  async function solicitarExtra(extraId){if(!confirm('Solicitar este extra? O responsável financeiro será notificado para aprovação.'))return;const d=await api({action:'financeiro_solicitar_extra',extra_id:extraId});if(d.error)return showToast(d.error,'error');showToast('Solicitação enviada ao responsável financeiro.','success');loadContaFinanceiro();}
+  async function solicitarExtra(extraId){if(!await _lumiedConfirm('Solicitar este extra? O responsável financeiro será notificado para aprovação.'))return;const d=await api({action:'financeiro_solicitar_extra',extra_id:extraId});if(d.error)return showToast(d.error,'error');showToast('Solicitação enviada ao responsável financeiro.','success');loadContaFinanceiro();}
   // ═══ ROI DASHBOARD ═══
   async function loadRoiDashboard(){try{const d=await fetch(SUPABASE_URL+'/functions/v1/lumied-ai',{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({action:'roi_dashboard',_token:getToken()})}).then(r=>r.json());if(d.error)return;const r=d.data?.roi_estimado||{};const m=d.data?.metricas_reais||{};const fmt=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');document.getElementById('roiEconMes').textContent=fmt(r.total_economia_mes||0);document.getElementById('roiEconAnual').textContent=fmt(r.total_economia_anual||0);document.getElementById('roiHoras').textContent=(r.horas_economizadas_mes||0)+'h';document.getElementById('roiRetidos').textContent=r.alunos_retidos_mes||0;document.getElementById('roiOpText').textContent=fmt(r.economia_operacional_mes||0)+'/mês — '+r.horas_economizadas_mes+'h de trabalho admin economizadas';document.getElementById('roiEvasaoText').textContent=fmt(r.evasao_evitada_mes||0)+'/mês — '+r.alunos_retidos_mes+' alunos que teriam saído foram retidos';document.getElementById('roiInadText').textContent=fmt(r.inadimplencia_evitada_mes||0)+'/mês em boletos que seriam perdidos';document.getElementById('roiResumo').textContent='Sua escola economiza '+fmt(r.total_economia_mes||0)+' por mês com o Lumied';document.getElementById('roiResumoSub').textContent='Isso equivale a '+fmt(r.total_economia_anual||0)+' por ano — com base nos dados reais da escola.';}catch(e){console.log('[ROI]',e);}}
 
@@ -10044,7 +10050,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function enviarContrato(id) {
-    if (!confirm('Enviar contrato para a familia?')) return;
+    if (!await _lumiedConfirm('Enviar contrato para a familia?')) return;
     const d = await api({ action: 'contrato_enviar', id });
     if (d.error) return showToast(d.error, 'error');
     showToast('Contrato enviado!', 'success');
@@ -10059,7 +10065,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function excluirContrato(id) {
-    if (!confirm('Excluir este contrato?')) return;
+    if (!await _lumiedConfirm('Excluir este contrato?')) return;
     const d = await api({ action: 'contrato_delete', id });
     if (d.error) return showToast(d.error, 'error');
     showToast('Contrato excluido.', 'success');
