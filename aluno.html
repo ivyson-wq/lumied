@@ -2,13 +2,13 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script
-  src="https://js.sentry-cdn.com/1af517a6f172fe6b386630dc285498fb.min.js"
-  crossorigin="anonymous"
-></script>
+<script src="/sentry-init.js"></script>
+<script src="/analytics.js" defer></script>
 <title>Maple Bear — Portal do Aluno</title>
 <meta name="theme-color" content="#C8102E">
 <link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/lumied-design.css">
 <link rel="stylesheet" href="/themes.css">
@@ -38,6 +38,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);pad
 .bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:10px;color:var(--muted);cursor:pointer;transition:color .15s;}
 .bnav-item.active{color:var(--red);font-weight:600;}
 .bnav-icon{font-size:20px;}
+#notasContent,#freqContent,#provasContent{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 table{width:100%;border-collapse:collapse;font-size:13px;}
 th{padding:8px;text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
 td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
@@ -246,15 +247,20 @@ async function loadProvas() {
   </div>`).join('');
 }
 
-// Check session
+// Check session — restore from localStorage if token exists
 (async function() {
   const token = localStorage.getItem('mb_aluno_token');
   if (!token) return;
-  // Simple validation: try to get notas
-  const d = await api({ action:'aluno_notas_get', aluno_email: '', ano: new Date().getFullYear(), _aluno_token: token });
-  // If no error about session, we're ok — but we need the aluno data
-  // For now, just redirect to login if no stored data
-  // TODO: add aluno_perfil action
+  try {
+    const d = await api({ action:'aluno_perfil', _aluno_token: token });
+    if (d && !d.error && d.nome) {
+      currentAluno = d;
+      showApp();
+      return;
+    }
+  } catch(_) {}
+  // Token invalid or API unavailable — clear and show login
+  localStorage.removeItem('mb_aluno_token');
 })();
 
 document.addEventListener('keydown', e => {

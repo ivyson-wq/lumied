@@ -7,6 +7,8 @@
 <title>Lumied — Admin Escola</title>
 <meta name="theme-color" content="#1c1712">
 <link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -135,8 +137,15 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .modal-overlay.show{display:flex;}
 .modal{background:var(--white);border-radius:16px;padding:30px;width:100%;max-width:500px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;max-height:90vh;overflow-y:auto;}
 .modal h3{font-family:'Lora',serif;font-size:17px;margin-bottom:6px;}.modal .msub{font-size:13px;color:var(--muted);margin-bottom:20px;}
+.hamburger{display:none;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;padding:8px;margin-right:12px;}
+.hamburger span{display:block;width:22px;height:2px;background:var(--text);margin:4px 0;border-radius:2px;transition:all .2s;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;}
+.sidebar-overlay.show{display:block;}
 @media(max-width:768px){
-  .sidebar{width:100%;height:auto;position:relative;}.main{margin-left:0;}
+  .sidebar{transform:translateX(-100%);transition:transform .3s;position:fixed;z-index:100;width:260px;height:100vh;}
+  .sidebar.open{transform:translateX(0);}
+  .hamburger{display:flex;}
+  .main{margin-left:0;}
   .plans-grid{grid-template-columns:1fr 1fr;}.ff-row{grid-template-columns:1fr;}
   .kpi-grid{grid-template-columns:1fr 1fr;}
   .content{padding:16px 12px 48px;}
@@ -155,8 +164,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <div class="login-logo"><img src="/lumied-logo-branco.png" style="height:40px;object-fit:contain;" alt="Lumied"><h1 id="loginTitle">Admin Escola</h1></div>
     <div id="loginForm">
       <h2>Acesso Admin</h2>
-      <div class="lf"><label>Email</label><input id="loginEmail" type="email" placeholder="admin@escola.com"></div>
-      <div class="lf"><label>Senha</label><input id="loginSenha" type="password" placeholder="Sua senha"></div>
+      <div class="lf"><label>Email</label><input id="loginEmail" type="email" placeholder="admin@escola.com" autocomplete="email"></div>
+      <div class="lf"><label>Senha</label><input id="loginSenha" type="password" placeholder="Sua senha" autocomplete="current-password"></div>
       <button class="login-btn" onclick="doLogin()">Entrar</button>
     </div>
     <div id="loginError"></div>
@@ -189,7 +198,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   </nav>
 
   <div class="main">
-    <div class="topbar"><h2 id="panelTitle">Dashboard</h2></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="topbar"><button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button><h2 id="panelTitle">Dashboard</h2></div>
     <div class="content">
 
       <!-- DASHBOARD -->
@@ -333,6 +343,12 @@ function showToast(msg, type = 'success') { const t = document.createElement('di
 function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
 function copyText(text) { navigator.clipboard.writeText(text); showToast('Copiado!'); }
 
+// ═══ HAMBURGER ═══
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+
 // ═══ AUTH ═══
 async function checkSession() {
   const token = getToken();
@@ -369,6 +385,9 @@ function showPanel(id, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   document.getElementById('panelTitle').textContent = titles[id] || id;
+  // Close sidebar on mobile after navigation
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
   const loaders = { dashboard: loadDashboard, plano: loadPlano, adicionais: loadAdicionais, modulos: loadModulos, tickets: loadTickets, lgpd: loadLgpd, config: loadConfig, api: loadApi, admins: loadAdmins };
   if (loaders[id]) loaders[id]();
 }
