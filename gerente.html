@@ -5847,17 +5847,20 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── CONTROLE DE ACESSO ────────────────────────────────
-  const ACESSO = SUPABASE_URL + '/functions/v1/acesso';
+  const ACESSO_FACE = SUPABASE_URL + '/functions/v1/acesso';
 
   async function callAcesso(body) {
+    // Solicitações/autorizados usam /api, Face Control ID usa /acesso
+    const isFaceAction = typeof body.action === 'string' && body.action.startsWith('acesso_');
+    const url = isFaceAction ? ACESSO_FACE : API;
     const token = getToken();
     const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
     if (token) headers['Authorization'] = 'Bearer ' + token;
     try {
-      const r = await fetch(ACESSO, { method: 'POST', headers, body: JSON.stringify(body) });
+      const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ ...body, _token: token }) });
       const d = await r.json();
       if (!r.ok && !d.error) d.error = d.message || `Erro ${r.status}`;
-      if (d.error === 'Sessão inválida ou expirada. Faça login novamente.') { doLogout(); }
+      if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'solicitacoes_list') { doLogout(); }
       return d;
     } catch (e) {
       return { error: 'Falha de conexão com o servidor.' };
@@ -6012,9 +6015,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function _renderAcessoDash() {
     try {
       const [dash, eventos, alertas] = await Promise.all([
-        api({ action: 'acesso_dashboard' }),
-        api({ action: 'acesso_eventos_list', limit: 20 }),
-        api({ action: 'acesso_alertas_list', lido: false })
+        callAcesso({ action: 'acesso_dashboard' }),
+        callAcesso({ action: 'acesso_eventos_list', limit: 20 }),
+        callAcesso({ action: 'acesso_alertas_list', lido: false })
       ]);
       const ds = dash.data || dash || {};
       document.getElementById('acessoDashStats').innerHTML = `
@@ -6045,12 +6048,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function marcarAlertaLido(id) {
-    await api({ action: 'acesso_alerta_marcar_lido', id });
+    await callAcesso({ action: 'acesso_alerta_marcar_lido', id });
     _renderAcessoDash();
   }
 
   async function loadAcessoDispositivos() {
-    const d = await api({ action: 'acesso_dispositivos_list' });
+    const d = await callAcesso({ action: 'acesso_dispositivos_list' });
     const list = d.data || d || [];
     const tb = document.getElementById('acessoDispTable');
     if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum dispositivo cadastrado.</td></tr>'; return; }
@@ -6084,28 +6087,28 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function testarDispositivo(id) {
     showToast('Testando conexao...', 'info');
-    const d = await api({ action: 'acesso_dispositivo_ping', id });
+    const d = await callAcesso({ action: 'acesso_dispositivo_ping', id });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast(d.online ? 'Dispositivo online!' : 'Dispositivo offline.', d.online ? 'success' : 'error');
   }
 
   async function syncFacesDispositivo(id) {
     showToast('Sincronizando faces...', 'info');
-    const d = await api({ action: 'acesso_dispositivo_sync_faces', id });
+    const d = await callAcesso({ action: 'acesso_dispositivo_sync_faces', id });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Faces sincronizadas!', 'success');
   }
 
   async function removerDispositivo(id) {
     if (!await _lumiedConfirm('Remover este dispositivo?')) return;
-    const d = await api({ action: 'acesso_dispositivo_delete', id });
+    const d = await callAcesso({ action: 'acesso_dispositivo_delete', id });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Dispositivo removido.', 'success');
     loadAcessoDispositivos();
   }
 
   async function loadAcessoFaces() {
-    const d = await api({ action: 'acesso_faces_list' });
+    const d = await callAcesso({ action: 'acesso_faces_list' });
     const list = d.data || d || [];
     document.getElementById('acessoFacesCount').textContent = list.length;
     const tb = document.getElementById('acessoFacesTable');
@@ -6130,7 +6133,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const tipo = document.getElementById('faceTipo').value;
     const busca = document.getElementById('faceBusca').value.trim();
     if (busca.length < 2) { document.getElementById('faceResultados').innerHTML = ''; return; }
-    const d = await api({ action: 'acesso_buscar_pessoa', tipo, busca });
+    const d = await callAcesso({ action: 'acesso_buscar_pessoa', tipo, busca });
     const list = d.data || d || [];
     document.getElementById('faceResultados').innerHTML = list.map(p => `
       <div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;" onclick="document.getElementById('facePessoaId').value='${p.id}';document.getElementById('faceBusca').value='${escHtml(p.nome)}';document.getElementById('faceResultados').innerHTML='';" onmouseover="this.style.background='#f5f0ea'" onmouseout="this.style.background=''">
@@ -6146,7 +6149,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (!fileInput.files.length) { showToast('Selecione uma foto.', 'error'); return; }
     const reader = new FileReader();
     reader.onload = async function() {
-      const d = await api({ action: 'acesso_face_create', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
+      const d = await callAcesso({ action: 'acesso_face_create', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
       if (d.error) { showToast(d.error, 'error'); return; }
       showToast('Face cadastrada!', 'success');
       closeFaceModal();
@@ -6157,20 +6160,20 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function removerFace(id) {
     if (!await _lumiedConfirm('Remover esta face?')) return;
-    await api({ action: 'acesso_face_delete', id });
+    await callAcesso({ action: 'acesso_face_delete', id });
     loadAcessoFaces();
   }
 
   async function syncAllFaces() {
     showToast('Sincronizando todas as faces...', 'info');
-    const d = await api({ action: 'acesso_sync_all_faces' });
+    const d = await callAcesso({ action: 'acesso_sync_all_faces' });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Sincronizacao iniciada!', 'success');
     loadAcessoFaces();
   }
 
   async function loadAcessoRfid() {
-    const d = await api({ action: 'acesso_rfid_list' });
+    const d = await callAcesso({ action: 'acesso_rfid_list' });
     const list = d.data || d || [];
     document.getElementById('acessoRfidCount').textContent = list.length;
     const tb = document.getElementById('acessoRfidTable');
@@ -6192,7 +6195,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const busca = document.getElementById('rfidBusca').value.trim();
     const wrap = document.getElementById('rfidResultados');
     if (busca.length < 2) { wrap.style.display = 'none'; return; }
-    const d = await api({ action: 'acesso_buscar_pessoa', tipo, busca });
+    const d = await callAcesso({ action: 'acesso_buscar_pessoa', tipo, busca });
     const list = d.data || d || [];
     wrap.style.display = list.length ? 'block' : 'none';
     wrap.innerHTML = list.map(p => `
@@ -6207,7 +6210,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const tipo = document.getElementById('rfidTipo').value;
     if (!uid) { showToast('Informe o UID do cartao.', 'error'); return; }
     if (!pessoaId) { showToast('Selecione uma pessoa.', 'error'); return; }
-    const d = await api({ action: 'acesso_rfid_create', card_uid: uid, pessoa_id: pessoaId, pessoa_tipo: tipo });
+    const d = await callAcesso({ action: 'acesso_rfid_create', card_uid: uid, pessoa_id: pessoaId, pessoa_tipo: tipo });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Cartao adicionado!', 'success');
     document.getElementById('rfidUid').value = '';
@@ -6217,19 +6220,19 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function toggleRfid(id, ativo) {
-    await api({ action: 'acesso_rfid_update', id, ativo });
+    await callAcesso({ action: 'acesso_rfid_update', id, ativo });
     loadAcessoRfid();
   }
 
   async function removerRfid(id) {
     if (!await _lumiedConfirm('Remover este cartao?')) return;
-    await api({ action: 'acesso_rfid_delete', id });
+    await callAcesso({ action: 'acesso_rfid_delete', id });
     loadAcessoRfid();
   }
 
   async function loadAcessoPermissoes() {
     const busca = (document.getElementById('permBuscaAluno')?.value || '').trim();
-    const d = await api({ action: 'acesso_permissoes_list', busca });
+    const d = await callAcesso({ action: 'acesso_permissoes_list', busca });
     const list = d.data || d || [];
     const wrap = document.getElementById('acessoPermissoesWrap');
     if (!list.length) { wrap.innerHTML = '<div class="empty-state">Nenhum aluno encontrado.</div>'; return; }
@@ -6271,7 +6274,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (fileInput.files.length) {
       foto_base64 = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(fileInput.files[0]); });
     }
-    const d = await api({ action: 'acesso_permissao_create', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
+    const d = await callAcesso({ action: 'acesso_permissao_create', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Pessoa autorizada adicionada!', 'success');
     closePermModal();
@@ -6280,7 +6283,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function removerPermissao(id) {
     if (!await _lumiedConfirm('Remover esta autorizacao?')) return;
-    await api({ action: 'acesso_permissao_delete', id });
+    await callAcesso({ action: 'acesso_permissao_delete', id });
     loadAcessoPermissoes();
   }
 
@@ -6288,7 +6291,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const data = document.getElementById('acessoEvtData')?.value || '';
     const tipo = document.getElementById('acessoEvtTipo')?.value || '';
     const pessoa_tipo = document.getElementById('acessoEvtPessoaTipo')?.value || '';
-    const d = await api({ action: 'acesso_eventos_list', data, tipo, pessoa_tipo });
+    const d = await callAcesso({ action: 'acesso_eventos_list', data, tipo, pessoa_tipo });
     const list = d.data || d || [];
     const tb = document.getElementById('acessoEventosTable');
     if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum evento encontrado.</td></tr>'; return; }
