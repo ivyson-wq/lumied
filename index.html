@@ -860,8 +860,15 @@ body.has-bottomnav{padding-bottom:56px;}
           <div id="autQualidade" style="display:none;margin-top:8px;font-size:12px;padding:8px 12px;border-radius:8px;"></div>
         </div>
         <div style="margin-top:12px;">
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Validade (opcional — deixe vazio para permanente)</label>
-          <input type="date" id="autValidade" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Período de autorização</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;" id="autValidadeOpts">
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="7" onchange="calcAutValidade()"> 7 dias</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="30" onchange="calcAutValidade()"> 30 dias</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="60" onchange="calcAutValidade()"> 60 dias</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="0" checked onchange="calcAutValidade()"> Indefinido</label>
+          </div>
+          <input type="hidden" id="autValidade">
+          <div id="autValidadeInfo" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
         </div>
         <button onclick="salvarAutorizado()" id="autSalvarBtn" style="margin-top:14px;width:100%;padding:12px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Adicionar Autorizado</button>
         <div id="autFeedback" style="display:none;margin-top:8px;font-size:13px;padding:10px;border-radius:8px;"></div>
@@ -2910,7 +2917,7 @@ body.has-bottomnav{padding-bottom:56px;}
         <div style="flex:1;">
           <div style="font-weight:600;font-size:14px;">${esc(a.responsavel_nome)}</div>
           <div style="font-size:12px;color:var(--muted);">${esc(a.parentesco || '—')} · ${esc(a.aluno_nome || '')}</div>
-          ${a.validade ? `<div style="font-size:11px;color:var(--muted);">Válido até ${new Date(a.validade).toLocaleDateString('pt-BR')}</div>` : ''}
+          ${a.validade ? (() => { const d = Math.ceil((new Date(a.validade) - new Date()) / 86400000); return `<div style="font-size:11px;color:${d <= 7 ? '#C8102E' : d <= 30 ? '#b07d00' : 'var(--muted)'};">${d > 0 ? 'Expira em ' + d + ' dia' + (d>1?'s':'') + ' (' + new Date(a.validade).toLocaleDateString('pt-BR') + ')' : 'Expirado'}</div>`; })() : '<div style="font-size:11px;color:var(--muted);">Permanente</div>'}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;">
           <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${a.autorizado ? 'rgba(45,122,58,.12);color:#2d7a3a' : 'rgba(200,16,46,.12);color:#C8102E'};">${a.autorizado ? 'Ativo' : 'Cancelado'}</span>
@@ -2979,6 +2986,21 @@ body.has-bottomnav{padding-bottom:56px;}
     }
   }
 
+  function calcAutValidade() {
+    const sel = document.querySelector('input[name="autValidadePeriodo"]:checked');
+    const dias = sel ? parseInt(sel.value) : 0;
+    const info = document.getElementById('autValidadeInfo');
+    if (dias > 0) {
+      const dt = new Date(); dt.setDate(dt.getDate() + dias);
+      document.getElementById('autValidade').value = dt.toISOString().split('T')[0];
+      info.textContent = 'Válido até ' + dt.toLocaleDateString('pt-BR');
+    } else {
+      document.getElementById('autValidade').value = '';
+      info.textContent = 'Autorização permanente (sem data de expiração)';
+    }
+  }
+  calcAutValidade(); // inicializar
+
   async function salvarAutorizado() {
     const nome = document.getElementById('autNome').value.trim();
     const parentesco = document.getElementById('autParentesco').value;
@@ -3028,6 +3050,8 @@ body.has-bottomnav{padding-bottom:56px;}
       document.getElementById('autParentesco').value = '';
       document.querySelectorAll('input[name="autFilho"]').forEach(c => c.checked = false);
       document.getElementById('autValidade').value = '';
+      document.querySelector('input[name="autValidadePeriodo"][value="0"]').checked = true;
+      calcAutValidade();
       autLimparFoto();
       carregarAutorizados();
     } catch(e) {
