@@ -2133,6 +2133,7 @@ body.has-bottomnav{padding-bottom:56px;}
   // ── PICKUP (ESTOU A CAMINHO) ───────────────────────────
   let pickupAtivoId = null;
   let pickupPollTimer = null;
+  let pickupRealtimeChannel = null;
   let pickupWatchId = null;
   const SCHOOL_LAT = -28.8628, SCHOOL_LON = -51.5201, CHEGOU_RAIO_M = 200;
 
@@ -2373,17 +2374,20 @@ body.has-bottomnav{padding-bottom:56px;}
 
   function startPickupPoll() {
     stopPickupPoll();
-    pickupPollTimer = setInterval(async () => {
-      if (!pickupAtivoId) { stopPickupPoll(); return; }
-      if (document.hidden) return; // não pollar com aba inativa
-      const hist = await callDiplomas({ action: 'pickup_meus_hoje' });
-      const ativos = (hist.data || []).filter(n => n.status === 'a_caminho');
-      if (ativos.length === 0) { pickupAtivoId = null; stopPickupPoll(); loadPickupCard(); }
-      else renderPickupHistorico(hist.data || []);
-    }, 30000);
+    // Realtime: escuta mudanças na tabela pickup_notificacoes
+    pickupRealtimeChannel = sb.channel('pickup-pai')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pickup_notificacoes' }, async () => {
+        if (!pickupAtivoId) return;
+        const hist = await callDiplomas({ action: 'pickup_meus_hoje' });
+        const ativos = (hist.data || []).filter(n => n.status === 'a_caminho');
+        if (ativos.length === 0) { pickupAtivoId = null; stopPickupPoll(); loadPickupCard(); }
+        else renderPickupHistorico(hist.data || []);
+      })
+      .subscribe();
   }
 
   function stopPickupPoll() {
+    if (pickupRealtimeChannel) { sb.removeChannel(pickupRealtimeChannel); pickupRealtimeChannel = null; }
     if (pickupPollTimer) { clearInterval(pickupPollTimer); pickupPollTimer = null; }
   }
 

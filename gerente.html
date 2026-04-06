@@ -2986,7 +2986,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   const DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
 
   let allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
-  let currentGerente=null, pollInterval=null;
+  let currentGerente=null, pollInterval=null, realtimeChannel=null;
+  const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
   function showToast(msg, type = 'info', duration = 4000) {
@@ -3089,7 +3090,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     localStorage.removeItem('mb_token');
     localStorage.removeItem('mb_nome');
     localStorage.removeItem('mb_email');
-    clearInterval(pollInterval);
+    if (realtimeChannel) { sbClient.removeChannel(realtimeChannel); realtimeChannel = null; }
     document.getElementById('appShell').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
     const bioEmail = localStorage.getItem('mb_bio_email');
@@ -3119,19 +3120,16 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     restoreMiniSidebar();
     renderTopbarPills();
     renderBottomBar();
-    // Poll a cada 60 segundos (pausa quando aba está inativa)
-    function startPoll() {
-      if (pollInterval) clearInterval(pollInterval);
-      pollInterval = setInterval(()=>{
+    // Realtime: atualiza dashboard quando dados mudam no banco
+    if (realtimeChannel) sbClient.removeChannel(realtimeChannel);
+    realtimeChannel = sbClient.channel('gerente-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitacoes' }, () => {
         if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inscricoes_atividades' }, () => {
         if(document.getElementById('panelDashAtiv').classList.contains('active')) loadAtivDashboard();
-      }, 60000);
-    }
-    startPoll();
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { clearInterval(pollInterval); pollInterval = null; }
-      else { loadData(); startPoll(); }
-    });
+      })
+      .subscribe();
   }
 
   document.addEventListener('keydown', e => { if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') doLogin(); });
@@ -10120,7 +10118,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   if (!navigator.onLine) showOfflineBanner(true);
 
   // ── CLEANUP ON UNLOAD ─────────────────────────────────
-  window.addEventListener('beforeunload', () => { if (pollInterval) clearInterval(pollInterval); });
+  window.addEventListener('beforeunload', () => { if (realtimeChannel) sbClient.removeChannel(realtimeChannel); });
 
   // ═══ ONBOARDING WIZARD ═══
   async function checkOnboarding() {
