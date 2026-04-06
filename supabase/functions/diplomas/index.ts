@@ -100,7 +100,9 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
     // Constrói features baseado nos papéis
     const features: string[] = []
     if (roles.includes('secretaria')) features.push('atestados')
-    if (roles.includes('comercial')) { features.push('crm', 'templates', 'metas') }
+    if (roles.includes('comercial')) features.push('crm', 'templates', 'metas')
+    if (roles.includes('financeiro') || roles.includes('diretor')) features.push('financeiro')
+    if (roles.includes('manutencao')) features.push('manutencao')
     return { id: user.id, nome: user.nome, email: user.email, features: features.length ? features : ['atestados'] }
   }
   return null

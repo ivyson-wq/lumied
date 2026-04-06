@@ -4340,8 +4340,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   // ── Editar papéis de membro ──
   const ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao'];
-  const ALL_FEATURES = ['atestados','crm','templates','metas'];
-  const FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais' };
+  const ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao'];
+  const FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção' };
 
   function openEditPapeis(id) {
     const u = equipeData.find(x => x.id === id);

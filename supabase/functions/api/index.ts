@@ -739,14 +739,16 @@ serve(async (req: Request) => {
       const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
       await admin.from("professoras").insert({ nome, email, senha_hash, tipo }).catch(() => {});
     }
-    if (papeis.includes("secretaria") || papeis.includes("comercial")) {
-      // Determina features baseado nos papéis
+    const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao"];
+    if (papeis.some((p: string) => secRoles.includes(p))) {
       let secFeatures = features || [];
       if (!secFeatures.length) {
         if (papeis.includes("secretaria")) secFeatures.push("atestados");
         if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
+        if (papeis.includes("financeiro") || papeis.includes("diretor")) secFeatures.push("financeiro");
+        if (papeis.includes("manutencao")) secFeatures.push("manutencao");
       }
-      await admin.from("secretarias").insert({ nome, email, senha_hash, features: secFeatures }).catch(() => {});
+      await admin.from("secretarias").upsert({ nome, email, senha_hash, features: secFeatures, ativo: true }, { onConflict: "email" }).catch(() => {});
     }
     return ok({ success: true });
   }
@@ -791,8 +793,9 @@ serve(async (req: Request) => {
           await admin.from("professoras").delete().eq("email", uEmail).catch(() => {});
         }
         // Secretaria/Comercial
-        const needsSec = papeis.includes("secretaria") || papeis.includes("comercial");
-        const hadSec = oldRoles.includes("secretaria") || oldRoles.includes("comercial");
+        const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao"];
+        const needsSec = papeis.some((p: string) => secRoles.includes(p));
+        const hadSec = oldRoles.some((p: string) => secRoles.includes(p));
         if (needsSec) {
           const secFeatures: string[] = Array.isArray(features) ? features : [];
           if (!secFeatures.length) {
