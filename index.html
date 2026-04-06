@@ -3194,9 +3194,11 @@ body.has-bottomnav{padding-bottom:56px;}
 
   loadLogo(); loadSeries(); initAuth();
 
-  // Registra Service Worker (PWA)
+  // Registra Service Worker (PWA) — força atualização
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(console.error);
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      reg.update();
+    }).catch(console.error);
   }
 
   // Banner iOS
