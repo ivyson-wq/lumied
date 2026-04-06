@@ -57,75 +57,40 @@ body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px
 const API = CONFIG.SUPABASE_URL + '/functions/v1/api';
 const H = { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON };
 
-// Definição dos portais com papéis necessários
+// Definição dos portais com módulos necessários (gating por escola, não por role)
 const PORTAIS = [
   { href: 'gerente.html', icon: '👔', iconBg: 'rgba(200,16,46,.1)', iconColor: 'var(--red)',
     title: 'Painel do Gerente', desc: 'Gestão e administração geral da escola.',
-    roles: ['gerente', 'diretor', 'financeiro'] },
+    modulo: null },
   { href: 'professora.html', icon: '👩‍🏫', iconBg: 'rgba(26,107,181,.1)', iconColor: '#1a6bb5',
     title: 'Portal das Professoras', desc: 'Atividades do corpo docente da escola.',
-    roles: ['professora', 'professora_assistente'] },
+    modulo: null },
   { href: 'secretaria.html', icon: '📋', iconBg: 'rgba(45,122,58,.1)', iconColor: '#2d7a3a',
     title: 'Portal da Equipe', desc: 'Secretaria, CRM comercial, leads, funil e metas.',
-    roles: ['secretaria', 'comercial'] },
+    modulo: null },
   { href: 'aluno.html', icon: '🎓', iconBg: 'rgba(26,107,181,.1)', iconColor: '#1a6bb5',
     title: 'Portal do Aluno', desc: 'Notas, frequência, provas e calendário.',
-    roles: ['aluno'] },
-  { href: 'admin.html', icon: '🔧', iconBg: 'rgba(107,63,160,.1)', iconColor: '#6b3fa0',
-    title: 'Painel Admin', desc: 'Gestão de escolas, planos e módulos. Acesso restrito.',
-    roles: ['admin'] },
+    modulo: 'portal_aluno' },
 ];
 
-function renderPortais(userPapeis) {
+function renderPortais(modulos) {
   const el = document.getElementById('portais');
-  // Se não logado ou sem papéis, mostra todos
-  const showAll = !userPapeis || !userPapeis.length;
-
   el.innerHTML = PORTAIS.map(p => {
-    const hasAccess = showAll || p.roles.some(r => userPapeis.includes(r));
+    const hasAccess = !p.modulo || !modulos || modulos.includes(p.modulo);
     return `<a href="${p.href}" class="portal-card${hasAccess ? '' : ' disabled'}">
       <div class="portal-icon" style="background:${p.iconBg};color:${p.iconColor};">${p.icon}</div>
       <div class="portal-info">
         <h3>${p.title}</h3>
-        <p>${p.desc}</p>
+        <p>${p.desc}${!hasAccess ? ' <em style="color:#999;">(não contratado)</em>' : ''}</p>
       </div>
       <span class="portal-arrow">→</span>
     </a>`;
   }).join('');
 }
 
-// Tenta detectar sessão ativa de qualquer portal
-async function detectSession() {
-  const tokens = [
-    localStorage.getItem('mb_token'),      // gerente
-    localStorage.getItem('sec_token'),      // secretaria/comercial
-    localStorage.getItem('prof_token'),     // professora
-  ].filter(Boolean);
-
-  if (!tokens.length) {
-    renderPortais(null);
-    return;
-  }
-
-  // Tenta cada token até encontrar um válido
-  for (const token of tokens) {
-    try {
-      const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'hub_whoami', _token: token }) });
-      const d = await res.json();
-      if (d.logged && d.papeis?.length) {
-        document.getElementById('userGreeting').textContent = `Olá, ${d.nome || d.email}`;
-        renderPortais(d.papeis);
-        return;
-      }
-    } catch(_) {}
-  }
-
-  // Nenhum token válido — mostra todos
-  renderPortais(null);
-}
-
-// Config escola + sessão
+// Carrega módulos da escola e sessão do usuário
 (async function() {
+  // Config da escola
   try {
     const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'config_publica' }) });
     const cfg = await res.json();
@@ -138,7 +103,33 @@ async function detectSession() {
   } catch(_) {
     document.getElementById('brandName').textContent = 'Escola';
   }
-  detectSession();
+
+  // Módulos habilitados da escola (gating por escola, não por role)
+  let modulos = null;
+  try {
+    const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'modulos_habilitados' }) });
+    const d = await res.json();
+    if (d && Array.isArray(d.modulos)) modulos = d.modulos;
+  } catch(_) {}
+
+  // Detecta sessão ativa para saudação
+  const tokens = [
+    localStorage.getItem('mb_token'),
+    localStorage.getItem('sec_token'),
+    localStorage.getItem('prof_token'),
+  ].filter(Boolean);
+  for (const token of tokens) {
+    try {
+      const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'hub_whoami', _token: token }) });
+      const d = await res.json();
+      if (d.logged) {
+        document.getElementById('userGreeting').textContent = `Olá, ${d.nome || d.email}`;
+        break;
+      }
+    } catch(_) {}
+  }
+
+  renderPortais(modulos);
 })();
 </script>
 <script src="/lumied-ux.js" defer></script>

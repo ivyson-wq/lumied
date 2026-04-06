@@ -1,25 +1,14 @@
-// Lumied — Service Worker v3 (Offline-First + Push Notifications)
-const CACHE_NAME = 'lumied-v3';
+// Lumied — Service Worker v4 (Network-First HTML + Push Notifications)
+const CACHE_NAME = 'lumied-v4';
 const OFFLINE_ASSETS = [
-  '/',
-  '/index.html',
-  '/gerente.html',
-  '/professora.html',
-  '/secretaria.html',
-  '/aluno.html',
-  '/admin.html',
-  '/area-restrita.html',
   '/themes.css',
   '/webauthn-client.js',
-  '/dist/gerente/index.js',
-  '/dist/pais/index.js',
-  '/dist/professora/index.js',
+  '/lumied-ux.js',
+  '/lumi-assistant.js',
+  '/sentry-init.js',
 ];
 
-// API responses to cache (read-only actions)
-const CACHEABLE_ACTIONS = ['series_list', 'atividades_list', 'modulos_habilitados', 'notas_periodos_list'];
-
-// Install: cache essential assets
+// Install: cache only essential static assets (not HTML)
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
@@ -28,7 +17,7 @@ self.addEventListener('install', e => {
   );
 });
 
-// Activate: clean old caches
+// Activate: clean ALL old caches immediately
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -37,61 +26,64 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: network-first for API, cache-first for assets
+// Fetch strategy
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // API calls: network-first with cache fallback
+  // API calls: network-first (offline fallback)
   if (url.pathname.includes('/functions/v1/')) {
     e.respondWith(
-      fetch(e.request.clone())
-        .then(res => {
-          // Cache successful GET-like API responses
-          if (res.ok && e.request.method === 'POST') {
-            const cloned = res.clone();
-            cloned.json().then(body => {
-              // Only cache read-only action responses
-              // Check if body was from a cacheable action
-            }).catch(() => {});
-          }
-          return res;
-        })
-        .catch(() => {
-          // Offline: return cached response if available
-          return caches.match(e.request).then(cached => {
-            if (cached) return cached;
-            return new Response(JSON.stringify({
-              error: 'Sem conexão. Dados offline não disponíveis.',
-              code: 'OFFLINE',
-              offline: true,
-            }), {
-              status: 503,
-              headers: { 'Content-Type': 'application/json' },
-            });
-          });
-        })
+      fetch(e.request.clone()).catch(() =>
+        caches.match(e.request).then(cached =>
+          cached || new Response(JSON.stringify({
+            error: 'Sem conexão. Dados offline não disponíveis.',
+            code: 'OFFLINE', offline: true,
+          }), { status: 503, headers: { 'Content-Type': 'application/json' } })
+        )
+      )
     );
     return;
   }
 
-  // Static assets: cache-first
+  // HTML pages: ALWAYS network-first (cache only as offline fallback)
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // JS files: network-first (cache for offline)
+  if (url.pathname.endsWith('.js')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request).then(cached => cached || new Response('Offline', { status: 503 })))
+    );
+    return;
+  }
+
+  // Other static assets (CSS, images, fonts): cache-first (ok to cache)
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(res => {
-        // Cache new static assets
         if (res.ok && e.request.method === 'GET') {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return res;
-      }).catch(() => {
-        // Offline fallback for navigation
-        if (e.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-        return new Response('Offline', { status: 503 });
-      });
+      }).catch(() => new Response('Offline', { status: 503 }));
     })
   );
 });
@@ -124,7 +116,6 @@ self.addEventListener('notificationclick', e => {
   const url = e.notification.data?.url || '/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // Focus existing window or open new
       for (const client of windowClients) {
         if (client.url.includes(url) && 'focus' in client) return client.focus();
       }
@@ -133,7 +124,7 @@ self.addEventListener('notificationclick', e => {
   );
 });
 
-// Background sync (for offline-queued actions)
+// Background sync
 self.addEventListener('sync', e => {
   if (e.tag === 'sync-offline-queue') {
     e.waitUntil(syncOfflineQueue());
@@ -141,7 +132,5 @@ self.addEventListener('sync', e => {
 });
 
 async function syncOfflineQueue() {
-  // Read queue from IndexedDB and replay
-  // This is a placeholder — actual implementation needs IndexedDB integration
   console.log('[SW] Background sync triggered');
 }
