@@ -2917,7 +2917,7 @@ body.has-bottomnav{padding-bottom:56px;}
         <div style="flex:1;">
           <div style="font-weight:600;font-size:14px;">${esc(a.responsavel_nome)}</div>
           <div style="font-size:12px;color:var(--muted);">${esc(a.parentesco || '—')} · ${esc(a.aluno_nome || '')}</div>
-          ${a.validade ? (() => { const d = Math.ceil((new Date(a.validade) - new Date()) / 86400000); return `<div style="font-size:11px;color:${d <= 7 ? '#C8102E' : d <= 30 ? '#b07d00' : 'var(--muted)'};">${d > 0 ? 'Expira em ' + d + ' dia' + (d>1?'s':'') + ' (' + new Date(a.validade).toLocaleDateString('pt-BR') + ')' : 'Expirado'}</div>`; })() : '<div style="font-size:11px;color:#2d7a3a;">✅ Permanente</div>'}
+          ${a.validade ? (() => { const d = Math.ceil((new Date(a.validade) - new Date()) / 86400000); return d <= 0 ? '<div style="font-size:11px;color:#1a1a1a;font-weight:600;">⛔ Expirado</div>' : `<div style="font-size:11px;color:${d <= 7 ? '#C8102E' : d <= 30 ? '#b07d00' : 'var(--muted)'};">Expira em ${d} dia${d>1?'s':''} (${new Date(a.validade).toLocaleDateString('pt-BR')})</div>`; })() : '<div style="font-size:11px;color:#2d7a3a;">✅ Permanente</div>'}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;">
           <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${a.autorizado ? 'rgba(45,122,58,.12);color:#2d7a3a' : 'rgba(200,16,46,.12);color:#C8102E'};">${a.autorizado ? 'Ativo' : 'Cancelado'}</span>
