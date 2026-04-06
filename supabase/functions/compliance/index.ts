@@ -548,17 +548,189 @@ router.on("compliance_dashboard_completo", authGerente, feat, async (ctx) => {
 //  Funções auxiliares
 // ═══════════════════════════════════════════════════════════════
 
-function calcularHoras(entrada: string, saida: string): number {
-  const [eh, em] = entrada.split(":").map(Number);
-  const [sh, sm] = saida.split(":").map(Number);
-  const minEntrada = eh * 60 + em;
-  const minSaida = sh * 60 + sm;
-  return Math.max(0, (minSaida - minEntrada) / 60);
-}
-
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + (m || 0);
+}
+
+/** Backward-compatible wrapper — returns decimal hours */
+function calcularHoras(entrada: string, saida: string): number {
+  const minEntrada = timeToMinutes(entrada);
+  const minSaida = timeToMinutes(saida);
+  return Math.max(0, (minSaida - minEntrada) / 60);
+}
+
+/** Load all ponto config from compliance_config_ponto as a Map<chave, valor> */
+async function carregarConfigPonto(sb: ReturnType<typeof createClient>): Promise<Map<string, string>> {
+  const { data } = await sb.from("compliance_config_ponto").select("chave, valor");
+  const map = new Map<string, string>();
+  (data ?? []).forEach((r: any) => map.set(r.chave, r.valor));
+  return map;
+}
+
+function cfgNum(cfg: Map<string, string>, chave: string, fallback: number): number {
+  const v = cfg.get(chave);
+  return v ? Number(v) : fallback;
+}
+
+/** Calculate night work minutes between two HH:MM times (CLT art. 73) */
+function calcularHorasNoturnas(
+  entradaMin: number,
+  saidaMin: number,
+  noturnInicio: number,
+  noturnFim: number,
+): number {
+  // Night period: 22:00 (1320) to 05:00 (300 next day → treat as 1740 if we normalize)
+  // We handle the wrap-around by checking two segments
+  let noturnaMin = 0;
+  const ranges: Array<[number, number]> = [];
+
+  if (noturnInicio > noturnFim) {
+    // Crosses midnight: e.g. 22:00-05:00 → [1320,1440] + [0,300]
+    ranges.push([noturnInicio, 1440]);
+    ranges.push([0, noturnFim]);
+  } else {
+    ranges.push([noturnInicio, noturnFim]);
+  }
+
+  for (const [rStart, rEnd] of ranges) {
+    const overlapStart = Math.max(entradaMin, rStart);
+    const overlapEnd = Math.min(saidaMin, rEnd);
+    if (overlapEnd > overlapStart) {
+      noturnaMin += overlapEnd - overlapStart;
+    }
+  }
+
+  return noturnaMin;
+}
+
+/** Determine jornada_diaria_min based on tipo_jornada */
+function jornadaPorTipo(tipo: string | null | undefined): number {
+  switch (tipo) {
+    case "parcial_4h": return 240;
+    case "parcial_6h": return 360;
+    default: return 480; // integral
+  }
+}
+
+/** Auto-deduct interval per CLT art. 71 */
+function intervaloLegal(jornadaMin: number, configIntervalo: number): number {
+  if (jornadaMin > 360) return Math.max(configIntervalo, 60); // >6h → min 1h
+  if (jornadaMin > 240) return Math.max(configIntervalo, 15); // >4h → min 15min
+  return 0; // <=4h → no mandatory break
+}
+
+interface ProcessamentoResult {
+  intervalo_minutos: number;
+  horas_normais_min: number;
+  hora_extra_50_min: number;
+  hora_extra_100_min: number;
+  hora_noturna_min: number;
+  atraso_min: number;
+  falta: boolean;
+  tipo_dia: string;
+  banco_horas_min: number;
+  minutos_excedentes: number;
+  dentro_horario: boolean;
+}
+
+/**
+ * Process a single ponto record with full CLT compliance.
+ * Given a ponto record and horario config, calculates all labor law fields.
+ */
+function processarRegistroPonto(
+  reg: any,
+  config: any,
+  tipoDia: string,
+  cfg: Map<string, string>,
+): ProcessamentoResult {
+  const entradaReal = timeToMinutes(reg.hora_entrada);
+  const saidaReal = reg.hora_saida ? timeToMinutes(reg.hora_saida) : entradaReal;
+  const entradaPrevista = timeToMinutes(config.hora_entrada);
+  const saidaPrevista = timeToMinutes(config.hora_saida);
+
+  const toleranciaEntrada = cfgNum(cfg, "tolerancia_entrada_min", 10);
+  const toleranciaSaida = cfgNum(cfg, "tolerancia_saida_min", 10);
+  const limiteHeDiaria = cfgNum(cfg, "limite_he_diaria_min", 120);
+  const jornadaMaxDiaria = cfgNum(cfg, "jornada_maxima_diaria_min", 600);
+  const bancoHorasAtivo = cfg.get("banco_horas_ativo") === "true";
+  const noturnInicio = timeToMinutes(cfg.get("hora_noturna_inicio") || "22:00");
+  const noturnFim = timeToMinutes(cfg.get("hora_noturna_fim") || "05:00");
+
+  const jornadaDiaria = config.jornada_diaria_min || jornadaPorTipo(config.tipo_jornada);
+
+  // If no hora_saida, mark as falta
+  if (!reg.hora_saida) {
+    return {
+      intervalo_minutos: 0, horas_normais_min: 0, hora_extra_50_min: 0, hora_extra_100_min: 0,
+      hora_noturna_min: 0, atraso_min: 0, falta: true, tipo_dia: tipoDia,
+      banco_horas_min: 0, minutos_excedentes: 0, dentro_horario: true,
+    };
+  }
+
+  // Gross minutes worked
+  let brutoMin = Math.max(0, saidaReal - entradaReal);
+
+  // Auto-deduct intervalo intrajornada (CLT art. 71)
+  const intervaloConfig = config.intervalo_minutos ?? 60;
+  const intervalo = intervaloLegal(brutoMin, intervaloConfig);
+  const liquidoMin = Math.max(0, brutoMin - intervalo);
+
+  // Cap at jornada maxima diaria (10h = 600min) — CLT art. 59
+  const efetivo = Math.min(liquidoMin, jornadaMaxDiaria);
+
+  // Atraso: late arrival beyond tolerance (CLT art. 58 §1°)
+  let atraso = 0;
+  if (entradaReal > entradaPrevista + toleranciaEntrada) {
+    atraso = entradaReal - entradaPrevista;
+  }
+
+  // Horas normais vs extras
+  let horasNormais = Math.min(efetivo, jornadaDiaria);
+  let totalExtra = Math.max(0, efetivo - jornadaDiaria);
+
+  // Check exit tolerance — only count extra if beyond tolerance
+  const saidaExcedente = saidaReal - saidaPrevista;
+  if (saidaExcedente <= toleranciaSaida && saidaExcedente >= 0) {
+    // Within tolerance — no extra
+    totalExtra = 0;
+    horasNormais = efetivo;
+  }
+
+  // Cap extra at 2h (120min) — CLT art. 59
+  totalExtra = Math.min(totalExtra, limiteHeDiaria);
+
+  // Split extra by tipo_dia
+  let he50 = 0;
+  let he100 = 0;
+  if (tipoDia === "domingo" || tipoDia === "feriado") {
+    he100 = totalExtra;
+  } else {
+    // sabado: also 50% unless it's a rest day (simplified: 50%)
+    he50 = totalExtra;
+  }
+
+  // Hora noturna (CLT art. 73)
+  const horaNot = calcularHorasNoturnas(entradaReal, saidaReal, noturnInicio, noturnFim);
+
+  // Banco de horas
+  const bancoMin = bancoHorasAtivo ? totalExtra : 0;
+
+  const dentroHorario = totalExtra === 0;
+
+  return {
+    intervalo_minutos: intervalo,
+    horas_normais_min: horasNormais,
+    hora_extra_50_min: he50,
+    hora_extra_100_min: he100,
+    hora_noturna_min: horaNot,
+    atraso_min: atraso,
+    falta: false,
+    tipo_dia: tipoDia,
+    banco_horas_min: bancoMin,
+    minutos_excedentes: totalExtra,
+    dentro_horario: dentroHorario,
+  };
 }
 
 async function verificarPonto(
@@ -566,21 +738,32 @@ async function verificarPonto(
   dataInicio?: string,
   dataFim?: string,
 ) {
-  // Buscar registros de ponto não verificados no período
+  // Load config
+  const cfg = await carregarConfigPonto(sb);
+
+  // Load feriados in the date range
+  let fQ = sb.from("compliance_feriados").select("data, tipo");
+  if (dataInicio) fQ = fQ.gte("data", dataInicio);
+  if (dataFim) fQ = fQ.lte("data", dataFim);
+  const { data: feriados } = await fQ;
+  const feriadoMap = new Map<string, string>();
+  (feriados ?? []).forEach((f: any) => feriadoMap.set(f.data, f.tipo));
+
+  // Fetch unprocessed ponto records in the period
   let q = sb
     .from("compliance_ponto_registros")
     .select("*, professoras(id, nome, email)")
-    .eq("dentro_horario", true) // ainda não marcados como fora
+    .eq("processado", false)
     .order("data");
   if (dataInicio) q = q.gte("data", dataInicio);
   if (dataFim) q = q.lte("data", dataFim);
   const { data: registros } = await q;
 
   if (!registros || registros.length === 0) {
-    return { verificados: 0, ocorrencias_criadas: 0 };
+    return { verificados: 0, ocorrencias_criadas: 0, processados: 0 };
   }
 
-  // Buscar todos os horários configurados
+  // Fetch all active schedules
   const { data: horarios } = await sb
     .from("compliance_horarios")
     .select("*")
@@ -593,27 +776,58 @@ async function verificarPonto(
   });
 
   let ocorrenciasCriadas = 0;
+  let processados = 0;
 
   for (const reg of registros) {
-    if (!reg.hora_saida) continue;
-
-    // Calcular dia da semana (1=seg, 7=dom) a partir da data
+    // Calculate dia_semana (1=Mon, 7=Sun)
     const dt = new Date(reg.data + "T12:00:00");
-    const jsDow = dt.getDay(); // 0=dom, 1=seg
+    const jsDow = dt.getDay();
     const diaSemana = jsDow === 0 ? 7 : jsDow;
+
+    // Determine tipo_dia
+    let tipoDia = "util";
+    if (feriadoMap.has(reg.data)) {
+      tipoDia = "feriado";
+    } else if (diaSemana === 7) {
+      tipoDia = "domingo";
+    } else if (diaSemana === 6) {
+      tipoDia = "sabado";
+    }
 
     const key = `${reg.professora_id}_${diaSemana}`;
     const configs = horariosMap.get(key);
-    if (!configs || configs.length === 0) continue;
+    if (!configs || configs.length === 0) {
+      // No schedule for this day — mark as processed, skip
+      await sb.from("compliance_ponto_registros")
+        .update({ processado: true, tipo_dia: tipoDia })
+        .eq("id", reg.id);
+      processados++;
+      continue;
+    }
 
     const config = configs[0];
-    const saidaPrevista = timeToMinutes(config.hora_saida);
-    const saidaReal = timeToMinutes(reg.hora_saida);
-    const tolerancia = config.tolerancia_minutos || 10;
-    const excedente = saidaReal - saidaPrevista - tolerancia;
+    const result = processarRegistroPonto(reg, config, tipoDia, cfg);
 
-    if (excedente > 0) {
-      // Verificar se já existe ocorrência para este registro
+    // Update the ponto record with all calculated fields
+    await sb.from("compliance_ponto_registros").update({
+      intervalo_minutos: result.intervalo_minutos,
+      horas_normais_min: result.horas_normais_min,
+      hora_extra_50_min: result.hora_extra_50_min,
+      hora_extra_100_min: result.hora_extra_100_min,
+      hora_noturna_min: result.hora_noturna_min,
+      atraso_min: result.atraso_min,
+      falta: result.falta,
+      tipo_dia: result.tipo_dia,
+      banco_horas_min: result.banco_horas_min,
+      processado: true,
+      dentro_horario: result.dentro_horario,
+      hora_extra_minutos: result.minutos_excedentes,
+    }).eq("id", reg.id);
+
+    processados++;
+
+    // Create ocorrencia if extra hours detected
+    if (result.minutos_excedentes > 0) {
       const { data: existente } = await sb
         .from("compliance_ocorrencias")
         .select("id")
@@ -621,26 +835,67 @@ async function verificarPonto(
         .limit(1);
 
       if (!existente || existente.length === 0) {
+        const tipoOcorrencia = (tipoDia === "domingo" || tipoDia === "feriado")
+          ? "hora_extra_domingo_feriado"
+          : "hora_extra_nao_autorizada";
         await sb.from("compliance_ocorrencias").insert({
           professora_id: reg.professora_id,
           ponto_registro_id: reg.id,
           data_ocorrencia: reg.data,
           hora_prevista_saida: config.hora_saida,
           hora_real_saida: reg.hora_saida,
-          minutos_excedentes: excedente,
-          tipo: "hora_extra_nao_autorizada",
+          minutos_excedentes: result.minutos_excedentes,
+          tipo: tipoOcorrencia,
         });
         ocorrenciasCriadas++;
       }
+    }
 
-      // Marcar registro como fora do horário
-      await sb.from("compliance_ponto_registros")
-        .update({ dentro_horario: false, hora_extra_minutos: excedente })
-        .eq("id", reg.id);
+    // Update banco de horas if active
+    if (result.banco_horas_min > 0) {
+      const mesDate = new Date(reg.data + "T12:00:00");
+      const mes = mesDate.getMonth() + 1;
+      const ano = mesDate.getFullYear();
+
+      const { data: banco } = await sb
+        .from("compliance_banco_horas")
+        .select("id, creditos_min, saldo_final_min")
+        .eq("professora_id", reg.professora_id)
+        .eq("mes", mes)
+        .eq("ano", ano)
+        .single();
+
+      if (banco) {
+        await sb.from("compliance_banco_horas").update({
+          creditos_min: (banco.creditos_min || 0) + result.banco_horas_min,
+          saldo_final_min: (banco.saldo_final_min || 0) + result.banco_horas_min,
+        }).eq("id", banco.id);
+      } else {
+        // Get saldo from previous month
+        const prevMes = mes === 1 ? 12 : mes - 1;
+        const prevAno = mes === 1 ? ano - 1 : ano;
+        const { data: prevBanco } = await sb
+          .from("compliance_banco_horas")
+          .select("saldo_final_min")
+          .eq("professora_id", reg.professora_id)
+          .eq("mes", prevMes)
+          .eq("ano", prevAno)
+          .single();
+
+        const saldoAnterior = prevBanco?.saldo_final_min ?? 0;
+        await sb.from("compliance_banco_horas").insert({
+          professora_id: reg.professora_id,
+          mes, ano,
+          saldo_anterior_min: saldoAnterior,
+          creditos_min: result.banco_horas_min,
+          debitos_min: 0,
+          saldo_final_min: saldoAnterior + result.banco_horas_min,
+        });
+      }
     }
   }
 
-  return { verificados: registros.length, ocorrencias_criadas: ocorrenciasCriadas };
+  return { verificados: registros.length, ocorrencias_criadas: ocorrenciasCriadas, processados };
 }
 
 async function enviarAlertaHoraExtra(
@@ -1052,6 +1307,173 @@ router.on("compliance_quiz_responder", authProfessora, async (ctx) => {
     tentativas_restantes: Math.max(0, (quiz.tentativas_max || 3) - tentativa),
     resultados,
   });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  RESUMO MENSAL CLT — Ponto por professora
+// ═══════════════════════════════════════════════════════════════
+
+router.on("compliance_ponto_resumo_mensal", authGerente, feat, async (ctx) => {
+  const { professora_id, mes, ano } = ctx.body as any;
+  const anoAtual = ano || new Date().getFullYear();
+  const mesAtual = mes || new Date().getMonth() + 1;
+  const dataInicio = `${anoAtual}-${String(mesAtual).padStart(2, "0")}-01`;
+  const dataFim = `${anoAtual}-${String(mesAtual).padStart(2, "0")}-31`;
+
+  let q = ctx.sb
+    .from("compliance_ponto_registros")
+    .select("*, professoras(id, nome, email)")
+    .gte("data", dataInicio)
+    .lte("data", dataFim)
+    .eq("processado", true)
+    .order("data");
+  if (professora_id) q = q.eq("professora_id", professora_id);
+
+  const { data: registros } = await q;
+
+  // Group by professora
+  const porProf = new Map<string, { nome: string; registros: any[] }>();
+  (registros ?? []).forEach((r: any) => {
+    const pid = r.professora_id;
+    const nome = r.professoras?.nome ?? "N/A";
+    if (!porProf.has(pid)) porProf.set(pid, { nome, registros: [] });
+    porProf.get(pid)!.registros.push(r);
+  });
+
+  // Load banco de horas for the month
+  const { data: bancos } = await ctx.sb
+    .from("compliance_banco_horas")
+    .select("*")
+    .eq("mes", mesAtual)
+    .eq("ano", anoAtual);
+  const bancoMap = new Map<string, any>();
+  (bancos ?? []).forEach((b: any) => bancoMap.set(b.professora_id, b));
+
+  const resumos = [...porProf.entries()].map(([pid, { nome, registros: regs }]) => {
+    const diasTrabalhados = regs.filter((r: any) => !r.falta).length;
+    const totalNormaisMin = regs.reduce((s: number, r: any) => s + (r.horas_normais_min || 0), 0);
+    const totalHe50Min = regs.reduce((s: number, r: any) => s + (r.hora_extra_50_min || 0), 0);
+    const totalHe100Min = regs.reduce((s: number, r: any) => s + (r.hora_extra_100_min || 0), 0);
+    const totalNoturnasMin = regs.reduce((s: number, r: any) => s + (r.hora_noturna_min || 0), 0);
+    const totalAtrasosMin = regs.reduce((s: number, r: any) => s + (r.atraso_min || 0), 0);
+    const totalFaltas = regs.filter((r: any) => r.falta).length;
+
+    // DSR calculation: (total HE + noturnas) / dias_uteis_trabalhados * domingos_e_feriados
+    const diasUteis = regs.filter((r: any) => r.tipo_dia === "util" && !r.falta).length;
+    const domingosFeriados = regs.filter((r: any) => r.tipo_dia === "domingo" || r.tipo_dia === "feriado").length;
+    const dsrMin = diasUteis > 0
+      ? Math.round(((totalHe50Min + totalHe100Min + totalNoturnasMin) / diasUteis) * (domingosFeriados || 4))
+      : 0;
+
+    const banco = bancoMap.get(pid);
+
+    return {
+      professora_id: pid,
+      nome,
+      mes: mesAtual,
+      ano: anoAtual,
+      dias_trabalhados: diasTrabalhados,
+      total_horas_normais_min: totalNormaisMin,
+      total_horas_normais_fmt: `${Math.floor(totalNormaisMin / 60)}h${String(totalNormaisMin % 60).padStart(2, "0")}`,
+      total_he_50_min: totalHe50Min,
+      total_he_50_fmt: `${Math.floor(totalHe50Min / 60)}h${String(totalHe50Min % 60).padStart(2, "0")}`,
+      total_he_100_min: totalHe100Min,
+      total_he_100_fmt: `${Math.floor(totalHe100Min / 60)}h${String(totalHe100Min % 60).padStart(2, "0")}`,
+      total_noturnas_min: totalNoturnasMin,
+      total_atrasos_min: totalAtrasosMin,
+      total_faltas: totalFaltas,
+      dsr_min: dsrMin,
+      dsr_fmt: `${Math.floor(dsrMin / 60)}h${String(dsrMin % 60).padStart(2, "0")}`,
+      banco_horas: banco ? {
+        saldo_anterior_min: banco.saldo_anterior_min,
+        creditos_min: banco.creditos_min,
+        debitos_min: banco.debitos_min,
+        saldo_final_min: banco.saldo_final_min,
+        fechado: banco.fechado,
+      } : null,
+    };
+  });
+
+  return successResponse(resumos);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  FERIADOS — CRUD
+// ═══════════════════════════════════════════════════════════════
+
+router.on("compliance_feriados_list", authGerente, feat, async (ctx) => {
+  const { ano } = ctx.body as any;
+  let q = ctx.sb.from("compliance_feriados").select("*").order("data");
+  if (ano) {
+    q = q.gte("data", `${ano}-01-01`).lte("data", `${ano}-12-31`);
+  }
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("compliance_feriados_save", authGerente, feat, async (ctx) => {
+  const { id, data, descricao, tipo } = ctx.body as any;
+  if (!data || !descricao) throw new AppError("VALIDATION_FAILED", "data e descricao obrigatorios.");
+  if (id) {
+    const { data: updated, error } = await ctx.sb.from("compliance_feriados")
+      .update({ data, descricao, tipo: tipo || "feriado" })
+      .eq("id", id).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    return successResponse(updated);
+  }
+  const { data: created, error } = await ctx.sb.from("compliance_feriados")
+    .insert({ data, descricao, tipo: tipo || "feriado" })
+    .select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(created);
+});
+
+router.on("compliance_feriados_delete", authGerente, feat, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatorio.");
+  const { error } = await ctx.sb.from("compliance_feriados").delete().eq("id", id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG PONTO — Read/Update
+// ═══════════════════════════════════════════════════════════════
+
+router.on("compliance_config_ponto_list", authGerente, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_config_ponto").select("*").order("chave");
+  return successResponse(data ?? []);
+});
+
+router.on("compliance_config_ponto_save", authGerente, feat, async (ctx) => {
+  const { configs } = ctx.body as any;
+  if (!Array.isArray(configs)) throw new AppError("VALIDATION_FAILED", "configs[] obrigatorio.");
+  let updated = 0;
+  for (const c of configs) {
+    if (!c.chave || c.valor === undefined) continue;
+    const { error } = await ctx.sb.from("compliance_config_ponto")
+      .update({ valor: String(c.valor) })
+      .eq("chave", c.chave);
+    if (!error) updated++;
+  }
+  return successResponse({ updated });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  BANCO DE HORAS — List
+// ═══════════════════════════════════════════════════════════════
+
+router.on("compliance_banco_horas_list", authGerente, feat, async (ctx) => {
+  const { professora_id, ano } = ctx.body as any;
+  const anoFiltro = ano || new Date().getFullYear();
+  let q = ctx.sb
+    .from("compliance_banco_horas")
+    .select("*, professoras(id, nome)")
+    .eq("ano", anoFiltro)
+    .order("mes");
+  if (professora_id) q = q.eq("professora_id", professora_id);
+  const { data } = await q;
+  return successResponse(data ?? []);
 });
 
 // ═══════════════════════════════════════════════════════════════
