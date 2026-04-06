@@ -33,11 +33,11 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 | Pais | `index.html` | Famílias | Login split-screen (logo à esquerda em fundo vermelho + form à direita). Google/Magic Link/biometria. Pickup, boletim, agenda digital, boletos |
 | Gerente | `gerente.html` | Direção | ~45 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação |
 | Professora | `professora.html` | Docentes | Chamada, notas, agenda digital, diplomas, materiais, growth plan |
-| Equipe | `secretaria.html` | Secretaria + Comercial | Feature-gated: atestados, CRM/leads, kanban, templates, metas |
+| Equipe | `secretaria.html` | Secretaria + Comercial + Financeiro + Manutenção | Feature-gated com sidebar agrupada e colapsável. 7 grupos: Secretaria (atestados, diplomas, PDI, impressões), Comercial (dashboard, leads, kanban, matrículas, vagas, contratos, templates, metas), Financeiro (dashboard, mensalidades, lançamentos, boletos), Infraestrutura (chamados, achados, biblioteca, cantina, transporte), Compliance (painel, certificações, inspeções, políticas, calendário, incidentes, horários, importar ponto, hora extra, alertas, feriados, config ponto) |
 | Admin Escola | `admin.html` | Staff Lumied + Admin Escola | Dashboard escola, meu plano, adicionais, módulos, tickets, LGPD, config, API, admins |
 | Admin Central | `admin-central.html` | Staff Lumied | Dashboard SaaS, escolas, staff, audit log, tickets, onboarding |
 | Aluno | `aluno.html` | Alunos | Notas, frequência, provas, calendário |
-| Hub | `area-restrita.html` | Staff | Seletor de portais |
+| Hub | `area-restrita.html` | Staff | Seletor de portais role-aware (detecta sessão, mostra só portais do usuário) |
 
 ---
 
@@ -239,8 +239,12 @@ Landing page em `site/index.html` — marca **Lumied**.
 
 - **Multi-papéis**: cada usuário pode ter 1+ papéis (`papeis text[]` em `usuarios`)
   - Papéis: `gerente`, `diretor`, `financeiro`, `professora`, `professora_assistente`, `secretaria`, `comercial`, `manutencao`
-  - `comercial` e `secretaria` mapeiam para `secretarias` table com feature gating (`features text[]`)
-  - Features disponíveis: `atestados`, `crm`, `templates`, `metas`
+  - Qualquer combinação de papéis é permitida (ex: gerente+professora, secretaria+comercial)
+  - Hub (`area-restrita.html`) detecta sessão e mostra só portais do usuário
+  - Papéis que usam Portal da Equipe: `secretaria`, `comercial`, `financeiro`, `diretor`, `manutencao`
+  - Esses papéis mapeiam para tabela `secretarias` com feature gating (`features text[]`)
+  - Features disponíveis: `atestados`, `crm`, `templates`, `metas`, `financeiro`, `manutencao`, `compliance`
+  - Gerente configura papéis e features por membro no painel Equipe (checkboxes + modal ✏️)
 - `escola_id` em 30+ tabelas de dados
 - `plano_limites`: limites por recurso (max_alunos, max_storage_gb, etc.)
 - `check_limite()`: função SQL para verificar limites
@@ -289,6 +293,77 @@ Landing page em `site/index.html` — marca **Lumied**.
 - Aceita URL direta ou upload de arquivo (max 2MB, converte para base64 data URL)
 - Preview em tempo real no formulário
 - Salvo como `escola_logo_url` no `escola_config`
+
+---
+
+## Portal da Equipe (`secretaria.html`)
+
+Portal unificado para Secretaria, Comercial, Financeiro, Infraestrutura e Compliance. Sidebar agrupada e colapsável, com visibilidade por features do usuário.
+
+**Features disponíveis** (configuráveis por usuário):
+
+| Feature | Grupo na Sidebar | Painéis |
+|---------|-----------------|---------|
+| `atestados` | Secretaria | Atestados, Diplomas, Growth Plan, Impressões |
+| `crm` | Comercial | Dashboard CRM, Leads, Funil Kanban (drag-drop), Matrículas (cards por turma), Vagas, Contratos, Templates, Metas |
+| `financeiro` | Financeiro | Dashboard (gráfico receita/despesa), Mensalidades, Lançamentos, Boletos |
+| `manutencao` | Infraestrutura | Chamados, Achados & Perdidos, Biblioteca, Cantina, Transporte |
+| `compliance` | Compliance | Painel Geral, Certificações, Inspeções, Políticas, Calendário, Incidentes, Horários, Importar Ponto (upload CSV), Hora Extra, Alertas, Feriados, Config Ponto |
+
+**Autenticação:** login unificado (`sessoes` table) ou legado (`secretaria_sessoes`). Chama `/diplomas` para actions de secretaria e `/api` para CRM/financeiro (token unificado aceito em ambos).
+
+---
+
+## Compliance — Ponto CLT
+
+Sistema de controle de ponto com cálculos trabalhistas conforme legislação brasileira.
+
+**Edge function:** `compliance` (Router v2) | **Tabelas:** `compliance_ponto_*`, `compliance_horarios`, `compliance_ocorrencias`, `compliance_alertas`, `compliance_banco_horas`, `compliance_feriados`, `compliance_config_ponto`
+
+### Regras CLT implementadas
+
+| Regra | Artigo | Implementação |
+|-------|--------|---------------|
+| Intervalo intrajornada | Art. 71 | 60min (>6h), 15min (>4h), auto-dedução |
+| Hora extra 50% | Art. 59 + CF 7° XVI | Dias úteis e sábados |
+| Hora extra 100% | Art. 59-A + Súmula 146 TST | Domingos e feriados |
+| Limite 2h extras/dia | Art. 59 | Cap 120min |
+| Jornada máxima 10h/dia | Art. 59 | Cap 600min |
+| Tolerância 10min | Art. 58 §1° | Configurável |
+| Hora noturna 22h-5h | Art. 73 | Hora reduzida 52:30 |
+| Adicional noturno 20% | Art. 73 | Rastreado por registro |
+| Banco de horas | Art. 59 §5° | 6 meses, saldo mensal |
+| Proibição domingo prof. | Art. 319 | Alerta de compliance |
+| Remuneração hora-aula | Art. 320 | Configurável |
+| DSR 1/6 | Art. 320 §1° | No resumo mensal |
+| Jornada professor | Art. 318 (Lei 13.415/17) | Parcial 4h/6h, integral 8h |
+
+### Configuração (`compliance_config_ponto`)
+
+16 parâmetros editáveis pelo gerente: tolerâncias, jornada, adicionais %, banco de horas, limites, hora noturna, hora-atividade (20% CCT), DSR.
+
+### Fluxo de importação
+
+1. Upload CSV (`professora_id;data;hora_entrada;hora_saida`)
+2. Pré-visualização no frontend
+3. `compliance_importar_ponto` → salva registros
+4. `compliance_verificar_ponto` → processa CLT, detecta feriados, calcula HE/noturna/atraso
+5. Cria ocorrências para HE não autorizada
+6. Alerta por email + ciência com selfie (bloqueia portal da professora)
+
+### Caxias do Sul
+
+Excluída da CCT estadual SINPRO/RS. Tem sindicato próprio: **SINPRO Caxias** (`sinprocaxias.com.br`). Valores da CCT local devem ser configurados no painel "Config. Ponto".
+
+---
+
+## Chrome Extension (Lumied CRM WhatsApp)
+
+Extensão Manifest V3 para enviar templates CRM no WhatsApp Web. Pronta para publicação na Chrome Web Store.
+
+**Arquivos:** `chrome-extension/` (manifest.json, content.js, content.css, popup.html, icons, privacy-policy.html)
+**Pacote:** `lumied-crm-whatsapp.zip` (14KB)
+**Guia de publicação:** `chrome-extension/STORE-LISTING.md`
 
 ---
 
@@ -386,7 +461,7 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 
 ## Banco de Dados
 
-- **110 migrations** (009-110)
+- **111 migrations** (009-111)
 - Migrations relevantes:
   - `048_planos_modulos.sql` — escolas, planos, modulos, admins
   - `075_multitenancy_limites.sql` — plano_limites, escola_uso
@@ -417,6 +492,7 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
   - `107` — Fix subdomínio + coluna `plano` (text) na tabela escolas
   - `109` — Sync familias → alunos (trigger automático `trg_sync_familia_aluno`)
   - `110` — Unificação de usuários: gerentes/professoras/secretarias → usuarios, sessões unificadas, triggers bidirecionais
+  - `111` — Ponto CLT: cálculos trabalhistas completos (HE 50%/100%, hora noturna, banco de horas, feriados, config)
 
 ---
 
