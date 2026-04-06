@@ -358,6 +358,14 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 
 ## Observabilidade
 
+### GitHub Actions Secrets
+- `SUPABASE_ACCESS_TOKEN` — Supabase Management API
+- `SENTRY_AUTH_TOKEN` — Sentry releases (`sntrys_eyJ...`) **Configurado**
+- `SENTRY_DSN` — Sentry event ingestion
+- `VERCEL_TOKEN` — Vercel deploy
+- `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` — Vercel project
+- `BETTERUPTIME_API_KEY`, `BETTERUPTIME_HEARTBEAT_URL` — Monitoramento
+
 ### Sentry (`lumied.sentry.io`)
 - Frontend: SDK Browser v9.25.0 via `sentry-init.js` em todos os portais
 - Edge Functions: `_shared/sentry.ts` reporter HTTP
