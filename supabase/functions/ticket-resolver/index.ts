@@ -95,6 +95,13 @@ async function sendEscalationEmail(
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
+  // Service role authentication check
+  const authHeader = req.headers.get("authorization")?.replace("Bearer ", "");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (authHeader !== serviceKey) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+
   try {
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,

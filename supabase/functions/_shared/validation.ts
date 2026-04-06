@@ -121,15 +121,25 @@ export function sanitize(value: string): string {
  * Sanitize all string fields in an object
  */
 export function sanitizeBody(body: Record<string, unknown>): Record<string, unknown> {
+  const SYSTEM_FIELDS = ['action', '_token', '_prof_token', '_aluno_token'];
+
+  function sanitizeValue(key: string, value: unknown): unknown {
+    if (SYSTEM_FIELDS.includes(key)) return value;
+    if (typeof value === 'string') return sanitize(value);
+    if (Array.isArray(value)) return value.map((item, i) => sanitizeValue(String(i), item));
+    if (value !== null && typeof value === 'object') {
+      const clean: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        clean[k] = sanitizeValue(k, v);
+      }
+      return clean;
+    }
+    return value;
+  }
+
   const clean: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(body)) {
-    if (key === 'action' || key === '_token' || key === '_prof_token' || key === '_aluno_token') {
-      clean[key] = value; // Don't sanitize system fields
-    } else if (typeof value === 'string') {
-      clean[key] = sanitize(value);
-    } else {
-      clean[key] = value;
-    }
+    clean[key] = sanitizeValue(key, value);
   }
   return clean;
 }

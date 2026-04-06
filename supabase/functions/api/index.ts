@@ -224,7 +224,7 @@ serve(async (req: Request) => {
   if (action === "login") {
     const { email, senha } = body as { email: string; senha: string };
     if (!email || !senha) return err("E-mail e senha são obrigatórios.");
-    const { data: g } = await admin.from("gerentes").select("*").eq("email", email).single();
+    const { data: g } = await admin.from("gerentes").select("id, nome, email, senha_hash").eq("email", email).single();
     if (!g) return err("E-mail ou senha incorretos.", 401);
     const ok2 = await verificarSenhaAuto(senha as string, g.senha_hash);
     if (!ok2) return err("E-mail ou senha incorretos.", 401);
@@ -626,6 +626,16 @@ serve(async (req: Request) => {
   const token = (body._token as string) || authHeader;
   const gerente = await validarSessao(admin, token);
   if (!gerente) return err("Sessão inválida ou expirada. Faça login novamente.", 401);
+
+  // ── Role check for sensitive financial actions ────────────────
+  const sensitiveActions = ["staff_alterar_resp_financeiro", "financeiro_decisao_aprovar", "financeiro_decisao_rejeitar", "indicacao_b2b_config_salvar"];
+  if (sensitiveActions.includes(action as string)) {
+    const { data: usr } = await admin.from("usuarios").select("papeis").ilike("email", gerente.email).maybeSingle();
+    const roles = usr?.papeis || [];
+    if (!roles.includes("gerente") && !roles.includes("diretor")) {
+      return err("Apenas gerentes e diretores podem realizar esta ação.", 403);
+    }
+  }
 
   // ── Solicitações ──────────────────────────────────────────────
   if (action === "solicitacoes_list") {

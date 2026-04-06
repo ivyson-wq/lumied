@@ -13,6 +13,13 @@ const log = createLogger("daily-digest");
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return corsResponse();
 
+  // Service role authentication check
+  const authHeader = req.headers.get("authorization")?.replace("Bearer ", "");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (authHeader !== serviceKey) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,

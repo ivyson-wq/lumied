@@ -67,6 +67,13 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
   if (req.method !== 'POST') return new Response('Método não permitido', { status: 405 })
 
+  // Authentication check
+  const authHeader = req.headers.get("x-webhook-secret") || req.headers.get("authorization")?.replace("Bearer ", "");
+  const expectedSecret = Deno.env.get("RELAY_SECRET");
+  if (expectedSecret && authHeader !== expectedSecret) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+
   try {
     const payload = await req.json()
     console.log('Webhook Inter recebido:', JSON.stringify(payload))
