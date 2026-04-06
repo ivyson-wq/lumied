@@ -882,6 +882,220 @@ router.on("acesso_presenca_turma", authProfessora, async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  Validação de qualidade de foto (Control iD)
+// ═══════════════════════════════════════════════════════════════
+
+/** Valida qualidade da foto usando o primeiro dispositivo ativo */
+async function validarQualidadeFoto(
+  sb: ReturnType<typeof createClient>,
+  fotoBinary: Uint8Array,
+): Promise<{ ok: boolean; scores: Any; errors: string[] }> {
+  const { data: devices } = await sb.from("acesso_dispositivos").select("*").eq("ativo", true).limit(1);
+  if (!devices?.length) {
+    return { ok: true, scores: null, errors: ["Nenhum dispositivo ativo para validação. Foto salva sem validação."] };
+  }
+  const dev = devices[0];
+  try {
+    const session = await getDeviceSession(sb, dev);
+    const res = await deviceFetch(dev.ip, dev.porta, `/user_test_image.fcgi?session=${session}`, {
+      method: "POST", body: fotoBinary,
+    });
+    const data = await res.json();
+    if (data.success === false || data.error) {
+      const erros: string[] = [];
+      for (const e of data.errors || []) {
+        switch (e.code) {
+          case 2: erros.push("Nenhum rosto detectado na foto."); break;
+          case 4: erros.push("Rosto não está centralizado."); break;
+          case 5: erros.push("Rosto muito longe — aproxime-se da câmera."); break;
+          case 6: erros.push("Rosto muito perto — afaste-se da câmera."); break;
+          case 7: erros.push("Pose inadequada — olhe diretamente para a câmera."); break;
+          case 8: erros.push("Foto sem nitidez — melhore a iluminação."); break;
+          case 9: erros.push("Rosto muito perto da borda da foto."); break;
+          default: erros.push(e.message || `Erro de qualidade (código ${e.code}).`);
+        }
+      }
+      return { ok: false, scores: data.scores || null, errors: erros };
+    }
+    return { ok: true, scores: data.scores || null, errors: [] };
+  } catch (err) {
+    return { ok: true, scores: null, errors: ["Dispositivo offline — foto salva sem validação de qualidade."] };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Validar foto (action pública para preview de qualidade)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_validar_foto", async (ctx) => {
+  const { foto } = ctx.body as Any;
+  if (!foto) throw new AppError("VALIDATION_FAILED", "foto (base64) é obrigatória.");
+  const raw = atob(foto.replace(/^data:image\/\w+;base64,/, ""));
+  const binary = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) binary[i] = raw.charCodeAt(i);
+  if (binary.length > 2 * 1024 * 1024) throw new AppError("VALIDATION_FAILED", "Foto deve ter no máximo 2MB.");
+  const result = await validarQualidadeFoto(ctx.sb, binary);
+  return successResponse(result);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Cadastro de face PÚBLICO (link para famílias)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_face_cadastro_publico", async (ctx) => {
+  const { token_cadastro, pessoa_nome, foto } = ctx.body as Any;
+  if (!token_cadastro || !foto) throw new AppError("VALIDATION_FAILED", "token_cadastro e foto são obrigatórios.");
+
+  // Validar token
+  const { data: tk } = await ctx.sb
+    .from("acesso_cadastro_tokens")
+    .select("*")
+    .eq("token", token_cadastro)
+    .eq("usado", false)
+    .maybeSingle();
+
+  if (!tk) throw new AppError("AUTH_INVALID", "Link inválido ou já utilizado.");
+  if (tk.expira_em && new Date(tk.expira_em) < new Date()) throw new AppError("AUTH_EXPIRED", "Link expirado.");
+
+  // Processar foto
+  const raw = atob(foto.replace(/^data:image\/\w+;base64,/, ""));
+  const binary = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) binary[i] = raw.charCodeAt(i);
+  if (binary.length > 2 * 1024 * 1024) throw new AppError("VALIDATION_FAILED", "Foto deve ter no máximo 2MB.");
+
+  // Validar qualidade
+  const qualidade = await validarQualidadeFoto(ctx.sb, binary);
+  if (!qualidade.ok) {
+    return successResponse({ ok: false, qualidade_erros: qualidade.errors, scores: qualidade.scores });
+  }
+
+  // Salvar foto no storage
+  const path = `acesso/faces/${tk.pessoa_id}_${Date.now()}.jpg`;
+  await ctx.sb.storage.from("wa-documentos").upload(path, binary, { contentType: "image/jpeg", upsert: true });
+  const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
+  const fotoUrl = urlData?.publicUrl || null;
+
+  const deviceUserId = uuidToDeviceId(tk.pessoa_id);
+
+  // Criar/atualizar face com status 'aguardando_aprovacao'
+  const { data: existing } = await ctx.sb
+    .from("acesso_faces")
+    .select("id")
+    .eq("pessoa_tipo", tk.pessoa_tipo)
+    .eq("pessoa_id", tk.pessoa_id)
+    .maybeSingle();
+
+  if (existing) {
+    await ctx.sb.from("acesso_faces").update({
+      pessoa_nome: pessoa_nome || tk.pessoa_nome,
+      foto_url: fotoUrl,
+      device_user_id: deviceUserId,
+      sync_status: "aguardando_aprovacao",
+      atualizado_em: new Date().toISOString(),
+    }).eq("id", existing.id);
+  } else {
+    await ctx.sb.from("acesso_faces").insert({
+      pessoa_tipo: tk.pessoa_tipo,
+      pessoa_id: tk.pessoa_id,
+      pessoa_nome: pessoa_nome || tk.pessoa_nome,
+      foto_url: fotoUrl,
+      device_user_id: deviceUserId,
+      sync_status: "aguardando_aprovacao",
+    });
+  }
+
+  // Marcar token como usado
+  await ctx.sb.from("acesso_cadastro_tokens").update({ usado: true, usado_em: new Date().toISOString() }).eq("id", tk.id);
+
+  return successResponse({ ok: true, qualidade_erros: qualidade.errors, mensagem: "Foto enviada! Aguarde aprovação da escola." });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Gerar link de cadastro (gerente cria link para família)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_gerar_link_cadastro", authGerente, async (ctx) => {
+  const { pessoa_tipo, pessoa_id, pessoa_nome, email } = ctx.body as Any;
+  if (!pessoa_tipo || !pessoa_id || !pessoa_nome) {
+    throw new AppError("VALIDATION_FAILED", "pessoa_tipo, pessoa_id e pessoa_nome são obrigatórios.");
+  }
+
+  // Gerar token único
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b => b.toString(16).padStart(2, "0")).join("");
+
+  const { data, error } = await ctx.sb.from("acesso_cadastro_tokens").insert({
+    token,
+    pessoa_tipo,
+    pessoa_id,
+    pessoa_nome,
+    email: email || null,
+    gerado_por: ctx.user?.nome || "sistema",
+    expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 dias
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  const appUrl = Deno.env.get("APP_URL") || "https://maplebearcaxias.lumied.com.br";
+  const link = `${appUrl}/cadastro-face.html?token=${token}`;
+
+  return successResponse({ token, link, expira_em: data.expira_em });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Aprovar face cadastrada pela família
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_face_aprovar", authGerente, async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+
+  const { data: face } = await ctx.sb.from("acesso_faces").select("*").eq("id", id).single();
+  if (!face) throw new AppError("NOT_FOUND", "Face não encontrada.");
+
+  // Baixar foto do storage para sincronizar
+  let fotoBinary: Uint8Array | null = null;
+  if (face.foto_url) {
+    try {
+      const res = await fetch(face.foto_url);
+      if (res.ok) fotoBinary = new Uint8Array(await res.arrayBuffer());
+    } catch (_) {}
+  }
+
+  // Sincronizar com todos os dispositivos
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  const syncResults: Any[] = [];
+
+  for (const dev of devices ?? []) {
+    try {
+      const session = await getDeviceSession(ctx.sb, dev);
+      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ object: "users", values: [{ id: face.device_user_id, name: face.pessoa_nome, registration: face.pessoa_id }] }),
+      });
+      if (fotoBinary) {
+        const ts = Math.floor(Date.now() / 1000);
+        await deviceFetch(dev.ip, dev.porta, `/user_set_image.fcgi?session=${session}&user_id=${face.device_user_id}&timestamp=${ts}`, {
+          method: "POST", body: fotoBinary,
+        });
+      }
+      syncResults.push({ device: dev.nome, ok: true });
+    } catch (err) {
+      syncResults.push({ device: dev.nome, ok: false, error: String(err) });
+    }
+  }
+
+  const allOk = syncResults.every(r => r.ok);
+  await ctx.sb.from("acesso_faces").update({
+    sync_status: allOk ? "sincronizado" : "erro",
+    sync_erro: allOk ? null : syncResults.filter(r => !r.ok).map(r => `${r.device}: ${r.error}`).join("; "),
+    atualizado_em: new Date().toISOString(),
+  }).eq("id", id);
+
+  return successResponse({ aprovado: true, sync: syncResults });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Server
 // ═══════════════════════════════════════════════════════════════
 serve(async (req) => {

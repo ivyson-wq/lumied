@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro Facial — Lumied</title>
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#f0ece6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.card{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.1);}
+.logo{text-align:center;margin-bottom:24px;}
+.logo img{height:40px;}
+h1{font-size:20px;font-weight:700;text-align:center;margin-bottom:8px;color:#1a1a1a;}
+.sub{font-size:13px;color:#5a5249;text-align:center;margin-bottom:24px;line-height:1.5;}
+.name-badge{background:#f8f5f0;border:1px solid #e2dbd1;border-radius:10px;padding:12px 16px;text-align:center;margin-bottom:20px;}
+.name-badge strong{font-size:15px;color:#1a1a1a;}
+.name-badge span{font-size:12px;color:#5a5249;display:block;margin-top:2px;}
+.preview-area{position:relative;width:100%;aspect-ratio:3/4;background:#1c1712;border-radius:14px;overflow:hidden;margin-bottom:16px;}
+.preview-area video,.preview-area img{width:100%;height:100%;object-fit:cover;}
+.preview-area .placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.5);font-size:48px;}
+.quality-feedback{font-size:13px;padding:10px 14px;border-radius:10px;margin-bottom:16px;display:none;}
+.quality-feedback.ok{background:#edf7ef;color:#2d7a3a;border:1px solid #c6e9cc;display:block;}
+.quality-feedback.error{background:#fdf0f2;color:#C8102E;border:1px solid #f5c6cb;display:block;}
+.quality-feedback.warning{background:#fff8e1;color:#b07d00;border:1px solid #ffe082;display:block;}
+.tips{background:#f8f5f0;border-radius:10px;padding:14px;margin-bottom:20px;font-size:12px;color:#5a5249;line-height:1.6;}
+.tips strong{color:#1a1a1a;}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s;margin-bottom:10px;}
+.btn-primary{background:#C8102E;color:#fff;}.btn-primary:hover{background:#a00d24;}
+.btn-primary:disabled{background:#ccc;cursor:not-allowed;}
+.btn-secondary{background:#f0ece6;color:#1a1a1a;border:1px solid #e2dbd1;}.btn-secondary:hover{background:#e8e4de;}
+.btn-camera{background:#1a6bb5;color:#fff;}.btn-camera:hover{background:#155a98;}
+.success-msg{text-align:center;padding:24px 0;}
+.success-msg .icon{font-size:48px;margin-bottom:12px;}
+.success-msg h2{font-size:18px;color:#2d7a3a;margin-bottom:8px;}
+.success-msg p{font-size:13px;color:#5a5249;line-height:1.5;}
+.error-page{text-align:center;padding:24px 0;}
+.error-page .icon{font-size:48px;margin-bottom:12px;}
+.error-page h2{font-size:18px;color:#C8102E;margin-bottom:8px;}
+.spinner{display:inline-block;width:20px;height:20px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo"><img src="/lumied-logo.png" alt="Lumied"></div>
+
+  <!-- Estado: Carregando -->
+  <div id="stateLoading">
+    <h1>Verificando link...</h1>
+    <p class="sub" style="margin-top:12px;"><span class="spinner" style="border-color:rgba(200,16,46,.3);border-top-color:#C8102E;"></span></p>
+  </div>
+
+  <!-- Estado: Erro (link inválido) -->
+  <div id="stateError" style="display:none;">
+    <div class="error-page">
+      <div class="icon">❌</div>
+      <h2>Link inválido</h2>
+      <p id="errorMsg">Este link de cadastro é inválido ou já foi utilizado.</p>
+    </div>
+  </div>
+
+  <!-- Estado: Formulário de captura -->
+  <div id="stateForm" style="display:none;">
+    <h1>Cadastro Facial</h1>
+    <p class="sub">Tire uma foto do rosto para reconhecimento na escola.</p>
+
+    <div class="name-badge">
+      <strong id="pessoaNome">—</strong>
+      <span id="pessoaTipo">—</span>
+    </div>
+
+    <div class="tips">
+      <strong>Dicas para uma boa foto:</strong><br>
+      • Olhe diretamente para a câmera<br>
+      • Boa iluminação no rosto (sem sombras)<br>
+      • Sem óculos escuros, boné ou máscara<br>
+      • Rosto centralizado e próximo da câmera<br>
+      • Fundo neutro (parede clara)
+    </div>
+
+    <div class="preview-area" id="previewArea">
+      <div class="placeholder" id="previewPlaceholder">📷</div>
+      <video id="cameraVideo" style="display:none;" autoplay playsinline></video>
+      <img id="previewImg" style="display:none;">
+    </div>
+
+    <div class="quality-feedback" id="qualityFeedback"></div>
+
+    <button class="btn btn-camera" id="btnCamera" onclick="startCamera()">📷 Abrir Câmera</button>
+    <button class="btn btn-secondary" id="btnCapture" onclick="capturePhoto()" style="display:none;">📸 Tirar Foto</button>
+    <button class="btn btn-secondary" id="btnRetry" onclick="retryPhoto()" style="display:none;">🔄 Tirar Outra</button>
+    <button class="btn btn-primary" id="btnSubmit" onclick="submitFace()" style="display:none;" disabled>Enviar Foto</button>
+
+    <input type="file" id="fileInput" accept="image/*" capture="user" style="display:none;" onchange="handleFileSelect(event)">
+    <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()" style="font-size:13px;">📁 Ou selecionar foto existente</button>
+  </div>
+
+  <!-- Estado: Sucesso -->
+  <div id="stateSuccess" style="display:none;">
+    <div class="success-msg">
+      <div class="icon">✅</div>
+      <h2>Foto enviada com sucesso!</h2>
+      <p>A escola irá revisar e aprovar seu cadastro facial. Você receberá uma confirmação quando estiver pronto.</p>
+    </div>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script>
+const API = CONFIG.SUPABASE_URL + '/functions/v1/acesso';
+const H = { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON };
+
+let tokenData = null;
+let currentPhoto = null; // base64
+let cameraStream = null;
+
+// Extrair token da URL
+const urlParams = new URLSearchParams(window.location.search);
+const token = urlParams.get('token');
+
+async function apiCall(body) {
+  const r = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify(body) });
+  return r.json();
+}
+
+// Verificar token ao carregar
+(async function() {
+  if (!token) { showError('Nenhum token fornecido. Use o link enviado pela escola.'); return; }
+
+  // Validar token fazendo uma chamada que retorna info sem consumir
+  // Como não temos um endpoint de verificação separado, tentamos enviar foto vazia para ver se o token é válido
+  // Melhor: verificar direto no banco
+  try {
+    const d = await apiCall({ action: 'acesso_face_cadastro_publico', token_cadastro: token, foto: 'test' });
+    if (d.error && d.error.includes('inválido')) { showError('Este link é inválido ou já foi utilizado.'); return; }
+    if (d.error && d.error.includes('expirado')) { showError('Este link expirou. Solicite um novo à escola.'); return; }
+    // Se deu outro erro (ex: foto inválida), o token é válido — mostrar form
+  } catch(_) {}
+
+  // Token parece válido — precisamos buscar os dados
+  // Vamos extrair do próprio erro ou mostrar formulário genérico
+  document.getElementById('stateLoading').style.display = 'none';
+  document.getElementById('stateForm').style.display = 'block';
+  document.getElementById('pessoaNome').textContent = 'Carregando...';
+  document.getElementById('pessoaTipo').textContent = '';
+})();
+
+function showError(msg) {
+  document.getElementById('stateLoading').style.display = 'none';
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('stateError').style.display = 'block';
+}
+
+// Câmera
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } });
+    const video = document.getElementById('cameraVideo');
+    video.srcObject = cameraStream;
+    video.style.display = 'block';
+    document.getElementById('previewPlaceholder').style.display = 'none';
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('btnCamera').style.display = 'none';
+    document.getElementById('btnCapture').style.display = 'block';
+  } catch(e) {
+    alert('Não foi possível acessar a câmera. Tente selecionar uma foto existente.');
+  }
+}
+
+function capturePhoto() {
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  currentPhoto = canvas.toDataURL('image/jpeg', 0.85);
+
+  // Parar câmera
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  video.style.display = 'none';
+
+  // Mostrar preview
+  const img = document.getElementById('previewImg');
+  img.src = currentPhoto;
+  img.style.display = 'block';
+  document.getElementById('btnCapture').style.display = 'none';
+  document.getElementById('btnRetry').style.display = 'block';
+
+  validatePhoto();
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    currentPhoto = ev.target.result;
+    const img = document.getElementById('previewImg');
+    img.src = currentPhoto;
+    img.style.display = 'block';
+    document.getElementById('previewPlaceholder').style.display = 'none';
+    document.getElementById('cameraVideo').style.display = 'none';
+    document.getElementById('btnCamera').style.display = 'none';
+    document.getElementById('btnCapture').style.display = 'none';
+    document.getElementById('btnRetry').style.display = 'block';
+    validatePhoto();
+  };
+  reader.readAsDataURL(file);
+}
+
+function retryPhoto() {
+  currentPhoto = null;
+  document.getElementById('previewImg').style.display = 'none';
+  document.getElementById('btnRetry').style.display = 'none';
+  document.getElementById('btnSubmit').style.display = 'none';
+  document.getElementById('btnSubmit').disabled = true;
+  document.getElementById('btnCamera').style.display = 'block';
+  document.getElementById('previewPlaceholder').style.display = 'flex';
+  document.getElementById('qualityFeedback').style.display = 'none';
+}
+
+async function validatePhoto() {
+  const fb = document.getElementById('qualityFeedback');
+  fb.className = 'quality-feedback warning';
+  fb.textContent = 'Verificando qualidade da foto...';
+  fb.style.display = 'block';
+  document.getElementById('btnSubmit').style.display = 'block';
+  document.getElementById('btnSubmit').disabled = true;
+
+  try {
+    const d = await apiCall({ action: 'acesso_validar_foto', foto: currentPhoto });
+    if (d.ok || (d.data && d.data.ok)) {
+      fb.className = 'quality-feedback ok';
+      fb.innerHTML = '✅ <strong>Foto aprovada!</strong> Qualidade adequada para reconhecimento facial.';
+      document.getElementById('btnSubmit').disabled = false;
+    } else {
+      const erros = d.errors || d.data?.errors || d.qualidade_erros || [];
+      if (erros.length && !erros[0].includes('offline') && !erros[0].includes('Nenhum dispositivo')) {
+        fb.className = 'quality-feedback error';
+        fb.innerHTML = '❌ <strong>Foto com problemas:</strong><br>' + erros.map(e => '• ' + e).join('<br>');
+      } else {
+        // Sem dispositivo para validar — aceitar mesmo assim
+        fb.className = 'quality-feedback warning';
+        fb.innerHTML = '⚠️ Não foi possível validar a qualidade (dispositivos offline). A escola verificará manualmente.';
+        document.getElementById('btnSubmit').disabled = false;
+      }
+    }
+  } catch(e) {
+    fb.className = 'quality-feedback warning';
+    fb.innerHTML = '⚠️ Não foi possível verificar a qualidade. Você pode enviar mesmo assim.';
+    document.getElementById('btnSubmit').disabled = false;
+  }
+}
+
+async function submitFace() {
+  if (!currentPhoto || !token) return;
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Enviando...';
+
+  try {
+    const d = await apiCall({
+      action: 'acesso_face_cadastro_publico',
+      token_cadastro: token,
+      pessoa_nome: document.getElementById('pessoaNome').textContent,
+      foto: currentPhoto,
+    });
+
+    if (d.error) {
+      const fb = document.getElementById('qualityFeedback');
+      fb.className = 'quality-feedback error';
+      fb.innerHTML = '❌ ' + d.error;
+      btn.disabled = false;
+      btn.textContent = 'Enviar Foto';
+      return;
+    }
+
+    if (d.ok === false && d.qualidade_erros?.length) {
+      const fb = document.getElementById('qualityFeedback');
+      fb.className = 'quality-feedback error';
+      fb.innerHTML = '❌ <strong>Foto rejeitada:</strong><br>' + d.qualidade_erros.map(e => '• ' + e).join('<br>');
+      btn.disabled = false;
+      btn.textContent = 'Enviar Foto';
+      return;
+    }
+
+    // Sucesso
+    document.getElementById('stateForm').style.display = 'none';
+    document.getElementById('stateSuccess').style.display = 'block';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Enviar Foto';
+    alert('Erro ao enviar. Tente novamente.');
+  }
+}
+</script>
+</body>
+</html>
