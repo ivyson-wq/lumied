@@ -567,6 +567,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
         <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Turnos & Horários</a>
         <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Atividades Extra</a>
+        <a class="nav-item" onclick="showPanel('acessoDash',this)" data-modulo="controle_acesso"><span class="ic">🚪</span> Controle de Acesso</a>
+        <a class="nav-item" onclick="showPanel('acessoDispositivos',this)" data-modulo="controle_acesso"><span class="ic">📡</span> Dispositivos</a>
+        <a class="nav-item" onclick="showPanel('acessoFaces',this)" data-modulo="controle_acesso"><span class="ic">👤</span> Faces Cadastradas</a>
+        <a class="nav-item" onclick="showPanel('acessoRfid',this)" data-modulo="controle_acesso"><span class="ic">💳</span> Cartões RFID</a>
+        <a class="nav-item" onclick="showPanel('acessoPermissoes',this)" data-modulo="controle_acesso"><span class="ic">🔐</span> Permissões Retirada</a>
+        <a class="nav-item" onclick="showPanel('acessoEventos',this)" data-modulo="controle_acesso"><span class="ic">📋</span> Log de Acessos</a>
       </div>
       </div>
 
@@ -2437,6 +2443,141 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       </div>
 
+      <!-- ── CONTROLE DE ACESSO: DASHBOARD ── -->
+      <div id="panelAcessoDash" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">Controle de Acesso — Dashboard</div>
+        <div class="stats-grid" id="acessoDashStats" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <div class="sec-title" style="font-size:14px;">Eventos Recentes</div>
+            <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);max-height:500px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.04);" id="acessoDashEvents"><div class="empty-state"><span class="spinner-sm"></span> Carregando...</div></div>
+          </div>
+          <div>
+            <div class="sec-title" style="font-size:14px;">Alertas Nao Lidos <span class="count-badge" id="acessoAlertCount">0</span></div>
+            <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);max-height:500px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.04);" id="acessoDashAlerts"><div class="empty-state"><span class="spinner-sm"></span> Carregando...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONTROLE DE ACESSO: DISPOSITIVOS ── -->
+      <div id="panelAcessoDispositivos" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">Dispositivos de Acesso</div>
+          <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="document.getElementById('acessoDispForm').style.display=document.getElementById('acessoDispForm').style.display==='none'?'block':'none'">+ Novo Dispositivo</button>
+        </div>
+        <div id="acessoDispForm" style="display:none;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div class="ff"><label>Nome</label><input id="adNome" placeholder="Catraca Entrada"></div>
+            <div class="ff"><label>IP</label><input id="adIp" placeholder="192.168.1.100"></div>
+            <div class="ff"><label>Porta</label><input id="adPorta" placeholder="80" value="80"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+            <div class="ff"><label>Tipo</label><select id="adTipo" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;"><option value="catraca">Catraca</option><option value="terminal">Terminal</option></select></div>
+            <div class="ff"><label>Localizacao</label><input id="adLocal" placeholder="Portaria Principal"></div>
+          </div>
+          <button class="btn-create" style="width:auto;padding:8px 20px;margin-top:8px;" onclick="salvarDispositivo()">Salvar</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Nome</th><th>IP</th><th>Tipo</th><th>Localizacao</th><th>Status</th><th>Ultimo Heartbeat</th><th>Acoes</th></tr></thead>
+          <tbody id="acessoDispTable"><tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- ── CONTROLE DE ACESSO: FACES ── -->
+      <div id="panelAcessoFaces" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">Faces Cadastradas <span class="count-badge" id="acessoFacesCount">0</span></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="openFaceModal()">+ Cadastrar Face</button>
+            <button style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="syncAllFaces()">Sincronizar Todas</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Foto</th><th>Nome</th><th>Tipo</th><th>Sync</th><th>Acoes</th></tr></thead>
+          <tbody id="acessoFacesTable"><tr><td colspan="5" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- Modal Cadastrar Face -->
+      <div class="modal-overlay" id="faceModal">
+        <div class="modal" style="max-width:500px;">
+          <h3>Cadastrar Face</h3>
+          <div class="msub">Vincule uma foto facial a um aluno, responsavel ou funcionario.</div>
+          <div class="ff"><label>Tipo</label><select id="faceTipo" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;" onchange="searchFacePessoa()"><option value="aluno">Aluno</option><option value="responsavel">Responsavel</option><option value="funcionario">Funcionario</option></select></div>
+          <div class="ff"><label>Buscar Pessoa</label><input id="faceBusca" placeholder="Digite o nome..." oninput="searchFacePessoa()"></div>
+          <div id="faceResultados" style="max-height:150px;overflow-y:auto;margin-bottom:12px;"></div>
+          <input type="hidden" id="facePessoaId">
+          <div class="ff"><label>Foto</label><input type="file" id="faceFoto" accept="image/*" style="padding:8px;"></div>
+          <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeFaceModal()">Cancelar</button>
+            <button class="btn-save" onclick="salvarFace()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONTROLE DE ACESSO: RFID ── -->
+      <div id="panelAcessoRfid" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">Cartoes RFID <span class="count-badge" id="acessoRfidCount">0</span></div>
+        </div>
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+            <div class="ff" style="margin:0;"><label>Card UID</label><input id="rfidUid" placeholder="AABBCCDD"></div>
+            <div class="ff" style="margin:0;"><label>Tipo</label><select id="rfidTipo" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;" onchange="searchRfidPessoa()"><option value="aluno">Aluno</option><option value="responsavel">Responsavel</option><option value="funcionario">Funcionario</option></select></div>
+            <div class="ff" style="margin:0;"><label>Buscar Pessoa</label><input id="rfidBusca" placeholder="Nome..." oninput="searchRfidPessoa()"><div id="rfidResultados" style="max-height:100px;overflow-y:auto;position:absolute;background:#fff;border:1px solid var(--border);border-radius:8px;z-index:10;display:none;"></div><input type="hidden" id="rfidPessoaId"></div>
+            <button class="btn-create" style="width:auto;padding:10px 18px;" onclick="salvarRfid()">+ Adicionar</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Card UID</th><th>Nome</th><th>Tipo</th><th>Status</th><th>Acoes</th></tr></thead>
+          <tbody id="acessoRfidTable"><tr><td colspan="5" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- ── CONTROLE DE ACESSO: PERMISSOES RETIRADA ── -->
+      <div id="panelAcessoPermissoes" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">Permissoes de Retirada</div>
+        <div style="display:flex;gap:12px;margin-bottom:16px;">
+          <input class="search-input" id="permBuscaAluno" placeholder="Buscar aluno..." oninput="loadAcessoPermissoes()" style="margin:0;flex:1;max-width:400px;">
+        </div>
+        <div id="acessoPermissoesWrap"><div class="empty-state"><span class="spinner-sm"></span> Carregando...</div></div>
+      </div>
+
+      <!-- Modal Adicionar Autorizado -->
+      <div class="modal-overlay" id="permModal">
+        <div class="modal" style="max-width:500px;">
+          <h3>Adicionar Pessoa Autorizada</h3>
+          <div class="msub">Autorize uma pessoa para retirada do aluno <strong id="permAlunoNome"></strong>.</div>
+          <input type="hidden" id="permAlunoId">
+          <div class="ff"><label>Nome do Responsavel</label><input id="permNome" placeholder="Nome completo"></div>
+          <div class="ff"><label>Parentesco</label><select id="permParentesco" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;"><option value="pai">Pai</option><option value="mae">Mae</option><option value="avo">Avo</option><option value="avoa">Avo</option><option value="tio">Tio</option><option value="tia">Tia</option><option value="motorista">Motorista</option><option value="outro">Outro</option></select></div>
+          <div class="ff"><label>Foto</label><input type="file" id="permFoto" accept="image/*" style="padding:8px;"></div>
+          <div class="ff"><label>Validade (opcional)</label><input type="date" id="permValidade"></div>
+          <div class="modal-actions">
+            <button class="btn-cancel" onclick="closePermModal()">Cancelar</button>
+            <button class="btn-save" onclick="salvarPermissao()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONTROLE DE ACESSO: LOG DE ACESSOS ── -->
+      <div id="panelAcessoEventos" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">Log de Acessos</div>
+        <div class="filter-bar" style="margin-bottom:16px;">
+          <input type="date" id="acessoEvtData" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;" onchange="loadAcessoEventos()">
+          <select id="acessoEvtTipo" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;" onchange="loadAcessoEventos()">
+            <option value="">Todos</option><option value="entrada">Entrada</option><option value="saida">Saida</option>
+          </select>
+          <select id="acessoEvtPessoaTipo" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;" onchange="loadAcessoEventos()">
+            <option value="">Todos</option><option value="aluno">Aluno</option><option value="responsavel">Responsavel</option><option value="funcionario">Funcionario</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Hora</th><th>Nome</th><th>Tipo</th><th>Metodo</th><th>Direcao</th><th>Dispositivo</th><th>Foto</th></tr></thead>
+          <tbody id="acessoEventosTable"><tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+
       <!-- ── CADASTRAR FAMÍLIA ── -->
       <div id="panelFamilias" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
@@ -3012,10 +3153,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -3090,6 +3231,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='contaFinanceiro') loadContaFinanceiro();
     if(id==='roi') loadRoiDashboard();
     if(id==='contratos') loadContratos();
+    if(id==='acessoDash') loadAcessoDash();
+    if(id==='acessoDispositivos') loadAcessoDispositivos();
+    if(id==='acessoFaces') loadAcessoFaces();
+    if(id==='acessoRfid') loadAcessoRfid();
+    if(id==='acessoPermissoes') loadAcessoPermissoes();
+    if(id==='acessoEventos') loadAcessoEventos();
     // Track usage for recents & smart ordering
     if(id !== 'analytics') trackPanelUsage(id);
     updateBottomBarActive(id);
@@ -5851,6 +5998,312 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   function fmtDate(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('pt-BR');
+  }
+
+  // ── CONTROLE DE ACESSO (NOVO) ─────────────────────────
+  let _acessoDashInterval = null;
+
+  async function loadAcessoDash() {
+    if (_acessoDashInterval) clearInterval(_acessoDashInterval);
+    await _renderAcessoDash();
+    _acessoDashInterval = setInterval(_renderAcessoDash, 15000);
+  }
+
+  async function _renderAcessoDash() {
+    try {
+      const [dash, eventos, alertas] = await Promise.all([
+        api({ action: 'acesso_dashboard' }),
+        api({ action: 'acesso_eventos_list', limit: 20 }),
+        api({ action: 'acesso_alertas_list', lido: false })
+      ]);
+      const ds = dash.data || dash || {};
+      document.getElementById('acessoDashStats').innerHTML = `
+        <div class="stat-card" style="--ac:var(--green);"><div class="stat-label">Alunos Presentes</div><div class="stat-value">${ds.alunos_presentes ?? 0}</div></div>
+        <div class="stat-card" style="--ac:var(--red);"><div class="stat-label">Alunos Ausentes</div><div class="stat-value">${ds.alunos_ausentes ?? 0}</div></div>
+        <div class="stat-card" style="--ac:var(--blue);"><div class="stat-label">Responsaveis na Escola</div><div class="stat-value">${ds.responsaveis_presentes ?? 0}</div></div>
+        <div class="stat-card" style="--ac:#d4830a;"><div class="stat-label">Alertas Nao Lidos</div><div class="stat-value">${ds.alertas_nao_lidos ?? 0}</div></div>
+      `;
+      const evts = (eventos.data || eventos || []);
+      document.getElementById('acessoDashEvents').innerHTML = evts.length ? evts.map(e => `
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">${e.direcao === 'entrada' ? '🟢' : '🔴'}</span>
+          <div style="flex:1;"><strong>${escHtml(e.pessoa_nome||'—')}</strong> <span style="color:var(--muted);font-size:11px;">${e.pessoa_tipo||''}</span>
+          <div style="font-size:11px;color:var(--muted);">${e.metodo||''} · ${e.dispositivo_nome||''}</div></div>
+          <div style="font-size:11px;color:var(--muted);">${e.criado_em ? new Date(e.criado_em).toLocaleTimeString('pt-BR') : ''}</div>
+        </div>`).join('') : '<div class="empty-state">Nenhum evento recente.</div>';
+      const alts = (alertas.data || alertas || []);
+      document.getElementById('acessoAlertCount').textContent = alts.length;
+      document.getElementById('acessoDashAlerts').innerHTML = alts.length ? alts.map(a => `
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">⚠️</span>
+          <div style="flex:1;"><strong>${escHtml(a.titulo||a.tipo||'Alerta')}</strong>
+          <div style="font-size:11px;color:var(--muted);">${escHtml(a.mensagem||'')}</div>
+          <div style="font-size:11px;color:var(--muted);">${a.criado_em ? new Date(a.criado_em).toLocaleString('pt-BR') : ''}</div></div>
+          <button class="action-btn" onclick="marcarAlertaLido('${a.id}')">Marcar como lido</button>
+        </div>`).join('') : '<div class="empty-state">Nenhum alerta pendente.</div>';
+    } catch(e) { console.error('Erro ao carregar dashboard de acesso:', e); }
+  }
+
+  async function marcarAlertaLido(id) {
+    await api({ action: 'acesso_alerta_marcar_lido', id });
+    _renderAcessoDash();
+  }
+
+  async function loadAcessoDispositivos() {
+    const d = await api({ action: 'acesso_dispositivos_list' });
+    const list = d.data || d || [];
+    const tb = document.getElementById('acessoDispTable');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum dispositivo cadastrado.</td></tr>'; return; }
+    tb.innerHTML = list.map(dev => {
+      const isOnline = dev.ultimo_heartbeat && (Date.now() - new Date(dev.ultimo_heartbeat).getTime() < 300000);
+      return `<tr>
+        <td style="font-weight:600;">${escHtml(dev.nome||'—')}</td>
+        <td>${escHtml(dev.ip||'—')}</td>
+        <td><span class="turno-pill ${dev.tipo==='catraca'?'integral':'semi'}">${dev.tipo||'—'}</span></td>
+        <td>${escHtml(dev.localizacao||'—')}</td>
+        <td><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:${isOnline?'var(--green)':'var(--red)'};">${isOnline?'🟢 Online':'🔴 Offline'}</span></td>
+        <td style="font-size:12px;color:var(--muted);">${dev.ultimo_heartbeat ? new Date(dev.ultimo_heartbeat).toLocaleString('pt-BR') : '—'}</td>
+        <td>
+          <button class="action-btn" onclick="testarDispositivo('${dev.id}')">Testar Conexao</button>
+          <button class="action-btn" onclick="syncFacesDispositivo('${dev.id}')">Sincronizar Faces</button>
+          <button class="action-btn del" onclick="removerDispositivo('${dev.id}')">Remover</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function salvarDispositivo() {
+    const body = { action: 'acesso_dispositivo_create', nome: document.getElementById('adNome').value, ip: document.getElementById('adIp').value, porta: document.getElementById('adPorta').value, tipo: document.getElementById('adTipo').value, localizacao: document.getElementById('adLocal').value };
+    const d = await api(body);
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Dispositivo adicionado!', 'success');
+    document.getElementById('acessoDispForm').style.display = 'none';
+    ['adNome','adIp','adLocal'].forEach(id => document.getElementById(id).value = '');
+    loadAcessoDispositivos();
+  }
+
+  async function testarDispositivo(id) {
+    showToast('Testando conexao...', 'info');
+    const d = await api({ action: 'acesso_dispositivo_ping', id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast(d.online ? 'Dispositivo online!' : 'Dispositivo offline.', d.online ? 'success' : 'error');
+  }
+
+  async function syncFacesDispositivo(id) {
+    showToast('Sincronizando faces...', 'info');
+    const d = await api({ action: 'acesso_dispositivo_sync_faces', id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Faces sincronizadas!', 'success');
+  }
+
+  async function removerDispositivo(id) {
+    if (!await _lumiedConfirm('Remover este dispositivo?')) return;
+    const d = await api({ action: 'acesso_dispositivo_delete', id });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Dispositivo removido.', 'success');
+    loadAcessoDispositivos();
+  }
+
+  async function loadAcessoFaces() {
+    const d = await api({ action: 'acesso_faces_list' });
+    const list = d.data || d || [];
+    document.getElementById('acessoFacesCount').textContent = list.length;
+    const tb = document.getElementById('acessoFacesTable');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhuma face cadastrada.</td></tr>'; return; }
+    tb.innerHTML = list.map(f => {
+      const syncBadge = f.sync_status === 'synced' ? '<span class="turno-pill integral">Sincronizado</span>' : f.sync_status === 'pending' ? '<span class="turno-pill semi">Pendente</span>' : '<span class="turno-pill tarde">Nao sincronizado</span>';
+      const foto = f.foto_url ? `<img src="${f.foto_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border);">` : '<div class="list-avatar">👤</div>';
+      return `<tr>
+        <td>${foto}</td>
+        <td style="font-weight:500;">${escHtml(f.pessoa_nome||'—')}</td>
+        <td>${escHtml(f.pessoa_tipo||'—')}</td>
+        <td>${syncBadge}</td>
+        <td><button class="action-btn del" onclick="removerFace('${f.id}')">Remover</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function openFaceModal() { document.getElementById('faceModal').classList.add('show'); }
+  function closeFaceModal() { document.getElementById('faceModal').classList.remove('show'); document.getElementById('faceBusca').value = ''; document.getElementById('faceResultados').innerHTML = ''; document.getElementById('facePessoaId').value = ''; }
+
+  async function searchFacePessoa() {
+    const tipo = document.getElementById('faceTipo').value;
+    const busca = document.getElementById('faceBusca').value.trim();
+    if (busca.length < 2) { document.getElementById('faceResultados').innerHTML = ''; return; }
+    const d = await api({ action: 'acesso_buscar_pessoa', tipo, busca });
+    const list = d.data || d || [];
+    document.getElementById('faceResultados').innerHTML = list.map(p => `
+      <div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;" onclick="document.getElementById('facePessoaId').value='${p.id}';document.getElementById('faceBusca').value='${escHtml(p.nome)}';document.getElementById('faceResultados').innerHTML='';" onmouseover="this.style.background='#f5f0ea'" onmouseout="this.style.background=''">
+        ${escHtml(p.nome)}
+      </div>`).join('');
+  }
+
+  async function salvarFace() {
+    const pessoaId = document.getElementById('facePessoaId').value;
+    const tipo = document.getElementById('faceTipo').value;
+    const fileInput = document.getElementById('faceFoto');
+    if (!pessoaId) { showToast('Selecione uma pessoa.', 'error'); return; }
+    if (!fileInput.files.length) { showToast('Selecione uma foto.', 'error'); return; }
+    const reader = new FileReader();
+    reader.onload = async function() {
+      const d = await api({ action: 'acesso_face_create', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
+      if (d.error) { showToast(d.error, 'error'); return; }
+      showToast('Face cadastrada!', 'success');
+      closeFaceModal();
+      loadAcessoFaces();
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  }
+
+  async function removerFace(id) {
+    if (!await _lumiedConfirm('Remover esta face?')) return;
+    await api({ action: 'acesso_face_delete', id });
+    loadAcessoFaces();
+  }
+
+  async function syncAllFaces() {
+    showToast('Sincronizando todas as faces...', 'info');
+    const d = await api({ action: 'acesso_sync_all_faces' });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Sincronizacao iniciada!', 'success');
+    loadAcessoFaces();
+  }
+
+  async function loadAcessoRfid() {
+    const d = await api({ action: 'acesso_rfid_list' });
+    const list = d.data || d || [];
+    document.getElementById('acessoRfidCount').textContent = list.length;
+    const tb = document.getElementById('acessoRfidTable');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum cartao RFID cadastrado.</td></tr>'; return; }
+    tb.innerHTML = list.map(r => `<tr>
+      <td style="font-family:monospace;font-weight:600;">${escHtml(r.card_uid||'—')}</td>
+      <td>${escHtml(r.pessoa_nome||'—')}</td>
+      <td>${escHtml(r.pessoa_tipo||'—')}</td>
+      <td><span class="turno-pill ${r.ativo?'integral':'tarde'}">${r.ativo?'Ativo':'Inativo'}</span></td>
+      <td>
+        <button class="action-btn" onclick="toggleRfid('${r.id}',${!r.ativo})">${r.ativo?'Desativar':'Ativar'}</button>
+        <button class="action-btn del" onclick="removerRfid('${r.id}')">Remover</button>
+      </td>
+    </tr>`).join('');
+  }
+
+  async function searchRfidPessoa() {
+    const tipo = document.getElementById('rfidTipo').value;
+    const busca = document.getElementById('rfidBusca').value.trim();
+    const wrap = document.getElementById('rfidResultados');
+    if (busca.length < 2) { wrap.style.display = 'none'; return; }
+    const d = await api({ action: 'acesso_buscar_pessoa', tipo, busca });
+    const list = d.data || d || [];
+    wrap.style.display = list.length ? 'block' : 'none';
+    wrap.innerHTML = list.map(p => `
+      <div style="padding:8px 12px;cursor:pointer;font-size:13px;" onclick="document.getElementById('rfidPessoaId').value='${p.id}';document.getElementById('rfidBusca').value='${escHtml(p.nome)}';document.getElementById('rfidResultados').style.display='none';" onmouseover="this.style.background='#f5f0ea'" onmouseout="this.style.background=''">
+        ${escHtml(p.nome)}
+      </div>`).join('');
+  }
+
+  async function salvarRfid() {
+    const uid = document.getElementById('rfidUid').value.trim();
+    const pessoaId = document.getElementById('rfidPessoaId').value;
+    const tipo = document.getElementById('rfidTipo').value;
+    if (!uid) { showToast('Informe o UID do cartao.', 'error'); return; }
+    if (!pessoaId) { showToast('Selecione uma pessoa.', 'error'); return; }
+    const d = await api({ action: 'acesso_rfid_create', card_uid: uid, pessoa_id: pessoaId, pessoa_tipo: tipo });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Cartao adicionado!', 'success');
+    document.getElementById('rfidUid').value = '';
+    document.getElementById('rfidBusca').value = '';
+    document.getElementById('rfidPessoaId').value = '';
+    loadAcessoRfid();
+  }
+
+  async function toggleRfid(id, ativo) {
+    await api({ action: 'acesso_rfid_update', id, ativo });
+    loadAcessoRfid();
+  }
+
+  async function removerRfid(id) {
+    if (!await _lumiedConfirm('Remover este cartao?')) return;
+    await api({ action: 'acesso_rfid_delete', id });
+    loadAcessoRfid();
+  }
+
+  async function loadAcessoPermissoes() {
+    const busca = (document.getElementById('permBuscaAluno')?.value || '').trim();
+    const d = await api({ action: 'acesso_permissoes_list', busca });
+    const list = d.data || d || [];
+    const wrap = document.getElementById('acessoPermissoesWrap');
+    if (!list.length) { wrap.innerHTML = '<div class="empty-state">Nenhum aluno encontrado.</div>'; return; }
+    wrap.innerHTML = list.map(aluno => {
+      const autorizados = (aluno.autorizados || []).map(a => {
+        const foto = a.foto_url ? `<img src="${a.foto_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">` : '<span style="font-size:20px;">👤</span>';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0ece6;">
+          ${foto}
+          <div style="flex:1;"><strong style="font-size:13px;">${escHtml(a.nome||'—')}</strong><div style="font-size:11px;color:var(--muted);">${escHtml(a.parentesco||'—')}${a.validade ? ' · Valido ate ' + new Date(a.validade).toLocaleDateString('pt-BR') : ''}</div></div>
+          <span class="turno-pill ${a.ativo?'integral':'tarde'}" style="font-size:10px;">${a.ativo?'Ativo':'Inativo'}</span>
+          <button class="action-btn del" onclick="removerPermissao('${a.id}')">Remover</button>
+        </div>`;
+      }).join('');
+      return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-weight:600;font-size:14px;">${escHtml(aluno.nome||'—')} <span style="font-size:12px;color:var(--muted);">${escHtml(aluno.serie||'')}</span></div>
+          <button class="action-btn" onclick="openPermModal('${aluno.id}','${escHtml(aluno.nome)}')">+ Adicionar Autorizado</button>
+        </div>
+        ${autorizados || '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhuma pessoa autorizada.</div>'}
+      </div>`;
+    }).join('');
+  }
+
+  function openPermModal(alunoId, alunoNome) {
+    document.getElementById('permAlunoId').value = alunoId;
+    document.getElementById('permAlunoNome').textContent = alunoNome;
+    document.getElementById('permModal').classList.add('show');
+  }
+  function closePermModal() { document.getElementById('permModal').classList.remove('show'); }
+
+  async function salvarPermissao() {
+    const alunoId = document.getElementById('permAlunoId').value;
+    const nome = document.getElementById('permNome').value.trim();
+    const parentesco = document.getElementById('permParentesco').value;
+    const validade = document.getElementById('permValidade').value || null;
+    if (!nome) { showToast('Informe o nome.', 'error'); return; }
+    const fileInput = document.getElementById('permFoto');
+    let foto_base64 = null;
+    if (fileInput.files.length) {
+      foto_base64 = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(fileInput.files[0]); });
+    }
+    const d = await api({ action: 'acesso_permissao_create', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Pessoa autorizada adicionada!', 'success');
+    closePermModal();
+    loadAcessoPermissoes();
+  }
+
+  async function removerPermissao(id) {
+    if (!await _lumiedConfirm('Remover esta autorizacao?')) return;
+    await api({ action: 'acesso_permissao_delete', id });
+    loadAcessoPermissoes();
+  }
+
+  async function loadAcessoEventos() {
+    const data = document.getElementById('acessoEvtData')?.value || '';
+    const tipo = document.getElementById('acessoEvtTipo')?.value || '';
+    const pessoa_tipo = document.getElementById('acessoEvtPessoaTipo')?.value || '';
+    const d = await api({ action: 'acesso_eventos_list', data, tipo, pessoa_tipo });
+    const list = d.data || d || [];
+    const tb = document.getElementById('acessoEventosTable');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum evento encontrado.</td></tr>'; return; }
+    tb.innerHTML = list.map(e => {
+      const foto = e.foto_captura_url ? `<img src="${e.foto_captura_url}" style="width:36px;height:36px;border-radius:4px;object-fit:cover;cursor:pointer;" onclick="window.open('${e.foto_captura_url}','_blank')">` : '—';
+      return `<tr>
+        <td style="font-size:12px;">${e.criado_em ? new Date(e.criado_em).toLocaleTimeString('pt-BR') : '—'}</td>
+        <td style="font-weight:500;">${escHtml(e.pessoa_nome||'—')}</td>
+        <td>${escHtml(e.pessoa_tipo||'—')}</td>
+        <td><span class="turno-pill ${e.metodo==='face'?'integral':'semi'}">${e.metodo==='face'?'Face':'RFID'}</span></td>
+        <td><span style="color:${e.direcao==='entrada'?'var(--green)':'var(--red)'};">${e.direcao==='entrada'?'🟢 Entrada':'🔴 Saida'}</span></td>
+        <td style="font-size:12px;">${escHtml(e.dispositivo_nome||'—')}</td>
+        <td>${foto}</td>
+      </tr>`;
+    }).join('');
   }
 
   // ── SECRETARIA ────────────────────────────────────────

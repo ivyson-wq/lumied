@@ -1,255 +1,894 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { getCorsHeaders } from '../_shared/cors.ts'
-import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
-import { captureException } from '../_shared/sentry.ts'
+// ═══════════════════════════════════════════════════════════════
+//  Edge Function: acesso (v2 — Router Pattern)
+//  Controle de acesso: Face Control ID (iDFace) + RFID
+//  Reconhecimento facial, presença automática, alertas
+// ═══════════════════════════════════════════════════════════════
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Router, rateLimit, authGerente, authProfessora } from "../_shared/router.ts";
+import { successResponse, AppError } from "../_shared/errors.ts";
 
-let CORS: Record<string, string> = getCorsHeaders()
+// deno-lint-ignore no-explicit-any
+type Any = any;
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: CORS })
-}
+const router = new Router("acesso");
+router.useGlobal(rateLimit());
 
-// Helper: carrega configs da escola do banco
-async function getEscolaConfig(sb: ReturnType<typeof createClient>): Promise<Record<string, any>> {
-  const { data: rows } = await sb.from('escola_config').select('chave, valor')
-  const cfg: Record<string, any> = {}
-  for (const r of rows ?? []) cfg[r.chave] = r.valor
-  return cfg
-}
+// ═══════════════════════════════════════════════════════════════
+//  Auth: Gerente OR Secretaria (unified sessions)
+// ═══════════════════════════════════════════════════════════════
+const authGerenteOrSecretaria: import("../_shared/router.ts").Middleware = async (ctx, next) => {
+  const token = (ctx.body._token as string) || null;
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
 
-async function sendEmail(to: string[], subject: string, html: string, cfg?: Record<string, any>) {
-  const escolaNome = cfg?.escola_nome || 'Escola'
-  const sender = cfg?.escola_email_sender || Deno.env.get('EMAIL_SENDER') || 'noreply@escola.com.br'
+  // Try 1: gerente_sessoes → gerentes
+  const { data: gs } = await ctx.sb
+    .from("gerente_sessoes")
+    .select("*, gerentes(id, nome, email)")
+    .eq("token", token)
+    .single();
+
+  if (gs && new Date(gs.expira_em) >= new Date()) {
+    const user = (gs as Any).gerentes;
+    ctx.user = { ...user, tipo: "gerente" };
+    return next();
+  }
+
+  // Try 2: sessoes → usuarios
+  const { data: su } = await ctx.sb
+    .from("sessoes")
+    .select("*, usuarios(id, nome, email, papeis)")
+    .eq("token", token)
+    .single();
+
+  if (su && new Date(su.expira_em) >= new Date()) {
+    const usuario = (su as Any).usuarios;
+    const allowed = ["gerente", "diretor", "secretaria", "comercial", "financeiro"];
+    const papeis: string[] = usuario?.papeis || [];
+    if (papeis.some((p: string) => allowed.includes(p))) {
+      ctx.user = { ...usuario, tipo: papeis[0] };
+      return next();
+    }
+  }
+
+  throw new AppError("AUTH_INVALID", "Sessão inválida ou sem permissão.");
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  Helper: HTTP call to Control iD device with timeout
+// ═══════════════════════════════════════════════════════════════
+async function deviceFetch(
+  ip: string,
+  porta: number,
+  path: string,
+  options: RequestInit = {},
+  timeoutMs = 5000
+): Promise<Response> {
+  const url = `https://${ip}:${porta}${path}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: `${escolaNome} <${sender}>`,
-        to,
-        subject,
-        html,
-      }),
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) console.error('Resend error:', await res.text())
-  } catch (e) {
-    console.error('sendEmail failed:', e)
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-Deno.serve(async (req) => {
-  CORS = getCorsHeaders(req)
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
-  try {
-
-  // Rate limiting
-  const ip = getClientIP(req)
-  const rl = checkRateLimit(ip, 'api')
-  if (!rl.allowed) return json({ error: `Tente novamente em ${rl.retryAfterSeconds}s.` }, 429)
-
-  const sb = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-
-  const body = await req.json()
-  const { action } = body
-
-  // Carrega config da escola para emails dinâmicos
-  const cfg = await getEscolaConfig(sb)
-  const escolaNome = cfg.escola_nome || 'Escola'
-  const appUrl = cfg.escola_url || Deno.env.get('APP_URL') || 'https://escola.app'
-  const corPrimaria = cfg.cor_primaria || '#C8102E'
-
-  // ── PÚBLICO: verifica se e-mail tem acesso ──────────────
-  if (action === 'check') {
-    return json({ allowed: true })
-  }
-
-  // ── PÚBLICO: solicitar acesso ───────────────────────────
-  if (action === 'solicitar') {
-    const nome: string        = (body.nome || '').trim()
-    const cpf: string         = (body.cpf || '').replace(/\D/g, '')
-    const email: string       = (body.email || '').toLowerCase().trim()
-    const telefone: string    = (body.telefone || '').trim()
-    const nome_crianca: string = (body.nome_crianca || '').trim()
-
-    if (!nome || !cpf || !email || !telefone || !nome_crianca)
-      return json({ error: 'Todos os campos são obrigatórios.' }, 400)
-    if (cpf.length !== 11)
-      return json({ error: 'CPF inválido.' }, 400)
-
-    // verifica se já está autorizado
+// Helper: get session from device (login or cached)
+async function getDeviceSession(sb: Any, device: Any): Promise<string> {
+  // If we have a cached session, try to use it (heartbeat test)
+  if (device.api_session) {
     try {
-      const { data: fam } = await sb.from('familias').select('email').ilike('email', email).maybeSingle()
-      if (fam) return json({ error: 'Este e-mail já possui acesso ao sistema.' }, 400)
-    } catch (_) {}
-    const { data: auth } = await sb.from('usuarios_autorizados').select('email').ilike('email', email).maybeSingle()
-    if (auth) return json({ error: 'Este e-mail já possui acesso ao sistema.' }, 400)
+      const res = await deviceFetch(device.ip, device.porta, `/system_information.fcgi?session=${device.api_session}`);
+      if (res.ok) return device.api_session;
+    } catch { /* session expired, re-login */ }
+  }
+  // Login to device
+  const res = await deviceFetch(device.ip, device.porta, "/login.fcgi", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ login: "admin", password: "admin" }),
+  });
+  if (!res.ok) throw new AppError("BAD_REQUEST", `Falha ao autenticar no dispositivo ${device.nome}: HTTP ${res.status}`);
+  const data = await res.json();
+  if (!data.session) throw new AppError("BAD_REQUEST", `Dispositivo ${device.nome} não retornou session token.`);
+  // Save session
+  await sb.from("acesso_dispositivos").update({ api_session: data.session, ultimo_heartbeat: new Date().toISOString() }).eq("id", device.id);
+  return data.session;
+}
 
-    // verifica se já existe solicitação pendente
-    const { data: dup } = await sb
-      .from('solicitacoes_acesso').select('id').ilike('email', email).eq('status', 'pendente').maybeSingle()
-    if (dup) return json({ error: 'Já existe uma solicitação pendente para este e-mail.' }, 400)
+// Helper: generate a numeric device_user_id from UUID
+function uuidToDeviceId(uuid: string): number {
+  // Use first 8 hex chars of UUID as a number (fits in 32 bits)
+  return parseInt(uuid.replace(/-/g, "").substring(0, 8), 16);
+}
 
-    // formata CPF
-    const cpfFmt = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
+// Helper: get config value
+async function getConfig(sb: Any, chave: string): Promise<string | null> {
+  const { data } = await sb.from("acesso_config").select("valor").eq("chave", chave).single();
+  return data?.valor ?? null;
+}
 
-    const { data: inserted, error: insErr } = await sb.from('solicitacoes_acesso').insert({
-      nome, cpf: cpfFmt, email, telefone, nome_crianca, status: 'pendente',
-    }).select()
-    if (insErr) return json({ error: insErr.message }, 400)
-    if (!inserted || inserted.length === 0)
-      return json({ error: 'Solicitação não foi salva. Verifique as permissões da tabela no Supabase (RLS).' }, 500)
+// ═══════════════════════════════════════════════════════════════
+//  DEVICE MANAGEMENT (authGerente)
+// ═══════════════════════════════════════════════════════════════
 
-    // envia e-mail para todos os gerentes
-    const { data: gerentes } = await sb.from('gerentes').select('email, nome')
-    if (gerentes && gerentes.length > 0) {
-      const emails = gerentes.map((g: { email: string }) => g.email)
-      await sendEmail(
-        emails,
-        `Nova solicitação de acesso — ${nome}`,
-        `
-        <div style="font-family:sans-serif;max-width:560px;margin:auto;">
-          <h2 style="color:${corPrimaria};">Nova Solicitação de Acesso</h2>
-          <p>Um responsável solicitou acesso ao formulário público da ${escolaNome}.</p>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
-            <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;border-radius:4px 0 0 4px;width:40%;">Nome</td><td style="padding:8px;border-bottom:1px solid #eee;">${nome}</td></tr>
-            <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;">CPF</td><td style="padding:8px;border-bottom:1px solid #eee;">${cpfFmt}</td></tr>
-            <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;">E-mail</td><td style="padding:8px;border-bottom:1px solid #eee;">${email}</td></tr>
-            <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;">Telefone</td><td style="padding:8px;border-bottom:1px solid #eee;">${telefone}</td></tr>
-            <tr><td style="padding:8px;background:#f9f5f0;font-weight:600;">Criança</td><td style="padding:8px;">${nome_crianca}</td></tr>
-          </table>
-          <a href="${appUrl}/gerente.html" style="display:inline-block;padding:12px 24px;background:${corPrimaria};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Revisar no Painel</a>
-        </div>
-        `,
-        cfg
-      )
+router.on("acesso_dispositivos_list", authGerenteOrSecretaria, async (ctx) => {
+  const { data } = await ctx.sb
+    .from("acesso_dispositivos")
+    .select("*")
+    .eq("ativo", true)
+    .order("criado_em", { ascending: false });
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_dispositivo_save", authGerente, async (ctx) => {
+  const { id, nome, ip, porta, tipo, localizacao, modelo } = ctx.body as Any;
+  if (!nome || !ip || !tipo) throw new AppError("VALIDATION_FAILED", "nome, ip e tipo são obrigatórios.");
+
+  const row = { nome, ip, porta: porta || 443, tipo, localizacao: localizacao || null, modelo: modelo || "iDFace" };
+
+  if (id) {
+    const { data, error } = await ctx.sb.from("acesso_dispositivos").update(row).eq("id", id).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    return successResponse(data);
+  }
+  const { data, error } = await ctx.sb.from("acesso_dispositivos").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("acesso_dispositivo_delete", authGerente, async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  await ctx.sb.from("acesso_dispositivos").update({ ativo: false }).eq("id", id);
+  return successResponse({ ok: true });
+});
+
+router.on("acesso_dispositivo_ping", authGerente, async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+
+  const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).single();
+  if (!device) throw new AppError("NOT_FOUND", "Dispositivo não encontrado.");
+
+  try {
+    const res = await deviceFetch(device.ip, device.porta, "/login.fcgi");
+    return successResponse({ online: res.status < 500, status: res.status, ip: device.ip, porta: device.porta });
+  } catch (err) {
+    return successResponse({ online: false, error: String(err), ip: device.ip, porta: device.porta });
+  }
+});
+
+router.on("acesso_dispositivo_sync", authGerente, async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+
+  const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).single();
+  if (!device) throw new AppError("NOT_FOUND", "Dispositivo não encontrado.");
+
+  try {
+    const session = await getDeviceSession(ctx.sb, device);
+    return successResponse({ ok: true, session, device_nome: device.nome });
+  } catch (err) {
+    return successResponse({ ok: false, error: err instanceof AppError ? err.message : String(err) });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  FACE ENROLLMENT (authGerente)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
+  const { pessoa_tipo, pessoa_id, pessoa_nome, foto } = ctx.body as Any;
+  if (!pessoa_tipo || !pessoa_id || !pessoa_nome) {
+    throw new AppError("VALIDATION_FAILED", "pessoa_tipo, pessoa_id e pessoa_nome são obrigatórios.");
+  }
+
+  const deviceUserId = uuidToDeviceId(pessoa_id);
+
+  // Store photo in Supabase Storage if provided
+  let fotoUrl: string | null = null;
+  let fotoBinary: Uint8Array | null = null;
+  if (foto) {
+    try {
+      // foto is base64
+      const raw = atob(foto.replace(/^data:image\/\w+;base64,/, ""));
+      fotoBinary = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) fotoBinary[i] = raw.charCodeAt(i);
+
+      const path = `acesso/faces/${pessoa_id}_${Date.now()}.jpg`;
+      const { error: upErr } = await ctx.sb.storage.from("wa-documentos").upload(path, fotoBinary, {
+        contentType: "image/jpeg", upsert: true,
+      });
+      if (!upErr) {
+        const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
+        fotoUrl = urlData?.publicUrl || null;
+      }
+    } catch (e) {
+      console.error("Erro ao processar foto:", e);
+    }
+  }
+
+  // Create/update acesso_faces record
+  const { data: existing } = await ctx.sb
+    .from("acesso_faces")
+    .select("id")
+    .eq("pessoa_tipo", pessoa_tipo)
+    .eq("pessoa_id", pessoa_id)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  let faceRecord;
+  if (existing) {
+    const { data, error } = await ctx.sb.from("acesso_faces").update({
+      pessoa_nome, foto_url: fotoUrl, device_user_id: deviceUserId,
+      sync_status: "pendente", sync_erro: null, atualizado_em: new Date().toISOString(),
+    }).eq("id", existing.id).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    faceRecord = data;
+  } else {
+    const { data, error } = await ctx.sb.from("acesso_faces").insert({
+      pessoa_tipo, pessoa_id, pessoa_nome, foto_url: fotoUrl,
+      device_user_id: deviceUserId, sync_status: "pendente",
+    }).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    faceRecord = data;
+  }
+
+  // Sync to all active devices
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  const syncResults: Any[] = [];
+
+  for (const dev of devices ?? []) {
+    try {
+      const session = await getDeviceSession(ctx.sb, dev);
+
+      // Create user on device
+      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          object: "users",
+          values: [{ id: deviceUserId, name: pessoa_nome, registration: pessoa_id }],
+        }),
+      });
+
+      // Send face image if available
+      if (fotoBinary) {
+        const ts = Math.floor(Date.now() / 1000);
+        const imgRes = await deviceFetch(
+          dev.ip, dev.porta,
+          `/user_set_image.fcgi?session=${session}&user_id=${deviceUserId}&timestamp=${ts}`,
+          { method: "POST", body: fotoBinary }
+        );
+        syncResults.push({ device: dev.nome, ok: imgRes.ok, status: imgRes.status });
+      } else {
+        syncResults.push({ device: dev.nome, ok: true, note: "Sem foto para enviar" });
+      }
+    } catch (err) {
+      syncResults.push({ device: dev.nome, ok: false, error: String(err) });
+    }
+  }
+
+  // Update sync status
+  const allOk = syncResults.length > 0 && syncResults.every((r) => r.ok);
+  const anyErr = syncResults.some((r) => !r.ok);
+  await ctx.sb.from("acesso_faces").update({
+    sync_status: allOk ? "sincronizado" : anyErr ? "erro" : "pendente",
+    sync_erro: anyErr ? syncResults.filter((r) => !r.ok).map((r) => `${r.device}: ${r.error}`).join("; ") : null,
+    atualizado_em: new Date().toISOString(),
+  }).eq("id", faceRecord.id);
+
+  return successResponse({ face: faceRecord, sync: syncResults });
+});
+
+router.on("acesso_faces_list", authGerenteOrSecretaria, async (ctx) => {
+  const { pessoa_tipo } = ctx.body as Any;
+  let q = ctx.sb.from("acesso_faces").select("*").eq("ativo", true).order("criado_em", { ascending: false });
+  if (pessoa_tipo) q = q.eq("pessoa_tipo", pessoa_tipo);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_face_delete", authGerente, async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  await ctx.sb.from("acesso_faces").update({ ativo: false, atualizado_em: new Date().toISOString() }).eq("id", id);
+  return successResponse({ ok: true });
+});
+
+router.on("acesso_face_sync_all", authGerente, async (ctx) => {
+  const { data: faces } = await ctx.sb.from("acesso_faces").select("*").eq("ativo", true);
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+
+  if (!faces?.length) return successResponse({ synced: 0, message: "Nenhuma face cadastrada." });
+  if (!devices?.length) return successResponse({ synced: 0, message: "Nenhum dispositivo ativo." });
+
+  const results: Any[] = [];
+
+  for (const dev of devices) {
+    try {
+      const session = await getDeviceSession(ctx.sb, dev);
+
+      // Create all users on device
+      const users = faces.map((f: Any) => ({ id: f.device_user_id, name: f.pessoa_nome, registration: f.pessoa_id }));
+      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ object: "users", values: users }),
+      });
+
+      // Send faces with photos
+      for (const face of faces) {
+        if (!face.foto_url) continue;
+        try {
+          // Download photo from storage
+          const photoRes = await fetch(face.foto_url, { signal: AbortSignal.timeout(5000) });
+          if (!photoRes.ok) continue;
+          const photoBytes = new Uint8Array(await photoRes.arrayBuffer());
+
+          const ts = Math.floor(Date.now() / 1000);
+          await deviceFetch(dev.ip, dev.porta,
+            `/user_set_image.fcgi?session=${session}&user_id=${face.device_user_id}&timestamp=${ts}`,
+            { method: "POST", body: photoBytes }
+          );
+
+          await ctx.sb.from("acesso_faces").update({
+            sync_status: "sincronizado", sync_erro: null, atualizado_em: new Date().toISOString(),
+          }).eq("id", face.id);
+        } catch (err) {
+          await ctx.sb.from("acesso_faces").update({
+            sync_status: "erro", sync_erro: `${dev.nome}: ${String(err)}`, atualizado_em: new Date().toISOString(),
+          }).eq("id", face.id);
+        }
+      }
+
+      results.push({ device: dev.nome, ok: true });
+    } catch (err) {
+      results.push({ device: dev.nome, ok: false, error: String(err) });
+    }
+  }
+
+  return successResponse({ synced: faces.length, devices: results });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  RFID CARD MANAGEMENT (authGerente)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_rfid_cadastrar", authGerente, async (ctx) => {
+  const { card_uid, pessoa_tipo, pessoa_id, pessoa_nome } = ctx.body as Any;
+  if (!card_uid || !pessoa_tipo || !pessoa_id || !pessoa_nome) {
+    throw new AppError("VALIDATION_FAILED", "card_uid, pessoa_tipo, pessoa_id e pessoa_nome são obrigatórios.");
+  }
+
+  const { data, error } = await ctx.sb.from("acesso_rfid").insert({
+    card_uid, pessoa_tipo, pessoa_id, pessoa_nome,
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.code === "23505" ? "Cartão já cadastrado." : error.message);
+
+  // Sync card to all active devices
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  const deviceUserId = uuidToDeviceId(pessoa_id);
+  for (const dev of devices ?? []) {
+    try {
+      const session = await getDeviceSession(ctx.sb, dev);
+      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ object: "cards", values: [{ value: Number(card_uid), user_id: deviceUserId }] }),
+      });
+    } catch (err) {
+      console.error(`Erro sync RFID → ${dev.nome}:`, err);
+    }
+  }
+
+  return successResponse(data);
+});
+
+router.on("acesso_rfid_list", authGerenteOrSecretaria, async (ctx) => {
+  const { data } = await ctx.sb.from("acesso_rfid").select("*").eq("ativo", true).order("criado_em", { ascending: false });
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_rfid_delete", authGerente, async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  await ctx.sb.from("acesso_rfid").update({ ativo: false }).eq("id", id);
+  return successResponse({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  PICKUP PERMISSIONS (authGerente)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_permissoes_list", authGerenteOrSecretaria, async (ctx) => {
+  const { aluno_id } = ctx.body as Any;
+  let q = ctx.sb.from("acesso_permissoes_retirada").select("*").eq("autorizado", true).order("criado_em", { ascending: false });
+  if (aluno_id) q = q.eq("aluno_id", aluno_id);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_permissao_save", authGerente, async (ctx) => {
+  const { id, aluno_id, aluno_nome, responsavel_id, responsavel_nome, responsavel_email, responsavel_foto_url, parentesco, validade } = ctx.body as Any;
+  if (!aluno_id || !aluno_nome || !responsavel_nome) {
+    throw new AppError("VALIDATION_FAILED", "aluno_id, aluno_nome e responsavel_nome são obrigatórios.");
+  }
+
+  const row = {
+    aluno_id, aluno_nome, responsavel_id: responsavel_id || null,
+    responsavel_nome, responsavel_email: responsavel_email || null,
+    responsavel_foto_url: responsavel_foto_url || null,
+    parentesco: parentesco || null,
+    autorizado: true,
+    autorizado_por: ctx.user?.nome || "Gerente",
+    validade: validade || null,
+  };
+
+  if (id) {
+    const { data, error } = await ctx.sb.from("acesso_permissoes_retirada").update(row).eq("id", id).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    return successResponse(data);
+  }
+  const { data, error } = await ctx.sb.from("acesso_permissoes_retirada").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("acesso_permissao_delete", authGerente, async (ctx) => {
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
+  return successResponse({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  DEVICE CALLBACK (NO auth — called by Face Control ID devices)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_evento_callback", async (ctx) => {
+  const { user_id, device_id, timestamp, method, card_value, direction, confidence, photo } = ctx.body as Any;
+
+  // Validate request comes from a registered device
+  const sourceIp = ctx.ip;
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  const registeredIps = (devices ?? []).map((d: Any) => d.ip);
+
+  // Find device by device_id or by source IP
+  let dispositivo: Any = null;
+  if (device_id) {
+    dispositivo = (devices ?? []).find((d: Any) => d.id === device_id);
+  }
+  if (!dispositivo) {
+    dispositivo = (devices ?? []).find((d: Any) => d.ip === sourceIp);
+  }
+
+  // Determine direction from device type
+  let direcao = direction || "entrada";
+  if (dispositivo) {
+    if (dispositivo.tipo === "catraca_entrada" || dispositivo.tipo === "terminal_entrada") direcao = "entrada";
+    else if (dispositivo.tipo === "catraca_saida" || dispositivo.tipo === "terminal_saida") direcao = "saida";
+    // terminal_bidirecional uses the direction from the device payload
+  }
+
+  // Look up person
+  let pessoa: Any = null;
+
+  if (method === "card" && card_value) {
+    // RFID lookup
+    const { data } = await ctx.sb.from("acesso_rfid").select("*").eq("card_uid", String(card_value)).eq("ativo", true).single();
+    if (data) pessoa = { tipo: data.pessoa_tipo, id: data.pessoa_id, nome: data.pessoa_nome };
+  } else if (user_id) {
+    // Face recognition lookup by device_user_id
+    const { data } = await ctx.sb.from("acesso_faces").select("*").eq("device_user_id", Number(user_id)).eq("ativo", true).single();
+    if (data) pessoa = { tipo: data.pessoa_tipo, id: data.pessoa_id, nome: data.pessoa_nome };
+  }
+
+  // Save capture photo if provided
+  let fotoCapturaUrl: string | null = null;
+  if (photo) {
+    try {
+      const raw = atob(photo.replace(/^data:image\/\w+;base64,/, ""));
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      const path = `acesso/capturas/${Date.now()}_${user_id || "unknown"}.jpg`;
+      const { error: upErr } = await ctx.sb.storage.from("wa-documentos").upload(path, bytes, {
+        contentType: "image/jpeg", upsert: true,
+      });
+      if (!upErr) {
+        const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
+        fotoCapturaUrl = urlData?.publicUrl || null;
+      }
+    } catch (e) {
+      console.error("Erro ao salvar foto captura:", e);
+    }
+  }
+
+  // Unknown person
+  if (!pessoa) {
+    // Create event for unknown person
+    const { data: evento } = await ctx.sb.from("acesso_eventos").insert({
+      dispositivo_id: dispositivo?.id || null,
+      pessoa_tipo: "desconhecido",
+      pessoa_id: "00000000-0000-0000-0000-000000000000",
+      pessoa_nome: "Desconhecido",
+      metodo: method === "card" ? "rfid" : "face",
+      direcao,
+      foto_captura_url: fotoCapturaUrl,
+      confianca: confidence || null,
+      card_uid: card_value ? String(card_value) : null,
+    }).select().single();
+
+    // Generate alert
+    const alertaDesconhecido = await getConfig(ctx.sb, "alerta_desconhecido");
+    if (alertaDesconhecido !== "false") {
+      await ctx.sb.from("acesso_alertas").insert({
+        evento_id: evento?.id,
+        tipo: "desconhecido",
+        pessoa_nome: "Pessoa não identificada",
+        mensagem: `Pessoa não identificada detectada no ${dispositivo?.nome || "dispositivo desconhecido"} (${direcao}).`,
+        destinatario_tipo: "recepcao",
+      });
     }
 
-    return json({ ok: true })
+    return successResponse({ ok: true, recognized: false });
   }
 
-  // ── AUTENTICADO: apenas gerentes ────────────────────────
-  const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim()
-  if (!token) return json({ error: 'Não autorizado' }, 401)
+  // Create event
+  const metodo = method === "card" ? "rfid" : "face";
+  const { data: evento } = await ctx.sb.from("acesso_eventos").insert({
+    dispositivo_id: dispositivo?.id || null,
+    pessoa_tipo: pessoa.tipo,
+    pessoa_id: pessoa.id,
+    pessoa_nome: pessoa.nome,
+    metodo,
+    direcao,
+    foto_captura_url: fotoCapturaUrl,
+    confianca: confidence || null,
+    card_uid: card_value ? String(card_value) : null,
+  }).select().single();
 
-  const { data: sessao } = await sb
-    .from('gerente_sessoes').select('gerente_id, expira_em').eq('token', token).maybeSingle()
-  if (!sessao || new Date(sessao.expira_em) < new Date())
-    return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
+  // ── ALUNO: update presence ──────────────────────────────
+  if (pessoa.tipo === "aluno") {
+    const hoje = new Date().toISOString().split("T")[0];
+    const agora = new Date().toTimeString().split(" ")[0]; // HH:MM:SS
 
-  const { data: gerenteAtual } = await sb
-    .from('gerentes').select('nome').eq('id', sessao.gerente_id).maybeSingle()
-  const nomeGerente = gerenteAtual?.nome || 'Gerente'
+    if (direcao === "entrada") {
+      // Upsert presence (entrada)
+      const { data: existing } = await ctx.sb.from("acesso_presenca")
+        .select("id").eq("aluno_id", pessoa.id).eq("data", hoje).maybeSingle();
 
-  if (action === 'list') {
-    const { data } = await sb
-      .from('usuarios_autorizados').select('*').order('criado_em', { ascending: false })
-    return json({ data: data ?? [] })
+      if (existing) {
+        await ctx.sb.from("acesso_presenca").update({
+          hora_entrada: agora, entrada_metodo: metodo, entrada_evento_id: evento?.id, status: "presente",
+        }).eq("id", existing.id);
+      } else {
+        // Get aluno_nome
+        await ctx.sb.from("acesso_presenca").insert({
+          aluno_id: pessoa.id, aluno_nome: pessoa.nome, data: hoje,
+          hora_entrada: agora, entrada_metodo: metodo, entrada_evento_id: evento?.id, status: "presente",
+        });
+      }
+
+      // Alert: aluno entered
+      await ctx.sb.from("acesso_alertas").insert({
+        evento_id: evento?.id,
+        tipo: "entrada_aluno",
+        pessoa_nome: pessoa.nome,
+        aluno_nome: pessoa.nome,
+        mensagem: `${pessoa.nome} chegou na escola via ${metodo}.`,
+        destinatario_tipo: "recepcao",
+      });
+
+    } else {
+      // Saida
+      const { data: existing } = await ctx.sb.from("acesso_presenca")
+        .select("id").eq("aluno_id", pessoa.id).eq("data", hoje).maybeSingle();
+
+      if (existing) {
+        await ctx.sb.from("acesso_presenca").update({
+          hora_saida: agora, saida_metodo: metodo, saida_evento_id: evento?.id, status: "saiu",
+        }).eq("id", existing.id);
+      } else {
+        await ctx.sb.from("acesso_presenca").insert({
+          aluno_id: pessoa.id, aluno_nome: pessoa.nome, data: hoje,
+          hora_saida: agora, saida_metodo: metodo, saida_evento_id: evento?.id, status: "saiu",
+        });
+      }
+
+      // Alert: aluno leaving
+      await ctx.sb.from("acesso_alertas").insert({
+        evento_id: evento?.id,
+        tipo: "saida_aluno",
+        pessoa_nome: pessoa.nome,
+        aluno_nome: pessoa.nome,
+        mensagem: `${pessoa.nome} saiu da escola via ${metodo}.`,
+        destinatario_tipo: "recepcao",
+      });
+    }
   }
 
-  if (action === 'solicitacoes_list') {
-    const { data } = await sb
-      .from('solicitacoes_acesso').select('*')
-      .eq('status', 'pendente').order('criado_em', { ascending: true })
-    return json({ data: data ?? [] })
+  // ── RESPONSAVEL: check permissions + alert teacher ──────
+  if (pessoa.tipo === "responsavel") {
+    // Find which alunos this person can pick up
+    const { data: perms } = await ctx.sb.from("acesso_permissoes_retirada")
+      .select("*")
+      .eq("responsavel_id", pessoa.id)
+      .eq("autorizado", true);
+
+    // Filter by validade
+    const hoje = new Date().toISOString().split("T")[0];
+    const validPerms = (perms ?? []).filter((p: Any) => !p.validade || p.validade >= hoje);
+
+    if (validPerms.length === 0) {
+      // Not authorized
+      const alertaNaoAut = await getConfig(ctx.sb, "alerta_nao_autorizado");
+      if (alertaNaoAut !== "false") {
+        await ctx.sb.from("acesso_alertas").insert({
+          evento_id: evento?.id,
+          tipo: "nao_autorizado",
+          pessoa_nome: pessoa.nome,
+          mensagem: `${pessoa.nome} tentou acessar mas NÃO está autorizado(a) a retirar nenhum aluno.`,
+          destinatario_tipo: "todos",
+        });
+      }
+    } else {
+      // For each authorized aluno, find turma and professora, create alerts
+      for (const perm of validPerms) {
+        // Get aluno info (turma/serie)
+        const { data: aluno } = await ctx.sb.from("alunos")
+          .select("id, nome, serie, serie_id")
+          .eq("id", perm.aluno_id)
+          .maybeSingle();
+
+        const turma = aluno?.serie || "Sem turma";
+
+        // Find professora assigned to this turma/serie
+        let professoraId: string | null = null;
+        if (aluno?.serie_id) {
+          const { data: prof } = await ctx.sb.from("professoras")
+            .select("id, nome")
+            .eq("serie_id", aluno.serie_id)
+            .eq("ativo", true)
+            .maybeSingle();
+          professoraId = prof?.id || null;
+        }
+
+        // Alert for reception
+        await ctx.sb.from("acesso_alertas").insert({
+          evento_id: evento?.id,
+          tipo: "chegada_responsavel",
+          pessoa_nome: pessoa.nome,
+          aluno_nome: perm.aluno_nome,
+          turma,
+          mensagem: `${pessoa.nome} (${perm.parentesco || "responsavel"}) chegou para buscar ${perm.aluno_nome} (${turma}).`,
+          destinatario_tipo: "recepcao",
+        });
+
+        // Alert for professora (if found)
+        if (professoraId) {
+          await ctx.sb.from("acesso_alertas").insert({
+            evento_id: evento?.id,
+            tipo: "chegada_responsavel",
+            pessoa_nome: pessoa.nome,
+            aluno_nome: perm.aluno_nome,
+            turma,
+            mensagem: `${pessoa.nome} (${perm.parentesco || "responsavel"}) chegou para buscar ${perm.aluno_nome}.`,
+            destinatario_tipo: "professora",
+            destinatario_id: professoraId,
+          });
+        }
+      }
+    }
   }
 
-  if (action === 'add') {
-    const email: string = (body.email || '').toLowerCase().trim()
-    const nome: string  = (body.nome || '').trim()
-    if (!email) return json({ error: 'E-mail obrigatório' }, 400)
-    const { error } = await sb.from('usuarios_autorizados')
-      .insert({ email, nome: nome || null, criado_por: nomeGerente })
-    if (error) return json({ error: error.code === '23505' ? 'E-mail já cadastrado.' : error.message }, 400)
-    return json({ ok: true })
+  // ── FUNCIONARIO: just log event, no special alert ───────
+  // (already logged above as acesso_eventos)
+
+  return successResponse({ ok: true, recognized: true, pessoa_nome: pessoa.nome, direcao });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  EVENT QUERIES (authGerenteOrSecretaria)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_eventos_list", authGerenteOrSecretaria, async (ctx) => {
+  const { data_inicio, data_fim, pessoa_tipo, direcao, limit: lim } = ctx.body as Any;
+  let q = ctx.sb.from("acesso_eventos").select("*, acesso_dispositivos(nome, localizacao)")
+    .order("criado_em", { ascending: false })
+    .limit(lim || 100);
+
+  if (pessoa_tipo) q = q.eq("pessoa_tipo", pessoa_tipo);
+  if (direcao) q = q.eq("direcao", direcao);
+  if (data_inicio) q = q.gte("criado_em", `${data_inicio}T00:00:00`);
+  if (data_fim) q = q.lte("criado_em", `${data_fim}T23:59:59`);
+
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_presenca_list", authGerenteOrSecretaria, async (ctx) => {
+  const { data: dataFiltro, turma, status } = ctx.body as Any;
+  const hoje = dataFiltro || new Date().toISOString().split("T")[0];
+
+  let q = ctx.sb.from("acesso_presenca").select("*").eq("data", hoje).order("aluno_nome");
+  if (status) q = q.eq("status", status);
+
+  const { data } = await q;
+
+  // If turma filter, we need to cross-reference with alunos
+  if (turma && data) {
+    const alunoIds = data.map((p: Any) => p.aluno_id);
+    if (alunoIds.length > 0) {
+      const { data: alunos } = await ctx.sb.from("alunos").select("id, serie").in("id", alunoIds);
+      const alunoSerie = new Map((alunos ?? []).map((a: Any) => [a.id, a.serie]));
+      const filtered = data.filter((p: Any) => alunoSerie.get(p.aluno_id) === turma);
+      return successResponse(filtered);
+    }
   }
 
-  if (action === 'remove') {
-    const { id } = body
-    const { error } = await sb.from('usuarios_autorizados').delete().eq('id', id)
-    if (error) return json({ error: error.message }, 400)
-    return json({ ok: true })
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_alertas_list", authGerenteOrSecretaria, async (ctx) => {
+  const { lido, limit: lim } = ctx.body as Any;
+  let q = ctx.sb.from("acesso_alertas").select("*")
+    .order("lido", { ascending: true })
+    .order("criado_em", { ascending: false })
+    .limit(lim || 50);
+
+  if (lido !== undefined && lido !== null) q = q.eq("lido", lido);
+
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_alerta_marcar_lido", authGerenteOrSecretaria, async (ctx) => {
+  const { id, ids } = ctx.body as Any;
+  if (ids && Array.isArray(ids)) {
+    await ctx.sb.from("acesso_alertas").update({ lido: true }).in("id", ids);
+  } else if (id) {
+    await ctx.sb.from("acesso_alertas").update({ lido: true }).eq("id", id);
+  } else {
+    throw new AppError("VALIDATION_FAILED", "id ou ids obrigatório.");
   }
+  return successResponse({ ok: true });
+});
 
-  if (action === 'aprovar') {
-    const { id } = body
-    const { data: sol } = await sb
-      .from('solicitacoes_acesso').select('*').eq('id', id).maybeSingle()
-    if (!sol) return json({ error: 'Solicitação não encontrada.' }, 404)
+router.on("acesso_dashboard", authGerenteOrSecretaria, async (ctx) => {
+  const hoje = new Date().toISOString().split("T")[0];
 
-    // adiciona aos autorizados (ignora duplicata)
-    await sb.from('usuarios_autorizados').insert({
-      email: sol.email, nome: sol.nome, criado_por: nomeGerente
-    }).then(() => {})
+  // Alunos presentes hoje
+  const { data: presentes } = await ctx.sb.from("acesso_presenca")
+    .select("id", { count: "exact" }).eq("data", hoje).eq("status", "presente");
 
-    // atualiza status
-    await sb.from('solicitacoes_acesso').update({
-      status: 'aprovado',
-      processado_em: new Date().toISOString(),
-      processado_por: nomeGerente,
-    }).eq('id', id)
+  // Alunos que saíram
+  const { data: sairam } = await ctx.sb.from("acesso_presenca")
+    .select("id", { count: "exact" }).eq("data", hoje).eq("status", "saiu");
 
-    // envia e-mail ao responsável
-    await sendEmail(
-      [sol.email],
-      `Acesso aprovado — ${escolaNome}`,
-      `
-      <div style="font-family:sans-serif;max-width:560px;margin:auto;">
-        <h2 style="color:${corPrimaria};">Acesso Aprovado! 🎉</h2>
-        <p>Olá, <strong>${sol.nome}</strong>!</p>
-        <p>Sua solicitação de acesso ao formulário da ${escolaNome} foi <strong>aprovada</strong>.</p>
-        <p style="margin:20px 0;">Agora você pode acessar o formulário usando o seu e-mail <strong>${sol.email}</strong> via Magic Link ou Google.</p>
-        <a href="${appUrl}" style="display:inline-block;padding:12px 24px;background:${corPrimaria};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Acessar Formulário</a>
-        <p style="margin-top:24px;font-size:12px;color:#999;">${escolaNome} — sistema de solicitações online.</p>
-      </div>
-      `,
-      cfg
-    )
+  // Total alunos ativos
+  const { count: totalAlunos } = await ctx.sb.from("alunos")
+    .select("id", { count: "exact", head: true }).eq("ativo", true);
 
-    return json({ ok: true })
-  }
+  // Alertas não lidos
+  const { count: alertasNaoLidos } = await ctx.sb.from("acesso_alertas")
+    .select("id", { count: "exact", head: true }).eq("lido", false);
 
-  if (action === 'rejeitar') {
-    const { id } = body
-    const { data: sol } = await sb
-      .from('solicitacoes_acesso').select('*').eq('id', id).maybeSingle()
-    if (!sol) return json({ error: 'Solicitação não encontrada.' }, 404)
+  // Eventos hoje
+  const { count: eventosHoje } = await ctx.sb.from("acesso_eventos")
+    .select("id", { count: "exact", head: true }).gte("criado_em", `${hoje}T00:00:00`);
 
-    await sb.from('solicitacoes_acesso').update({
-      status: 'rejeitado',
-      processado_em: new Date().toISOString(),
-      processado_por: nomeGerente,
-    }).eq('id', id)
+  // Devices online (heartbeat within last 2 minutes)
+  const twoMinAgo = new Date(Date.now() - 120000).toISOString();
+  const { count: devicesOnline } = await ctx.sb.from("acesso_dispositivos")
+    .select("id", { count: "exact", head: true }).eq("ativo", true).gte("ultimo_heartbeat", twoMinAgo);
 
-    await sendEmail(
-      [sol.email],
-      `Solicitação de acesso — ${escolaNome}`,
-      `
-      <div style="font-family:sans-serif;max-width:560px;margin:auto;">
-        <h2 style="color:${corPrimaria};">${escolaNome}</h2>
-        <p>Olá, <strong>${sol.nome}</strong>.</p>
-        <p>Analisamos sua solicitação de acesso ao formulário online e, no momento, não foi possível aprová-la.</p>
-        <p>Em caso de dúvidas, entre em contato diretamente com a escola.</p>
-        <p style="margin-top:24px;font-size:12px;color:#999;">${escolaNome} — sistema de solicitações online.</p>
-      </div>
-      `,
-      cfg
-    )
+  const { count: devicesTotal } = await ctx.sb.from("acesso_dispositivos")
+    .select("id", { count: "exact", head: true }).eq("ativo", true);
 
-    return json({ ok: true })
-  }
+  return successResponse({
+    presentes: presentes?.length ?? 0,
+    sairam: sairam?.length ?? 0,
+    ausentes: (totalAlunos ?? 0) - (presentes?.length ?? 0) - (sairam?.length ?? 0),
+    total_alunos: totalAlunos ?? 0,
+    alertas_nao_lidos: alertasNaoLidos ?? 0,
+    eventos_hoje: eventosHoje ?? 0,
+    devices_online: devicesOnline ?? 0,
+    devices_total: devicesTotal ?? 0,
+  });
+});
 
-  return json({ error: 'Ação desconhecida' }, 400)
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG CRUD
+// ═══════════════════════════════════════════════════════════════
 
-  } catch (error) {
-    console.error('[acesso] Unhandled error:', error)
-    captureException(error instanceof Error ? error : new Error(String(error)), { function: 'acesso' }).catch(() => {})
-    return json({ error: 'Erro interno do servidor.' }, 500)
-  }
-})
+router.on("acesso_config_list", authGerenteOrSecretaria, async (ctx) => {
+  const { data } = await ctx.sb.from("acesso_config").select("*").order("chave");
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_config_save", authGerente, async (ctx) => {
+  const { chave, valor, descricao } = ctx.body as Any;
+  if (!chave || valor === undefined) throw new AppError("VALIDATION_FAILED", "chave e valor são obrigatórios.");
+
+  const { data, error } = await ctx.sb.from("acesso_config").upsert(
+    { chave, valor: String(valor), descricao: descricao || null },
+    { onConflict: "chave" }
+  ).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  PROFESSORA ACTIONS
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_alertas_professora", authProfessora, async (ctx) => {
+  const professoraId = ctx.user?.id;
+  if (!professoraId) throw new AppError("AUTH_REQUIRED", "Professora ID não encontrado.");
+
+  const { data } = await ctx.sb.from("acesso_alertas")
+    .select("*")
+    .eq("destinatario_tipo", "professora")
+    .eq("destinatario_id", professoraId)
+    .eq("lido", false)
+    .order("criado_em", { ascending: false })
+    .limit(20);
+
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_presenca_turma", authProfessora, async (ctx) => {
+  const professoraId = ctx.user?.id;
+  if (!professoraId) throw new AppError("AUTH_REQUIRED", "Professora ID não encontrado.");
+
+  // Get professora's serie_id
+  const { data: prof } = await ctx.sb.from("professoras")
+    .select("serie_id").eq("id", professoraId).single();
+
+  if (!prof?.serie_id) return successResponse([]);
+
+  // Get alunos from that serie
+  const { data: alunos } = await ctx.sb.from("alunos")
+    .select("id, nome").eq("serie_id", prof.serie_id).eq("ativo", true);
+
+  if (!alunos?.length) return successResponse([]);
+
+  const hoje = new Date().toISOString().split("T")[0];
+  const alunoIds = alunos.map((a: Any) => a.id);
+
+  const { data: presenca } = await ctx.sb.from("acesso_presenca")
+    .select("*").eq("data", hoje).in("aluno_id", alunoIds);
+
+  // Merge: for each aluno, attach their presence status
+  const presMap = new Map((presenca ?? []).map((p: Any) => [p.aluno_id, p]));
+  const resultado = alunos.map((a: Any) => {
+    const p = presMap.get(a.id);
+    return {
+      aluno_id: a.id,
+      aluno_nome: a.nome,
+      status: p?.status || "ausente",
+      hora_entrada: p?.hora_entrada || null,
+      hora_saida: p?.hora_saida || null,
+      entrada_metodo: p?.entrada_metodo || null,
+      saida_metodo: p?.saida_metodo || null,
+    };
+  });
+
+  return successResponse(resultado);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Server
+// ═══════════════════════════════════════════════════════════════
+serve(async (req) => {
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  return router.handle(req, sb);
+});

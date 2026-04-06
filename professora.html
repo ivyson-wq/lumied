@@ -1144,6 +1144,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     checkGerenteAccess();
     verificarCienciasPendentes();
     verificarQuizPendente();
+    startAcessoPolling();
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  ALERTAS DE ACESSO — Polling em tempo real
+  // ═══════════════════════════════════════════════════
+  async function startAcessoPolling() {
+    setInterval(async () => {
+      try {
+        const d = await callApi({ action: 'acesso_alertas_professora' });
+        const alerts = d.data || d || [];
+        if (!Array.isArray(alerts) || !alerts.length) return;
+        const container = document.getElementById('acessoAlertsBanner') || createAcessoBanner();
+        container.innerHTML = alerts.map(a => `
+          <div style="background:#fff3e0;border:1px solid #f6a623;border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:13px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:24px;">${a.tipo === 'chegada_responsavel' ? '🚗' : a.tipo === 'entrada_aluno' ? '✅' : '🚪'}</span>
+            <div>
+              <strong>${a.pessoa_nome}</strong> ${a.mensagem}
+              ${a.aluno_nome ? ' — <strong>' + a.aluno_nome + '</strong>' : ''}
+              <div style="font-size:11px;color:#888;margin-top:2px;">${new Date(a.criado_em).toLocaleTimeString('pt-BR')}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch(_) {}
+    }, 10000);
+  }
+
+  function createAcessoBanner() {
+    const el = document.createElement('div');
+    el.id = 'acessoAlertsBanner';
+    el.style.cssText = 'position:fixed;top:60px;right:16px;width:350px;max-height:400px;overflow-y:auto;z-index:500;';
+    document.body.appendChild(el);
+    return el;
   }
 
   // ═══════════════════════════════════════════════════
