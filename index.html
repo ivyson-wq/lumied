@@ -1287,6 +1287,7 @@ body.has-bottomnav{padding-bottom:0;}
   }
 
   function showLoginWall() {
+    document.getElementById('loginScreenWrap').style.display = 'flex';
     document.getElementById('loginWall').style.display = 'block';
     document.getElementById('userBar').style.display = 'none';
     document.getElementById('formWrap').style.display = 'none';
@@ -1329,11 +1330,15 @@ body.has-bottomnav{padding-bottom:0;}
         });
         const sols = await r2.json();
         if (!sols.length) {
-          // Email não cadastrado — mostrar tela de solicitação
+          // Email não cadastrado — mostrar tela de acesso negado/solicitação
+          // SignOut para evitar loop (onAuthStateChange redetectaria sessão)
+          await sb.auth.signOut();
+          currentUser = null;
+          showAccessDenied(email);
+          document.getElementById('loginScreenWrap').style.display = 'none';
           document.getElementById('loginWall').style.display = 'none';
           document.getElementById('formWrap').style.display = 'none';
           document.getElementById('accessPending').style.display = 'block';
-          document.querySelector('.site-header')?.classList.add('compact');
           return;
         }
       }
@@ -1363,6 +1368,7 @@ body.has-bottomnav{padding-bottom:0;}
       document.getElementById('nomeResp').nextElementSibling.style.display = 'none';
     }
 
+    document.getElementById('loginScreenWrap').style.display = 'none';
     document.getElementById('loginWall').style.display   = 'none';
     document.getElementById('formWrap').style.display    = 'block';
     document.getElementById('pickupCard').style.display  = 'block';
