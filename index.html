@@ -2375,11 +2375,12 @@ body.has-bottomnav{padding-bottom:56px;}
     stopPickupPoll();
     pickupPollTimer = setInterval(async () => {
       if (!pickupAtivoId) { stopPickupPoll(); return; }
+      if (document.hidden) return; // não pollar com aba inativa
       const hist = await callDiplomas({ action: 'pickup_meus_hoje' });
       const ativos = (hist.data || []).filter(n => n.status === 'a_caminho');
       if (ativos.length === 0) { pickupAtivoId = null; stopPickupPoll(); loadPickupCard(); }
       else renderPickupHistorico(hist.data || []);
-    }, 15000);
+    }, 30000);
   }
 
   function stopPickupPoll() {

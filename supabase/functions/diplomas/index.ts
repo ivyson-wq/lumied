@@ -1161,7 +1161,7 @@ Deno.serve(async (req) => {
     if (action === 'pickup_meus_hoje') {
       const today = new Date().toISOString().split('T')[0]
       const { data } = await sb
-        .from('pickup_notificacoes').select('*')
+        .from('pickup_notificacoes').select('id, crianca_nome, status, saiu_em, eta_minutos, modo_transporte')
         .eq('email_pai', emailPai)
         .gte('saiu_em', today + 'T00:00:00Z')
         .order('saiu_em', { ascending: false })

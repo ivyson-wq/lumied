@@ -3119,11 +3119,19 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     restoreMiniSidebar();
     renderTopbarPills();
     renderBottomBar();
-    // Poll a cada 15 segundos
-    pollInterval = setInterval(()=>{
-      if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
-      if(document.getElementById('panelDashAtiv').classList.contains('active')) loadAtivDashboard();
-    }, 15000);
+    // Poll a cada 60 segundos (pausa quando aba está inativa)
+    function startPoll() {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(()=>{
+        if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
+        if(document.getElementById('panelDashAtiv').classList.contains('active')) loadAtivDashboard();
+      }, 60000);
+    }
+    startPoll();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { clearInterval(pollInterval); pollInterval = null; }
+      else { loadData(); startPoll(); }
+    });
   }
 
   document.addEventListener('keydown', e => { if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none') doLogin(); });

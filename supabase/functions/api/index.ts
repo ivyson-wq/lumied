@@ -639,7 +639,9 @@ serve(async (req: Request) => {
 
   // ── Solicitações ──────────────────────────────────────────────
   if (action === "solicitacoes_list") {
-    const { data } = await admin.from("solicitacoes").select("*").order("criado_em", { ascending: false });
+    const limite = Number(body.limite) || 100;
+    const offset = Number(body.offset) || 0;
+    const { data } = await admin.from("solicitacoes").select("id, nome, email, telefone, nome_crianca, turno, status, criado_em").order("criado_em", { ascending: false }).range(offset, offset + limite - 1);
     return ok(data ?? []);
   }
   if (action === "solicitacoes_update_turno") {

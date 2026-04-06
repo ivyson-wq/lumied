@@ -477,7 +477,7 @@ serve(async (req: Request) => {
     const blocked = requireModulo(enabledModules, "frequencia"); if (blocked) return blocked;
     const { chamada_id } = body as any;
     if (!chamada_id) return err("chamada_id obrigatório.");
-    const { data } = await sb.from("frequencia_registros").select("*").eq("chamada_id", chamada_id).order("aluno_nome");
+    const { data } = await sb.from("frequencia_registros").select("id, chamada_id, aluno_email, aluno_nome, status, observacao").eq("chamada_id", chamada_id).order("aluno_nome");
     return ok(data ?? []);
   }
 
