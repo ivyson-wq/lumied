@@ -1391,16 +1391,66 @@ body.has-bottomnav{padding-bottom:0;}
 
   // ── Módulos habilitados (feature gating) ──
   window._enabledModules = null;
+  // Todos os itens possíveis da bottom nav (ordem de prioridade)
+  const ALL_NAV_ITEMS = [
+    { tab: 'inicio', icon: '🏠', label: 'Início', modulo: null },
+    { tab: 'diaadia', icon: '📅', label: 'Dia a Dia', modulo: 'agenda_digital' },
+    { tab: 'boletim', icon: '📝', label: 'Boletim', modulo: 'notas' },
+    { tab: 'boletos', icon: '💰', label: 'Boletos', modulo: 'financeiro' },
+    { tab: 'solicitar', icon: '🕐', label: 'Turno', modulo: 'turno' },
+    { tab: 'atividades', icon: '🎯', label: 'Atividades', modulo: 'atividades' },
+    { tab: 'achados', icon: '🔍', label: 'Achados', modulo: 'achados' },
+  ];
+  const MAX_BOTTOM_ITEMS = 5; // máximo na barra (incluindo "Mais")
+
   async function loadModulosHabilitadosPais() {
     try {
       const d = await call({ action: 'modulos_habilitados' });
       if (d && Array.isArray(d.modulos)) {
         window._enabledModules = new Set(d.modulos);
+        // Esconder seções/painéis de módulos desativados
         document.querySelectorAll('[data-modulo]').forEach(el => {
+          if (el.closest('#bottomNav') || el.closest('#paisMoreMenu')) return; // nav tratado separado
           el.style.display = window._enabledModules.has(el.dataset.modulo) ? '' : 'none';
         });
+        // Reconstruir bottom nav
+        rebuildBottomNav();
       }
     } catch(e) { console.warn('Feature gating não disponível:', e); }
+  }
+
+  function rebuildBottomNav() {
+    const enabled = ALL_NAV_ITEMS.filter(it => !it.modulo || window._enabledModules?.has(it.modulo));
+    const nav = document.getElementById('bottomNav');
+    const moreMenu = document.getElementById('paisMoreMenu');
+    if (!nav) return;
+
+    if (enabled.length <= MAX_BOTTOM_ITEMS) {
+      // Tudo cabe na barra — sem botão "Mais"
+      nav.innerHTML = enabled.map((it, i) =>
+        `<button class="bnav-item${i === 0 ? ' active' : ''}" onclick="switchTab('${it.tab}')" data-tab="${it.tab}">
+          <span class="bnav-icon">${it.icon}</span><span class="bnav-label">${it.label}</span>
+        </button>`
+      ).join('');
+      if (moreMenu) moreMenu.style.display = 'none';
+    } else {
+      // Primeiros 4 na barra + "Mais"
+      const barItems = enabled.slice(0, MAX_BOTTOM_ITEMS - 1);
+      const moreItems = enabled.slice(MAX_BOTTOM_ITEMS - 1);
+      nav.innerHTML = barItems.map((it, i) =>
+        `<button class="bnav-item${i === 0 ? ' active' : ''}" onclick="switchTab('${it.tab}')" data-tab="${it.tab}">
+          <span class="bnav-icon">${it.icon}</span><span class="bnav-label">${it.label}</span>
+        </button>`
+      ).join('') + `<button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn">
+        <span class="bnav-icon">☰</span><span class="bnav-label">Mais</span>
+      </button>`;
+      if (moreMenu) {
+        const grid = moreMenu.querySelector('div');
+        if (grid) grid.innerHTML = moreItems.map(it =>
+          `<button class="bnav-more-item" onclick="switchTab('${it.tab}');closePaisMore()"><span>${it.icon}</span>${it.label}</button>`
+        ).join('');
+      }
+    }
   }
 
   // ── TURNO ─────────────────────────────────────────────
