@@ -610,8 +610,8 @@ O sistema cria automaticamente:
 - **IMPORTANTE**: `createClient()` em `index.html` DEVE ser chamado sem opções de `auth` — qualquer opção custom causa crash quando há `#access_token` ou `?code=` na URL de retorno do OAuth.
 
 ### Cloudflare Workers
-- Account ID: `d0d79afc2b86f65653d10dbef3ceaee7`
-- API Token: `cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e`
+- Account ID: stored in env `CLOUDFLARE_ACCOUNT_ID` (do NOT commit)
+- API Token: stored in env `CLOUDFLARE_API_TOKEN` (do NOT commit)
 
 | Worker | URL | Cron | Descrição |
 |--------|-----|------|-----------|
@@ -622,7 +622,7 @@ O sistema cria automaticamente:
 **Deploy Workers:**
 ```bash
 cd whatsapp-gateway  # ou whatsapp-worker
-CLOUDFLARE_API_TOKEN=cfut_6zo3yVZSvAF8GFmGlRVgFpzPKJYw9oj7vYKmBPQOd1b0dd3e CLOUDFLARE_ACCOUNT_ID=d0d79afc2b86f65653d10dbef3ceaee7 npx wrangler deploy
+CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACCOUNT_ID npx wrangler deploy
 ```
 
 ### Vercel
