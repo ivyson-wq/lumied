@@ -1181,7 +1181,7 @@ serve(async (req: Request) => {
 
   // ── Famílias (CRUD) ─────────────────────────────────────
   if (action === "familias_list") {
-    const { data } = await admin.from("familias").select("*").order("nome_aluno");
+    const { data } = await admin.from("familias").select("cpf, nome_responsavel, nome_aluno, email, serie, escola_id, atualizado_em").order("nome_aluno");
     return ok(data ?? []);
   }
   if (action === "familias_update") {
@@ -1202,9 +1202,13 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
   if (action === "familias_delete") {
-    const { cpf } = body as { cpf: string };
-    if (!cpf) return err("CPF obrigatório.");
-    await admin.from("familias").delete().eq("cpf", cpf);
+    const { cpf, email } = body as { cpf?: string; email?: string };
+    if (!cpf && !email) return err("CPF ou email obrigatório.");
+    if (cpf) {
+      await admin.from("familias").delete().eq("cpf", cpf);
+    } else {
+      await admin.from("familias").delete().eq("email", email);
+    }
     return ok({ success: true });
   }
 

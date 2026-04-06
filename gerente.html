@@ -8141,7 +8141,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             </td>
             <td style="padding:11px 14px;border-bottom:1px solid #f5f0ea;text-align:right;white-space:nowrap;">
               <button class="action-btn" onclick="abrirEditFamilia('${esc(r.cpf)}')" style="margin-right:4px;" title="Editar">✏️</button>
-              <button class="action-btn del" onclick="deleteFamilia('${esc(r.cpf)}','${esc(r.nome_aluno)}')">🗑</button>
+              <button class="action-btn del" onclick="deleteFamilia('${esc(r.cpf||'')}','${esc(r.nome_aluno)}','${esc(r.email||'')}')">🗑</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -8193,9 +8193,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     await loadFamiliasPanel();
   }
 
-  async function deleteFamilia(cpf, nome) {
+  async function deleteFamilia(cpf, nome, email) {
     if (!await _lumiedConfirm('Remover ' + nome + ' da lista de famílias?')) return;
-    await api({ action: 'familias_delete', cpf });
+    const payload = { action: 'familias_delete' };
+    if (cpf) payload.cpf = cpf; else payload.email = email;
+    await api(payload);
     await loadFamiliasPanel();
   }
 
