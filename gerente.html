@@ -4392,14 +4392,17 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         const c = PAPEL_COLORS[r] || '#666';
         return `<span class="role-badge" style="background:${c}15;color:${c};border-color:${c}30;">${PAPEIS[r]||r}</span>`;
       }).join(' ');
-      return `<div class="list-row">
+      return `<div class="list-row" style="flex-wrap:wrap;row-gap:8px;">
         <div class="list-avatar" style="background:${cor}20;color:${cor};">${(u.nome||'?')[0].toUpperCase()}</div>
-        <div class="lr-main"><strong>${esc(u.nome||'—')}</strong><span>${esc(u.email)} · ${new Date(u.criado_em).toLocaleDateString('pt-BR')}${u.serie_nome ? ' · ' + esc(u.serie_nome) : ''}</span></div>
+        <div class="lr-main" style="min-width:180px;"><strong>${esc(u.nome||'—')}</strong><span>${esc(u.email)} · ${new Date(u.criado_em).toLocaleDateString('pt-BR')}${u.serie_nome ? ' · ' + esc(u.serie_nome) : ''}</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${badges}</div>
+        </div>
         ${turmaSelect}
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">${badges}</div>
-        <button class="action-btn" onclick="openPermissoes('${u.id}','${esc(u.nome||u.email)}','${u.papeis?u.papeis[0]:u.papel}')" title="Permissões" style="font-size:14px;">🔐</button>
-        <button class="action-btn" onclick="openEditPapeis('${u.id}')" title="Editar papéis" style="font-size:14px;">✏️</button>
-        ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
+        <div style="display:flex;gap:4px;align-items:center;margin-left:auto;">
+          <button class="action-btn" onclick="openPermissoes('${u.id}','${esc(u.nome||u.email)}','${u.papeis?u.papeis[0]:u.papel}')" title="Permissões" style="font-size:14px;">🔐</button>
+          <button class="action-btn" onclick="openEditPapeis('${u.id}')" title="Editar papéis" style="font-size:14px;">✏️</button>
+          ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
+        </div>
       </div>`;
     }).join('');
     // Seta valores dos selects de turma
@@ -4436,6 +4439,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function setEquipeSerie(email, serie_id) {
     const d = await api({ action:'usuarios_set_serie', email, serie_id: serie_id || null });
     if (d.error) showToast('Erro: ' + d.error, 'error');
+    else showToast('Turma atualizada!', 'success');
   }
   async function deleteEquipeMember(id, nome) {
     if (!await _lumiedConfirm('Remover "'+nome+'" da equipe?')) return;
