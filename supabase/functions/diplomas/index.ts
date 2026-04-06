@@ -90,12 +90,18 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   }
   // Fallback: sessão unificada
   const user = await getUsuario(sb, token)
-  if (user && user.papel === 'secretaria') {
+  if (!user) return null
+  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
+  if (roles.includes('secretaria') || roles.includes('comercial')) {
     const { data: sec } = await sb
       .from('secretarias').select('id, nome, email, features')
       .ilike('email', user.email).maybeSingle()
     if (sec) return { ...sec, features: sec.features || ['atestados'] }
-    return { id: user.id, nome: user.nome, email: user.email, features: ['atestados'] }
+    // Constrói features baseado nos papéis
+    const features: string[] = []
+    if (roles.includes('secretaria')) features.push('atestados')
+    if (roles.includes('comercial')) { features.push('crm', 'templates', 'metas') }
+    return { id: user.id, nome: user.nome, email: user.email, features: features.length ? features : ['atestados'] }
   }
   return null
 }
@@ -108,7 +114,7 @@ async function getUsuario(sb: ReturnType<typeof createClient>, token: string) {
     .eq('token', token).maybeSingle()
   if (!sessao || new Date(sessao.expira_em) < new Date()) return null
   const { data } = await sb
-    .from('usuarios').select('id, nome, email, papel')
+    .from('usuarios').select('id, nome, email, papel, papeis')
     .eq('id', sessao.usuario_id).maybeSingle()
   return data ?? null
 }
