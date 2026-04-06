@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/lumied-design.css">
 <link rel="stylesheet" href="/themes.css">
 <style>
-:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;}
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);padding-bottom:80px;}
 .topbar{background:#1c1712;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
@@ -91,8 +91,8 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
 </div>
 <style>@media(max-width:768px){.login-photo-side{display:none !important;}#loginWall>div:last-child{width:100% !important;}}</style>
 
-<div id="appWrap" style="display:none;">
-  <div class="topbar">
+<div id="appWrap" style="display:none;" role="main">
+  <div class="topbar" role="banner">
     <div class="topbar-brand">
       <img src="/lumied-logo-branco.png" class="leaf" style="height:36px;object-fit:contain;" alt="Lumied">
       <div><h1>Maple Bear</h1><span>Portal do Aluno</span></div>
@@ -136,7 +136,7 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
     </div>
   </div>
 
-  <nav class="bnav">
+  <nav class="bnav" role="navigation" aria-label="Menu principal">
     <button class="bnav-item active" onclick="switchTab('notas',this)"><span class="bnav-icon">📝</span>Notas</button>
     <button class="bnav-item" onclick="switchTab('frequencia',this)"><span class="bnav-icon">✅</span>Frequência</button>
     <button class="bnav-item" onclick="switchTab('provas',this)"><span class="bnav-icon">📋</span>Provas</button>

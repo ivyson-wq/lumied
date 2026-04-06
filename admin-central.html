@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--purple:#6b3fa0;--purple-dark:#562f87;--purple-light:rgba(107,63,160,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#7a7169;--green:#2d7a3a;--blue:#1a6bb5;--red:#C8102E;}
+:root{--purple:#6b3fa0;--purple-dark:#562f87;--purple-light:rgba(107,63,160,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--blue:#1a6bb5;--red:#C8102E;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
@@ -202,7 +202,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
 <!-- APP -->
 <div id="appShell">
-  <nav class="sidebar">
+  <nav class="sidebar" role="navigation" aria-label="Menu principal">
     <div class="sb-brand">
       <img src="/lumied-logo-branco.png" class="sb-leaf" style="height:28px;object-fit:contain;" alt="Lumied">
       <h1>Lumied</h1>
@@ -223,8 +223,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     </div>
   </nav>
 
-  <div class="main">
-    <div class="topbar">
+  <div class="main" role="main">
+    <div class="topbar" role="banner">
       <h2 id="panelTitle">Dashboard</h2>
     </div>
     <div class="content">
@@ -375,7 +375,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 </div>
 
 <!-- MODAL: RESPONDER TICKET -->
-<div class="modal-overlay" id="modalResponderTicket">
+<div class="modal-overlay" id="modalResponderTicket" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:550px;">
     <h3>Responder Ticket</h3>
     <p class="msub" id="ticketResumo"></p>

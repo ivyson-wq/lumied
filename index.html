@@ -19,10 +19,10 @@
 <link rel="stylesheet" href="/lumied-design.css">
 <link rel="stylesheet" href="/themes.css">
 <script src="/dist/pais/index.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-0VpB0wAYDdhWCEv3+IjT0Z9Kgpvszkf70RFX3ro7l4QR5nywxsMaOpmvZKsfRF8I" crossorigin="anonymous"></script>
 <script src="/webauthn-client.js"></script>
 <style>
-:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.07);--cream:#f8f5f0;--border:#e6ddd3;--text:#1a1a1a;--muted:#7a7169;--white:#fff;}
+:root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.07);--cream:#f8f5f0;--border:#e6ddd3;--text:#1a1a1a;--muted:#5a5249;--white:#fff;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
 
@@ -340,7 +340,7 @@ body.has-bottomnav{padding-bottom:56px;}
 <div id="userBar">
   <div class="ub-inner">
     <div class="ub-info">
-      <img id="ubAvatar" class="ub-avatar" alt="">
+      <img id="ubAvatar" class="ub-avatar" alt="" loading="lazy">
       <div id="ubAvatarFb" class="ub-avatar-fb">?</div>
       <div>
         <div class="ub-name" id="ubName">—</div>
@@ -499,7 +499,7 @@ body.has-bottomnav{padding-bottom:56px;}
     </div>
 
     <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
-      <img src="/lumied-logo-preto.png" style="height:32px;object-fit:contain;" alt="Lumied">
+      <img src="/lumied-logo-preto.png" style="height:32px;object-fit:contain;" alt="Lumied" loading="lazy">
     </div>
   </div>
 </div>
@@ -540,7 +540,7 @@ body.has-bottomnav{padding-bottom:56px;}
   </div>
 </div>
 
-<div class="form-wrap" id="formWrap">
+<div class="form-wrap" id="formWrap" role="main">
 
   <!-- GREETING -->
   <div class="greeting" id="greetingBar" style="display:none;">
@@ -814,7 +814,7 @@ body.has-bottomnav{padding-bottom:56px;}
 </div><!-- /formWrap -->
 
 <!-- BOTTOM NAV -->
-<nav class="bottom-nav" id="bottomNav">
+<nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Menu principal">
   <button class="bnav-item active" onclick="switchTab('inicio')" data-tab="inicio">
     <span class="bnav-icon">🏠</span>
     <span class="bnav-label">Início</span>
@@ -831,7 +831,7 @@ body.has-bottomnav{padding-bottom:56px;}
     <span class="bnav-icon">💰</span>
     <span class="bnav-label">Boletos</span>
   </button>
-  <button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn">
+  <button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn" aria-label="Menu">
     <span class="bnav-icon">☰</span>
     <span class="bnav-label">Mais</span>
   </button>
@@ -986,7 +986,7 @@ body.has-bottomnav{padding-bottom:56px;}
     let container = document.getElementById('toastContainer');
     if (!container) {
       container = document.createElement('div');
-      container.id = 'toastContainer';
+      container.id = 'toastContainer'; container.setAttribute('role','alert'); container.setAttribute('aria-live','polite');
       container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;max-width:380px;';
       document.body.appendChild(container);
     }
@@ -1537,7 +1537,7 @@ body.has-bottomnav{padding-bottom:56px;}
         `<button class="bnav-item${i === 0 ? ' active' : ''}" onclick="switchTab('${it.tab}')" data-tab="${it.tab}">
           <span class="bnav-icon">${it.icon}</span><span class="bnav-label">${it.label}</span>
         </button>`
-      ).join('') + `<button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn">
+      ).join('') + `<button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn" aria-label="Menu">
         <span class="bnav-icon">☰</span><span class="bnav-label">Mais</span>
       </button>`;
       if (moreMenu) {
