@@ -30,11 +30,12 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 
 | Portal | Arquivo | Público | Descrição |
 |--------|---------|---------|-----------|
-| Pais | `index.html` | Famílias | Login Google/Magic Link/biometria. Pickup, boletim, agenda digital, boletos |
+| Pais | `index.html` | Famílias | Login split-screen (logo à esquerda em fundo vermelho + form à direita). Google/Magic Link/biometria. Pickup, boletim, agenda digital, boletos |
 | Gerente | `gerente.html` | Direção | ~45 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação |
 | Professora | `professora.html` | Docentes | Chamada, notas, agenda digital, diplomas, materiais, growth plan |
 | Secretaria | `secretaria.html` | Secretaria | Validação de atestados |
-| Admin | `admin.html` | Superadmin (SaaS) | Dashboard, escolas, planos, módulos, status, LGPD, tickets, admins |
+| Admin Escola | `admin.html` | Staff Lumied + Admin Escola | Dashboard escola, meu plano, adicionais, módulos, tickets, LGPD, config, API, admins |
+| Admin Central | `admin-central.html` | Staff Lumied | Dashboard SaaS, escolas, staff, audit log, tickets, onboarding |
 | Aluno | `aluno.html` | Alunos | Notas, frequência, provas, calendário |
 | Hub | `area-restrita.html` | Staff | Seletor de portais |
 
@@ -66,7 +67,9 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 | `send-email` | Legado | Envio de emails (branding dinâmico) |
 | `daily-digest` | Standalone | Resumo diário por aluno |
 
-**Deploy:** `supabase functions deploy <nome> --no-verify-jwt --project-ref brgorknbrjlfwvrrlwxj --import-map supabase/functions/deno.json`
+**Deploy:** `supabase functions deploy <nome> --no-verify-jwt --import-map supabase/functions/deno.json`
+
+> Nota: `--project-ref` não é necessário quando o projeto está linkado (`supabase link`).
 
 ---
 
@@ -99,23 +102,28 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 
 ### Painel Admin da Escola (`admin.html`)
 
-**URL:** `escola.lumied.com.br/admin.html` — Config por escola, só staff Lumied.
+**URL:** `escola.lumied.com.br/admin.html` — Painel por escola.
+Acesso: staff Lumied (login com credenciais staff) ou admin da escola.
 Sem link em nenhum portal — acesso apenas via URL direta.
+Detecta escola automaticamente pelo subdomínio (`window.location.hostname`).
 
-Painel de configuração da escola com 8 seções:
+Painel de configuração da escola com 9 seções:
 
 | Seção | Descrição |
 |-------|-----------|
-| **Dashboard** | KPIs (escolas ativas, total alunos, MRR, tickets abertos), alertas, top módulos, tabela uso por escola |
-| **Escolas** | CRUD de escolas com subdomínio, Supabase URL/Key, barras de uso, status (ativo/expirando/limite) |
-| **Planos** | Gestão de planos de assinatura com preços e módulos incluídos |
-| **Módulos** | Visão geral dos 38 módulos disponíveis |
-| **Status** | Health check de cada escola (latência DB/Storage) |
-| **LGPD** | Solicitações de dados (exportar/excluir/retificar) com aprovação/recusa |
-| **Tickets** | Gestão de tickets de suporte com resposta e fechamento |
-| **Admins** | CRUD de superadmins da plataforma |
+| **Dashboard** | KPIs da escola (plano atual, módulos ativos, tickets abertos, decisões pendentes), alertas (plano expirando, limites), barras de uso |
+| **Meu Plano** | Plano atual com preço/expiração, uso vs limites, grid comparativo dos 5 tiers com botões Upgrade/Downgrade, decisões pendentes |
+| **Adicionais** | Extras opcionais (WhatsApp msgs, storage, usuários) — contratar/cancelar |
+| **Módulos** | Visão read-only dos módulos ativos desta escola (agrupados por categoria) |
+| **Tickets** | Tickets de suporte filtrados por esta escola |
+| **LGPD** | Solicitações LGPD filtradas por esta escola |
+| **Configurações** | Edição das escola_config (nome, cores, URLs, etc.) agrupadas por categoria |
+| **API & Integrações** | URLs do Supabase, Edge Functions, portais da escola (read-only com botão copiar) |
+| **Admins** | CRUD de admins desta escola |
 
-**Endpoints admin:** `dashboard_stats`, `escola_uso_list`, `lgpd_solicitacoes_list`, `lgpd_solicitacoes_process`, `system_health`, `tickets_list`, `ticket_respond`, `ticket_close` + todos os CRUD originais.
+**Endpoints escola-scoped:** `escola_dashboard`, `escola_plano_info`, `escola_solicitar_upgrade`, `escola_solicitar_downgrade`, `escola_extras_list`, `escola_extra_contratar`, `escola_extra_cancelar`, `escola_config_list`, `escola_config_update`, `escola_api_info` + `escola_modulos_get`, `tickets_list`, `lgpd_solicitacoes_list`.
+
+**Auth dual:** `authAdmin` aceita tanto `_token` (admin_sessoes/admins) quanto fallback para `_staff_token` (lumied_staff_sessoes/lumied_staff). `admin_login` tenta admins table primeiro, depois lumied_staff como fallback.
 
 ---
 
@@ -239,6 +247,47 @@ Landing page em `site/index.html` — marca **Lumied**.
 
 ---
 
+## Unificação de Dados (Migrations 109-110)
+
+### Alunos ↔ Famílias (Migration 109)
+- Tabela `familias` é o ponto de entrada de dados (cadastro de famílias)
+- Tabela `alunos` é a tabela normalizada central
+- **Trigger `trg_sync_familia_aluno`**: INSERT/UPDATE em `familias` → sincroniza automaticamente para `alunos`
+- **Trigger `trg_deactivate_aluno`**: DELETE em `familias` → desativa aluno
+- Colunas denormalizadas em `alunos`: `responsavel_nome`, `resp_nome`, `cpf`, `serie`
+
+### Usuários Unificados (Migration 110)
+- Tabela `usuarios` é a fonte canônica (campos: `id, nome, email, senha_hash, papel, tipo, serie_id, series_monitoras, escola_id, ativo`)
+- Tabelas legadas `gerentes`, `professoras`, `secretarias` mantidas para backwards compatibility
+- **Trigger `trg_sync_usuario_legacy`**: INSERT/UPDATE em `usuarios` → sincroniza para tabela legada correspondente
+- Tabela `sessoes` unificada (substitui `gerente_sessoes` + `professora_sessoes` + `secretaria_sessoes`)
+- **Trigger `trg_sync_sessao_legacy`**: INSERT em `sessoes` → sincroniza para tabela de sessão legada
+- 24 tabelas dependentes ganharam coluna `usuario_id` FK para `usuarios` (dados copiados das colunas legadas)
+- Código legado continua funcionando com tabelas antigas via triggers bidirecionais
+
+### Plano de Migração Gradual
+- Fase atual: triggers bidirecionais mantêm tudo sincronizado
+- Próximo passo: migrar edge functions para usar `usuarios`/`sessoes` diretamente
+- Final: remover tabelas legadas e triggers de sincronização
+
+---
+
+## Branding
+
+### Logo Lumied
+- Arquivo: `/lumied-logo.png` (coruja dourada + texto "Lumied" em fundo roxo)
+- Presente em todos os portais: sidebars, topbars, telas de login, footers "Powered by Lumied"
+- Substitui emojis (🍁/🟣) usados anteriormente
+- Escola pode ter logo própria via `escola_config` (chave `escola_logo_url`)
+
+### Onboarding de Logo
+- Campo de upload de logo no formulário de criação de escola (admin-central.html)
+- Aceita URL direta ou upload de arquivo (max 2MB, converte para base64 data URL)
+- Preview em tempo real no formulário
+- Salvo como `escola_logo_url` no `escola_config`
+
+---
+
 ## Segurança
 
 - **RLS** habilitado em 20+ tabelas com policies restritivas
@@ -333,7 +382,7 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 
 ## Banco de Dados
 
-- **103 migrations** (009-103)
+- **110 migrations** (009-110)
 - Migrations relevantes:
   - `085-088` — Compliance: hora extra, incidentes, certificações, inspeções, políticas, calendário
   - `086` — Indicações B2C (pais indicam famílias)
@@ -353,6 +402,10 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
   - `102` — Histórico do Aluno (aluno_historico, atas restritas)
   - `103` — Permissões por usuário (permissoes_usuario, defaults 7 papéis × 25 módulos)
   - `104` — Lumied Staff (lumied_staff, sessões, audit log)
+  - `105` — Seed Maple Bear Caxias do Sul (escola inicial)
+  - `107` — Fix subdomínio + coluna `plano` (text) na tabela escolas
+  - `109` — Sync familias → alunos (trigger automático `trg_sync_familia_aluno`)
+  - `110` — Unificação de usuários: gerentes/professoras/secretarias → usuarios, sessões unificadas, triggers bidirecionais
 
 ---
 
@@ -422,11 +475,11 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → e
 
 **Via Painel Central (`admin.lumied.com.br` → Escolas → + Nova Escola):**
 
-O formulário pede: nome, subdomínio, plano, CNPJ, gerente (nome/email/senha).
+O formulário pede: nome, subdomínio, plano, CNPJ, cor primária, ícone, logo (URL ou upload), gerente (nome/email/senha).
 
 O sistema cria automaticamente:
 1. Registro na tabela `escolas` (com plano e data de expiração 1 ano)
-2. 8 configs em `escola_config` (nome, cor, URL, email, ícone)
+2. 9+ configs em `escola_config` (nome, cor, URL, email, ícone, logo_url)
 3. Primeiro gerente (tabelas `gerentes` + `usuarios`)
 4. Config `superusuario_email` (acesso admin da escola)
 5. Módulos do plano ativados em `escola_modulos` (6 a 40+ conforme tier)
