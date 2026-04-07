@@ -736,15 +736,33 @@ async function criarNovaEscola() {
   // Sucesso!
   resultDiv.style.display = 'block';
   resultDiv.style.background = '#f0fdf4'; resultDiv.style.color = '#166534'; resultDiv.style.border = '1px solid rgba(22,163,74,.2)';
-  resultDiv.innerHTML = `✅ <strong>Escola criada com sucesso!</strong><br><br>
-    🌐 <a href="${esc(d.url)}" target="_blank">${esc(d.url)}</a><br>
-    🔧 <a href="${esc(d.url_admin)}" target="_blank">${esc(d.url_admin)}</a><br>
-    📊 <a href="${esc(d.url_gerente)}" target="_blank">${esc(d.url_gerente)}</a><br>
-    📦 Módulos ativados: <strong>${d.modulos_ativados}</strong><br>
-    🎒 Séries criadas: <strong>${d.series_criadas || '?'}</strong><br>
-    👤 Gerente: <strong>${esc(d.gerente_email)}</strong><br><br>
-    <strong>Pendências manuais:</strong><br>` +
-    (d.pendencias || []).map(p => `• ${esc(p)}`).join('<br>');
+  const slug = document.getElementById('neSubdominio').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  resultDiv.innerHTML = `
+    <div style="background:#f0fdf4;border:1px solid rgba(22,163,74,.2);border-radius:10px;padding:20px;">
+      <div style="font-size:18px;font-weight:700;color:#166534;margin-bottom:16px;">✅ Escola criada com sucesso!</div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;margin-bottom:16px;">
+        <span style="color:#7a7169;">Site</span><a href="${esc(d.url)}" target="_blank" style="color:#1a6bb5;">${esc(d.url)}</a>
+        <span style="color:#7a7169;">Admin</span><a href="${esc(d.url_admin)}" target="_blank" style="color:#1a6bb5;">${esc(d.url_admin)}</a>
+        <span style="color:#7a7169;">Gerente</span><a href="${esc(d.url_gerente)}" target="_blank" style="color:#1a6bb5;">${esc(d.url_gerente)}</a>
+        <span style="color:#7a7169;">Módulos</span><strong>${d.modulos_ativados}</strong>
+        <span style="color:#7a7169;">Séries</span><strong>${d.series_criadas || '?'}</strong>
+        <span style="color:#7a7169;">Gerente</span><strong>${esc(d.gerente_email)}</strong>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;margin-top:12px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px;">📋 Checklist Pós-Criação</div>
+      <div style="font-size:13px;line-height:2;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>1.</strong> Aguardar ~1 minuto e verificar SSL: <a href="https://${esc(slug)}.lumied.com.br" target="_blank">https://${esc(slug)}.lumied.com.br</a></label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>2.</strong> Testar login do gerente em <a href="https://${esc(slug)}.lumied.com.br/gerente.html" target="_blank">gerente.html</a> com email/senha cadastrados</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>3.</strong> Verificar se a logo aparece corretamente na tela de login de todos os portais</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>4.</strong> Gerente: cadastrar professoras e demais membros da equipe (portal Gerente → Equipe)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>5.</strong> Gerente: verificar séries/turmas e renomear se necessário (portal Gerente → Turmas)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>6.</strong> Gerente: cadastrar alunos/famílias (portal Gerente → Famílias)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>7.</strong> Testar portal dos pais: <a href="https://${esc(slug)}.lumied.com.br" target="_blank">login como família</a></label>
+        ${(d.pendencias || []).some(p => p.includes('WhatsApp')) ? '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>8.</strong> Configurar WhatsApp: META_APP_SECRET, WHATSAPP_TOKEN, META_PHONE_NUMBER_ID no Supabase Secrets</label>' : ''}
+        ${(d.pendencias || []).some(p => p.includes('Inter')) ? '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox"> <strong>9.</strong> Configurar Banco Inter: INTER_CLIENT_ID/SECRET no Supabase Secrets (se usar boletos)</label>' : ''}
+      </div>
+    </div>`;
 
   // Refresh dashboard
   loadDashboard();
