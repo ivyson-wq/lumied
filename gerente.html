@@ -1141,6 +1141,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelAlmoxarifado" class="panel" style="display:none;"></div>
 
       <div id="panelAlmDash" class="panel">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+            <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-bottom:12px;">📝 Criar Requisição</button>
+          </div>
           <div style="margin-bottom:16px;">
             <input type="hidden" id="almDashMes">
             <div class="month-nav">
@@ -1164,6 +1167,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <div id="panelAlmPend" class="panel">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+            <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-bottom:12px;">📝 Criar Requisição</button>
+          </div>
           <div id="almPendLoading" class="empty-state">⏳ Carregando…</div>
           <div id="almPendEmpty" class="empty-state" style="display:none;">✅ Nenhuma requisição pendente.</div>
           <div id="almPendList"></div>

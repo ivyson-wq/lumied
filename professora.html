@@ -1108,12 +1108,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
         <!-- Itens não cadastrados -->
         <div style="margin-top:18px;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;">Itens Não Cadastrados</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;">Solicitar Material Novo</div>
           <div style="background:#fff8e1;border:1px solid #f0dfa0;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#7a5e00;line-height:1.5;">
-            Precisa de algo que não está no catálogo ou está sem estoque? Descreva aqui — o gerente avaliará.
+            Precisa de algo que não está no catálogo? Preencha os dados abaixo. Após aprovação pelo gerente, este material será adicionado ao catálogo.
           </div>
-          <textarea id="almItensLivres" rows="3" placeholder="Ex: 3x Papel cartão amarelo A3&#10;1x Tinta guache azul 500ml&#10;..."
-            style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;outline:none;background:#fff;"></textarea>
+          <div id="almNovosItens"></div>
+          <button onclick="almAddNovoItem()" type="button" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--muted);cursor:pointer;width:100%;font-family:'DM Sans',sans-serif;">+ Adicionar material não cadastrado</button>
         </div>
       </div>
 
@@ -3283,8 +3283,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('almObservacao').value = '';
     document.getElementById('almModalErr').classList.remove('show');
     document.getElementById('almSearchInput').value = '';
-    const livres = document.getElementById('almItensLivres');
-    if (livres) livres.value = '';
+    document.getElementById('almNovosItens').innerHTML = '';
+    almNovoItemCount = 0;
     document.getElementById('almModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
     // Load catalog
@@ -3299,8 +3299,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   function almFecharModal() {
     document.getElementById('almModal').style.display = 'none';
     document.body.style.overflow = '';
-    const livres = document.getElementById('almItensLivres');
-    if (livres) livres.value = '';
+    document.getElementById('almNovosItens').innerHTML = '';
+    almNovoItemCount = 0;
   }
 
   function almFiltrarCatalogo() {
@@ -3401,15 +3401,46 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('almCartTotal').textContent = fmtBRL(total);
   }
 
+  var almNovoItemCount = 0;
+  function almAddNovoItem() {
+    almNovoItemCount++;
+    const idx = almNovoItemCount;
+    const el = document.getElementById('almNovosItens');
+    const div = document.createElement('div');
+    div.id = 'almNovoItem_' + idx;
+    div.style.cssText = 'background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:600;">Material #${idx}</span>
+        <button onclick="document.getElementById('almNovoItem_${idx}').remove()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);">×</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="grid-column:1/-1;"><input type="text" class="alm-novo-nome" placeholder="Nome do material *" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><select class="alm-novo-unidade" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <option value="unidade">Unidade</option><option value="folha">Folha</option><option value="metro">Metro</option><option value="litro">Litro</option><option value="kg">Kg</option><option value="caixa">Caixa</option><option value="pacote">Pacote</option><option value="rolo">Rolo</option><option value="resma">Resma</option>
+        </select></div>
+        <div><select class="alm-novo-categoria" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <option value="">Categoria</option><option value="Papelaria">Papelaria</option><option value="Artes">Artes</option><option value="Escritório">Escritório</option><option value="Limpeza">Limpeza</option><option value="Decoração">Decoração</option><option value="Pedagógico">Pedagógico</option><option value="Outro">Outro</option>
+        </select></div>
+        <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+      </div>`;
+    el.appendChild(div);
+  }
+
   async function almSubmitReq() {
     const errEl = document.getElementById('almModalErr');
     errEl.classList.remove('show');
-    // Parse itens livres (não cadastrados)
-    const livresText = (document.getElementById('almItensLivres')?.value || '').trim();
-    const itensLivres = livresText ? livresText.split('\n').filter(l => l.trim()).map(l => {
-      const m = l.match(/^(\d+)\s*[x×]\s*(.+)/i);
-      return { insumo_id: null, nome: m ? m[2].trim() : l.trim(), unidade: 'unidade', preco_unit: 0, qty_solicitado: m ? parseInt(m[1]) : 1 };
-    }) : [];
+    // Collect structured new items (não cadastrados)
+    const itensLivres = [];
+    document.querySelectorAll('[id^="almNovoItem_"]').forEach(div => {
+      const nome = div.querySelector('.alm-novo-nome')?.value?.trim();
+      const unidade = div.querySelector('.alm-novo-unidade')?.value || 'unidade';
+      const categoria = div.querySelector('.alm-novo-categoria')?.value || null;
+      const qty = parseInt(div.querySelector('.alm-novo-qty')?.value) || 1;
+      const descricao = div.querySelector('.alm-novo-descricao')?.value?.trim() || null;
+      if (nome) itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, preco_unit: 0, qty_solicitado: qty });
+    });
     const todosItens = [...almCart, ...itensLivres];
     if (!todosItens.length) { errEl.textContent = 'Adicione pelo menos um item.'; errEl.classList.add('show'); return; }
     const btn = document.getElementById('almBtnEnviar');
