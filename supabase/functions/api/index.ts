@@ -211,7 +211,7 @@ serve(async (req: Request) => {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_KEY}` },
       body: JSON.stringify({
-        from: `${escolaNome} <noreply@lumied.com.br>`,
+        from: `${escolaNome} <onboarding@resend.dev>`,
         to: [email],
         subject: `Seu acesso ao ${escolaNome}`,
         html,
@@ -544,7 +544,7 @@ serve(async (req: Request) => {
           method: "POST",
           headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: "Lumied Contratos <noreply@lumied.com.br>",
+            from: "Lumied Contratos <onboarding@resend.dev>",
             to: [contrato.familia_email],
             subject: `Código de verificação: ${codigo}`,
             html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;">
@@ -668,7 +668,7 @@ serve(async (req: Request) => {
               method: "POST",
               headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
               body: JSON.stringify({
-                from: "Lumied Contratos <noreply@lumied.com.br>",
+                from: "Lumied Contratos <onboarding@resend.dev>",
                 to: destinatarios,
                 subject: `Contrato Assinado — ${codigoVerificacao}`,
                 html: emailHtml,
@@ -731,7 +731,7 @@ serve(async (req: Request) => {
           method: "POST",
           headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: "Lumied Tickets <noreply@lumied.com.br>",
+            from: "Lumied Tickets <onboarding@resend.dev>",
             to: ["ivyson@gmail.com"],
             subject: `[Ticket #${ticketNumero || '?'} ${tipoLabel[(tipo as string) || 'bug'] || tipo}] ${(descricao as string || '').slice(0, 80)}`,
             html: `<div style="font-family:sans-serif;max-width:600px;">
