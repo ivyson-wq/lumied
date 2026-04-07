@@ -145,13 +145,20 @@
     };
 
     try {
-      const url = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/api';
-      const anon = typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_ANON ? CONFIG.SUPABASE_ANON : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-      await fetch(url, {
+      const url = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
+      const anon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+      var resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
         body: JSON.stringify(body)
       });
+      var result = await resp.json();
+      if (result.error) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Enviar';
+        alert('Erro: ' + result.error);
+        return;
+      }
       document.getElementById('tw-form').innerHTML = '<div class="tw-success"><span>&#10003;</span>Ticket enviado!<br><small style="color:#7a7169;">Responderemos em breve.</small></div>';
       setTimeout(function() {
         panel.classList.remove('show');
