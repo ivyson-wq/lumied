@@ -1298,51 +1298,31 @@ serve(async (req: Request) => {
     const { email, nova_senha } = body as { email?: string; nova_senha?: string };
     if (!email) return err("E-mail obrigatório.");
     if (!nova_senha || nova_senha.length < 6) return err("Senha deve ter no mínimo 6 caracteres.");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    // Find user ID: try RPC function first, fallback to GoTrue API
+    // Find user ID via Supabase Auth Admin API
     let userId: string | null = null;
-    const { data: rpcUid } = await admin.rpc("get_auth_uid_by_email", { p_email: email }).maybeSingle();
-    if (rpcUid) {
-      userId = typeof rpcUid === "string" ? rpcUid : (rpcUid as any)?.get_auth_uid_by_email || null;
+    const { data: { users: foundUsers }, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (!listErr && foundUsers) {
+      const found = foundUsers.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (found) userId = found.id;
     }
-    // Fallback: paginate GoTrue Admin API
+    // If not found in first page, try RPC fallback
     if (!userId) {
-      for (let page = 1; page <= 50 && !userId; page++) {
-        const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=500`, {
-          headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
-        });
-        if (!res.ok) break;
-        const data = await res.json();
-        const users = data.users || [];
-        const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-        if (found) { userId = found.id; break; }
-        if (users.length < 500) break;
+      const { data: rpcUid } = await admin.rpc("get_auth_uid_by_email", { p_email: email });
+      if (rpcUid) {
+        userId = typeof rpcUid === "string" ? rpcUid : (rpcUid as any)?.get_auth_uid_by_email || (Array.isArray(rpcUid) && rpcUid[0]) || null;
       }
     }
     // If user not found in auth.users, create one so the family can login with password
     if (!userId) {
-      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: nova_senha, email_confirm: true })
+      const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
+        email, password: nova_senha, email_confirm: true
       });
-      if (!createRes.ok) {
-        const errBody = await createRes.json().catch(() => ({}));
-        return err("Erro ao criar usuário: " + (errBody.message || errBody.msg || "erro desconhecido"));
-      }
+      if (createErr) return err("Erro ao criar usuário: " + createErr.message);
       return ok({ success: true });
     }
-    // Update password via GoTrue Admin API
-    const updateRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-      method: "PUT",
-      headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ password: nova_senha })
-    });
-    if (!updateRes.ok) {
-      const errBody = await updateRes.json().catch(() => ({}));
-      return err("Erro ao alterar senha: " + (errBody.message || errBody.msg || "erro desconhecido"));
-    }
+    // Update password via Supabase Auth Admin SDK
+    const { error: updateErr } = await admin.auth.admin.updateUserById(userId, { password: nova_senha });
+    if (updateErr) return err("Erro ao alterar senha: " + updateErr.message);
     return ok({ success: true });
   }
   if (action === "familias_delete") {
