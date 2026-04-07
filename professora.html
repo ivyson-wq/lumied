@@ -210,6 +210,50 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .alm-qty-input{width:64px;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-family:'DM Sans',sans-serif;}
 .alm-notif-item{padding:10px 12px;border-radius:8px;background:#f7f7f7;margin-bottom:6px;font-size:13px;}
 
+/* DASHBOARD TURNOS/ATIVIDADES (same as gerente) */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px;}
+.stat-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px 16px;box-shadow:0 2px 8px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:transform .2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac,var(--red));border-radius:12px 12px 0 0;}
+.stat-card[data-g="total"]{--ac:#2d7a3a;}.stat-card[data-g="integral"]{--ac:#C8102E;}.stat-card[data-g="semi"]{--ac:#d4830a;}.stat-card[data-g="tarde"]{--ac:#1a6bb5;}.stat-card[data-g="diaria"]{--ac:#6b3fa0;}
+.stat-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+.stat-value{font-size:34px;font-weight:700;color:var(--text);line-height:1.1;margin:4px 0 2px;}
+.stat-sub{font-size:10px;color:var(--muted);}
+.dias-semana-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.dia-card{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:transform .2s;}
+.dia-card:hover{transform:translateY(-2px);}
+.dia-card-header{background:var(--red);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.dia-card-header .dia-nome{font-size:14px;font-weight:700;color:#fff;}
+.dia-card-header .dia-count{background:rgba(255,255,255,.25);color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:100px;font-family:'DM Sans',sans-serif;}
+.dia-card-body{padding:12px 14px;min-height:60px;}
+.dia-crianca-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid #f5f0ea;}
+.dia-crianca-item:last-child{border-bottom:none;}
+.dia-crianca-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:5px;}
+.dia-crianca-info{flex:1;min-width:0;}
+.dia-crianca-info strong{display:block;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dia-crianca-info span{font-size:10px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dia-vazio{font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:12px 0;}
+.p-count-badge{background:rgba(200,16,46,.08);color:var(--red);font-size:12px;font-weight:600;padding:2px 10px;border-radius:100px;}
+.p-filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.p-fb{padding:6px 14px;border-radius:100px;border:1.5px solid var(--border);background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .2s;}
+.p-fb.active{border-color:var(--red);background:rgba(200,16,46,.04);color:var(--red);}
+.p-table-wrap{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.p-table-wrap table{width:100%;border-collapse:collapse;font-size:13px;}
+.p-table-wrap th{padding:12px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#faf8f5;border-bottom:1.5px solid var(--border);}
+.p-table-wrap td{padding:10px 14px;border-bottom:1px solid #f5f0ea;vertical-align:top;}
+.p-table-wrap tr:last-child td{border-bottom:none;}
+.turno-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;border:none;font-family:'DM Sans',sans-serif;}
+.turno-pill.integral{background:rgba(200,16,46,.1);color:#C8102E;}
+.turno-pill.semi{background:rgba(212,131,10,.1);color:#c27800;}
+.turno-pill.tarde{background:rgba(26,107,181,.1);color:#1a6bb5;}
+.turno-pill.diaria{background:rgba(107,63,160,.1);color:#6b3fa0;}
+.p-ocup-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:28px;}
+@media(max-width:768px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .dias-semana-grid{grid-template-columns:1fr 1fr;}
+  .p-ocup-grid{grid-template-columns:1fr;}
+}
+
 /* PAGE SYSTEM */
 .prof-page{display:none;}
 .prof-page.active{display:block;animation:profFade .25s ease;}
@@ -904,9 +948,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div class="sec-title">📊 Turnos
         <button onclick="loadPageTurnos()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
       </div>
-      <div id="pageTurnosStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;"></div>
-      <div class="sec-title" style="font-size:13px;margin-top:16px;">Solicitacoes Recentes</div>
-      <div id="pageTurnosList" style="max-height:60vh;overflow-y:auto;"></div>
+
+      <div class="stats-grid" id="pageTurnosStats">
+        <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="ptTotal">—</div><div class="stat-sub">solicitacoes</div></div>
+        <div class="stat-card" data-g="integral"><div class="stat-label">Integral</div><div class="stat-value" id="ptIntegral">—</div><div class="stat-sub">todas freq.</div></div>
+        <div class="stat-card" data-g="semi"><div class="stat-label">Semi-Int.</div><div class="stat-value" id="ptSemi">—</div><div class="stat-sub">todas freq.</div></div>
+        <div class="stat-card" data-g="tarde"><div class="stat-label">Tarde</div><div class="stat-value" id="ptTarde">—</div><div class="stat-sub">13:30h</div></div>
+        <div class="stat-card" data-g="diaria"><div class="stat-label">Diaria</div><div class="stat-value" id="ptDiaria">—</div><div class="stat-sub">avulso</div></div>
+      </div>
+
+      <div class="sec-title" style="margin-bottom:16px;">📅 Criancas por Dia da Semana</div>
+      <div class="dias-semana-grid" id="ptDiasSemanaGrid">
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="ptD_Segunda">0</span></div><div class="dia-card-body" id="ptL_Segunda"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terca</span><span class="dia-count" id="ptD_Terca">0</span></div><div class="dia-card-body" id="ptL_Terca"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="ptD_Quarta">0</span></div><div class="dia-card-body" id="ptL_Quarta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="ptD_Quinta">0</span></div><div class="dia-card-body" id="ptL_Quinta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="ptD_Sexta">0</span></div><div class="dia-card-body" id="ptL_Sexta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+      </div>
+
+      <div class="sec-title">Solicitacoes <span class="p-count-badge" id="ptTableCount">0</span></div>
+      <div class="p-filter-bar">
+        <button class="p-fb active" onclick="setPtFilter('all',this)">Todos</button>
+        <button class="p-fb" onclick="setPtFilter('integral',this)">Integral</button>
+        <button class="p-fb" onclick="setPtFilter('semi',this)">Semi-Int.</button>
+        <button class="p-fb" onclick="setPtFilter('tarde',this)">Tarde</button>
+        <button class="p-fb" onclick="setPtFilter('diaria',this)">Diaria</button>
+        <input class="search-input" id="ptSearchInput" type="text" placeholder="Buscar..." oninput="renderPtTable()" style="margin-left:auto;padding:6px 12px;border:1.5px solid var(--border);border-radius:100px;font-family:'DM Sans',sans-serif;font-size:12px;max-width:180px;">
+      </div>
+      <div class="p-table-wrap">
+        <table>
+          <thead><tr><th>Crianca</th><th>Responsavel</th><th>Serie</th><th>Turno</th><th>Dias</th><th>Data</th></tr></thead>
+          <tbody id="ptTableBody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ═══ PAGE: ATIVIDADES EXTRACLASSE ═══ -->
@@ -914,11 +988,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div class="sec-title">🎯 Atividades Extraclasse
         <button onclick="loadPageAtividades()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
       </div>
-      <div id="pageAtivStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;"></div>
-      <div class="sec-title" style="font-size:13px;margin-top:16px;">Atividades</div>
-      <div id="pageAtivGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;"></div>
-      <div class="sec-title" style="font-size:13px;margin-top:16px;">Inscricoes Recentes</div>
-      <div id="pageAtivInscricoes" style="max-height:40vh;overflow-y:auto;"></div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card" data-g="total"><div class="stat-label">Total de Inscricoes</div><div class="stat-value" id="paTotal">—</div><div class="stat-sub">em atividades</div></div>
+        <div class="stat-card" data-g="integral"><div class="stat-label">Atividades Ativas</div><div class="stat-value" id="paAtivas">—</div><div class="stat-sub">com inscricoes abertas</div></div>
+        <div class="stat-card" data-g="semi"><div class="stat-label">Turmas Lotadas</div><div class="stat-value" id="paLotadas">—</div><div class="stat-sub">sem vagas disponiveis</div></div>
+        <div class="stat-card" data-g="tarde"><div class="stat-label">Vagas Disponiveis</div><div class="stat-value" id="paVagas">—</div><div class="stat-sub">total em aberto</div></div>
+      </div>
+
+      <div class="sec-title" style="margin-bottom:16px;">📅 Criancas por Dia da Semana</div>
+      <div class="dias-semana-grid" id="paDiasSemanaGrid">
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="paD_Segunda">0</span></div><div class="dia-card-body" id="paL_Segunda"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terca</span><span class="dia-count" id="paD_Terca">0</span></div><div class="dia-card-body" id="paL_Terca"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="paD_Quarta">0</span></div><div class="dia-card-body" id="paL_Quarta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="paD_Quinta">0</span></div><div class="dia-card-body" id="paL_Quinta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="paD_Sexta">0</span></div><div class="dia-card-body" id="paL_Sexta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
+      </div>
+
+      <div class="sec-title" style="margin-bottom:16px;">🎯 Ocupacao por Atividade</div>
+      <div class="p-ocup-grid" id="paOcupacaoGrid"></div>
+
+      <div class="sec-title">Inscricoes Recebidas <span class="p-count-badge" id="paInscricoesCount">0</span>
+        <input class="search-input" id="paSearchInput" type="text" placeholder="Buscar..." oninput="renderPaTable()" style="margin-left:auto;padding:6px 12px;border:1.5px solid var(--border);border-radius:100px;font-family:'DM Sans',sans-serif;font-size:12px;max-width:180px;">
+      </div>
+      <div class="p-table-wrap">
+        <table>
+          <thead><tr><th>Crianca</th><th>Responsavel</th><th>Serie</th><th>Atividades e Turmas</th><th>Data</th></tr></thead>
+          <tbody id="paInscricoesBody"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ═══ PAGE: MODULOS CONFIG (gerente only) ═══ -->
@@ -1970,83 +2068,207 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     } catch(_) {}
   }
 
-  // ── PAGE: TURNOS (full) ──
+  // ── TURNO INFO (same as gerente) ──
+  var PT_TURNO_INFO = {
+    integral_5x:{label:'Integral 5x/sem',g:'integral'},integral_4x:{label:'Integral 4x/sem',g:'integral'},
+    integral_3x:{label:'Integral 3x/sem',g:'integral'},integral_2x:{label:'Integral 2x/sem',g:'integral'},
+    integral_1x:{label:'Integral 1x/sem',g:'integral'},semi_5x:{label:'Semi-Int. 5x/sem',g:'semi'},
+    semi_4x:{label:'Semi-Int. 4x/sem',g:'semi'},semi_3x:{label:'Semi-Int. 3x/sem',g:'semi'},
+    semi_2x:{label:'Semi-Int. 2x/sem',g:'semi'},semi_1x:{label:'Semi-Int. 1x/sem',g:'semi'},
+    tarde:{label:'Tarde',g:'tarde'},diaria:{label:'Diaria',g:'diaria'},
+    'Integral (7h-19h)':{label:'Integral',g:'integral'},'Semi-Integral (7h-13h30)':{label:'Semi-Int.',g:'semi'},
+    'Semi-Integral (13h-19h)':{label:'Semi-Int.',g:'semi'},'Tarde (13h-17h)':{label:'Tarde',g:'tarde'},
+    'Diária (por dia)':{label:'Diaria',g:'diaria'}
+  };
+  var ptAllData = [], ptFilter = 'all';
+  var paAllAtiv = [], paAllInsc = [];
+
+  // ── PAGE: TURNOS (full — mirrors gerente) ──
   async function loadPageTurnos() {
     try {
       var d = await callApi({ action: 'prof_turnos_dashboard' });
       if (!d || d.error) return;
+      ptAllData = d.data || [];
       var c = d.counts || {};
-      var stats = [['Total', d.total||0, '#6C63FF'], ['Integral', c.integral||0, '#48bb78'], ['Semi-Integral', c.semi||0, '#f6a623'], ['Tarde', c.tarde||0, '#e53e3e'], ['Diaria', c.diaria||0, '#1a6bb5']];
-      document.getElementById('pageTurnosStats').innerHTML = stats.map(function(s) {
-        return '<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;">' +
-          '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">' + s[0] + '</div>' +
-          '<div style="font-size:28px;font-weight:700;color:' + s[2] + ';">' + s[1] + '</div></div>';
-      }).join('');
-      var items = d.data || [];
-      document.getElementById('pageTurnosList').innerHTML = items.length
-        ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);text-align:left;">' +
-          '<th style="padding:8px;">Crianca</th><th style="padding:8px;">Turno</th><th style="padding:8px;">Status</th><th style="padding:8px;">Data</th></tr></thead><tbody>' +
-          items.map(function(s) {
-            var statusColor = s.status === 'ativo' ? '#48bb78' : s.status === 'pendente' ? '#f6a623' : 'var(--muted)';
-            return '<tr style="border-bottom:1px solid var(--border);">' +
-              '<td style="padding:8px;font-weight:600;">' + esc(s.nome_crianca) + '</td>' +
-              '<td style="padding:8px;">' + esc(s.turno || '-') + '</td>' +
-              '<td style="padding:8px;"><span style="color:' + statusColor + ';font-weight:600;font-size:11px;text-transform:uppercase;">' + esc(s.status || '-') + '</span></td>' +
-              '<td style="padding:8px;color:var(--muted);font-size:12px;">' + (s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '-') + '</td></tr>';
-          }).join('') + '</tbody></table>'
-        : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px;">Nenhuma solicitacao de turno encontrada.</div>';
+      document.getElementById('ptTotal').textContent = d.total || 0;
+      document.getElementById('ptIntegral').textContent = c.integral || 0;
+      document.getElementById('ptSemi').textContent = c.semi || 0;
+      document.getElementById('ptTarde').textContent = c.tarde || 0;
+      document.getElementById('ptDiaria').textContent = c.diaria || 0;
+      renderPtDiasSemana();
+      renderPtTable();
     } catch(_) {}
   }
 
-  // ── PAGE: ATIVIDADES (full) ──
+  function renderPtDiasSemana() {
+    var DIAS = ['Segunda','Terca','Quarta','Quinta','Sexta'];
+    var map = {}; DIAS.forEach(function(d){ map[d] = []; });
+    ptAllData.forEach(function(r) {
+      if (!Array.isArray(r.dias_semana)) return;
+      r.dias_semana.forEach(function(dia) {
+        // Normalize accented names
+        var key = dia.replace('ç','c').replace('é','e');
+        if (map[key]) map[key].push(r);
+        else if (map[dia]) map[dia].push(r);
+      });
+    });
+    DIAS.forEach(function(dia) {
+      var list = map[dia];
+      var countEl = document.getElementById('ptD_' + dia);
+      var listEl  = document.getElementById('ptL_' + dia);
+      if (!countEl || !listEl) return;
+      countEl.textContent = list.length;
+      if (!list.length) { listEl.innerHTML = '<div class="dia-vazio">Nenhuma crianca</div>'; return; }
+      listEl.innerHTML = list.map(function(r) {
+        var t = PT_TURNO_INFO[r.turno];
+        var turnoShort = t ? t.label : (r.turno || '');
+        return '<div class="dia-crianca-item"><div class="dia-crianca-dot"></div><div class="dia-crianca-info">' +
+          '<strong>' + esc(r.nome_crianca) + '</strong>' +
+          '<span>' + esc(r.serie||'') + (r.serie && turnoShort ? ' · ' : '') + turnoShort + '</span></div></div>';
+      }).join('');
+    });
+  }
+
+  function setPtFilter(f, btn) {
+    ptFilter = f;
+    document.querySelectorAll('.p-filter-bar .p-fb').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderPtTable();
+  }
+
+  function renderPtTable() {
+    var q = (document.getElementById('ptSearchInput')?.value || '').toLowerCase();
+    var rows = ptAllData.filter(function(r) {
+      var t = PT_TURNO_INFO[r.turno];
+      var g = t ? t.g : '';
+      var mf = ptFilter === 'all' || g === ptFilter;
+      var ms = !q || [r.nome_crianca, r.nome_resp, r.email, r.serie].some(function(v){ return v && v.toLowerCase().indexOf(q) >= 0; });
+      return mf && ms;
+    });
+    document.getElementById('ptTableCount').textContent = rows.length;
+    var tb = document.getElementById('ptTableBody');
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Nenhum resultado.</td></tr>'; return; }
+    tb.innerHTML = rows.map(function(r) {
+      var t = PT_TURNO_INFO[r.turno] || { label: r.turno || '—', g: '' };
+      var date = r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      var dias = Array.isArray(r.dias_semana) && r.dias_semana.length
+        ? r.dias_semana.map(function(d){ return '<span style="display:inline-block;background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:2px 7px;font-size:10px;font-weight:600;margin:1px;">'+esc(d)+'</span>'; }).join(' ')
+        : '<span style="color:var(--muted);font-size:12px;">—</span>';
+      return '<tr><td><strong>' + esc(r.nome_crianca) + '</strong></td>' +
+        '<td>' + esc(r.nome_resp||'') + (r.email ? '<br><small style="color:var(--muted)">' + esc(r.email) + '</small>' : '') + '</td>' +
+        '<td>' + esc(r.serie || '—') + '</td>' +
+        '<td><span class="turno-pill ' + t.g + '">' + t.label + '</span></td>' +
+        '<td>' + dias + '</td>' +
+        '<td style="font-size:12px;color:var(--muted);">' + date + '</td></tr>';
+    }).join('');
+  }
+
+  // ── PAGE: ATIVIDADES (full — mirrors gerente) ──
   async function loadPageAtividades() {
     try {
       var d = await callApi({ action: 'prof_atividades_dashboard' });
       if (!d || d.error) return;
-      var ativs = d.atividades || [];
-      var inscs = d.inscricoes || [];
-      var totalInscritos = ativs.reduce(function(s, a) { return s + (a.totalInscritos || 0); }, 0);
-      var totalVagas = ativs.reduce(function(s, a) { return s + (a.totalVagas || 0); }, 0);
-      var lotadas = ativs.filter(function(a) { return a.totalInscritos >= a.totalVagas && a.totalVagas > 0; }).length;
-      var vagasDisp = Math.max(0, totalVagas - totalInscritos);
-      var stats = [['Atividades', ativs.length, '#6C63FF'], ['Inscricoes', totalInscritos, '#48bb78'], ['Lotadas', lotadas, '#e53e3e'], ['Vagas Livres', vagasDisp, '#1a6bb5']];
+      paAllAtiv = d.atividades || [];
+      paAllInsc = d.inscricoes || [];
 
-      document.getElementById('pageAtivStats').innerHTML = stats.map(function(s) {
-        return '<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;">' +
-          '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">' + s[0] + '</div>' +
-          '<div style="font-size:28px;font-weight:700;color:' + s[2] + ';">' + s[1] + '</div></div>';
-      }).join('');
+      // Stats
+      var totalInscritos = paAllInsc.length;
+      var ativasComVaga = paAllAtiv.filter(function(a){ return (a.horarios||[]).some(function(t){ return (t.vagas_disponiveis == null ? 999 : t.vagas_disponiveis) > 0; }); }).length;
+      var turmasLotadas = paAllAtiv.reduce(function(acc,a){ return acc + (a.horarios||[]).filter(function(t){ return t.vagas != null && (t.vagas_disponiveis == null ? 999 : t.vagas_disponiveis) === 0; }).length; }, 0);
+      var vagasTotal = paAllAtiv.reduce(function(acc,a){ return acc + (a.horarios||[]).reduce(function(s,t){ return s + (t.vagas_disponiveis||0); },0); },0);
+      document.getElementById('paTotal').textContent = totalInscritos;
+      document.getElementById('paAtivas').textContent = ativasComVaga;
+      document.getElementById('paLotadas').textContent = turmasLotadas;
+      document.getElementById('paVagas').textContent = vagasTotal;
 
-      document.getElementById('pageAtivGrid').innerHTML = ativs.length
-        ? ativs.map(function(a) {
-          var pct = a.totalVagas > 0 ? Math.min(100, Math.round(a.totalInscritos / a.totalVagas * 100)) : 0;
-          var barColor = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
-          var horarios = (a.horarios || []).map(function(h) {
-            return '<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;padding:2px 0;">' +
-              '<span>' + esc(h.dia || '') + ' ' + esc(h.hora || '') + '</span>' +
-              '<span>' + (h.inscritos||0) + '/' + (h.vagas||0) + '</span></div>';
+      // Criancas por dia — subagrupadas por atividade e turma
+      var DIAS = ['Segunda','Terca','Quarta','Quinta','Sexta'];
+      var diasMap = {}; DIAS.forEach(function(d){ diasMap[d] = {}; });
+      paAllInsc.forEach(function(ins) {
+        (ins.turmas_selecionadas||[]).forEach(function(ts) {
+          var ativ = paAllAtiv.find(function(a){ return a.id === ts.atividade_id; });
+          var ativNome = ativ ? ativ.nome : 'Atividade';
+          var turmaNome = ts.turma || 'Turma';
+          (ts.slots||[]).forEach(function(slot) {
+            var dia = (slot.dia||'').replace('ç','c').replace('é','e');
+            if (!diasMap[dia]) return;
+            if (!diasMap[dia][ativNome]) diasMap[dia][ativNome] = {};
+            if (!diasMap[dia][ativNome][turmaNome]) diasMap[dia][ativNome][turmaNome] = [];
+            diasMap[dia][ativNome][turmaNome].push({ nome: ins.nome_crianca, serie: ins.serie });
+          });
+        });
+      });
+
+      DIAS.forEach(function(dia) {
+        var criancasNoDia = new Set();
+        Object.values(diasMap[dia]).forEach(function(turmas){ Object.values(turmas).forEach(function(lista){ lista.forEach(function(c){ criancasNoDia.add(c.nome); }); }); });
+        var count = criancasNoDia.size;
+        var cEl = document.getElementById('paD_'+dia); if (cEl) cEl.textContent = count;
+        var lEl = document.getElementById('paL_'+dia); if (!lEl) return;
+        if (!count) { lEl.innerHTML = '<div class="dia-vazio">Nenhuma crianca</div>'; return; }
+        var atividadesNoDia = Object.entries(diasMap[dia]);
+        lEl.innerHTML = atividadesNoDia.length ? atividadesNoDia.map(function(entry) {
+          var ativNome = entry[0], turmas = entry[1];
+          var turmasHTML = Object.entries(turmas).map(function(te) {
+            var turmaNome = te[0], criancas = te[1];
+            var criancasHTML = criancas.map(function(c) {
+              return '<div class="dia-crianca-item" style="padding:4px 0 4px 8px;"><div class="dia-crianca-dot" style="width:5px;height:5px;margin-top:6px;background:var(--muted);opacity:.5;"></div><div class="dia-crianca-info"><strong>' + esc(c.nome) + '</strong>' + (c.serie ? '<span>' + esc(c.serie) + '</span>' : '') + '</div></div>';
+            }).join('');
+            return '<div style="margin-bottom:6px;"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0 2px;border-bottom:1px dashed #e8e3dc;margin-bottom:2px;">🕐 ' + esc(turmaNome) + ' <span style="font-weight:400;color:#bbb;">(' + criancas.length + ')</span></div>' + criancasHTML + '</div>';
           }).join('');
-          return '<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;' + (a.cor ? 'border-left:4px solid ' + a.cor : '') + '">' +
-            '<div style="font-size:14px;font-weight:700;margin-bottom:8px;">' + esc(a.nome) + '</div>' +
-            '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">' + a.totalInscritos + ' / ' + a.totalVagas + ' vagas (' + pct + '%)</div>' +
-            '<div style="background:#f0ece6;border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px;">' +
-            '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:6px;transition:width .3s;"></div></div>' +
-            horarios + '</div>';
-        }).join('')
-        : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px;grid-column:1/-1;">Nenhuma atividade cadastrada.</div>';
+          var tot = Object.values(turmas).reduce(function(s,l){ return s + l.length; }, 0);
+          return '<div style="margin-bottom:10px;border-bottom:1px solid #f0ece6;padding-bottom:8px;"><div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>' + esc(ativNome) + ' <span style="font-weight:500;color:var(--muted);font-size:10px;">(' + tot + ')</span></div>' + turmasHTML + '</div>';
+        }).join('') : '<div class="dia-vazio">Nenhuma crianca</div>';
+      });
 
-      document.getElementById('pageAtivInscricoes').innerHTML = inscs.length
-        ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);text-align:left;">' +
-          '<th style="padding:8px;">Crianca</th><th style="padding:8px;">Turmas</th><th style="padding:8px;">Data</th></tr></thead><tbody>' +
-          inscs.map(function(i) {
-            var turmas = Array.isArray(i.turmas_selecionadas) ? i.turmas_selecionadas.join(', ') : (i.turmas_selecionadas || '-');
-            return '<tr style="border-bottom:1px solid var(--border);">' +
-              '<td style="padding:8px;font-weight:600;">' + esc(i.nome_crianca) + '</td>' +
-              '<td style="padding:8px;font-size:12px;">' + esc(turmas) + '</td>' +
-              '<td style="padding:8px;color:var(--muted);font-size:12px;">' + (i.criado_em ? new Date(i.criado_em).toLocaleDateString('pt-BR') : '-') + '</td></tr>';
-          }).join('') + '</tbody></table>'
-        : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">Nenhuma inscricao encontrada.</div>';
+      // Ocupacao por atividade
+      var grid = document.getElementById('paOcupacaoGrid');
+      if (!paAllAtiv.length) { grid.innerHTML = '<p style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</p>'; }
+      else {
+        grid.innerHTML = paAllAtiv.map(function(a) {
+          var turmas = (a.horarios||[]).map(function(t) {
+            var inscritos = t.inscritos||0, vagas = t.vagas != null ? t.vagas : null;
+            var pct = vagas ? Math.round((inscritos/vagas)*100) : 0;
+            var cor = pct >= 100 ? '#C8102E' : pct >= 75 ? '#d4830a' : '#2d7a3a';
+            return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+              '<span style="font-size:12px;font-weight:500;color:var(--text);">' + esc(t.turma) + '</span>' +
+              '<span style="font-size:11px;color:' + cor + ';font-weight:600;">' + inscritos + (vagas != null ? '/' + vagas : '') + ' inscrito(s)</span></div>' +
+              (vagas != null ? '<div style="height:6px;background:#f0ece6;border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + Math.min(100,pct) + '%;background:' + cor + ';border-radius:3px;transition:width .4s;"></div></div>' : '') + '</div>';
+          }).join('');
+          return '<div style="background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);">' +
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
+            '<span style="width:12px;height:12px;border-radius:50%;background:' + (a.cor||'var(--red)') + ';flex-shrink:0;display:inline-block;"></span>' +
+            '<span style="font-size:14px;font-weight:700;color:var(--text);">' + esc(a.nome) + '</span>' +
+            '<span style="font-size:11px;color:var(--muted);margin-left:auto;">R$ ' + Number(a.preco||0).toFixed(2).replace('.',',') + '/mes</span></div>' +
+            (turmas || '<span style="font-size:12px;color:var(--muted);">Sem turmas.</span>') + '</div>';
+        }).join('');
+      }
+
+      // Tabela inscricoes
+      renderPaTable();
     } catch(_) {}
+  }
+
+  function renderPaTable() {
+    var q = (document.getElementById('paSearchInput')?.value || '').toLowerCase();
+    var rows = paAllInsc.filter(function(ins) {
+      return !q || [ins.nome_crianca, ins.nome_resp, ins.email, ins.serie].some(function(v){ return v && v.toLowerCase().indexOf(q) >= 0; });
+    });
+    document.getElementById('paInscricoesCount').textContent = rows.length;
+    var tb = document.getElementById('paInscricoesBody');
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Nenhuma inscricao.</td></tr>'; return; }
+    tb.innerHTML = rows.map(function(ins) {
+      var atividades = (ins.turmas_selecionadas||[]).map(function(ts) {
+        return '<div style="margin-bottom:4px;"><span style="font-size:11px;font-weight:600;color:var(--text);">' + esc(ts.turma||'') + '</span>' +
+          ((ts.slots||[]).length ? '<span style="font-size:10px;color:var(--muted);margin-left:4px;">' + ts.slots.map(function(s){ return s.dia + ' ' + s.inicio + '–' + s.fim; }).join(', ') + '</span>' : '') + '</div>';
+      }).join('') || '—';
+      var date = ins.criado_em ? new Date(ins.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      return '<tr><td><strong>' + esc(ins.nome_crianca) + '</strong></td>' +
+        '<td>' + esc(ins.nome_resp||'') + (ins.email ? '<br><small style="color:var(--muted)">' + esc(ins.email) + '</small>' : '') + '</td>' +
+        '<td>' + esc(ins.serie || '—') + '</td>' +
+        '<td>' + atividades + '</td>' +
+        '<td style="font-size:12px;color:var(--muted);">' + date + '</td></tr>';
+    }).join('');
   }
 
   async function loadRanking() {

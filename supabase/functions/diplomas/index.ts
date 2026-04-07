@@ -2281,7 +2281,7 @@ Deno.serve(async (req) => {
     const token = (body._token as string) || (body._prof_token as string)
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
-    const { data: sols } = await sb.from('solicitacoes').select('id, nome_crianca, turno, status, criado_em').order('criado_em', { ascending: false }).limit(200)
+    const { data: sols } = await sb.from('solicitacoes').select('id, nome_crianca, nome_resp, email, serie, turno, dias_semana, status, criado_em').order('criado_em', { ascending: false }).limit(500)
     const TURNO_GROUPS: Record<string, string> = { 'Integral (7h-19h)':'integral','Semi-Integral (7h-13h30)':'semi','Semi-Integral (13h-19h)':'semi','Tarde (13h-17h)':'tarde','Diária (por dia)':'diaria' }
     const counts: Record<string, number> = { integral: 0, semi: 0, tarde: 0, diaria: 0 }
     for (const s of sols ?? []) { const g = TURNO_GROUPS[s.turno]; if (g) counts[g]++; }
@@ -2292,12 +2292,16 @@ Deno.serve(async (req) => {
     const token = (body._token as string) || (body._prof_token as string)
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
-    const { data: ativs } = await sb.from('atividades').select('id, nome, cor, horarios, ativo').eq('ativo', true).order('ordem')
-    const { data: inscs } = await sb.from('inscricoes_atividades').select('id, nome_crianca, turmas_selecionadas, slots, criado_em').order('criado_em', { ascending: false }).limit(200)
+    const { data: ativs } = await sb.from('atividades').select('id, nome, cor, preco, horarios, ativo').eq('ativo', true).order('ordem')
+    const { data: inscs } = await sb.from('inscricoes_atividades').select('id, nome_crianca, nome_resp, email, serie, turmas_selecionadas, slots, criado_em').order('criado_em', { ascending: false }).limit(500)
     const atividades = (ativs ?? []).map((a: any) => {
-      const totalVagas = (a.horarios || []).reduce((s: number, h: any) => s + (h.vagas || 0), 0)
-      const totalInscritos = (a.horarios || []).reduce((s: number, h: any) => s + (h.inscritos || 0), 0)
-      return { id: a.id, nome: a.nome, cor: a.cor, totalVagas, totalInscritos, horarios: a.horarios || [] }
+      const horarios = (a.horarios || []).map((h: any) => ({
+        turma: h.turma || h.dia || '', dia: h.dia || '', hora: h.hora || '', inicio: h.inicio || '', fim: h.fim || '',
+        vagas: h.vagas ?? null, inscritos: h.inscritos || 0, vagas_disponiveis: h.vagas != null ? Math.max(0, (h.vagas || 0) - (h.inscritos || 0)) : null
+      }))
+      const totalVagas = horarios.reduce((s: number, h: any) => s + (h.vagas || 0), 0)
+      const totalInscritos = horarios.reduce((s: number, h: any) => s + (h.inscritos || 0), 0)
+      return { id: a.id, nome: a.nome, cor: a.cor, preco: a.preco || 0, totalVagas, totalInscritos, horarios, ativo: a.ativo }
     })
     return json({ atividades, inscricoes: inscs ?? [] })
   }
