@@ -973,6 +973,12 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 - Layout: badges de papel abaixo do nome (não ao lado), evita sobreposição com múltiplos papéis
 - Página "Módulos" removida do portal da professora (só no admin)
 
+### Manutenção — Professora (2026-04-07)
+- `manutencao_submit` agora busca `usuario_id` pelo `_email` enviado (antes ficava `null`)
+- Nova action pública `manutencao_minhas`: retorna chamados filtrados por `usuario_id` do email
+- `professora.html` usa `manutencao_minhas` em vez de `manutencao_list` (que era gerente-only)
+- `callManutApi` agora envia token para actions autenticadas
+
 ---
 
 ## Banco de Dados — Migrations Recentes
