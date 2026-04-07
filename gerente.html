@@ -1287,7 +1287,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div class="two-col">
             <div>
               <div class="sec-title">Turmas <span class="count-badge" id="almTurmasCount">0</span></div>
-              <div class="hint" style="margin-bottom:12px;">Associe as professoras às suas turmas no painel de Professoras.</div>
               <div id="almTurmasList"></div>
             </div>
             <div class="form-card">
@@ -7611,27 +7610,33 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const d = await callDiplomas({ action: 'alm_series_list' });
     const turmas = d.data || [];
     document.getElementById('almTurmasCount').textContent = turmas.length;
-    document.getElementById('almTurmasList').innerHTML = turmas.map(t => `
-      <div class="alm-insumo-row">
-        <div style="width:18px;height:18px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></div>
-        <div style="flex:1;font-weight:600;font-size:13px;">${t.nome}</div>
-        <div style="font-size:11px;color:var(--muted);">${(t.professoras||[]).length} professora(s)</div>
-        <button onclick="almEditarTurma(${JSON.stringify(t).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
-        <button onclick="almDelTurma('${t.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Remover</button>
-      </div>`).join('') || '<div class="empty-state">Nenhuma turma cadastrada.</div>';
-    // Professor-turma assignment list
+    // Load all professors for assignment
     const profsRaw = await api({ action: 'professoras_list' }).catch(() => []);
     const allProfs = Array.isArray(profsRaw) ? profsRaw : [];
+    document.getElementById('almTurmasList').innerHTML = turmas.map(t => {
+      const profs = allProfs.filter(p => p.serie_id === t.id || p.alm_turma_id === t.id);
+      return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:18px;height:18px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></div>
+          <div style="flex:1;font-weight:600;font-size:14px;">${t.nome}</div>
+          <button onclick="almEditarTurma(${JSON.stringify(t).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
+          <button onclick="almDelTurma('${t.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Remover</button>
+        </div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);letter-spacing:.5px;margin-bottom:6px;">Professoras (${profs.length})</div>
+        ${profs.length ? profs.map(p => `<span style="display:inline-block;background:#f0ece6;border-radius:6px;padding:3px 10px;font-size:12px;margin:2px;">${p.nome}</span>`).join('') : '<span style="font-size:12px;color:var(--muted);font-style:italic;">Nenhuma professora associada</span>'}
+      </div>`;
+    }).join('') || '<div class="empty-state">Nenhuma turma cadastrada.</div>';
+    // Professor-turma assignment list (select per professor)
     document.getElementById('almProfTurmaList').innerHTML = allProfs.length
       ? allProfs.map((p) => `
           <div class="alm-insumo-row">
             <div style="flex:1;font-size:13px;"><strong>${p.nome}</strong> <span style="color:var(--muted);">${p.email}</span></div>
             <select onchange="almSetProfTurma('${p.id}',this.value)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;">
               <option value="">— Sem turma —</option>
-              ${turmas.map((t) => `<option value="${t.id}" ${p.alm_turma_id===t.id?'selected':''}>${t.nome}</option>`).join('')}
+              ${turmas.map((t) => `<option value="${t.id}" ${(p.serie_id===t.id||p.alm_turma_id===t.id)?'selected':''}>${t.nome}</option>`).join('')}
             </select>
           </div>`).join('')
-      : '<div class="empty-state">Carregue o painel de professoras primeiro.</div>';
+      : '<div class="empty-state">Nenhuma professora cadastrada.</div>';
   }
 
   function almEditarTurma(t) {
