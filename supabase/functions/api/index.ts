@@ -1298,31 +1298,66 @@ serve(async (req: Request) => {
     const { email, nova_senha } = body as { email?: string; nova_senha?: string };
     if (!email) return err("E-mail obrigatório.");
     if (!nova_senha || nova_senha.length < 6) return err("Senha deve ter no mínimo 6 caracteres.");
-    // Find user ID via Supabase Auth Admin API
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Find user by email via GoTrue Admin REST API (most reliable method)
     let userId: string | null = null;
-    const { data: { users: foundUsers }, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (!listErr && foundUsers) {
-      const found = foundUsers.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-      if (found) userId = found.id;
-    }
-    // If not found in first page, try RPC fallback
+    try {
+      const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=1&per_page=50`, {
+        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
+      });
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const users = listData?.users || listData || [];
+        if (Array.isArray(users)) {
+          const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+          if (found) userId = found.id;
+        }
+      }
+      // Paginate if not found in first page
+      if (!userId) {
+        for (let page = 2; page <= 20 && !userId; page++) {
+          const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=50`, {
+            headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
+          });
+          if (!res.ok) break;
+          const data = await res.json();
+          const users = data?.users || data || [];
+          if (!Array.isArray(users) || users.length === 0) break;
+          const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+          if (found) { userId = found.id; break; }
+        }
+      }
+    } catch (_e) { /* fallback below */ }
+    // Fallback: RPC
     if (!userId) {
-      const { data: rpcUid } = await admin.rpc("get_auth_uid_by_email", { p_email: email });
-      if (rpcUid) {
-        userId = typeof rpcUid === "string" ? rpcUid : (rpcUid as any)?.get_auth_uid_by_email || (Array.isArray(rpcUid) && rpcUid[0]) || null;
+      try {
+        const { data: rpcData } = await admin.rpc("get_auth_uid_by_email", { p_email: email });
+        if (rpcData) userId = String(rpcData);
+      } catch (_e) { /* ignore */ }
+    }
+    // Update or create
+    if (userId) {
+      const updateRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ password: nova_senha })
+      });
+      if (!updateRes.ok) {
+        const errBody = await updateRes.json().catch(() => ({}));
+        return err("Erro ao alterar senha: " + (errBody.message || errBody.msg || "erro desconhecido"));
+      }
+    } else {
+      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: nova_senha, email_confirm: true })
+      });
+      if (!createRes.ok) {
+        const errBody = await createRes.json().catch(() => ({}));
+        return err("Erro ao criar usuário: " + (errBody.message || errBody.msg || "erro desconhecido"));
       }
     }
-    // If user not found in auth.users, create one so the family can login with password
-    if (!userId) {
-      const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
-        email, password: nova_senha, email_confirm: true
-      });
-      if (createErr) return err("Erro ao criar usuário: " + createErr.message);
-      return ok({ success: true });
-    }
-    // Update password via Supabase Auth Admin SDK
-    const { error: updateErr } = await admin.auth.admin.updateUserById(userId, { password: nova_senha });
-    if (updateErr) return err("Erro ao alterar senha: " + updateErr.message);
     return ok({ success: true });
   }
   if (action === "familias_delete") {
