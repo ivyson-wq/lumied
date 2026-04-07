@@ -2685,6 +2685,16 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
                 </select>
               </div>
             </div>
+            <!-- Alterar senha -->
+            <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+              <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Alterar Senha do Portal dos Pais</div>
+              <div style="display:flex;gap:10px;align-items:flex-end;">
+                <div class="ff" style="flex:1;margin:0;"><label>Nova Senha (min. 6 caracteres)</label><input type="text" id="famEditNovaSenha" placeholder="Deixe vazio para manter a senha atual" autocomplete="new-password"></div>
+                <button onclick="famResetSenha()" style="padding:9px 18px;border-radius:8px;border:none;background:#1a6bb5;color:#fff;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;white-space:nowrap;">Alterar Senha</button>
+              </div>
+              <div class="f-alert error" id="famSenhaErr" style="margin-top:8px;"></div>
+              <div class="f-alert success" id="famSenhaOk" style="margin-top:8px;"></div>
+            </div>
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
               <button onclick="fecharEditFamilia()" style="padding:9px 18px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
               <button onclick="salvarEditFamilia()" class="btn-create" style="width:auto;padding:9px 22px;">Salvar</button>
@@ -8236,11 +8246,31 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     selSerie.innerHTML = '<option value="">— sem serie —</option>' + famSeriesOpts;
     if (r.serie) selSerie.value = r.serie;
     if (r.turno) document.getElementById('famEditTurno').value = r.turno;
+    document.getElementById('famEditNovaSenha').value = '';
+    document.getElementById('famSenhaErr').classList.remove('show');
+    document.getElementById('famSenhaOk').classList.remove('show');
     const modal = document.getElementById('famEditModal');
     modal.style.display = 'flex';
   }
   function fecharEditFamilia() {
     document.getElementById('famEditModal').style.display = 'none';
+    document.getElementById('famEditNovaSenha').value = '';
+    document.getElementById('famSenhaErr').classList.remove('show');
+    document.getElementById('famSenhaOk').classList.remove('show');
+  }
+  async function famResetSenha() {
+    const errEl = document.getElementById('famSenhaErr');
+    const okEl = document.getElementById('famSenhaOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    const email = document.getElementById('famEditEmail').value.trim();
+    const novaSenha = document.getElementById('famEditNovaSenha').value;
+    if (!novaSenha) { errEl.textContent = 'Digite a nova senha.'; errEl.classList.add('show'); return; }
+    if (novaSenha.length < 6) { errEl.textContent = 'Senha deve ter no minimo 6 caracteres.'; errEl.classList.add('show'); return; }
+    if (!email) { errEl.textContent = 'E-mail da familia nao definido.'; errEl.classList.add('show'); return; }
+    const d = await api({ action: 'familias_reset_senha', email, nova_senha: novaSenha });
+    if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    okEl.textContent = 'Senha alterada com sucesso!'; okEl.classList.add('show');
+    document.getElementById('famEditNovaSenha').value = '';
   }
   async function salvarEditFamilia() {
     const cpf = document.getElementById('famEditCpf').value;

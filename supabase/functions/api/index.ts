@@ -1294,6 +1294,18 @@ serve(async (req: Request) => {
     if (error) return err(error.message);
     return ok({ success: true });
   }
+  if (action === "familias_reset_senha") {
+    const { email, nova_senha } = body as { email?: string; nova_senha?: string };
+    if (!email) return err("E-mail obrigatório.");
+    if (!nova_senha || nova_senha.length < 6) return err("Senha deve ter no mínimo 6 caracteres.");
+    const { data: users, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    if (listErr) return err("Erro ao buscar usuários: " + listErr.message);
+    const user = users.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+    if (!user) return err("Usuário não encontrado no sistema de autenticação. Verifique se o e-mail está correto.");
+    const { error: updateErr } = await admin.auth.admin.updateUserById(user.id, { password: nova_senha });
+    if (updateErr) return err("Erro ao alterar senha: " + updateErr.message);
+    return ok({ success: true });
+  }
   if (action === "familias_delete") {
     const { cpf, email } = body as { cpf?: string; email?: string };
     if (!cpf && !email) return err("CPF ou email obrigatório.");
