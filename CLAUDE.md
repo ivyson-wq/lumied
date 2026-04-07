@@ -616,26 +616,30 @@ GitHub (1 repo) ──push──> Vercel Projeto A (env: SUPABASE_URL=xxx) → e
 
 **Via Painel Central (`admin.lumied.com.br` → Escolas → + Nova Escola):**
 
-O formulário pede: nome, subdomínio, plano, CNPJ, cor primária, ícone, logo (URL ou upload), gerente (nome/email/senha).
+O formulário pede: nome, subdomínio, plano, CNPJ, telefone, endereço, cor primária, ícone, tipo de séries, logo (URL ou upload), gerente (nome/email/senha).
 
 O sistema cria automaticamente:
-1. Registro na tabela `escolas` (com plano e data de expiração 1 ano)
-2. 9+ configs em `escola_config` (nome, cor, URL, email, ícone, logo_url)
-3. Primeiro gerente (tabelas `gerentes` + `usuarios`)
-4. Config `superusuario_email` (acesso admin da escola)
-5. Módulos do plano ativados em `escola_modulos` (6 a 40+ conforme tier)
-6. 10 séries padrão em `series`
-7. **Subdomínio no Vercel** via API (SSL automático em ~1 min)
-8. Audit log da criação
+1. Registro na tabela `escolas` com `plano_id` (UUID FK) + `plano` (text) + expiração 1 ano
+2. 9+ configs em `escola_config` (nome, cor, URL, email, ícone, logo_url, superusuário)
+3. Primeiro gerente em `gerentes` + `usuarios` (ambos com `escola_id`)
+4. Módulos do plano ativados em `escola_modulos` (via `plano_modulos` do banco, não hardcoded)
+5. Séries padrão configuráveis: Maple Bear, Ed. Infantil, Fundamental ou Completa
+6. **Subdomínio no Vercel** via API (SSL automático em ~1 min)
+7. Audit log completo (módulos, séries, status Vercel)
 
-**Retorna:** URLs (site, admin, gerente) + checklist de pendências manuais
+**Detalhes técnicos (action `staff_criar_escola` em `admin/index.ts`):**
+- `escola_modulos` usa `modulo_id` (UUID) + `habilitado` (boolean) — resolve IDs via `plano_modulos` join
+- `escola_config` não tem coluna `escola_id` — é single-tenant por chave PK
+- Contato da escola preenchido automaticamente com dados do gerente
+- Séries configuráveis por `series_tipo`: `maple_bear`, `educacao_infantil`, `fundamental`, `completa`
+
+**Retorna:** URLs (site, admin, gerente) + contagem de módulos/séries + checklist de pendências
 
 **Pendências manuais pós-criação:**
-- `RESEND_API_KEY` — para envio de emails
-- Google OAuth — adicionar redirect URI
-- Banco Inter (se usar boletos) — `INTER_CLIENT_ID/SECRET`
+- Verificar SSL em `https://escola.lumied.com.br` (~1 min)
+- Testar login do gerente
 - WhatsApp (se no plano) — `META_APP_SECRET`, `WHATSAPP_TOKEN`
-- Testar acesso em `https://escola.lumied.com.br`
+- Banco Inter (se usar boletos) — `INTER_CLIENT_ID/SECRET`
 
 > Guia detalhado legado: `NOVO-CLIENTE.md`
 
@@ -644,7 +648,7 @@ O sistema cria automaticamente:
 ## Credenciais e Secrets
 
 ### Supabase Edge Functions Secrets
-- `ANTHROPIC_API_KEY` — API Anthropic para Lumi (Claude Haiku). **PENDENTE — precisa configurar**
+- `ANTHROPIC_API_KEY` — API Anthropic para Lumi (Claude Haiku). **Configurado**
 - `VERCEL_API_TOKEN` — Vercel API para criar subdomínios no onboarding. **Configurado**
 - `RESEND_API_KEY` — API do Resend para envio de emails
 - `APP_URL` — URL pública do portal (ex: `https://maplebearcaxias.lumied.com.br`)
@@ -979,6 +983,50 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 - `professora.html` usa `manutencao_minhas` em vez de `manutencao_list` (que era gerente-only)
 - `callManutApi` agora envia token para actions autenticadas
 
+### Sessão 2026-04-07 — Correções e Features
+
+**Tickets de Suporte:**
+- Número sequencial (#1001+) — mostrado ao usuário no widget e no email
+- Modal de detalhes no admin-central: tratamento, próximos passos, resposta, URL de origem
+- `ticket_create` movido para seção pública (antes do auth check)
+- Widget hardcoda URL Supabase (CONFIG não carregado nos portais)
+- Email via Resend (temporariamente `onboarding@resend.dev` — domínio `lumied.com.br` precisa verificar no Resend)
+- Remote Trigger Claude AI (`trig_01PTaCsfDfdNrUGwfUeZJZ96`): 1x/dia + poke ao criar ticket
+- Actions: `staff_tickets_list`, `staff_ticket_respond`, `staff_ticket_close`, `staff_ticket_update`, `staff_ticket_get`
+
+**Lumi (Assistente IA):**
+- `ANTHROPIC_API_KEY` configurada
+- `lumi-assistant.js` corrigido: `addMsg` usava `body` inexistente, `loading.remove()` crashava
+- `lumied-ai/index.ts`: auth flexível aceita gerente, professora, secretaria e sessão unificada
+
+**Almoxarifado:**
+- Catálogo do gerente usa `alm_insumos_list` (não `alm_catalogo` que era de professora)
+- Botão "Criar Requisição" no Dashboard e Pendentes
+- Professora: formulário estruturado para material não cadastrado (nome, unidade, categoria, qty)
+- Turmas: professoras mostradas inline nos cards + select para editar associação
+- Importação em massa de equipe via XLSX (modelo + upload + preview)
+- 146 insumos no catálogo (62 novos extraídos de PDFs de listas de materiais)
+
+**Feature Gating:**
+- Secretaria: adicionado gating por módulos da escola (duplo filtro: features do usuário + módulos da escola)
+- Portal dos pais: pickup card respeita `data-modulo="pickup"`
+- SRI hash do Supabase JS CDN atualizado em todos os portais
+
+**Onboarding (Reescrito):**
+- `escola_modulos`: usa `modulo_id` (UUID) + `habilitado` via `plano_modulos` do banco
+- `escolas`: seta `plano_id` (UUID FK) + `plano` (text)
+- `gerentes`/`usuarios`: incluem `escola_id`
+- `escola_config`: respeita schema real (chave PK, sem escola_id)
+- Séries configuráveis: Maple Bear, Ed. Infantil, Fundamental, Completa
+
+**Portal dos Pais:**
+- Auto-preencher nome responsável e filhos nos formulários de turno/atividades
+- Reset senha família: usa `generateLink` para obter user ID (contorna bug GoTrue listUsers)
+- Busca famílias: `oninput` chama `renderFamiliasLista()` direto
+- Coluna `turno` adicionada à tabela `familias` (migration 207)
+
+**Service Worker:** bumped v4 → v5 para forçar cache bust
+
 ---
 
 ## Banco de Dados — Migrations Recentes
@@ -989,3 +1037,6 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 | `203` | Realtime habilitado em solicitacoes, inscricoes_atividades, pickup_notificacoes |
 | `204` | manutencoes.professora_id nullable |
 | `205` | impressoes: colunas professora_nome e turma_nome |
+| `206` | RPC `get_auth_uid_by_email` (SECURITY DEFINER) — não mais usada, substituída por `generateLink` |
+| `207` | familias: coluna `turno` (text) |
+| `208` | tickets: coluna `numero` (serial #1001+), `tratamento`, `proximos_passos` |
