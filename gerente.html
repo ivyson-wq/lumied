@@ -8603,6 +8603,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const d = await api({ action: 'analytics_dashboard', ano });
     if (d.error) { el.innerHTML = '<div class="empty-state">Erro ao carregar.</div>'; return; }
 
+    var z12 = [0,0,0,0,0,0,0,0,0,0,0,0];
+    d.solicitacoes_por_mes = d.solicitacoes_por_mes || z12;
+    d.gastos_almox_por_mes = d.gastos_almox_por_mes || z12;
+    d.manutencao_por_mes = d.manutencao_por_mes || z12;
     const maxSol = Math.max(...d.solicitacoes_por_mes, 1);
     const maxGasto = Math.max(...d.gastos_almox_por_mes, 1);
     const maxManut = Math.max(...d.manutencao_por_mes, 1);
@@ -8671,6 +8675,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const ano = document.getElementById('finDashAno').value;
     const d = await api({ action: 'fin_dashboard', ano });
     if (d.error) { document.getElementById('finDashContent').innerHTML = '<div class="empty-state">Erro.</div>'; return; }
+    var z12f = [0,0,0,0,0,0,0,0,0,0,0,0];
+    d.receitas_mes = d.receitas_mes || z12f;
+    d.despesas_mes = d.despesas_mes || z12f;
+    d.total_receitas = d.total_receitas || 0;
+    d.total_despesas = d.total_despesas || 0;
+    d.pendente = d.pendente || 0;
     const fmtR = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
     const maxVal = Math.max(...d.receitas_mes, ...d.despesas_mes, 1);
     document.getElementById('finDashContent').innerHTML = `
