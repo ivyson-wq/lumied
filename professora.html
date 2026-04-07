@@ -3319,10 +3319,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         const estoqueTxt = estoqueNum > 0
           ? `Estoque: ${estoqueNum}`
           : `<span style="color:#e53e3e;font-weight:600;">Estoque: ${estoqueNum}</span>`;
+        const precoUnit = it.qtd_por_embalagem > 1 ? it.preco / it.qtd_por_embalagem : it.preco;
+        const embInfo = it.qtd_por_embalagem > 1
+          ? `<div style="font-size:10px;color:#1a6bb5;margin-top:1px;">${esc(it.unidade_compra||'emb')} c/ ${it.qtd_por_embalagem} ${esc(it.unidade)} = ${fmtBRL(it.preco)}</div>`
+          : '';
         return `<div class="alm-catalog-item">
           <div class="alm-cat-info">
             <div class="alm-cat-name">${esc(it.nome)}</div>
-            <div class="alm-cat-sub">${fmtBRL(it.qtd_por_embalagem > 1 ? it.preco / it.qtd_por_embalagem : it.preco)}/${it.unidade} · ${estoqueTxt}</div>
+            <div class="alm-cat-sub">${fmtBRL(precoUnit)}/${esc(it.unidade)} · ${estoqueTxt} ${esc(it.unidade)}</div>
+            ${embInfo}
           </div>
           <button class="alm-add-btn" onclick="almAddToCart('${it.id}')" ${inCart ? 'style="background:#6b8c6b;"' : ''}>
             ${inCart ? '✓ Adicionado' : '+ Adicionar'}
@@ -3337,7 +3342,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const it = almCatalogo.find(c => c.id === insumoId);
     if (!it) return;
     const precoUnit = it.qtd_por_embalagem > 1 ? it.preco / it.qtd_por_embalagem : it.preco;
-    almCart.push({ insumo_id: it.id, nome: it.nome, unidade: it.unidade, preco_unit: precoUnit, qty_solicitado: 1 });
+    const qtdEmb = it.qtd_por_embalagem || 1;
+    almCart.push({ insumo_id: it.id, nome: it.nome, unidade: it.unidade, preco_unit: precoUnit, qty_solicitado: 1, qtd_por_embalagem: qtdEmb, preco_embalagem: it.preco, unidade_compra: it.unidade_compra || '' });
     almRenderCart();
     almFiltrarCatalogo();
   }
@@ -3350,8 +3356,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   function almUpdateQty(insumoId, val) {
     const it = almCart.find(c => c.insumo_id === insumoId);
-    if (it) it.qty_solicitado = Math.max(1, parseFloat(val) || 1);
-    almRenderCartTotal();
+    if (it) { it.qty_solicitado = Math.max(1, parseFloat(val) || 1); almRenderCart(); }
   }
 
   function almRenderCart() {
@@ -3359,17 +3364,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const listEl  = document.getElementById('almCartList');
     if (!almCart.length) { emptyEl.style.display = 'block'; listEl.innerHTML = ''; almRenderCartTotal(); return; }
     emptyEl.style.display = 'none';
-    listEl.innerHTML = almCart.map(it =>
-      `<div class="alm-cart-item">
+    listEl.innerHTML = almCart.map(it => {
+      const subtotal = it.qty_solicitado * it.preco_unit;
+      const embInfo = it.qtd_por_embalagem > 1
+        ? `<div style="font-size:10px;color:#1a6bb5;">1 ${esc(it.unidade_compra||'emb')} = ${it.qtd_por_embalagem} ${esc(it.unidade)}</div>`
+        : '';
+      return `<div class="alm-cart-item">
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:13px;">${esc(it.nome)}</div>
           <div style="font-size:11px;color:var(--muted);">${fmtBRL(it.preco_unit)} / ${esc(it.unidade)}</div>
+          ${embInfo}
         </div>
-        <input type="number" class="alm-qty-input" value="${it.qty_solicitado}" min="1" step="0.5"
-          onchange="almUpdateQty('${it.insumo_id}', this.value)">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <input type="number" class="alm-qty-input" value="${it.qty_solicitado}" min="1" step="1"
+            onchange="almUpdateQty('${it.insumo_id}', this.value)">
+          <div style="font-size:10px;color:var(--muted);">${esc(it.unidade)}</div>
+        </div>
+        <div style="text-align:right;min-width:60px;">
+          <div style="font-size:12px;font-weight:600;">${fmtBRL(subtotal)}</div>
+        </div>
         <button onclick="almRemoveCart('${it.insumo_id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;">×</button>
-      </div>`
-    ).join('');
+      </div>`;
+    }).join('');
     almRenderCartTotal();
   }
 
