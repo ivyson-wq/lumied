@@ -159,7 +159,8 @@
         alert('Erro: ' + result.error);
         return;
       }
-      document.getElementById('tw-form').innerHTML = '<div class="tw-success"><span>&#10003;</span>Ticket enviado!<br><small style="color:#7a7169;">Responderemos em breve.</small></div>';
+      var numDisplay = result.numero ? '<br><strong style="font-size:16px;color:#1a1a1a;">Ticket #' + result.numero + '</strong>' : '';
+      document.getElementById('tw-form').innerHTML = '<div class="tw-success"><span>&#10003;</span>Ticket enviado!' + numDisplay + '<br><small style="color:#7a7169;">Guarde o número para acompanhar.</small></div>';
       setTimeout(function() {
         panel.classList.remove('show');
         // Reset form

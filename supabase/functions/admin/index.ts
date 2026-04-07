@@ -610,6 +610,27 @@ router.on("staff_ticket_close", authStaff, async (ctx) => {
   return successResponse({ success: true });
 });
 
+router.on("staff_ticket_update", authStaff, async (ctx) => {
+  const { ticket_id, tratamento, proximos_passos, resposta, status } = ctx.body as any;
+  if (!ticket_id) throw new AppError("VALIDATION_FAILED", "ticket_id obrigatório.");
+  const updates: Record<string, unknown> = { atualizado_em: new Date().toISOString() };
+  if (tratamento !== undefined) updates.tratamento = tratamento;
+  if (proximos_passos !== undefined) updates.proximos_passos = proximos_passos;
+  if (resposta !== undefined) { updates.resposta = resposta; updates.respondido_por = ctx.user!.email; }
+  if (status) updates.status = status;
+  const { error } = await ctx.sb.from("tickets").update(updates).eq("id", ticket_id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+router.on("staff_ticket_get", authStaff, async (ctx) => {
+  const { ticket_id } = ctx.body as any;
+  if (!ticket_id) throw new AppError("VALIDATION_FAILED", "ticket_id obrigatório.");
+  const { data } = await ctx.sb.from("tickets").select("*, escolas(nome)").eq("id", ticket_id).single();
+  if (!data) throw new AppError("NOT_FOUND", "Ticket não encontrado.");
+  return successResponse(data);
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  ONBOARDING — Criar novo cliente automaticamente
 // ═══════════════════════════════════════════════════════════════

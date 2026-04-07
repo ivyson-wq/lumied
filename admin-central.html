@@ -363,9 +363,35 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Escola</th><th>Email</th><th>Portal</th><th>Tipo</th><th>Descricao</th><th>URL</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
+            <thead><tr><th>#</th><th>Escola</th><th>Email</th><th>Portal</th><th>Tipo</th><th>Descricao</th><th>URL</th><th>Status</th><th>Data</th></tr></thead>
             <tbody id="ticketsBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Modal detalhes do ticket -->
+      <div id="ticketDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;overflow-y:auto;padding:24px;">
+        <div style="background:#fff;border-radius:16px;max-width:700px;margin:0 auto;padding:28px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h3 style="font-size:17px;font-weight:700;" id="tdTitle">Ticket #---</h3>
+            <button onclick="document.getElementById('ticketDetailModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+          </div>
+          <div id="tdInfo" style="display:grid;grid-template-columns:120px 1fr;gap:8px 12px;font-size:13px;margin-bottom:20px;"></div>
+          <div style="border-top:1px solid #e2dbd1;padding-top:16px;">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#7a7169;margin-bottom:8px;">Tratamento / Diagnóstico</div>
+            <textarea id="tdTratamento" rows="3" style="width:100%;padding:10px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;" placeholder="Descreva o que foi feito ou está sendo investigado..."></textarea>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#7a7169;margin-bottom:8px;margin-top:12px;">Próximos Passos</div>
+            <textarea id="tdProximos" rows="2" style="width:100%;padding:10px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;" placeholder="O que precisa ser feito a seguir..."></textarea>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#7a7169;margin-bottom:8px;margin-top:12px;">Resposta ao Usuário</div>
+            <textarea id="tdResposta" rows="2" style="width:100%;padding:10px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;" placeholder="Resposta visível para o usuário (opcional)..."></textarea>
+            <div style="display:flex;gap:10px;margin-top:16px;align-items:center;">
+              <select id="tdStatus" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+                <option value="aberto">Aberto</option><option value="respondido">Respondido</option><option value="escalado">Escalado</option><option value="fechado">Fechado</option>
+              </select>
+              <button onclick="salvarTicketDetail()" style="padding:8px 20px;background:#6B3FA0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Salvar</button>
+              <div id="tdOk" style="color:#2d7a3a;font-size:13px;font-weight:600;display:none;">Salvo!</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -815,20 +841,17 @@ function renderTickets() {
     const statusCls = t.status || 'aberto';
     const escolaNome = t.escolas?.nome || t.escola_nome || '-';
     const urlPagina = t.url_pagina || '';
-    const urlShort = urlPagina ? urlPagina.replace(/^https?:\/\//, '').slice(0, 40) : '-';
-    return `<tr>
+    const urlShort = urlPagina ? urlPagina.replace(/^https?:\/\//, '').slice(0, 35) : '-';
+    return `<tr onclick="abrirTicketDetail('${t.id}')" style="cursor:pointer;">
+      <td style="font-weight:700;color:#6B3FA0;">#${t.numero || '?'}</td>
       <td>${esc(escolaNome)}</td>
       <td>${esc(t.email)}</td>
       <td><span style="font-size:11px;text-transform:capitalize;">${esc(t.portal || '-')}</span></td>
       <td><span style="font-size:11px;text-transform:capitalize;">${esc(t.tipo || '-')}</span></td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(t.descricao)}">${esc(t.descricao)}</td>
-      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${urlPagina ? `<a href="${esc(urlPagina)}" target="_blank" title="${esc(urlPagina)}" style="color:#1a6bb5;">${esc(urlShort)}</a>` : '-'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(t.descricao)}">${esc(t.descricao)}</td>
+      <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${urlPagina ? `<a href="${esc(urlPagina)}" target="_blank" title="${esc(urlPagina)}" style="color:#1a6bb5;" onclick="event.stopPropagation()">${esc(urlShort)}</a>` : '-'}</td>
       <td><span class="status-pill ${statusCls}">${esc(t.status || 'aberto')}</span></td>
       <td style="font-size:12px;white-space:nowrap;">${fmtDate(t.criado_em)}</td>
-      <td>
-        ${t.status !== 'fechado' ? `<button class="action-btn purple" onclick="abrirResponderTicket('${t.id}','${esc(t.descricao || '')}')">Responder</button>` : ''}
-        ${t.status !== 'fechado' ? `<button class="action-btn del" onclick="fecharTicket('${t.id}')">Fechar</button>` : ''}
-      </td>
     </tr>`;
   }).join('');
 }
@@ -838,6 +861,49 @@ function filterTickets(status, el) {
   document.querySelectorAll('#ticketFilters .filter-tab').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
   renderTickets();
+}
+
+let _currentTicketId = null;
+async function abrirTicketDetail(id) {
+  _currentTicketId = id;
+  const d = await api({ action: 'staff_ticket_get', ticket_id: id });
+  if (d.error) { alert(d.error); return; }
+  const t = d;
+  document.getElementById('tdTitle').textContent = 'Ticket #' + (t.numero || '?');
+  const escolaNome = t.escolas?.nome || '-';
+  const tipoLabel = { bug: 'Bug/Erro', duvida: 'Dúvida', sugestao: 'Sugestão', urgente: '🚨 URGENTE' };
+  document.getElementById('tdInfo').innerHTML = `
+    <div style="font-weight:600;color:#7a7169;">Escola</div><div>${esc(escolaNome)}</div>
+    <div style="font-weight:600;color:#7a7169;">Email</div><div>${esc(t.email)}</div>
+    <div style="font-weight:600;color:#7a7169;">Portal</div><div style="text-transform:capitalize;">${esc(t.portal || '-')}</div>
+    <div style="font-weight:600;color:#7a7169;">Tipo</div><div>${esc(tipoLabel[t.tipo] || t.tipo || '-')}</div>
+    <div style="font-weight:600;color:#7a7169;">Data</div><div>${fmtDate(t.criado_em)}</div>
+    <div style="font-weight:600;color:#7a7169;">URL de origem</div><div>${t.url_pagina ? '<a href="' + esc(t.url_pagina) + '" target="_blank" style="color:#1a6bb5;word-break:break-all;">' + esc(t.url_pagina) + '</a>' : '-'}</div>
+    <div style="font-weight:600;color:#7a7169;">User Agent</div><div style="font-size:11px;color:#999;word-break:break-all;">${esc(t.user_agent || '-')}</div>
+    <div style="font-weight:600;color:#7a7169;">Resolução</div><div>${esc(t.resolucao_tela || '-')}</div>
+    <div style="font-weight:600;color:#7a7169;grid-column:1/-1;margin-top:8px;border-top:1px solid #e2dbd1;padding-top:8px;">Descrição do Usuário</div>
+    <div style="grid-column:1/-1;background:#f9f7f4;padding:10px 12px;border-radius:8px;white-space:pre-wrap;font-size:13px;line-height:1.5;">${esc(t.descricao)}</div>
+  `;
+  document.getElementById('tdTratamento').value = t.tratamento || '';
+  document.getElementById('tdProximos').value = t.proximos_passos || '';
+  document.getElementById('tdResposta').value = t.resposta || '';
+  document.getElementById('tdStatus').value = t.status || 'aberto';
+  document.getElementById('tdOk').style.display = 'none';
+  document.getElementById('ticketDetailModal').style.display = 'block';
+}
+async function salvarTicketDetail() {
+  const d = await api({
+    action: 'staff_ticket_update',
+    ticket_id: _currentTicketId,
+    tratamento: document.getElementById('tdTratamento').value.trim(),
+    proximos_passos: document.getElementById('tdProximos').value.trim(),
+    resposta: document.getElementById('tdResposta').value.trim() || undefined,
+    status: document.getElementById('tdStatus').value,
+  });
+  if (d.error) { alert(d.error); return; }
+  document.getElementById('tdOk').style.display = 'inline';
+  setTimeout(() => document.getElementById('tdOk').style.display = 'none', 3000);
+  loadTickets();
 }
 
 function abrirResponderTicket(id, desc) {

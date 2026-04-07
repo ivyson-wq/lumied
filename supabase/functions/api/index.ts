@@ -716,12 +716,13 @@ serve(async (req: Request) => {
       const { data: esc } = await admin.from("escolas").select("id").eq("ativo", true).limit(1).single();
       escola_id = esc?.id || null;
     } catch {}
-    const { error: insErr } = await admin.from("tickets").insert({
+    const { data: ticketData, error: insErr } = await admin.from("tickets").insert({
       escola_id, email, nome: nome || null, portal, tipo: tipo || "bug",
       descricao, url_pagina: url_pagina || null, user_agent: user_agent || null,
       resolucao_tela: resolucao_tela || null,
-    });
+    }).select("numero").single();
     if (insErr) return err("Erro ao criar ticket: " + insErr.message);
+    const ticketNumero = ticketData?.numero;
     try {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (resendKey) {
@@ -732,7 +733,7 @@ serve(async (req: Request) => {
           body: JSON.stringify({
             from: "Lumied Tickets <noreply@lumied.com.br>",
             to: ["ivyson@gmail.com"],
-            subject: `[Ticket ${tipoLabel[(tipo as string) || 'bug'] || tipo}] ${(descricao as string || '').slice(0, 80)}`,
+            subject: `[Ticket #${ticketNumero || '?'} ${tipoLabel[(tipo as string) || 'bug'] || tipo}] ${(descricao as string || '').slice(0, 80)}`,
             html: `<div style="font-family:sans-serif;max-width:600px;">
               <h2 style="color:#C8102E;">Novo Ticket de Suporte</h2>
               <table style="border-collapse:collapse;width:100%;">
@@ -748,7 +749,7 @@ serve(async (req: Request) => {
         });
       }
     } catch {}
-    return ok({ success: true });
+    return ok({ success: true, numero: ticketNumero });
   }
 
   // ════════════════════════════════════════════════════════════
