@@ -271,6 +271,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div class="ff"><label>Cor Primaria</label><input id="neCor" type="color" value="#C8102E" style="height:38px;"></div>
             <div class="ff"><label>Icone/Emoji</label><input id="neIcone" placeholder="🏫" value="🏫" maxlength="4"></div>
             <div class="ff"><label>Endereco</label><input id="neEndereco" placeholder="Cidade, Estado"></div>
+            <div class="ff"><label>Séries / Currículo</label>
+              <select id="neSeriesTipo" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+                <option value="maple_bear">Maple Bear (Bear Care → Year 5)</option>
+                <option value="educacao_infantil">Educação Infantil (Berçário → Pré II)</option>
+                <option value="fundamental">Fundamental (1º → 9º Ano)</option>
+                <option value="completa">Completa (Berçário → 9º Ano)</option>
+              </select>
+            </div>
           </div>
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
             <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Logo da Escola *</div>
@@ -701,6 +709,7 @@ async function criarNovaEscola() {
     cor_primaria: document.getElementById('neCor').value,
     escola_icone: document.getElementById('neIcone').value.trim() || '🏫',
     escola_logo_url: document.getElementById('neLogoUrl').value.trim() || undefined,
+    series_tipo: document.getElementById('neSeriesTipo').value,
     gerente_nome: document.getElementById('neGerenteNome').value.trim(),
     gerente_email: document.getElementById('neGerenteEmail').value.trim(),
     gerente_senha: document.getElementById('neGerenteSenha').value,
@@ -732,6 +741,7 @@ async function criarNovaEscola() {
     🔧 <a href="${esc(d.url_admin)}" target="_blank">${esc(d.url_admin)}</a><br>
     📊 <a href="${esc(d.url_gerente)}" target="_blank">${esc(d.url_gerente)}</a><br>
     📦 Módulos ativados: <strong>${d.modulos_ativados}</strong><br>
+    🎒 Séries criadas: <strong>${d.series_criadas || '?'}</strong><br>
     👤 Gerente: <strong>${esc(d.gerente_email)}</strong><br><br>
     <strong>Pendências manuais:</strong><br>` +
     (d.pendencias || []).map(p => `• ${esc(p)}`).join('<br>');

@@ -637,35 +637,40 @@ router.on("staff_ticket_get", authStaff, async (ctx) => {
 
 router.on("staff_criar_escola", authStaff, async (ctx) => {
   const { nome, subdominio, plano, gerente_nome, gerente_email, gerente_senha,
-    cnpj, telefone, endereco, cor_primaria, escola_icone, escola_logo_url } = ctx.body as any;
+    cnpj, telefone, endereco, cor_primaria, escola_icone, escola_logo_url,
+    series_tipo } = ctx.body as any;
 
   if (!nome || !subdominio || !gerente_nome || !gerente_email || !gerente_senha) {
     throw new AppError("VALIDATION_FAILED", "nome, subdominio, gerente_nome, gerente_email e gerente_senha são obrigatórios.");
   }
 
-  // Validar subdomínio
   const slug = subdominio.toLowerCase().replace(/[^a-z0-9-]/g, '');
   if (slug.length < 3) throw new AppError("VALIDATION_FAILED", "Subdomínio muito curto (min 3 caracteres).");
 
-  // Verificar se subdomínio já existe
-  const { data: existing } = await ctx.sb.from("escolas").select("id").eq("subdominio", slug).single();
+  const { data: existing } = await ctx.sb.from("escolas").select("id").eq("subdominio", slug).maybeSingle();
   if (existing) throw new AppError("CONFLICT", `Subdomínio "${slug}" já está em uso.`);
 
+  const planoSlug = plano || 'gestao';
   const agora = new Date().toISOString();
-  const planoFim = new Date(Date.now() + 365 * 86400000).toISOString(); // 1 ano
+  const planoFim = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0];
 
-  // 1. Criar escola
+  // 1. Resolver plano_id a partir do slug
+  const { data: planoRow } = await ctx.sb.from("planos").select("id").eq("slug", planoSlug).maybeSingle();
+  if (!planoRow) throw new AppError("VALIDATION_FAILED", `Plano "${planoSlug}" não encontrado.`);
+
+  // 2. Criar escola com plano_id (UUID FK) + plano (text)
   const { data: escola, error: errEscola } = await ctx.sb.from("escolas").insert({
-    nome, subdominio: slug, plano: plano || 'gestao',
-    plano_fim: planoFim, ativo: true,
-    modulo_whatsapp: false,
-    criado_em: agora,
+    nome, subdominio: slug, plano: planoSlug, plano_id: planoRow.id,
+    plano_inicio: agora.split('T')[0], plano_fim: planoFim,
+    cnpj: cnpj || null, contato_nome: gerente_nome,
+    contato_email: gerente_email.toLowerCase().trim(),
+    contato_telefone: telefone || null,
+    ativo: true, modulo_whatsapp: false, tema: 'corporativo',
   }).select("id").single();
-
   if (errEscola || !escola) throw new AppError("BAD_REQUEST", errEscola?.message || "Erro ao criar escola.");
 
-  // 2. Configurações iniciais da escola
-  const configs: Array<{ chave: string; valor: string }> = [
+  // 3. Configurações (escola_config não tem escola_id — usa chave única por escola via prefixo ou upsert por chave)
+  const configs: Array<{ chave: string; valor: unknown }> = [
     { chave: 'escola_nome', valor: nome },
     { chave: 'escola_icone', valor: escola_icone || '🏫' },
     { chave: 'cor_primaria', valor: cor_primaria || '#C8102E' },
@@ -673,41 +678,40 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
     { chave: 'cor_cream', valor: '#f8f5f0' },
     { chave: 'escola_url', valor: `https://${slug}.lumied.com.br` },
     { chave: 'escola_email_domain', valor: 'lumied.com.br' },
-    { chave: 'escola_email_sender', valor: 'noreply@lumied.com.br' },
+    { chave: 'escola_email_sender', valor: 'onboarding@resend.dev' },
+    { chave: 'superusuario_email', valor: gerente_email.toLowerCase().trim() },
   ];
   if (cnpj) configs.push({ chave: 'escola_cnpj', valor: cnpj });
-  if (telefone) configs.push({ chave: 'escola_telefone', valor: telefone });
-  if (endereco) configs.push({ chave: 'escola_endereco', valor: endereco });
   if (escola_logo_url) configs.push({ chave: 'escola_logo_url', valor: escola_logo_url });
-
   for (const cfg of configs) {
-    await ctx.sb.from("escola_config").insert({ ...cfg, escola_id: escola.id });
+    await ctx.sb.from("escola_config").upsert({ chave: cfg.chave, valor: cfg.valor }, { onConflict: "chave" }).catch(() => {});
   }
 
-  // 3. Criar primeiro gerente
+  // 4. Criar gerente com escola_id
   const gerenteSenhaHash = await hashSenha(gerente_senha);
-  await ctx.sb.from("gerentes").insert({ nome: gerente_nome, email: gerente_email.toLowerCase().trim(), senha_hash: gerenteSenhaHash });
-  await ctx.sb.from("usuarios").insert({ nome: gerente_nome, email: gerente_email.toLowerCase().trim(), senha_hash: gerenteSenhaHash, papel: 'gerente' });
+  const emailNorm = gerente_email.toLowerCase().trim();
+  await ctx.sb.from("gerentes").insert({ nome: gerente_nome, email: emailNorm, senha_hash: gerenteSenhaHash, escola_id: escola.id });
+  await ctx.sb.from("usuarios").insert({ nome: gerente_nome, email: emailNorm, senha_hash: gerenteSenhaHash, papel: 'gerente', papeis: ['gerente'], escola_id: escola.id, ativo: true });
 
-  // 4. Config superusuário da escola
-  await ctx.sb.from("escola_config").insert({ chave: 'superusuario_email', valor: gerente_email.toLowerCase().trim(), escola_id: escola.id });
-
-  // 5. Ativar módulos padrão do plano
-  const MODULOS_POR_PLANO: Record<string, string[]> = {
-    starter: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria'],
-    gestao: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao'],
-    automacao: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao', 'whatsapp', 'cobranca', 'pix', 'contratos', 'compliance', 'biblioteca', 'cantina', 'transporte', 'matricula', 'pesquisas'],
-    avancado: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao', 'whatsapp', 'cobranca', 'pix', 'contratos', 'compliance', 'biblioteca', 'cantina', 'transporte', 'matricula', 'pesquisas', 'analytics', 'rh', 'contabil', 'ponto', 'pdi', 'impressoes'],
-    rede: ['notas', 'frequencia', 'calendario', 'documentos', 'portal_aluno', 'biometria', 'comunicacao', 'chat', 'crm', 'financeiro', 'pickup', 'almoxarifado', 'relatorios_bncc', 'turnos', 'atividades', 'diplomas', 'atestados', 'achados', 'manutencao', 'whatsapp', 'cobranca', 'pix', 'contratos', 'compliance', 'biblioteca', 'cantina', 'transporte', 'matricula', 'pesquisas', 'analytics', 'rh', 'contabil', 'ponto', 'pdi', 'impressoes', 'app_nativo', 'ead', 'loja', 'multi_escola', 'api_dedicada', 'emergencias'],
-  };
-  const modulos = MODULOS_POR_PLANO[plano || 'gestao'] || MODULOS_POR_PLANO.gestao;
-  for (const mod of modulos) {
-    await ctx.sb.from("escola_modulos").upsert({ escola_id: escola.id, modulo_slug: mod, ativo: true }, { onConflict: "escola_id,modulo_slug" });
+  // 5. Ativar módulos do plano (usa plano_modulos do banco, não hardcoded)
+  const { data: planoModulos } = await ctx.sb.from("plano_modulos").select("modulo_id").eq("plano_id", planoRow.id);
+  const modulosAtivados = planoModulos || [];
+  for (const pm of modulosAtivados) {
+    await ctx.sb.from("escola_modulos").upsert(
+      { escola_id: escola.id, modulo_id: pm.modulo_id, habilitado: true },
+      { onConflict: "escola_id,modulo_id" }
+    ).catch(() => {});
   }
 
-  // 6. Séries padrão
-  const seriesPadrao = ['Bear Care', 'Toddler', 'Nursery', 'Junior Kindergarten (JK)', 'Senior Kindergarten (SK)', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'];
-  for (const serie of seriesPadrao) {
+  // 6. Séries padrão (configurável por tipo de escola)
+  const SERIES: Record<string, string[]> = {
+    maple_bear: ['Bear Care', 'Toddler', 'Nursery', 'Junior Kindergarten (JK)', 'Senior Kindergarten (SK)', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
+    educacao_infantil: ['Berçário', 'Maternal I', 'Maternal II', 'Jardim I', 'Jardim II', 'Pré I', 'Pré II'],
+    fundamental: ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano', '6º Ano', '7º Ano', '8º Ano', '9º Ano'],
+    completa: ['Berçário', 'Maternal I', 'Maternal II', 'Jardim I', 'Jardim II', 'Pré I', 'Pré II', '1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano', '6º Ano', '7º Ano', '8º Ano', '9º Ano'],
+  };
+  const seriesEscolhidas = SERIES[series_tipo || 'maple_bear'] || SERIES.maple_bear;
+  for (const serie of seriesEscolhidas) {
     await ctx.sb.from("series").insert({ nome: serie, escola_id: escola.id }).catch(() => {});
   }
 
@@ -715,6 +719,7 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
   const VERCEL_TOKEN = Deno.env.get("VERCEL_API_TOKEN");
   const VERCEL_PROJECT = Deno.env.get("VERCEL_PROJECT_ID") || "prj_6uDL0URPHd5DiMj5ahaZcEltRfSL";
   const VERCEL_TEAM = Deno.env.get("VERCEL_TEAM_ID") || "team_k3kAHF00rep1GFrBRA53OmGg";
+  let vercelOk = false;
   if (VERCEL_TOKEN) {
     try {
       const domainRes = await fetch(`https://api.vercel.com/v10/projects/${VERCEL_PROJECT}/domains?teamId=${VERCEL_TEAM}`, {
@@ -723,37 +728,37 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
         body: JSON.stringify({ name: `${slug}.lumied.com.br` }),
       });
       const domainData = await domainRes.json();
-      log.info("Vercel domain added", { domain: `${slug}.lumied.com.br`, verified: domainData.verified });
+      vercelOk = domainRes.ok;
+      log.info("Vercel domain added", { domain: `${slug}.lumied.com.br`, ok: domainRes.ok, verified: domainData.verified });
     } catch (e) {
       log.error("Vercel domain error", { error: (e as Error).message });
     }
-  } else {
-    log.warn("VERCEL_API_TOKEN not set — subdomínio não registrado automaticamente");
   }
 
   // 8. Audit log
   await ctx.sb.from("lumied_staff_audit").insert({
     staff_id: ctx.user!.id, staff_nome: ctx.user!.nome,
     acao: 'escola_criada',
-    detalhes: { nome, subdominio: slug, plano: plano || 'gestao', gerente_email },
+    detalhes: { nome, subdominio: slug, plano: planoSlug, gerente_email: emailNorm, modulos: modulosAtivados.length, series: seriesEscolhidas.length, vercel: vercelOk },
     escola_id: escola.id,
   });
 
-  // 8. Checklist de pendências
-  const pendencias = [];
-  pendencias.push('RESEND_API_KEY — Configurar em Supabase Secrets para envio de emails');
-  if (modulos.includes('whatsapp')) {
-    pendencias.push('META_APP_SECRET — Meta Business Manager');
-    pendencias.push('WHATSAPP_TOKEN — Meta Developers');
-    pendencias.push('META_PHONE_NUMBER_ID — WhatsApp API Setup');
+  // 9. Checklist de pendências
+  const pendencias: string[] = [];
+  if (!vercelOk) pendencias.push('Subdomínio Vercel — registrar manualmente ou verificar VERCEL_API_TOKEN');
+  // Resolve module slugs for checklist
+  const { data: moduloSlugs } = await ctx.sb.from("escola_modulos").select("modulos(slug)").eq("escola_id", escola.id).eq("habilitado", true);
+  const slugsAtivos = (moduloSlugs || []).map((m: any) => m.modulos?.slug).filter(Boolean);
+  if (slugsAtivos.includes('whatsapp_departamental') || slugsAtivos.includes('whatsapp_gateway')) {
+    pendencias.push('WhatsApp — META_APP_SECRET, WHATSAPP_TOKEN, META_PHONE_NUMBER_ID');
   }
-  if (modulos.includes('financeiro')) {
-    pendencias.push('INTER_CLIENT_ID/SECRET — Banco Inter (se usar boletos)');
+  if (slugsAtivos.includes('financeiro')) {
+    pendencias.push('Banco Inter — INTER_CLIENT_ID/SECRET (se usar boletos)');
   }
-  pendencias.push('Google OAuth — Adicionar redirect URI do novo Supabase');
-  pendencias.push('Verificar SSL em https://' + slug + '.lumied.com.br');
+  pendencias.push('Verificar SSL em https://' + slug + '.lumied.com.br (~1 min)');
+  pendencias.push('Testar login do gerente em https://' + slug + '.lumied.com.br/gerente.html');
 
-  log.info("Nova escola criada", { escola_id: escola.id, nome, slug, plano: plano || 'gestao' });
+  log.info("Nova escola criada", { escola_id: escola.id, nome, slug, plano: planoSlug, modulos: modulosAtivados.length });
 
   return successResponse({
     success: true,
@@ -761,8 +766,9 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
     url: `https://${slug}.lumied.com.br`,
     url_admin: `https://${slug}.lumied.com.br/admin.html`,
     url_gerente: `https://${slug}.lumied.com.br/gerente.html`,
-    modulos_ativados: modulos.length,
-    gerente_email,
+    modulos_ativados: modulosAtivados.length,
+    series_criadas: seriesEscolhidas.length,
+    gerente_email: emailNorm,
     pendencias,
   });
 });
