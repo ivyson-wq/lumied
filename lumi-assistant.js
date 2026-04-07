@@ -107,18 +107,11 @@
   }
 
   function addMsg(text, type) {
-    // Para bottombar, mostra no painel de resposta
     const resp = document.getElementById('lumiResponse');
     const content = document.getElementById('lumiRespContent');
-    if (type === 'user') return; // não mostrar a pergunta do user no painel
+    if (type === 'user') return;
     resp.style.display = 'block';
     content.innerHTML = text;
-    const msg = document.createElement('div');
-    msg.className = 'lumi-msg ' + type;
-    msg.innerHTML = text;
-    body.appendChild(msg);
-    body.scrollTop = body.scrollHeight;
-    return msg;
   }
 
   window._lumiPergunta = function (texto) {
@@ -155,7 +148,7 @@
         addMsg('<div style="display:flex;gap:8px;"><span style="font-size:16px;flex-shrink:0;">✨</span><div>' + resp.replace(/\n/g, '<br>') + '</div></div>', 'ai');
       }
     } catch (e) {
-      loading.remove();
+      console.error('[Lumi]', e);
       addMsg('Erro de conexão. Tente novamente.', 'ai');
     }
   };
