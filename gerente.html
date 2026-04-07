@@ -3013,6 +3013,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   var DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
 
+  var MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   var allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
   var currentGerente=null, pollInterval=null, realtimeChannel=null;
   var sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -8594,9 +8595,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── ANALYTICS DASHBOARD ────────────────────────────
-  var MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   async function loadAnalytics() {
+    var _MC = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var _Z12 = [0,0,0,0,0,0,0,0,0,0,0,0];
     const ano = document.getElementById('analyticsAno').value;
     const el = document.getElementById('analyticsContent');
     el.innerHTML = '<div class="empty-state">Carregando...</div>';
@@ -8604,10 +8606,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     try { d = await api({ action: 'analytics_dashboard', ano }); } catch(_) { d = {}; }
     if (!d || d.error || !d.solicitacoes_por_mes) { el.innerHTML = '<div class="empty-state">Nenhum dado disponível para ' + ano + '.</div>'; return; }
 
-    var z12 = [0,0,0,0,0,0,0,0,0,0,0,0];
-    if (!Array.isArray(d.solicitacoes_por_mes)) d.solicitacoes_por_mes = z12;
-    if (!Array.isArray(d.gastos_almox_por_mes)) d.gastos_almox_por_mes = z12;
-    if (!Array.isArray(d.manutencao_por_mes)) d.manutencao_por_mes = z12;
+    if (!Array.isArray(d.solicitacoes_por_mes)) d.solicitacoes_por_mes = _Z12;
+    if (!Array.isArray(d.gastos_almox_por_mes)) d.gastos_almox_por_mes = _Z12;
+    if (!Array.isArray(d.manutencao_por_mes)) d.manutencao_por_mes = _Z12;
     const maxSol = Math.max(...d.solicitacoes_por_mes, 1);
     const maxGasto = Math.max(...d.gastos_almox_por_mes, 1);
     const maxManut = Math.max(...d.manutencao_por_mes, 1);
@@ -8620,7 +8621,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           ${d.solicitacoes_por_mes.map((v,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
             <div style="font-size:10px;font-weight:600;color:${v>0?'var(--red)':'var(--muted)'};">${v||''}</div>
             <div style="width:100%;background:${v>0?'var(--red)':'#f0ece6'};border-radius:4px 4px 0 0;height:${Math.max(4,v/maxSol*100)}px;transition:height .3s;"></div>
-            <div style="font-size:9px;color:var(--muted);">${MESES_CURTOS[i]}</div>
+            <div style="font-size:9px;color:var(--muted);">${_MC[i]}</div>
           </div>`).join('')}
         </div>
       </div>
@@ -8632,7 +8633,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           ${d.gastos_almox_por_mes.map((v,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
             <div style="font-size:9px;font-weight:600;color:${v>0?'#1a6bb5':'var(--muted)'};">${v>0?almFmtBRL(v):''}</div>
             <div style="width:100%;background:${v>0?'#1a6bb5':'#f0ece6'};border-radius:4px 4px 0 0;height:${Math.max(4,v/maxGasto*100)}px;transition:height .3s;"></div>
-            <div style="font-size:9px;color:var(--muted);">${MESES_CURTOS[i]}</div>
+            <div style="font-size:9px;color:var(--muted);">${_MC[i]}</div>
           </div>`).join('')}
         </div>
       </div>
@@ -8645,7 +8646,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             ${d.manutencao_por_mes.map((v,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
               <div style="font-size:9px;color:${v>0?'#d4830a':'var(--muted)'};">${v||''}</div>
               <div style="width:100%;background:${v>0?'#d4830a':'#f0ece6'};border-radius:4px 4px 0 0;height:${Math.max(4,v/maxManut*100)}px;"></div>
-              <div style="font-size:8px;color:var(--muted);">${MESES_CURTOS[i]}</div>
+              <div style="font-size:8px;color:var(--muted);">${_MC[i]}</div>
             </div>`).join('')}
           </div>
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
