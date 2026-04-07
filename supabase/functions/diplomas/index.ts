@@ -2281,19 +2281,25 @@ Deno.serve(async (req) => {
     const token = (body._token as string) || (body._prof_token as string)
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
-    const { data: sols } = await sb.from('solicitacoes').select('id, nome_crianca, nome_resp, email, serie, turno, dias_semana, status, criado_em').order('criado_em', { ascending: false }).limit(500)
+    const { data: sols, error: solErr } = await sb.from('solicitacoes').select('*').order('criado_em', { ascending: false }).limit(500)
+    if (solErr) return json({ error: solErr.message }, 400)
     const TURNO_GROUPS: Record<string, string> = { 'Integral (7h-19h)':'integral','Semi-Integral (7h-13h30)':'semi','Semi-Integral (13h-19h)':'semi','Tarde (13h-17h)':'tarde','Diária (por dia)':'diaria' }
     const counts: Record<string, number> = { integral: 0, semi: 0, tarde: 0, diaria: 0 }
-    for (const s of sols ?? []) { const g = TURNO_GROUPS[s.turno]; if (g) counts[g]++; }
-    return json({ data: sols ?? [], counts, total: (sols ?? []).length })
+    const rows = (sols ?? []).map((s: any) => ({
+      id: s.id, nome_crianca: s.nome_crianca || '', nome_resp: s.nome_resp || s.nome || '',
+      email: s.email || '', serie: s.serie || '', turno: s.turno || '',
+      dias_semana: s.dias_semana || [], status: s.status || '', criado_em: s.criado_em
+    }))
+    for (const s of rows) { const g = TURNO_GROUPS[s.turno]; if (g) counts[g]++; }
+    return json({ data: rows, counts, total: rows.length })
   }
 
   if (action === 'prof_atividades_dashboard') {
     const token = (body._token as string) || (body._prof_token as string)
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
-    const { data: ativs } = await sb.from('atividades').select('id, nome, cor, preco, horarios, ativo').eq('ativo', true).order('ordem')
-    const { data: inscs } = await sb.from('inscricoes_atividades').select('id, nome_crianca, nome_resp, email, serie, turmas_selecionadas, slots, criado_em').order('criado_em', { ascending: false }).limit(500)
+    const { data: ativs } = await sb.from('atividades').select('*').eq('ativo', true).order('ordem')
+    const { data: inscs } = await sb.from('inscricoes_atividades').select('*').order('criado_em', { ascending: false }).limit(500)
     const atividades = (ativs ?? []).map((a: any) => {
       const horarios = (a.horarios || []).map((h: any) => ({
         turma: h.turma || h.dia || '', dia: h.dia || '', hora: h.hora || '', inicio: h.inicio || '', fim: h.fim || '',

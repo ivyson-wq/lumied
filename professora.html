@@ -2087,7 +2087,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   async function loadPageTurnos() {
     try {
       var d = await callApi({ action: 'prof_turnos_dashboard' });
-      if (!d || d.error) return;
+      if (!d || d.error) {
+        document.getElementById('ptTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#e53e3e;">' + (d && d.error ? esc(d.error) : 'Erro ao carregar turnos.') + '</td></tr>';
+        return;
+      }
       ptAllData = d.data || [];
       var c = d.counts || {};
       document.getElementById('ptTotal').textContent = d.total || 0;
@@ -2097,7 +2100,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       document.getElementById('ptDiaria').textContent = c.diaria || 0;
       renderPtDiasSemana();
       renderPtTable();
-    } catch(_) {}
+    } catch(e) {
+      document.getElementById('ptTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#e53e3e;">Erro de conexao.</td></tr>';
+    }
   }
 
   function renderPtDiasSemana() {
@@ -2246,7 +2251,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
       // Tabela inscricoes
       renderPaTable();
-    } catch(_) {}
+    } catch(e) {
+      document.getElementById('paInscricoesBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#e53e3e;">Erro de conexao.</td></tr>';
+    }
   }
 
   function renderPaTable() {
