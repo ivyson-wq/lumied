@@ -880,3 +880,106 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
    - `maple_bear_lembrete_2h` (Utility)
    - `maple_bear_followup` (Utility)
 5. Webhook configurado → `https://whatsapp-gateway.ivyson.workers.dev/webhook`
+
+---
+
+## Performance & Cache (2026-04-06)
+
+### Edge Function Invocations — Otimizações
+- **Realtime WebSocket** substituiu polling no gerente (dashboard) e pais (pickup)
+  - Tabelas com Realtime habilitado: `solicitacoes`, `inscricoes_atividades`, `pickup_notificacoes`
+  - Zero invocations para atualização de dados em tempo real
+- **ticket-resolver**: cron 15min → 1h, só executa se houver tickets abertos (`ticket_resolver_if_needed()`)
+- **lumied-monitor**: cron 15min → 30min
+
+### Egress — Otimizações
+- `pickup_meus_hoje`: `select('*')` → colunas específicas
+- `solicitacoes_list`: `select('*')` sem LIMIT → colunas específicas + paginação (LIMIT 100)
+- `frequencia_registros_list`: `select('*')` → colunas específicas
+
+### Service Worker (v4)
+- **Network-first** para HTML e JS (sempre busca do servidor, cache só offline)
+- **Cache-first** apenas para CSS, imagens e fontes
+- Versão incrementada `lumied-v3` → `lumied-v4` para forçar atualização
+- Script inline de auto-update em todos os portais (`reg.update()` + `controllerchange` → reload)
+- Push notifications mantidas
+
+### Vercel CDN
+- `Cache-Control: no-cache, no-store, must-revalidate` para HTML
+- `CDN-Cache-Control: no-store` e `Vercel-CDN-Cache-Control: no-store` para HTML e JS
+- `Service-Worker-Allowed: /` no sw.js
+
+---
+
+## Magic Link Customizado (2026-04-06)
+
+- **Action**: `send_magic_link` (api/index.ts, seção pública)
+- **Fluxo**: gera link via `admin.auth.admin.generateLink({ type: 'magiclink' })` → envia email via Resend
+- **Template**: logo da escola (`escola_logo_url`), nome, cor primária, "by Lumied" no rodapé
+- **Fallback**: se não há logo, usa ícone emoji
+- **Rate limiting**: preset "login"
+- **Frontend**: `index.html` usa `fetch('/functions/v1/api', { action: 'send_magic_link' })` em vez de `sb.auth.signInWithOtp()`
+- **Onboarding**: logo obrigatória no formulário de criação de escola
+
+---
+
+## Portal dos Pais — Perfil (2026-04-06)
+
+- **Tab "Meu Perfil"**: edição de nome, telefone + alteração de senha
+- Botão "Perfil" na barra do usuário (ao lado de "Sair")
+- Senha: `sb.auth.updateUser({ password })` — mínimo 6 chars, confirmação
+- Dados: `sb.auth.updateUser({ data: { full_name, telefone } })`
+- Email: read-only (não editável)
+- Login Google removido — apenas Magic Link + email/senha + biometria
+
+---
+
+## Área Restrita — Gating por Escola (2026-04-06)
+
+- Acesso aos portais baseado em **módulos da escola** (não mais por papel do usuário)
+- `modulos_habilitados` (público) determina quais portais ficam habilitados
+- Portais sem módulo requerido: disabled com "(não contratado)"
+- Admin removido da lista (acesso apenas via URL direta)
+- Saudação "Olá, nome" se houver sessão ativa
+
+---
+
+## Correções (2026-04-06)
+
+### Secretaria — Tela Branca
+- **Causa raiz**: 3 funções (`loadAcessoDashSec`, `loadAcessoEventosSec`, `loadAcessoPresencaSec`) referenciadas no `NAV_GROUPS` mas nunca definidas → `ReferenceError` quebrava todo o script
+- **Fix**: funções criadas + `NAV_GROUPS` movido antes de `showApp()` (TDZ)
+- **Fallback**: se `loadProfile` falha, mostra todas as features (não apenas `atestados`)
+
+### Manutenção
+- `professora_id` agora nullable na tabela `manutencoes` (chamados da secretaria/gerente)
+- `manutencao_create` salva `usuario_id` do gerente logado
+- Modal com formulário (substituiu `prompt()`) — urgência sem valor padrão, obrigatória
+- Dashboard: alerta visual de integrações desconectadas (Mercado Livre, Banco Inter)
+
+### Impressões
+- Colunas `professora_nome` e `turma_nome` adicionadas à tabela `impressoes` (migration 205)
+
+### Achados e Perdidos
+- Botão "Devolvido" no portal da professora para marcar item como devolvido
+- Pergunta nome de quem retirou (opcional)
+- Auth: aceita professora ou gerente
+
+### Diplomas
+- `getProfessora()` auto-cria registro na tabela `professoras` se usuário tem papel `professora` mas não tem registro (resolve FK violation)
+
+### Equipe (Gerente)
+- Toast "Turma atualizada!" ao salvar turma de um membro
+- Layout: badges de papel abaixo do nome (não ao lado), evita sobreposição com múltiplos papéis
+- Página "Módulos" removida do portal da professora (só no admin)
+
+---
+
+## Banco de Dados — Migrations Recentes
+
+| Migration | Descrição |
+|-----------|-----------|
+| `202` | ticket-resolver otimizado (1h + verificação de tickets abertos) |
+| `203` | Realtime habilitado em solicitacoes, inscricoes_atividades, pickup_notificacoes |
+| `204` | manutencoes.professora_id nullable |
+| `205` | impressoes: colunas professora_nome e turma_nome |
