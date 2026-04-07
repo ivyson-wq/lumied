@@ -11,11 +11,34 @@ import { askClaude, SYSTEM_PROMPTS, buildContextFromData } from "../_shared/ai.t
 const router = new Router("lumied-ai");
 router.useGlobal(rateLimit({ maxRequests: 30, windowMs: 60000 }));
 
+// Auth flexível: tenta legado, fallback sessão unificada
+import type { Middleware } from "../_shared/router.ts";
+const authFlexivel: Middleware = async (ctx, next) => {
+  const token = (ctx.body._token as string) || (ctx.body._prof_token as string) || null;
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token obrigatório.");
+  // Try gerente_sessoes
+  const { data: gs } = await ctx.sb.from("gerente_sessoes").select("*, gerentes(id, nome, email)").eq("token", token).maybeSingle();
+  if (gs && new Date(gs.expira_em) >= new Date()) { ctx.user = { ...(gs as any).gerentes, tipo: "gerente" }; return next(); }
+  // Try professora_sessoes
+  const { data: ps } = await ctx.sb.from("professora_sessoes").select("*, professoras(id, nome, email, serie_id)").eq("token", token).maybeSingle();
+  if (ps && new Date(ps.expira_em) >= new Date()) { ctx.user = { ...(ps as any).professoras, tipo: "professora" }; return next(); }
+  // Try secretaria_sessoes
+  const { data: ss } = await ctx.sb.from("secretaria_sessoes").select("*, secretarias(id, nome, email)").eq("token", token).maybeSingle();
+  if (ss && new Date(ss.expira_em) >= new Date()) { ctx.user = { ...(ss as any).secretarias, tipo: "secretaria" }; return next(); }
+  // Try sessões unificadas
+  const { data: us } = await ctx.sb.from("sessoes").select("usuario_id, expira_em").eq("token", token).maybeSingle();
+  if (us && new Date(us.expira_em) >= new Date()) {
+    const { data: u } = await ctx.sb.from("usuarios").select("id, nome, email, papeis, papel").eq("id", us.usuario_id).maybeSingle();
+    if (u) { ctx.user = { ...u, tipo: "unificado" }; return next(); }
+  }
+  throw new AppError("AUTH_INVALID", "Sessão inválida.");
+};
+
 // ═══════════════════════════════════════════════════════
 //  ASSISTENTE — Pergunta livre com contexto de dados
 // ═══════════════════════════════════════════════════════
 
-router.on("ai_perguntar", authGerente, async (ctx) => {
+router.on("ai_perguntar", authFlexivel, async (ctx) => {
   const { pergunta, portal = "gerente" } = ctx.body as any;
   if (!pergunta) throw new AppError("VALIDATION_FAILED", "Pergunta obrigatória.");
 
@@ -48,7 +71,7 @@ ${pergunta}`;
 });
 
 // Professora também pode perguntar
-router.on("ai_perguntar_prof", authProfessora, async (ctx) => {
+router.on("ai_perguntar_prof", authFlexivel, async (ctx) => {
   const { pergunta } = ctx.body as any;
   if (!pergunta) throw new AppError("VALIDATION_FAILED", "Pergunta obrigatória.");
 
