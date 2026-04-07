@@ -2658,7 +2658,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <!-- Busca familias -->
         <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:18px;">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
-            <input type="text" id="famSearch" placeholder="Buscar por aluno, responsavel, e-mail ou CPF..." oninput="debouncedFamilias()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <input type="text" id="famSearch" placeholder="Buscar por aluno, responsavel, e-mail ou CPF..." oninput="renderFamiliasLista()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           </div>
           <div id="famLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando...</div></div>
         </div>
