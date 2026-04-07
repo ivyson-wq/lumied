@@ -2162,9 +2162,14 @@ serve(async (req: Request) => {
 
   // ── Atribuir turma/série a professora ───────────────────
   if (action === "usuarios_set_serie") {
-    const { email, serie_id } = body as { email: string; serie_id: string | null };
+    const { email, serie_id, serie_nome } = body as { email: string; serie_id?: string | null; serie_nome?: string };
     if (!email) return err("E-mail obrigatório.");
-    const { error } = await admin.from("professoras").update({ serie_id: serie_id || null }).eq("email", email);
+    let resolvedId = serie_id || null;
+    if (!resolvedId && serie_nome) {
+      const { data: s } = await admin.from("series").select("id").ilike("nome", serie_nome).limit(1).maybeSingle();
+      resolvedId = s?.id || null;
+    }
+    const { error } = await admin.from("professoras").update({ serie_id: resolvedId }).eq("email", email);
     if (error) return err(error.message);
     return ok({ success: true });
   }

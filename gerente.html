@@ -2401,7 +2401,23 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelEquipe" class="panel">
         <div class="two-col">
           <div>
-            <div class="sec-title">Equipe <span class="count-badge" id="equipeCount">0</span></div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+              <div class="sec-title" style="margin:0;">Equipe <span class="count-badge" id="equipeCount">0</span></div>
+              <div style="margin-left:auto;display:flex;gap:8px;">
+                <button onclick="eqGerarModelo()" class="btn-create" style="padding:6px 14px;font-size:12px;background:#1a6bb5;">📥 Modelo XLSX</button>
+                <label class="btn-create" style="padding:6px 14px;font-size:12px;background:#2d7a3a;cursor:pointer;">📤 Importar XLSX<input type="file" accept=".xlsx,.xls" onchange="eqImportarXlsx(this)" style="display:none;"></label>
+              </div>
+            </div>
+            <div id="eqImportPreview" style="display:none;background:#f0f7ff;border:1.5px solid rgba(26,107,181,.2);border-radius:10px;padding:14px;margin-bottom:12px;">
+              <div style="font-size:13px;font-weight:600;color:#1a6bb5;margin-bottom:8px;">Pré-visualização da importação</div>
+              <div id="eqImportList" style="max-height:200px;overflow-y:auto;font-size:12px;"></div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button onclick="eqConfirmarImport()" class="btn-create" style="padding:7px 18px;font-size:12px;">Confirmar Importação</button>
+                <button onclick="document.getElementById('eqImportPreview').style.display='none'" style="padding:7px 18px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+              </div>
+              <div class="f-alert error" id="eqImportErr" style="margin-top:8px;"></div>
+              <div class="f-alert success" id="eqImportOk" style="margin-top:8px;"></div>
+            </div>
             <div class="filter-bar" style="margin-bottom:12px;">
               <button class="fb active" onclick="setEquipeFilter('todos',this)">Todos</button>
               <button class="fb" onclick="setEquipeFilter('gerente',this)">Gerentes</button>
@@ -4497,6 +4513,90 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (d.error) { showToast(d.error, 'error'); return; }
     loadEquipe();
   }
+  // ── IMPORTAÇÃO EM MASSA ────────────────────────────────
+  var eqImportData = [];
+  function eqGerarModelo() {
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
+    const wb = XLSX.utils.book_new();
+    const wsData = [
+      ['nome', 'email', 'senha', 'papeis', 'turma'],
+      ['Maria Silva', 'maria@escola.com', '123456', 'professora', 'Year 1'],
+      ['João Souza', 'joao@escola.com', '123456', 'professora,professora_assistente', 'Year 2'],
+      ['Ana Costa', 'ana@escola.com', '123456', 'secretaria,comercial', ''],
+      ['Carlos Lima', 'carlos@escola.com', '123456', 'manutencao', ''],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 40 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Equipe');
+    const wsInst = XLSX.utils.aoa_to_sheet([
+      ['Instruções para importação de equipe'],
+      [''],
+      ['Colunas obrigatórias:'],
+      ['  nome — Nome completo do membro'],
+      ['  email — E-mail (será o login)'],
+      ['  senha — Senha inicial (mínimo 6 caracteres)'],
+      [''],
+      ['Colunas opcionais:'],
+      ['  papeis — Um ou mais papéis separados por vírgula:'],
+      ['    gerente, diretor, financeiro, professora, professora_assistente, secretaria, comercial, manutencao'],
+      ['  turma — Nome da série/turma (só para professora/assistente)'],
+      [''],
+      ['Se "papeis" estiver vazio, será criado como "professora" por padrão.'],
+      ['Se o e-mail já existir, o membro será ignorado (sem duplicação).'],
+    ]);
+    wsInst['!cols'] = [{ wch: 80 }];
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
+    XLSX.writeFile(wb, 'modelo_importacao_equipe.xlsx');
+  }
+  function eqImportarXlsx(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!rows.length) { showToast('Planilha vazia','error'); return; }
+      eqImportData = rows.map(r => ({
+        nome: (r.nome || r.Nome || '').toString().trim(),
+        email: (r.email || r.Email || r['e-mail'] || r['E-mail'] || '').toString().trim().toLowerCase(),
+        senha: (r.senha || r.Senha || r.password || '').toString().trim(),
+        papeis: (r.papeis || r.Papeis || r.papel || r.Papel || 'professora').toString().trim().split(/[,;|]/).map(p => p.trim().toLowerCase()).filter(Boolean),
+        turma: (r.turma || r.Turma || r.serie || r.Serie || '').toString().trim(),
+      })).filter(r => r.nome && r.email);
+      if (!eqImportData.length) { showToast('Nenhum registro válido encontrado','error'); return; }
+      document.getElementById('eqImportList').innerHTML =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:4px 8px;">Nome</th><th style="text-align:left;padding:4px 8px;">Email</th><th style="text-align:left;padding:4px 8px;">Papéis</th><th style="text-align:left;padding:4px 8px;">Turma</th></tr></thead><tbody>' +
+        eqImportData.map(r => `<tr><td style="padding:4px 8px;">${esc(r.nome)}</td><td style="padding:4px 8px;">${esc(r.email)}</td><td style="padding:4px 8px;">${r.papeis.join(', ')}</td><td style="padding:4px 8px;">${esc(r.turma||'—')}</td></tr>`).join('') +
+        '</tbody></table>';
+      document.getElementById('eqImportPreview').style.display = 'block';
+      document.getElementById('eqImportErr').classList.remove('show');
+      document.getElementById('eqImportOk').classList.remove('show');
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  async function eqConfirmarImport() {
+    const errEl = document.getElementById('eqImportErr');
+    const okEl = document.getElementById('eqImportOk');
+    errEl.classList.remove('show'); okEl.classList.remove('show');
+    let ok = 0, erros = [];
+    for (const r of eqImportData) {
+      if (!r.senha || r.senha.length < 6) { erros.push(r.email + ': senha < 6 chars'); continue; }
+      const d = await api({ action: 'usuarios_create', nome: r.nome, email: r.email, senha: r.senha, papeis: r.papeis });
+      if (d.error) { erros.push(r.email + ': ' + d.error); continue; }
+      if (r.turma && (r.papeis.includes('professora') || r.papeis.includes('professora_assistente'))) {
+        await api({ action: 'usuarios_set_serie', email: r.email, serie_nome: r.turma });
+      }
+      ok++;
+    }
+    if (ok) okEl.textContent = ok + ' membro(s) importado(s) com sucesso!'; okEl.classList.add('show');
+    if (erros.length) { errEl.textContent = erros.join(' | '); errEl.classList.add('show'); }
+    eqImportData = [];
+    loadEquipe();
+  }
+
   // ── PERMISSIONS MODAL ──────────────────────────────────
   var MODULOS_DISPONIVEIS = [
     { slug: 'dashboard', nome: 'Dashboard' },
