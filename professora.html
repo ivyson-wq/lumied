@@ -378,6 +378,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> Notas</button>
     <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> Chamada</button>
     <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> Diário</button>
+    <button class="ps-item" onclick="switchProfPage('turnos',this)" data-page="turnos"><span class="ps-icon">📊</span> Turnos</button>
+    <button class="ps-item" onclick="switchProfPage('atividades',this)" data-page="atividades" data-modulo="atividades"><span class="ps-icon">🎯</span> Atividades Extra</button>
     <button class="ps-item" onclick="switchProfPage('modulosConfig',this)" data-page="modulosConfig" id="sidebarModulosBtn" style="display:none;border-top:1px solid rgba(255,255,255,.1);margin-top:8px;"><span class="ps-icon">⚙️</span> Modulos</button>
   </div>
 
@@ -418,15 +420,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div id="profDashAlerts" style="margin-top:16px;"></div>
 
       <!-- Dashboard Turnos -->
-      <div id="profDashTurnos" style="margin-top:20px;">
-        <div class="sec-title" style="font-size:14px;">📊 Turnos</div>
+      <div id="profDashTurnos" style="margin-top:20px;cursor:pointer;" onclick="switchProfPage('turnos',document.querySelector('[data-page=turnos]'))">
+        <div class="sec-title" style="font-size:14px;">📊 Turnos <span style="font-size:11px;color:var(--muted);font-weight:400;">ver tudo &rarr;</span></div>
         <div id="profTurnosStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;"></div>
         <div id="profTurnosRecentes" style="max-height:200px;overflow-y:auto;"></div>
       </div>
 
       <!-- Dashboard Atividades Extraclasse -->
-      <div id="profDashAtiv" style="margin-top:20px;" data-modulo="atividades">
-        <div class="sec-title" style="font-size:14px;">🎯 Atividades Extraclasse</div>
+      <div id="profDashAtiv" style="margin-top:20px;cursor:pointer;" data-modulo="atividades" onclick="switchProfPage('atividades',document.querySelector('[data-page=atividades]'))">
+        <div class="sec-title" style="font-size:14px;">🎯 Atividades Extraclasse <span style="font-size:11px;color:var(--muted);font-weight:400;">ver tudo &rarr;</span></div>
         <div id="profAtivStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;"></div>
         <div id="profAtivGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
       </div>
@@ -897,6 +899,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <button style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;" onclick="salvarDiario()">Salvar Registro</button>
     </div>
 
+    <!-- ═══ PAGE: TURNOS ═══ -->
+    <div class="prof-page" id="pageTurnos">
+      <div class="sec-title">📊 Turnos
+        <button onclick="loadPageTurnos()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <div id="pageTurnosStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;"></div>
+      <div class="sec-title" style="font-size:13px;margin-top:16px;">Solicitacoes Recentes</div>
+      <div id="pageTurnosList" style="max-height:60vh;overflow-y:auto;"></div>
+    </div>
+
+    <!-- ═══ PAGE: ATIVIDADES EXTRACLASSE ═══ -->
+    <div class="prof-page" id="pageAtividades">
+      <div class="sec-title">🎯 Atividades Extraclasse
+        <button onclick="loadPageAtividades()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <div id="pageAtivStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px;"></div>
+      <div class="sec-title" style="font-size:13px;margin-top:16px;">Atividades</div>
+      <div id="pageAtivGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;"></div>
+      <div class="sec-title" style="font-size:13px;margin-top:16px;">Inscricoes Recentes</div>
+      <div id="pageAtivInscricoes" style="max-height:40vh;overflow-y:auto;"></div>
+    </div>
+
     <!-- ═══ PAGE: MODULOS CONFIG (gerente only) ═══ -->
     <div class="prof-page" id="pageModulosConfig">
       <div class="sec-title">⚙️ Modulos do Tier
@@ -954,6 +978,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="pbnav-more-item" onclick="switchProfPage('impressoes',this);closeProfMore()" data-modulo="impressoes"><span>🖨️</span>Impressões</button>
     <button class="pbnav-more-item" onclick="switchProfPage('achados',this);closeProfMore()" data-modulo="achados"><span>🔍</span>Achados</button>
     <button class="pbnav-more-item" onclick="switchProfPage('diario',this);closeProfMore()" data-modulo="diario_classe"><span>📖</span>Diário</button>
+    <button class="pbnav-more-item" onclick="switchProfPage('turnos',this);closeProfMore()"><span>📊</span>Turnos</button>
+    <button class="pbnav-more-item" onclick="switchProfPage('atividades',this);closeProfMore()" data-modulo="atividades"><span>🎯</span>Atividades</button>
     <button class="pbnav-more-item" onclick="switchProfPage('modulosConfig',this);closeProfMore()" id="bnavModulosBtn" style="display:none;"><span>⚙️</span>Modulos</button>
   </div>
 </div>
@@ -1566,6 +1592,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     window.scrollTo({ top: 0, behavior: 'smooth' });
     closeProfMore();
     if (page === 'modulosConfig') loadModulosConfig();
+    if (page === 'turnos') loadPageTurnos();
+    if (page === 'atividades') loadPageAtividades();
   }
 
   // ── CAMERA FAB ──
@@ -1939,6 +1967,85 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
             '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:6px;transition:width .3s;"></div></div></div>';
         }).join('')
         : '<div style="color:var(--muted);font-size:12px;grid-column:1/-1;">Nenhuma atividade cadastrada.</div>';
+    } catch(_) {}
+  }
+
+  // ── PAGE: TURNOS (full) ──
+  async function loadPageTurnos() {
+    try {
+      var d = await callApi({ action: 'prof_turnos_dashboard' });
+      if (!d || d.error) return;
+      var c = d.counts || {};
+      var stats = [['Total', d.total||0, '#6C63FF'], ['Integral', c.integral||0, '#48bb78'], ['Semi-Integral', c.semi||0, '#f6a623'], ['Tarde', c.tarde||0, '#e53e3e'], ['Diaria', c.diaria||0, '#1a6bb5']];
+      document.getElementById('pageTurnosStats').innerHTML = stats.map(function(s) {
+        return '<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;">' +
+          '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">' + s[0] + '</div>' +
+          '<div style="font-size:28px;font-weight:700;color:' + s[2] + ';">' + s[1] + '</div></div>';
+      }).join('');
+      var items = d.data || [];
+      document.getElementById('pageTurnosList').innerHTML = items.length
+        ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);text-align:left;">' +
+          '<th style="padding:8px;">Crianca</th><th style="padding:8px;">Turno</th><th style="padding:8px;">Status</th><th style="padding:8px;">Data</th></tr></thead><tbody>' +
+          items.map(function(s) {
+            var statusColor = s.status === 'ativo' ? '#48bb78' : s.status === 'pendente' ? '#f6a623' : 'var(--muted)';
+            return '<tr style="border-bottom:1px solid var(--border);">' +
+              '<td style="padding:8px;font-weight:600;">' + esc(s.nome_crianca) + '</td>' +
+              '<td style="padding:8px;">' + esc(s.turno || '-') + '</td>' +
+              '<td style="padding:8px;"><span style="color:' + statusColor + ';font-weight:600;font-size:11px;text-transform:uppercase;">' + esc(s.status || '-') + '</span></td>' +
+              '<td style="padding:8px;color:var(--muted);font-size:12px;">' + (s.criado_em ? new Date(s.criado_em).toLocaleDateString('pt-BR') : '-') + '</td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px;">Nenhuma solicitacao de turno encontrada.</div>';
+    } catch(_) {}
+  }
+
+  // ── PAGE: ATIVIDADES (full) ──
+  async function loadPageAtividades() {
+    try {
+      var d = await callApi({ action: 'prof_atividades_dashboard' });
+      if (!d || d.error) return;
+      var ativs = d.atividades || [];
+      var inscs = d.inscricoes || [];
+      var totalInscritos = ativs.reduce(function(s, a) { return s + (a.totalInscritos || 0); }, 0);
+      var totalVagas = ativs.reduce(function(s, a) { return s + (a.totalVagas || 0); }, 0);
+      var lotadas = ativs.filter(function(a) { return a.totalInscritos >= a.totalVagas && a.totalVagas > 0; }).length;
+      var vagasDisp = Math.max(0, totalVagas - totalInscritos);
+      var stats = [['Atividades', ativs.length, '#6C63FF'], ['Inscricoes', totalInscritos, '#48bb78'], ['Lotadas', lotadas, '#e53e3e'], ['Vagas Livres', vagasDisp, '#1a6bb5']];
+
+      document.getElementById('pageAtivStats').innerHTML = stats.map(function(s) {
+        return '<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;">' +
+          '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">' + s[0] + '</div>' +
+          '<div style="font-size:28px;font-weight:700;color:' + s[2] + ';">' + s[1] + '</div></div>';
+      }).join('');
+
+      document.getElementById('pageAtivGrid').innerHTML = ativs.length
+        ? ativs.map(function(a) {
+          var pct = a.totalVagas > 0 ? Math.min(100, Math.round(a.totalInscritos / a.totalVagas * 100)) : 0;
+          var barColor = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+          var horarios = (a.horarios || []).map(function(h) {
+            return '<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;padding:2px 0;">' +
+              '<span>' + esc(h.dia || '') + ' ' + esc(h.hora || '') + '</span>' +
+              '<span>' + (h.inscritos||0) + '/' + (h.vagas||0) + '</span></div>';
+          }).join('');
+          return '<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;' + (a.cor ? 'border-left:4px solid ' + a.cor : '') + '">' +
+            '<div style="font-size:14px;font-weight:700;margin-bottom:8px;">' + esc(a.nome) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">' + a.totalInscritos + ' / ' + a.totalVagas + ' vagas (' + pct + '%)</div>' +
+            '<div style="background:#f0ece6;border-radius:6px;height:8px;overflow:hidden;margin-bottom:10px;">' +
+            '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:6px;transition:width .3s;"></div></div>' +
+            horarios + '</div>';
+        }).join('')
+        : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px;grid-column:1/-1;">Nenhuma atividade cadastrada.</div>';
+
+      document.getElementById('pageAtivInscricoes').innerHTML = inscs.length
+        ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);text-align:left;">' +
+          '<th style="padding:8px;">Crianca</th><th style="padding:8px;">Turmas</th><th style="padding:8px;">Data</th></tr></thead><tbody>' +
+          inscs.map(function(i) {
+            var turmas = Array.isArray(i.turmas_selecionadas) ? i.turmas_selecionadas.join(', ') : (i.turmas_selecionadas || '-');
+            return '<tr style="border-bottom:1px solid var(--border);">' +
+              '<td style="padding:8px;font-weight:600;">' + esc(i.nome_crianca) + '</td>' +
+              '<td style="padding:8px;font-size:12px;">' + esc(turmas) + '</td>' +
+              '<td style="padding:8px;color:var(--muted);font-size:12px;">' + (i.criado_em ? new Date(i.criado_em).toLocaleDateString('pt-BR') : '-') + '</td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">Nenhuma inscricao encontrada.</div>';
     } catch(_) {}
   }
 
