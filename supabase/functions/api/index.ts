@@ -1298,66 +1298,51 @@ serve(async (req: Request) => {
     const { email, nova_senha } = body as { email?: string; nova_senha?: string };
     if (!email) return err("E-mail obrigatório.");
     if (!nova_senha || nova_senha.length < 6) return err("Senha deve ter no mínimo 6 caracteres.");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    // Find user by email via GoTrue Admin REST API (most reliable method)
+    // Step 1: Try to create user (works if user doesn't exist yet)
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email, password: nova_senha, email_confirm: true
+    });
+    if (created?.user) return ok({ success: true });
+    // Step 2: User already exists — find their ID and update password
+    // Method A: Supabase SDK listUsers (safe access, no nested destructuring)
     let userId: string | null = null;
     try {
-      const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=1&per_page=50`, {
-        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
-      });
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        const users = listData?.users || listData || [];
-        if (Array.isArray(users)) {
-          const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-          if (found) userId = found.id;
-        }
+      const result = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const users = result?.data?.users;
+      if (Array.isArray(users)) {
+        const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+        if (found) userId = found.id;
       }
-      // Paginate if not found in first page
-      if (!userId) {
-        for (let page = 2; page <= 20 && !userId; page++) {
-          const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=50`, {
-            headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
-          });
-          if (!res.ok) break;
-          const data = await res.json();
-          const users = data?.users || data || [];
-          if (!Array.isArray(users) || users.length === 0) break;
-          const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-          if (found) { userId = found.id; break; }
-        }
-      }
-    } catch (_e) { /* fallback below */ }
-    // Fallback: RPC
+    } catch (_e) { /* continue to fallbacks */ }
+    // Method B: RPC function (if migration 206 was applied)
     if (!userId) {
       try {
         const { data: rpcData } = await admin.rpc("get_auth_uid_by_email", { p_email: email });
         if (rpcData) userId = String(rpcData);
-      } catch (_e) { /* ignore */ }
+      } catch (_e) { /* continue */ }
     }
-    // Update or create
-    if (userId) {
-      const updateRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-        method: "PUT",
-        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ password: nova_senha })
-      });
-      if (!updateRes.ok) {
-        const errBody = await updateRes.json().catch(() => ({}));
-        return err("Erro ao alterar senha: " + (errBody.message || errBody.msg || "erro desconhecido"));
-      }
-    } else {
-      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: nova_senha, email_confirm: true })
-      });
-      if (!createRes.ok) {
-        const errBody = await createRes.json().catch(() => ({}));
-        return err("Erro ao criar usuário: " + (errBody.message || errBody.msg || "erro desconhecido"));
-      }
+    // Method C: GoTrue REST API direct
+    if (!userId) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        for (let page = 1; page <= 20 && !userId; page++) {
+          const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=100`, {
+            headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
+          });
+          if (!res.ok) break;
+          const json = await res.json();
+          const users = json?.users;
+          if (!Array.isArray(users) || users.length === 0) break;
+          const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+          if (found) { userId = found.id; break; }
+        }
+      } catch (_e) { /* continue */ }
     }
+    if (!userId) return err("Não foi possível localizar o usuário. Tente novamente ou contate o suporte.");
+    // Update password
+    const { error: updateErr } = await admin.auth.admin.updateUserById(userId, { password: nova_senha });
+    if (updateErr) return err("Erro ao alterar senha: " + updateErr.message);
     return ok({ success: true });
   }
   if (action === "familias_delete") {
