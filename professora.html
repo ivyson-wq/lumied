@@ -793,8 +793,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         <h3 style="font-size:14px;font-weight:600;margin-bottom:12px;">Nova Solicitação</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div class="ff" style="margin:0;grid-column:1/-1;">
-            <label>Arquivo (PDF, imagem) *</label>
-            <input type="file" id="impArquivo" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style="font-size:12px;font-family:'DM Sans',sans-serif;">
+            <label>Arquivos (PDF, imagem) * — selecione um ou vários</label>
+            <input type="file" id="impArquivo" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" multiple style="font-size:12px;font-family:'DM Sans',sans-serif;">
+            <div id="impArquivosList" style="display:none;margin-top:8px;font-size:12px;color:var(--muted);"></div>
           </div>
           <div class="ff" style="margin:0;">
             <label>Quantidade de cópias *</label>
@@ -1125,6 +1126,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   async function showApp(user) {
+    // Verificar horário de acesso
+    try {
+      const hr = await callApi({ action: 'professora_verificar_horario' });
+      if (hr && hr.permitido === false) {
+        alert(hr.mensagem || 'Acesso fora do horário permitido.');
+        localStorage.removeItem('prof_token');
+        localStorage.removeItem('prof_nome');
+        localStorage.removeItem('prof_email');
+        location.reload();
+        return;
+      }
+    } catch(_) {}
     currentProf = user;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appShell').style.display = 'block';
@@ -3183,35 +3196,59 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     }).join('');
   }
 
+  // Preview de arquivos selecionados
+  document.getElementById('impArquivo').addEventListener('change', function() {
+    const listEl = document.getElementById('impArquivosList');
+    const files = this.files;
+    if (!files.length) { listEl.style.display = 'none'; return; }
+    listEl.style.display = 'block';
+    listEl.innerHTML = '<strong>' + files.length + ' arquivo' + (files.length > 1 ? 's' : '') + ' selecionado' + (files.length > 1 ? 's' : '') + ':</strong><br>' +
+      Array.from(files).map((f, i) => '📎 ' + esc(f.name) + ' <span style="color:#999;">(' + (f.size / 1024).toFixed(0) + ' KB)</span>').join('<br>');
+  });
+
   async function enviarImpressao() {
-    const file = document.getElementById('impArquivo').files[0];
+    const files = Array.from(document.getElementById('impArquivo').files);
     const copias = parseInt(document.getElementById('impCopias').value) || 1;
     const tipo_papel = document.getElementById('impPapel').value;
     const para_dia = document.getElementById('impDia').value;
     const observacao = document.getElementById('impObs').value.trim();
     const errEl = document.getElementById('impErr');
     errEl.style.display = 'none';
-    if (!file) { errEl.textContent = 'Selecione um arquivo.'; errEl.style.display = 'block'; return; }
+    if (!files.length) { errEl.textContent = 'Selecione ao menos um arquivo.'; errEl.style.display = 'block'; return; }
     const btn = document.getElementById('impBtn');
-    btn.disabled = true; btn.textContent = 'Enviando...';
-    try {
-      const buf = await file.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
-      const base64 = btoa(bin);
-      const d = await callApi({
-        action: 'impressao_enviar', copias, tipo_papel, para_dia: para_dia || null,
-        observacao: observacao || null, base64, mime: file.type, arquivo_nome: file.name,
-      });
-      if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
-      showToast('Solicitacao enviada! ' + d.usado + '/' + d.limite + ' copias usadas.', 'success', 5000);
-      document.getElementById('impArquivo').value = '';
-      document.getElementById('impCopias').value = '1';
-      document.getElementById('impObs').value = '';
-      document.getElementById('impDia').value = '';
-      loadImpressoes();
-    } catch(e) { errEl.textContent = 'Erro ao enviar.'; errEl.style.display = 'block'; }
-    finally { btn.disabled = false; btn.textContent = 'Enviar Solicitação'; }
+    btn.disabled = true;
+    const total = files.length;
+    let enviados = 0, erros = [];
+    let ultimoResult = null;
+    for (const file of files) {
+      btn.textContent = 'Enviando ' + (enviados + 1) + '/' + total + '...';
+      try {
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+        const base64 = btoa(bin);
+        const d = await callApi({
+          action: 'impressao_enviar', copias, tipo_papel, para_dia: para_dia || null,
+          observacao: observacao || null, base64, mime: file.type, arquivo_nome: file.name,
+        });
+        if (d.error) { erros.push(file.name + ': ' + d.error); }
+        else { enviados++; ultimoResult = d; }
+      } catch(e) { erros.push(file.name + ': Erro ao enviar.'); }
+    }
+    if (enviados > 0 && ultimoResult) {
+      showToast(enviados + ' arquivo' + (enviados > 1 ? 's enviados' : ' enviado') + '! ' + ultimoResult.usado + '/' + ultimoResult.limite + ' copias usadas.', 'success', 5000);
+    }
+    if (erros.length) {
+      errEl.innerHTML = erros.map(e => esc(e)).join('<br>');
+      errEl.style.display = 'block';
+    }
+    document.getElementById('impArquivo').value = '';
+    document.getElementById('impArquivosList').style.display = 'none';
+    document.getElementById('impCopias').value = '1';
+    document.getElementById('impObs').value = '';
+    document.getElementById('impDia').value = '';
+    loadImpressoes();
+    btn.disabled = false; btn.textContent = 'Enviar Solicitação';
   }
 
   // ── WEBAUTHN / BIOMETRIA ─────────────────────────────

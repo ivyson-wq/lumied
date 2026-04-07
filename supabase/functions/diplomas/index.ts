@@ -20,6 +20,32 @@ async function criarNotif(sb: any, portal: string, destinatario: string, titulo:
   await sb.from('notificacoes').insert({ portal, destinatario, titulo, mensagem, tipo })
 }
 
+// ── Verificação de horário de acesso ────────────────────────
+async function verificarHorarioAcesso(sb: ReturnType<typeof createClient>, professoraId: string): Promise<{ permitido: boolean; mensagem?: string }> {
+  const now = new Date()
+  // Usa horário de Brasília (UTC-3)
+  const brNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
+  const diaSemana = brNow.getDay() // 0=domingo
+  const { data: regras } = await sb
+    .from('professora_horario_acesso').select('dia_semana, hora_inicio, hora_fim, ativo')
+    .eq('professora_id', professoraId).eq('ativo', true)
+  // Se não há regras configuradas, acesso é livre
+  if (!regras || regras.length === 0) return { permitido: true }
+  const regraHoje = regras.find((r: any) => r.dia_semana === diaSemana)
+  if (!regraHoje) {
+    return { permitido: false, mensagem: 'Acesso não permitido neste dia da semana.' }
+  }
+  const horaAtual = brNow.getHours() * 60 + brNow.getMinutes()
+  const [hi, mi] = regraHoje.hora_inicio.split(':').map(Number)
+  const [hf, mf] = regraHoje.hora_fim.split(':').map(Number)
+  const inicio = hi * 60 + mi
+  const fim = hf * 60 + mf
+  if (horaAtual < inicio || horaAtual > fim) {
+    return { permitido: false, mensagem: `Acesso permitido apenas das ${regraHoje.hora_inicio} às ${regraHoje.hora_fim}.` }
+  }
+  return { permitido: true }
+}
+
 // ── Session validators ──────────────────────────────────────
 async function getProfessora(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
@@ -322,12 +348,23 @@ Deno.serve(async (req) => {
       .from('professoras').select('id, nome, email, senha_hash').ilike('email', email).maybeSingle()
     if (!prof || !prof.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     if (!await verificarSenha(senha, prof.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    // Verificar horário de acesso
+    const horario = await verificarHorarioAcesso(sb, prof.id)
+    if (!horario.permitido) return json({ error: horario.mensagem || 'Acesso fora do horário permitido.' }, 403)
     const tok = randomToken()
     await sb.from('professora_sessoes').insert({
       professora_id: prof.id, token: tok,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
     return json({ token: tok, nome: prof.nome, email: prof.email })
+  }
+
+  if (action === 'professora_verificar_horario') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    const horario = await verificarHorarioAcesso(sb, prof.id)
+    return json({ permitido: horario.permitido, mensagem: horario.mensagem || null })
   }
 
   if (action === 'secretaria_login') {

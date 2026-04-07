@@ -518,6 +518,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
         <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
         <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
+        <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> Horários de Acesso</a>
         <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
       </div>
 
@@ -1919,6 +1920,30 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div id="impGerenteContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
+      <!-- HORARIOS DE ACESSO PROFESSORAS -->
+      <div id="panelHorarioAcesso" class="panel">
+        <h2 class="panel-title">🕐 Horários de Acesso ao Sistema</h2>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Defina os dias e horários em que cada professora pode acessar o portal. Professoras sem horário configurado têm acesso livre.</p>
+        <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <select id="haSelectProf" style="flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;" onchange="haLoadProfessora()">
+            <option value="">Selecione uma professora...</option>
+          </select>
+          <button onclick="haAplicarPadrao()" style="padding:10px 16px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;" title="Aplica Seg-Sex 07:00-18:00">Aplicar Horário Comercial</button>
+          <button onclick="haRemoverTodos()" style="padding:10px 16px;background:#e53e3e;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;" title="Remove restrições (acesso livre)">Remover Restrições</button>
+        </div>
+        <div id="haEditor" style="display:none;">
+          <table class="data-table" style="font-size:13px;">
+            <thead><tr><th style="width:30px;"></th><th>Dia</th><th>Entrada</th><th>Saída</th></tr></thead>
+            <tbody id="haTableBody"></tbody>
+          </table>
+          <button onclick="haSalvar()" id="haSaveBtn" style="margin-top:12px;padding:10px 24px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Salvar Horários</button>
+        </div>
+        <div style="margin-top:24px;">
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Resumo de Todas as Professoras</h3>
+          <div id="haResumoList"><div class="empty-state">Carregando...</div></div>
+        </div>
+      </div>
+
       <!-- COMPLIANCE — Dashboard Completo -->
       <div id="panelCompDash" class="panel">
         <div class="sec-title">⚖️ Compliance — Painel Geral</div>
@@ -3162,10 +3187,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -3201,6 +3226,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='achados')     loadAchadosGerente();
     if(id==='emergencia')  loadEmergencia();
     if(id==='impressoes')  loadImpressoesGerente();
+    if(id==='horarioAcesso') loadHorarioAcesso();
     if(id==='finDash')     loadFinDashboard();
     if(id==='finLanc')     loadFinLancamentos();
     if(id==='finMens')     loadFinMensalidades();
@@ -9603,6 +9629,107 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const mes = new Date().toISOString().slice(0,7);
     await api({ action: 'impressoes_orcamento_set', turma_id: turmaId, mes, limite });
     showToast('Limite atualizado!', 'success');
+  }
+
+  // ── HORÁRIOS DE ACESSO PROFESSORAS ──────────────────
+  const HA_DIAS = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  let haAllData = [], haProfs = [];
+
+  async function loadHorarioAcesso() {
+    const d = await api({ action: 'prof_horario_acesso_list' });
+    haAllData = d.data || [];
+    haProfs = d.professoras || [];
+    // Preencher select
+    const sel = document.getElementById('haSelectProf');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Selecione uma professora...</option>' +
+      haProfs.map(p => '<option value="' + p.id + '">' + esc(p.nome) + ' (' + esc(p.email) + ')</option>').join('');
+    if (current) sel.value = current;
+    // Resumo
+    haRenderResumo();
+    // Se já tem uma selecionada, recarrega
+    if (sel.value) haLoadProfessora();
+  }
+
+  function haRenderResumo() {
+    const el = document.getElementById('haResumoList');
+    if (!haProfs.length) { el.innerHTML = '<div class="empty-state">Nenhuma professora cadastrada.</div>'; return; }
+    el.innerHTML = '<table class="data-table" style="font-size:12px;"><thead><tr><th>Professora</th><th>Restrição</th><th>Horários</th></tr></thead><tbody>' +
+      haProfs.map(p => {
+        const regras = haAllData.filter(r => r.professora_id === p.id && r.ativo);
+        const hasRegras = regras.length > 0;
+        const resumo = hasRegras
+          ? regras.sort((a,b) => a.dia_semana - b.dia_semana).map(r => HA_DIAS[r.dia_semana].slice(0,3) + ' ' + r.hora_inicio.slice(0,5) + '-' + r.hora_fim.slice(0,5)).join(', ')
+          : '<span style="color:var(--green);">Acesso livre</span>';
+        return '<tr><td><strong>' + esc(p.nome) + '</strong></td>' +
+          '<td>' + (hasRegras ? '<span style="color:#e53e3e;font-weight:600;">Restrito</span>' : '<span style="color:var(--green);">Livre</span>') + '</td>' +
+          '<td>' + resumo + '</td></tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  function haLoadProfessora() {
+    const profId = document.getElementById('haSelectProf').value;
+    const editor = document.getElementById('haEditor');
+    if (!profId) { editor.style.display = 'none'; return; }
+    editor.style.display = 'block';
+    const regras = haAllData.filter(r => r.professora_id === profId);
+    const tbody = document.getElementById('haTableBody');
+    tbody.innerHTML = HA_DIAS.map((dia, i) => {
+      const regra = regras.find(r => r.dia_semana === i);
+      const checked = regra && regra.ativo ? 'checked' : '';
+      const hi = regra ? regra.hora_inicio.slice(0,5) : '07:00';
+      const hf = regra ? regra.hora_fim.slice(0,5) : '18:00';
+      return '<tr>' +
+        '<td><input type="checkbox" class="ha-check" data-dia="' + i + '" ' + checked + '></td>' +
+        '<td>' + dia + '</td>' +
+        '<td><input type="time" class="ha-inicio" data-dia="' + i + '" value="' + hi + '" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;"></td>' +
+        '<td><input type="time" class="ha-fim" data-dia="' + i + '" value="' + hf + '" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;"></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  async function haSalvar() {
+    const profId = document.getElementById('haSelectProf').value;
+    if (!profId) return;
+    const horarios = [];
+    document.querySelectorAll('.ha-check').forEach(cb => {
+      if (cb.checked) {
+        const dia = parseInt(cb.dataset.dia);
+        const inicio = document.querySelector('.ha-inicio[data-dia="' + dia + '"]').value;
+        const fim = document.querySelector('.ha-fim[data-dia="' + dia + '"]').value;
+        horarios.push({ dia_semana: dia, hora_inicio: inicio, hora_fim: fim, ativo: true });
+      }
+    });
+    const btn = document.getElementById('haSaveBtn');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    const d = await api({ action: 'prof_horario_acesso_salvar', professora_id: profId, horarios });
+    btn.disabled = false; btn.textContent = 'Salvar Horários';
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Horários salvos com sucesso!', 'success');
+    loadHorarioAcesso();
+  }
+
+  function haAplicarPadrao() {
+    // Marca Seg-Sex 07:00-18:00
+    document.querySelectorAll('.ha-check').forEach(cb => {
+      const dia = parseInt(cb.dataset.dia);
+      cb.checked = dia >= 1 && dia <= 5; // Seg-Sex
+    });
+    document.querySelectorAll('.ha-inicio').forEach(inp => inp.value = '07:00');
+    document.querySelectorAll('.ha-fim').forEach(inp => inp.value = '18:00');
+    showToast('Horário comercial aplicado (Seg-Sex 07:00-18:00). Clique "Salvar" para confirmar.', 'info');
+  }
+
+  async function haRemoverTodos() {
+    const profId = document.getElementById('haSelectProf').value;
+    if (!profId) { showToast('Selecione uma professora.', 'error'); return; }
+    const prof = haProfs.find(p => p.id === profId);
+    if (!await _lumiedConfirm('Remover todas as restrições de horário de ' + (prof?.nome || 'esta professora') + '? Ela terá acesso livre ao sistema.')) return;
+    const d = await api({ action: 'prof_horario_acesso_remover', professora_id: profId });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Restrições removidas. Acesso livre.', 'success');
+    loadHorarioAcesso();
   }
 
   // ── EMERGENCIA ──────────────────────────────────────

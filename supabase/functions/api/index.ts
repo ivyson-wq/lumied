@@ -2016,6 +2016,37 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Horário de Acesso Professoras ────────────────────────
+  if (action === "prof_horario_acesso_list") {
+    const { data } = await admin.from("professora_horario_acesso").select("*").order("professora_id").order("dia_semana");
+    const { data: profs } = await admin.from("professoras").select("id, nome, email").eq("ativo", true).order("nome");
+    return ok({ data: data ?? [], professoras: profs ?? [] });
+  }
+  if (action === "prof_horario_acesso_salvar") {
+    const { professora_id, horarios } = body as any;
+    if (!professora_id || !Array.isArray(horarios)) return err("professora_id e horarios[] obrigatórios.");
+    // Remove existentes e insere novos
+    await admin.from("professora_horario_acesso").delete().eq("professora_id", professora_id);
+    if (horarios.length > 0) {
+      const rows = horarios.map((h: any) => ({
+        professora_id,
+        dia_semana: h.dia_semana,
+        hora_inicio: h.hora_inicio || "07:00",
+        hora_fim: h.hora_fim || "18:00",
+        ativo: h.ativo !== false,
+      }));
+      const { error } = await admin.from("professora_horario_acesso").insert(rows);
+      if (error) return err(error.message);
+    }
+    return ok({ success: true });
+  }
+  if (action === "prof_horario_acesso_remover") {
+    const { professora_id } = body as any;
+    if (!professora_id) return err("professora_id obrigatório.");
+    await admin.from("professora_horario_acesso").delete().eq("professora_id", professora_id);
+    return ok({ success: true });
+  }
+
   // ── Alertas de Emergencia ───────────────────────────────
   if (action === "emergencia_acionar") {
     const { tipo, mensagem } = body as { tipo: string; mensagem?: string };
