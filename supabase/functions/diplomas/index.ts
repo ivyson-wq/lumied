@@ -2318,11 +2318,16 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'achados_devolver') {
-    // Marca como devolvido
+    // Marca como devolvido (professora ou gerente)
+    const devToken = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, devToken)
+    const ger = !prof ? await getGerente(sb, devToken) : null
+    if (!prof && !ger) return json({ error: 'Sessão inválida.' }, 401)
     const { id, devolvido_para } = body as { id: string; devolvido_para: string }
     if (!id) return json({ error: 'ID obrigatório.' }, 400)
+    const quem = prof?.nome || ger?.nome || 'Equipe'
     await sb.from('achados_perdidos').update({
-      status: 'devolvido', devolvido_para: devolvido_para || null, devolvido_em: new Date().toISOString()
+      status: 'devolvido', devolvido_para: devolvido_para || null, devolvido_em: new Date().toISOString(),
     }).eq('id', id)
     return json({ ok: true })
   }
