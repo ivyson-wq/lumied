@@ -3006,16 +3006,16 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 </div>
 
 <script>
-  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-  const API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
-  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  var SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  var API  = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
 
-  const DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
+  var DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
 
-  let allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
-  let currentGerente=null, pollInterval=null, realtimeChannel=null;
-  const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  var allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
+  var currentGerente=null, pollInterval=null, realtimeChannel=null;
+  var sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
   function showToast(msg, type = 'info', duration = 4000) {
@@ -3033,9 +3033,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(() => toast.remove(), 300); }, duration);
   }
-  let dipFilter='todos', dipPendingAction=null, editingSenhaId=null;
+  var dipFilter='todos', dipPendingAction=null, editingSenhaId=null;
 
-  const TURNO_INFO = {
+  var TURNO_INFO = {
     integral_5x:{label:'Integral · 5×/sem',  price:'R$ 4.395,00',g:'integral'},
     integral_4x:{label:'Integral · 4×/sem',  price:'R$ 4.303,57',g:'integral'},
     integral_3x:{label:'Integral · 3×/sem',  price:'R$ 4.072,13',g:'integral'},
@@ -3136,6 +3136,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('userEmail').textContent = user.email || '';
     const firstName = (user.nome || 'Gerente').split(/\s/)[0];
     document.getElementById('greetingTopbar').textContent = 'Olá, ' + firstName;
+    // Defer loads to after all script declarations are initialized
+    setTimeout(function() {
     loadAnalytics();
     loadNotificacoes();
     loadSidebarLogo();
@@ -3148,6 +3150,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     restoreMiniSidebar();
     renderTopbarPills();
     renderBottomBar();
+    }, 0);
     // Realtime: atualiza dashboard quando dados mudam no banco
     if (realtimeChannel) sbClient.removeChannel(realtimeChannel);
     realtimeChannel = sbClient.channel('gerente-dashboard')
@@ -3333,21 +3336,23 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   function trackPanelUsage(id) {
-    // Update recents (max 8, no duplicates)
-    let recents = getRecents().filter(r => r !== id);
-    recents.unshift(id);
-    if (recents.length > 8) recents = recents.slice(0, 8);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(recents));
+    try {
+      // Update recents (max 8, no duplicates)
+      let recents = getRecents().filter(r => r !== id);
+      recents.unshift(id);
+      if (recents.length > 8) recents = recents.slice(0, 8);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recents));
 
-    // Update usage count
-    const usage = getUsage();
-    usage[id] = (usage[id] || 0) + 1;
-    localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
+      // Update usage count
+      const usage = getUsage();
+      usage[id] = (usage[id] || 0) + 1;
+      localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
 
-    // Update recently used chips on dashboard
-    renderRecentChips();
-    // Update less-used styling
-    updateLessUsedItems();
+      // Update recently used chips on dashboard
+      renderRecentChips();
+      // Update less-used styling
+      updateLessUsedItems();
+    } catch(_) {}
   }
 
   function toggleFavorite(panelId, e) {
@@ -3742,11 +3747,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
-  const debouncedRenderTable = debounce(renderTable);
-  const debouncedAtivDash = debounce(() => { if (typeof renderAtivDashTable === 'function') renderAtivDashTable(); });
-  const debouncedAlmNR = debounce(() => { if (typeof almNRFiltrarCatalogo === 'function') almNRFiltrarCatalogo(); });
-  const debouncedCadastro = debounce(() => { if (typeof renderCadastroLista === 'function') renderCadastroLista(); });
-  const debouncedFamilias = debounce(() => { if (typeof renderFamiliasLista === 'function') renderFamiliasLista(); });
+  var debouncedRenderTable = debounce(renderTable);
+  var debouncedAtivDash = debounce(() => { if (typeof renderAtivDashTable === 'function') renderAtivDashTable(); });
+  var debouncedAlmNR = debounce(() => { if (typeof almNRFiltrarCatalogo === 'function') almNRFiltrarCatalogo(); });
+  var debouncedCadastro = debounce(() => { if (typeof renderCadastroLista === 'function') renderCadastroLista(); });
+  var debouncedFamilias = debounce(() => { if (typeof renderFamiliasLista === 'function') renderFamiliasLista(); });
   function setFilter(f,btn){ currentFilter=f; document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderTable(); }
 
   // ── TURNO MODAL ───────────────────────────────────────
@@ -3944,7 +3949,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('logoFileName').textContent='📎 '+file.name; document.getElementById('logoFileName').style.display='block';
     document.getElementById('btnUpload').disabled=false;
   }
-  const uz=document.getElementById('uploadZone');
+  var uz=document.getElementById('uploadZone');
   uz?.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
   uz?.addEventListener('dragleave',()=>uz.classList.remove('drag'));
   uz?.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f){const dt=new DataTransfer();dt.items.add(f);document.getElementById('logoFile').files=dt.files;onLogoSelected({target:{files:[f]}});}});
@@ -3976,8 +3981,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── BIBLIOTECA ─────────────────────────────────────────
-  let bibAcervo = [];
-  const OP_URL = SUPABASE_URL + '/functions/v1/operacional';
+  var bibAcervo = [];
+  var OP_URL = SUPABASE_URL + '/functions/v1/operacional';
   async function opApi(body) {
     const r = await fetch(OP_URL, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body:JSON.stringify({...body,_token:getToken()}) });
     return r.json();
@@ -4083,7 +4088,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     showToast('Cardápio salvo!','success');
   }
 
-  let cantCreditos = [];
+  var cantCreditos = [];
   async function loadCantCreditos() {
     const d = await opApi({ action:'cantina_creditos_list' });
     cantCreditos = Array.isArray(d) ? d : (d.data || []);
@@ -4121,7 +4126,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── ALUNOS ──────────────────────────────────────────────
-  let alunosData = [], alunoAtual = null;
+  var alunosData = [], alunoAtual = null;
 
   async function loadAlunos() {
     const d = await api({ action: 'alunos_list' });
@@ -4372,13 +4377,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   function alunoUploadDoc() { showToast('Em desenvolvimento — upload de documentos', 'info'); }
 
   // Load on panel show
-  const _origShowPanel = window.showPanel || function(){};
+  var _origShowPanel = window.showPanel || function(){};
   // Will be handled by existing showPanel — load data when panel opens
 
   // ── EQUIPE UNIFICADA ──────────────────────────────────
-  let equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
-  const PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção' };
-  const PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a' };
+  var equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
+  var PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção' };
+  var PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a' };
 
   async function loadEquipe() {
     if (!equipeSeriesOpts) {
@@ -4477,7 +4482,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadEquipe();
   }
   // ── PERMISSIONS MODAL ──────────────────────────────────
-  const MODULOS_DISPONIVEIS = [
+  var MODULOS_DISPONIVEIS = [
     { slug: 'dashboard', nome: 'Dashboard' },
     { slug: 'alunos', nome: 'Alunos' },
     { slug: 'turmas', nome: 'Turmas' },
@@ -4505,7 +4510,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     { slug: 'historico_aluno', nome: 'Histórico Aluno' },
   ];
 
-  let permUserId = null;
+  var permUserId = null;
 
   async function openPermissoes(userId, nome, papel) {
     permUserId = userId;
@@ -4590,9 +4595,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── Editar papéis de membro ──
-  const ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao'];
-  const ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao'];
-  const FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção' };
+  var ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao'];
+  var ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao'];
+  var FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção' };
 
   function openEditPapeis(id) {
     const u = equipeData.find(x => x.id === id);
@@ -4879,7 +4884,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── EDIÇÃO DE ATIVIDADE ───────────────────────────────
-  let editingAtivId = null;
+  var editingAtivId = null;
 
   async function openAtivEdit(id) {
     // Busca dados atuais
@@ -5033,7 +5038,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── DASHBOARD ATIVIDADES ──────────────────────────────
-  let allInscricoesAtiv = [];
+  var allInscricoesAtiv = [];
 
   async function loadAtivDashboard() {
     const [inscricoes, atividades] = await Promise.all([
@@ -5188,7 +5193,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── EXPORTAR PDF ──────────────────────────────────────
-  let ultimoRelatorioTexto = ''; // para compartilhar no WhatsApp
+  var ultimoRelatorioTexto = ''; // para compartilhar no WhatsApp
 
   function showExportButtons(show) {
     document.getElementById('btnExportPdf').style.display  = show ? 'flex' : 'none';
@@ -5543,11 +5548,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── MANUTENÇÃO ──────────────────────────────────────────
-  let manutData = [], manutFilter = 'todos';
-  const URGENCIA_LABEL = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🟠 Alta', critica:'🔴 Crítica' };
-  const MANUT_STATUS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
-  let EQUIPES = [];
-  let relatorioEquipesSel = new Set();
+  var manutData = [], manutFilter = 'todos';
+  var URGENCIA_LABEL = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🟠 Alta', critica:'🔴 Crítica' };
+  var MANUT_STATUS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
+  var EQUIPES = [];
+  var relatorioEquipesSel = new Set();
 
   async function loadManutEquipes() {
     const d = await api({ action:'manut_equipes_list' });
@@ -5777,7 +5782,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── REUNIÕES ──────────────────────────────────────────
-  const CALENDAR_URL = SUPABASE_URL + '/functions/v1/calendar';
+  var CALENDAR_URL = SUPABASE_URL + '/functions/v1/calendar';
 
   async function callCalendar(body) {
     const r = await fetch(CALENDAR_URL, {
@@ -5788,7 +5793,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     return r.json();
   }
 
-  const DIAS_SEMANA = ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+  var DIAS_SEMANA = ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 
   async function loadReunioesPanel() {
     await Promise.all([loadReunioesList(), loadGestorasGerente()]);
@@ -5886,7 +5891,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── CONTROLE DE ACESSO ────────────────────────────────
-  const ACESSO_FACE = SUPABASE_URL + '/functions/v1/acesso';
+  var ACESSO_FACE = SUPABASE_URL + '/functions/v1/acesso';
 
   async function callAcesso(body) {
     // Solicitações/autorizados usam /api, Face Control ID usa /acesso
@@ -6043,7 +6048,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── CONTROLE DE ACESSO (NOVO) ─────────────────────────
-  let _acessoDashInterval = null;
+  var _acessoDashInterval = null;
 
   async function loadAcessoDash() {
     if (_acessoDashInterval) clearInterval(_acessoDashInterval);
@@ -6536,17 +6541,17 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── PDI (GESTORA) ─────────────────────────────────────────
-  const GCOMP_LABELS = {
+  var GCOMP_LABELS = {
     linguagem:'🗣️ Proficiência no Idioma', metodologia:'📚 Metodologia e Didática',
     avaliacao:'📊 Avaliação da Aprendizagem', intercultural:'🌍 Competência Intercultural',
     colaboracao:'🤝 Colaboração e Comunidade', inovacao:'💡 Inovação e Tecnologia',
     desenvolvimento:'📈 Desenvolvimento Profissional',
   };
-  const G_STATUS = {rascunho:'✏️ Rascunho',aguardando_aprovacao:'⏳ Aguardando',em_andamento:'✅ Em Andamento',encerrado:'🏁 Encerrado'};
-  const G_NOTA = ['','Em Desenvolvimento','Atende','Supera','Referência'];
-  const META_STATUS_G = {pendente:'⏳ Pendente',em_andamento:'🔄 Em andamento',concluido:'✅ Concluído',revisado:'🔁 Revisado'};
+  var G_STATUS = {rascunho:'✏️ Rascunho',aguardando_aprovacao:'⏳ Aguardando',em_andamento:'✅ Em Andamento',encerrado:'🏁 Encerrado'};
+  var G_NOTA = ['','Em Desenvolvimento','Atende','Supera','Referência'];
+  var META_STATUS_G = {pendente:'⏳ Pendente',em_andamento:'🔄 Em andamento',concluido:'✅ Concluído',revisado:'🔁 Revisado'};
 
-  let pdiReviewData = null;
+  var pdiReviewData = null;
 
   async function loadPdiPanel() {
     await Promise.all([ loadPdiCiclos(), loadPdiPainel() ]);
@@ -6812,11 +6817,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── ALMOXARIFADO ─────────────────────────────────────────
-  let almReviewId = null;
-  let almReviewItens = [];          // itens da req em análise
-  let almSelectedPrices = {};       // idx → melhor resultado de preço por item
-  const almFmtBRL = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const almMesBR  = mes => { const [y,m]=mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1]+'/'+y; };
+  var almReviewId = null;
+  var almReviewItens = [];          // itens da req em análise
+  var almSelectedPrices = {};       // idx → melhor resultado de preço por item
+  var almFmtBRL = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  var almMesBR  = mes => { const [y,m]=mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1]+'/'+y; };
 
   function almShowTab(tab, btn) {
     document.querySelectorAll('#almTabs .alm-tab').forEach(b => b.classList.remove('active'));
@@ -6834,7 +6839,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── MONTH NAV HELPERS ──────────────────────────────────
-  const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   function monthNavSet(inputId, val) {
     document.getElementById(inputId).value = val;
     const [y, m] = val.split('-');
@@ -7011,9 +7016,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     almReviewItens.forEach((it, i) => almFetchPrecos(it.nome, it.unidade, i, it));
   }
 
-  const platIcon  = { 'Zoom': '🔎', 'Mercado Livre': '🛒', 'Shopee': '🧡', 'Amazon': '📦', 'Reval': '🏪' };
-  const matchColor = m => m >= 80 ? '#2d7a2d' : m >= 50 ? '#b07d00' : '#c0392b';
-  const matchLabel = m => m >= 80 ? 'Alta precisão' : m >= 50 ? 'Precisão média' : 'Baixa precisão';
+  var platIcon  = { 'Zoom': '🔎', 'Mercado Livre': '🛒', 'Shopee': '🧡', 'Amazon': '📦', 'Reval': '🏪' };
+  var matchColor = m => m >= 80 ? '#2d7a2d' : m >= 50 ? '#b07d00' : '#c0392b';
+  var matchLabel = m => m >= 80 ? 'Alta precisão' : m >= 50 ? 'Precisão média' : 'Baixa precisão';
 
   // Cart links: ML has a real pre-filled checkout URL; Shopee/Amazon go to product/search page
   function almCartUrl(r, qty) {
@@ -7048,7 +7053,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     </label>`;
   }
 
-  let almAllPrices = {}; // idx -> array of results
+  var almAllPrices = {}; // idx -> array of results
 
   async function almFetchPrecos(nome, unidade, idx, itemData) {
     const el = document.getElementById('alm-price-' + idx);
@@ -7250,14 +7255,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── Criar Requisição (gerente em nome de professora) ──────
-  let almNRCart  = [];
-  let almNRCatalogo = [];
-  let almNRXlsxParsed = [];
+  var almNRCart  = [];
+  var almNRCatalogo = [];
+  var almNRXlsxParsed = [];
 
-  const almNRNorm = s => (s||'').toLowerCase()
+  var almNRNorm = s => (s||'').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
-  const almNRFmtBRL = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  var almNRFmtBRL = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   function almGerarModelo() {
     const wb = XLSX.utils.book_new();
@@ -7718,7 +7723,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── IMPORTAR INSUMOS VIA EXCEL ──────────────────────
-  let almInsumoXlsxParsed = [];
+  var almInsumoXlsxParsed = [];
 
   function almGerarModeloInsumos() {
     const wb = XLSX.utils.book_new();
@@ -7903,7 +7908,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── CATEGORIAS DE INSUMOS ────────────────────────────
-  let almCategorias = [];
+  var almCategorias = [];
   async function almLoadCategorias() {
     const d = await api({ action: 'alm_categorias_list' });
     almCategorias = Array.isArray(d) ? d : [];
@@ -7977,8 +7982,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── FAMÍLIAS (tabela familias) ────────────────────────
-  let famDados = [];
-  let famSeriesOpts = '';
+  var famDados = [];
+  var famSeriesOpts = '';
 
   // ── IMPORTACAO DE FAMILIAS E ATIVIDADES ──────────────
   function gerarModeloFamilias() {
@@ -8051,8 +8056,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     XLSX.writeFile(wb, 'modelo_atividades_maple_bear.xlsx');
   }
 
-  let famImportData = [];
-  let famImportMode = ''; // 'familias' ou 'atividades'
+  var famImportData = [];
+  var famImportMode = ''; // 'familias' ou 'atividades'
 
   async function importarFamiliasXlsx(input) {
     const file = input.files[0];
@@ -8284,7 +8289,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── CADASTRAR FAMÍLIA ─────────────────────────────────
-  let cadDados = [];
+  var cadDados = [];
 
   async function loadCadastroPanel() {
     // Carrega séries no select
@@ -8393,7 +8398,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── NOTIFICAÇÕES ─────────────────────────────────────
-  let notifData = [];
+  var notifData = [];
   async function loadNotificacoes() {
     if (!currentGerente) return;
     const d = await api({ action: 'notif_list', portal: 'gerente', email: currentGerente.email });
@@ -8426,11 +8431,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── CALENDARIO ESCOLAR ──────────────────────────────
-  let calEventos = [];
-  let calAno = new Date().getFullYear();
-  const CAL_TIPOS = { feriado:'Feriado', reuniao:'Reuniao', evento:'Evento', data_comemorativa:'Data Comemorativa', recesso:'Recesso', avaliacao:'Avaliacao' };
-  const CAL_MESES = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
-  const CAL_DIAS = ['D','S','T','Q','Q','S','S'];
+  var calEventos = [];
+  var calAno = new Date().getFullYear();
+  var CAL_TIPOS = { feriado:'Feriado', reuniao:'Reuniao', evento:'Evento', data_comemorativa:'Data Comemorativa', recesso:'Recesso', avaliacao:'Avaliacao' };
+  var CAL_MESES = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  var CAL_DIAS = ['D','S','T','Q','Q','S','S'];
 
   function calMudarAno(delta) { calAno += delta; loadCalendario(); }
   function calToggleForm() {
@@ -8657,7 +8662,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── FINANCEIRO ─────────────────────────────────────
-  let finTipoFilter = 'todos';
+  var finTipoFilter = 'todos';
   function setFinTipo(t, btn) { finTipoFilter = t; document.querySelectorAll('#panelFinLanc .fb').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); loadFinLancamentos(); }
   function toggleFinLancForm() { const el = document.getElementById('finLancForm'); el.style.display = el.style.display==='none'?'block':'none'; }
   function toggleFinContaForm() { const el = document.getElementById('finContaForm'); el.style.display = el.style.display==='none'?'block':'none'; }
@@ -9004,7 +9009,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── CRM ────────────────────────────────────────────
-  let crmEstagios = [], crmLeads = [];
+  var crmEstagios = [], crmLeads = [];
   function toggleCrmLeadForm() { const el=document.getElementById('crmLeadForm'); el.style.display=el.style.display==='none'?'block':'none'; }
   function toggleCrmTemplateForm() { const el=document.getElementById('crmTemplateForm'); el.style.display=el.style.display==='none'?'block':'none'; }
 
@@ -9529,9 +9534,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── IMPRESSOES (gerente) ────────────────────────────
-  let impGerenteFilter = 'pendentes';
-  const IMP_STATUS_G = { pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado', impresso:'🖨️ Impresso', entregue:'📦 Entregue' };
-  const IMP_PAPEL_G = { sulfite:'Sulfite A4', desenho:'Papel Desenho', cartolina:'Cartolina', foto:'Fotográfico', adesivo:'Adesivo' };
+  var impGerenteFilter = 'pendentes';
+  var IMP_STATUS_G = { pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado', impresso:'🖨️ Impresso', entregue:'📦 Entregue' };
+  var IMP_PAPEL_G = { sulfite:'Sulfite A4', desenho:'Papel Desenho', cartolina:'Cartolina', foto:'Fotográfico', adesivo:'Adesivo' };
 
   function setImpFilter(f, btn) {
     impGerenteFilter = f;
@@ -9733,7 +9738,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── EMERGENCIA ──────────────────────────────────────
-  const EMERG_TIPOS = { incendio:'🔥 Incêndio', intruso:'🚷 Intruso', emergencia_medica:'🚑 Emergência Médica', evacuacao:'🏃 Evacuação', outro:'⚠️ Outro' };
+  var EMERG_TIPOS = { incendio:'🔥 Incêndio', intruso:'🚷 Intruso', emergencia_medica:'🚑 Emergência Médica', evacuacao:'🏃 Evacuação', outro:'⚠️ Outro' };
 
   async function acionarEmergencia(tipo) {
     const msg = prompt('Mensagem adicional (opcional):');
@@ -9888,7 +9893,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // ═══════════════════════════════════════════════════════════
   //  COMUNICAÇÃO — CHAT
   // ═══════════════════════════════════════════════════════════
-  const COMUNICACAO = SUPABASE_URL + '/functions/v1/comunicacao';
+  var COMUNICACAO = SUPABASE_URL + '/functions/v1/comunicacao';
   async function apiCom(body) {
     const token = getToken();
     const r = await fetch(COMUNICACAO, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body: JSON.stringify({...body, _token: token}) });
@@ -9921,7 +9926,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // ═══════════════════════════════════════════════════════════
   //  PESQUISAS / ENQUETES
   // ═══════════════════════════════════════════════════════════
-  const DIPLOMAS_FN = SUPABASE_URL + '/functions/v1/diplomas';
+  var DIPLOMAS_FN = SUPABASE_URL + '/functions/v1/diplomas';
   async function apiDiplomas(body) {
     const token = getToken();
     const r = await fetch(DIPLOMAS_FN, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body: JSON.stringify({...body, _token: token}) });
@@ -10000,7 +10005,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // ═══════════════════════════════════════════════════════════
   //  ACADÊMICO — NOTAS / BOLETIM
   // ═══════════════════════════════════════════════════════════
-  const ACADEMICO = SUPABASE_URL + '/functions/v1/academico';
+  var ACADEMICO = SUPABASE_URL + '/functions/v1/academico';
   async function apiAcademico(body) {
     const token = getToken();
     const r = await fetch(ACADEMICO, {
@@ -10056,7 +10061,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     </tr>`).join('');
   }
 
-  let _periodos = [];
+  var _periodos = [];
   function showPeriodoForm() {
     document.getElementById('periodoEditId').value = '';
     document.getElementById('periodoNome').value = '';
@@ -10136,7 +10141,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     </tr>`).join('');
   }
 
-  let _discs = [];
+  var _discs = [];
   function showDiscForm() {
     document.getElementById('discId').value = '';
     document.getElementById('discNome').value = '';
@@ -10318,7 +10323,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('briefingDate').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
   // Chamar após login
-  const _origShowApp = showApp;
+  var _origShowApp = showApp;
   showApp = function(user) {
     _origShowApp(user);
     loadMorningBriefing();
@@ -10326,7 +10331,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   };
 
   // ═══ BUSCA RÁPIDA (Ctrl+K) ═══
-  const searchData = [
+  var searchData = [
     {icon:'📊',text:'Dashboard Analytics',panel:'analytics'},
     {icon:'📝',text:'Notas / Visão Geral',panel:'notasVisao'},
     {icon:'✅',text:'Frequência',panel:'frequencia'},
@@ -10364,7 +10369,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   ];
 
   // Create search overlay
-  const searchOverlay = document.createElement('div');
+  var searchOverlay = document.createElement('div');
   searchOverlay.className = 'search-overlay';
   searchOverlay.innerHTML = '<div class="search-box"><div class="search-input-wrap"><span class="search-icon">🔍</span><input id="searchInput" placeholder="Buscar funcionalidade..." autocomplete="off"><span style="font-size:11px;color:var(--muted);padding:4px 8px;border:1px solid var(--border);border-radius:4px;">ESC</span></div><div class="search-results" id="searchResults"></div></div>';
   searchOverlay.addEventListener('click', (e) => { if (e.target === searchOverlay) closeSearch(); });
@@ -10398,7 +10403,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   document.getElementById('searchInput')?.addEventListener('input', (e) => renderSearchResults(e.target.value));
 
   // ═══ AUTO-SAVE ═══
-  let autoSaveIndicator = document.createElement('div');
+  var autoSaveIndicator = document.createElement('div');
   autoSaveIndicator.className = 'autosave-indicator';
   autoSaveIndicator.textContent = '✓ Salvo';
   document.body.appendChild(autoSaveIndicator);
@@ -10416,7 +10421,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   });
 
   // ═══ COMPLIANCE MODULE ═══
-  const COMPLIANCE_API = SUPABASE_URL + '/functions/v1/compliance';
+  var COMPLIANCE_API = SUPABASE_URL + '/functions/v1/compliance';
   async function compApi(body) {
     const token = getToken();
     const r = await fetch(COMPLIANCE_API, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body: JSON.stringify({...body, _token: token}) });
@@ -10447,7 +10452,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function loadCompPoliticas() { const d = await compApi({action:'compliance_politicas_list'}); const items = d.data||[]; document.getElementById('compPoliticasBody').innerHTML = items.length ? items.map(p=>`<tr><td>${p.titulo}</td><td>${p.categoria}</td><td>v${p.versao}</td><td>${p.vigente_desde?String(p.vigente_desde).split('-').reverse().join('/'):'—'}</td><td>${p.revisao_proxima?String(p.revisao_proxima).split('-').reverse().join('/'):'—'}</td><td><span class="status-pill" style="background:${{vigente:'#2d7a3a',rascunho:'#d4830a',revogada:'#888'}[p.status]||'#888'};color:#fff;">${p.status}</span></td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhuma.</td></tr>'; }
   async function loadCompCalendario() { const d = await compApi({action:'compliance_calendario_list'}); const items = d.data||[]; document.getElementById('compCalendarioBody').innerHTML = items.length ? items.map(c=>`<tr><td>${String(c.data_limite).split('-').reverse().join('/')}</td><td>${c.titulo}</td><td>${c.categoria}</td><td><span class="status-pill" style="background:${{baixa:'#888',normal:'#1a6bb5',alta:'#d4830a',critica:'#C8102E'}[c.prioridade]||'#888'};color:#fff;">${c.prioridade}</span></td><td><span class="status-pill" style="background:${{pendente:'#d4830a',em_andamento:'#1a6bb5',concluido:'#2d7a3a',atrasado:'#C8102E'}[c.status]||'#888'};color:#fff;">${c.status}</span></td><td>${c.status!=='concluido'?`<button onclick="compApi({action:'compliance_calendario_concluir',id:'${c.id}'}).then(()=>{showToast('Concluído');loadCompCalendario()})" style="background:#2d7a3a;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">Concluir</button>`:'✓'}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhum.</td></tr>'; }
   async function loadCompAlertas() { const d = await compApi({action:'compliance_alertas_list'}); const items = d.data||[]; document.getElementById('compAlertasBody').innerHTML = items.length ? items.map(a=>`<tr><td>${new Date(a.criado_em).toLocaleDateString('pt-BR')}</td><td>${a.professoras?.nome||'—'}</td><td>${a.email_destino}</td><td>${a.assunto}</td><td>${a.enviado?'<span class="status-pill" style="background:#2d7a3a;color:#fff;">Sim</span>':'<span class="status-pill" style="background:#C8102E;color:#fff;">Não</span>'}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhum.</td></tr>'; }
-  let compPontoRegistros = [];
+  var compPontoRegistros = [];
   function previewPontoGerente() {
     const fileInput = document.getElementById('compArquivoPonto');
     const preview = document.getElementById('compPontoPreview');
@@ -10573,7 +10578,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function loadRoiDashboard(){try{const d=await fetch(SUPABASE_URL+'/functions/v1/lumied-ai',{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({action:'roi_dashboard',_token:getToken()})}).then(r=>r.json());if(d.error)return;const r=d.data?.roi_estimado||{};const m=d.data?.metricas_reais||{};const fmt=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');document.getElementById('roiEconMes').textContent=fmt(r.total_economia_mes||0);document.getElementById('roiEconAnual').textContent=fmt(r.total_economia_anual||0);document.getElementById('roiHoras').textContent=(r.horas_economizadas_mes||0)+'h';document.getElementById('roiRetidos').textContent=r.alunos_retidos_mes||0;document.getElementById('roiOpText').textContent=fmt(r.economia_operacional_mes||0)+'/mês — '+r.horas_economizadas_mes+'h de trabalho admin economizadas';document.getElementById('roiEvasaoText').textContent=fmt(r.evasao_evitada_mes||0)+'/mês — '+r.alunos_retidos_mes+' alunos que teriam saído foram retidos';document.getElementById('roiInadText').textContent=fmt(r.inadimplencia_evitada_mes||0)+'/mês em boletos que seriam perdidos';document.getElementById('roiResumo').textContent='Sua escola economiza '+fmt(r.total_economia_mes||0)+' por mês com o Lumied';document.getElementById('roiResumoSub').textContent='Isso equivale a '+fmt(r.total_economia_anual||0)+' por ano — com base nos dados reais da escola.';}catch(e){console.log('[ROI]',e);}}
 
   // ═══ CONTRATOS DIGITAIS ═══
-  let contratosData = [];
+  var contratosData = [];
   async function loadContratos() {
     const el = document.getElementById('contratosListContent');
     el.innerHTML = '<div class="empty-state">Carregando...</div>';
