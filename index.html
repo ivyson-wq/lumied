@@ -643,10 +643,12 @@ body.has-bottomnav{padding-bottom:56px;}
         <div class="field">
           <label for="nomeResp">Seu nome completo <span class="req">*</span></label>
           <input type="text" id="nomeResp" placeholder="Ex: Ana Paula Corrêa" autocomplete="name">
+          <div class="locked-badge" style="display:none;">🔒 Dados da sua família</div>
           <div class="err-msg" id="nomeRespErr">Informe seu nome completo.</div>
         </div>
         <div class="field">
           <label for="nomeCrianca">Nome da criança <span class="req">*</span></label>
+          <select id="filhoSelect" style="display:none;" onchange="onFilhoSelect(this,'nomeCrianca','serieSelect')"></select>
           <input type="text" id="nomeCrianca" placeholder="Ex: Pedro Corrêa">
           <div class="err-msg" id="nomeCriancaErr">Informe o nome da criança.</div>
         </div>
@@ -729,10 +731,12 @@ body.has-bottomnav{padding-bottom:56px;}
         <div class="field">
           <label for="nomeRespAtiv">Seu nome completo <span class="req">*</span></label>
           <input type="text" id="nomeRespAtiv" placeholder="Ex: Ana Paula Corrêa" autocomplete="name">
+          <div class="locked-badge" style="display:none;">🔒 Dados da sua família</div>
           <div class="err-msg" id="nomeRespAtivErr">Informe seu nome completo.</div>
         </div>
         <div class="field">
           <label for="nomeCriancaAtiv">Nome da criança <span class="req">*</span></label>
+          <select id="filhoSelectAtiv" style="display:none;" onchange="onFilhoSelect(this,'nomeCriancaAtiv','serieSelectAtiv')"></select>
           <input type="text" id="nomeCriancaAtiv" placeholder="Ex: Pedro Corrêa">
           <div class="err-msg" id="nomeCriancaAtivErr">Informe o nome da criança.</div>
         </div>
@@ -1528,6 +1532,39 @@ body.has-bottomnav{padding-bottom:56px;}
     btn.disabled = false; btn.innerHTML = '✉️ Enviar link de acesso';
   }
 
+  function setupFilhoSelect(selectId, inputId, serieSelectId, filhos) {
+    const sel = document.getElementById(selectId);
+    const inp = document.getElementById(inputId);
+    if (!filhos.length) { sel.style.display = 'none'; inp.style.display = ''; return; }
+    if (filhos.length === 1) {
+      // 1 filho: preenche direto e esconde select
+      sel.style.display = 'none';
+      inp.style.display = '';
+      inp.value = filhos[0].nome_aluno;
+      inp.readOnly = true;
+      // Auto-selecionar série
+      if (filhos[0].serie) {
+        const sEl = document.getElementById(serieSelectId);
+        if (sEl) { for (const o of sEl.options) { if (o.text === filhos[0].serie || o.value === filhos[0].serie) { o.selected = true; break; } } }
+      }
+    } else {
+      // Múltiplos filhos: mostra select, esconde input
+      sel.style.display = '';
+      inp.style.display = 'none';
+      sel.innerHTML = '<option value="">Selecione a criança…</option>' +
+        filhos.map(f => `<option value="${f.nome_aluno}" data-serie="${f.serie||''}">${f.nome_aluno}${f.serie ? ' — ' + f.serie : ''}</option>`).join('');
+    }
+  }
+  function onFilhoSelect(sel, inputId, serieSelectId) {
+    const inp = document.getElementById(inputId);
+    inp.value = sel.value;
+    const serie = sel.selectedOptions[0]?.dataset.serie;
+    if (serie) {
+      const sEl = document.getElementById(serieSelectId);
+      if (sEl) { for (const o of sEl.options) { if (o.text === serie || o.value === serie) { o.selected = true; break; } } }
+    }
+  }
+
   async function showForm(user) {
     const meta  = user.user_metadata || {};
     const name  = meta.full_name || meta.name || '';
@@ -1575,15 +1612,34 @@ body.has-bottomnav{padding-bottom:56px;}
 
     document.getElementById('email').value    = email;
     document.getElementById('emailAtiv').value = email;
-    // Nome: pré-preenche se vier do Google; deixa editável para magic link
-    if (name) {
-      document.getElementById('nomeResp').value    = name;
-      document.getElementById('nomeResp').readOnly = true;
-      document.getElementById('nomeResp').nextElementSibling.style.display = 'flex';
+
+    // Buscar filhos do responsável na tabela familias
+    try {
+      const fRes = await fetch(SUPABASE_URL + '/rest/v1/familias?select=nome_responsavel,nome_aluno,serie&email=ilike.' + encodeURIComponent(email), {
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+      });
+      window._filhosData = await fRes.json();
+    } catch(_) { window._filhosData = []; }
+    const filhos = window._filhosData || [];
+
+    // Auto-preencher nome do responsável
+    const nomeResp = filhos.length ? filhos[0].nome_responsavel : name;
+    if (nomeResp) {
+      ['nomeResp','nomeRespAtiv'].forEach(id => {
+        document.getElementById(id).value = nomeResp;
+        document.getElementById(id).readOnly = true;
+        document.getElementById(id).nextElementSibling.style.display = 'flex';
+      });
     } else {
-      document.getElementById('nomeResp').readOnly = false;
-      document.getElementById('nomeResp').nextElementSibling.style.display = 'none';
+      ['nomeResp','nomeRespAtiv'].forEach(id => {
+        document.getElementById(id).readOnly = false;
+        document.getElementById(id).nextElementSibling.style.display = 'none';
+      });
     }
+
+    // Auto-preencher filhos (select ou input direto)
+    setupFilhoSelect('filhoSelect', 'nomeCrianca', 'serieSelect', filhos);
+    setupFilhoSelect('filhoSelectAtiv', 'nomeCriancaAtiv', 'serieSelectAtiv', filhos);
 
     _accessDeniedActive = false;
     document.getElementById('loginScreenWrap').style.display = 'none';
