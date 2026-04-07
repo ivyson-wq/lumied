@@ -2986,8 +2986,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   // ── MANUTENÇÃO ──────────────────────────────────────────
   const MANUT_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
   async function callManutApi(body) {
-    const headers = { 'Content-Type': 'application/json', 'apikey': ANON };
-    const r = await fetch(MANUT_API, { method: 'POST', headers, body: JSON.stringify(body) });
+    const tok = getToken();
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
+    const r = await fetch(MANUT_API, { method: 'POST', headers, body: JSON.stringify({ ...body, _token: tok }) });
     return r.json();
   }
 
@@ -3031,10 +3032,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   async function loadMeusManut() {
     if (!currentProf) return;
-    const d = await callManutApi({ action: 'manutencao_list' });
-    const list = (Array.isArray(d) ? d : (d.data || [])).filter(m =>
-      m.usuarios?.email?.toLowerCase() === currentProf.email?.toLowerCase()
-    );
+    const d = await callManutApi({ action: 'manutencao_minhas', _email: currentProf.email });
+    const list = Array.isArray(d) ? d : (d.data || []);
     const el = document.getElementById('meusManutList');
     if (!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:12px;">Nenhum chamado enviado.</div>'; return; }
     const URG = { baixa:'🟢', media:'🟡', alta:'🟠', critica:'🔴' };

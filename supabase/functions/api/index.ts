@@ -473,9 +473,24 @@ serve(async (req: Request) => {
     }
     const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url };
     if (usuario_id) insert.usuario_id = usuario_id;
+    else if (_email) {
+      const { data: u } = await admin.from("usuarios").select("id").ilike("email", _email as string).maybeSingle();
+      if (u) insert.usuario_id = u.id;
+    }
     const { error } = await admin.from("manutencoes").insert(insert);
     if (error) return err(error.message);
     return ok({ success: true });
+  }
+
+  // ── Manutenção — meus chamados (professora/equipe) ──
+  if (action === "manutencao_minhas") {
+    const email = ((body._email as string) || "").toLowerCase().trim();
+    if (!email) return err("E-mail obrigatório.");
+    const { data: user } = await admin.from("usuarios").select("id").ilike("email", email).maybeSingle();
+    if (!user) return ok([]);
+    const { data } = await admin.from("manutencoes").select("*, usuarios(nome, email)")
+      .eq("usuario_id", user.id).order("criado_em", { ascending: false });
+    return ok(data ?? []);
   }
 
   // ── Contratos PÚBLICOS (família acessa sem login) ──
