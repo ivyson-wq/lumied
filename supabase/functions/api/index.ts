@@ -749,6 +749,10 @@ serve(async (req: Request) => {
         });
       }
     } catch {}
+    // Disparar Claude AI trigger imediatamente via poke (fire-and-forget)
+    try {
+      fetch("https://api.claude.ai/v1/code/triggers/trig_01PTaCsfDfdNrUGwfUeZJZ96/poke?token=lumied-ticket-poke-2026", { method: "POST" }).catch(() => {});
+    } catch {}
     return ok({ success: true, numero: ticketNumero });
   }
 
