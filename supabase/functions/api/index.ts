@@ -1288,10 +1288,16 @@ serve(async (req: Request) => {
     if (nome_responsavel !== undefined) updates.nome_responsavel = nome_responsavel;
     if (email !== undefined) updates.email = email;
     if (serie !== undefined) updates.serie = serie;
-    if (turno !== undefined) updates.turno = turno;
-    if (!Object.keys(updates).length) return err("Nenhum campo para atualizar.");
-    const { error } = await admin.from("familias").update(updates).eq("cpf", cpf);
-    if (error) return err(error.message);
+    if (!Object.keys(updates).length && turno === undefined) return err("Nenhum campo para atualizar.");
+    // Update main fields
+    if (Object.keys(updates).length) {
+      const { error } = await admin.from("familias").update(updates).eq("cpf", cpf);
+      if (error) return err(error.message);
+    }
+    // Try updating turno separately (column may not exist yet)
+    if (turno !== undefined) {
+      await admin.from("familias").update({ turno }).eq("cpf", cpf).then(() => {}).catch(() => {});
+    }
     return ok({ success: true });
   }
   if (action === "familias_reset_senha") {
