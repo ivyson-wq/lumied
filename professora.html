@@ -1012,13 +1012,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 </div>
 
 <script>
-  const DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
-  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  var DIPLOMAS_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
 
-  let currentProf = null;
-  let selectedFile = null;
-  let selectedAtestFile = null;
-  let rankingData = [];
+  var currentProf = null;
+  var selectedFile = null;
+  var selectedAtestFile = null;
+  var rankingData = [];
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
   function showToast(msg, type = 'info', duration = 4000) {
@@ -1039,7 +1039,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   // ── DEBOUNCE ───────────────────────────────────────────
   function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
-  const debouncedAlmSearch = debounce(() => { if (typeof almFiltrarCatalogo === 'function') almFiltrarCatalogo(); });
+  var debouncedAlmSearch = debounce(() => { if (typeof almFiltrarCatalogo === 'function') almFiltrarCatalogo(); });
 
   function getToken() { return localStorage.getItem('prof_token'); }
 
@@ -1225,7 +1225,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.querySelector('.main,.content')?.style.setProperty('margin-top', '56px');
   }
 
-  let quizState = null;
+  var quizState = null;
 
   async function iniciarQuiz(atribuicaoId) {
     document.getElementById('quizBanner')?.remove();
@@ -1398,8 +1398,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.body.appendChild(overlay);
   }
 
-  let selfieStream = null;
-  let selfieBase64 = null;
+  var selfieStream = null;
+  var selfieBase64 = null;
 
   async function abrirCamera() {
     if (selfieBase64) return; // já capturou
@@ -1479,7 +1479,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── Módulos config (gerente only) ──
-  let _isGerente = false;
+  var _isGerente = false;
   async function checkGerenteAccess() {
     const d = await callApi({ action: 'escola_modulos_get_all' });
     if (d && Array.isArray(d) && !d.error) {
@@ -1594,9 +1594,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ═══ GRAVADOR DE ÁUDIO + TRANSCRIÇÃO WHISPER ═══
-  let audioRecorder = null;
-  let audioChunks = [];
-  let audioRecording = false;
+  var audioRecorder = null;
+  var audioChunks = [];
+  var audioRecording = false;
 
   function abrirGravadorAudio() {
     if (audioRecording) return;
@@ -1946,7 +1946,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('btnSubmit').disabled = false;
   }
 
-  const uz = document.getElementById('uploadZone');
+  var uz = document.getElementById('uploadZone');
   uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag'); });
   uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
   uz.addEventListener('drop', e => {
@@ -2007,7 +2007,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('btnAtestSubmit').disabled = false;
   }
 
-  const atestUz = document.getElementById('atestUploadZone');
+  var atestUz = document.getElementById('atestUploadZone');
   atestUz.addEventListener('dragover', e => { e.preventDefault(); atestUz.classList.add('drag'); });
   atestUz.addEventListener('dragleave', () => atestUz.classList.remove('drag'));
   atestUz.addEventListener('drop', e => {
@@ -2095,7 +2095,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── PDI ────────────────────────────────────────────────────
-  const COMP_LABELS = {
+  var COMP_LABELS = {
     linguagem:      '🗣️ Proficiência no Idioma',
     metodologia:    '📚 Metodologia e Didática',
     avaliacao:      '📊 Avaliação da Aprendizagem',
@@ -2104,18 +2104,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     inovacao:       '💡 Inovação e Tecnologia',
     desenvolvimento:'📈 Desenvolvimento Profissional',
   };
-  const AREAS = Object.keys(COMP_LABELS);
-  const NOTA_LABEL = ['','Em Desenvolvimento','Atende','Supera','Referência'];
-  const STATUS_PDI = {
+  var AREAS = Object.keys(COMP_LABELS);
+  var NOTA_LABEL = ['','Em Desenvolvimento','Atende','Supera','Referência'];
+  var STATUS_PDI = {
     rascunho:'✏️ Rascunho', aguardando_aprovacao:'⏳ Aguardando Aprovação',
     em_andamento:'✅ Em Andamento', encerrado:'🏁 Encerrado',
   };
-  const META_STATUS_LABEL = {
+  var META_STATUS_LABEL = {
     pendente:'Pendente', em_andamento:'Em andamento', concluido:'Concluído', revisado:'Revisado',
   };
 
-  let pdiState = { ciclo: null, pdi: null };
-  let pdiMetaCount = 0;
+  var pdiState = { ciclo: null, pdi: null };
+  var pdiMetaCount = 0;
 
   async function loadMeuPdi() {
     const d = await callApi({ action: 'pdi_meu_status' });
@@ -2388,11 +2388,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   });
 
   // ── PICKUP QUEUE ────────────────────────────────────────
-  let SERIES_DISPONIVEIS = ['Bear Care','Toddler','Nursery','Junior Kindergarten (JK)','Senior Kindergarten (SK)','Year 1','Year 2','Year 3'];
-  let pickupSeriesSelecionadas = [];
-  let pickupPollInt = null;
-  let pickupUltimaFila = [];
-  let pickupSoundCtx = null;
+  var SERIES_DISPONIVEIS = ['Bear Care','Toddler','Nursery','Junior Kindergarten (JK)','Senior Kindergarten (SK)','Year 1','Year 2','Year 3'];
+  var pickupSeriesSelecionadas = [];
+  var pickupPollInt = null;
+  var pickupUltimaFila = [];
+  var pickupSoundCtx = null;
 
   function initPickupSeries() {
     const el = document.getElementById('pickupSeriesBtns');
@@ -2539,11 +2539,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── ALMOXARIFADO ────────────────────────────────────────
-  let almCatalogo = [];
-  let almCart = [];  // [{insumo_id, nome, unidade, preco_unit, qty_solicitado}]
+  var almCatalogo = [];
+  var almCart = [];  // [{insumo_id, nome, unidade, preco_unit, qty_solicitado}]
 
-  const fmtBRL = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-  const mesBR  = mes => { const [y,m] = mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1] + '/' + y; };
+  var fmtBRL = v => 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  var mesBR  = mes => { const [y,m] = mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1] + '/' + y; };
 
   async function almLoadAll() {
     almProfSetMes(new Date().toISOString().slice(0,7));
@@ -2553,7 +2553,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── MONTH NAV PROFESSORA ────────────────────────────
-  const MESES_PT_PROF = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var MESES_PT_PROF = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   function almProfSetMes(val) {
     document.getElementById('almProfMes').value = val;
     const [y, m] = val.split('-');
@@ -2673,7 +2673,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── Excel: template e upload ───────────────────────────
-  let almXlsxParsed = [];  // itens lidos da planilha aguardando import
+  var almXlsxParsed = [];  // itens lidos da planilha aguardando import
 
   function almSwitchTab(tab) {
     // Tabs foram removidas no redesign — função mantida como no-op
@@ -2738,7 +2738,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // Normalize string for matching
-  const almNorm = s => (s||'').toLowerCase()
+  var almNorm = s => (s||'').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
 
@@ -2997,7 +2997,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── MANUTENÇÃO ──────────────────────────────────────────
-  const MANUT_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
+  var MANUT_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
   async function callManutApi(body) {
     const tok = getToken();
     const headers = { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
@@ -3063,7 +3063,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── NOTIFICAÇÕES ─────────────────────────────────────
-  let notifData = [];
+  var notifData = [];
   async function loadNotificacoes() {
     if (!currentProf) return;
     const d = await callApi({ action: 'notif_list', portal: 'professora', email: currentProf.email });
@@ -3167,8 +3167,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   // ── IMPRESSOES ──────────────────────────────────────
-  const IMP_STATUS = { pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado', impresso:'🖨️ Impresso', entregue:'📦 Entregue' };
-  const IMP_PAPEL = { sulfite:'Sulfite A4', desenho:'Papel Desenho', cartolina:'Cartolina', foto:'Fotográfico', adesivo:'Adesivo' };
+  var IMP_STATUS = { pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado', impresso:'🖨️ Impresso', entregue:'📦 Entregue' };
+  var IMP_PAPEL = { sulfite:'Sulfite A4', desenho:'Papel Desenho', cartolina:'Cartolina', foto:'Fotográfico', adesivo:'Adesivo' };
 
   async function loadImpressoes() {
     const d = await callApi({ action: 'impressao_minhas' });

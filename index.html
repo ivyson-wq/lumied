@@ -994,18 +994,18 @@ body.has-bottomnav{padding-bottom:56px;}
 </div>
 
 <script>
-  const SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-  const API      = SUPABASE_URL + '/functions/v1/api';
-  const SEND     = SUPABASE_URL + '/functions/v1/send-email';
-  const ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
-  const DIPLOMAS = SUPABASE_URL + '/functions/v1/diplomas';
+  var SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+  var API      = SUPABASE_URL + '/functions/v1/api';
+  var SEND     = SUPABASE_URL + '/functions/v1/send-email';
+  var ACESSO   = SUPABASE_URL + '/functions/v1/acesso';
+  var DIPLOMAS = SUPABASE_URL + '/functions/v1/diplomas';
 
-  const { createClient } = supabase;
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+  var { createClient } = supabase;
+  var sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
   // ── TAB NAVIGATION ──────────────────────────────────────
-  let currentTab = 'inicio';
+  var currentTab = 'inicio';
   function switchTab(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -1072,8 +1072,8 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── ATALHOS PERSONALIZÁVEIS ──────────────────────────────
-  const PAIS_FAV_KEY = 'lumied_fav_pais';
-  const paisTabMeta = {
+  var PAIS_FAV_KEY = 'lumied_fav_pais';
+  var paisTabMeta = {
     inicio: { icon: '🏠', label: 'Início' },
     diaadia: { icon: '📅', label: 'Dia a Dia' },
     boletim: { icon: '📝', label: 'Boletim' },
@@ -1083,7 +1083,7 @@ body.has-bottomnav{padding-bottom:56px;}
     achados: { icon: '🔍', label: 'Achados' },
     acesso: { icon: '🔐', label: 'Acesso' }
   };
-  let paisEditMode = false;
+  var paisEditMode = false;
 
   function getPaisFavorites() {
     try { return JSON.parse(localStorage.getItem(PAIS_FAV_KEY)) || ['boletos','diaadia','boletim']; }
@@ -1143,13 +1143,13 @@ body.has-bottomnav{padding-bottom:56px;}
     setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(() => toast.remove(), 300); }, duration);
   }
 
-  let diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
-  let resendCooldown = null;
-  let _accessDeniedActive = false; // flag para evitar loop com onAuthStateChange
+  var diasSelecionados = [], diasFreqNecessaria = 0, currentUser = null;
+  var resendCooldown = null;
+  var _accessDeniedActive = false; // flag para evitar loop com onAuthStateChange
 
   // ── AUTO-LOGOUT POR INATIVIDADE (30 min) ──────────────
-  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos
-  let _inactivityTimer = null;
+  var INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos
+  var _inactivityTimer = null;
   function resetInactivityTimer() {
     if (_inactivityTimer) clearTimeout(_inactivityTimer);
     if (!currentUser) return;
@@ -1259,7 +1259,7 @@ body.has-bottomnav{padding-bottom:56px;}
     });
   }
 
-  let deniedEmail = '';
+  var deniedEmail = '';
 
   function showAccessDenied(email) {
     if (email) deniedEmail = email;
@@ -1619,7 +1619,7 @@ body.has-bottomnav{padding-bottom:56px;}
   // ── Módulos habilitados (feature gating) ──
   window._enabledModules = null;
   // Todos os itens possíveis da bottom nav (ordem de prioridade)
-  const ALL_NAV_ITEMS = [
+  var ALL_NAV_ITEMS = [
     { tab: 'inicio', icon: '🏠', label: 'Início', modulo: null },
     { tab: 'diaadia', icon: '📅', label: 'Dia a Dia', modulo: 'agenda_digital' },
     { tab: 'boletim', icon: '📝', label: 'Boletim', modulo: 'notas' },
@@ -1628,7 +1628,7 @@ body.has-bottomnav{padding-bottom:56px;}
     { tab: 'atividades', icon: '🎯', label: 'Atividades', modulo: 'atividades' },
     { tab: 'achados', icon: '🔍', label: 'Achados', modulo: 'achados' },
   ];
-  const MAX_BOTTOM_ITEMS = 8; // cabe todos os itens sem botão "Mais"
+  var MAX_BOTTOM_ITEMS = 8; // cabe todos os itens sem botão "Mais"
 
   async function loadModulosHabilitadosPais() {
     try {
@@ -1681,7 +1681,7 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── TURNO ─────────────────────────────────────────────
-  const TURNO_INFO = {
+  var TURNO_INFO = {
     integral_5x:{label:'Integral · 5× na semana',price:'R$ 4.395,00',inicio:'07:30h',freq:5},
     integral_4x:{label:'Integral · 4× na semana',price:'R$ 4.303,57',inicio:'07:30h',freq:4},
     integral_3x:{label:'Integral · 3× na semana',price:'R$ 4.072,13',inicio:'07:30h',freq:3},
@@ -1695,7 +1695,7 @@ body.has-bottomnav{padding-bottom:56px;}
     tarde:{label:'Apenas a Tarde',price:null,inicio:'13:30h (13:10h Ens. Fund.)',freq:null},
     diaria:{label:'Diária',price:'R$ 150,00',inicio:null,freq:null},
   };
-  const PRECISA_DIAS = v => TURNO_INFO[v]?.freq != null && TURNO_INFO[v].freq < 5;
+  var PRECISA_DIAS = v => TURNO_INFO[v]?.freq != null && TURNO_INFO[v].freq < 5;
 
   function onTurnoChange() {
     const val = document.getElementById('turnoSelect').value;
@@ -1748,9 +1748,9 @@ body.has-bottomnav{padding-bottom:56px;}
   ['dSeg','dTer','dQua','dQui','dSex'].forEach(id=>document.getElementById(id).addEventListener('change',updateDiasCounter));
 
   // ── ATIVIDADES ────────────────────────────────────────
-  let todasAtividades = [];
+  var todasAtividades = [];
   // Map: atividade_id → { turma, slots } | null
-  let atividadesSelecionadas = new Map();
+  var atividadesSelecionadas = new Map();
 
   async function loadAtividades() {
     const data = await call({ action: 'atividades_list' });
@@ -1970,8 +1970,8 @@ body.has-bottomnav{padding-bottom:56px;}
   function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   // ── AGENDA / CHECK-OUT ────────────────────────────────
-  let agendaData = null;
-  let ausenciaPendente = null;
+  var agendaData = null;
+  var ausenciaPendente = null;
 
   function novoEnvio() {
     document.getElementById('successPanel').style.display = 'none';
@@ -2195,11 +2195,11 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── PICKUP (ESTOU A CAMINHO) ───────────────────────────
-  let pickupAtivoId = null;
-  let pickupPollTimer = null;
-  let pickupRealtimeChannel = null;
-  let pickupWatchId = null;
-  const SCHOOL_LAT = -28.8628, SCHOOL_LON = -51.5201, CHEGOU_RAIO_M = 200;
+  var pickupAtivoId = null;
+  var pickupPollTimer = null;
+  var pickupRealtimeChannel = null;
+  var pickupWatchId = null;
+  var SCHOOL_LAT = -28.8628, SCHOOL_LON = -51.5201, CHEGOU_RAIO_M = 200;
 
   function haversineM(lat1,lon1,lat2,lon2) {
     const R = 6371000, toRad = d => d * Math.PI / 180;
@@ -2346,7 +2346,7 @@ body.has-bottomnav{padding-bottom:56px;}
     loadPickupCard();
   }
 
-  let pickupDistanciaInicial = null;
+  var pickupDistanciaInicial = null;
 
   function showPickupAtivo(n) {
     const aviso = document.getElementById('pickupAviso');
@@ -2551,7 +2551,7 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── MODO ──────────────────────────────────────────────
-  let modoAtual = null;
+  var modoAtual = null;
 
   function setModo(modo) {
     modoAtual = modo;
@@ -2564,7 +2564,7 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── TAB ATIVIDADES (separado) ────────────────────────
-  let ativTabInited = false;
+  var ativTabInited = false;
   async function initAtividadesTab() {
     if (currentUser) {
       document.getElementById('emailAtiv').value = currentUser.email;
@@ -2579,8 +2579,8 @@ body.has-bottomnav{padding-bottom:56px;}
     loadAtividadesAtiv();
   }
 
-  let todasAtividadesAtiv = [];
-  let ativSelecionadasAtiv = new Map();
+  var todasAtividadesAtiv = [];
+  var ativSelecionadasAtiv = new Map();
 
   async function loadAtividadesAtiv() {
     const data = await call({ action: 'atividades_list' });
@@ -2792,7 +2792,7 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── DIA A DIA (Agenda Digital) ─────────────────────────
-  const COMUNICACAO_API = SUPABASE_URL + '/functions/v1/comunicacao';
+  var COMUNICACAO_API = SUPABASE_URL + '/functions/v1/comunicacao';
   async function callCom(body) {
     const r = await fetch(COMUNICACAO_API, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify(body) });
     return r.json();
@@ -2831,7 +2831,7 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── BOLETIM DIGITAL ────────────────────────────────────
-  const ACADEMICO_API = SUPABASE_URL + '/functions/v1/academico';
+  var ACADEMICO_API = SUPABASE_URL + '/functions/v1/academico';
   async function callAcademico(body) {
     const r = await fetch(ACADEMICO_API, {
       method:'POST',
@@ -2905,10 +2905,10 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // ── ACESSO / CONTROLE DE RETIRADA ─────────────
-  const ACESSO_API = CONFIG.SUPABASE_URL + '/functions/v1/acesso';
-  let autFotoBase64 = null;
-  let autCameraStream = null;
-  let meusFilhosData = [];
+  var ACESSO_API = CONFIG.SUPABASE_URL + '/functions/v1/acesso';
+  var autFotoBase64 = null;
+  var autCameraStream = null;
+  var meusFilhosData = [];
 
   async function callAcesso(body) {
     const token = sb ? (await sb.auth.getSession()).data?.session?.access_token : null;
@@ -3209,15 +3209,15 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   // Banner iOS
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const isStandalone = window.navigator.standalone === true;
-  const iosDismissed = localStorage.getItem('iosBannerDismissed');
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  var isStandalone = window.navigator.standalone === true;
+  var iosDismissed = localStorage.getItem('iosBannerDismissed');
   if (isIOS && !isStandalone && !iosDismissed) {
     document.getElementById('iosBanner').style.display = 'block';
   }
 
   // Banner de instalação do app (Android)
-  let deferredPrompt = null;
+  var deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredPrompt = e;
