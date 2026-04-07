@@ -3280,13 +3280,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── FAVORITOS & PERSONALIZAÇÃO ─────────────────────────
-  const FAV_KEY = 'lumied_fav_gerente';
-  const RECENT_KEY = 'lumied_recent_gerente';
-  const USAGE_KEY = 'lumied_usage_gerente';
-  let customizeMode = false;
+  var FAV_KEY = 'lumied_fav_gerente';
+  var RECENT_KEY = 'lumied_recent_gerente';
+  var USAGE_KEY = 'lumied_usage_gerente';
+  var customizeMode = false;
 
   // Panel metadata for display
-  const panelMeta = {
+  var panelMeta = {
     dashboard:{icon:'📊',label:'Dashboard Turnos'},series:{icon:'🎒',label:'Séries'},
     dashAtiv:{icon:'📊',label:'Ativ. Extra'},atividades:{icon:'🎯',label:'Gerenciar Ativ.'},
     diplomas:{icon:'🏆',label:'Diplomas'},atestados:{icon:'🏥',label:'Atestados'},
@@ -8589,7 +8589,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── ANALYTICS DASHBOARD ────────────────────────────
-  const MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   async function loadAnalytics() {
     const ano = document.getElementById('analyticsAno').value;
@@ -9632,8 +9632,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── HORÁRIOS DE ACESSO PROFESSORAS ──────────────────
-  const HA_DIAS = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-  let haAllData = [], haProfs = [];
+  var HA_DIAS = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  var haAllData = [], haProfs = [];
 
   async function loadHorarioAcesso() {
     const d = await api({ action: 'prof_horario_acesso_list' });
