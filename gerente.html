@@ -8600,13 +8600,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const ano = document.getElementById('analyticsAno').value;
     const el = document.getElementById('analyticsContent');
     el.innerHTML = '<div class="empty-state">Carregando...</div>';
-    const d = await api({ action: 'analytics_dashboard', ano });
-    if (d.error) { el.innerHTML = '<div class="empty-state">Erro ao carregar.</div>'; return; }
+    var d;
+    try { d = await api({ action: 'analytics_dashboard', ano }); } catch(_) { d = {}; }
+    if (!d || d.error || !d.solicitacoes_por_mes) { el.innerHTML = '<div class="empty-state">Nenhum dado disponível para ' + ano + '.</div>'; return; }
 
     var z12 = [0,0,0,0,0,0,0,0,0,0,0,0];
-    d.solicitacoes_por_mes = d.solicitacoes_por_mes || z12;
-    d.gastos_almox_por_mes = d.gastos_almox_por_mes || z12;
-    d.manutencao_por_mes = d.manutencao_por_mes || z12;
+    if (!Array.isArray(d.solicitacoes_por_mes)) d.solicitacoes_por_mes = z12;
+    if (!Array.isArray(d.gastos_almox_por_mes)) d.gastos_almox_por_mes = z12;
+    if (!Array.isArray(d.manutencao_por_mes)) d.manutencao_por_mes = z12;
     const maxSol = Math.max(...d.solicitacoes_por_mes, 1);
     const maxGasto = Math.max(...d.gastos_almox_por_mes, 1);
     const maxManut = Math.max(...d.manutencao_por_mes, 1);
