@@ -8599,6 +8599,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function loadAnalytics() {
     var _MC = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     var _Z12 = [0,0,0,0,0,0,0,0,0,0,0,0];
+    var _fmtBRL = function(v) { return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+    var _MS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
     const ano = document.getElementById('analyticsAno').value;
     const el = document.getElementById('analyticsContent');
     el.innerHTML = '<div class="empty-state">Carregando...</div>';
@@ -8613,7 +8615,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const maxGasto = Math.max(...d.gastos_almox_por_mes, 1);
     const maxManut = Math.max(...d.manutencao_por_mes, 1);
 
-    el.innerHTML = `
+    try { el.innerHTML = `
       <!-- Solicitacoes por mes -->
       <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Solicitacoes de Turno por Mes</div>
@@ -8631,7 +8633,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Gastos Almoxarifado por Mes (R$)</div>
         <div style="display:flex;align-items:flex-end;gap:4px;height:120px;">
           ${d.gastos_almox_por_mes.map((v,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div style="font-size:9px;font-weight:600;color:${v>0?'#1a6bb5':'var(--muted)'};">${v>0?almFmtBRL(v):''}</div>
+            <div style="font-size:9px;font-weight:600;color:${v>0?'#1a6bb5':'var(--muted)'};">${v>0?_fmtBRL(v):''}</div>
             <div style="width:100%;background:${v>0?'#1a6bb5':'#f0ece6'};border-radius:4px 4px 0 0;height:${Math.max(4,v/maxGasto*100)}px;transition:height .3s;"></div>
             <div style="font-size:9px;color:var(--muted);">${_MC[i]}</div>
           </div>`).join('')}
@@ -8650,7 +8652,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             </div>`).join('')}
           </div>
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-            ${Object.entries(d.manutencao_status||{}).map(([s,c]) => `<span style="font-size:11px;padding:2px 8px;background:#f5f0ea;border-radius:10px;">${MANUT_STATUS[s]||s}: ${c}</span>`).join('')}
+            ${Object.entries(d.manutencao_status||{}).map(([s,c]) => `<span style="font-size:11px;padding:2px 8px;background:#f5f0ea;border-radius:10px;">${_MS[s]||s}: ${c}</span>`).join('')}
           </div>
         </div>
 
@@ -8665,6 +8667,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
     `;
+    } catch(e) { el.innerHTML = '<div class="empty-state">Erro ao renderizar analytics: ' + e.message + '</div>'; }
   }
 
   // ── FINANCEIRO ─────────────────────────────────────
