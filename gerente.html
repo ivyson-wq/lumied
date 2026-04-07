@@ -1156,6 +1156,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             </div>
           </div>
           <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);" id="almDashStats"></div>
+          <!-- Integrações -->
+          <div id="almIntegracoes" style="margin-top:20px;"></div>
           <div class="sec-title" style="margin-top:20px;">Orçamento por Turma</div>
           <div id="almDashTurmas"></div>
       </div>
@@ -6859,6 +6861,24 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const badge = document.getElementById('almPendBadge');
     if (d.pendentes > 0) { badge.textContent = d.pendentes; badge.style.display = 'inline'; }
     else badge.style.display = 'none';
+    // Integrações (Mercado Livre, etc.)
+    const intEl = document.getElementById('almIntegracoes');
+    const mlId = localStorage.getItem('ml_client_id');
+    const integracoes = [
+      { nome: 'Mercado Livre', icon: '🛒', conectado: !!mlId, desc: mlId ? 'Conectado — preços automáticos' : 'Desconectado — configure ML_CLIENT_ID para atualização automática de preços' },
+      { nome: 'Banco Inter', icon: '🏦', conectado: false, desc: 'Não configurado — boletos de compra manual' },
+    ];
+    const desconectados = integracoes.filter(i => !i.conectado);
+    if (desconectados.length) {
+      intEl.innerHTML = `<div style="background:#fdf0f2;border:1.5px solid rgba(200,16,46,.2);border-radius:12px;padding:16px 20px;margin-bottom:8px;">
+        <div style="font-weight:700;font-size:14px;color:#a00d24;margin-bottom:10px;">⚠️ Integrações Desconectadas</div>
+        ${desconectados.map(i => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(200,16,46,.08);">
+          <span style="font-size:20px;">${i.icon}</span>
+          <div><strong style="font-size:13px;">${i.nome}</strong><div style="font-size:12px;color:#666;margin-top:2px;">${i.desc}</div></div>
+          <span style="margin-left:auto;padding:4px 10px;background:#fdf0f2;border:1px solid rgba(200,16,46,.2);border-radius:6px;font-size:11px;font-weight:600;color:#a00d24;">Desconectado</span>
+        </div>`).join('')}
+      </div>`;
+    } else { intEl.innerHTML = ''; }
     const turmasEl = document.getElementById('almDashTurmas');
     if (!(d.turmas||[]).length) { turmasEl.innerHTML = '<div class="empty-state">Nenhuma turma cadastrada.</div>'; return; }
     turmasEl.innerHTML = d.turmas.map(t => {
