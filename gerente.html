@@ -7325,10 +7325,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     almNRSwitchTab('buscar');
     almNRRenderCart();
 
-    // Load catalog
+    // Load catalog (use alm_insumos_list which is gerente-accessible)
     if (!almNRCatalogo.length) {
-      const d = await callDiplomas({ action: 'alm_catalogo' });
-      almNRCatalogo = d.data || [];
+      const d = await callDiplomas({ action: 'alm_insumos_list' });
+      almNRCatalogo = (d.data || []).filter(i => i.ativo);
     }
     almNRFiltrarCatalogo();
 
