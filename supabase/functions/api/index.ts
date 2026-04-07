@@ -1300,21 +1300,40 @@ serve(async (req: Request) => {
     if (!nova_senha || nova_senha.length < 6) return err("Senha deve ter no mínimo 6 caracteres.");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    // Find user ID via GoTrue Admin REST API (more reliable than SDK listUsers)
+    // Find user ID: try RPC function first, fallback to GoTrue API
     let userId: string | null = null;
-    for (let page = 1; page <= 20 && !userId; page++) {
-      const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=100`, {
-        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
-      });
-      if (!res.ok) break;
-      const data = await res.json();
-      const users = data.users || [];
-      const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-      if (found) { userId = found.id; break; }
-      if (users.length < 100) break;
+    const { data: rpcUid } = await admin.rpc("get_auth_uid_by_email", { p_email: email }).maybeSingle();
+    if (rpcUid) {
+      userId = typeof rpcUid === "string" ? rpcUid : (rpcUid as any)?.get_auth_uid_by_email || null;
     }
-    if (!userId) return err("Usuário não encontrado no sistema de autenticação. Verifique se o e-mail está correto.");
-    // Update password via GoTrue Admin REST API
+    // Fallback: paginate GoTrue Admin API
+    if (!userId) {
+      for (let page = 1; page <= 50 && !userId; page++) {
+        const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=500`, {
+          headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
+        });
+        if (!res.ok) break;
+        const data = await res.json();
+        const users = data.users || [];
+        const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+        if (found) { userId = found.id; break; }
+        if (users.length < 500) break;
+      }
+    }
+    // If user not found in auth.users, create one so the family can login with password
+    if (!userId) {
+      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: nova_senha, email_confirm: true })
+      });
+      if (!createRes.ok) {
+        const errBody = await createRes.json().catch(() => ({}));
+        return err("Erro ao criar usuário: " + (errBody.message || errBody.msg || "erro desconhecido"));
+      }
+      return ok({ success: true });
+    }
+    // Update password via GoTrue Admin API
     const updateRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
       method: "PUT",
       headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
