@@ -581,6 +581,36 @@ router.on("staff_audit_log", authStaff, async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  TICKETS — Staff Lumied (todas as escolas)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("staff_tickets_list", authStaff, async (ctx) => {
+  const { status: filtro } = ctx.body as any;
+  let q = ctx.sb.from("tickets").select("*, escolas(nome)").order("criado_em", { ascending: false }).limit(200);
+  if (filtro) q = q.eq("status", filtro);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("staff_ticket_respond", authStaff, async (ctx) => {
+  const { ticket_id, resposta } = ctx.body as any;
+  if (!ticket_id || !resposta) throw new AppError("VALIDATION_FAILED", "ticket_id e resposta obrigatórios.");
+  const { error } = await ctx.sb.from("tickets").update({
+    resposta, respondido_por: ctx.user!.email, status: "respondido", atualizado_em: new Date().toISOString()
+  }).eq("id", ticket_id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+router.on("staff_ticket_close", authStaff, async (ctx) => {
+  const { ticket_id } = ctx.body as any;
+  if (!ticket_id) throw new AppError("VALIDATION_FAILED", "ticket_id obrigatório.");
+  const { error } = await ctx.sb.from("tickets").update({ status: "fechado", atualizado_em: new Date().toISOString() }).eq("id", ticket_id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  ONBOARDING — Criar novo cliente automaticamente
 // ═══════════════════════════════════════════════════════════════
 
