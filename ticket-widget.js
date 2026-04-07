@@ -28,8 +28,8 @@
   // Detectar email do usuário logado
   function getUserEmail() {
     try {
-      // Supabase Auth
-      const sb = localStorage.getItem('sb-' + (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '').split('//')[1]?.split('.')[0] + '-auth-token');
+      const ref = 'brgorknbrjlfwvrrlwxj';
+      const sb = localStorage.getItem('sb-' + ref + '-auth-token');
       if (sb) { const d = JSON.parse(sb); return d?.user?.email || ''; }
     } catch {}
     return '';
@@ -129,8 +129,8 @@
     };
 
     try {
-      const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
-      const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
+      const url = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/api';
+      const anon = typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_ANON ? CONFIG.SUPABASE_ANON : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
       await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
