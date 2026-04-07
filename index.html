@@ -558,7 +558,7 @@ body.has-bottomnav{padding-bottom:56px;}
   </div>
 
   <!-- ESTOU A CAMINHO -->
-  <div class="card" id="pickupCard" style="display:none;">
+  <div class="card" id="pickupCard" data-modulo="pickup" style="display:none;">
     <div class="card-title" style="margin-bottom:12px;">
       🚗 Estou a Caminho
       <button onclick="loadPickupCard()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
@@ -1590,7 +1590,6 @@ body.has-bottomnav{padding-bottom:56px;}
     document.getElementById('accessPending').style.display = 'none';
     document.getElementById('loginWall').style.display   = 'none';
     document.getElementById('formWrap').style.display    = 'block';
-    document.getElementById('pickupCard').style.display  = 'block';
     document.getElementById('agendaCard').style.display  = 'block';
     document.getElementById('boletosCard').style.display = 'block';
     resetInactivityTimer();
@@ -2249,7 +2248,7 @@ body.has-bottomnav{padding-bottom:56px;}
 
   async function loadPickupCard() {
     if (!currentUser) return;
-    document.getElementById('pickupCard').style.display = 'block';
+    if (window._enabledModules && !window._enabledModules.has('pickup')) return;
     const loading = document.getElementById('pickupLoading');
     const errEl   = document.getElementById('pickupErr');
     const filhos  = document.getElementById('pickupFilhos');
