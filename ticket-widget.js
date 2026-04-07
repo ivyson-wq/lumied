@@ -28,9 +28,25 @@
   // Detectar email do usuário logado
   function getUserEmail() {
     try {
+      // Supabase Auth (portal dos pais)
       const ref = 'brgorknbrjlfwvrrlwxj';
       const sb = localStorage.getItem('sb-' + ref + '-auth-token');
-      if (sb) { const d = JSON.parse(sb); return d?.user?.email || ''; }
+      if (sb) { const d = JSON.parse(sb); if (d?.user?.email) return d.user.email; }
+      // Gerente email
+      const ge = localStorage.getItem('mb_email');
+      if (ge) return ge;
+      // Professora email
+      const pe = localStorage.getItem('prof_email');
+      if (pe) return pe;
+      // Secretaria email
+      const se = localStorage.getItem('sec_email');
+      if (se) return se;
+      // Aluno email
+      const ae = localStorage.getItem('mb_aluno_email');
+      if (ae) return ae;
+      // Try reading from DOM (userEmail/userBar elements)
+      const ue = document.getElementById('userEmail') || document.getElementById('ubEmail');
+      if (ue && ue.textContent) return ue.textContent.trim();
     } catch {}
     return '';
   }

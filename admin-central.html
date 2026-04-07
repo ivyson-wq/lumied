@@ -363,8 +363,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Escola</th><th>Email</th><th>Portal</th><th>Tipo</th><th>Descricao</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
-            <tbody id="ticketsBody"><tr><td colspan="8" class="empty-state">Carregando...</td></tr></tbody>
+            <thead><tr><th>Escola</th><th>Email</th><th>Portal</th><th>Tipo</th><th>Descricao</th><th>URL</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
+            <tbody id="ticketsBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -808,17 +808,21 @@ function renderTickets() {
   const filtered = _ticketFilter ? _ticketsList.filter(t => t.status === _ticketFilter) : _ticketsList;
   const tbody = document.getElementById('ticketsBody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum ticket encontrado</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum ticket encontrado</td></tr>';
     return;
   }
   tbody.innerHTML = filtered.map(t => {
     const statusCls = t.status || 'aberto';
+    const escolaNome = t.escolas?.nome || t.escola_nome || '-';
+    const urlPagina = t.url_pagina || '';
+    const urlShort = urlPagina ? urlPagina.replace(/^https?:\/\//, '').slice(0, 40) : '-';
     return `<tr>
-      <td>${esc(t.escola_nome || '-')}</td>
+      <td>${esc(escolaNome)}</td>
       <td>${esc(t.email)}</td>
       <td><span style="font-size:11px;text-transform:capitalize;">${esc(t.portal || '-')}</span></td>
       <td><span style="font-size:11px;text-transform:capitalize;">${esc(t.tipo || '-')}</span></td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(t.descricao)}">${esc(t.descricao)}</td>
+      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${urlPagina ? `<a href="${esc(urlPagina)}" target="_blank" title="${esc(urlPagina)}" style="color:#1a6bb5;">${esc(urlShort)}</a>` : '-'}</td>
       <td><span class="status-pill ${statusCls}">${esc(t.status || 'aberto')}</span></td>
       <td style="font-size:12px;white-space:nowrap;">${fmtDate(t.criado_em)}</td>
       <td>
