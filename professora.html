@@ -416,6 +416,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         </div>
       </div>
       <div id="profDashAlerts" style="margin-top:16px;"></div>
+
+      <!-- Dashboard Turnos -->
+      <div id="profDashTurnos" style="margin-top:20px;">
+        <div class="sec-title" style="font-size:14px;">📊 Turnos</div>
+        <div id="profTurnosStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;"></div>
+        <div id="profTurnosRecentes" style="max-height:200px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- Dashboard Atividades Extraclasse -->
+      <div id="profDashAtiv" style="margin-top:20px;" data-modulo="atividades">
+        <div class="sec-title" style="font-size:14px;">🎯 Atividades Extraclasse</div>
+        <div id="profAtivStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;"></div>
+        <div id="profAtivGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+      </div>
     </div>
 
     <!-- ═══ PAGE: FILA ═══ -->
@@ -1861,6 +1875,71 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       }
     } catch(_) {}
     document.getElementById('profDashAlerts').innerHTML = alertsHtml;
+
+    // Dashboards de turnos e atividades
+    loadProfTurnos();
+    loadProfAtividades();
+  }
+
+  async function loadProfTurnos() {
+    try {
+      var d = await callApi({ action: 'prof_turnos_dashboard' });
+      if (!d || d.error) { document.getElementById('profTurnosStats').innerHTML = ''; return; }
+      var c = d.counts || {};
+      document.getElementById('profTurnosStats').innerHTML =
+        ['Total:' + (d.total||0), 'Integral:' + (c.integral||0), 'Semi:' + (c.semi||0), 'Tarde:' + (c.tarde||0), 'Diaria:' + (c.diaria||0)]
+        .map(function(t) {
+          var parts = t.split(':');
+          return '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">' +
+            '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">' + parts[0] + '</div>' +
+            '<div style="font-size:20px;font-weight:700;">' + parts[1] + '</div></div>';
+        }).join('');
+      var items = (d.data || []).slice(0, 8);
+      document.getElementById('profTurnosRecentes').innerHTML = items.length
+        ? items.map(function(s) {
+          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">' +
+            '<span style="font-weight:600;">' + esc(s.nome_crianca) + '</span>' +
+            '<span style="color:var(--muted);margin-left:auto;font-size:11px;">' + esc(s.turno || '') + '</span></div>';
+        }).join('')
+        : '<div style="color:var(--muted);font-size:12px;">Nenhuma solicitacao de turno.</div>';
+    } catch(_) { document.getElementById('profTurnosStats').innerHTML = ''; }
+  }
+
+  async function loadProfAtividades() {
+    var el = document.getElementById('profDashAtiv');
+    if (!el) return;
+    var m = window._enabledModules || new Set();
+    if (!m.has('atividades')) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    try {
+      var d = await callApi({ action: 'prof_atividades_dashboard' });
+      if (!d || d.error) return;
+      var ativs = d.atividades || [];
+      var inscs = d.inscricoes || [];
+      var totalInscritos = ativs.reduce(function(s, a) { return s + (a.totalInscritos || 0); }, 0);
+      var totalVagas = ativs.reduce(function(s, a) { return s + (a.totalVagas || 0); }, 0);
+      var lotadas = ativs.filter(function(a) { return a.totalInscritos >= a.totalVagas && a.totalVagas > 0; }).length;
+
+      document.getElementById('profAtivStats').innerHTML =
+        [['Inscricoes', totalInscritos], ['Atividades', ativs.length], ['Lotadas', lotadas], ['Vagas', Math.max(0, totalVagas - totalInscritos)]]
+        .map(function(p) {
+          return '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">' +
+            '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">' + p[0] + '</div>' +
+            '<div style="font-size:20px;font-weight:700;">' + p[1] + '</div></div>';
+        }).join('');
+
+      document.getElementById('profAtivGrid').innerHTML = ativs.length
+        ? ativs.map(function(a) {
+          var pct = a.totalVagas > 0 ? Math.min(100, Math.round(a.totalInscritos / a.totalVagas * 100)) : 0;
+          var barColor = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+          return '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;">' +
+            '<div style="font-size:13px;font-weight:600;margin-bottom:6px;">' + esc(a.nome) + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">' + a.totalInscritos + ' / ' + a.totalVagas + ' vagas (' + pct + '%)</div>' +
+            '<div style="background:#f0ece6;border-radius:6px;height:6px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:6px;transition:width .3s;"></div></div></div>';
+        }).join('')
+        : '<div style="color:var(--muted);font-size:12px;grid-column:1/-1;">Nenhuma atividade cadastrada.</div>';
+    } catch(_) {}
   }
 
   async function loadRanking() {

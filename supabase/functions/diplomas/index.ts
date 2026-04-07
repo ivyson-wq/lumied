@@ -2276,6 +2276,32 @@ Deno.serve(async (req) => {
     return json({ data: data ?? [], usado: totalUsado, limite })
   }
 
+  // ━━ DASHBOARDS PROFESSORA (read-only) ━━━━━━━━━━━━━━━━━
+  if (action === 'prof_turnos_dashboard') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    const { data: sols } = await sb.from('solicitacoes').select('id, nome_crianca, turno, status, criado_em').order('criado_em', { ascending: false }).limit(200)
+    const TURNO_GROUPS: Record<string, string> = { 'Integral (7h-19h)':'integral','Semi-Integral (7h-13h30)':'semi','Semi-Integral (13h-19h)':'semi','Tarde (13h-17h)':'tarde','Diária (por dia)':'diaria' }
+    const counts: Record<string, number> = { integral: 0, semi: 0, tarde: 0, diaria: 0 }
+    for (const s of sols ?? []) { const g = TURNO_GROUPS[s.turno]; if (g) counts[g]++; }
+    return json({ data: sols ?? [], counts, total: (sols ?? []).length })
+  }
+
+  if (action === 'prof_atividades_dashboard') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    const { data: ativs } = await sb.from('atividades').select('id, nome, cor, horarios, ativo').eq('ativo', true).order('ordem')
+    const { data: inscs } = await sb.from('inscricoes_atividades').select('id, nome_crianca, turmas_selecionadas, slots, criado_em').order('criado_em', { ascending: false }).limit(200)
+    const atividades = (ativs ?? []).map((a: any) => {
+      const totalVagas = (a.horarios || []).reduce((s: number, h: any) => s + (h.vagas || 0), 0)
+      const totalInscritos = (a.horarios || []).reduce((s: number, h: any) => s + (h.inscritos || 0), 0)
+      return { id: a.id, nome: a.nome, cor: a.cor, totalVagas, totalInscritos, horarios: a.horarios || [] }
+    })
+    return json({ atividades, inscricoes: inscs ?? [] })
+  }
+
   // ━━ CALENDARIO PUBLICO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (action === 'calendario_publico') {
     const mes = (body.mes as string) || new Date().toISOString().slice(0, 7)
