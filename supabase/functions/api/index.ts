@@ -1298,12 +1298,32 @@ serve(async (req: Request) => {
     const { email, nova_senha } = body as { email?: string; nova_senha?: string };
     if (!email) return err("E-mail obrigatório.");
     if (!nova_senha || nova_senha.length < 6) return err("Senha deve ter no mínimo 6 caracteres.");
-    const { data: users, error: listErr } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    if (listErr) return err("Erro ao buscar usuários: " + listErr.message);
-    const user = users.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
-    if (!user) return err("Usuário não encontrado no sistema de autenticação. Verifique se o e-mail está correto.");
-    const { error: updateErr } = await admin.auth.admin.updateUserById(user.id, { password: nova_senha });
-    if (updateErr) return err("Erro ao alterar senha: " + updateErr.message);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Find user ID via GoTrue Admin REST API (more reliable than SDK listUsers)
+    let userId: string | null = null;
+    for (let page = 1; page <= 20 && !userId; page++) {
+      const res = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=${page}&per_page=100`, {
+        headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey }
+      });
+      if (!res.ok) break;
+      const data = await res.json();
+      const users = data.users || [];
+      const found = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (found) { userId = found.id; break; }
+      if (users.length < 100) break;
+    }
+    if (!userId) return err("Usuário não encontrado no sistema de autenticação. Verifique se o e-mail está correto.");
+    // Update password via GoTrue Admin REST API
+    const updateRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+      method: "PUT",
+      headers: { "Authorization": `Bearer ${serviceKey}`, "apikey": serviceKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ password: nova_senha })
+    });
+    if (!updateRes.ok) {
+      const errBody = await updateRes.json().catch(() => ({}));
+      return err("Erro ao alterar senha: " + (errBody.message || errBody.msg || "erro desconhecido"));
+    }
     return ok({ success: true });
   }
   if (action === "familias_delete") {
