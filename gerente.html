@@ -770,7 +770,20 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <option value="">Todas as turmas</option>
           </select>
           <button onclick="abrirCadastroAluno()" style="padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Novo Aluno</button>
-          <button onclick="importarAlunosCSV()" style="padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📁 Importar CSV</button>
+          <button onclick="alunosGerarModelo()" style="padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📥 Modelo XLSX</button>
+          <label style="padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">📤 Importar XLSX<input type="file" accept=".xlsx,.xls" onchange="alunosImportarXlsx(this)" style="display:none;"></label>
+        </div>
+
+        <!-- Import preview -->
+        <div id="alunosImportPreview" style="display:none;margin-bottom:20px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <h4 style="margin:0 0 12px;">Pré-visualização da importação</h4>
+          <div id="alunosImportList" style="max-height:300px;overflow-y:auto;margin-bottom:12px;"></div>
+          <div id="alunosImportErr" style="display:none;margin-bottom:8px;padding:8px 12px;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:12px;"></div>
+          <div id="alunosImportOk" style="display:none;margin-bottom:8px;padding:8px 12px;background:#f0fdf4;color:#166534;border-radius:8px;font-size:12px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="alunosConfirmarImport()" class="btn-create" style="padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Confirmar Importação</button>
+            <button onclick="document.getElementById('alunosImportPreview').style.display='none'" style="padding:8px 20px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
+          </div>
         </div>
 
         <!-- Tabela de Alunos -->
@@ -4492,37 +4505,95 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAlunos();
   }
 
-  function importarAlunosCSV() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.csv,.txt';
-    input.onchange = async (e) => {
-      const file = e.target.files[0]; if (!file) return;
-      const text = await file.text();
-      const linhas = text.split('\n').filter(l => l.trim());
-      if (linhas.length < 2) return showToast('CSV vazio ou inválido', 'error');
-      // Skip header
-      const header = linhas[0].toLowerCase();
-      if (!header.includes('nome')) return showToast('CSV deve ter cabeçalho com colunas: nome, email, serie, data_nascimento, responsavel', 'error');
-      if (!await _lumiedConfirm(`Importar ${linhas.length - 1} alunos? Formato esperado: nome,email,serie,data_nascimento,responsavel`)) return;
-      let sucesso = 0, erro = 0;
-      for (let i = 1; i < linhas.length; i++) {
-        const cols = linhas[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-        const [nome, email, serie, nasc, resp] = cols;
-        if (!nome) { erro++; continue; }
-        let dataFmt = null;
-        if (nasc) {
-          if (nasc.includes('/')) { const [d,m,y] = nasc.split('/'); if (d&&m&&y) dataFmt = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
-          else dataFmt = nasc;
-        }
-        const r = await api({ action:'aluno_criar', nome, email:email||null, serie:serie||null, data_nascimento:dataFmt, responsavel_nome:resp||null });
-        if (r.error) erro++; else sucesso++;
-      }
-      showToast(`Importação: ${sucesso} sucesso, ${erro} erro`, sucesso > 0 ? 'success' : 'error');
-      loadAlunos();
-    };
-    input.click();
+  // ── IMPORTAÇÃO DE ALUNOS (XLSX) ──────────────────────
+  var alunosImportData = [];
+  function alunosGerarModelo() {
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['nome', 'email', 'serie', 'data_nascimento', 'responsavel'],
+      ['Pedro Silva', 'pedro@escola.com', 'Year 1', '15/03/2019', 'Maria Silva'],
+      ['Julia Costa', 'julia@escola.com', 'Toddler', '22/08/2020', 'Ana Costa'],
+      ['Lucas Souza', 'lucas@escola.com', 'Year 2', '10/01/2018', 'Carlos Souza'],
+    ]);
+    ws['!cols'] = [{ wch: 25 }, { wch: 28 }, { wch: 15 }, { wch: 18 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Alunos');
+    const wsInst = XLSX.utils.aoa_to_sheet([
+      ['Instrucoes para importacao de alunos'],
+      [''],
+      ['Colunas:'],
+      ['  nome — Nome completo do aluno (obrigatório)'],
+      ['  email — E-mail de contato (opcional)'],
+      ['  serie — Série/turma do aluno (opcional)'],
+      ['  data_nascimento — Data no formato DD/MM/AAAA (opcional)'],
+      ['  responsavel — Nome do responsável (opcional)'],
+      [''],
+      ['Se o e-mail já existir no sistema, o aluno será ignorado (sem duplicação).'],
+    ]);
+    wsInst['!cols'] = [{ wch: 72 }];
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucoes');
+    XLSX.writeFile(wb, 'modelo_importacao_alunos.xlsx');
   }
+
+  function alunosImportarXlsx(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const sheetName = wb.SheetNames.find(n => !n.toLowerCase().includes('instru')) || wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+      if (!rows.length) { showToast('Planilha vazia','error'); return; }
+      alunosImportData = rows.map(r => {
+        const nome = (r.nome || r.Nome || r.NOME || '').toString().trim();
+        const email = (r.email || r.Email || r['e-mail'] || r['E-mail'] || '').toString().trim();
+        const serie = (r.serie || r.Serie || r.turma || r.Turma || '').toString().trim();
+        const nascRaw = (r.data_nascimento || r['Data Nascimento'] || r.nascimento || '').toString().trim();
+        const resp = (r.responsavel || r.Responsavel || r['responsável'] || '').toString().trim();
+        return { nome, email, serie, data_nascimento: nascRaw, responsavel: resp };
+      }).filter(r => r.nome);
+      if (!alunosImportData.length) { showToast('Nenhum registro válido (nome obrigatório)','error'); return; }
+      document.getElementById('alunosImportList').innerHTML =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:4px 8px;">Nome</th><th style="text-align:left;padding:4px 8px;">Email</th><th style="text-align:left;padding:4px 8px;">Série</th><th style="text-align:left;padding:4px 8px;">Nascimento</th><th style="text-align:left;padding:4px 8px;">Responsável</th></tr></thead><tbody>' +
+        alunosImportData.map(r =>
+          `<tr><td style="padding:4px 8px;">${esc(r.nome)}</td><td style="padding:4px 8px;">${esc(r.email||'—')}</td><td style="padding:4px 8px;">${esc(r.serie||'—')}</td><td style="padding:4px 8px;">${esc(r.data_nascimento||'—')}</td><td style="padding:4px 8px;">${esc(r.responsavel||'—')}</td></tr>`
+        ).join('') + '</tbody></table>';
+      document.getElementById('alunosImportErr').style.display = 'none';
+      document.getElementById('alunosImportOk').style.display = 'none';
+      document.getElementById('alunosImportPreview').style.display = 'block';
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function alunosConfirmarImport() {
+    const errEl = document.getElementById('alunosImportErr');
+    const okEl = document.getElementById('alunosImportOk');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    if (!alunosImportData.length) { errEl.textContent = 'Nenhum dado para importar.'; errEl.style.display = 'block'; return; }
+    const btn = document.querySelector('#alunosImportPreview .btn-create');
+    if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
+    let okCount = 0, erros = [];
+    for (const r of alunosImportData) {
+      let dataFmt = null;
+      if (r.data_nascimento) {
+        if (r.data_nascimento.includes('/')) {
+          const [d,m,y] = r.data_nascimento.split('/');
+          if (d&&m&&y) dataFmt = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        } else dataFmt = r.data_nascimento;
+      }
+      const d = await api({ action:'aluno_criar', nome:r.nome, email:r.email||null, serie:r.serie||null, data_nascimento:dataFmt, responsavel_nome:r.responsavel||null });
+      if (d.error) erros.push(r.nome + ': ' + d.error); else okCount++;
+    }
+    if (okCount) { okEl.textContent = okCount + ' aluno(s) importado(s) com sucesso!'; okEl.style.display = 'block'; }
+    if (erros.length) { errEl.textContent = erros.join(' | '); errEl.style.display = 'block'; }
+    alunosImportData = [];
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Importação'; }
+    document.getElementById('alunosImportPreview').style.display = 'none';
+    loadAlunos();
+  }
+
   function alunoUploadDoc() { showToast('Em desenvolvimento — upload de documentos', 'info'); }
 
   // Load on panel show
