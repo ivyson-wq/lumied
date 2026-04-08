@@ -4580,20 +4580,28 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function eqConfirmarImport() {
     const errEl = document.getElementById('eqImportErr');
     const okEl = document.getElementById('eqImportOk');
+    const btn = document.querySelector('#eqImportPreview .btn-create');
     errEl.classList.remove('show'); okEl.classList.remove('show');
-    let ok = 0, erros = [];
+    if (!eqImportData.length) { errEl.textContent = 'Nenhum dado para importar.'; errEl.classList.add('show'); return; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
+    let okCount = 0, erros = [];
     for (const r of eqImportData) {
       if (!r.senha || r.senha.length < 6) { erros.push(r.email + ': senha < 6 chars'); continue; }
-      const d = await api({ action: 'usuarios_create', nome: r.nome, email: r.email, senha: r.senha, papeis: r.papeis });
-      if (d.error) { erros.push(r.email + ': ' + d.error); continue; }
-      if (r.turma && (r.papeis.includes('professora') || r.papeis.includes('professora_assistente'))) {
-        await api({ action: 'usuarios_set_serie', email: r.email, serie_nome: r.turma });
-      }
-      ok++;
+      try {
+        const d = await api({ action: 'usuarios_create', nome: r.nome, email: r.email, senha: r.senha, papeis: r.papeis });
+        if (d.error) { erros.push(r.email + ': ' + d.error); continue; }
+        if (r.turma && (r.papeis.includes('professora') || r.papeis.includes('professora_assistente'))) {
+          await api({ action: 'usuarios_set_serie', email: r.email, serie_nome: r.turma });
+        }
+        okCount++;
+      } catch (e) { erros.push(r.email + ': erro de rede'); }
     }
-    if (ok) okEl.textContent = ok + ' membro(s) importado(s) com sucesso!'; okEl.classList.add('show');
+    if (okCount) { okEl.textContent = okCount + ' membro(s) importado(s) com sucesso!'; okEl.classList.add('show'); }
     if (erros.length) { errEl.textContent = erros.join(' | '); errEl.classList.add('show'); }
+    if (!okCount && !erros.length) { errEl.textContent = 'Nenhum registro processado.'; errEl.classList.add('show'); }
     eqImportData = [];
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Importação'; }
+    document.getElementById('eqImportPreview').style.display = 'none';
     loadEquipe();
   }
 
