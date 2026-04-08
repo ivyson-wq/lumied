@@ -568,7 +568,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
         <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
         <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Turnos & Horários</a>
-        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Atividades Extra</a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Atividades Extra</a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
         <a class="nav-item" onclick="showPanel('acessoDash',this)" data-modulo="controle_acesso"><span class="ic">🚪</span> Controle de Acesso</a>
         <a class="nav-item" onclick="showPanel('acessoDispositivos',this)" data-modulo="controle_acesso"><span class="ic">📡</span> Dispositivos</a>
         <a class="nav-item" onclick="showPanel('acessoFaces',this)" data-modulo="controle_acesso"><span class="ic">👤</span> Faces Cadastradas</a>
@@ -5381,7 +5382,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
     // diasMap[dia][periodo][atividade_nome][turma_nome] = [criança, ...]
     // periodo = 'manha' ou 'tarde'
-    console.log('[AtivDash] inscritos:', allInscricoesAtiv.length, 'atividades:', todasAtiv.length, 'horariosMap keys:', Object.keys(ativHorariosMap).length);
     allInscricoesAtiv.forEach(ins => {
       (ins.turmas_selecionadas||[]).forEach(ts => {
         const ativ = todasAtiv.find(a => a.id === ts.atividade_id);
@@ -5392,7 +5392,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         if (!slots) {
           const horario = ativHorariosMap[ts.atividade_id + '|' + normTurma(turmaNome)];
           slots = horario?.slots || [];
-          if (!horario) console.log('[AtivDash] NO MATCH for', ts.atividade_id + '|' + normTurma(turmaNome), 'keys sample:', Object.keys(ativHorariosMap).slice(0,3));
         }
         slots.forEach(slot => {
           if (!diasMap[slot.dia]) return;
