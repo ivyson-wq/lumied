@@ -1,5 +1,5 @@
 // Lumied — Service Worker v5 (Network-First HTML + Push Notifications)
-const CACHE_NAME = 'lumied-v5';
+const CACHE_NAME = 'lumied-v6';
 const OFFLINE_ASSETS = [
   '/themes.css',
   '/webauthn-client.js',

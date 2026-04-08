@@ -5381,6 +5381,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
     // diasMap[dia][periodo][atividade_nome][turma_nome] = [criança, ...]
     // periodo = 'manha' ou 'tarde'
+    console.log('[AtivDash] inscritos:', allInscricoesAtiv.length, 'atividades:', todasAtiv.length, 'horariosMap keys:', Object.keys(ativHorariosMap).length);
     allInscricoesAtiv.forEach(ins => {
       (ins.turmas_selecionadas||[]).forEach(ts => {
         const ativ = todasAtiv.find(a => a.id === ts.atividade_id);
@@ -5391,6 +5392,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         if (!slots) {
           const horario = ativHorariosMap[ts.atividade_id + '|' + normTurma(turmaNome)];
           slots = horario?.slots || [];
+          if (!horario) console.log('[AtivDash] NO MATCH for', ts.atividade_id + '|' + normTurma(turmaNome), 'keys sample:', Object.keys(ativHorariosMap).slice(0,3));
         }
         slots.forEach(slot => {
           if (!diasMap[slot.dia]) return;
