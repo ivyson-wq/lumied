@@ -3248,6 +3248,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (bc) bc.innerHTML = sec && sec !== title ? '<span style="cursor:pointer;" onclick="showPanel(\'analytics\')">Dashboard</span> <span style="opacity:.5;margin:0 4px;">›</span> ' + sec + ' <span style="opacity:.5;margin:0 4px;">›</span> ' + title : '';
     document.getElementById('liveBadge').style.display = (id==='dashboard'||id==='dashAtiv')?'flex':'none';
     showExportButtons(id==='dashboard'||id==='dashAtiv');
+    if(id==='dashboard')   loadData();
     if(id==='alunos')      loadAlunos();
     if(id==='biblioteca')  loadBibAcervo();
     if(id==='bibEmprestimos') loadBibEmprestimos();
