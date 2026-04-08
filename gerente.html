@@ -8283,6 +8283,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   function gerarModeloAtividades() {
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([
       ['Nome da Crianca *', 'E-mail Responsavel *', 'Nome Responsavel', 'Serie', 'Atividade *', 'Turma da Atividade'],
