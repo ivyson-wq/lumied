@@ -1141,6 +1141,52 @@ serve(async (req: Request) => {
     return ok({ sucesso, erros });
   }
 
+  if (action === "alunos_import_atividades") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { registros } = body as { registros: { nome: string; atividade: string; turma?: string }[] };
+    if (!Array.isArray(registros) || !registros.length) return err("registros obrigatório (array).");
+
+    // Busca todas as atividades cadastradas para resolver nomes → IDs
+    const { data: atividades } = await admin.from("atividades").select("id, nome, horarios");
+    const ativMap: Record<string, { id: string; horarios: any[] }> = {};
+    for (const a of atividades ?? []) {
+      ativMap[a.nome.toLowerCase()] = { id: a.id, horarios: a.horarios ?? [] };
+    }
+
+    // Agrupa linhas por aluno (mesmo aluno pode ter múltiplas atividades)
+    const porAluno: Record<string, { atividades_ids: string[]; turmas_selecionadas: any[] }> = {};
+    const erros: string[] = [];
+    for (const r of registros) {
+      if (!r.nome || !r.atividade) { erros.push((r.nome || "?") + ": nome e atividade obrigatórios"); continue; }
+      const ativ = ativMap[r.atividade.toLowerCase()];
+      if (!ativ) { erros.push(r.nome + ": atividade '" + r.atividade + "' não encontrada"); continue; }
+      const key = r.nome.toLowerCase();
+      if (!porAluno[key]) porAluno[key] = { atividades_ids: [], turmas_selecionadas: [] };
+      if (!porAluno[key].atividades_ids.includes(ativ.id)) porAluno[key].atividades_ids.push(ativ.id);
+      // Resolve turma → slots a partir dos horários da atividade
+      const turmaInfo = r.turma ? ativ.horarios.find((h: any) => h.turma === r.turma) : null;
+      porAluno[key].turmas_selecionadas.push({
+        atividade_id: ativ.id,
+        turma: r.turma || (ativ.horarios[0]?.turma ?? ''),
+        slots: turmaInfo?.slots ?? ativ.horarios[0]?.slots ?? [],
+      });
+    }
+
+    let sucesso = 0;
+    for (const [nomeLower, dados] of Object.entries(porAluno)) {
+      const { data: found } = await admin.from("alunos").select("id").ilike("nome", nomeLower).limit(1).single();
+      if (!found) { erros.push(nomeLower + ": aluno não encontrado"); continue; }
+      const { error } = await admin.from("alunos").update({
+        atividades_ids: dados.atividades_ids,
+        turmas_selecionadas: dados.turmas_selecionadas,
+      }).eq("id", found.id);
+      if (error) { erros.push(nomeLower + ": " + error.message); continue; }
+      sucesso++;
+    }
+    return ok({ sucesso, erros });
+  }
+
   if (action === "aluno_historico_create") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);

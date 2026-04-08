@@ -8293,20 +8293,27 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([
-      ['Nome da Crianca *', 'E-mail Responsavel *', 'Nome Responsavel', 'Serie', 'Atividade *', 'Turma da Atividade'],
-      ['Pedro Silva', 'maria@email.com', 'Maria Silva', 'Toddler', 'Natacao', 'Turma A — 14h'],
-      ['Pedro Silva', 'maria@email.com', 'Maria Silva', 'Toddler', 'Futebol', 'Turma B — 15h'],
-      ['Julia Costa', 'ana@email.com', 'Ana Costa', 'Year 1', 'Bale', 'Turma A — 14h'],
-      ['','','','','',''],['','','','','',''],
+      ['nome', 'atividade', 'turma'],
+      ['Pedro Silva', 'Natacao', 'Turma A — 14h'],
+      ['Pedro Silva', 'Futebol', 'Turma B — 15h'],
+      ['Julia Costa', 'Bale', 'Turma A — 14h'],
     ]);
-    ws['!cols'] = [{ wch: 24 }, { wch: 28 }, { wch: 24 }, { wch: 14 }, { wch: 20 }, { wch: 22 }];
+    ws['!cols'] = [{ wch: 30 }, { wch: 25 }, { wch: 25 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Atividades');
     const wsInst = XLSX.utils.aoa_to_sheet([
-      ['INSTRUCOES — Importacao de Inscricoes em Atividades'],
+      ['Instrucoes para importacao de atividades extras'],
       [''],
-      ['Colunas obrigatorias: Nome da Crianca, E-mail Responsavel, Atividade'],
-      ['Cada linha = uma inscricao. Se uma crianca faz 2 atividades, use 2 linhas.'],
-      ['A atividade deve existir previamente no sistema (Gerenciar Atividades).'],
+      ['Colunas:'],
+      ['  nome — Nome do aluno (deve corresponder exatamente ao cadastro)'],
+      ['  atividade — Nome da atividade (deve existir em Gerenciar Atividades)'],
+      ['  turma — Nome da turma/horario da atividade'],
+      [''],
+      ['Se uma crianca faz 2 atividades, use 2 linhas com o mesmo nome.'],
+      [''],
+      ['IMPORTANTE:'],
+      ['  - Somente alunos cujo nome apareca na planilha serao atualizados.'],
+      ['  - Alunos que nao estejam na planilha NAO serao modificados.'],
+      ['  - O nome deve ser identico ao cadastrado no sistema.'],
     ]);
     wsInst['!cols'] = [{ wch: 72 }];
     XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucoes');
@@ -8349,25 +8356,29 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const file = input.files[0];
     if (!file) return;
     input.value = '';
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
     famImportMode = 'atividades';
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(new Uint8Array(buf), { type:'array' });
       const sheetName = wb.SheetNames.find(n => !n.toLowerCase().includes('instru')) || wb.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header:1, defval:'' });
-      famImportData = rows.slice(1).filter(r => String(r[0]||'').trim() && String(r[4]||'').trim()).map(r => ({
-        nome_crianca: String(r[0]||'').trim(),
-        email: String(r[1]||'').trim(),
-        nome_resp: String(r[2]||'').trim(),
-        serie: String(r[3]||'').trim(),
-        atividade: String(r[4]||'').trim(),
-        turma: String(r[5]||'').trim(),
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval:'' });
+      famImportData = rows.filter(r => {
+        const nome = (r.nome || r.Nome || r.NOME || '').toString().trim();
+        const ativ = (r.atividade || r.Atividade || r.ATIVIDADE || '').toString().trim();
+        return nome && ativ;
+      }).map(r => ({
+        nome: (r.nome || r.Nome || r.NOME || '').toString().trim(),
+        atividade: (r.atividade || r.Atividade || r.ATIVIDADE || '').toString().trim(),
+        turma: (r.turma || r.Turma || r.TURMA || '').toString().trim(),
       }));
-      if (!famImportData.length) { showToast('Nenhum registro encontrado.','warning'); return; }
+      if (!famImportData.length) { showToast('Nenhum registro válido (nome + atividade obrigatórios)','warning'); return; }
       document.getElementById('ativImportSummary').textContent = famImportData.length + ' inscricao(oes) encontrada(s)';
-      document.getElementById('ativImportRows').innerHTML = famImportData.map(f =>
-        `<div style="padding:5px 8px;border-bottom:1px solid #f0ece6;">${esc(f.nome_crianca)} · ${esc(f.email)} · ${esc(f.atividade)} · ${esc(f.turma||'—')}</div>`
-      ).join('');
+      document.getElementById('ativImportRows').innerHTML =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:4px 8px;">Nome</th><th style="text-align:left;padding:4px 8px;">Atividade</th><th style="text-align:left;padding:4px 8px;">Turma</th></tr></thead><tbody>' +
+        famImportData.map(f =>
+          `<tr><td style="padding:4px 8px;">${esc(f.nome)}</td><td style="padding:4px 8px;">${esc(f.atividade)}</td><td style="padding:4px 8px;">${esc(f.turma||'—')}</td></tr>`
+        ).join('') + '</tbody></table>';
       document.getElementById('ativImportBtn').textContent = 'Importar ' + famImportData.length + ' inscricoes';
       document.getElementById('ativImportResult').style.display = 'block';
     } catch(e) { showToast('Erro ao ler arquivo.','error'); }
@@ -8401,17 +8412,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function confirmarImportAtividades() {
     const btn = document.getElementById('ativImportBtn');
     btn.disabled = true; btn.textContent = 'Importando...';
-    let ok = 0, erros = 0;
-    for (const f of famImportData) {
-      try {
-        await api({ action: 'inscricao_atividade_submit', email: f.email, nome_resp: f.nome_resp, nome_crianca: f.nome_crianca, serie: f.serie || null, atividades_detalhe: [{ nome: f.atividade, turma_selecionada: f.turma || null }] });
-        ok++;
-      } catch(_) { erros++; }
+    const d = await api({ action: 'alunos_import_atividades', registros: famImportData });
+    if (d.error) {
+      showToast(d.error, 'error');
+    } else {
+      const msgs = [];
+      if (d.sucesso) msgs.push(d.sucesso + ' atualizado(s)');
+      if (d.erros && d.erros.length) msgs.push(d.erros.length + ' erro(s)');
+      showToast(msgs.join(', ') || 'Concluído', d.erros?.length ? 'warning' : 'success');
+      if (d.erros && d.erros.length) console.log('Erros importação atividades:', d.erros);
     }
-    showToast(ok + ' inscricao(oes) importada(s)' + (erros ? ', ' + erros + ' erro(s)' : ''), erros ? 'warning' : 'success');
     document.getElementById('ativImportResult').style.display = 'none';
     famImportData = [];
     btn.disabled = false;
+    btn.textContent = 'Confirmar';
+    loadAtivDashboard();
   }
 
   function toggleCadastroForm() {
