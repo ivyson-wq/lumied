@@ -19,6 +19,8 @@
     "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^3.11.174",
     "puppeteer": "^24.40.0"
   }
 }
