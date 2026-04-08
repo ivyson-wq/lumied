@@ -1050,7 +1050,7 @@ serve(async (req: Request) => {
   if (action === "alunos_list") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
-    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, criado_em").order("nome");
+    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, turno, dias_semana, criado_em").order("nome");
     return ok(data ?? []);
   }
 
@@ -1088,6 +1088,37 @@ serve(async (req: Request) => {
     }).select("id").single();
     if (error) return err(error.message);
     return ok({ success: true, id: data?.id });
+  }
+
+  if (action === "aluno_update_turno") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { id, turno, dias_semana } = body as { id: string; turno: string; dias_semana?: string[] };
+    if (!id || !turno) return err("id e turno obrigatórios.");
+    const updateData: any = { turno };
+    if (dias_semana !== undefined) updateData.dias_semana = dias_semana;
+    const { error } = await admin.from("alunos").update(updateData).eq("id", id);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+
+  if (action === "alunos_import_turnos") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { registros } = body as { registros: { nome: string; turno: string; dias_semana?: string[] }[] };
+    if (!Array.isArray(registros) || !registros.length) return err("registros obrigatório (array).");
+    let sucesso = 0, erros: string[] = [];
+    for (const r of registros) {
+      if (!r.nome || !r.turno) { erros.push((r.nome || "?") + ": nome e turno obrigatórios"); continue; }
+      const updateData: any = { turno: r.turno };
+      if (r.dias_semana) updateData.dias_semana = r.dias_semana;
+      const { data: found } = await admin.from("alunos").select("id").ilike("nome", r.nome).limit(1).single();
+      if (!found) { erros.push(r.nome + ": aluno não encontrado"); continue; }
+      const { error } = await admin.from("alunos").update(updateData).eq("id", found.id);
+      if (error) { erros.push(r.nome + ": " + error.message); continue; }
+      sucesso++;
+    }
+    return ok({ sucesso, erros });
   }
 
   if (action === "aluno_historico_create") {

@@ -901,7 +901,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
 
         <div class="stats-grid">
-          <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="sTotal">—</div><div class="stat-sub">solicitações</div></div>
+          <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="sTotal">—</div><div class="stat-sub">alunos</div></div>
           <div class="stat-card" data-g="integral"><div class="stat-label">Integral</div><div class="stat-value" id="sIntegral">—</div><div class="stat-sub">todas freq.</div></div>
           <div class="stat-card" data-g="semi"><div class="stat-label">Semi-Int.</div><div class="stat-value" id="sSemi">—</div><div class="stat-sub">todas freq.</div></div>
           <div class="stat-card" data-g="tarde"><div class="stat-label">Tarde</div><div class="stat-value" id="sTarde">—</div><div class="stat-sub">13:30h</div></div>
@@ -917,18 +917,34 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="dCount_Quinta">0</span></div><div class="dia-card-body" id="dList_Quinta"><div class="dia-vazio">Nenhuma criança</div></div></div>
           <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="dCount_Sexta">0</span></div><div class="dia-card-body" id="dList_Sexta"><div class="dia-vazio">Nenhuma criança</div></div></div>
         </div>
-        <div class="sec-title">Solicitações <span class="count-badge" id="tableCount">0</span></div>
+        <div class="sec-title" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span>Alunos <span class="count-badge" id="tableCount">0</span></span>
+          <button onclick="turnoGerarModelo()" style="padding:6px 14px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">📥 Modelo XLSX</button>
+          <label style="padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">📤 Importar Turnos<input type="file" accept=".xlsx,.xls" onchange="turnoImportarXlsx(this)" style="display:none;"></label>
+        </div>
+        <!-- Import preview -->
+        <div id="turnoImportPreview" style="display:none;margin-bottom:20px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <h4 style="margin:0 0 12px;">Pré-visualização da importação</h4>
+          <div id="turnoImportList" style="max-height:300px;overflow-y:auto;margin-bottom:12px;"></div>
+          <div id="turnoImportErr" class="alert-err" style="display:none;margin-bottom:8px;padding:8px 12px;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:12px;"></div>
+          <div id="turnoImportOk" class="alert-ok" style="display:none;margin-bottom:8px;padding:8px 12px;background:#f0fdf4;color:#166534;border-radius:8px;font-size:12px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="turnoConfirmarImport()" class="btn-create" style="padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Confirmar Importação</button>
+            <button onclick="document.getElementById('turnoImportPreview').style.display='none'" style="padding:8px 20px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
+          </div>
+        </div>
         <div class="filter-bar">
           <button class="fb active" onclick="setFilter('all',this)">Todos</button>
           <button class="fb" onclick="setFilter('integral',this)">🔴 Integral</button>
           <button class="fb" onclick="setFilter('semi',this)">🟠 Semi-Integral</button>
           <button class="fb" onclick="setFilter('tarde',this)">🔵 Tarde</button>
           <button class="fb" onclick="setFilter('diaria',this)">🟣 Diária</button>
+          <button class="fb" onclick="setFilter('sem_turno',this)">⚪ Sem turno</button>
           <input class="search-input" id="searchInput" type="text" placeholder="🔍  Buscar..." oninput="debouncedRenderTable()">
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Criança</th><th>Responsável</th><th>Série</th><th>Turno</th><th>Dias</th><th>Data</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Aluno</th><th>Responsável</th><th>Série</th><th>Turno</th><th>Dias</th><th>Ações</th></tr></thead>
             <tbody id="tableBody"><tr><td colspan="6" class="empty-state">⏳ Carregando…</td></tr></tbody>
           </table>
         </div>
@@ -3186,7 +3202,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     // Realtime: atualiza dashboard quando dados mudam no banco
     if (realtimeChannel) sbClient.removeChannel(realtimeChannel);
     realtimeChannel = sbClient.channel('gerente-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'solicitacoes' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alunos' }, () => {
         if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inscricoes_atividades' }, () => {
@@ -3633,9 +3649,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   // ── DATA ──────────────────────────────────────────────
   async function loadData() {
-    const data = await api({ action:'solicitacoes_list' });
-    if (!Array.isArray(data)) return;
-    allData = data; updateStats(); renderTable();
+    const data = await api({ action:'alunos_list' });
+    const list = Array.isArray(data) ? data : (data.data || []);
+    allData = list; updateStats(); renderTable();
     loadAiInsights();
   }
 
@@ -3736,12 +3752,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       listEl.innerHTML = list.map(r => {
         const t = TURNO_INFO[r.turno];
-        const turnoShort = t ? t.label.replace(' na semana','').replace(' · ',' ') : r.turno;
+        const turnoShort = t ? t.label.replace(' na semana','').replace(' · ',' ') : (r.turno || '—');
         return `<div class="dia-crianca-item">
           <div class="dia-crianca-dot"></div>
           <div class="dia-crianca-info">
-            <strong>${esc(r.nome_crianca)}</strong>
-            <span>${esc(r.serie||'')}${r.serie&&turnoShort?' · ':''}${turnoShort}</span>
+            <strong>${esc(r.nome)}</strong>
+            <span>${esc(r.serie||r.turma||'')}${(r.serie||r.turma)&&turnoShort?' · ':''}${turnoShort}</span>
           </div>
         </div>`;
       }).join('');
@@ -3752,27 +3768,26 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const q = document.getElementById('searchInput').value.toLowerCase();
     const rows = allData.filter(r => {
       const g = TURNO_INFO[r.turno]?.g||'';
-      const mf = currentFilter==='all'||g===currentFilter;
-      const ms = !q||[r.nome_crianca,r.nome_resp,r.email,r.serie].some(v=>v?.toLowerCase().includes(q));
+      const mf = currentFilter==='all' || (currentFilter==='sem_turno' ? !r.turno : g===currentFilter);
+      const ms = !q||[r.nome,r.responsavel_nome,r.resp_nome,r.email,r.serie,r.turma].some(v=>v?.toLowerCase().includes(q));
       return mf&&ms;
     });
     document.getElementById('tableCount').textContent = rows.length;
     const tb = document.getElementById('tableBody');
-    if (!rows.length) { tb.innerHTML='<tr><td colspan="7" class="empty-state">📭 Nenhum resultado.</td></tr>'; return; }
+    if (!rows.length) { tb.innerHTML='<tr><td colspan="6" class="empty-state">Nenhum resultado.</td></tr>'; return; }
     tb.innerHTML = rows.map(r => {
-      const t = TURNO_INFO[r.turno]||{label:r.turno,g:''};
-      const date = new Date(r.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const t = TURNO_INFO[r.turno]||{label:r.turno||'Sem turno',g:''};
       const dias = Array.isArray(r.dias_semana) && r.dias_semana.length
         ? r.dias_semana.map(d => '<span style="display:inline-block;background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:2px 7px;font-size:10px;font-weight:600;margin:1px;">'+esc(d)+'</span>').join(' ')
         : '<span style="color:var(--muted);font-size:12px;">—</span>';
+      const resp = r.responsavel_nome || r.resp_nome || '';
       return `<tr>
-        <td><strong>${esc(r.nome_crianca)}</strong></td>
-        <td>${esc(r.nome_resp)}<br><small style="color:var(--muted)">${esc(r.email)}</small></td>
-        <td>${esc(r.serie||'—')}</td>
-        <td><button class="turno-pill ${t.g}" onclick="openModal('${esc(r.id)}','${esc(r.turno)}','${esc(r.nome_crianca)}')">${t.label}${t.price?' · '+t.price:''} ✎</button></td>
+        <td><strong>${esc(r.nome)}</strong></td>
+        <td>${esc(resp)}${resp && r.email ? '<br>' : ''}${r.email ? '<small style="color:var(--muted)">'+esc(r.email)+'</small>' : ''}</td>
+        <td>${esc(r.serie||r.turma||'—')}</td>
+        <td><button class="turno-pill ${t.g}" onclick="openModal('${esc(r.id)}','${esc(r.turno||'')}','${esc(r.nome)}')">${t.label}${t.price?' · '+t.price:''} ✎</button></td>
         <td>${dias}</td>
-        <td class="date-cell">${date}</td>
-        <td><button class="action-btn del" onclick="deleteRow('${esc(r.id)}','${esc(r.nome_crianca)}')">🗑</button></td>
+        <td><button class="action-btn" onclick="openModal('${esc(r.id)}','${esc(r.turno||'')}','${esc(r.nome)}')" title="Editar turno">✏️</button></td>
       </tr>`;
     }).join('');
   }
@@ -3800,12 +3815,115 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const v = document.querySelector('input[name="mt"]:checked')?.value;
     if(!v||!editingId) return;
     document.getElementById('btnSave').disabled=true;
-    await api({ action:'solicitacoes_update_turno', id:editingId, turno:v });
+    const d = await api({ action:'aluno_update_turno', id:editingId, turno:v });
+    if (d.error) showToast(d.error, 'error');
     closeModal(); document.getElementById('btnSave').disabled=false; loadData();
   }
-  async function deleteRow(id, nome) {
-    if(!await _lumiedConfirm('Remover solicitação de "'+nome+'"?')) return;
-    await api({ action:'solicitacoes_delete', id }); loadData();
+
+  // ── IMPORTAÇÃO DE TURNOS (XLSX) ────────────────────────
+  var turnoImportData = [];
+  function turnoGerarModelo() {
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
+    const wb = XLSX.utils.book_new();
+    const wsData = [
+      ['nome', 'turno', 'dias_semana'],
+      ['Maria Silva', 'integral_5x', 'Segunda,Terça,Quarta,Quinta,Sexta'],
+      ['João Souza', 'semi_2x', 'Segunda,Quarta'],
+      ['Ana Costa', 'tarde', ''],
+      ['Carlos Lima', 'diaria', 'Terça'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 45 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Turnos');
+    const turnosRef = [
+      ['Instruções para importação de turnos'],
+      [''],
+      ['Colunas:'],
+      ['  nome — Nome do aluno (deve corresponder exatamente ao cadastro)'],
+      ['  turno — Código do turno (ver lista abaixo)'],
+      ['  dias_semana — Dias separados por vírgula (opcional)'],
+      [''],
+      ['Códigos de turno disponíveis:'],
+      ...Object.entries(TURNO_INFO).map(([k,v]) => ['  ' + k + ' — ' + v.label + (v.price ? ' (' + v.price + ')' : '')]),
+      [''],
+      ['Dias válidos: Segunda, Terça, Quarta, Quinta, Sexta'],
+      [''],
+      ['IMPORTANTE:'],
+      ['  - Somente alunos cujo nome apareça na planilha serão atualizados.'],
+      ['  - Alunos que não estejam na planilha NÃO serão modificados.'],
+      ['  - O nome deve ser idêntico ao cadastrado no sistema.'],
+    ];
+    const wsInst = XLSX.utils.aoa_to_sheet(turnosRef);
+    wsInst['!cols'] = [{ wch: 80 }];
+    XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
+    XLSX.writeFile(wb, 'modelo_importacao_turnos.xlsx');
+  }
+
+  function turnoImportarXlsx(input) {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    if (typeof XLSX === 'undefined') { showToast('Aguarde o carregamento do XLSX','error'); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!rows.length) { showToast('Planilha vazia','error'); return; }
+      turnoImportData = rows.map(r => {
+        const nome = (r.nome || r.Nome || r.NOME || '').toString().trim();
+        const turno = (r.turno || r.Turno || r.TURNO || '').toString().trim().toLowerCase();
+        const diasRaw = (r.dias_semana || r.Dias || r.dias || '').toString().trim();
+        const dias_semana = diasRaw ? diasRaw.split(/[,;|]/).map(d => d.trim()).filter(Boolean) : [];
+        return { nome, turno, dias_semana };
+      }).filter(r => r.nome && r.turno);
+      if (!turnoImportData.length) { showToast('Nenhum registro válido (nome + turno obrigatórios)','error'); return; }
+      // Validate turno codes
+      const invalidos = turnoImportData.filter(r => !TURNO_INFO[r.turno]);
+      document.getElementById('turnoImportList').innerHTML =
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:4px 8px;">Nome</th><th style="text-align:left;padding:4px 8px;">Turno</th><th style="text-align:left;padding:4px 8px;">Dias</th><th style="text-align:left;padding:4px 8px;">Status</th></tr></thead><tbody>' +
+        turnoImportData.map(r => {
+          const valid = TURNO_INFO[r.turno];
+          return `<tr style="${valid?'':'background:#fef2f2;'}"><td style="padding:4px 8px;">${esc(r.nome)}</td><td style="padding:4px 8px;">${valid ? esc(valid.label) : '<span style="color:#991b1b;">'+esc(r.turno)+' (inválido)</span>'}</td><td style="padding:4px 8px;">${r.dias_semana.length ? esc(r.dias_semana.join(', ')) : '—'}</td><td style="padding:4px 8px;">${valid ? '✅' : '❌'}</td></tr>`;
+        }).join('') +
+        '</tbody></table>';
+      const errEl = document.getElementById('turnoImportErr');
+      const okEl = document.getElementById('turnoImportOk');
+      errEl.style.display = 'none'; okEl.style.display = 'none';
+      if (invalidos.length) {
+        errEl.textContent = invalidos.length + ' registro(s) com turno inválido — serão ignorados.';
+        errEl.style.display = 'block';
+      }
+      document.getElementById('turnoImportPreview').style.display = 'block';
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function turnoConfirmarImport() {
+    const errEl = document.getElementById('turnoImportErr');
+    const okEl = document.getElementById('turnoImportOk');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    const validos = turnoImportData.filter(r => TURNO_INFO[r.turno]);
+    if (!validos.length) { errEl.textContent = 'Nenhum registro válido para importar.'; errEl.style.display = 'block'; return; }
+    const btn = document.querySelector('#turnoImportPreview .btn-create');
+    if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
+    const d = await api({ action: 'alunos_import_turnos', registros: validos });
+    if (d.error) {
+      errEl.textContent = d.error; errEl.style.display = 'block';
+    } else {
+      const msgs = [];
+      if (d.sucesso) msgs.push(d.sucesso + ' atualizado(s)');
+      if (d.erros && d.erros.length) msgs.push(d.erros.length + ' erro(s)');
+      okEl.textContent = msgs.join(', ') || 'Concluído';
+      okEl.style.display = 'block';
+      if (d.erros && d.erros.length) {
+        errEl.textContent = d.erros.join(' | ');
+        errEl.style.display = 'block';
+      }
+    }
+    turnoImportData = [];
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Importação'; }
+    loadData();
   }
 
   // ── SÉRIES ────────────────────────────────────────────
