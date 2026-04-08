@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Central de Ajuda — Lumied | Tutoriais e FAQ para Gestão Escolar</title>
-<meta name="description" content="Central de Ajuda Lumied — Guias, tutoriais e FAQ para todos os portais do sistema de gestão escolar. Pais, professoras, gerentes, secretaria. 45 artigos.">
+<meta name="description" content="Central de Ajuda Lumied — Guias, tutoriais e FAQ para todos os portais do sistema de gestão escolar. Pais, professoras, gerentes, equipe, alunos. 90+ artigos com gating por módulos.">
 <meta name="keywords" content="gestão escolar, sistema escolar, tutorial, ajuda, FAQ, Lumied, portal pais, portal professora, boletim, frequência, notas">
 <meta property="og:title" content="Central de Ajuda — Lumied">
-<meta property="og:description" content="Guias completos para usar o Lumied. 45 artigos cobrindo todos os 6 portais.">
+<meta property="og:description" content="Guias completos para usar o Lumied. 90+ artigos cobrindo todos os portais com gating por módulos.">
 <meta property="og:type" content="website">
 <link rel="canonical" href="https://lumied.com.br/ajuda/">
 <script type="application/ld+json">
@@ -204,11 +204,13 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="sidebar-links">
       <a href="#pais-login">Login e Cadastro</a>
       <a href="#pais-home">Tela Inicial</a>
-      <a href="#pais-pickup">Pickup — Estou a Caminho</a>
-      <a href="#pais-turno">Mudança de Turno</a>
-      <a href="#pais-extra">Atividades Extracurriculares</a>
-      <a href="#pais-boletos">Boletos</a>
-      <a href="#pais-agenda">Agenda Digital</a>
+      <a href="#pais-perfil">Meu Perfil</a>
+      <a href="#pais-pickup" data-modulo="pickup">Pickup</a>
+      <a href="#pais-turno" data-modulo="turnos">Mudança de Turno</a>
+      <a href="#pais-extra" data-modulo="atividades">Atividades Extracurriculares</a>
+      <a href="#pais-boletos" data-modulo="financeiro">Boletos</a>
+      <a href="#pais-agenda" data-modulo="comunicacao">Agenda Digital</a>
+      <a href="#pais-acesso" data-modulo="acesso">Controle de Acesso</a>
     </div>
   </div>
 
@@ -216,20 +218,28 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="sidebar-section-title" onclick="toggleSection(this)">👔 Portal do Gerente <span class="chevron">▸</span></div>
     <div class="sidebar-links">
       <a href="#gerente-login">Login e Navegação</a>
-      <a href="#gerente-dashboard">Dashboard Analytics</a>
-      <a href="#gerente-turnos">Turnos</a>
-      <a href="#gerente-atividades">Atividades</a>
-      <a href="#gerente-professoras">Professoras</a>
-      <a href="#gerente-almoxarifado">Almoxarifado</a>
+      <a href="#gerente-dashboard" data-modulo="dashboard">Dashboard Analytics</a>
+      <a href="#gerente-equipe" data-modulo="equipe">Gestão da Equipe</a>
+      <a href="#gerente-permissoes" data-modulo="equipe">Permissões (RBAC)</a>
+      <a href="#gerente-turnos" data-modulo="turnos">Turnos</a>
+      <a href="#gerente-atividades" data-modulo="atividades">Atividades</a>
+      <a href="#gerente-academico" data-modulo="alunos">Acadêmico</a>
+      <a href="#gerente-financeiro" data-modulo="financeiro">Financeiro</a>
+      <a href="#gerente-crm" data-modulo="crm">CRM</a>
+      <a href="#gerente-matricula" data-modulo="crm">Matrícula Online</a>
+      <a href="#gerente-comunicacao" data-modulo="comunicacao">Comunicação</a>
+      <a href="#gerente-almoxarifado" data-modulo="almoxarifado">Almoxarifado</a>
       <a href="#gerente-manutencao">Manutenção</a>
       <a href="#gerente-achados">Achados e Perdidos</a>
-      <a href="#gerente-financeiro">Financeiro</a>
-      <a href="#gerente-crm">CRM</a>
-      <a href="#gerente-academico">Acadêmico</a>
       <a href="#gerente-calendario">Calendário</a>
-      <a href="#gerente-comunicacao">Comunicação</a>
-      <a href="#gerente-matricula">Matrícula Online</a>
-      <a href="#gerente-config">Configurações</a>
+      <a href="#gerente-acesso" data-modulo="acesso">Controle de Acesso</a>
+      <a href="#gerente-compliance" data-modulo="compliance">Compliance CLT</a>
+      <a href="#gerente-rh" data-modulo="rh">RH e Folha</a>
+      <a href="#gerente-biblioteca" data-modulo="biblioteca">Biblioteca</a>
+      <a href="#gerente-cantina" data-modulo="cantina">Cantina</a>
+      <a href="#gerente-transporte" data-modulo="transporte">Transporte</a>
+      <a href="#gerente-loja" data-modulo="loja">Loja Virtual</a>
+      <a href="#gerente-config" data-modulo="config">Configurações</a>
       <a href="#gerente-emergencia">Emergência</a>
     </div>
   </div>
@@ -238,25 +248,49 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="sidebar-section-title" onclick="toggleSection(this)">👩‍🏫 Portal da Professora <span class="chevron">▸</span></div>
     <div class="sidebar-links">
       <a href="#prof-login">Login e Navegação</a>
-      <a href="#prof-fila">Fila de Retirada</a>
-      <a href="#prof-diplomas">Diplomas e Ranking</a>
-      <a href="#prof-agp">Annual Growth Plan</a>
-      <a href="#prof-materiais">Materiais</a>
-      <a href="#prof-atestados">Atestados Médicos</a>
+      <a href="#prof-chamada" data-modulo="frequencia">Chamada</a>
+      <a href="#prof-notas" data-modulo="notas">Notas</a>
+      <a href="#prof-agenda" data-modulo="comunicacao">Agenda Digital</a>
+      <a href="#prof-fila" data-modulo="pickup">Fila de Retirada</a>
+      <a href="#prof-alertas" data-modulo="acesso">Alertas de Acesso</a>
+      <a href="#prof-diplomas" data-modulo="diplomas">Diplomas e Ranking</a>
+      <a href="#prof-agp" data-modulo="diplomas">Growth Plan</a>
+      <a href="#prof-materiais" data-modulo="almoxarifado">Materiais</a>
+      <a href="#prof-atestados" data-modulo="atestados">Atestados Médicos</a>
       <a href="#prof-manutencao">Manutenção</a>
       <a href="#prof-achados">Achados e Perdidos</a>
       <a href="#prof-impressoes">Impressões</a>
-      <a href="#prof-agenda">Agenda Digital</a>
-      <a href="#prof-notas">Notas</a>
-      <a href="#prof-chamada">Chamada</a>
+      <a href="#prof-diario" data-modulo="comunicacao">Diário de Classe</a>
     </div>
   </div>
 
-  <div class="sidebar-section" data-portal="secretaria">
-    <div class="sidebar-section-title" onclick="toggleSection(this)">📋 Portal da Secretaria <span class="chevron">▸</span></div>
+  <div class="sidebar-section" data-portal="equipe">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">📋 Portal da Equipe <span class="chevron">▸</span></div>
     <div class="sidebar-links">
-      <a href="#sec-login">Login</a>
-      <a href="#sec-atestados">Validação de Atestados</a>
+      <a href="#equipe-login">Login</a>
+      <a href="#equipe-sec-atestados" data-feature="atestados" data-modulo="atestados">Atestados</a>
+      <a href="#equipe-sec-diplomas" data-feature="atestados" data-modulo="diplomas">Diplomas</a>
+      <a href="#equipe-sec-impressoes" data-feature="atestados">Impressões</a>
+      <a href="#equipe-crm-dashboard" data-feature="crm" data-modulo="crm">Dashboard CRM</a>
+      <a href="#equipe-crm-leads" data-feature="crm" data-modulo="crm">Leads</a>
+      <a href="#equipe-crm-kanban" data-feature="crm" data-modulo="crm">Funil Kanban</a>
+      <a href="#equipe-crm-matriculas" data-feature="crm" data-modulo="crm">Matrículas</a>
+      <a href="#equipe-crm-contratos" data-feature="crm" data-modulo="crm">Contratos Digitais</a>
+      <a href="#equipe-crm-metas" data-feature="crm" data-modulo="crm">Metas</a>
+      <a href="#equipe-fin-dashboard" data-feature="financeiro" data-modulo="financeiro">Dashboard Financeiro</a>
+      <a href="#equipe-fin-mensalidades" data-feature="financeiro" data-modulo="financeiro">Mensalidades</a>
+      <a href="#equipe-fin-boletos" data-feature="financeiro" data-modulo="financeiro">Boletos</a>
+      <a href="#equipe-infra-chamados" data-feature="manutencao">Chamados</a>
+      <a href="#equipe-infra-achados" data-feature="manutencao">Achados e Perdidos</a>
+      <a href="#equipe-infra-biblioteca" data-feature="manutencao" data-modulo="biblioteca">Biblioteca</a>
+      <a href="#equipe-infra-cantina" data-feature="manutencao" data-modulo="cantina">Cantina</a>
+      <a href="#equipe-infra-transporte" data-feature="manutencao" data-modulo="transporte">Transporte</a>
+      <a href="#equipe-comp-painel" data-feature="compliance" data-modulo="compliance">Painel Compliance</a>
+      <a href="#equipe-comp-ponto" data-feature="compliance" data-modulo="compliance">Ponto e Hora Extra</a>
+      <a href="#equipe-comp-incidentes" data-feature="compliance" data-modulo="compliance">Incidentes</a>
+      <a href="#equipe-comp-certificacoes" data-feature="compliance" data-modulo="compliance">Certificações</a>
+      <a href="#equipe-comp-politicas" data-feature="compliance" data-modulo="compliance">Políticas</a>
+      <a href="#equipe-comp-calendario" data-feature="compliance" data-modulo="compliance">Calendário Regulatório</a>
     </div>
   </div>
 
@@ -264,9 +298,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="sidebar-section-title" onclick="toggleSection(this)">🎓 Portal do Aluno <span class="chevron">▸</span></div>
     <div class="sidebar-links">
       <a href="#aluno-login">Login</a>
-      <a href="#aluno-notas">Notas</a>
-      <a href="#aluno-frequencia">Frequência</a>
-      <a href="#aluno-provas">Provas</a>
+      <a href="#aluno-notas" data-modulo="notas">Notas</a>
+      <a href="#aluno-frequencia" data-modulo="frequencia">Frequência</a>
+      <a href="#aluno-provas" data-modulo="notas">Provas</a>
     </div>
   </div>
 
@@ -293,7 +327,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="portal-card" onclick="openPortal('pais')"><span class="emoji">👨‍👩‍👧</span><span class="label">Pais</span></div>
     <div class="portal-card" onclick="openPortal('gerente')"><span class="emoji">👔</span><span class="label">Gerente</span></div>
     <div class="portal-card" onclick="openPortal('professora')"><span class="emoji">👩‍🏫</span><span class="label">Professora</span></div>
-    <div class="portal-card" onclick="openPortal('secretaria')"><span class="emoji">📋</span><span class="label">Secretaria</span></div>
+    <div class="portal-card" onclick="openPortal('equipe')"><span class="emoji">📋</span><span class="label">Equipe</span></div>
     <div class="portal-card" onclick="openPortal('aluno')"><span class="emoji">🎓</span><span class="label">Aluno</span></div>
     <div class="portal-card" onclick="openPortal('setup')"><span class="emoji">⚙️</span><span class="label">Setup Wizard</span></div>
   </div>
@@ -441,7 +475,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="pais-pickup" class="help-article" data-portal="pais" data-keywords="pickup retirada estou a caminho buscar filho aluno fila carro chegada">
+<article id="pais-pickup" class="help-article" data-portal="pais" data-modulo="pickup" data-keywords="pickup retirada estou a caminho buscar filho aluno fila carro chegada">
   <h2>🚗 Pickup — Estou a Caminho</h2>
   <p class="article-desc">Avise a escola que você está indo buscar seu filho e acompanhe a fila de retirada em tempo real.</p>
 
@@ -516,7 +550,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="pais-turno" class="help-article" data-portal="pais" data-keywords="mudanca turno troca manha tarde periodo horario solicitar">
+<article id="pais-turno" class="help-article" data-portal="pais" data-modulo="turnos" data-keywords="mudanca turno troca manha tarde periodo horario solicitar">
   <h2>🔄 Mudança de Turno</h2>
   <p class="article-desc">Solicite alteração de turno do seu filho (manhã para tarde ou vice-versa) diretamente pelo app.</p>
 
@@ -572,7 +606,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="pais-extra" class="help-article" data-portal="pais" data-keywords="atividades extracurriculares esportes musica artes ballet futebol natacao inscrever matricula">
+<article id="pais-extra" class="help-article" data-portal="pais" data-modulo="atividades" data-keywords="atividades extracurriculares esportes musica artes ballet futebol natacao inscrever matricula">
   <h2>🎯 Atividades Extracurriculares</h2>
   <p class="article-desc">Inscreva seu filho em atividades extracurriculares oferecidas pela escola, como esportes, música e artes.</p>
 
@@ -646,7 +680,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="pais-boletos" class="help-article" data-portal="pais" data-keywords="boletos pagamento financeiro mensalidade valor fatura pagar segunda via pix">
+<article id="pais-boletos" class="help-article" data-portal="pais" data-modulo="financeiro" data-keywords="boletos pagamento financeiro mensalidade valor fatura pagar segunda via pix">
   <h2>💰 Boletos</h2>
   <p class="article-desc">Visualize, pague e gerencie os boletos de mensalidade e taxas adicionais.</p>
 
@@ -728,7 +762,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="pais-agenda" class="help-article" data-portal="pais" data-keywords="agenda digital diario comunicacao professora recado foto atividade dia rotina">
+<article id="pais-agenda" class="help-article" data-portal="pais" data-modulo="comunicacao" data-keywords="agenda digital diario comunicacao professora recado foto atividade dia rotina">
   <h2>📅 Agenda Digital</h2>
   <p class="article-desc">Acompanhe o dia a dia do seu filho com fotos, recados e relatórios da professora.</p>
 
@@ -874,7 +908,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-dashboard" class="help-article" data-portal="gerente" data-keywords="dashboard analytics painel graficos metricas indicadores relatorios kpi presenca financeiro">
+<article id="gerente-dashboard" class="help-article" data-portal="gerente" data-modulo="dashboard" data-keywords="dashboard analytics painel graficos metricas indicadores relatorios kpi presenca financeiro">
   <h2>📊 Dashboard Analytics</h2>
   <p class="article-desc">Monitore indicadores-chave da escola em tempo real: presença, financeiro, matrículas e muito mais.</p>
 
@@ -942,7 +976,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-turnos" class="help-article" data-portal="gerente" data-keywords="turnos horarios manha tarde integral periodo configurar criar turno">
+<article id="gerente-turnos" class="help-article" data-portal="gerente" data-modulo="turnos" data-keywords="turnos horarios manha tarde integral periodo configurar criar turno">
   <h2>🔄 Turnos</h2>
   <p class="article-desc">Configure e gerencie os turnos da escola (manhã, tarde, integral) e defina horários de entrada e saída.</p>
 
@@ -993,7 +1027,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-atividades" class="help-article" data-portal="gerente" data-keywords="atividades extracurriculares cadastrar gerenciar vagas inscritos horarios professor">
+<article id="gerente-atividades" class="help-article" data-portal="gerente" data-modulo="atividades" data-keywords="atividades extracurriculares cadastrar gerenciar vagas inscritos horarios professor">
   <h2>🎯 Atividades</h2>
   <p class="article-desc">Crie e gerencie atividades extracurriculares, defina vagas, horários e valores.</p>
 
@@ -1058,7 +1092,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-professoras" class="help-article" data-portal="gerente" data-keywords="professoras professores equipe cadastrar funcionarios staff recursos humanos rh">
+<article id="gerente-professoras" class="help-article" data-portal="gerente" data-modulo="equipe" data-keywords="professoras professores equipe cadastrar funcionarios staff recursos humanos rh">
   <h2>👩‍🏫 Professoras</h2>
   <p class="article-desc">Gerencie o cadastro de professoras, atribua turmas e controle acessos.</p>
 
@@ -1106,7 +1140,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-almoxarifado" class="help-article" data-portal="gerente" data-keywords="almoxarifado estoque materiais suprimentos pedidos controle inventario">
+<article id="gerente-almoxarifado" class="help-article" data-portal="gerente" data-modulo="almoxarifado" data-keywords="almoxarifado estoque materiais suprimentos pedidos controle inventario">
   <h2>📦 Almoxarifado</h2>
   <p class="article-desc">Controle o estoque de materiais escolares e gerencie pedidos de reposição das professoras.</p>
 
@@ -1291,7 +1325,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-financeiro" class="help-article" data-portal="gerente" data-keywords="financeiro boletos pagamentos inadimplencia receita despesa fluxo caixa relatorio contas">
+<article id="gerente-financeiro" class="help-article" data-portal="gerente" data-modulo="financeiro" data-keywords="financeiro boletos pagamentos inadimplencia receita despesa fluxo caixa relatorio contas">
   <h2>💰 Financeiro</h2>
   <p class="article-desc">Controle financeiro completo: boletos, inadimplência, receitas e fluxo de caixa.</p>
 
@@ -1349,7 +1383,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-crm" class="help-article" data-portal="gerente" data-keywords="crm leads funil vendas matricula prospeccao contato interessados conversao">
+<article id="gerente-crm" class="help-article" data-portal="gerente" data-modulo="crm" data-keywords="crm leads funil vendas matricula prospeccao contato interessados conversao">
   <h2>📞 CRM</h2>
   <p class="article-desc">Gerencie leads e prospects interessados na escola. Acompanhe todo o funil de matrículas.</p>
 
@@ -1405,7 +1439,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-academico" class="help-article" data-portal="gerente" data-keywords="academico alunos turmas matricula lista classe enturmar transferir year">
+<article id="gerente-academico" class="help-article" data-portal="gerente" data-modulo="alunos" data-keywords="academico alunos turmas matricula lista classe enturmar transferir year">
   <h2>📝 Acadêmico</h2>
   <p class="article-desc">Gerencie turmas, alunos, matrículas e dados acadêmicos de toda a escola.</p>
 
@@ -1505,7 +1539,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-comunicacao" class="help-article" data-portal="gerente" data-keywords="comunicacao avisos notificacoes mensagem circular comunicado pais email whatsapp push">
+<article id="gerente-comunicacao" class="help-article" data-portal="gerente" data-modulo="comunicacao" data-keywords="comunicacao avisos notificacoes mensagem circular comunicado pais email whatsapp push">
   <h2>📢 Comunicação</h2>
   <p class="article-desc">Envie comunicados, avisos e notificações para pais, professoras ou toda a comunidade escolar.</p>
 
@@ -1558,7 +1592,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-matricula" class="help-article" data-portal="gerente" data-keywords="matricula online formulario inscricao novo aluno rematricula vaga">
+<article id="gerente-matricula" class="help-article" data-portal="gerente" data-modulo="crm" data-keywords="matricula online formulario inscricao novo aluno rematricula vaga">
   <h2>📋 Matrícula Online</h2>
   <p class="article-desc">Configure o formulário de matrícula online e gerencie as inscrições recebidas.</p>
 
@@ -1622,7 +1656,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="gerente-config" class="help-article" data-portal="gerente" data-keywords="configuracoes ajustes preferencias modulos escola branding cores personalizar usuarios permissoes">
+<article id="gerente-config" class="help-article" data-portal="gerente" data-modulo="config" data-keywords="configuracoes ajustes preferencias modulos escola branding cores personalizar usuarios permissoes">
   <h2>⚙️ Configurações</h2>
   <p class="article-desc">Personalize a plataforma: dados da escola, cores, módulos ativos, usuários e permissões.</p>
 
@@ -1777,7 +1811,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-fila" class="help-article" data-portal="professora" data-keywords="fila retirada pickup buscar aluno entrega pais carro saida dismissal">
+<article id="prof-fila" class="help-article" data-portal="professora" data-modulo="pickup" data-keywords="fila retirada pickup buscar aluno entrega pais carro saida dismissal">
   <h2>🚗 Fila de Retirada</h2>
   <p class="article-desc">Veja em tempo real quais pais estão a caminho e organize a entrega dos alunos.</p>
 
@@ -1840,7 +1874,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-diplomas" class="help-article" data-portal="professora" data-keywords="diplomas ranking certificados alunos destaque comportamento reconhecimento gamificacao estrelas pontos">
+<article id="prof-diplomas" class="help-article" data-portal="professora" data-modulo="diplomas" data-keywords="diplomas ranking certificados alunos destaque comportamento reconhecimento gamificacao estrelas pontos">
   <h2>🏆 Diplomas e Ranking</h2>
   <p class="article-desc">Reconheça o esforço dos alunos com diplomas digitais e acompanhe o ranking da turma.</p>
 
@@ -1899,7 +1933,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-agp" class="help-article" data-portal="professora" data-keywords="annual growth plan agp crescimento profissional avaliacao metas desenvolvimento carreira">
+<article id="prof-agp" class="help-article" data-portal="professora" data-modulo="diplomas" data-keywords="annual growth plan agp crescimento profissional avaliacao metas desenvolvimento carreira">
   <h2>📈 Annual Growth Plan</h2>
   <p class="article-desc">Acompanhe seu plano de desenvolvimento profissional anual com metas e feedbacks da gestão.</p>
 
@@ -1955,7 +1989,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-materiais" class="help-article" data-portal="professora" data-keywords="materiais pedidos almoxarifado solicitar material suprimentos escolar papelaria">
+<article id="prof-materiais" class="help-article" data-portal="professora" data-modulo="almoxarifado" data-keywords="materiais pedidos almoxarifado solicitar material suprimentos escolar papelaria">
   <h2>📦 Materiais</h2>
   <p class="article-desc">Solicite materiais do almoxarifado da escola para sua turma.</p>
 
@@ -2015,7 +2049,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-atestados" class="help-article" data-portal="professora" data-keywords="atestados medicos saude doenca falta justificada aluno afastamento documento">
+<article id="prof-atestados" class="help-article" data-portal="professora" data-modulo="atestados" data-keywords="atestados medicos saude doenca falta justificada aluno afastamento documento">
   <h2>🏥 Atestados Médicos</h2>
   <p class="article-desc">Registre atestados médicos de alunos para justificar faltas automaticamente.</p>
 
@@ -2221,7 +2255,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-agenda" class="help-article" data-portal="professora" data-keywords="agenda digital diario publicar postar fotos recados alimentacao soneca atividades registro">
+<article id="prof-agenda" class="help-article" data-portal="professora" data-modulo="comunicacao" data-keywords="agenda digital diario publicar postar fotos recados alimentacao soneca atividades registro">
   <h2>📅 Agenda Digital</h2>
   <p class="article-desc">Publique o diário do dia: alimentação, soneca, atividades, fotos e recados para os pais.</p>
 
@@ -2288,7 +2322,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-notas" class="help-article" data-portal="professora" data-keywords="notas avaliacoes conceitos lancar nota prova trabalho trimestre boletim">
+<article id="prof-notas" class="help-article" data-portal="professora" data-modulo="notas" data-keywords="notas avaliacoes conceitos lancar nota prova trabalho trimestre boletim">
   <h2>📝 Notas</h2>
   <p class="article-desc">Lance notas de provas, trabalhos e avaliações para cada aluno da sua turma.</p>
 
@@ -2337,7 +2371,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="prof-chamada" class="help-article" data-portal="professora" data-keywords="chamada frequencia presenca falta atraso lista alunos attendance diario presentes ausentes">
+<article id="prof-chamada" class="help-article" data-portal="professora" data-modulo="frequencia" data-keywords="chamada frequencia presenca falta atraso lista alunos attendance diario presentes ausentes">
   <h2>📋 Chamada</h2>
   <p class="article-desc">Faça a chamada diária da turma, registre presenças, faltas e atrasos.</p>
 
@@ -2416,7 +2450,651 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
 </article>
 
 <!-- ════════════════════════════════════════════════════════ -->
-<!--               PORTAL DA SECRETARIA                      -->
+<!--            NOVOS ARTIGOS — PORTAL DOS PAIS               -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="pais-perfil" class="help-article" data-portal="pais" data-keywords="perfil editar nome telefone senha alterar conta meu perfil">
+  <h2>👤 Meu Perfil</h2>
+  <p class="article-desc">Edite seus dados pessoais e altere sua senha de acesso.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Perfil (botão na barra superior)</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Toque no botão <strong>"Perfil"</strong> ao lado de "Sair" na barra superior. A tela de perfil exibirá seus dados atuais.</p>
+      <div class="mockup"><div class="mockup-header"><span>👤 Meu Perfil</span><span></span></div><div class="mockup-content"><div style="font-size:.78rem;font-weight:500;margin-bottom:2px">Nome:</div><div class="mockup-input">Maria Pereira</div><div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Telefone:</div><div class="mockup-input">(54) 99123-4567</div><div style="font-size:.78rem;font-weight:500;margin-top:6px;margin-bottom:2px">Email:</div><div class="mockup-input" style="background:#eee;color:var(--muted)">maria@email.com (somente leitura)</div><div class="mockup-btn primary" style="width:100%;margin-top:10px;text-align:center">Salvar</div><div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;font-weight:600;font-size:.82rem">Alterar Senha</div><div class="mockup-input" style="margin-top:4px">Nova senha (mín. 6 caracteres)</div><div class="mockup-input">Confirmar nova senha</div><div class="mockup-btn secondary" style="width:100%;margin-top:6px;text-align:center">Alterar Senha</div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Edite seu <strong>nome</strong> e <strong>telefone</strong>. O email é somente leitura e não pode ser alterado.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Para alterar a senha, preencha os campos de nova senha (mínimo 6 caracteres) e confirmação, depois toque em <strong>"Alterar Senha"</strong>.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Por que não posso alterar meu email?</summary><p>O email é a chave de identificação da sua conta e está vinculado à matrícula. Para alterá-lo, entre em contato com a secretaria da escola.</p></details>
+    <details><summary>Esqueci minha senha atual. Posso alterar assim mesmo?</summary><p>Use a opção "Magic Link" na tela de login para acessar sem senha. Após entrar, altere a senha na tela de perfil.</p></details>
+  </div>
+</article>
+
+<article id="pais-acesso" class="help-article" data-portal="pais" data-modulo="acesso" data-keywords="acesso face reconhecimento facial foto presenca entrada saida autorizado retirada controle">
+  <h2>🔐 Controle de Acesso</h2>
+  <p class="article-desc">Acompanhe a presença dos filhos por reconhecimento facial, gerencie sua foto e autorizados para retirada.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal dos Pais → Acesso</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse a aba <strong>Acesso</strong> na navegação. A tela tem 3 seções: Minha Face, Presença dos Filhos e Autorizados.</p>
+      <div class="mockup"><div class="mockup-header"><span>🔐 Acesso</span><span></span></div><div class="mockup-content"><div class="mockup-card"><div style="font-weight:600;font-size:.82rem;margin-bottom:4px">📸 Minha Face</div><div style="font-size:.78rem;color:var(--muted)">Foto cadastrada e aprovada <span class="mockup-pill green">Ativa</span></div></div><div class="mockup-card"><div style="font-weight:600;font-size:.82rem;margin-bottom:4px">📍 Presença Hoje</div><div style="font-size:.78rem">Lorenzo — Entrada: <strong>07:28</strong> · Saída: <span style="color:var(--muted)">—</span></div><div style="font-size:.78rem">Sofia — Entrada: <strong>07:32</strong> · Saída: <span style="color:var(--muted)">—</span></div></div><div class="mockup-card"><div style="font-weight:600;font-size:.82rem;margin-bottom:4px">👥 Autorizados para Retirada</div><div style="font-size:.78rem">Avó Maria — Permanente <span class="mockup-pill green">Ativo</span></div><div style="font-size:.78rem">Tia Ana — 30 dias <span class="mockup-pill yellow">Expira 15/04</span></div></div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Em <strong>"Presença Hoje"</strong>, acompanhe em tempo real a entrada e saída dos seus filhos, detectadas automaticamente pelo reconhecimento facial da escola.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Em <strong>"Autorizados"</strong>, adicione pessoas que podem buscar seus filhos. Informe nome, parentesco, tire uma foto (obrigatória, com validação de qualidade) e defina o período: 7, 30, 60 dias ou permanente.</p></div></div>
+  </div>
+  <div class="warning-box"><strong>⚠️ Importante:</strong> A foto do autorizado passa por validação de qualidade (centralização, nitidez, pose). Se rejeitada, tire outra com boa iluminação e rosto frontal.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Como cadastro minha face?</summary><p>A escola envia um link de cadastro por email ou WhatsApp. Acesse pelo celular, tire uma foto e aguarde aprovação do gerente.</p></details>
+    <details><summary>Posso cancelar a autorização de alguém?</summary><p>Sim. Na seção "Autorizados", toque no nome e selecione "Cancelar Autorização". A pessoa perde acesso imediatamente.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--         NOVOS ARTIGOS — PORTAL DO GERENTE                -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="gerente-equipe" class="help-article" data-portal="gerente" data-modulo="equipe" data-keywords="equipe staff funcionarios papeis roles multi cadastro importar xlsx">
+  <h2>👥 Gestão da Equipe</h2>
+  <p class="article-desc">Cadastre membros, atribua papéis múltiplos e configure features por usuário.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Equipe</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Equipe</strong> na sidebar. Veja todos os membros com seus papéis, turmas e status.</p>
+      <div class="mockup"><div class="mockup-header"><span>👥 Equipe</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Cadastrar</span></div><div class="mockup-content"><div class="mockup-row"><div class="mockup-avatar">AC</div><div style="flex:1"><div style="font-weight:600;font-size:.82rem">Ana Clara</div><div style="font-size:.7rem"><span class="mockup-pill blue">professora</span> <span class="mockup-pill blue">secretaria</span></div></div><div class="mockup-pill green">Ativa</div></div><div class="mockup-row"><div class="mockup-avatar">RM</div><div style="flex:1"><div style="font-weight:600;font-size:.82rem">Roberto Mendes</div><div style="font-size:.7rem"><span class="mockup-pill blue">financeiro</span> <span class="mockup-pill blue">comercial</span></div></div><div class="mockup-pill green">Ativo</div></div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em <strong>"+ Cadastrar"</strong>. Preencha nome, email, selecione os <strong>papéis</strong> (checkboxes: gerente, diretor, financeiro, professora, secretaria, comercial, manutenção) e as <strong>features</strong> (atestados, crm, financeiro, etc.).</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Para importar em massa, clique em <strong>"Importar XLSX"</strong>. Baixe o modelo, preencha e faça upload. O sistema mostra um preview antes de confirmar.</p></div></div>
+  </div>
+  <div class="tip-box"><strong>💡 Dica:</strong> Cada membro pode ter múltiplos papéis (ex: professora + secretaria). Isso permite acessar vários portais com a mesma conta.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Um membro pode ter mais de um papel?</summary><p>Sim! Use os checkboxes para marcar todos os papéis aplicáveis. O Hub (área-restrita) mostrará os portais de cada papel.</p></details>
+    <details><summary>Como configuro as features de cada membro?</summary><p>Edite o membro e marque as features: atestados, crm, financeiro, manutencao, compliance. Isso define quais seções do Portal da Equipe ele verá.</p></details>
+  </div>
+</article>
+
+<article id="gerente-permissoes" class="help-article" data-portal="gerente" data-modulo="equipe" data-keywords="permissoes rbac controle acesso modulos ver editar papel usuario personalizar">
+  <h2>🔐 Permissões de Usuário</h2>
+  <p class="article-desc">Configure permissões granulares por usuário: quais módulos cada pessoa pode ver ou editar.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Equipe → Botão 🔐</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Na lista da equipe, clique no ícone <strong>🔐</strong> ao lado do membro. Um modal com 25 módulos será exibido.</p>
+      <div class="mockup"><div class="mockup-header"><span>🔐 Permissões — Ana Clara</span><span></span></div><div class="mockup-content"><table class="mockup-table"><tr><th>Módulo</th><th>Ver</th><th>Editar</th></tr><tr><td>Dashboard</td><td><input type="checkbox" checked></td><td><input type="checkbox"></td></tr><tr><td>Notas</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr><tr><td>Frequência</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr><tr><td>Financeiro</td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr></table><div style="display:flex;gap:8px;margin-top:8px"><div class="mockup-btn secondary" style="flex:1;text-align:center">Restaurar Padrão</div><div class="mockup-btn primary" style="flex:1;text-align:center">Salvar</div></div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Marque <strong>Ver</strong> e/ou <strong>Editar</strong> para cada módulo. Cada papel tem defaults (ex: professora pode editar notas/frequência, financeiro pode editar boletos).</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Clique em <strong>"Restaurar Padrão"</strong> para voltar às permissões padrão do papel, ou <strong>"Salvar"</strong> para aplicar as personalizações.</p></div></div>
+  </div>
+  <div class="info-box"><strong>ℹ️ Nota:</strong> Overrides por usuário prevalecem sobre os defaults do papel. Gerente e Diretor têm acesso total por padrão.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Quais são os 7 papéis disponíveis?</summary><p>Gerente, Diretor, Financeiro, Professora, Professora Assistente, Secretaria e Manutenção. Cada um tem permissões padrão diferentes.</p></details>
+    <details><summary>Posso dar acesso total a alguém que não é gerente?</summary><p>Sim, basta marcar "Ver" e "Editar" em todos os 25 módulos. Mas considere se o papel "Diretor" não seria mais adequado.</p></details>
+  </div>
+</article>
+
+<article id="gerente-acesso" class="help-article" data-portal="gerente" data-modulo="acesso" data-keywords="controle acesso face reconhecimento facial rfid dispositivos iDFace catraca presenca alertas">
+  <h2>🔐 Controle de Acesso</h2>
+  <p class="article-desc">Gerencie dispositivos de reconhecimento facial, cadastro de faces, RFID e monitore eventos de acesso em tempo real.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Controle de Acesso</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Controle de Acesso</strong> na sidebar. O módulo tem 6 sub-painéis: Dashboard, Dispositivos, Faces, RFID, Permissões de Retirada e Log de Eventos.</p>
+      <div class="mockup"><div class="mockup-header"><span>🔐 Controle de Acesso — Dashboard</span><span style="font-size:.7rem">🔴 Ao vivo</span></div><div class="mockup-content"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px"><div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--green)">6</div><div class="lbl">Dispositivos Online</div></div></div><div class="mockup-card"><div class="mockup-stat"><div class="num">247</div><div class="lbl">Presenças Hoje</div></div></div></div><div style="font-weight:600;font-size:.82rem;margin-bottom:4px">Eventos Recentes</div><div class="mockup-card" style="font-size:.78rem"><span class="mockup-pill green">07:28</span> Lorenzo Pereira — Entrada (Face)</div><div class="mockup-card" style="font-size:.78rem"><span class="mockup-pill blue">07:32</span> Maria Pereira (mãe) — Identificada</div><div class="mockup-card" style="font-size:.78rem"><span class="mockup-pill red">07:35</span> Pessoa desconhecida — Alerta recepção</div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Em <strong>Faces</strong>, gerencie os cadastros. Gere links de cadastro público (válidos por 7 dias) para que famílias tirem a foto pelo celular. Aprove ou rejeite as fotos recebidas.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Em <strong>Dispositivos</strong>, monitore os 6 Control iD iDFace (status online/offline, heartbeat). Em <strong>Log de Eventos</strong>, veja todo o histórico de entradas, saídas e alertas.</p></div></div>
+  </div>
+  <div class="warning-box"><strong>⚠️ Segurança:</strong> Pessoas não identificadas geram alerta automático na recepção. Nunca desabilite este recurso.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Como funciona o cadastro público de face?</summary><p>Gere um link único (Faces → + Link) e envie por email/WhatsApp. A família acessa pelo celular, tira a foto e aguarda aprovação. A validação verifica centralização, nitidez e pose.</p></details>
+    <details><summary>Posso usar RFID em vez de face?</summary><p>Sim. Em RFID, cadastre cartões de acesso para funcionários ou alunos mais velhos. Face e RFID coexistem nos mesmos dispositivos.</p></details>
+  </div>
+</article>
+
+<article id="gerente-compliance" class="help-article" data-portal="gerente" data-modulo="compliance" data-keywords="compliance clt ponto hora extra noturna banco horas feriado trabalhista score certificacoes">
+  <h2>📋 Compliance CLT</h2>
+  <p class="article-desc">Controle de ponto com cálculos trabalhistas, certificações, inspeções e score de conformidade.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Compliance</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Compliance</strong> na sidebar. O painel mostra o score geral (0-100) e problemas abertos.</p>
+      <div class="mockup"><div class="mockup-header"><span>📋 Compliance</span><span>Score: <strong style="color:var(--green)">87/100</strong></span></div><div class="mockup-content"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px"><div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--green)">87</div><div class="lbl">Score</div></div></div><div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--red)">3</div><div class="lbl">Pendências</div></div></div><div class="mockup-card"><div class="mockup-stat"><div class="num">12</div><div class="lbl">Cert. Ativas</div></div></div></div><div style="font-weight:600;font-size:.82rem;margin-bottom:4px">Módulos</div><div class="mockup-card" style="font-size:.78rem;display:flex;justify-content:space-between"><span>Ponto e Hora Extra</span><span class="mockup-pill green">OK</span></div><div class="mockup-card" style="font-size:.78rem;display:flex;justify-content:space-between"><span>Certificações</span><span class="mockup-pill yellow">1 vencendo</span></div><div class="mockup-card" style="font-size:.78rem;display:flex;justify-content:space-between"><span>Incidentes</span><span class="mockup-pill red">2 abertos</span></div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>O módulo <strong>Ponto</strong> implementa 13 regras CLT: hora extra 50%/100%, hora noturna (22h-5h com hora reduzida), intervalo intrajornada, banco de horas, limite 2h extras/dia. O cron verifica automaticamente a cada 12h.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Em <strong>Config Ponto</strong>, ajuste os 16 parâmetros: tolerância de atraso, jornada diária, percentuais de adicional, banco de horas, hora-atividade (20% CCT), DSR.</p></div></div>
+  </div>
+  <div class="info-box"><strong>ℹ️ Ciência com Selfie:</strong> Quando há hora extra não autorizada, a professora recebe um alerta no portal que bloqueia o uso até que ela leia a notificação e tire uma selfie confirmando ciência.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Como importar registros de ponto?</summary><p>Vá em Ponto → Importar. Faça upload de um CSV com formato: professora_id;data;hora_entrada;hora_saida. O sistema pré-visualiza antes de processar.</p></details>
+    <details><summary>O sistema suporta AFD (Portaria 671)?</summary><p>Sim. O módulo Ponto AFD faz parse de registros tipo 1/3/5/9 de REPs homologados, com de-para PIS→funcionário.</p></details>
+  </div>
+</article>
+
+<article id="gerente-rh" class="help-article" data-portal="gerente" data-modulo="rh" data-keywords="rh recursos humanos folha pagamento ferias ponto funcionarios contrato">
+  <h2>👔 RH e Folha</h2>
+  <p class="article-desc">Gestão de RH: cadastro de funcionários, contratos, férias e integração com ponto.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → RH</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>RH</strong> na sidebar. Veja o dashboard com total de funcionários, férias programadas e resumo de ponto.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Em <strong>Funcionários</strong>, cadastre dados completos: contrato, salário, cargo, data de admissão. Em <strong>Férias</strong>, programe períodos e acompanhe saldos.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>O módulo integra com <strong>Compliance CLT</strong> para cálculos de ponto, hora extra e banco de horas.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>O sistema calcula folha de pagamento?</summary><p>O dashboard RH consolida as informações de ponto e horas extras. A geração da folha em si depende da integração contábil configurada.</p></details>
+  </div>
+</article>
+
+<article id="gerente-biblioteca" class="help-article" data-portal="gerente" data-modulo="biblioteca" data-keywords="biblioteca livros emprestimo devolucao catalogo acervo multa">
+  <h2>📚 Biblioteca</h2>
+  <p class="article-desc">Gerencie o acervo da biblioteca escolar: catálogo, empréstimos, devoluções e multas.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Biblioteca</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Biblioteca</strong> na sidebar. Veja o catálogo com busca por título, autor ou ISBN.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Para registrar um empréstimo, busque o livro, selecione o aluno e defina a data de devolução. O sistema alerta automaticamente sobre atrasos.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Na aba <strong>Empréstimos</strong>, veja todos os livros emprestados e pendentes. Multas por atraso são calculadas automaticamente.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso cadastrar livros em massa?</summary><p>Sim. Use "Importar" para fazer upload de um CSV com título, autor, ISBN e quantidade de exemplares.</p></details>
+  </div>
+</article>
+
+<article id="gerente-cantina" class="help-article" data-portal="gerente" data-modulo="cantina" data-keywords="cantina refeitorio cardapio alimentacao pedidos restricoes dieta">
+  <h2>🍽️ Cantina</h2>
+  <p class="article-desc">Gerencie o cardápio da cantina, pedidos e restrições alimentares dos alunos.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Cantina</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Cantina</strong> na sidebar. Configure o cardápio semanal e gerencie os pedidos.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Em <strong>Restrições</strong>, cadastre alergias e restrições alimentares de cada aluno. A cantina será alertada automaticamente.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Use <strong>Relatórios</strong> para acompanhar vendas, itens mais consumidos e desperdício.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Os pais podem ver o cardápio?</summary><p>Sim, se o módulo Comunicação estiver ativo. O cardápio pode ser enviado como comunicado semanal.</p></details>
+  </div>
+</article>
+
+<article id="gerente-transporte" class="help-article" data-portal="gerente" data-modulo="transporte" data-keywords="transporte escolar rotas motorista onibus van paradas horarios">
+  <h2>🚌 Transporte Escolar</h2>
+  <p class="article-desc">Gerencie rotas de transporte, motoristas, paradas e alunos transportados.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Transporte</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Transporte</strong> na sidebar. Cadastre rotas com paradas, horários e motorista responsável.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Vincule alunos a rotas e paradas. Os pais podem visualizar as informações de transporte no portal.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Acompanhe o status das rotas e gerencie substituições de motoristas quando necessário.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Os pais são notificados sobre atrasos?</summary><p>Se configurado, o sistema pode enviar notificações push quando houver alterações nos horários das rotas.</p></details>
+  </div>
+</article>
+
+<article id="gerente-loja" class="help-article" data-portal="gerente" data-modulo="loja" data-keywords="loja virtual ecommerce uniformes material escolar produtos pedidos vendas">
+  <h2>🛒 Loja Virtual</h2>
+  <p class="article-desc">E-commerce da escola: venda uniformes, materiais e produtos pelo portal dos pais.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Loja</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Loja</strong> na sidebar. Cadastre produtos com foto, descrição, preço e estoque.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Os pais verão os produtos no portal e poderão fazer pedidos. O pagamento é adicionado ao boleto mensal ou pago via PIX.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Gerencie pedidos pendentes, separe itens e marque como entregues. Acompanhe vendas por período.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso vender uniformes pela loja?</summary><p>Sim! Uniformes, materiais, livros e qualquer produto da escola podem ser cadastrados com fotos, tamanhos e variações.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--       NOVOS ARTIGOS — PORTAL DA PROFESSORA               -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="prof-alertas" class="help-article" data-portal="professora" data-modulo="acesso" data-keywords="alertas acesso chegada responsavel buscar tempo real notificacao banner">
+  <h2>🔔 Alertas de Acesso em Tempo Real</h2>
+  <p class="article-desc">Receba alertas instantâneos quando um responsável chegar para buscar um aluno da sua turma.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Automático (banner flutuante)</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Os alertas aparecem automaticamente como um <strong>banner flutuante</strong> no topo do portal. O sistema verifica a cada 10 segundos se algum responsável de aluno da sua turma foi identificado na entrada.</p>
+      <div class="mockup"><div class="mockup-header"><span>👩‍🏫 Portal da Professora</span><span></span></div><div class="mockup-content"><div style="background:#e6f4ea;border:1px solid var(--green);border-radius:6px;padding:10px;margin-bottom:10px;font-size:.82rem"><strong>🔔 Alerta de Acesso</strong><br>Maria Pereira (mãe) chegou para buscar <strong>Lorenzo Pereira</strong> — Year 2B<br><span style="font-size:.72rem;color:var(--muted)">Há 1 minuto</span></div><div style="color:var(--muted);font-size:.78rem;text-align:center">Conteúdo do portal...</div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>O alerta inclui: nome do responsável, parentesco, nome do aluno e há quanto tempo foi identificado. Prepare o aluno para a retirada.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>O banner desaparece após alguns segundos ou pode ser fechado manualmente. Alertas de pessoas desconhecidas são enviados para a recepção, não para a professora.</p></div></div>
+  </div>
+  <div class="info-box"><strong>ℹ️ Nota:</strong> Os alertas funcionam mesmo se você estiver em outra página do portal. O polling roda em background a cada 10 segundos.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso desativar os alertas?</summary><p>Não é recomendável, pois são essenciais para a segurança. Consulte a gestão se os alertas estiverem causando distração excessiva.</p></details>
+    <details><summary>Recebo alerta de alunos de outras turmas?</summary><p>Não. Você recebe apenas alertas de responsáveis dos alunos da sua turma.</p></details>
+  </div>
+</article>
+
+<article id="prof-diario" class="help-article" data-portal="professora" data-modulo="comunicacao" data-keywords="diario classe registro diario alimentacao soneca observacoes relatorio">
+  <h2>📖 Diário de Classe</h2>
+  <p class="article-desc">Registre o dia a dia da turma: alimentação, soneca, atividades e observações individuais.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Professora → Agenda Digital → Diário</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Dentro da <strong>Agenda Digital</strong>, use a aba "Diário" para preencher o registro do dia. Selecione a data e preencha os campos para toda a turma ou individualmente por aluno.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Registre: alimentação (comeu bem/parcial/não comeu), soneca (horários), atividades realizadas, e observações individuais importantes.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Adicione <strong>fotos do dia</strong> e um recado geral. Ao publicar, os pais recebem tudo na Agenda Digital do portal deles.</p></div></div>
+  </div>
+  <div class="tip-box"><strong>💡 Dica:</strong> Use "Salvar Rascunho" para ir adicionando informações ao longo do dia. Publique ao final do expediente com tudo completo.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso editar após publicar?</summary><p>Sim. A agenda pode ser editada mesmo após publicação. Os pais verão a versão atualizada.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               PORTAL DA EQUIPE                           -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="equipe-login" class="help-article" data-portal="equipe" data-keywords="equipe login acesso secretaria comercial financeiro manutencao compliance">
+  <h2>🔐 Login no Portal da Equipe</h2>
+  <p class="article-desc">Acesse o Portal da Equipe — unificado para Secretaria, Comercial, Financeiro, Infraestrutura e Compliance.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Login</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>suaescola.lumied.com.br/area-restrita</strong> e selecione "Portal da Equipe". Entre com email e senha cadastrados pelo gerente.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Após o login, a sidebar mostrará apenas as seções que seu perfil tem acesso. Cada seção é agrupada: Secretaria, Comercial, Financeiro, Infraestrutura, Compliance.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Se você tem acesso a mais de um portal (ex: também é professora), use o <strong>Hub</strong> (área-restrita) para alternar entre portais.</p></div></div>
+  </div>
+  <div class="info-box"><strong>ℹ️ Visibilidade:</strong> As seções visíveis dependem das features configuradas pelo gerente: atestados, crm, financeiro, manutencao, compliance. Se uma seção não aparece, peça ao gerente para liberar.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Por que não vejo todas as seções?</summary><p>O gerente configura quais features cada membro tem acesso. Se precisa de acesso a uma seção, solicite ao gerente.</p></details>
+  </div>
+</article>
+
+<article id="equipe-sec-atestados" class="help-article" data-portal="equipe" data-feature="atestados" data-modulo="atestados" data-keywords="atestados validar aprovar rejeitar secretaria documento medico">
+  <h2>✅ Atestados</h2>
+  <p class="article-desc">Valide ou rejeite atestados médicos enviados pelas professoras e pais.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Secretaria → Atestados</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Na sidebar, acesse <strong>Atestados</strong> no grupo Secretaria. Veja os atestados pendentes com foto do documento, aluno e período.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Verifique: nome do aluno, data, carimbo/CRM do médico, período. Clique na foto para ampliar.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Clique em <strong>"Validar"</strong> (faltas viram justificadas automaticamente) ou <strong>"Rejeitar"</strong> com motivo.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso reverter uma validação?</summary><p>Apenas o gerente pode reverter. Solicite se tiver validado por engano.</p></details>
+  </div>
+</article>
+
+<article id="equipe-sec-diplomas" class="help-article" data-portal="equipe" data-feature="atestados" data-modulo="diplomas" data-keywords="diplomas certificados emitir ranking gamificacao secretaria">
+  <h2>🏆 Diplomas</h2>
+  <p class="article-desc">Emita diplomas digitais e gerencie o sistema de gamificação por turma.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Secretaria → Diplomas</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Diplomas</strong> no grupo Secretaria. Veja diplomas emitidos e pendentes por turma.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Selecione modelo, aluno e personalize. O diploma fica disponível no portal dos pais.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Acompanhe o ranking de estrelas por turma. A gamificação é gerenciada pelas professoras.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Quem pode emitir diplomas?</summary><p>Professoras e secretaria com feature "atestados" habilitada podem emitir diplomas.</p></details>
+  </div>
+</article>
+
+<article id="equipe-sec-impressoes" class="help-article" data-portal="equipe" data-feature="atestados" data-keywords="impressoes imprimir fila copias pedidos secretaria xerox">
+  <h2>🖨️ Impressões</h2>
+  <p class="article-desc">Gerencie a fila de impressões solicitadas pelas professoras.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Secretaria → Impressões</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Impressões</strong> no grupo Secretaria. Veja a fila de solicitações por ordem de prioridade e data limite.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em um pedido para ver detalhes: arquivo, cópias, tipo (P&B/colorido), frente/verso. Baixe o arquivo e imprima.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Após imprimir, marque como <strong>"Pronta"</strong>. A professora será notificada para retirada.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso rejeitar um pedido?</summary><p>Sim, com um motivo (ex: "Arquivo corrompido", "Excede cota de cópias"). A professora pode reenviar.</p></details>
+  </div>
+</article>
+
+<article id="equipe-crm-dashboard" class="help-article" data-portal="equipe" data-feature="crm" data-modulo="crm" data-keywords="crm dashboard funil conversao leads metricas vendas comercial">
+  <h2>📊 Dashboard CRM</h2>
+  <p class="article-desc">Acompanhe métricas do funil comercial: leads, conversão, matrículas e metas.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Comercial → Dashboard</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Dashboard</strong> no grupo Comercial. Veja KPIs: leads novos, taxa de conversão, matrículas do mês e progresso das metas.</p>
+      <div class="mockup"><div class="mockup-header"><span>📊 Dashboard CRM</span><span>Abril/2026</span></div><div class="mockup-content"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--blue)">42</div><div class="lbl">Leads Novos</div></div></div><div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--green)">23%</div><div class="lbl">Conversão</div></div></div><div class="mockup-card"><div class="mockup-stat"><div class="num">8</div><div class="lbl">Matrículas</div></div></div><div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--red)">67%</div><div class="lbl">Meta</div></div></div></div></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Filtre por período, origem do lead (site, indicação, WhatsApp, presencial) e série desejada.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Clique nos cards para detalhar: lista de leads por etapa, histórico de interações e pipeline.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Os dados atualizam em tempo real?</summary><p>Sim. Cada lead movido no funil ou matrícula efetivada atualiza automaticamente o dashboard.</p></details>
+  </div>
+</article>
+
+<article id="equipe-crm-leads" class="help-article" data-portal="equipe" data-feature="crm" data-modulo="crm" data-keywords="leads cadastro contato interessados prospects telefone email">
+  <h2>👤 Leads</h2>
+  <p class="article-desc">Cadastre e gerencie famílias interessadas na escola.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Comercial → Leads</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Leads</strong> no grupo Comercial. Veja a lista com nome, contato, série desejada e score.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em um lead para ver histórico de interações (ligações, emails, visitas). Registre novos contatos e mova no funil.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Leads entram automaticamente via Matrícula Online, indicações ou cadastro manual.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>O score do lead é calculado automaticamente?</summary><p>Sim, baseado em interações, tempo no funil e completude dos dados. Quanto mais engajado, maior o score.</p></details>
+  </div>
+</article>
+
+<article id="equipe-crm-kanban" class="help-article" data-portal="equipe" data-feature="crm" data-modulo="crm" data-keywords="kanban funil vendas drag drop etapas pipeline comercial">
+  <h2>📋 Funil Kanban</h2>
+  <p class="article-desc">Visualize e mova leads entre etapas do funil com arrastar e soltar.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Comercial → Kanban</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Kanban</strong> no grupo Comercial. As colunas representam as etapas: Novo Lead → Contato → Visita → Proposta → Matriculado.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Arraste os cards de leads entre colunas para mover no funil. Cada card mostra nome, série, contato e score.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Clique no card para detalhar: agendar visita, registrar ligação, ou converter em matrícula.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso personalizar as etapas do funil?</summary><p>As etapas padrão podem ser configuradas pelo gerente em CRM → Configurações.</p></details>
+  </div>
+</article>
+
+<article id="equipe-crm-matriculas" class="help-article" data-portal="equipe" data-feature="crm" data-modulo="crm" data-keywords="matriculas vagas turmas inscritos capacidade comercial">
+  <h2>📝 Matrículas</h2>
+  <p class="article-desc">Acompanhe matrículas por turma com cards visuais mostrando vagas e inscritos.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Comercial → Matrículas</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Matrículas</strong>. Veja cards por turma com total de alunos, vagas abertas e lista de espera.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em uma turma para ver detalhes de cada matrícula: status, data, contrato assinado.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Converta leads do CRM em matrículas com um clique — os dados são preenchidos automaticamente.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso gerenciar lista de espera?</summary><p>Sim. Quando as vagas enchem, leads interessados ficam na lista de espera e são notificados quando abrir vaga.</p></details>
+  </div>
+</article>
+
+<article id="equipe-crm-contratos" class="help-article" data-portal="equipe" data-feature="crm" data-modulo="crm" data-keywords="contratos digitais assinatura eletronica templates variaveis verificacao">
+  <h2>📄 Contratos Digitais</h2>
+  <p class="article-desc">Gere contratos a partir de templates, envie para assinatura eletrônica e verifique autenticidade.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Comercial → Contratos</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Contratos</strong>. Crie um contrato selecionando template, família e preenchendo variáveis automaticamente.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Envie para a família. Ela acessa o link, verifica por email (código 6 dígitos), lê o contrato e assina (canvas digital).</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>O sistema registra evidências probatórias: hash SHA-256, IP, geolocalização, timestamp. Verificação pública em <code>/verificar.html?c=LUM-XXXXXXXX</code>.</p></div></div>
+  </div>
+  <div class="info-box"><strong>ℹ️ Validade Legal:</strong> Assinatura eletrônica simples com 2FA, conforme Art. 4º da Lei 14.063/2020. Válida para contratos de matrícula escolar.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Como criar templates?</summary><p>Vá em Contratos → Templates. Crie modelos HTML usando variáveis como {{familia_nome}}, {{aluno_nome}}, {{valor_mensal}}.</p></details>
+  </div>
+</article>
+
+<article id="equipe-crm-metas" class="help-article" data-portal="equipe" data-feature="crm" data-modulo="crm" data-keywords="metas comerciais vendas objetivo progresso acompanhar">
+  <h2>🎯 Metas Comerciais</h2>
+  <p class="article-desc">Defina e acompanhe metas de matrículas e conversão da equipe comercial.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Comercial → Metas</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Metas</strong>. Veja o progresso mensal: matrículas realizadas vs meta, taxa de conversão vs objetivo.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>O gerente define metas por período. O dashboard atualiza automaticamente conforme leads avançam no funil.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Exporte relatórios de performance por mês, trimestre ou ano.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Quem define as metas?</summary><p>O gerente define metas em Configurações → CRM → Metas. A equipe comercial visualiza e acompanha.</p></details>
+  </div>
+</article>
+
+<article id="equipe-fin-dashboard" class="help-article" data-portal="equipe" data-feature="financeiro" data-modulo="financeiro" data-keywords="financeiro dashboard receita despesa grafico inadimplencia">
+  <h2>💰 Dashboard Financeiro</h2>
+  <p class="article-desc">Visão geral financeira: receita, despesa, inadimplência e gráficos por período.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Financeiro → Dashboard</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Dashboard</strong> no grupo Financeiro. Veja receita recebida, prevista e inadimplência com gráfico de evolução.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Filtre por mês, turma ou tipo de receita. O gráfico compara receita vs despesa ao longo do tempo.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Clique em "Inadimplentes" para ver a lista detalhada de famílias com boletos atrasados.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso exportar relatórios?</summary><p>Sim. Clique no ícone de download para exportar em CSV ou PDF qualquer relatório financeiro.</p></details>
+  </div>
+</article>
+
+<article id="equipe-fin-mensalidades" class="help-article" data-portal="equipe" data-feature="financeiro" data-modulo="financeiro" data-keywords="mensalidades familias pagamento status cobranca vencimento">
+  <h2>📋 Mensalidades</h2>
+  <p class="article-desc">Acompanhe o status de pagamento de cada família, envie lembretes e gerencie cobranças.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Financeiro → Mensalidades</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Mensalidades</strong>. Veja a lista de famílias com status: pago, aberto, atrasado.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em uma família para ver histórico de pagamentos. Envie lembrete por email ou WhatsApp.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Para descontos ou renegociação, edite o boleto e aplique o ajuste com motivo para registro.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>A cobrança automática funciona?</summary><p>Sim. A régua de cobrança envia lembretes automáticos antes e após o vencimento, conforme configurado pelo gerente.</p></details>
+  </div>
+</article>
+
+<article id="equipe-fin-boletos" class="help-article" data-portal="equipe" data-feature="financeiro" data-modulo="financeiro" data-keywords="boletos gerar emitir segunda via compensacao banco inter pix">
+  <h2>🏦 Boletos</h2>
+  <p class="article-desc">Gere, envie e acompanhe boletos. Integração com Banco Inter e PIX.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Financeiro → Boletos</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Boletos</strong>. Veja boletos emitidos com status de compensação (pago, aberto, vencido).</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Gere 2ª via com juros/multa automáticos. Boletos PIX são confirmados em até 30 minutos.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>A sincronização com o Banco Inter é automática. Pagamentos por boleto bancário levam até 3 dias úteis.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso gerar boletos em lote?</summary><p>Sim. Use "Gerar Lote" para emitir boletos de todas as famílias de um mês de uma vez.</p></details>
+  </div>
+</article>
+
+<article id="equipe-infra-chamados" class="help-article" data-portal="equipe" data-feature="manutencao" data-keywords="chamados manutencao reparos infraestrutura predial consertos">
+  <h2>🔧 Chamados de Manutenção</h2>
+  <p class="article-desc">Gerencie chamados de reparo e manutenção da infraestrutura escolar.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Infraestrutura → Chamados</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Chamados</strong> no grupo Infraestrutura. Veja todos os chamados por prioridade e status.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em um chamado para ver detalhes, fotos e atualizar status (Pendente → Em andamento → Concluído).</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Ao concluir, adicione comentário com a solução. A pessoa que abriu é notificada.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Quem pode abrir chamados?</summary><p>Professoras, gerentes e membros da equipe com feature "manutencao" podem abrir chamados.</p></details>
+  </div>
+</article>
+
+<article id="equipe-infra-achados" class="help-article" data-portal="equipe" data-feature="manutencao" data-keywords="achados perdidos objetos encontrados devolucao retirada">
+  <h2>🔍 Achados e Perdidos</h2>
+  <p class="article-desc">Registre e gerencie objetos encontrados na escola.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Infraestrutura → Achados e Perdidos</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Achados e Perdidos</strong>. Veja itens registrados com foto, descrição e status.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Registre novos itens com foto, local e data. Marque como "Devolvido" quando reclamado.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Ao devolver, registre o nome de quem retirou (opcional) para controle.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Há prazo para manter itens?</summary><p>Configurável pelo gerente. Após o prazo, itens são arquivados automaticamente.</p></details>
+  </div>
+</article>
+
+<article id="equipe-infra-biblioteca" class="help-article" data-portal="equipe" data-feature="manutencao" data-modulo="biblioteca" data-keywords="biblioteca livros emprestimo devolucao catalogo">
+  <h2>📚 Biblioteca</h2>
+  <p class="article-desc">Gerencie empréstimos e devoluções de livros do acervo escolar.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Infraestrutura → Biblioteca</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Busque o livro no catálogo por título, autor ou ISBN.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Para emprestar, selecione o aluno e defina a data de devolução.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Na aba Empréstimos, acompanhe devoluções pendentes. Multas por atraso são calculadas automaticamente.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Os alunos podem reservar livros?</summary><p>Depende da configuração. Se habilitado, alunos podem reservar pelo portal e retirar na biblioteca.</p></details>
+  </div>
+</article>
+
+<article id="equipe-infra-cantina" class="help-article" data-portal="equipe" data-feature="manutencao" data-modulo="cantina" data-keywords="cantina refeitorio cardapio pedidos vendas">
+  <h2>🍽️ Cantina</h2>
+  <p class="article-desc">Gerencie o cardápio e pedidos da cantina escolar.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Infraestrutura → Cantina</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Configure o cardápio do dia/semana com itens e preços.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Gerencie pedidos e verifique restrições alimentares dos alunos antes de servir.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Acompanhe vendas e relatórios de consumo por período.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Alergias são destacadas?</summary><p>Sim. Alunos com restrições cadastradas têm um alerta visual ao lado do nome em todos os pedidos.</p></details>
+  </div>
+</article>
+
+<article id="equipe-infra-transporte" class="help-article" data-portal="equipe" data-feature="manutencao" data-modulo="transporte" data-keywords="transporte escolar rotas motoristas paradas">
+  <h2>🚌 Transporte</h2>
+  <p class="article-desc">Gerencie rotas de transporte escolar, motoristas e paradas.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Infraestrutura → Transporte</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Cadastre rotas com nome, horários, paradas e motorista responsável.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Vincule alunos às rotas e paradas de embarque/desembarque.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Gerencie substituições de motorista e alterações de horário com notificação automática.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Os pais veem as rotas?</summary><p>Sim. Informações de rota, parada e horário ficam visíveis no portal dos pais para alunos que usam transporte.</p></details>
+  </div>
+</article>
+
+<article id="equipe-comp-painel" class="help-article" data-portal="equipe" data-feature="compliance" data-modulo="compliance" data-keywords="compliance painel score conformidade problemas pendencias">
+  <h2>📋 Painel de Compliance</h2>
+  <p class="article-desc">Visão geral de conformidade: score 0-100, pendências e status de cada módulo.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Compliance → Painel</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Painel</strong> no grupo Compliance. O score reflete a conformidade geral da escola baseado em problemas abertos.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Veja o status de cada sub-módulo: certificações, inspeções, políticas, ponto, incidentes.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Clique nas pendências para resolver diretamente. Cada resolução melhora o score automaticamente.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Como o score é calculado?</summary><p>Score = 100 - (pontos de penalidade por problema aberto). Cada tipo de problema tem peso diferente.</p></details>
+  </div>
+</article>
+
+<article id="equipe-comp-ponto" class="help-article" data-portal="equipe" data-feature="compliance" data-modulo="compliance" data-keywords="ponto hora extra noturna banco horas importar csv clt trabalhista">
+  <h2>⏰ Ponto e Hora Extra</h2>
+  <p class="article-desc">Importe registros de ponto, verifique horas extras e gerencie banco de horas conforme CLT.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Compliance → Ponto</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Ponto</strong> no grupo Compliance. Veja o espelho de ponto mensal com entradas, saídas, horas trabalhadas e extras.</p>
+      <div class="mockup"><div class="mockup-header"><span>⏰ Ponto — Abril/2026</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">Importar CSV</span></div><div class="mockup-content"><table class="mockup-table"><tr><th>Func.</th><th>Data</th><th>Entrada</th><th>Saída</th><th>HE</th></tr><tr><td>Ana Clara</td><td>01/04</td><td>07:25</td><td>17:35</td><td><span class="mockup-pill yellow">1h05 (50%)</span></td></tr><tr><td>Ana Clara</td><td>02/04</td><td>07:30</td><td>16:30</td><td><span class="mockup-pill green">—</span></td></tr><tr><td>Beatriz</td><td>01/04</td><td>07:28</td><td>18:15</td><td><span class="mockup-pill red">1h45 (50%)</span></td></tr></table></div></div>
+    </div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em <strong>"Importar CSV"</strong> para upload de registros. Formato: professora_id;data;hora_entrada;hora_saida. O sistema pré-visualiza e processa cálculos CLT automaticamente.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Horas extras são calculadas com regras CLT: 50% em dias úteis, 100% em domingos/feriados. Hora noturna (22h-5h) com hora reduzida 52:30 e adicional 20%.</p></div></div>
+  </div>
+  <div class="warning-box"><strong>⚠️ Ciência:</strong> Horas extras não autorizadas geram alerta. A professora precisa tomar ciência (com selfie) antes de continuar usando o portal.</div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>O banco de horas tem prazo?</summary><p>Sim, 6 meses conforme Art. 59 §5° da CLT. O saldo é calculado mensalmente e alertas são emitidos quando próximo do vencimento.</p></details>
+    <details><summary>Tolerância de atraso é configurável?</summary><p>Sim. Em Config Ponto, ajuste a tolerância (padrão: 10 minutos, conforme Art. 58 §1° da CLT).</p></details>
+  </div>
+</article>
+
+<article id="equipe-comp-incidentes" class="help-article" data-portal="equipe" data-feature="compliance" data-modulo="compliance" data-keywords="incidentes bullying ocorrencia investigacao conselho tutelar">
+  <h2>🚨 Incidentes</h2>
+  <p class="article-desc">Registre incidentes, bullying e ocorrências com fluxo de investigação e encaminhamento.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Compliance → Incidentes</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Incidentes</strong>. Registre ocorrências com tipo, envolvidos, descrição detalhada e evidências.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Inicie a investigação: entreviste envolvidos, registre depoimentos, defina medidas.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Para casos graves, encaminhe ao Conselho Tutelar com documentação completa gerada pelo sistema.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Incidentes afetam o score de compliance?</summary><p>Sim. Incidentes abertos penalizam o score. Resolver e documentar adequadamente restaura os pontos.</p></details>
+  </div>
+</article>
+
+<article id="equipe-comp-certificacoes" class="help-article" data-portal="equipe" data-feature="compliance" data-modulo="compliance" data-keywords="certificacoes obrigatorias vencimento treinamentos alvara bombeiros sanitaria">
+  <h2>📜 Certificações</h2>
+  <p class="article-desc">Gerencie as 8 certificações obrigatórias com vencimento, treinamentos e alertas.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Compliance → Certificações</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Certificações</strong>. Veja o status de cada certificação: válida, vencendo ou vencida.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Registre novas certificações com data de emissão e vencimento. O sistema alerta automaticamente 30 dias antes do vencimento.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Vincule treinamentos às certificações. Registre a participação dos funcionários.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Quais certificações são obrigatórias?</summary><p>Alvará de funcionamento, AVCB (Bombeiros), Vigilância Sanitária, CND/FGTS, entre outras. O sistema inclui as 8 certificações padrão.</p></details>
+  </div>
+</article>
+
+<article id="equipe-comp-politicas" class="help-article" data-portal="equipe" data-feature="compliance" data-modulo="compliance" data-keywords="politicas documentos versao aceite obrigatorio assinatura">
+  <h2>📑 Políticas</h2>
+  <p class="article-desc">Repositório de políticas internas com versionamento e aceite obrigatório dos funcionários.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Compliance → Políticas</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Políticas</strong>. Crie e gerencie documentos de política interna com versionamento.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Defina quais funcionários devem assinar cada política. O sistema rastreia quem leu e aceitou.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Ao publicar nova versão, todos os funcionários são notificados para aceitar novamente.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>Posso gerar quiz sobre uma política?</summary><p>Sim! O sistema gera quizzes automáticos via IA (Claude) a partir do conteúdo da política, com nota mínima de 70%.</p></details>
+  </div>
+</article>
+
+<article id="equipe-comp-calendario" class="help-article" data-portal="equipe" data-feature="compliance" data-modulo="compliance" data-keywords="calendario regulatorio obrigacoes rais esocial fgts censo lgpd avcb">
+  <h2>📅 Calendário Regulatório</h2>
+  <p class="article-desc">Acompanhe as 13 obrigações regulatórias com prazos e status de cumprimento.</p>
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal da Equipe → Compliance → Calendário</div>
+  <h3>Passo a passo</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Calendário Regulatório</strong>. Veja todas as obrigações organizadas por mês com status.</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Obrigações incluem: RAIS, eSocial, FGTS, Censo Escolar, AVCB, LGPD RIPD, entre outras.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Marque como cumprida ao finalizar cada obrigação. O sistema alerta com antecedência sobre prazos.</p></div></div>
+  </div>
+  <div class="faq-section"><h3>Perguntas Frequentes</h3>
+    <details><summary>O calendário é personalizado por estado/município?</summary><p>O calendário base é nacional. Obrigações municipais (como alvará) podem ser adicionadas manualmente.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               PORTAL DA SECRETARIA (legado)              -->
 <!-- ════════════════════════════════════════════════════════ -->
 
 <article id="sec-login" class="help-article" data-portal="secretaria" data-keywords="secretaria login acesso area restrita secretary">
@@ -2465,7 +3143,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="sec-atestados" class="help-article" data-portal="secretaria" data-keywords="validacao atestados medicos aprovar rejeitar documento verificar secretaria">
+<article id="sec-atestados" class="help-article" data-portal="secretaria" data-modulo="atestados" data-keywords="validacao atestados medicos aprovar rejeitar documento verificar secretaria">
   <h2>✅ Validação de Atestados</h2>
   <p class="article-desc">Valide ou rejeite atestados médicos enviados pelas professoras e pais.</p>
 
@@ -2579,7 +3257,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="aluno-notas" class="help-article" data-portal="aluno" data-keywords="notas boletim media conceito resultado avaliacao prova trabalho aluno">
+<article id="aluno-notas" class="help-article" data-portal="aluno" data-modulo="notas" data-keywords="notas boletim media conceito resultado avaliacao prova trabalho aluno">
   <h2>📊 Notas</h2>
   <p class="article-desc">Consulte suas notas por disciplina, trimestre e tipo de avaliação.</p>
 
@@ -2630,7 +3308,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="aluno-frequencia" class="help-article" data-portal="aluno" data-keywords="frequencia presenca falta atraso porcentagem faltas justificadas aluno attendance">
+<article id="aluno-frequencia" class="help-article" data-portal="aluno" data-modulo="frequencia" data-keywords="frequencia presenca falta atraso porcentagem faltas justificadas aluno attendance">
   <h2>📅 Frequência</h2>
   <p class="article-desc">Acompanhe sua frequência escolar com detalhamento de presenças, faltas e atrasos.</p>
 
@@ -2694,7 +3372,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 </article>
 
-<article id="aluno-provas" class="help-article" data-portal="aluno" data-keywords="provas avaliacoes calendario datas horarios exames testes simulado conteudo">
+<article id="aluno-provas" class="help-article" data-portal="aluno" data-modulo="notas" data-keywords="provas avaliacoes calendario datas horarios exames testes simulado conteudo">
   <h2>📝 Provas</h2>
   <p class="article-desc">Consulte o calendário de provas com datas, horários e conteúdo programado.</p>
 
@@ -3042,6 +3720,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
 </main>
 </div><!-- /layout -->
 
+<script src="/config.js"></script>
 <script>
 /* ── Sidebar toggle (mobile) ── */
 function toggleSidebar(){
@@ -3056,29 +3735,22 @@ function toggleSection(el){
 
 /* ── Navigation ── */
 function navigateTo(hash){
-  // Hide welcome
   document.getElementById('welcomeScreen').style.display='none';
   document.getElementById('noResults').classList.remove('visible');
-  // Clear search
   document.getElementById('searchInput').value='';
-  // Hide all articles
   document.querySelectorAll('.help-article').forEach(a=>a.classList.remove('visible'));
-  // Show target
   const target=document.getElementById(hash);
   if(target){
     target.classList.add('visible');
     target.scrollIntoView({behavior:'smooth',block:'start'});
   }
-  // Update sidebar active state
   document.querySelectorAll('.sidebar-links a').forEach(a=>a.classList.remove('active'));
   const link=document.querySelector('.sidebar-links a[href="#'+hash+'"]');
   if(link){
     link.classList.add('active');
-    // Open parent section
     const section=link.closest('.sidebar-section');
     if(section && !section.classList.contains('open')) section.classList.add('open');
   }
-  // Close mobile sidebar
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('active');
 }
@@ -3095,11 +3767,9 @@ window.addEventListener('DOMContentLoaded',handleHash);
 function openPortal(portal){
   const section=document.querySelector('.sidebar-section[data-portal="'+portal+'"]');
   if(section){
-    // Open this section, close others
     document.querySelectorAll('.sidebar-section').forEach(s=>s.classList.remove('open'));
     section.classList.add('open');
-    // Navigate to first article
-    const firstLink=section.querySelector('.sidebar-links a');
+    const firstLink=section.querySelector('.sidebar-links a:not([style*="display: none"])');
     if(firstLink){
       const hash=firstLink.getAttribute('href').replace('#','');
       location.hash=hash;
@@ -3107,46 +3777,24 @@ function openPortal(portal){
   }
 }
 
-/* ── Portal filtering via ?portal= ── */
-const _portalParam = new URLSearchParams(location.search).get('portal');
-if (_portalParam) {
-  // Hide sidebar sections for other portals
-  document.querySelectorAll('.sidebar-section').forEach(s => {
-    if (s.dataset.portal !== _portalParam) s.style.display = 'none';
-  });
-  // Open the matching section
-  const mySection = document.querySelector('.sidebar-section[data-portal="' + _portalParam + '"]');
-  if (mySection) { mySection.classList.add('open'); mySection.style.display = ''; }
-  // Hide welcome portal cards for other portals
-  document.querySelectorAll('.portal-card').forEach(c => {
-    if (c.getAttribute('onclick')?.includes("'" + _portalParam + "'")) c.style.display = '';
-    else c.style.display = 'none';
-  });
-  // Filter search results to only this portal
-  const _origSearch = handleSearch;
-}
-
 /* ── Search ── */
+let _activePortal = null;
 function handleSearch(query){
   const q=query.toLowerCase().trim();
   const articles=document.querySelectorAll('.help-article');
   const welcome=document.getElementById('welcomeScreen');
   const noResults=document.getElementById('noResults');
-
   if(!q){
-    // Empty search — show welcome, hide articles
     welcome.style.display='';
     noResults.classList.remove('visible');
     articles.forEach(a=>a.classList.remove('visible'));
     return;
   }
-
   welcome.style.display='none';
   let found=0;
-
   articles.forEach(a=>{
-    // If portal filter active, skip articles from other portals
-    if(_portalParam && a.dataset.portal !== _portalParam){ a.classList.remove('visible'); return; }
+    if(a.style.display==='none'){ return; }
+    if(_activePortal && a.dataset.portal !== _activePortal){ a.classList.remove('visible'); return; }
     const title=(a.querySelector('h2')?.textContent||'').toLowerCase();
     const desc=(a.querySelector('.article-desc')?.textContent||'').toLowerCase();
     const keywords=(a.dataset.keywords||'').toLowerCase();
@@ -3154,9 +3802,115 @@ function handleSearch(query){
     a.classList.toggle('visible',match);
     if(match) found++;
   });
-
   noResults.classList.toggle('visible',found===0);
 }
+
+/* ── Module & Feature Gating ── */
+(async function initGating(){
+  const SUPABASE_URL = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_URL)
+    ? CONFIG.SUPABASE_URL
+    : 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+  const ANON = (typeof CONFIG !== 'undefined' && CONFIG.SUPABASE_ANON)
+    ? CONFIG.SUPABASE_ANON
+    : '';
+  const API = SUPABASE_URL + '/functions/v1/api';
+  const API_DIP = SUPABASE_URL + '/functions/v1/diplomas';
+  const H = { 'Content-Type':'application/json', 'apikey':ANON, 'Authorization':'Bearer '+ANON };
+
+  // 1. Detect portal from URL param or session token
+  let portal = new URLSearchParams(location.search).get('portal');
+  // Map legacy "secretaria" param to "equipe"
+  if(portal === 'secretaria') portal = 'equipe';
+
+  if(!portal){
+    // Auto-detect from session tokens
+    if(localStorage.getItem('mb_token')) portal = 'pais';
+    else if(localStorage.getItem('prof_token')) portal = 'professora';
+    else if(localStorage.getItem('sec_token')) portal = 'equipe';
+    // gerente uses gerente_sessoes — check via different key patterns
+    else {
+      try {
+        for(const k of Object.keys(localStorage)){
+          if(k.includes('gerente') && k.includes('token')){ portal='gerente'; break; }
+        }
+      } catch(_){}
+    }
+  }
+  _activePortal = portal;
+
+  // 2. Load school's enabled modules (public action)
+  let enabledModules = null;
+  if(ANON){
+    try {
+      const r = await fetch(API, { method:'POST', headers:H, body:JSON.stringify({action:'modulos_habilitados'}) });
+      const d = await r.json();
+      if(d && Array.isArray(d.modulos)) enabledModules = new Set(d.modulos);
+    } catch(_){}
+  }
+
+  // 3. For Equipe users, load their features
+  let userFeatures = null;
+  if(portal === 'equipe'){
+    const token = localStorage.getItem('sec_token');
+    if(token){
+      try {
+        const r = await fetch(API_DIP, { method:'POST', headers:H, body:JSON.stringify({action:'secretaria_perfil', _token:token}) });
+        const d = await r.json();
+        if(d && !d.error && d.features) userFeatures = new Set(d.features);
+      } catch(_){}
+    }
+  }
+
+  // 4. Apply portal filter
+  if(portal){
+    document.querySelectorAll('.sidebar-section').forEach(s => {
+      if(s.dataset.portal !== portal) s.style.display = 'none';
+    });
+    const mySection = document.querySelector('.sidebar-section[data-portal="'+portal+'"]');
+    if(mySection){ mySection.classList.add('open'); mySection.style.display = ''; }
+    // Filter welcome cards
+    document.querySelectorAll('.portal-card').forEach(c => {
+      const onclick = c.getAttribute('onclick') || '';
+      if(!onclick.includes("'"+portal+"'")) c.style.display = 'none';
+    });
+    // Hide articles from other portals
+    document.querySelectorAll('.help-article').forEach(a => {
+      if(a.dataset.portal && a.dataset.portal !== portal) a.style.display = 'none';
+    });
+  }
+
+  // 5. Apply module gating (hide articles/links for disabled modules)
+  if(enabledModules){
+    function hideByModulo(el){
+      const mod = el.dataset.modulo;
+      if(mod && !enabledModules.has(mod)){
+        el.style.display = 'none';
+      }
+    }
+    document.querySelectorAll('.help-article[data-modulo]').forEach(hideByModulo);
+    document.querySelectorAll('.sidebar-links a[data-modulo]').forEach(hideByModulo);
+  }
+
+  // 6. Apply feature gating for Equipe
+  if(userFeatures){
+    function hideByFeature(el){
+      const feat = el.dataset.feature;
+      if(feat && !userFeatures.has(feat)){
+        el.style.display = 'none';
+      }
+    }
+    document.querySelectorAll('.help-article[data-feature]').forEach(hideByFeature);
+    document.querySelectorAll('.sidebar-links a[data-feature]').forEach(hideByFeature);
+  }
+
+  // 7. Clean up empty sidebar sections
+  document.querySelectorAll('.sidebar-section').forEach(s => {
+    if(s.style.display === 'none') return;
+    const visibleLinks = [...s.querySelectorAll('.sidebar-links a')].filter(a => a.style.display !== 'none');
+    if(visibleLinks.length === 0) s.style.display = 'none';
+  });
+
+})();
 </script>
 
 <!-- CTA Banner -->
