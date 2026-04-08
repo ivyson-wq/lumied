@@ -3662,7 +3662,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // ── DATA ──────────────────────────────────────────────
   async function loadData() {
     const data = await api({ action:'alunos_list' });
-    const list = Array.isArray(data) ? data : (data.data || []);
+    const raw = Array.isArray(data) ? data : (data.data || []);
+    const list = raw.filter(a => a.ativo !== false);
     allData = list; updateStats(); renderTable();
     loadAiInsights();
   }
@@ -5385,63 +5386,93 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta'];
     // diasMap[dia][atividade_nome][turma_nome] = [criança, ...]
     const diasMap = {};
-    DIAS.forEach(d => diasMap[d] = {});
+    DIAS.forEach(d => diasMap[d] = { manha: {}, tarde: {} });
 
+    // Monta mapa de horários das atividades para resolver slots vazios
+    const ativHorariosMap = {};
+    todasAtiv.forEach(a => {
+      (a.horarios||[]).forEach(h => {
+        ativHorariosMap[a.id + '|' + (h.turma||'')] = h;
+      });
+    });
+
+    // diasMap[dia][periodo][atividade_nome][turma_nome] = [criança, ...]
+    // periodo = 'manha' ou 'tarde'
     allInscricoesAtiv.forEach(ins => {
       (ins.turmas_selecionadas||[]).forEach(ts => {
-        // Descobre o nome da atividade a partir do ID
         const ativ = todasAtiv.find(a => a.id === ts.atividade_id);
         const ativNome = ativ?.nome || 'Atividade';
         const turmaNome = ts.turma || 'Turma';
-        (ts.slots||[]).forEach(slot => {
+        // Resolve slots: usa os da inscrição, ou busca nos horários da atividade
+        let slots = ts.slots && ts.slots.length ? ts.slots : null;
+        if (!slots) {
+          const horario = ativHorariosMap[ts.atividade_id + '|' + turmaNome];
+          slots = horario?.slots || [];
+        }
+        slots.forEach(slot => {
           if (!diasMap[slot.dia]) return;
-          if (!diasMap[slot.dia][ativNome]) diasMap[slot.dia][ativNome] = {};
-          if (!diasMap[slot.dia][ativNome][turmaNome]) diasMap[slot.dia][ativNome][turmaNome] = [];
-          diasMap[slot.dia][ativNome][turmaNome].push({ nome: ins.nome_crianca, serie: ins.serie });
+          // Determina período pela hora de início
+          const hora = parseInt((slot.inicio||'12:00').split(':')[0]);
+          const periodo = hora < 12 ? 'manha' : 'tarde';
+          if (!diasMap[slot.dia][periodo]) diasMap[slot.dia][periodo] = {};
+          if (!diasMap[slot.dia][periodo][ativNome]) diasMap[slot.dia][periodo][ativNome] = {};
+          if (!diasMap[slot.dia][periodo][ativNome][turmaNome]) diasMap[slot.dia][periodo][ativNome][turmaNome] = [];
+          diasMap[slot.dia][periodo][ativNome][turmaNome].push({ nome: ins.nome_crianca, serie: ins.serie });
         });
       });
     });
 
     DIAS.forEach(dia => {
-      // Conta total único de crianças no dia (evita duplicatas por slot)
       const criancasNoDia = new Set();
-      Object.values(diasMap[dia]).forEach(turmas =>
-        Object.values(turmas).forEach(lista => lista.forEach(c => criancasNoDia.add(c.nome)))
-      );
+      ['manha','tarde'].forEach(p => {
+        Object.values(diasMap[dia][p]||{}).forEach(turmas =>
+          Object.values(turmas).forEach(lista => lista.forEach(c => criancasNoDia.add(c.nome)))
+        );
+      });
       const count = criancasNoDia.size;
       document.getElementById('adCount_'+dia).textContent = count;
       const listEl = document.getElementById('adList_'+dia);
       if (!count) { listEl.innerHTML = '<div class="dia-vazio">Nenhuma criança</div>'; return; }
 
-      const atividadesNoDia = Object.entries(diasMap[dia]);
-
-      listEl.innerHTML = atividadesNoDia.length ? atividadesNoDia.map(([ativNome, turmas]) => {
-        const turmasHTML = Object.entries(turmas).map(([turmaNome, criancas]) => {
-          const criancasHTML = criancas.map(c =>
-            `<div class="dia-crianca-item" style="padding:4px 0 4px 8px;">
-              <div class="dia-crianca-dot" style="width:5px;height:5px;margin-top:6px;background:var(--muted);opacity:.5;"></div>
-              <div class="dia-crianca-info">
-                <strong>${esc(c.nome)}</strong>
-                ${c.serie?`<span>${esc(c.serie)}</span>`:''}
+      let html = '';
+      [['manha','☀️ Manhã','#e67e22'],['tarde','🌙 Tarde','#1a6bb5']].forEach(([periodo, label, cor]) => {
+        const atividades = Object.entries(diasMap[dia][periodo]||{});
+        if (!atividades.length) return;
+        const totalPeriodo = atividades.reduce((s,[,turmas]) => s + Object.values(turmas).reduce((s2,l) => s2+l.length, 0), 0);
+        html += `<div style="margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:700;color:${cor};margin-bottom:8px;padding:4px 8px;background:${cor}11;border-radius:6px;display:flex;align-items:center;gap:6px;">
+            ${label} <span style="font-weight:500;font-size:10px;color:var(--muted);">(${totalPeriodo})</span>
+          </div>`;
+        html += atividades.map(([ativNome, turmas]) => {
+          const turmasHTML = Object.entries(turmas).map(([turmaNome, criancas]) => {
+            const criancasHTML = criancas.map(c =>
+              `<div class="dia-crianca-item" style="padding:4px 0 4px 8px;">
+                <div class="dia-crianca-dot" style="width:5px;height:5px;margin-top:6px;background:var(--muted);opacity:.5;"></div>
+                <div class="dia-crianca-info">
+                  <strong>${esc(c.nome)}</strong>
+                  ${c.serie?`<span>${esc(c.serie)}</span>`:''}
+                </div>
+              </div>`
+            ).join('');
+            return `<div style="margin-bottom:6px;">
+              <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0 2px;border-bottom:1px dashed #e8e3dc;margin-bottom:2px;">
+                🕐 ${esc(turmaNome)} <span style="font-weight:400;color:#bbb;">(${criancas.length})</span>
               </div>
-            </div>`
-          ).join('');
-          return `<div style="margin-bottom:6px;">
-            <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0 2px;border-bottom:1px dashed #e8e3dc;margin-bottom:2px;">
-              🕐 ${esc(turmaNome)} <span style="font-weight:400;color:#bbb;">(${criancas.length})</span>
+              ${criancasHTML}
+            </div>`;
+          }).join('');
+          const tot = Object.values(turmas).reduce((s,l)=>s+l.length,0);
+          return `<div style="margin-bottom:10px;border-bottom:1px solid #f0ece6;padding-bottom:8px;">
+            <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>
+              ${esc(ativNome)} <span style="font-weight:500;color:var(--muted);font-size:10px;">(${tot})</span>
             </div>
-            ${criancasHTML}
+            ${turmasHTML}
           </div>`;
         }).join('');
-        const tot = Object.values(turmas).reduce((s,l)=>s+l.length,0);
-        return `<div style="margin-bottom:10px;border-bottom:1px solid #f0ece6;padding-bottom:8px;">
-          <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>
-            ${esc(ativNome)} <span style="font-weight:500;color:var(--muted);font-size:10px;">(${tot})</span>
-          </div>
-          ${turmasHTML}
-        </div>`;
-      }).join('') : '<div class="dia-vazio">Nenhuma criança</div>';
+        html += '</div>';
+      });
+      listEl.innerHTML = html || '<div class="dia-vazio">Nenhuma criança</div>';
     });
 
     // ── Ocupação por atividade ──
