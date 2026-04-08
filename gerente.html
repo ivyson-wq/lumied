@@ -5336,12 +5336,16 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   var allInscricoesAtiv = [];
 
   async function loadAtivDashboard() {
+    console.log('[ATIV] loadAtivDashboard chamada');
     const [alunosRaw, atividades] = await Promise.all([
       api({ action:'alunos_list' }),
       api({ action:'atividades_list_all' })
     ]);
+    console.log('[ATIV] alunosRaw type:', typeof alunosRaw, Array.isArray(alunosRaw), 'atividades type:', typeof atividades, Array.isArray(atividades));
 
     const todosAlunos = Array.isArray(alunosRaw) ? alunosRaw : (alunosRaw.data || []);
+    console.log('[ATIV] todosAlunos:', todosAlunos.length, 'com ativ:', todosAlunos.filter(a => a.atividades_ids && a.atividades_ids.length).length);
+    if (todosAlunos.length > 0) console.log('[ATIV] sample aluno:', JSON.stringify({nome: todosAlunos[0].nome, atividades_ids: todosAlunos[0].atividades_ids, turmas_sel: todosAlunos[0].turmas_selecionadas?.length}));
     // Filtra alunos com atividades e mapeia para formato esperado
     allInscricoesAtiv = todosAlunos.filter(a => a.atividades_ids && a.atividades_ids.length).map(a => ({
       id: a.id, nome_crianca: a.nome, email: a.email,
