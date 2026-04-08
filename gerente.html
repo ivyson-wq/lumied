@@ -888,31 +888,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       <!-- DASHBOARD -->
       <div id="panelDashboard" class="panel">
-        <!-- LUMI SEARCH BAR (central no dashboard) -->
-        <div style="max-width:700px;margin:0 auto 32px;text-align:center;">
-          <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;" id="lumiGreeting">Bom dia!</h2>
-          <p id="aiDailyResume" style="font-size:13px;color:var(--muted);margin-bottom:16px;">Carregando insights do dia...</p>
-          <div style="position:relative;" id="lumiSearchWrap">
-            <input type="text" id="lumiDashInput" placeholder="Pergunte qualquer coisa à Lumi... ex: Como está a inadimplência?" style="width:100%;padding:16px 56px 16px 48px;border:2px solid #e2dbd1;border-radius:16px;font-size:15px;font-family:inherit;outline:none;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.04);transition:border-color .2s,box-shadow .2s;" onfocus="this.style.borderColor='#6B3FA0';this.style.boxShadow='0 4px 24px rgba(107,63,160,.12)';" onblur="this.style.borderColor='#e2dbd1';this.style.boxShadow='0 4px 20px rgba(0,0,0,.04)';" onkeydown="if(event.key==='Enter')lumiDashPerguntar()">
-            <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;pointer-events:none;">✨</span>
-            <button onclick="lumiDashPerguntar()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6B3FA0,#1A6BB5);color:#fff;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">→</button>
-          </div>
-          <div id="lumiDashResponse" style="display:none;margin-top:16px;text-align:left;background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;font-size:13px;color:var(--text);line-height:1.6;"></div>
-        </div>
-
-        <!-- AI Insights -->
-        <div class="section-header-ai">
-          <h2>Insights da Lumi</h2>
-          <span class="lumi-badge">✨ IA</span>
-        </div>
-        <div class="insights-grid" id="aiInsightsGrid">
-          <div class="insight-card">
-            <div class="insight-icon">📊</div>
-            <div class="insight-title">Analisando dados...</div>
-            <div class="insight-text">A Lumi está coletando insights do dia para você.</div>
-          </div>
-        </div>
-
         <div class="stats-grid">
           <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="sTotal">—</div><div class="stat-sub">alunos</div></div>
           <div class="stat-card" data-g="integral"><div class="stat-label">Integral</div><div class="stat-value" id="sIntegral">—</div><div class="stat-sub">todas freq.</div></div>
@@ -1003,6 +978,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <!-- Ocupação por atividade -->
         <div class="sec-title" style="margin-bottom:16px;">🎯 Ocupação por Atividade</div>
         <div id="atOcupacaoGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:28px;"></div>
+
+        <!-- Alunos por atividade -->
+        <div class="sec-title" style="margin-bottom:16px;">👥 Alunos por Atividade</div>
+        <div id="atAlunosPorAtivGrid" style="display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:28px;"></div>
 
         <!-- Tabela de inscrições -->
         <div class="sec-title">Inscrições Recebidas <span class="count-badge" id="adInscricoesCount">0</span>
@@ -3665,15 +3644,16 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const raw = Array.isArray(data) ? data : (data.data || []);
     const list = raw.filter(a => a.ativo !== false);
     allData = list; updateStats(); renderTable();
-    loadAiInsights();
   }
 
   // Lumi search bar no dashboard
   async function lumiDashPerguntar() {
     const input = document.getElementById('lumiDashInput');
+    if (!input) return;
     const pergunta = input.value.trim();
     if (!pergunta) return;
     const respDiv = document.getElementById('lumiDashResponse');
+    if (!respDiv) return;
     respDiv.style.display = 'block';
     respDiv.innerHTML = '<span style="color:var(--muted);">✨ Analisando...</span>';
     try {
@@ -3722,7 +3702,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       `).join('');
       // Update greeting with resume
       const resumo = insights.find(i => i.categoria === 'resumo');
-      if (resumo) document.getElementById('aiDailyResume').textContent = resumo.descricao;
+      const resumeEl = document.getElementById('aiDailyResume');
+      if (resumo && resumeEl) resumeEl.textContent = resumo.descricao;
     } catch (e) { console.log('[AI] Insights not loaded:', e); }
   }
 
@@ -5389,10 +5370,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     DIAS.forEach(d => diasMap[d] = { manha: {}, tarde: {} });
 
     // Monta mapa de horários das atividades para resolver slots vazios
+    // Usa chave normalizada (sem zero à esquerda) para matching flexível
     const ativHorariosMap = {};
+    function normTurma(t) { return (t||'').replace(/\b0(\d)/g, '$1'); }
     todasAtiv.forEach(a => {
       (a.horarios||[]).forEach(h => {
-        ativHorariosMap[a.id + '|' + (h.turma||'')] = h;
+        ativHorariosMap[a.id + '|' + normTurma(h.turma)] = h;
       });
     });
 
@@ -5403,10 +5386,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         const ativ = todasAtiv.find(a => a.id === ts.atividade_id);
         const ativNome = ativ?.nome || 'Atividade';
         const turmaNome = ts.turma || 'Turma';
-        // Resolve slots: usa os da inscrição, ou busca nos horários da atividade
+        // Resolve slots: usa os da inscrição, ou busca nos horários da atividade (matching flexível)
         let slots = ts.slots && ts.slots.length ? ts.slots : null;
         if (!slots) {
-          const horario = ativHorariosMap[ts.atividade_id + '|' + turmaNome];
+          const horario = ativHorariosMap[ts.atividade_id + '|' + normTurma(turmaNome)];
           slots = horario?.slots || [];
         }
         slots.forEach(slot => {
@@ -5503,6 +5486,47 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <span style="font-size:11px;color:var(--muted);margin-left:auto;">R$ ${Number(a.preco).toFixed(2).replace('.',',')}/mês</span>
           </div>
           ${turmas||'<span style="font-size:12px;color:var(--muted);">Sem turmas.</span>'}
+        </div>`;
+      }).join('');
+    }
+
+    // ── Alunos por atividade ──
+    const ativGrid = document.getElementById('atAlunosPorAtivGrid');
+    if (!todasAtiv.length) { ativGrid.innerHTML = ''; }
+    else {
+      // Agrupa inscritos por atividade → turma
+      const porAtiv = {};
+      allInscricoesAtiv.forEach(ins => {
+        (ins.turmas_selecionadas||[]).forEach(ts => {
+          const ativ = todasAtiv.find(a => a.id === ts.atividade_id);
+          if (!ativ) return;
+          if (!porAtiv[ativ.nome]) porAtiv[ativ.nome] = { cor: ativ.cor || '#C8102E', turmas: {} };
+          const turmaNome = ts.turma || 'Sem turma';
+          if (!porAtiv[ativ.nome].turmas[turmaNome]) porAtiv[ativ.nome].turmas[turmaNome] = [];
+          porAtiv[ativ.nome].turmas[turmaNome].push(ins.nome_crianca);
+        });
+      });
+
+      ativGrid.innerHTML = Object.entries(porAtiv).sort((a,b) => a[0].localeCompare(b[0])).map(([ativNome, info]) => {
+        const totalAtiv = Object.values(info.turmas).reduce((s,l) => s+l.length, 0);
+        const turmasHTML = Object.entries(info.turmas).sort((a,b) => a[0].localeCompare(b[0])).map(([turmaNome, alunos]) => {
+          const alunosSorted = [...alunos].sort((a,b) => a.localeCompare(b));
+          return `<div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;padding:4px 0 4px;border-bottom:1px dashed #e8e3dc;margin-bottom:4px;">
+              🕐 ${esc(turmaNome)} <span style="font-weight:400;color:#bbb;">(${alunos.length})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 16px;">
+              ${alunosSorted.map(n => `<div style="font-size:12px;padding:3px 0;color:var(--text);">• ${esc(n)}</div>`).join('')}
+            </div>
+          </div>`;
+        }).join('');
+        return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <span style="width:12px;height:12px;border-radius:50%;background:${info.cor};flex-shrink:0;display:inline-block;"></span>
+            <span style="font-family:'Lora',serif;font-size:15px;font-weight:700;color:var(--text);">${esc(ativNome)}</span>
+            <span style="font-size:12px;color:var(--muted);margin-left:auto;">${totalAtiv} aluno(s)</span>
+          </div>
+          ${turmasHTML}
         </div>`;
       }).join('');
     }
