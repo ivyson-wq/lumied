@@ -3204,8 +3204,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     realtimeChannel = sbClient.channel('gerente-dashboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alunos' }, () => {
         if(document.getElementById('panelDashboard').classList.contains('active')) loadData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inscricoes_atividades' }, () => {
         if(document.getElementById('panelDashAtiv').classList.contains('active')) loadAtivDashboard();
       })
       .subscribe();
@@ -5284,12 +5282,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   var allInscricoesAtiv = [];
 
   async function loadAtivDashboard() {
-    const [inscricoes, atividades] = await Promise.all([
-      api({ action:'inscricoes_atividades_list' }),
+    const [alunosRaw, atividades] = await Promise.all([
+      api({ action:'alunos_list' }),
       api({ action:'atividades_list_all' })
     ]);
 
-    allInscricoesAtiv = Array.isArray(inscricoes) ? inscricoes : [];
+    const todosAlunos = Array.isArray(alunosRaw) ? alunosRaw : (alunosRaw.data || []);
+    // Filtra alunos com atividades e mapeia para formato esperado
+    allInscricoesAtiv = todosAlunos.filter(a => a.atividades_ids && a.atividades_ids.length).map(a => ({
+      id: a.id, nome_crianca: a.nome, email: a.email,
+      nome_resp: a.responsavel_nome || a.resp_nome || '',
+      serie: a.serie || a.turma || '',
+      atividades_ids: a.atividades_ids,
+      turmas_selecionadas: a.turmas_selecionadas,
+      almoco_dias: a.almoco_dias, criado_em: a.criado_em,
+    }));
     const todasAtiv   = Array.isArray(atividades)  ? atividades  : [];
 
     // ── Stats gerais ──

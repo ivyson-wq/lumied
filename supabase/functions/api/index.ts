@@ -357,13 +357,13 @@ serve(async (req: Request) => {
     const { data: atividades } = await admin.from("atividades").select("*").eq("ativo", true).order("ordem");
     if (!atividades?.length) return ok([]);
 
-    // Busca todas as inscrições para contar por atividade+turma
-    const { data: inscricoes } = await admin.from("inscricoes_atividades").select("turmas_selecionadas");
+    // Busca turmas_selecionadas dos alunos para contar por atividade+turma
+    const { data: alunosAtiv } = await admin.from("alunos").select("turmas_selecionadas").not("turmas_selecionadas", "is", null);
 
     // Monta mapa: "atividade_id|turma_nome" → contagem
     const ocupacao: Record<string, number> = {};
-    for (const ins of inscricoes ?? []) {
-      for (const ts of (ins.turmas_selecionadas ?? [])) {
+    for (const al of alunosAtiv ?? []) {
+      for (const ts of (al.turmas_selecionadas ?? [])) {
         const key = `${ts.atividade_id}|${ts.turma}`;
         ocupacao[key] = (ocupacao[key] || 0) + 1;
       }
@@ -386,14 +386,22 @@ serve(async (req: Request) => {
   if (action === "minha_agenda") {
     const { email } = body as { email: string };
     if (!email) return err("E-mail obrigatório.");
-    const [solicitacoes, inscricoes, ausencias] = await Promise.all([
+    const [solicitacoes, alunosAtiv, ausencias] = await Promise.all([
       admin.from("solicitacoes").select("*").eq("email", email).order("criado_em", { ascending: false }),
-      admin.from("inscricoes_atividades").select("*").eq("email", email).order("criado_em", { ascending: false }),
+      admin.from("alunos").select("id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").or(`email.eq.${email},familia_email.eq.${email}`).not("atividades_ids", "is", null),
       admin.from("ausencias").select("*").eq("email_resp", email).gte("data_ausencia", new Date().toISOString().split("T")[0]),
     ]);
+    // Map alunos to inscricoes format for backwards compat
+    const inscricoes = (alunosAtiv.data ?? []).map(a => ({
+      id: a.id, email: a.email, nome_crianca: a.nome,
+      nome_resp: a.responsavel_nome || a.resp_nome || '',
+      serie: a.serie || a.turma || '',
+      atividades_ids: a.atividades_ids, turmas_selecionadas: a.turmas_selecionadas,
+      almoco_dias: a.almoco_dias, criado_em: a.criado_em,
+    }));
     return ok({
       solicitacoes: solicitacoes.data ?? [],
-      inscricoes: inscricoes.data ?? [],
+      inscricoes,
       ausencias: ausencias.data ?? [],
     });
   }
@@ -437,17 +445,29 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
-  // Inscrição pública em atividades
+  // Inscrição pública em atividades — grava na tabela alunos
   if (action === "inscricao_atividade_submit") {
     const { email, nome_resp, nome_crianca, serie, atividades_ids, atividades_detalhe, turmas_selecionadas } = body as Record<string, unknown>;
     if (!email || !nome_resp || !nome_crianca || !atividades_ids) return err("Campos obrigatórios ausentes.");
-    const { error } = await admin.from("inscricoes_atividades").insert({
-      email, nome_resp, nome_crianca, serie,
-      atividades_ids,
-      atividades_detalhe: atividades_detalhe ?? [],
-      turmas_selecionadas: turmas_selecionadas ?? []
-    });
-    if (error) return err(error.message);
+    // Busca aluno pelo nome (ilike)
+    const { data: found } = await admin.from("alunos").select("id").ilike("nome", nome_crianca as string).limit(1).single();
+    if (found) {
+      const { error } = await admin.from("alunos").update({
+        atividades_ids: atividades_ids as string[],
+        turmas_selecionadas: turmas_selecionadas ?? [],
+      }).eq("id", found.id);
+      if (error) return err(error.message);
+    } else {
+      // Aluno não cadastrado — cria na tabela alunos
+      const { error } = await admin.from("alunos").insert({
+        nome: nome_crianca, email: email || null, serie: serie || null,
+        responsavel_nome: nome_resp,
+        atividades_ids: atividades_ids as string[],
+        turmas_selecionadas: turmas_selecionadas ?? [],
+        ativo: true,
+      });
+      if (error) return err(error.message);
+    }
     return ok({ success: true });
   }
 
@@ -1050,7 +1070,7 @@ serve(async (req: Request) => {
   if (action === "alunos_list") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
-    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, turno, dias_semana, criado_em").order("nome");
+    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, turno, dias_semana, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").order("nome");
     return ok(data ?? []);
   }
 
@@ -1196,10 +1216,10 @@ serve(async (req: Request) => {
     const { data: atividades } = await admin.from("atividades").select("*").order("ordem");
     if (!atividades?.length) return ok([]);
 
-    const { data: inscricoes } = await admin.from("inscricoes_atividades").select("turmas_selecionadas");
+    const { data: alunosAtiv } = await admin.from("alunos").select("turmas_selecionadas").not("turmas_selecionadas", "is", null);
     const ocupacao: Record<string, number> = {};
-    for (const ins of inscricoes ?? []) {
-      for (const ts of (ins.turmas_selecionadas ?? [])) {
+    for (const al of alunosAtiv ?? []) {
+      for (const ts of (al.turmas_selecionadas ?? [])) {
         const key = `${ts.atividade_id}|${ts.turma}`;
         ocupacao[key] = (ocupacao[key] || 0) + 1;
       }
@@ -1247,12 +1267,39 @@ serve(async (req: Request) => {
 
   // ── Inscrições em atividades (autenticado) ────────────────────
   if (action === "inscricoes_atividades_list") {
-    const { data } = await admin.from("inscricoes_atividades").select("*").order("criado_em", { ascending: false });
-    return ok(data ?? []);
+    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").not("atividades_ids", "is", null).order("nome");
+    // Map to expected frontend fields
+    const mapped = (data ?? []).map(a => ({
+      id: a.id,
+      nome_crianca: a.nome,
+      email: a.email,
+      nome_resp: a.responsavel_nome || a.resp_nome || '',
+      serie: a.serie || a.turma || '',
+      atividades_ids: a.atividades_ids,
+      turmas_selecionadas: a.turmas_selecionadas,
+      almoco_dias: a.almoco_dias,
+      criado_em: a.criado_em,
+    }));
+    return ok(mapped);
   }
   if (action === "inscricoes_atividades_delete") {
     const { id } = body as { id: string };
-    await admin.from("inscricoes_atividades").delete().eq("id", id);
+    // Clear atividades from aluno instead of deleting
+    const { error } = await admin.from("alunos").update({ atividades_ids: null, turmas_selecionadas: null, almoco_dias: null }).eq("id", id);
+    if (error) return err(error.message);
+    return ok({ success: true });
+  }
+  if (action === "aluno_update_atividades") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { id, atividades_ids, turmas_selecionadas, almoco_dias } = body as any;
+    if (!id) return err("id obrigatório.");
+    const updateData: any = {};
+    if (atividades_ids !== undefined) updateData.atividades_ids = atividades_ids;
+    if (turmas_selecionadas !== undefined) updateData.turmas_selecionadas = turmas_selecionadas;
+    if (almoco_dias !== undefined) updateData.almoco_dias = almoco_dias;
+    const { error } = await admin.from("alunos").update(updateData).eq("id", id);
+    if (error) return err(error.message);
     return ok({ success: true });
   }
 
