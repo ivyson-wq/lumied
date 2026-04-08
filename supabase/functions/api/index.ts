@@ -1127,12 +1127,24 @@ serve(async (req: Request) => {
     if (!gerente) return err("Sessão inválida.", 401);
     const { registros } = body as { registros: { nome: string; turno: string; dias_semana?: string[] }[] };
     if (!Array.isArray(registros) || !registros.length) return err("registros obrigatório (array).");
+    // Busca todos os alunos para matching flexível
+    const { data: todosAlunos } = await admin.from("alunos").select("id, nome");
+    const alunosList = todosAlunos ?? [];
+    function findAlunoTurno(nomeBusca: string) {
+      const limpo = nomeBusca.replace(/\s*-\s*G\d+$/i, "").trim().toLowerCase();
+      let f = alunosList.find(a => a.nome.toLowerCase() === limpo);
+      if (f) return f;
+      f = alunosList.find(a => a.nome.toLowerCase().startsWith(limpo) || limpo.startsWith(a.nome.toLowerCase()));
+      if (f) return f;
+      const palavras = limpo.split(/\s+/).filter(p => p.length > 2);
+      return alunosList.find(a => palavras.every(p => a.nome.toLowerCase().includes(p))) || null;
+    }
     let sucesso = 0, erros: string[] = [];
     for (const r of registros) {
       if (!r.nome || !r.turno) { erros.push((r.nome || "?") + ": nome e turno obrigatórios"); continue; }
       const updateData: any = { turno: r.turno };
       if (r.dias_semana) updateData.dias_semana = r.dias_semana;
-      const { data: found } = await admin.from("alunos").select("id").ilike("nome", r.nome).limit(1).single();
+      const found = findAlunoTurno(r.nome);
       if (!found) { erros.push(r.nome + ": aluno não encontrado"); continue; }
       const { error } = await admin.from("alunos").update(updateData).eq("id", found.id);
       if (error) { erros.push(r.nome + ": " + error.message); continue; }
@@ -1154,15 +1166,40 @@ serve(async (req: Request) => {
       ativMap[a.nome.toLowerCase()] = { id: a.id, horarios: a.horarios ?? [] };
     }
 
+    // Busca todos os alunos para matching flexível
+    const { data: todosAlunos } = await admin.from("alunos").select("id, nome");
+    const alunosList = todosAlunos ?? [];
+
+    // Função de matching: limpa sufixos (- G1, - G2), normaliza acentos, busca parcial
+    function findAluno(nomeBusca: string) {
+      // Remove sufixos como "- G1", "- G2" etc
+      const limpo = nomeBusca.replace(/\s*-\s*G\d+$/i, "").trim().toLowerCase();
+      // Match exato (case-insensitive)
+      let found = alunosList.find(a => a.nome.toLowerCase() === limpo);
+      if (found) return found;
+      // Match parcial: nome da planilha contido no nome do banco ou vice-versa
+      found = alunosList.find(a => a.nome.toLowerCase().startsWith(limpo) || limpo.startsWith(a.nome.toLowerCase()));
+      if (found) return found;
+      // Match por palavras: todas as palavras do nome da planilha devem estar no nome do banco
+      const palavras = limpo.split(/\s+/).filter(p => p.length > 2);
+      found = alunosList.find(a => {
+        const nomeDb = a.nome.toLowerCase();
+        return palavras.every(p => nomeDb.includes(p));
+      });
+      return found || null;
+    }
+
     // Agrupa linhas por aluno (mesmo aluno pode ter múltiplas atividades)
-    const porAluno: Record<string, { atividades_ids: string[]; turmas_selecionadas: any[] }> = {};
+    const porAluno: Record<string, { alunoId: string; atividades_ids: string[]; turmas_selecionadas: any[] }> = {};
     const erros: string[] = [];
     for (const r of registros) {
       if (!r.nome || !r.atividade) { erros.push((r.nome || "?") + ": nome e atividade obrigatórios"); continue; }
       const ativ = ativMap[r.atividade.toLowerCase()];
       if (!ativ) { erros.push(r.nome + ": atividade '" + r.atividade + "' não encontrada"); continue; }
-      const key = r.nome.toLowerCase();
-      if (!porAluno[key]) porAluno[key] = { atividades_ids: [], turmas_selecionadas: [] };
+      const aluno = findAluno(r.nome);
+      if (!aluno) { erros.push(r.nome + ": aluno não encontrado"); continue; }
+      const key = aluno.id;
+      if (!porAluno[key]) porAluno[key] = { alunoId: aluno.id, atividades_ids: [], turmas_selecionadas: [] };
       if (!porAluno[key].atividades_ids.includes(ativ.id)) porAluno[key].atividades_ids.push(ativ.id);
       // Resolve turma → slots a partir dos horários da atividade
       const turmaInfo = r.turma ? ativ.horarios.find((h: any) => h.turma === r.turma) : null;
@@ -1174,14 +1211,12 @@ serve(async (req: Request) => {
     }
 
     let sucesso = 0;
-    for (const [nomeLower, dados] of Object.entries(porAluno)) {
-      const { data: found } = await admin.from("alunos").select("id").ilike("nome", nomeLower).limit(1).single();
-      if (!found) { erros.push(nomeLower + ": aluno não encontrado"); continue; }
+    for (const [, dados] of Object.entries(porAluno)) {
       const { error } = await admin.from("alunos").update({
         atividades_ids: dados.atividades_ids,
         turmas_selecionadas: dados.turmas_selecionadas,
-      }).eq("id", found.id);
-      if (error) { erros.push(nomeLower + ": " + error.message); continue; }
+      }).eq("id", dados.alunoId);
+      if (error) { erros.push(dados.alunoId + ": " + error.message); continue; }
       sucesso++;
     }
     return ok({ sucesso, erros });
