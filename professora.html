@@ -2027,33 +2027,37 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     } catch(_) {}
     document.getElementById('profDashAlerts').innerHTML = alertsHtml;
 
-    // Dashboards de turnos e atividades
-    loadProfTurnos();
+    // Dashboards de turnos e atividades (preview no dashboard)
+    loadProfTurnosDashPreview();
     loadProfAtividades();
   }
 
-  async function loadProfTurnos() {
+  async function loadProfTurnosDashPreview() {
     try {
-      var d = await callApi({ action: 'prof_turnos_dashboard' });
-      if (!d || d.error) { document.getElementById('profTurnosStats').innerHTML = ''; return; }
-      var c = d.counts || {};
-      document.getElementById('profTurnosStats').innerHTML =
-        ['Total:' + (d.total||0), 'Integral:' + (c.integral||0), 'Semi:' + (c.semi||0), 'Tarde:' + (c.tarde||0), 'Diaria:' + (c.diaria||0)]
+      var data = await callProfApi({ action: 'alunos_list' });
+      var raw = Array.isArray(data) ? data : (data.data || []);
+      var list = raw.filter(function(a) { return a.ativo !== false && a.turno; });
+      var c = { integral: 0, semi: 0, tarde: 0, diaria: 0 };
+      list.forEach(function(r) { var g = TURNO_INFO[r.turno]?.g; if (c[g] !== undefined) c[g]++; });
+      var el = document.getElementById('profTurnosStats');
+      if (el) el.innerHTML =
+        ['Total:' + list.length, 'Integral:' + c.integral, 'Semi:' + c.semi, 'Tarde:' + c.tarde, 'Diaria:' + c.diaria]
         .map(function(t) {
           var parts = t.split(':');
           return '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">' +
             '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">' + parts[0] + '</div>' +
             '<div style="font-size:20px;font-weight:700;">' + parts[1] + '</div></div>';
         }).join('');
-      var items = (d.data || []).slice(0, 8);
-      document.getElementById('profTurnosRecentes').innerHTML = items.length
+      var items = list.slice(0, 8);
+      var recEl = document.getElementById('profTurnosRecentes');
+      if (recEl) recEl.innerHTML = items.length
         ? items.map(function(s) {
           return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">' +
-            '<span style="font-weight:600;">' + esc(s.nome_crianca) + '</span>' +
+            '<span style="font-weight:600;">' + esc(s.nome) + '</span>' +
             '<span style="color:var(--muted);margin-left:auto;font-size:11px;">' + esc(s.turno || '') + '</span></div>';
         }).join('')
-        : '<div style="color:var(--muted);font-size:12px;">Nenhuma solicitacao de turno.</div>';
-    } catch(_) { document.getElementById('profTurnosStats').innerHTML = ''; }
+        : '<div style="color:var(--muted);font-size:12px;">Nenhum aluno com turno.</div>';
+    } catch(_) { var el2 = document.getElementById('profTurnosStats'); if (el2) el2.innerHTML = ''; }
   }
 
   async function loadProfAtividades() {
@@ -3303,9 +3307,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   let profTurnoData = [], profTurnoFilter = 'all';
 
   async function loadProfTurnos() {
-    const data = await callProfApi({ action: 'solicitacoes_list' });
-    if (!Array.isArray(data)) return;
-    profTurnoData = data;
+    const raw = await callProfApi({ action: 'alunos_list' });
+    const data = Array.isArray(raw) ? raw : (raw.data || []);
+    profTurnoData = data.filter(a => a.ativo !== false && a.turno);
     updateProfTurnoStats();
     renderProfTurnoTable();
   }
@@ -3338,7 +3342,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       listEl.innerHTML = list.map(r => {
         const t = TURNO_INFO[r.turno];
         const turnoShort = t ? t.label.replace(' na semana','').replace(' · ',' ') : r.turno;
-        return `<div class="dia-crianca-item"><div class="dia-crianca-dot"></div><div class="dia-crianca-info"><strong>${esc(r.nome_crianca)}</strong><span>${esc(r.serie||'')}${r.serie&&turnoShort?' · ':''}${turnoShort}</span></div></div>`;
+        return `<div class="dia-crianca-item"><div class="dia-crianca-dot"></div><div class="dia-crianca-info"><strong>${esc(r.nome)}</strong><span>${esc(r.serie||'')}${r.serie&&turnoShort?' · ':''}${turnoShort}</span></div></div>`;
       }).join('');
     });
   }
@@ -3355,7 +3359,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const rows = profTurnoData.filter(r => {
       const g = TURNO_INFO[r.turno]?.g || '';
       const mf = profTurnoFilter === 'all' || g === profTurnoFilter;
-      const ms = !q || [r.nome_crianca, r.nome_resp, r.email, r.serie].some(v => v?.toLowerCase().includes(q));
+      const ms = !q || [r.nome, r.responsavel_nome, r.email, r.serie].some(v => v?.toLowerCase().includes(q));
       return mf && ms;
     });
     document.getElementById('pTTableCount').textContent = rows.length;
@@ -3368,8 +3372,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         ? r.dias_semana.map(d => '<span style="display:inline-block;background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:2px 7px;font-size:10px;font-weight:600;margin:1px;">' + esc(d) + '</span>').join(' ')
         : '<span style="color:var(--muted);font-size:12px;">—</span>';
       return `<tr>
-        <td><strong>${esc(r.nome_crianca)}</strong></td>
-        <td>${esc(r.nome_resp)}<br><small style="color:var(--muted)">${esc(r.email)}</small></td>
+        <td><strong>${esc(r.nome)}</strong></td>
+        <td>${esc(r.responsavel_nome || r.resp_nome || '—')}</td>
         <td>${esc(r.serie || '—')}</td>
         <td><span class="turno-pill ${t.g}">${t.label}${t.price ? ' · ' + t.price : ''}</span></td>
         <td>${dias}</td>
