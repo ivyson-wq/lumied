@@ -1268,10 +1268,11 @@ Deno.serve(async (req) => {
   // ━━ ALMOXARIFADO: PRICE SEARCH (public, no auth required) ━━━━━━
 
   if (action === 'alm_buscar_precos') {
-    const { nome, unidade } = body
+    const { nome, unidade, descricao } = body as any
     if (!nome) return json({ error: 'Nome do item não informado.' }, 400)
 
-    const query = nome.trim()
+    // Inclui descricao (especificação) na busca para encontrar produto correto (ex: "250ml")
+    const query = descricao ? `${nome.trim()} ${descricao.trim()}` : nome.trim()
     const encoded = encodeURIComponent(query)
 
     // ── helper: word-overlap match % ────────────────────────
@@ -2182,10 +2183,14 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'alm_prof_set_turma') {
-      const { professora_id, turma_id } = body
+      const { professora_id, turma_id, turma_ids } = body as any
       if (!professora_id) return json({ error: 'professora_id obrigatório.' }, 400)
+      // Suporte multi-turma: turma_ids (array) ou turma_id (single, retrocompat)
+      const ids: string[] = Array.isArray(turma_ids) ? turma_ids.filter(Boolean) : (turma_id ? [turma_id] : [])
+      const serie_id = ids[0] || null
+      const series_monitoras = ids.length > 0 ? ids : null
       const { error } = await sb.from('professoras')
-        .update({ serie_id: turma_id || null }).eq('id', professora_id)
+        .update({ serie_id, series_monitoras }).eq('id', professora_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
@@ -2229,33 +2234,51 @@ Deno.serve(async (req) => {
     const buf = Uint8Array.from(atob(base64 as string), c => c.charCodeAt(0))
     await sb.storage.from('impressoes').upload(path, buf, { contentType: mime || 'application/pdf' })
     const { data: pub } = sb.storage.from('impressoes').getPublicUrl(path)
+    // Contar páginas do PDF
+    let numPaginas = 1
+    if (ext === 'pdf') {
+      try {
+        const text = new TextDecoder('latin1').decode(buf)
+        // Método 1: contar /Type /Page (exclui /Type /Pages que é o catálogo)
+        const pageMatches = text.match(/\/Type\s*\/Page[^s]/g)
+        if (pageMatches && pageMatches.length > 0) {
+          numPaginas = pageMatches.length
+        } else {
+          // Método 2: buscar /Count N no catálogo de páginas
+          const countMatch = text.match(/\/Count\s+(\d+)/)
+          if (countMatch) numPaginas = parseInt(countMatch[1]) || 1
+        }
+      } catch { numPaginas = 1 }
+    }
+    const nCopias = parseInt(copias)
+    const totalFolhas = nCopias * numPaginas
     // Buscar turma da professora
     const { data: profData } = await sb.from('professoras').select('serie_id, series(id, nome)').eq('id', prof.id).maybeSingle()
     const turma = (profData as any)?.series ?? null
-    // Verificar limite mensal
+    // Verificar limite mensal (baseado em folhas: copias × paginas)
     const mes = new Date().toISOString().slice(0, 7)
     const { data: orc } = await sb.from('impressoes_orcamento').select('limite').eq('turma_id', turma?.id || '').eq('mes', mes).maybeSingle()
     const limite = orc?.limite ?? 50
-    const { data: usadas } = await sb.from('impressoes').select('copias')
+    const { data: usadas } = await sb.from('impressoes').select('copias, num_paginas')
       .eq('turma_id', turma?.id || '').gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
-    const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + (r.copias || 0), 0)
-    if (totalUsado + parseInt(copias) > limite) {
-      return json({ error: `Limite mensal de ${limite} copias excedido. Ja utilizado: ${totalUsado}. Disponivel: ${limite - totalUsado}.` }, 400)
+    const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + ((r.copias || 0) * (r.num_paginas || 1)), 0)
+    if (totalUsado + totalFolhas > limite) {
+      return json({ error: `Limite mensal de ${limite} folhas excedido. Ja utilizado: ${totalUsado}. Disponivel: ${limite - totalUsado}. Este arquivo: ${numPaginas} pag × ${nCopias} copias = ${totalFolhas} folhas.` }, 400)
     }
     const { error } = await sb.from('impressoes').insert({
       professora_id: prof.id, professora_nome: prof.nome,
       turma_id: turma?.id || null, turma_nome: turma?.nome || null,
       arquivo_url: pub.publicUrl, arquivo_nome: arquivo_nome || path,
-      copias: parseInt(copias), tipo_papel: tipo_papel || 'sulfite',
+      copias: nCopias, num_paginas: numPaginas, tipo_papel: tipo_papel || 'sulfite',
       para_dia: para_dia || null, observacao: observacao || null,
     })
     if (error) return json({ error: error.message }, 400)
     // Notifica gerentes
     const { data: gerentes } = await sb.from('gerentes').select('email')
     for (const g of gerentes ?? []) {
-      await criarNotif(sb, 'gerente', g.email, 'Nova impressao', `${prof.nome} solicitou ${copias} copias (${tipo_papel}).`, 'info')
+      await criarNotif(sb, 'gerente', g.email, 'Nova impressao', `${prof.nome} solicitou ${nCopias} copias × ${numPaginas} pag = ${totalFolhas} folhas (${tipo_papel}).`, 'info')
     }
-    return json({ ok: true, usado: totalUsado + parseInt(copias), limite })
+    return json({ ok: true, usado: totalUsado + totalFolhas, limite, num_paginas: numPaginas })
   }
 
   if (action === 'impressao_minhas') {
@@ -2270,9 +2293,9 @@ Deno.serve(async (req) => {
     const turmaId = (profData as any)?.serie_id
     const { data: orc } = await sb.from('impressoes_orcamento').select('limite').eq('turma_id', turmaId || '').eq('mes', mes).maybeSingle()
     const limite = orc?.limite ?? 50
-    const { data: usadas } = await sb.from('impressoes').select('copias')
+    const { data: usadas } = await sb.from('impressoes').select('copias, num_paginas')
       .eq('turma_id', turmaId || '').gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
-    const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + (r.copias || 0), 0)
+    const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + ((r.copias || 0) * (r.num_paginas || 1)), 0)
     return json({ data: data ?? [], usado: totalUsado, limite })
   }
 

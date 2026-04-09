@@ -7439,7 +7439,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function almFetchPrecos(nome, unidade, idx, itemData) {
     const el = document.getElementById('alm-price-' + idx);
     if (!el) return;
-    const d = await callDiplomas({ action: 'alm_buscar_precos', nome, unidade });
+    const d = await callDiplomas({ action: 'alm_buscar_precos', nome, unidade, descricao: itemData?.descricao || '' });
     if (!document.getElementById('alm-price-' + idx)) return;
     if (d.error || !d.data || !d.data.length) {
       el.innerHTML = `<div class="alm-price-skeleton" style="color:#c0392b;">Nao foi possivel buscar precos.</div>`;
@@ -7884,7 +7884,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       return `<div class="alm-insumo-row" style="${!it.ativo ? 'opacity:.5;' : ''}">
         <div style="display:flex;align-items:center;gap:10px;flex:1;">
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:13px;">${it.nome}</div>
+            <div style="font-weight:600;font-size:13px;">${it.nome}${it.descricao ? ` <span style="font-weight:400;color:var(--muted);font-size:11px;">(${esc(it.descricao)})</span>` : ''}</div>
             <div style="font-size:11px;color:var(--muted);">
               ${it.categoria||'Geral'} · Estoque: ${it.estoque_qty} ${it.unidade}
               ${it.qtd_por_embalagem > 1 ? ` · Embalagem: ${it.unidade_compra||'cx'} c/ ${it.qtd_por_embalagem} ${it.unidade}` : ''}
@@ -7979,7 +7979,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const profsRaw = await api({ action: 'professoras_list' }).catch(() => []);
     const allProfs = Array.isArray(profsRaw) ? profsRaw : [];
     document.getElementById('almTurmasList').innerHTML = turmas.map(t => {
-      const profs = allProfs.filter(p => p.serie_id === t.id || p.alm_turma_id === t.id);
+      const profs = allProfs.filter(p => p.serie_id === t.id || p.alm_turma_id === t.id || (Array.isArray(p.series_monitoras) && p.series_monitoras.includes(t.id)));
       return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <div style="width:18px;height:18px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></div>
@@ -7993,14 +7993,18 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     }).join('') || '<div class="empty-state">Nenhuma turma cadastrada.</div>';
     // Professor-turma assignment list (select per professor)
     document.getElementById('almProfTurmaList').innerHTML = allProfs.length
-      ? allProfs.map((p) => `
-          <div class="alm-insumo-row">
-            <div style="flex:1;font-size:13px;"><strong>${p.nome}</strong> <span style="color:var(--muted);">${p.email}</span></div>
-            <select onchange="almSetProfTurma('${p.id}',this.value)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;">
-              <option value="">— Sem turma —</option>
-              ${turmas.map((t) => `<option value="${t.id}" ${(p.serie_id===t.id||p.alm_turma_id===t.id)?'selected':''}>${t.nome}</option>`).join('')}
-            </select>
-          </div>`).join('')
+      ? allProfs.map((p) => {
+          const profTurmas = new Set([p.serie_id, p.alm_turma_id, ...(p.series_monitoras||[])].filter(Boolean));
+          return `<div class="alm-insumo-row" style="flex-wrap:wrap;">
+            <div style="flex:1;font-size:13px;min-width:180px;"><strong>${p.nome}</strong> <span style="color:var(--muted);">${p.email}</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${turmas.map((t) => `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:${profTurmas.has(t.id)?'rgba(200,16,46,.06)':'#fff'};">
+                <input type="checkbox" data-prof="${p.id}" data-turma="${t.id}" ${profTurmas.has(t.id)?'checked':''} onchange="almToggleProfTurma('${p.id}')" style="accent-color:var(--red);">
+                ${esc(t.nome)}
+              </label>`).join('')}
+            </div>
+          </div>`;
+        }).join('')
       : '<div class="empty-state">Nenhuma professora cadastrada.</div>';
   }
 
@@ -8037,6 +8041,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function almSetProfTurma(professora_id, turma_id) {
     await callDiplomas({ action: 'alm_prof_set_turma', professora_id, turma_id: turma_id || null });
+  }
+  async function almToggleProfTurma(profId) {
+    const checks = document.querySelectorAll(`input[data-prof="${profId}"]`);
+    const turmaIds = [...checks].filter(c => c.checked).map(c => c.dataset.turma);
+    await callDiplomas({ action: 'alm_prof_set_turma', professora_id: profId, turma_ids: turmaIds });
+    showToast('Turmas atualizadas!', 'success');
   }
 
   async function almLoadOrcamentos() {
@@ -8217,7 +8227,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       const ins = insumos[i];
       btn.textContent = `⏳ ${i+1}/${total} — ${ins.nome.substring(0,25)}...`;
       try {
-        const d = await callDiplomas({ action: 'alm_buscar_precos', nome: ins.nome, unidade: ins.unidade });
+        const d = await callDiplomas({ action: 'alm_buscar_precos', nome: ins.nome, unidade: ins.unidade, descricao: ins.descricao || '' });
         const resultados = d.data || [];
         // Acumula status das fontes
         if (d.fontes) {

@@ -908,7 +908,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
             </select>
           </div>
           <div class="ff" style="margin:0;">
-            <label>Para qual dia</label>
+            <label>Para qual dia (mín. 2 dias úteis)</label>
             <input type="date" id="impDia" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           </div>
           <div class="ff" style="margin:0;">
@@ -3238,7 +3238,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
           <option value="">Categoria</option><option value="Papelaria">Papelaria</option><option value="Artes">Artes</option><option value="Escritório">Escritório</option><option value="Limpeza">Limpeza</option><option value="Decoração">Decoração</option><option value="Pedagógico">Pedagógico</option><option value="Outro">Outro</option>
         </select></div>
         <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-        <div><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div style="grid-column:1/-1;"><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional — ex: tinta guache 250ml)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
       </div>`;
     el.appendChild(div);
   }
@@ -3253,8 +3254,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       const unidade = div.querySelector('.alm-novo-unidade')?.value || 'unidade';
       const categoria = div.querySelector('.alm-novo-categoria')?.value || null;
       const qty = parseInt(div.querySelector('.alm-novo-qty')?.value) || 1;
+      const preco = parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0;
       const descricao = div.querySelector('.alm-novo-descricao')?.value?.trim() || null;
-      if (nome) itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, preco_unit: 0, qty_solicitado: qty });
+      if (nome) itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, preco_unit: preco, qty_solicitado: qty });
     });
     const todosItens = [...almCart, ...itensLivres];
     if (!todosItens.length) { errEl.textContent = 'Adicione pelo menos um item.'; errEl.classList.add('show'); return; }
@@ -3689,7 +3691,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     const items = d.data || [];
     // Cota
     const pct = d.limite > 0 ? Math.min(100, (d.usado / d.limite) * 100) : 0;
-    document.getElementById('impCotaInfo').textContent = d.usado + ' / ' + d.limite + ' copias usadas este mes';
+    document.getElementById('impCotaInfo').textContent = d.usado + ' / ' + d.limite + ' folhas usadas este mes';
     document.getElementById('impCotaBar').style.width = pct + '%';
     document.getElementById('impCotaBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
     // Lista
@@ -3700,7 +3702,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       return `<div class="upload-card" style="margin-bottom:8px;padding:12px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <a href="${esc(it.arquivo_url)}" target="_blank" style="font-weight:600;font-size:13px;color:var(--blue);text-decoration:none;">📎 ${esc(it.arquivo_nome||'Arquivo')}</a>
-          <span style="font-size:12px;color:var(--muted);">${it.copias} copias · ${IMP_PAPEL[it.tipo_papel]||it.tipo_papel}</span>
+          <span style="font-size:12px;color:var(--muted);">${it.copias} cop × ${it.num_paginas||1} pag = ${(it.copias||1)*(it.num_paginas||1)} folhas · ${IMP_PAPEL[it.tipo_papel]||it.tipo_papel}</span>
           ${it.para_dia ? `<span style="font-size:12px;color:var(--muted);">Para ${new Date(it.para_dia+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</span>` : ''}
           <span style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;${it.status==='entregue'?'background:#edf7f0;color:#2d7a3a;':it.status==='rejeitado'?'background:#fdf0f2;color:#a00d24;':'background:#fff8e1;color:#b07d00;'}">${IMP_STATUS[it.status]||it.status}</span>
         </div>
@@ -3709,6 +3711,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       </div>`;
     }).join('');
   }
+
+  // Setar min do date picker para 2 dias úteis à frente
+  (function setImpMinDate() {
+    const d = new Date();
+    let diasUteis = 0;
+    while (diasUteis < 2) {
+      d.setDate(d.getDate() + 1);
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) diasUteis++; // pula sáb/dom
+    }
+    const min = d.toISOString().slice(0, 10);
+    const el = document.getElementById('impDia');
+    if (el) { el.min = min; el.value = ''; }
+  })();
 
   // Preview de arquivos selecionados
   document.getElementById('impArquivo').addEventListener('change', function() {
@@ -3750,7 +3766,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       } catch(e) { erros.push(file.name + ': Erro ao enviar.'); }
     }
     if (enviados > 0 && ultimoResult) {
-      showToast(enviados + ' arquivo' + (enviados > 1 ? 's enviados' : ' enviado') + '! ' + ultimoResult.usado + '/' + ultimoResult.limite + ' copias usadas.', 'success', 5000);
+      showToast(enviados + ' arquivo' + (enviados > 1 ? 's enviados' : ' enviado') + (ultimoResult.num_paginas > 1 ? ' (' + ultimoResult.num_paginas + ' pag)' : '') + '! ' + ultimoResult.usado + '/' + ultimoResult.limite + ' folhas usadas.', 'success', 5000);
     }
     if (erros.length) {
       errEl.innerHTML = erros.map(e => esc(e)).join('<br>');

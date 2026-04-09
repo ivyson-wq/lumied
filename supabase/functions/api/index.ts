@@ -2233,11 +2233,11 @@ serve(async (req: Request) => {
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
     const { data: turmas } = await admin.from("series").select("id, nome").eq("ativo", true).order("nome");
     const { data: orcs } = await admin.from("impressoes_orcamento").select("turma_id, limite").eq("mes", mes);
-    const { data: usadas } = await admin.from("impressoes").select("turma_id, copias").gte("criado_em", mes + "-01").in("status", ["pendente", "aprovado", "impresso", "entregue"]);
+    const { data: usadas } = await admin.from("impressoes").select("turma_id, copias, num_paginas").gte("criado_em", mes + "-01").in("status", ["pendente", "aprovado", "impresso", "entregue"]);
     const orcMap: Record<string, number> = {};
     for (const o of orcs ?? []) orcMap[o.turma_id] = o.limite;
     const usadoMap: Record<string, number> = {};
-    for (const u of usadas ?? []) usadoMap[u.turma_id] = (usadoMap[u.turma_id] || 0) + u.copias;
+    for (const u of usadas ?? []) usadoMap[u.turma_id] = (usadoMap[u.turma_id] || 0) + ((u.copias || 0) * (u.num_paginas || 1));
     const result = (turmas ?? []).map((t: any) => ({ ...t, limite: orcMap[t.id] ?? 50, usado: usadoMap[t.id] ?? 0 }));
     return ok(result);
   }
