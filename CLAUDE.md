@@ -1029,6 +1029,62 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 
 ---
 
+## Portal da Professora — Turnos & Atividades Extras (2026-04-09)
+
+### Dashboards espelho do gerente (read-only)
+- **Turnos**: stats (total, integral, semi, tarde, diária), crianças por dia da semana, tabela com filtros e busca
+- **Atividades Extras**: stats (inscrições, ativas, lotadas, vagas), crianças por dia subagrupadas por atividade/turma, ocupação por atividade com barras de progresso, tabela de inscrições
+- Navegação: sidebar + bottom nav "Mais" com `data-modulo="turno"` e `data-modulo="atividades"`
+- Fonte de dados: `alunos_list` (tabela `alunos`, 202 alunos ativos) — mesma do gerente
+- **NÃO usa mais** `solicitacoes` (tabela legada com 3 registros de teste)
+
+### Auth ampliado no `api/index.ts`
+- `validarSessao` agora aceita papéis: `gerente`, `diretor`, `financeiro`, `secretaria`, `comercial`, **`professora`**, **`professora_assistente`**
+- Fallback para `professora_sessoes` (legado) se não encontrar em `sessoes` unificada
+- Permite professoras acessarem `alunos_list`, `solicitacoes_list`, `inscricoes_atividades_list`, `atividades_list_all`
+
+### `solicitacoes_list` corrigido
+- Select agora inclui `nome_resp`, `serie`, `dias_semana`, `mes_vigencia` (antes faltavam)
+
+---
+
+## Impressão — Contagem de Páginas (2026-04-09)
+
+### Cota baseada em folhas (cópias × páginas)
+- **Migration 212**: coluna `num_paginas integer NOT NULL DEFAULT 1` na tabela `impressoes`
+- Backend (`impressao_enviar`): extrai páginas do PDF via regex (`/Type /Page[^s]`), fallback `/Count N`
+- Cota: `totalUsado = SUM(copias × num_paginas)` — um doc de 25 páginas × 2 cópias = 50 folhas
+- `impressao_minhas` e `impressoes_orcamento_list` também usam `copias × num_paginas`
+- Display: "2 cop × 25 pag = 50 folhas" na lista da professora
+- Notificação ao gerente inclui páginas: "3 copias × 10 pag = 30 folhas"
+
+### Data de entrega: mínimo 2 dias úteis
+- Date picker (`impDia`) tem `min` setado automaticamente para 2 dias úteis à frente
+- Pula sábados e domingos (não considera feriados)
+
+---
+
+## Almoxarifado — Melhorias (2026-04-09)
+
+### Múltiplas professoras por turma
+- UI do gerente: dropdown trocado por **checkboxes** (cada professora pode marcar várias turmas)
+- Backend `alm_prof_set_turma`: aceita `turma_ids` (array) além de `turma_id` (retrocompat)
+- Salva `serie_id` = primeira turma, `series_monitoras` = array completo
+- Display de turmas: filtra por `serie_id` OU `alm_turma_id` OU `series_monitoras.includes()`
+
+### Campo de preço no formulário de material novo
+- Professora agora informa preço estimado ao solicitar material não cadastrado
+- Campo "Preço unit. R$" no formulário "Novo Item"
+- Antes enviava `preco_unit: 0`, agora envia o valor informado
+
+### Preços — proteção de edição manual
+- Insumos com `referencia_fonte = 'manual'` são **pulados** por `alm_atualizar_precos` (automático)
+- `alm_insumo_save`: marca `referencia_fonte = 'manual'` quando gerente edita preço
+- Busca de preços (`alm_buscar_precos` e `alm_atualizar_precos`): inclui `descricao` do insumo na query para melhor precisão (ex: "Tinta Guache 250ml")
+- Display do catálogo mostra descrição/especificação ao lado do nome
+
+---
+
 ## Banco de Dados — Migrations Recentes
 
 | Migration | Descrição |
@@ -1040,3 +1096,7 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 | `206` | RPC `get_auth_uid_by_email` (SECURITY DEFINER) — não mais usada, substituída por `generateLink` |
 | `207` | familias: coluna `turno` (text) |
 | `208` | tickets: coluna `numero` (serial #1001+), `tratamento`, `proximos_passos` |
+| `209` | insumos: fracionamento (unidade_compra, qtd_por_embalagem) |
+| `210` | alunos: coluna `turno` (text) + `dias_semana` (text[]) |
+| `211` | alunos: colunas `atividades_ids`, `turmas_selecionadas`, `almoco_dias` |
+| `212` | impressoes: coluna `num_paginas` (integer, default 1) para contagem de folhas |
