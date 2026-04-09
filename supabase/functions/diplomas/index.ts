@@ -1559,13 +1559,16 @@ Deno.serve(async (req) => {
   // ── ATUALIZAÇÃO AUTOMÁTICA DE PREÇOS ────────────────────
   if (action === 'alm_atualizar_precos') {
     // Atualiza preços via Zoom.com.br (funciona server-side)
-    const { data: insumos } = await sb.from('alm_insumos').select('id, nome, unidade, preco').eq('ativo', true)
-    if (!insumos?.length) return json({ ok: true, atualizados: 0 })
+    const { data: insumos } = await sb.from('alm_insumos').select('id, nome, unidade, preco, descricao, referencia_fonte').eq('ativo', true)
+    if (!insumos?.length) return json({ ok: true, atualizados: 0, pulados: 0 })
+    // Pula insumos com preço atualizado manualmente pelo gerente
+    const autoInsumos = insumos.filter((i: any) => i.referencia_fonte !== 'manual')
+    const pulados = insumos.length - autoInsumos.length
 
     let atualizados = 0
-    for (const insumo of insumos) {
+    for (const insumo of autoInsumos) {
       try {
-        const query = insumo.nome.trim()
+        const query = insumo.descricao ? `${insumo.nome.trim()} ${insumo.descricao.trim()}` : insumo.nome.trim()
         const encoded = encodeURIComponent(query)
         let melhorPreco: number | null = null
 
@@ -1610,7 +1613,7 @@ Deno.serve(async (req) => {
       } catch (_) {}
     }
 
-    return json({ ok: true, atualizados, total: insumos.length })
+    return json({ ok: true, atualizados, total: insumos.length, pulados })
   }
 
   // ━━ ALMOXARIFADO: PURCHASE TRACKING (gerente only) ━━━━━━━━
@@ -1949,8 +1952,14 @@ Deno.serve(async (req) => {
     if (action === 'alm_insumo_save') {
       const { id, nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra, qtd_por_embalagem } = body
       if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
-      const data = { nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra: unidade_compra || null, qtd_por_embalagem: qtd_por_embalagem || 1 }
+      const data: Record<string, unknown> = { nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra: unidade_compra || null, qtd_por_embalagem: qtd_por_embalagem || 1 }
       if (id) {
+        // Se o gerente editou o preço manualmente, marcar como 'manual' para não sobrescrever na atualização automática
+        const { data: old } = await sb.from('alm_insumos').select('preco').eq('id', id).maybeSingle()
+        if (old && preco != null && Number(preco) !== Number(old.preco)) {
+          data.referencia_fonte = 'manual'
+          data.preco_atualizado_em = new Date().toISOString()
+        }
         const { error } = await sb.from('alm_insumos').update(data).eq('id', id)
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true })
