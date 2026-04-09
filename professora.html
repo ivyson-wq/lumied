@@ -802,7 +802,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   <div class="upload-card" id="almBudgetCard" style="margin-bottom:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <div>
-        <div style="font-size:13px;font-weight:600;" id="almTurmaNome">—</div>
+        <select id="almTurmaSelect" onchange="almOnTurmaChange()" style="font-size:13px;font-weight:600;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'DM Sans',sans-serif;background:#fff;"></select>
         <div style="font-size:12px;color:var(--muted);" id="almMesLabel"></div>
       </div>
       <button onclick="almAbrirNovaReq()" class="btn-submit" style="font-size:13px;padding:8px 16px;width:auto;" id="almBtnNovaReq">+ Nova Requisição</button>
@@ -2815,25 +2815,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     return document.getElementById('almProfMes')?.value || new Date().toISOString().slice(0,7);
   }
 
+  var almTurmasData = [];
   async function almLoadBudget() {
     const mes = almGetMes();
     const d = await callApi({ action: 'alm_minha_turma', mes });
     document.getElementById('almMesLabel').textContent = 'Orçamento de ' + mesBR(mes);
-    if (!d.turma) {
-      document.getElementById('almTurmaNome').textContent = 'Sem turma atribuída';
+    almTurmasData = d.turmas || [];
+    const sel = document.getElementById('almTurmaSelect');
+    if (!almTurmasData.length) {
+      sel.innerHTML = '<option>Sem turma atribuída</option>';
       document.getElementById('almBtnNovaReq').disabled = true;
       return;
     }
-    document.getElementById('almTurmaNome').textContent = d.turma.nome;
+    const currentVal = sel.value;
+    sel.innerHTML = almTurmasData.map(t => `<option value="${t.id}" ${t.id === currentVal ? 'selected' : ''}>${esc(t.nome)}</option>`).join('');
     document.getElementById('almBtnNovaReq').disabled = false;
-    const orc = d.orcamento || 0;
-    const gasto = d.gasto || 0;
-    const gastoPend = d.gasto_pendente || 0;
+    almUpdateBudgetDisplay();
+  }
+
+  function almOnTurmaChange() { almUpdateBudgetDisplay(); }
+
+  function almUpdateBudgetDisplay() {
+    const turmaId = document.getElementById('almTurmaSelect').value;
+    const t = almTurmasData.find(x => x.id === turmaId) || almTurmasData[0];
+    if (!t) return;
+    const orc = t.orcamento || 0;
+    const gasto = t.gasto || 0;
+    const gastoPend = t.gasto_pendente || 0;
     const pct = orc > 0 ? Math.min(100, (gasto / orc) * 100) : 0;
     document.getElementById('almBudgetBar').style.width = pct + '%';
     document.getElementById('almBudgetBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
     document.getElementById('almGastoVal').innerHTML = fmtBRL(gasto) + (gastoPend > 0 ? ` <span style="font-size:10px;color:#b07d00;">(${fmtBRL(gastoPend)} pendente)</span>` : '');
-    document.getElementById('almOrcVal').textContent   = fmtBRL(orc);
+    document.getElementById('almOrcVal').textContent = fmtBRL(orc);
   }
 
   async function almLoadReqs() {
@@ -3266,10 +3279,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (!todosItens.length) { errEl.textContent = 'Adicione pelo menos um item.'; errEl.classList.add('show'); return; }
     const btn = document.getElementById('almBtnEnviar');
     btn.disabled = true; btn.textContent = 'Enviando…';
+    const turmaId = document.getElementById('almTurmaSelect')?.value || null;
     const d = await callApi({
       action: 'alm_criar_req',
       itens: todosItens,
       mes: almGetMes(),
+      turma_id: turmaId,
       observacao: document.getElementById('almObservacao').value.trim(),
     });
     btn.disabled = false; btn.innerHTML = '📋 Enviar Requisição';

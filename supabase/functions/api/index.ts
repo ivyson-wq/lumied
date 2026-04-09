@@ -1323,9 +1323,9 @@ serve(async (req: Request) => {
     return ok(resultado);
   }
   if (action === "atividades_create") {
-    const { nome, preco, descricao, cor, horarios, ordem } = body as Record<string, unknown>;
+    const { nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno } = body as Record<string, unknown>;
     if (!nome) return err("Nome é obrigatório.");
-    const { error } = await admin.from("atividades").insert({ nome, preco: preco ?? 0, descricao: descricao ?? "", cor: cor ?? "#C8102E", horarios: horarios ?? [], ordem: ordem ?? 99 });
+    const { error } = await admin.from("atividades").insert({ nome, preco: preco ?? 0, descricao: descricao ?? "", cor: cor ?? "#C8102E", horarios: horarios ?? [], ordem: ordem ?? 99, valor_repasse_aluno: valor_repasse_aluno ?? 0 });
     if (error) return err(error.message);
     return ok({ success: true });
   }
@@ -1339,15 +1339,72 @@ serve(async (req: Request) => {
 
   // Atualização completa (edição pelo gerente)
   if (action === "atividades_update_full") {
-    const { id, nome, preco, descricao, cor, horarios, ordem } = body as Record<string, unknown>;
+    const { id, nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno } = body as Record<string, unknown>;
     if (!id || !nome) return err("ID e nome são obrigatórios.");
-    const { error } = await admin.from("atividades").update({ nome, preco, descricao, cor, horarios, ordem }).eq("id", id);
+    const updateData: Record<string, unknown> = { nome, preco, descricao, cor, horarios, ordem };
+    if (valor_repasse_aluno != null) updateData.valor_repasse_aluno = valor_repasse_aluno;
+    const { error } = await admin.from("atividades").update(updateData).eq("id", id);
     if (error) return err(error.message);
     return ok({ success: true });
   }
   if (action === "atividades_delete") {
     const { id } = body as { id: string };
     await admin.from("atividades").delete().eq("id", id);
+    return ok({ success: true });
+  }
+
+  // ── Contas a Receber — Atividades Extras ─────────────────────
+  if (action === "atividades_apurar_mes") {
+    // Apura e gera contas a receber para cada atividade no mês informado
+    const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
+    const { data: atividades } = await admin.from("atividades").select("id, nome, valor_repasse_aluno").eq("ativo", true);
+    const { data: alunos } = await admin.from("alunos").select("atividades_ids").eq("ativo", true).not("atividades_ids", "is", null);
+    if (!atividades?.length) return ok({ gerados: 0 });
+
+    // Conta alunos por atividade
+    const contagem: Record<string, number> = {};
+    for (const a of alunos ?? []) {
+      for (const aid of (a.atividades_ids || [])) {
+        contagem[aid] = (contagem[aid] || 0) + 1;
+      }
+    }
+
+    // Calcula vencimento: dia 05 do mês seguinte
+    const [y, m] = mes.split("-").map(Number);
+    const nextMonth = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+    const vencimento = `${nextMonth}-05`;
+
+    let gerados = 0;
+    for (const ativ of atividades) {
+      const qtd = contagem[ativ.id] || 0;
+      if (qtd === 0 && !ativ.valor_repasse_aluno) continue;
+      const total = qtd * (ativ.valor_repasse_aluno || 0);
+      const { error } = await admin.from("atividades_contas_receber").upsert({
+        atividade_id: ativ.id, atividade_nome: ativ.nome, mes_apuracao: mes,
+        qtd_alunos: qtd, valor_por_aluno: ativ.valor_repasse_aluno || 0,
+        valor_total: total, data_vencimento: vencimento,
+      }, { onConflict: "atividade_id,mes_apuracao" });
+      if (!error) gerados++;
+    }
+    return ok({ gerados, mes, vencimento });
+  }
+  if (action === "atividades_contas_list") {
+    const mes = (body as any).mes;
+    let q = admin.from("atividades_contas_receber").select("*").order("atividade_nome");
+    if (mes) q = q.eq("mes_apuracao", mes);
+    const { data } = await q;
+    return ok(data ?? []);
+  }
+  if (action === "atividades_conta_pagar") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatório.");
+    await admin.from("atividades_contas_receber").update({ status: "pago", data_pagamento: new Date().toISOString().slice(0, 10) }).eq("id", id);
+    return ok({ success: true });
+  }
+  if (action === "atividades_conta_cancelar") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatório.");
+    await admin.from("atividades_contas_receber").update({ status: "cancelado" }).eq("id", id);
     return ok({ success: true });
   }
 

@@ -1739,20 +1739,27 @@ Deno.serve(async (req) => {
     if (action === 'alm_minha_turma') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
       const { data: profData } = await sb
-        .from('professoras').select('serie_id, series(id, nome)')
+        .from('professoras').select('serie_id, series_monitoras')
         .eq('id', prof.id).maybeSingle()
-      const turma = (profData as any)?.series ?? null
-      if (!turma) return json({ turma: null, orcamento: null })
-      const { data: orc } = await sb
-        .from('alm_orcamentos').select('valor')
-        .eq('turma_id', turma.id).eq('mes', mes).maybeSingle()
-      // Total spent (approved + pending) this month for this turma
-      const { data: reqs } = await sb
-        .from('alm_requisicoes').select('total, status')
-        .eq('turma_id', turma.id).eq('mes', mes).in('status', ['aprovado', 'pendente'])
-      const gasto = (reqs ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
-      const gastoPendente = (reqs ?? []).filter((r: any) => r.status === 'pendente').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
-      return json({ turma, orcamento: orc?.valor ?? 0, gasto, gasto_pendente: gastoPendente })
+      // Todas as turmas da professora (serie_id + series_monitoras)
+      const turmaIds: string[] = [...new Set([
+        (profData as any)?.serie_id,
+        ...((profData as any)?.series_monitoras || [])
+      ].filter(Boolean))]
+      if (!turmaIds.length) return json({ turma: null, turmas: [], orcamento: null })
+      const { data: turmasData } = await sb.from('series').select('id, nome').in('id', turmaIds).order('nome')
+      const turmas = turmasData ?? []
+      const turma = turmas[0] ?? null
+      // Busca orçamento e gasto de cada turma
+      const turmasInfo = []
+      for (const t of turmas) {
+        const { data: orc } = await sb.from('alm_orcamentos').select('valor').eq('turma_id', t.id).eq('mes', mes).maybeSingle()
+        const { data: reqs } = await sb.from('alm_requisicoes').select('total, status').eq('turma_id', t.id).eq('mes', mes).in('status', ['aprovado', 'pendente'])
+        const gasto = (reqs ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
+        const gastoPendente = (reqs ?? []).filter((r: any) => r.status === 'pendente').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
+        turmasInfo.push({ ...t, orcamento: orc?.valor ?? 0, gasto, gasto_pendente: gastoPendente })
+      }
+      return json({ turma, turmas: turmasInfo, orcamento: turmasInfo[0]?.orcamento ?? 0, gasto: turmasInfo[0]?.gasto ?? 0, gasto_pendente: turmasInfo[0]?.gasto_pendente ?? 0 })
     }
 
     if (action === 'alm_minhas_reqs') {
@@ -1768,10 +1775,13 @@ Deno.serve(async (req) => {
       const observacao: string = body.observacao || ''
       if (!itens.length) return json({ error: 'Adicione pelo menos um item.' }, 400)
       const mes = (body.mes as string) || new Date().toISOString().slice(0, 7)
-      // Get teacher's turma
-      const { data: profData } = await sb
-        .from('professoras').select('serie_id').eq('id', prof.id).maybeSingle()
-      const turma_id = (profData as any)?.serie_id ?? null
+      // Turma: aceita turma_id do frontend (multi-turma) ou fallback para serie_id
+      let turma_id = (body.turma_id as string) || null
+      if (!turma_id) {
+        const { data: profData } = await sb
+          .from('professoras').select('serie_id').eq('id', prof.id).maybeSingle()
+        turma_id = (profData as any)?.serie_id ?? null
+      }
       const total = itens.reduce((s: number, it: any) =>
         s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
       const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({

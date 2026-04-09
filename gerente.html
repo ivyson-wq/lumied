@@ -1031,6 +1031,17 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
         </div>
 
+        <!-- Contas a Receber — Repasse de Atividades -->
+        <div class="form-card" style="margin-bottom:20px;background:#fff8f0;border-color:rgba(212,131,10,.25);">
+          <div class="sec-title" style="margin-bottom:12px;">💰 Contas a Receber — Repasse de Atividades</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+            <input type="month" id="ativContasMes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <button onclick="apurarContasAtiv()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">📊 Apurar Mês</button>
+            <button onclick="loadContasAtiv()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">↻ Atualizar</button>
+          </div>
+          <div id="ativContasContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
+        </div>
+
         <!-- Stats por dia -->
         <div class="sec-title" style="margin-bottom:16px;">📅 Inscrições por Dia da Semana</div>
         <div class="dia-count-grid">
@@ -1074,7 +1085,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div class="form-card">
               <h3>➕ Nova Atividade</h3>
               <div class="ff"><label>Nome</label><input type="text" id="newAtivNome" placeholder="Ex: Natação"></div>
-              <div class="ff"><label>Preço mensal (R$)</label><input type="number" id="newAtivPreco" placeholder="150.00" step="0.01" min="0"></div>
+              <div class="ff"><label>Preço mensal (R$) — cobrado da família</label><input type="number" id="newAtivPreco" placeholder="150.00" step="0.01" min="0"></div>
+              <div class="ff"><label>Repasse à escola (R$/aluno/mês)</label><input type="number" id="newAtivRepasse" placeholder="30.00" step="0.01" min="0"></div>
               <div class="ff"><label>Descrição</label><input type="text" id="newAtivDesc" placeholder="Descrição curta (opcional)"></div>
               <div class="ff">
                 <label>Cor</label>
@@ -2803,7 +2815,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     <h3>Editar Atividade</h3>
     <div class="ff" style="margin-top:16px;"><label>Nome</label><input type="text" id="editAtivNome"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div class="ff"><label>Preço mensal (R$)</label><input type="number" id="editAtivPreco" step="0.01" min="0"></div>
+      <div class="ff"><label>Preço mensal (R$) — cobrado da família</label><input type="number" id="editAtivPreco" step="0.01" min="0"></div>
+      <div class="ff"><label>Repasse à escola (R$/aluno/mês)</label><input type="number" id="editAtivRepasse" step="0.01" min="0"></div>
       <div class="ff"><label>Ordem</label><input type="number" id="editAtivOrdem" min="1"></div>
     </div>
     <div class="ff"><label>Descrição</label><input type="text" id="editAtivDesc"></div>
@@ -4999,7 +5012,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   // ── ATIVIDADES ────────────────────────────────────────
   async function loadAtividadesPanel() {
-    await Promise.all([ loadAtividadesCRUD(), loadInscricoesAtividades(), loadAlmocoConfig() ]);
+    await Promise.all([ loadAtividadesCRUD(), loadInscricoesAtividades(), loadAlmocoConfig(), loadContasAtiv() ]);
   }
   async function loadAlmocoConfig() {
     const d = await api({ action:'config_get', chave:'almoco_preco' });
@@ -5026,7 +5039,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <span class="ativ-color-dot" style="background:${a.cor||'#C8102E'}"></span>
         <div class="lr-main">
           <strong>${esc(a.nome)}</strong>
-          <span>R$ ${Number(a.preco).toFixed(2).replace('.',',')} · ${a.ativo?'Ativa':'Inativa'}</span>
+          <span>R$ ${Number(a.preco).toFixed(2).replace('.',',')} · ${a.ativo?'Ativa':'Inativa'}${a.valor_repasse_aluno ? ` · Repasse: R$ ${Number(a.valor_repasse_aluno).toFixed(2).replace('.',',')}/aluno` : ''}</span>
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${turmaInfo}</div>
         </div>
         <button class="action-btn" onclick="openAtivEdit('${a.id}')">✎ Editar</button>
@@ -5155,11 +5168,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       if (!t.turma) return showAlert('ativ','error','Informe o nome de todas as turmas.');
       if (!t.slots.length) return showAlert('ativ','error','Adicione horários para todas as turmas.');
     }
-    const d = await api({ action:'atividades_create', nome, preco, descricao:desc, cor, horarios, ordem:99 });
+    const repasse = parseFloat(document.getElementById('newAtivRepasse').value)||0;
+    const d = await api({ action:'atividades_create', nome, preco, descricao:desc, cor, horarios, ordem:99, valor_repasse_aluno:repasse });
     if (d.error) return showAlert('ativ','error',d.error);
     showAlert('ativ','success','✅ Atividade "'+nome+'" criada!');
     document.getElementById('newAtivNome').value='';
     document.getElementById('newAtivPreco').value='';
+    document.getElementById('newAtivRepasse').value='';
     document.getElementById('newAtivDesc').value='';
     document.getElementById('turmasContainer').innerHTML='';
     loadAtividadesCRUD();
@@ -5190,6 +5205,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
     document.getElementById('editAtivNome').value  = a.nome || '';
     document.getElementById('editAtivPreco').value = a.preco || 0;
+    document.getElementById('editAtivRepasse').value = a.valor_repasse_aluno || 0;
     document.getElementById('editAtivOrdem').value = a.ordem || 99;
     document.getElementById('editAtivDesc').value  = a.descricao || '';
     document.getElementById('editAtivCor').value   = a.cor || '#C8102E';
@@ -5324,12 +5340,66 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     }
 
     document.getElementById('btnSaveAtiv').disabled = true;
-    const d = await api({ action:'atividades_update_full', id:editingAtivId, nome, preco, descricao:desc, cor, horarios, ordem });
+    const repasse = parseFloat(document.getElementById('editAtivRepasse').value)||0;
+    const d = await api({ action:'atividades_update_full', id:editingAtivId, nome, preco, descricao:desc, cor, horarios, ordem, valor_repasse_aluno:repasse });
     document.getElementById('btnSaveAtiv').disabled = false;
 
     if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
     closeAtivModal();
     loadAtividadesCRUD();
+  }
+
+  // ── CONTAS A RECEBER ATIVIDADES ──────────────────────
+  (function() {
+    const el = document.getElementById('ativContasMes');
+    if (el) el.value = new Date().toISOString().slice(0, 7);
+  })();
+
+  async function loadContasAtiv() {
+    const mes = document.getElementById('ativContasMes')?.value || new Date().toISOString().slice(0, 7);
+    const data = await api({ action: 'atividades_contas_list', mes });
+    const list = Array.isArray(data) ? data : [];
+    const el = document.getElementById('ativContasContent');
+    if (!list.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Nenhuma conta para este mês. Clique "Apurar Mês" para gerar.</div>'; return; }
+    const total = list.reduce((s, c) => s + (c.valor_total || 0), 0);
+    const STATUS = { pendente: '⏳ Pendente', pago: '✅ Pago', cancelado: '❌ Cancelado', atrasado: '🔴 Atrasado' };
+    el.innerHTML = `
+      <div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 18px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Total a Receber</div><div style="font-size:22px;font-weight:700;color:#d4830a;">R$ ${total.toFixed(2).replace('.',',')}</div></div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 18px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Atividades</div><div style="font-size:22px;font-weight:700;">${list.length}</div></div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 18px;"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Vencimento</div><div style="font-size:16px;font-weight:700;">${list[0]?.data_vencimento ? new Date(list[0].data_vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</div></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Atividade</th><th>Alunos</th><th>Valor/Aluno</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>${list.map(c => `<tr>
+          <td><strong>${esc(c.atividade_nome)}</strong></td>
+          <td>${c.qtd_alunos}</td>
+          <td>R$ ${Number(c.valor_por_aluno).toFixed(2).replace('.',',')}</td>
+          <td><strong>R$ ${Number(c.valor_total).toFixed(2).replace('.',',')}</strong></td>
+          <td><span style="font-size:11px;">${STATUS[c.status]||c.status}</span></td>
+          <td>${c.status==='pendente'?`<button class="action-btn" onclick="marcarContaPaga('${c.id}')">✅ Pago</button><button class="action-btn del" onclick="cancelarConta('${c.id}')">✕</button>`:c.data_pagamento?new Date(c.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR'):''}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  }
+
+  async function apurarContasAtiv() {
+    const mes = document.getElementById('ativContasMes')?.value || new Date().toISOString().slice(0, 7);
+    const d = await api({ action: 'atividades_apurar_mes', mes });
+    if (d.error) return showToast(d.error, 'error');
+    showToast(`Apuração concluída: ${d.gerados} atividade(s), vencimento ${new Date(d.vencimento+'T12:00:00').toLocaleDateString('pt-BR')}.`, 'success', 5000);
+    loadContasAtiv();
+  }
+
+  async function marcarContaPaga(id) {
+    await api({ action: 'atividades_conta_pagar', id });
+    showToast('Marcado como pago!', 'success');
+    loadContasAtiv();
+  }
+
+  async function cancelarConta(id) {
+    if (!await _lumiedConfirm('Cancelar esta conta a receber?')) return;
+    await api({ action: 'atividades_conta_cancelar', id });
+    loadContasAtiv();
   }
 
   // ── DASHBOARD ATIVIDADES ──────────────────────────────
