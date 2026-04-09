@@ -68,6 +68,42 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .sec-title{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
 .count-badge{background:var(--red-light);color:var(--red);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:2px 10px;border-radius:100px;}
 
+/* DASHBOARD TURNOS & ATIVIDADES */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:26px;}
+.dias-semana-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.dia-card{background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:transform .2s;}
+.dia-card:hover{transform:translateY(-2px);}
+.dia-card-header{background:var(--red);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.dia-card-header .dia-nome{font-family:'Lora',serif;font-size:14px;font-weight:700;color:#fff;}
+.dia-card-header .dia-count{background:rgba(255,255,255,.25);color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:100px;font-family:'DM Sans',sans-serif;}
+.dia-card-body{padding:12px 14px;min-height:60px;}
+.dia-crianca-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid #f5f0ea;}
+.dia-crianca-item:last-child{border-bottom:none;}
+.dia-crianca-dot{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:5px;}
+.dia-crianca-info{flex:1;min-width:0;}
+.dia-crianca-info strong{display:block;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dia-crianca-info span{font-size:10px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dia-vazio{font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:12px 0;}
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.fb{padding:6px 14px;border-radius:100px;border:1.5px solid var(--border);background:var(--white);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .2s;}
+.fb.active{border-color:var(--red);background:var(--red-light);color:var(--red);}
+.p-search-input{padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;background:var(--white);margin-left:auto;width:200px;transition:border-color .2s;}
+.p-search-input:focus{border-color:var(--red);}
+.table-wrap{background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:13px;}
+.table-wrap th{background:#faf8f5;font-weight:600;text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);}
+.table-wrap td{padding:12px 16px;border-top:1px solid #f0ece6;vertical-align:top;}
+.table-wrap .date-cell{font-size:11px;color:var(--muted);white-space:nowrap;}
+.table-wrap .empty-state{text-align:center;padding:40px 24px;color:var(--muted);}
+.turno-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;border:none;font-family:'DM Sans',sans-serif;}
+.turno-pill.integral{background:rgba(200,16,46,.1);color:#C8102E;}.turno-pill.semi{background:rgba(212,131,10,.1);color:#c27800;}.turno-pill.tarde{background:rgba(26,107,181,.1);color:#1a6bb5;}.turno-pill.diaria{background:rgba(107,63,160,.1);color:#6b3fa0;}
+@media(max-width:768px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .dias-semana-grid{grid-template-columns:1fr 1fr;}
+  .table-wrap{overflow-x:auto;}
+  .p-search-input{width:100%;}
+}
+
 /* RANKING TABLE */
 .ranking-wrap{background:var(--white);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:32px;}
 .ranking-row{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid #f0ece6;transition:background .15s;}
@@ -422,8 +458,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> Notas</button>
     <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> Chamada</button>
     <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> Diário</button>
-    <button class="ps-item" onclick="switchProfPage('turnos',this)" data-page="turnos"><span class="ps-icon">📊</span> Turnos</button>
-    <button class="ps-item" onclick="switchProfPage('atividades',this)" data-page="atividades" data-modulo="atividades"><span class="ps-icon">🎯</span> Atividades Extra</button>
+    <button class="ps-item" onclick="switchProfPage('turnos',this)" data-page="turnos" data-modulo="turno"><span class="ps-icon">📊</span> Turnos</button>
+    <button class="ps-item" onclick="switchProfPage('ativExtras',this)" data-page="ativExtras" data-modulo="atividades"><span class="ps-icon">🎯</span> Atividades Extras</button>
     <button class="ps-item" onclick="switchProfPage('modulosConfig',this)" data-page="modulosConfig" id="sidebarModulosBtn" style="display:none;border-top:1px solid rgba(255,255,255,.1);margin-top:8px;"><span class="ps-icon">⚙️</span> Modulos</button>
   </div>
 
@@ -943,82 +979,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <button style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;" onclick="salvarDiario()">Salvar Registro</button>
     </div>
 
-    <!-- ═══ PAGE: TURNOS ═══ -->
-    <div class="prof-page" id="pageTurnos">
-      <div class="sec-title">📊 Turnos
-        <button onclick="loadPageTurnos()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
-      </div>
-
-      <div class="stats-grid" id="pageTurnosStats">
-        <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="ptTotal">—</div><div class="stat-sub">solicitacoes</div></div>
-        <div class="stat-card" data-g="integral"><div class="stat-label">Integral</div><div class="stat-value" id="ptIntegral">—</div><div class="stat-sub">todas freq.</div></div>
-        <div class="stat-card" data-g="semi"><div class="stat-label">Semi-Int.</div><div class="stat-value" id="ptSemi">—</div><div class="stat-sub">todas freq.</div></div>
-        <div class="stat-card" data-g="tarde"><div class="stat-label">Tarde</div><div class="stat-value" id="ptTarde">—</div><div class="stat-sub">13:30h</div></div>
-        <div class="stat-card" data-g="diaria"><div class="stat-label">Diaria</div><div class="stat-value" id="ptDiaria">—</div><div class="stat-sub">avulso</div></div>
-      </div>
-
-      <div class="sec-title" style="margin-bottom:16px;">📅 Criancas por Dia da Semana</div>
-      <div class="dias-semana-grid" id="ptDiasSemanaGrid">
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="ptD_Segunda">0</span></div><div class="dia-card-body" id="ptL_Segunda"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terca</span><span class="dia-count" id="ptD_Terca">0</span></div><div class="dia-card-body" id="ptL_Terca"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="ptD_Quarta">0</span></div><div class="dia-card-body" id="ptL_Quarta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="ptD_Quinta">0</span></div><div class="dia-card-body" id="ptL_Quinta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="ptD_Sexta">0</span></div><div class="dia-card-body" id="ptL_Sexta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-      </div>
-
-      <div class="sec-title">Solicitacoes <span class="p-count-badge" id="ptTableCount">0</span></div>
-      <div class="p-filter-bar">
-        <button class="p-fb active" onclick="setPtFilter('all',this)">Todos</button>
-        <button class="p-fb" onclick="setPtFilter('integral',this)">Integral</button>
-        <button class="p-fb" onclick="setPtFilter('semi',this)">Semi-Int.</button>
-        <button class="p-fb" onclick="setPtFilter('tarde',this)">Tarde</button>
-        <button class="p-fb" onclick="setPtFilter('diaria',this)">Diaria</button>
-        <input class="search-input" id="ptSearchInput" type="text" placeholder="Buscar..." oninput="renderPtTable()" style="margin-left:auto;padding:6px 12px;border:1.5px solid var(--border);border-radius:100px;font-family:'DM Sans',sans-serif;font-size:12px;max-width:180px;">
-      </div>
-      <div class="p-table-wrap">
-        <table>
-          <thead><tr><th>Crianca</th><th>Responsavel</th><th>Serie</th><th>Turno</th><th>Dias</th><th>Data</th></tr></thead>
-          <tbody id="ptTableBody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ═══ PAGE: ATIVIDADES EXTRACLASSE ═══ -->
-    <div class="prof-page" id="pageAtividades">
-      <div class="sec-title">🎯 Atividades Extraclasse
-        <button onclick="loadPageAtividades()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
-      </div>
-
-      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat-card" data-g="total"><div class="stat-label">Total de Inscricoes</div><div class="stat-value" id="paTotal">—</div><div class="stat-sub">em atividades</div></div>
-        <div class="stat-card" data-g="integral"><div class="stat-label">Atividades Ativas</div><div class="stat-value" id="paAtivas">—</div><div class="stat-sub">com inscricoes abertas</div></div>
-        <div class="stat-card" data-g="semi"><div class="stat-label">Turmas Lotadas</div><div class="stat-value" id="paLotadas">—</div><div class="stat-sub">sem vagas disponiveis</div></div>
-        <div class="stat-card" data-g="tarde"><div class="stat-label">Vagas Disponiveis</div><div class="stat-value" id="paVagas">—</div><div class="stat-sub">total em aberto</div></div>
-      </div>
-
-      <div class="sec-title" style="margin-bottom:16px;">📅 Criancas por Dia da Semana</div>
-      <div class="dias-semana-grid" id="paDiasSemanaGrid">
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="paD_Segunda">0</span></div><div class="dia-card-body" id="paL_Segunda"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terca</span><span class="dia-count" id="paD_Terca">0</span></div><div class="dia-card-body" id="paL_Terca"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="paD_Quarta">0</span></div><div class="dia-card-body" id="paL_Quarta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="paD_Quinta">0</span></div><div class="dia-card-body" id="paL_Quinta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="paD_Sexta">0</span></div><div class="dia-card-body" id="paL_Sexta"><div class="dia-vazio">Nenhuma crianca</div></div></div>
-      </div>
-
-      <div class="sec-title" style="margin-bottom:16px;">🎯 Ocupacao por Atividade</div>
-      <div class="p-ocup-grid" id="paOcupacaoGrid"></div>
-
-      <div class="sec-title">Inscricoes Recebidas <span class="p-count-badge" id="paInscricoesCount">0</span>
-        <input class="search-input" id="paSearchInput" type="text" placeholder="Buscar..." oninput="renderPaTable()" style="margin-left:auto;padding:6px 12px;border:1.5px solid var(--border);border-radius:100px;font-family:'DM Sans',sans-serif;font-size:12px;max-width:180px;">
-      </div>
-      <div class="p-table-wrap">
-        <table>
-          <thead><tr><th>Crianca</th><th>Responsavel</th><th>Serie</th><th>Atividades e Turmas</th><th>Data</th></tr></thead>
-          <tbody id="paInscricoesBody"><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
     <!-- ═══ PAGE: MODULOS CONFIG (gerente only) ═══ -->
     <div class="prof-page" id="pageModulosConfig">
       <div class="sec-title">⚙️ Modulos do Tier
@@ -1030,6 +990,71 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       </div>
       <div id="modulosConfigCount" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
       <div id="modulosConfigGrid"></div>
+    </div>
+
+    <!-- ═══ PAGE: TURNOS ═══ -->
+    <div class="prof-page" id="pageTurnos">
+      <div class="sec-title">📊 Dashboard de Turnos</div>
+      <div class="stats-grid">
+        <div class="stat-card" data-g="total"><div class="stat-label">Total</div><div class="stat-value" id="pTTotal">—</div><div class="stat-sub">solicitações</div></div>
+        <div class="stat-card" data-g="integral"><div class="stat-label">Integral</div><div class="stat-value" id="pTIntegral">—</div><div class="stat-sub">todas freq.</div></div>
+        <div class="stat-card" data-g="semi"><div class="stat-label">Semi-Int.</div><div class="stat-value" id="pTSemi">—</div><div class="stat-sub">todas freq.</div></div>
+        <div class="stat-card" data-g="tarde"><div class="stat-label">Tarde</div><div class="stat-value" id="pTTarde">—</div><div class="stat-sub">13:30h</div></div>
+        <div class="stat-card" data-g="diaria"><div class="stat-label">Diária</div><div class="stat-value" id="pTDiaria">—</div><div class="stat-sub">R$ 150,00</div></div>
+      </div>
+      <div class="sec-title" style="margin-bottom:16px;">📅 Crianças por Dia da Semana</div>
+      <div class="dias-semana-grid">
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="pTd_Segunda">0</span></div><div class="dia-card-body" id="pTl_Segunda"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terça</span><span class="dia-count" id="pTd_Terça">0</span></div><div class="dia-card-body" id="pTl_Terça"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="pTd_Quarta">0</span></div><div class="dia-card-body" id="pTl_Quarta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="pTd_Quinta">0</span></div><div class="dia-card-body" id="pTl_Quinta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="pTd_Sexta">0</span></div><div class="dia-card-body" id="pTl_Sexta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+      </div>
+      <div class="sec-title">Solicitações <span class="count-badge" id="pTTableCount">0</span></div>
+      <div class="filter-bar">
+        <button class="fb active" onclick="setProfTurnoFilter('all',this)">Todos</button>
+        <button class="fb" onclick="setProfTurnoFilter('integral',this)">🔴 Integral</button>
+        <button class="fb" onclick="setProfTurnoFilter('semi',this)">🟠 Semi-Integral</button>
+        <button class="fb" onclick="setProfTurnoFilter('tarde',this)">🔵 Tarde</button>
+        <button class="fb" onclick="setProfTurnoFilter('diaria',this)">🟣 Diária</button>
+        <input class="p-search-input" id="pTSearch" type="text" placeholder="🔍  Buscar..." oninput="renderProfTurnoTable()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Criança</th><th>Responsável</th><th>Série</th><th>Turno</th><th>Dias</th><th>Data</th></tr></thead>
+          <tbody id="pTTableBody"><tr><td colspan="6" class="empty-state">⏳ Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: ATIVIDADES EXTRAS ═══ -->
+    <div class="prof-page" id="pageAtivExtras">
+      <div class="sec-title">🎯 Dashboard de Atividades Extras</div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card" data-g="total"><div class="stat-label">Total de Inscrições</div><div class="stat-value" id="pATotal">—</div><div class="stat-sub">em atividades</div></div>
+        <div class="stat-card" data-g="integral"><div class="stat-label">Atividades Ativas</div><div class="stat-value" id="pAAtivas">—</div><div class="stat-sub">com inscrições abertas</div></div>
+        <div class="stat-card" data-g="semi"><div class="stat-label">Turmas Lotadas</div><div class="stat-value" id="pALotadas">—</div><div class="stat-sub">sem vagas disponíveis</div></div>
+        <div class="stat-card" data-g="tarde"><div class="stat-label">Vagas Disponíveis</div><div class="stat-value" id="pAVagas">—</div><div class="stat-sub">total em aberto</div></div>
+      </div>
+      <div class="sec-title" style="margin-bottom:16px;">📅 Crianças por Dia da Semana</div>
+      <div class="dias-semana-grid">
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="pAd_Segunda">0</span></div><div class="dia-card-body" id="pAl_Segunda"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terça</span><span class="dia-count" id="pAd_Terça">0</span></div><div class="dia-card-body" id="pAl_Terça"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="pAd_Quarta">0</span></div><div class="dia-card-body" id="pAl_Quarta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="pAd_Quinta">0</span></div><div class="dia-card-body" id="pAl_Quinta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+        <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="pAd_Sexta">0</span></div><div class="dia-card-body" id="pAl_Sexta"><div class="dia-vazio">Nenhuma criança</div></div></div>
+      </div>
+      <div class="sec-title" style="margin-bottom:16px;">🎯 Ocupação por Atividade</div>
+      <div id="pAOcupacaoGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:28px;"></div>
+      <div class="sec-title">Inscrições Recebidas <span class="count-badge" id="pAInscCount">0</span>
+        <input class="p-search-input" id="pASearch" type="text" placeholder="🔍  Buscar..." oninput="renderProfAtivTable()" style="margin-left:auto;">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Criança</th><th>Responsável</th><th>Série</th><th>Atividades e Turmas</th><th>Data</th></tr></thead>
+          <tbody id="pATableBody"><tr><td colspan="5" class="empty-state">⏳ Carregando…</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
   </div><!-- /content -->
@@ -1076,8 +1101,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="pbnav-more-item" onclick="switchProfPage('impressoes',this);closeProfMore()" data-modulo="impressoes"><span>🖨️</span>Impressões</button>
     <button class="pbnav-more-item" onclick="switchProfPage('achados',this);closeProfMore()" data-modulo="achados"><span>🔍</span>Achados</button>
     <button class="pbnav-more-item" onclick="switchProfPage('diario',this);closeProfMore()" data-modulo="diario_classe"><span>📖</span>Diário</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('turnos',this);closeProfMore()"><span>📊</span>Turnos</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('atividades',this);closeProfMore()" data-modulo="atividades"><span>🎯</span>Atividades</button>
+    <button class="pbnav-more-item" onclick="switchProfPage('turnos',this);closeProfMore()" data-modulo="turno"><span>📊</span>Turnos</button>
+    <button class="pbnav-more-item" onclick="switchProfPage('ativExtras',this);closeProfMore()" data-modulo="atividades"><span>🎯</span>Ativ. Extras</button>
     <button class="pbnav-more-item" onclick="switchProfPage('modulosConfig',this);closeProfMore()" id="bnavModulosBtn" style="display:none;"><span>⚙️</span>Modulos</button>
   </div>
 </div>
@@ -1690,8 +1715,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     window.scrollTo({ top: 0, behavior: 'smooth' });
     closeProfMore();
     if (page === 'modulosConfig') loadModulosConfig();
-    if (page === 'turnos') loadPageTurnos();
-    if (page === 'atividades') loadPageAtividades();
+    if (page === 'turnos') loadProfTurnos();
+    if (page === 'ativExtras') loadProfAtivExtras();
   }
 
   // ── CAMERA FAB ──
@@ -2066,216 +2091,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         }).join('')
         : '<div style="color:var(--muted);font-size:12px;grid-column:1/-1;">Nenhuma atividade cadastrada.</div>';
     } catch(_) {}
-  }
-
-  // ── TURNO INFO (same as gerente) ──
-  var PT_TURNO_INFO = {
-    integral_5x:{label:'Integral 5x/sem',g:'integral'},integral_4x:{label:'Integral 4x/sem',g:'integral'},
-    integral_3x:{label:'Integral 3x/sem',g:'integral'},integral_2x:{label:'Integral 2x/sem',g:'integral'},
-    integral_1x:{label:'Integral 1x/sem',g:'integral'},semi_5x:{label:'Semi-Int. 5x/sem',g:'semi'},
-    semi_4x:{label:'Semi-Int. 4x/sem',g:'semi'},semi_3x:{label:'Semi-Int. 3x/sem',g:'semi'},
-    semi_2x:{label:'Semi-Int. 2x/sem',g:'semi'},semi_1x:{label:'Semi-Int. 1x/sem',g:'semi'},
-    tarde:{label:'Tarde',g:'tarde'},diaria:{label:'Diaria',g:'diaria'},
-    'Integral (7h-19h)':{label:'Integral',g:'integral'},'Semi-Integral (7h-13h30)':{label:'Semi-Int.',g:'semi'},
-    'Semi-Integral (13h-19h)':{label:'Semi-Int.',g:'semi'},'Tarde (13h-17h)':{label:'Tarde',g:'tarde'},
-    'Diária (por dia)':{label:'Diaria',g:'diaria'}
-  };
-  var ptAllData = [], ptFilter = 'all';
-  var paAllAtiv = [], paAllInsc = [];
-
-  // ── PAGE: TURNOS (full — mirrors gerente) ──
-  async function loadPageTurnos() {
-    try {
-      var d = await callApi({ action: 'prof_turnos_dashboard' });
-      if (!d || d.error) {
-        document.getElementById('ptTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#e53e3e;">' + (d && d.error ? esc(d.error) : 'Erro ao carregar turnos.') + '</td></tr>';
-        return;
-      }
-      ptAllData = d.data || [];
-      var c = d.counts || {};
-      document.getElementById('ptTotal').textContent = d.total || 0;
-      document.getElementById('ptIntegral').textContent = c.integral || 0;
-      document.getElementById('ptSemi').textContent = c.semi || 0;
-      document.getElementById('ptTarde').textContent = c.tarde || 0;
-      document.getElementById('ptDiaria').textContent = c.diaria || 0;
-      renderPtDiasSemana();
-      renderPtTable();
-    } catch(e) {
-      document.getElementById('ptTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#e53e3e;">Erro de conexao.</td></tr>';
-    }
-  }
-
-  function renderPtDiasSemana() {
-    var DIAS = ['Segunda','Terca','Quarta','Quinta','Sexta'];
-    var map = {}; DIAS.forEach(function(d){ map[d] = []; });
-    ptAllData.forEach(function(r) {
-      if (!Array.isArray(r.dias_semana)) return;
-      r.dias_semana.forEach(function(dia) {
-        // Normalize accented names
-        var key = dia.replace('ç','c').replace('é','e');
-        if (map[key]) map[key].push(r);
-        else if (map[dia]) map[dia].push(r);
-      });
-    });
-    DIAS.forEach(function(dia) {
-      var list = map[dia];
-      var countEl = document.getElementById('ptD_' + dia);
-      var listEl  = document.getElementById('ptL_' + dia);
-      if (!countEl || !listEl) return;
-      countEl.textContent = list.length;
-      if (!list.length) { listEl.innerHTML = '<div class="dia-vazio">Nenhuma crianca</div>'; return; }
-      listEl.innerHTML = list.map(function(r) {
-        var t = PT_TURNO_INFO[r.turno];
-        var turnoShort = t ? t.label : (r.turno || '');
-        return '<div class="dia-crianca-item"><div class="dia-crianca-dot"></div><div class="dia-crianca-info">' +
-          '<strong>' + esc(r.nome_crianca) + '</strong>' +
-          '<span>' + esc(r.serie||'') + (r.serie && turnoShort ? ' · ' : '') + turnoShort + '</span></div></div>';
-      }).join('');
-    });
-  }
-
-  function setPtFilter(f, btn) {
-    ptFilter = f;
-    document.querySelectorAll('.p-filter-bar .p-fb').forEach(function(b){ b.classList.remove('active'); });
-    btn.classList.add('active');
-    renderPtTable();
-  }
-
-  function renderPtTable() {
-    var q = (document.getElementById('ptSearchInput')?.value || '').toLowerCase();
-    var rows = ptAllData.filter(function(r) {
-      var t = PT_TURNO_INFO[r.turno];
-      var g = t ? t.g : '';
-      var mf = ptFilter === 'all' || g === ptFilter;
-      var ms = !q || [r.nome_crianca, r.nome_resp, r.email, r.serie].some(function(v){ return v && v.toLowerCase().indexOf(q) >= 0; });
-      return mf && ms;
-    });
-    document.getElementById('ptTableCount').textContent = rows.length;
-    var tb = document.getElementById('ptTableBody');
-    if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted);">Nenhum resultado.</td></tr>'; return; }
-    tb.innerHTML = rows.map(function(r) {
-      var t = PT_TURNO_INFO[r.turno] || { label: r.turno || '—', g: '' };
-      var date = r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-      var dias = Array.isArray(r.dias_semana) && r.dias_semana.length
-        ? r.dias_semana.map(function(d){ return '<span style="display:inline-block;background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:2px 7px;font-size:10px;font-weight:600;margin:1px;">'+esc(d)+'</span>'; }).join(' ')
-        : '<span style="color:var(--muted);font-size:12px;">—</span>';
-      return '<tr><td><strong>' + esc(r.nome_crianca) + '</strong></td>' +
-        '<td>' + esc(r.nome_resp||'') + (r.email ? '<br><small style="color:var(--muted)">' + esc(r.email) + '</small>' : '') + '</td>' +
-        '<td>' + esc(r.serie || '—') + '</td>' +
-        '<td><span class="turno-pill ' + t.g + '">' + t.label + '</span></td>' +
-        '<td>' + dias + '</td>' +
-        '<td style="font-size:12px;color:var(--muted);">' + date + '</td></tr>';
-    }).join('');
-  }
-
-  // ── PAGE: ATIVIDADES (full — mirrors gerente) ──
-  async function loadPageAtividades() {
-    try {
-      var d = await callApi({ action: 'prof_atividades_dashboard' });
-      if (!d || d.error) return;
-      paAllAtiv = d.atividades || [];
-      paAllInsc = d.inscricoes || [];
-
-      // Stats
-      var totalInscritos = paAllInsc.length;
-      var ativasComVaga = paAllAtiv.filter(function(a){ return (a.horarios||[]).some(function(t){ return (t.vagas_disponiveis == null ? 999 : t.vagas_disponiveis) > 0; }); }).length;
-      var turmasLotadas = paAllAtiv.reduce(function(acc,a){ return acc + (a.horarios||[]).filter(function(t){ return t.vagas != null && (t.vagas_disponiveis == null ? 999 : t.vagas_disponiveis) === 0; }).length; }, 0);
-      var vagasTotal = paAllAtiv.reduce(function(acc,a){ return acc + (a.horarios||[]).reduce(function(s,t){ return s + (t.vagas_disponiveis||0); },0); },0);
-      document.getElementById('paTotal').textContent = totalInscritos;
-      document.getElementById('paAtivas').textContent = ativasComVaga;
-      document.getElementById('paLotadas').textContent = turmasLotadas;
-      document.getElementById('paVagas').textContent = vagasTotal;
-
-      // Criancas por dia — subagrupadas por atividade e turma
-      var DIAS = ['Segunda','Terca','Quarta','Quinta','Sexta'];
-      var diasMap = {}; DIAS.forEach(function(d){ diasMap[d] = {}; });
-      paAllInsc.forEach(function(ins) {
-        (ins.turmas_selecionadas||[]).forEach(function(ts) {
-          var ativ = paAllAtiv.find(function(a){ return a.id === ts.atividade_id; });
-          var ativNome = ativ ? ativ.nome : 'Atividade';
-          var turmaNome = ts.turma || 'Turma';
-          (ts.slots||[]).forEach(function(slot) {
-            var dia = (slot.dia||'').replace('ç','c').replace('é','e');
-            if (!diasMap[dia]) return;
-            if (!diasMap[dia][ativNome]) diasMap[dia][ativNome] = {};
-            if (!diasMap[dia][ativNome][turmaNome]) diasMap[dia][ativNome][turmaNome] = [];
-            diasMap[dia][ativNome][turmaNome].push({ nome: ins.nome_crianca, serie: ins.serie });
-          });
-        });
-      });
-
-      DIAS.forEach(function(dia) {
-        var criancasNoDia = new Set();
-        Object.values(diasMap[dia]).forEach(function(turmas){ Object.values(turmas).forEach(function(lista){ lista.forEach(function(c){ criancasNoDia.add(c.nome); }); }); });
-        var count = criancasNoDia.size;
-        var cEl = document.getElementById('paD_'+dia); if (cEl) cEl.textContent = count;
-        var lEl = document.getElementById('paL_'+dia); if (!lEl) return;
-        if (!count) { lEl.innerHTML = '<div class="dia-vazio">Nenhuma crianca</div>'; return; }
-        var atividadesNoDia = Object.entries(diasMap[dia]);
-        lEl.innerHTML = atividadesNoDia.length ? atividadesNoDia.map(function(entry) {
-          var ativNome = entry[0], turmas = entry[1];
-          var turmasHTML = Object.entries(turmas).map(function(te) {
-            var turmaNome = te[0], criancas = te[1];
-            var criancasHTML = criancas.map(function(c) {
-              return '<div class="dia-crianca-item" style="padding:4px 0 4px 8px;"><div class="dia-crianca-dot" style="width:5px;height:5px;margin-top:6px;background:var(--muted);opacity:.5;"></div><div class="dia-crianca-info"><strong>' + esc(c.nome) + '</strong>' + (c.serie ? '<span>' + esc(c.serie) + '</span>' : '') + '</div></div>';
-            }).join('');
-            return '<div style="margin-bottom:6px;"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0 2px;border-bottom:1px dashed #e8e3dc;margin-bottom:2px;">🕐 ' + esc(turmaNome) + ' <span style="font-weight:400;color:#bbb;">(' + criancas.length + ')</span></div>' + criancasHTML + '</div>';
-          }).join('');
-          var tot = Object.values(turmas).reduce(function(s,l){ return s + l.length; }, 0);
-          return '<div style="margin-bottom:10px;border-bottom:1px solid #f0ece6;padding-bottom:8px;"><div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>' + esc(ativNome) + ' <span style="font-weight:500;color:var(--muted);font-size:10px;">(' + tot + ')</span></div>' + turmasHTML + '</div>';
-        }).join('') : '<div class="dia-vazio">Nenhuma crianca</div>';
-      });
-
-      // Ocupacao por atividade
-      var grid = document.getElementById('paOcupacaoGrid');
-      if (!paAllAtiv.length) { grid.innerHTML = '<p style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</p>'; }
-      else {
-        grid.innerHTML = paAllAtiv.map(function(a) {
-          var turmas = (a.horarios||[]).map(function(t) {
-            var inscritos = t.inscritos||0, vagas = t.vagas != null ? t.vagas : null;
-            var pct = vagas ? Math.round((inscritos/vagas)*100) : 0;
-            var cor = pct >= 100 ? '#C8102E' : pct >= 75 ? '#d4830a' : '#2d7a3a';
-            return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-              '<span style="font-size:12px;font-weight:500;color:var(--text);">' + esc(t.turma) + '</span>' +
-              '<span style="font-size:11px;color:' + cor + ';font-weight:600;">' + inscritos + (vagas != null ? '/' + vagas : '') + ' inscrito(s)</span></div>' +
-              (vagas != null ? '<div style="height:6px;background:#f0ece6;border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + Math.min(100,pct) + '%;background:' + cor + ';border-radius:3px;transition:width .4s;"></div></div>' : '') + '</div>';
-          }).join('');
-          return '<div style="background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);">' +
-            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
-            '<span style="width:12px;height:12px;border-radius:50%;background:' + (a.cor||'var(--red)') + ';flex-shrink:0;display:inline-block;"></span>' +
-            '<span style="font-size:14px;font-weight:700;color:var(--text);">' + esc(a.nome) + '</span>' +
-            '<span style="font-size:11px;color:var(--muted);margin-left:auto;">R$ ' + Number(a.preco||0).toFixed(2).replace('.',',') + '/mes</span></div>' +
-            (turmas || '<span style="font-size:12px;color:var(--muted);">Sem turmas.</span>') + '</div>';
-        }).join('');
-      }
-
-      // Tabela inscricoes
-      renderPaTable();
-    } catch(e) {
-      document.getElementById('paInscricoesBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#e53e3e;">Erro de conexao.</td></tr>';
-    }
-  }
-
-  function renderPaTable() {
-    var q = (document.getElementById('paSearchInput')?.value || '').toLowerCase();
-    var rows = paAllInsc.filter(function(ins) {
-      return !q || [ins.nome_crianca, ins.nome_resp, ins.email, ins.serie].some(function(v){ return v && v.toLowerCase().indexOf(q) >= 0; });
-    });
-    document.getElementById('paInscricoesCount').textContent = rows.length;
-    var tb = document.getElementById('paInscricoesBody');
-    if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Nenhuma inscricao.</td></tr>'; return; }
-    tb.innerHTML = rows.map(function(ins) {
-      var atividades = (ins.turmas_selecionadas||[]).map(function(ts) {
-        return '<div style="margin-bottom:4px;"><span style="font-size:11px;font-weight:600;color:var(--text);">' + esc(ts.turma||'') + '</span>' +
-          ((ts.slots||[]).length ? '<span style="font-size:10px;color:var(--muted);margin-left:4px;">' + ts.slots.map(function(s){ return s.dia + ' ' + s.inicio + '–' + s.fim; }).join(', ') + '</span>' : '') + '</div>';
-      }).join('') || '—';
-      var date = ins.criado_em ? new Date(ins.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-      return '<tr><td><strong>' + esc(ins.nome_crianca) + '</strong></td>' +
-        '<td>' + esc(ins.nome_resp||'') + (ins.email ? '<br><small style="color:var(--muted)">' + esc(ins.email) + '</small>' : '') + '</td>' +
-        '<td>' + esc(ins.serie || '—') + '</td>' +
-        '<td>' + atividades + '</td>' +
-        '<td style="font-size:12px;color:var(--muted);">' + date + '</td></tr>';
-    }).join('');
   }
 
   async function loadRanking() {
@@ -3456,6 +3271,243 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     almFecharModal();
     almLoadReqs();
     almLoadBudget();
+  }
+
+  // ── DASHBOARD TURNOS (read-only, espelho do gerente) ─────────
+  const PROF_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
+  const TURNO_INFO = {
+    integral_5x:{label:'Integral · 5×/sem',price:'R$ 4.395,00',g:'integral'},
+    integral_4x:{label:'Integral · 4×/sem',price:'R$ 4.303,57',g:'integral'},
+    integral_3x:{label:'Integral · 3×/sem',price:'R$ 4.072,13',g:'integral'},
+    integral_2x:{label:'Integral · 2×/sem',price:'R$ 3.760,70',g:'integral'},
+    integral_1x:{label:'Integral · 1×/sem',price:'R$ 3.300,00',g:'integral'},
+    semi_5x:{label:'Semi-Int. · 5×/sem',price:'R$ 4.030,00',g:'semi'},
+    semi_4x:{label:'Semi-Int. · 4×/sem',price:'R$ 3.991,57',g:'semi'},
+    semi_3x:{label:'Semi-Int. · 3×/sem',price:'R$ 3.773,13',g:'semi'},
+    semi_2x:{label:'Semi-Int. · 2×/sem',price:'R$ 3.534,70',g:'semi'},
+    semi_1x:{label:'Semi-Int. · 1×/sem',price:'R$ 3.196,27',g:'semi'},
+    tarde:{label:'Tarde',price:null,g:'tarde'},
+    diaria:{label:'Diária',price:'R$ 150,00',g:'diaria'},
+  };
+
+  async function callProfApi(body) {
+    const tok = getToken();
+    const headers = { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
+    const r = await fetch(PROF_API, { method: 'POST', headers, body: JSON.stringify({ ...body, _token: tok }) });
+    return r.json();
+  }
+
+  // ── Turnos ──
+  let profTurnoData = [], profTurnoFilter = 'all';
+
+  async function loadProfTurnos() {
+    const data = await callProfApi({ action: 'solicitacoes_list' });
+    if (!Array.isArray(data)) return;
+    profTurnoData = data;
+    updateProfTurnoStats();
+    renderProfTurnoTable();
+  }
+
+  function updateProfTurnoStats() {
+    let c = { integral: 0, semi: 0, tarde: 0, diaria: 0 };
+    profTurnoData.forEach(r => { const g = TURNO_INFO[r.turno]?.g; if (c[g] !== undefined) c[g]++; });
+    document.getElementById('pTTotal').textContent = profTurnoData.length;
+    document.getElementById('pTIntegral').textContent = c.integral;
+    document.getElementById('pTSemi').textContent = c.semi;
+    document.getElementById('pTTarde').textContent = c.tarde;
+    document.getElementById('pTDiaria').textContent = c.diaria;
+    renderProfTurnoDias();
+  }
+
+  function renderProfTurnoDias() {
+    const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta'];
+    const map = {}; DIAS.forEach(d => map[d] = []);
+    profTurnoData.forEach(r => {
+      if (!Array.isArray(r.dias_semana) || !r.dias_semana.length) return;
+      r.dias_semana.forEach(dia => { if (map[dia]) map[dia].push(r); });
+    });
+    DIAS.forEach(dia => {
+      const list = map[dia];
+      const countEl = document.getElementById('pTd_' + dia);
+      const listEl = document.getElementById('pTl_' + dia);
+      if (!countEl || !listEl) return;
+      countEl.textContent = list.length;
+      if (!list.length) { listEl.innerHTML = '<div class="dia-vazio">Nenhuma criança</div>'; return; }
+      listEl.innerHTML = list.map(r => {
+        const t = TURNO_INFO[r.turno];
+        const turnoShort = t ? t.label.replace(' na semana','').replace(' · ',' ') : r.turno;
+        return `<div class="dia-crianca-item"><div class="dia-crianca-dot"></div><div class="dia-crianca-info"><strong>${esc(r.nome_crianca)}</strong><span>${esc(r.serie||'')}${r.serie&&turnoShort?' · ':''}${turnoShort}</span></div></div>`;
+      }).join('');
+    });
+  }
+
+  function setProfTurnoFilter(f, btn) {
+    profTurnoFilter = f;
+    document.querySelectorAll('#pageTurnos .fb').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderProfTurnoTable();
+  }
+
+  function renderProfTurnoTable() {
+    const q = (document.getElementById('pTSearch')?.value || '').toLowerCase();
+    const rows = profTurnoData.filter(r => {
+      const g = TURNO_INFO[r.turno]?.g || '';
+      const mf = profTurnoFilter === 'all' || g === profTurnoFilter;
+      const ms = !q || [r.nome_crianca, r.nome_resp, r.email, r.serie].some(v => v?.toLowerCase().includes(q));
+      return mf && ms;
+    });
+    document.getElementById('pTTableCount').textContent = rows.length;
+    const tb = document.getElementById('pTTableBody');
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">📭 Nenhum resultado.</td></tr>'; return; }
+    tb.innerHTML = rows.map(r => {
+      const t = TURNO_INFO[r.turno] || { label: r.turno, g: '' };
+      const date = new Date(r.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const dias = Array.isArray(r.dias_semana) && r.dias_semana.length
+        ? r.dias_semana.map(d => '<span style="display:inline-block;background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:2px 7px;font-size:10px;font-weight:600;margin:1px;">' + esc(d) + '</span>').join(' ')
+        : '<span style="color:var(--muted);font-size:12px;">—</span>';
+      return `<tr>
+        <td><strong>${esc(r.nome_crianca)}</strong></td>
+        <td>${esc(r.nome_resp)}<br><small style="color:var(--muted)">${esc(r.email)}</small></td>
+        <td>${esc(r.serie || '—')}</td>
+        <td><span class="turno-pill ${t.g}">${t.label}${t.price ? ' · ' + t.price : ''}</span></td>
+        <td>${dias}</td>
+        <td class="date-cell">${date}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Atividades Extras ──
+  let profAtivInscricoes = [], profAtivTodas = [];
+
+  async function loadProfAtivExtras() {
+    const [inscricoes, atividades] = await Promise.all([
+      callProfApi({ action: 'inscricoes_atividades_list' }),
+      callProfApi({ action: 'atividades_list_all' })
+    ]);
+    profAtivInscricoes = Array.isArray(inscricoes) ? inscricoes : [];
+    profAtivTodas = Array.isArray(atividades) ? atividades : [];
+
+    // Stats
+    const totalInscritos = profAtivInscricoes.length;
+    const ativasComVaga = profAtivTodas.filter(a => a.ativo && (a.horarios || []).some(t => (t.vagas_disponiveis ?? 999) > 0)).length;
+    const turmasLotadas = profAtivTodas.reduce((acc, a) => acc + (a.horarios || []).filter(t => t.vagas != null && (t.vagas_disponiveis ?? 999) === 0).length, 0);
+    const vagasTotal = profAtivTodas.reduce((acc, a) => acc + (a.horarios || []).reduce((s, t) => s + (t.vagas_disponiveis ?? 0), 0), 0);
+
+    document.getElementById('pATotal').textContent = totalInscritos;
+    document.getElementById('pAAtivas').textContent = ativasComVaga;
+    document.getElementById('pALotadas').textContent = turmasLotadas;
+    document.getElementById('pAVagas').textContent = vagasTotal;
+
+    // Crianças por dia
+    const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta'];
+    const diasMap = {}; DIAS.forEach(d => diasMap[d] = {});
+
+    profAtivInscricoes.forEach(ins => {
+      (ins.turmas_selecionadas || []).forEach(ts => {
+        const ativ = profAtivTodas.find(a => a.id === ts.atividade_id);
+        const ativNome = ativ?.nome || 'Atividade';
+        const turmaNome = ts.turma || 'Turma';
+        (ts.slots || []).forEach(slot => {
+          if (!diasMap[slot.dia]) return;
+          if (!diasMap[slot.dia][ativNome]) diasMap[slot.dia][ativNome] = {};
+          if (!diasMap[slot.dia][ativNome][turmaNome]) diasMap[slot.dia][ativNome][turmaNome] = [];
+          diasMap[slot.dia][ativNome][turmaNome].push({ nome: ins.nome_crianca, serie: ins.serie });
+        });
+      });
+    });
+
+    DIAS.forEach(dia => {
+      const criancasNoDia = new Set();
+      Object.values(diasMap[dia]).forEach(turmas =>
+        Object.values(turmas).forEach(lista => lista.forEach(c => criancasNoDia.add(c.nome)))
+      );
+      const count = criancasNoDia.size;
+      document.getElementById('pAd_' + dia).textContent = count;
+      const listEl = document.getElementById('pAl_' + dia);
+      if (!count) { listEl.innerHTML = '<div class="dia-vazio">Nenhuma criança</div>'; return; }
+
+      const atividadesNoDia = Object.entries(diasMap[dia]);
+      listEl.innerHTML = atividadesNoDia.length ? atividadesNoDia.map(([ativNome, turmas]) => {
+        const turmasHTML = Object.entries(turmas).map(([turmaNome, criancas]) => {
+          const criancasHTML = criancas.map(c =>
+            `<div class="dia-crianca-item" style="padding:4px 0 4px 8px;">
+              <div class="dia-crianca-dot" style="width:5px;height:5px;margin-top:6px;background:var(--muted);opacity:.5;"></div>
+              <div class="dia-crianca-info"><strong>${esc(c.nome)}</strong>${c.serie ? `<span>${esc(c.serie)}</span>` : ''}</div>
+            </div>`
+          ).join('');
+          return `<div style="margin-bottom:6px;">
+            <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:4px 0 2px;border-bottom:1px dashed #e8e3dc;margin-bottom:2px;">
+              🕐 ${esc(turmaNome)} <span style="font-weight:400;color:#bbb;">(${criancas.length})</span>
+            </div>${criancasHTML}</div>`;
+        }).join('');
+        const tot = Object.values(turmas).reduce((s, l) => s + l.length, 0);
+        return `<div style="margin-bottom:10px;border-bottom:1px solid #f0ece6;padding-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;flex-shrink:0;"></span>
+            ${esc(ativNome)} <span style="font-weight:500;color:var(--muted);font-size:10px;">(${tot})</span>
+          </div>${turmasHTML}</div>`;
+      }).join('') : '<div class="dia-vazio">Nenhuma criança</div>';
+    });
+
+    // Ocupação por atividade
+    const grid = document.getElementById('pAOcupacaoGrid');
+    if (!profAtivTodas.length) { grid.innerHTML = '<p style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</p>'; }
+    else {
+      grid.innerHTML = profAtivTodas.map(a => {
+        const turmas = (a.horarios || []).map(t => {
+          const inscritos = t.inscritos || 0;
+          const vagas = t.vagas ?? null;
+          const pct = vagas ? Math.round((inscritos / vagas) * 100) : 0;
+          const cor = pct >= 100 ? '#C8102E' : pct >= 75 ? '#d4830a' : '#2d7a3a';
+          return `<div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:12px;font-weight:500;color:var(--text);">${esc(t.turma)}</span>
+              <span style="font-size:11px;color:${cor};font-weight:600;">${inscritos}${vagas != null ? '/' + vagas : ''} inscrito(s)</span>
+            </div>
+            ${vagas != null ? `<div style="height:6px;background:#f0ece6;border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${Math.min(100, pct)}%;background:${cor};border-radius:3px;transition:width .4s;"></div>
+            </div>` : ''}
+          </div>`;
+        }).join('');
+        return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <span style="width:12px;height:12px;border-radius:50%;background:${a.cor || '#C8102E'};flex-shrink:0;display:inline-block;"></span>
+            <span style="font-family:'Lora',serif;font-size:14px;font-weight:700;color:var(--text);">${esc(a.nome)}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:auto;">R$ ${Number(a.preco).toFixed(2).replace('.', ',')}/mês</span>
+          </div>
+          ${turmas || '<span style="font-size:12px;color:var(--muted);">Sem turmas.</span>'}
+        </div>`;
+      }).join('');
+    }
+
+    // Tabela
+    renderProfAtivTable();
+  }
+
+  function renderProfAtivTable() {
+    const q = (document.getElementById('pASearch')?.value || '').toLowerCase();
+    const rows = profAtivInscricoes.filter(ins =>
+      !q || [ins.nome_crianca, ins.nome_resp, ins.email, ins.serie].some(v => v?.toLowerCase().includes(q))
+    );
+    document.getElementById('pAInscCount').textContent = rows.length;
+    const tb = document.getElementById('pATableBody');
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">📭 Nenhuma inscrição.</td></tr>'; return; }
+    tb.innerHTML = rows.map(ins => {
+      const atividades = (ins.turmas_selecionadas || []).map(ts =>
+        `<div style="margin-bottom:4px;">
+          <span style="font-size:11px;font-weight:600;color:var(--text);">${esc(ts.turma || '')}</span>
+          ${(ts.slots || []).length ? `<span style="font-size:10px;color:var(--muted);margin-left:4px;">${ts.slots.map(s => s.dia + ' ' + s.inicio + '–' + s.fim).join(', ')}</span>` : ''}
+        </div>`
+      ).join('') || '—';
+      const date = new Date(ins.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return `<tr>
+        <td><strong>${esc(ins.nome_crianca)}</strong></td>
+        <td>${esc(ins.nome_resp)}<br><small style="color:var(--muted)">${esc(ins.email)}</small></td>
+        <td>${esc(ins.serie || '—')}</td>
+        <td>${atividades}</td>
+        <td class="date-cell">${date}</td>
+      </tr>`;
+    }).join('');
   }
 
   // ── MANUTENÇÃO ──────────────────────────────────────────

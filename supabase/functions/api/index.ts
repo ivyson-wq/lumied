@@ -20,16 +20,21 @@ async function validarSessao(admin: ReturnType<typeof createClient>, token: stri
   // Tenta gerente_sessoes primeiro (legado)
   const gerente = await _validarSessao(admin, "gerente_sessoes", "gerentes", "gerente_id", token);
   if (gerente) return gerente;
-  // Fallback: sessão unificada (permite secretaria/comercial acessar actions da API)
+  // Fallback: sessão unificada (permite todos os papéis acessarem actions da API)
   if (!token) return null;
   const { data: sessao } = await admin.from("sessoes").select("usuario_id, expira_em").eq("token", token).maybeSingle();
-  if (!sessao || new Date(sessao.expira_em) < new Date()) return null;
-  const { data: user } = await admin.from("usuarios").select("id, nome, email, papeis, papel").eq("id", sessao.usuario_id).maybeSingle();
-  if (!user) return null;
-  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []);
-  const allowedRoles = ["gerente", "diretor", "financeiro", "secretaria", "comercial"];
-  if (!roles.some((r: string) => allowedRoles.includes(r))) return null;
-  return { id: user.id, nome: user.nome, email: user.email };
+  if (sessao && new Date(sessao.expira_em) >= new Date()) {
+    const { data: user } = await admin.from("usuarios").select("id, nome, email, papeis, papel").eq("id", sessao.usuario_id).maybeSingle();
+    if (user) {
+      const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []);
+      const allowedRoles = ["gerente", "diretor", "financeiro", "secretaria", "comercial", "professora", "professora_assistente"];
+      if (roles.some((r: string) => allowedRoles.includes(r))) return { id: user.id, nome: user.nome, email: user.email };
+    }
+  }
+  // Fallback: professora_sessoes (legado — professoras que logaram via professora_login)
+  const prof = await _validarSessao(admin, "professora_sessoes", "professoras", "professora_id", token);
+  if (prof) return prof;
+  return null;
 }
 
 serve(async (req: Request) => {
