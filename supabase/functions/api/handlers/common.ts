@@ -22,10 +22,13 @@ export async function seriesCreate(ctx: Context) {
 }
 
 export async function seriesUpdate(ctx: Context) {
-  const { id, ...fields } = ctx.body as any;
+  const body = ctx.body as any;
+  const { id } = body;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
-  delete fields.action; delete fields._token;
-  const { error } = await ctx.sb.from("series").update(fields).eq("id", id);
+  const ALLOWED = ["nome", "turno", "ordem", "ativo"];
+  const update: Record<string, unknown> = {};
+  for (const k of ALLOWED) if (k in body) update[k] = body[k];
+  const { error } = await ctx.sb.from("series").update(update).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 }

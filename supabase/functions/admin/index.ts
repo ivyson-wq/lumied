@@ -192,9 +192,12 @@ router.on("planos_create", authAdmin, async (ctx) => {
 });
 
 router.on("planos_update", authAdmin, validateInput(idSchema), async (ctx) => {
-  const { id, ...fields } = ctx.body as any;
-  delete fields.action; delete fields._token;
-  const { error } = await ctx.sb.from("planos").update(fields).eq("id", id);
+  const body = ctx.body as any;
+  const { id } = body;
+  const ALLOWED = ["slug", "nome", "descricao", "preco_mensal", "preco_anual", "max_alunos", "max_storage_gb", "cor", "ativo", "ordem", "tier"];
+  const update: Record<string, unknown> = {};
+  for (const k of ALLOWED) if (k in body) update[k] = body[k];
+  const { error } = await ctx.sb.from("planos").update(update).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -234,9 +237,17 @@ router.on("escolas_create", authAdmin, async (ctx) => {
 });
 
 router.on("escolas_update", authAdmin, validateInput(idSchema), async (ctx) => {
-  const { id, ...fields } = ctx.body as any;
-  delete fields.action; delete fields._token;
-  const { error } = await ctx.sb.from("escolas").update(fields).eq("id", id);
+  const body = ctx.body as any;
+  const { id } = body;
+  const ALLOWED = [
+    "nome", "cnpj", "slug", "subdominio", "plano_id", "plano",
+    "contato_nome", "contato_email", "contato_telefone",
+    "telefone", "endereco", "email_contato",
+    "tema", "ativo", "plano_inicio", "plano_fim", "expira_em", "status",
+  ];
+  const update: Record<string, unknown> = {};
+  for (const k of ALLOWED) if (k in body) update[k] = body[k];
+  const { error } = await ctx.sb.from("escolas").update(update).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });

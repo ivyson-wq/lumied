@@ -1176,8 +1176,6 @@ body.has-bottomnav{padding-bottom:56px;}
     const hasToken = fullUrl.includes('access_token');
     const hasHash = window.location.hash.length > 1;
     const hasError = fullUrl.includes('error');
-    console.log('[Auth Debug] URL:', fullUrl);
-    console.log('[Auth Debug] code:', hasCode, 'token:', hasToken, 'hash:', hasHash, 'error:', hasError);
 
     // Detecta erros de OAuth retornados na URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -1203,12 +1201,10 @@ body.has-bottomnav{padding-bottom:56px;}
     // Se voltou do OAuth com ?code= (server ainda usa PKCE), tenta trocar
     const authCode = urlParams.get('code');
     if (authCode) {
-      console.log('[Auth Debug] Tentando exchangeCodeForSession com code:', authCode.substring(0, 8) + '...');
       try {
         const { data, error: exchangeError } = await sb.auth.exchangeCodeForSession(authCode);
         window.history.replaceState({}, '', window.location.pathname);
         if (!exchangeError && data?.session?.user) {
-          console.log('[Auth Debug] Exchange OK, user:', data.session.user.email);
           currentUser = data.session.user;
           await showForm(data.session.user);
           return;
@@ -1222,7 +1218,6 @@ body.has-bottomnav{padding-bottom:56px;}
 
     // getSession() detecta tokens no hash (implicit) ou sessão existente
     const { data: { session }, error: sessionError } = await sb.auth.getSession();
-    console.log('[Auth Debug] getSession result:', session ? 'user=' + session.user.email : 'null', 'error:', sessionError);
     if (session?.user) {
       currentUser = session.user; await showForm(session.user);
     } else {
@@ -1552,7 +1547,7 @@ body.has-bottomnav{padding-bottom:56px;}
       sel.style.display = '';
       inp.style.display = 'none';
       sel.innerHTML = '<option value="">Selecione a criança…</option>' +
-        filhos.map(f => `<option value="${f.nome_aluno}" data-serie="${f.serie||''}">${f.nome_aluno}${f.serie ? ' — ' + f.serie : ''}</option>`).join('');
+        filhos.map(f => `<option value="${escHtml(f.nome_aluno)}" data-serie="${escHtml(f.serie||'')}">${esc2(f.nome_aluno)}${f.serie ? ' — ' + esc2(f.serie) : ''}</option>`).join('');
     }
   }
   function onFilhoSelect(sel, inputId, serieSelectId) {
@@ -2406,10 +2401,10 @@ body.has-bottomnav{padding-bottom:56px;}
   function showPickupAtivo(n) {
     const aviso = document.getElementById('pickupAviso');
     const info  = document.getElementById('pickupAvisoInfo');
-    let txt = `Aviso enviado para <strong>${n.nome_crianca}</strong>.`;
+    let txt = `Aviso enviado para <strong>${esc2(n.nome_crianca)}</strong>.`;
     if (n.eta_minutos) {
       const modo = n.eta_modo === 'google_maps' ? '📍 Google Maps' : n.eta_modo === 'calculo_local' ? '📐 Estimativa' : '⏱ Manual';
-      txt += ` ETA: <strong>${n.eta_minutos} min</strong> (${modo})`;
+      txt += ` ETA: <strong>${esc2(n.eta_minutos)} min</strong> (${esc2(modo)})`;
     }
     info.innerHTML = txt;
     aviso.style.display = 'block';
@@ -2877,7 +2872,9 @@ body.has-bottomnav{padding-bottom:56px;}
           </div></div>`;
         // Fotos
         for (const foto of item.agenda_fotos || []) {
-          html += `<img src="${foto.url}" style="max-width:100%;border-radius:10px;margin:8px 0;" loading="lazy">`;
+          if (typeof foto.url === 'string' && /^https:\/\//.test(foto.url)) {
+            html += `<img src="${escHtml(foto.url)}" style="max-width:100%;border-radius:10px;margin:8px 0;" loading="lazy">`;
+          }
         }
       }
       html += '</div>';
@@ -3189,7 +3186,6 @@ body.has-bottomnav{padding-bottom:56px;}
   function showBioRegisterButton() {
     if (typeof WebAuthnClient === 'undefined') return;
     WebAuthnClient.isPlatformAvailable().then(ok => {
-      console.log('[WebAuthn] isPlatformAvailable:', ok);
       if (!ok) return;
       if (!localStorage.getItem('pais_bio_email') && !sessionStorage.getItem('bio_banner_shown')) {
         document.getElementById('bioRegBanner').style.display = 'block';

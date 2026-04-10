@@ -1399,7 +1399,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       const pendentes = d.data || [];
       if (pendentes.length === 0) return;
       mostrarNotificacaoQuiz(pendentes);
-    } catch (e) { console.log('[QUIZ] Sem pendências:', e); }
+    } catch (e) { /* sem pendências */ }
   }
 
   function mostrarNotificacaoQuiz(quizzes) {
@@ -1519,7 +1519,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       const pendentes = d.data || d || [];
       if (pendentes.length === 0) return;
       mostrarOverlayCiencia(pendentes[0]); // mostrar a primeira pendente
-    } catch (e) { console.log('[CIENCIA] Sem pendências ou erro:', e); }
+    } catch (e) { /* sem pendências */ }
   }
 
   async function callApiCompliance(body) {
@@ -3904,7 +3904,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   function showBioRegisterButton() {
     if (typeof WebAuthnClient === 'undefined') return;
     WebAuthnClient.isPlatformAvailable().then(ok => {
-      console.log('[WebAuthn] isPlatformAvailable:', ok);
       if (!ok) return;
       if (!localStorage.getItem('prof_bio_email') && !sessionStorage.getItem('bio_banner_shown')) {
         document.getElementById('bioRegBanner').style.display = 'block';

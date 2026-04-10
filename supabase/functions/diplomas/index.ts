@@ -2637,10 +2637,13 @@ Deno.serve(async (req) => {
   if (action === 'pesquisa_update') {
     const ger = await getGerente(sb, token)
     if (!ger) return json({ error: 'Sessão inválida.' }, 401)
-    const { id, ...fields } = body as any
+    const b = body as any
+    const { id } = b
     if (!id) return json({ error: 'ID obrigatório' }, 400)
-    delete fields.action; delete fields._token; delete fields._prof_token
-    const { error } = await sb.from('pesquisas').update(fields).eq('id', id)
+    const ALLOWED = ['titulo', 'descricao', 'tipo', 'publico_alvo', 'data_limite', 'data_inicio', 'data_fim', 'ativo', 'ativa']
+    const update: Record<string, unknown> = {}
+    for (const k of ALLOWED) if (k in b) update[k] = b[k]
+    const { error } = await sb.from('pesquisas').update(update).eq('id', id)
     if (error) return json({ error: error.message }, 400)
     return json({ success: true })
   }

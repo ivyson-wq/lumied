@@ -258,26 +258,12 @@ serve(async (req: Request) => {
     return ok({ ok: true, saved: configs.length })
   }
 
-  // ── Config para setup inicial (sem auth — só funciona se não tem gerente) ──
+  // ── config_escola_setup REMOVIDA (2026-04-10) ──
+  // Esta action permitia setar configs arbitrárias (incluindo superusuario_email)
+  // sem autenticação quando a tabela gerentes estava vazia — permitia escalação
+  // de privilégio. Setup de escolas agora é exclusivo via admin/staff_criar_escola.
   if (action === "config_escola_setup") {
-    const { count } = await admin.from("gerentes").select("*", { count: "exact", head: true })
-    if ((count ?? 0) > 0) {
-      // Se já tem gerente, exige auth
-      const token = (req.headers.get("authorization") ?? "").replace("Bearer ", "")
-      const gerente = await validarSessao(admin, token)
-      if (!gerente) return err("Sessão inválida.", 401)
-    }
-    const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
-    if (!configs?.length) return err("Nenhuma config fornecida.")
-    for (const c of configs) {
-      await admin.from("escola_config").upsert({
-        chave: c.chave,
-        valor: typeof c.valor === 'string' ? JSON.stringify(c.valor) : c.valor,
-        descricao: c.descricao || null,
-        categoria: c.categoria || 'geral',
-      }, { onConflict: 'chave' })
-    }
-    return ok({ ok: true, saved: configs.length })
+    return err("Action descontinuada. Use staff_criar_escola (admin-central.html).", 410)
   }
 
   // Verifica se é o primeiro acesso (nenhum gerente cadastrado)

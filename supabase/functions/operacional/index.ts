@@ -192,10 +192,16 @@ router.on("transporte_rotas_create", authGerente, transp, async (ctx) => {
 });
 
 router.on("transporte_rotas_update", authGerente, transp, async (ctx) => {
-  const { id, ...fields } = ctx.body as any;
+  const body = ctx.body as any;
+  const { id } = body;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
-  delete fields.action; delete fields._token;
-  const { error } = await ctx.sb.from("transporte_rotas").update(fields).eq("id", id);
+  const ALLOWED = [
+    "nome", "turno", "motorista_nome", "motorista_telefone", "motorista_cnh",
+    "motorista", "veiculo", "placa", "capacidade", "tarifa", "ativo",
+  ];
+  const update: Record<string, unknown> = {};
+  for (const k of ALLOWED) if (k in body) update[k] = body[k];
+  const { error } = await ctx.sb.from("transporte_rotas").update(update).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });

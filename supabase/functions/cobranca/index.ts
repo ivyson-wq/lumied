@@ -58,10 +58,17 @@ router.on("regua_config_create", authGerente, requireFeature("regua_cobranca"), 
 });
 
 router.on("regua_config_update", authGerente, requireFeature("regua_cobranca"), async (ctx) => {
-  const { id, ...fields } = ctx.body as any;
+  const body = ctx.body as any;
+  const { id } = body;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
-  delete fields.action; delete fields._token;
-  const { error } = await ctx.sb.from("regua_config").update(fields).eq("id", id);
+  const ALLOWED = [
+    "evento", "canal", "dias_offset", "dias_atraso",
+    "template_assunto", "template_corpo", "template_id",
+    "ordem", "ativo",
+  ];
+  const update: Record<string, unknown> = {};
+  for (const k of ALLOWED) if (k in body) update[k] = body[k];
+  const { error } = await ctx.sb.from("regua_config").update(update).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
