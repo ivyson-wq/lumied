@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="/themes.css">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="/dist/gerente/index.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-6uukdHiftld8tJvsEnb1GXdOm6/h98QIKjmAy6BI4WpoHahjbaBL8IVhavKP2sxI" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 <script src="/webauthn-client.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
@@ -3070,7 +3070,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   var MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   var allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
   var currentGerente=null, pollInterval=null, realtimeChannel=null;
-  var sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  var sbClient = (typeof supabase !== 'undefined' && supabase?.createClient) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+  if (!sbClient) console.error('[gerente] Supabase JS CDN falhou ao carregar — realtime desabilitado');
 
   // Globals de papéis — declarados no topo para evitar TDZ/ordem de execução
   window.PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção', impressao:'Impressão' };
