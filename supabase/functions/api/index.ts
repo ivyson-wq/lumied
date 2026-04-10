@@ -27,7 +27,7 @@ async function validarSessao(admin: ReturnType<typeof createClient>, token: stri
     const { data: user } = await admin.from("usuarios").select("id, nome, email, papeis, papel").eq("id", sessao.usuario_id).maybeSingle();
     if (user) {
       const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []);
-      const allowedRoles = ["gerente", "diretor", "financeiro", "secretaria", "comercial", "professora", "professora_assistente"];
+      const allowedRoles = ["gerente", "diretor", "financeiro", "secretaria", "comercial", "professora", "professora_assistente", "impressao"];
       if (roles.some((r: string) => allowedRoles.includes(r))) return { id: user.id, nome: user.nome, email: user.email };
     }
   }
@@ -899,7 +899,7 @@ serve(async (req: Request) => {
     // Aceita papeis (array) ou papel (string legado)
     let papeis: string[] = Array.isArray(rawPapeis) && rawPapeis.length ? rawPapeis : (papel ? [papel] : []);
     if (!papeis.length) return err("Selecione pelo menos um papel.");
-    const papeisValidos = ["gerente", "diretor", "financeiro", "professora", "professora_assistente", "secretaria", "comercial", "manutencao"];
+    const papeisValidos = ["gerente", "diretor", "financeiro", "professora", "professora_assistente", "secretaria", "comercial", "manutencao", "impressao"];
     const invalidos = papeis.filter((p: string) => !papeisValidos.includes(p));
     if (invalidos.length) return err("Papel inválido: " + invalidos.join(", "));
     if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
@@ -915,7 +915,7 @@ serve(async (req: Request) => {
       const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
       await admin.from("professoras").insert({ nome, email, senha_hash, tipo }).catch(() => {});
     }
-    const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao"];
+    const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao"];
     if (papeis.some((p: string) => secRoles.includes(p))) {
       let secFeatures = features || [];
       if (!secFeatures.length) {
@@ -923,6 +923,7 @@ serve(async (req: Request) => {
         if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
         if (papeis.includes("financeiro") || papeis.includes("diretor")) secFeatures.push("financeiro");
         if (papeis.includes("manutencao")) secFeatures.push("manutencao");
+        if (papeis.includes("impressao")) secFeatures.push("impressao");
       }
       await admin.from("secretarias").upsert({ nome, email, senha_hash, features: secFeatures, ativo: true }, { onConflict: "email" }).catch(() => {});
     }
@@ -969,7 +970,7 @@ serve(async (req: Request) => {
           await admin.from("professoras").delete().eq("email", uEmail).catch(() => {});
         }
         // Secretaria/Comercial
-        const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao"];
+        const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao"];
         const needsSec = papeis.some((p: string) => secRoles.includes(p));
         const hadSec = oldRoles.some((p: string) => secRoles.includes(p));
         if (needsSec) {
@@ -977,6 +978,7 @@ serve(async (req: Request) => {
           if (!secFeatures.length) {
             if (papeis.includes("secretaria")) secFeatures.push("atestados");
             if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
+            if (papeis.includes("impressao")) secFeatures.push("impressao");
           }
           // Upsert: cria se não existe, atualiza features se existe
           await admin.from("secretarias").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, features: secFeatures, ativo: true }, { onConflict: "email" }).catch(() => {});

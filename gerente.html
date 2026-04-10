@@ -2466,6 +2466,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
                   <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="secretaria"> Secretaria</label>
                   <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="comercial"> Comercial</label>
                   <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="manutencao"> Manutenção</label>
+                  <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;"><input type="checkbox" name="eqPapel" value="impressao"> Impressão</label>
                 </div>
               </div>
               <div class="ff" id="eqTurmaWrap" style="display:none;"><label>Turma / Série</label>
@@ -4598,8 +4599,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   // ── EQUIPE UNIFICADA ──────────────────────────────────
   var equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
-  var PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção' };
-  var PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a' };
+  var PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção', impressao:'Impressão' };
+  var PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a', impressao:'#8b5cf6' };
 
   async function loadEquipe() {
     if (!equipeSeriesOpts) {
@@ -4903,9 +4904,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── Editar papéis de membro ──
-  var ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao'];
-  var ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao'];
-  var FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção' };
+  var ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao','impressao'];
+  var ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao','impressao'];
+  var FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção', impressao:'Impressões' };
 
   function openEditPapeis(id) {
     const u = equipeData.find(x => x.id === id);
@@ -4947,7 +4948,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   function toggleEditFeatures() {
     const checked = [...document.querySelectorAll('input[name="editPapel"]:checked')].map(c => c.value);
-    const show = checked.includes('secretaria') || checked.includes('comercial');
+    const show = checked.includes('secretaria') || checked.includes('comercial') || checked.includes('impressao');
     document.getElementById('editPapeisFeatures').style.display = show ? 'block' : 'none';
     if (show) {
       // Auto-check features based on roles
@@ -4955,6 +4956,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       featureCbs.forEach(cb => {
         if (checked.includes('secretaria') && cb.value === 'atestados') cb.checked = true;
         if (checked.includes('comercial') && ['crm','templates','metas'].includes(cb.value)) cb.checked = true;
+        if (checked.includes('impressao') && cb.value === 'impressao') cb.checked = true;
       });
     }
   }
