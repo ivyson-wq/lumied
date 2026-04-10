@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, authProfessora, requireFeature } from "../_shared/router.ts";
+import { Router, rateLimit, authGerente, authProfessora, requireFeature, type Middleware } from "../_shared/router.ts";
 import { successResponse, AppError } from "../_shared/errors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { uploadArquivo } from "../_shared/auth.ts";
@@ -15,6 +15,72 @@ router.useGlobal(rateLimit());
 
 const agendaFeat = requireFeature("agenda_digital");
 const chatFeat = requireFeature("chat");
+
+// ═══ Auth middleware for pais (family portal) ═══
+// Validates the Supabase Auth Bearer token (sb.auth.getUser) and derives
+// identity from the authenticated user — never from body.
+const authPais: Middleware = async (ctx, next) => {
+  const authHeader = ctx.req.headers.get("authorization") ?? "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
+  const { data: { user }, error } = await ctx.sb.auth.getUser(token);
+  if (error || !user) throw new AppError("AUTH_INVALID", "Sessão inválida.");
+  const email = (user.email || "").toLowerCase().trim();
+  if (!email) throw new AppError("AUTH_INVALID", "Email não encontrado na sessão.");
+  ctx.user = { id: user.id, nome: (user.user_metadata?.full_name as string) || email.split("@")[0], email, tipo: "pais" };
+  return next();
+};
+
+// Auth middleware that accepts any valid session: gerente, professora, or pais.
+// Used for chat endpoints where any authenticated user may be a participant.
+const authAny: Middleware = async (ctx, next) => {
+  const gToken = (ctx.body._token as string) || null;
+  const pToken = (ctx.body._prof_token as string) || null;
+  // Try gerente first
+  if (gToken) {
+    const { data } = await ctx.sb.from("gerente_sessoes").select("*, gerentes(id, nome, email)").eq("token", gToken).single();
+    if (data && new Date((data as any).expira_em) >= new Date()) {
+      const u = (data as any).gerentes;
+      ctx.user = { id: u.id, nome: u.nome, email: u.email, tipo: "gerente" };
+      return next();
+    }
+  }
+  // Try professora
+  if (pToken) {
+    const { data } = await ctx.sb.from("professora_sessoes").select("*, professoras(id, nome, email)").eq("token", pToken).single();
+    if (data && new Date((data as any).expira_em) >= new Date()) {
+      const u = (data as any).professoras;
+      ctx.user = { id: u.id, nome: u.nome, email: u.email, tipo: "professora" };
+      return next();
+    }
+  }
+  // Fallback: Supabase Auth Bearer (pais)
+  const authHeader = ctx.req.headers.get("authorization") ?? "";
+  const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (bearer) {
+    const { data: { user }, error } = await ctx.sb.auth.getUser(bearer);
+    if (!error && user) {
+      const email = (user.email || "").toLowerCase().trim();
+      if (email) {
+        ctx.user = { id: user.id, nome: (user.user_metadata?.full_name as string) || email.split("@")[0], email, tipo: "pais" };
+        return next();
+      }
+    }
+  }
+  throw new AppError("AUTH_REQUIRED", "Autenticação obrigatória.");
+};
+
+// Helper: verify ctx.user is a participant of the given conversa
+async function assertParticipant(ctx: any, conversa_id: string) {
+  const { data: part } = await ctx.sb
+    .from("chat_participantes")
+    .select("id")
+    .eq("conversa_id", conversa_id)
+    .eq("usuario_tipo", ctx.user.tipo)
+    .eq("usuario_id", ctx.user.tipo === "pais" ? ctx.user.email : ctx.user.id)
+    .maybeSingle();
+  if (!part) throw new AppError("FORBIDDEN", "Você não participa desta conversa.");
+}
 
 // ═══ AGENDA DIGITAL ═══
 
@@ -67,14 +133,23 @@ router.on("agenda_publicar", authProfessora, agendaFeat, async (ctx) => {
   return successResponse({ success: true });
 });
 
-router.on("agenda_pais_get", agendaFeat, async (ctx) => {
-  const { aluno_email, data_inicio, data_fim } = ctx.body as any;
-  if (!aluno_email) throw new AppError("VALIDATION_FAILED", "aluno_email obrigatório.");
-  let q = ctx.sb.from("agenda_registros").select("*, series(nome), professoras(nome), agenda_itens(*, agenda_fotos(*))").eq("publicado", true).or(`aluno_email.eq.${aluno_email},aluno_email.is.null`).order("data", { ascending: false });
-  if (data_inicio) q = q.gte("data", data_inicio);
-  if (data_fim) q = q.lte("data", data_fim);
-  const { data } = await q.limit(30);
-  return successResponse(data ?? []);
+router.on("agenda_pais_get", authPais, agendaFeat, async (ctx) => {
+  const { data_inicio, data_fim } = ctx.body as any;
+  // Email is derived from authenticated session, never from body.
+  const aluno_email = ctx.user!.email;
+  // Avoid PostgREST .or() injection: run two queries and merge in code.
+  const baseSelect = "*, series(nome), professoras(nome), agenda_itens(*, agenda_fotos(*))";
+  let q1 = ctx.sb.from("agenda_registros").select(baseSelect).eq("publicado", true).eq("aluno_email", aluno_email).order("data", { ascending: false });
+  let q2 = ctx.sb.from("agenda_registros").select(baseSelect).eq("publicado", true).is("aluno_email", null).order("data", { ascending: false });
+  if (data_inicio) { q1 = q1.gte("data", data_inicio); q2 = q2.gte("data", data_inicio); }
+  if (data_fim) { q1 = q1.lte("data", data_fim); q2 = q2.lte("data", data_fim); }
+  const [{ data: d1 }, { data: d2 }] = await Promise.all([q1.limit(30), q2.limit(30)]);
+  const merged = [...(d1 ?? []), ...(d2 ?? [])];
+  // Deduplicate by id and sort by data desc
+  const seen = new Set<string>();
+  const unique = merged.filter((r: any) => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
+  unique.sort((a: any, b: any) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0));
+  return successResponse(unique.slice(0, 30));
 });
 
 router.on("agenda_foto_upload", authProfessora, agendaFeat, async (ctx) => {
@@ -89,38 +164,51 @@ router.on("agenda_foto_upload", authProfessora, agendaFeat, async (ctx) => {
 
 // ═══ CHAT ═══
 
-router.on("chat_conversas_list", chatFeat, async (ctx) => {
-  const { usuario_tipo, usuario_id } = ctx.body as any;
-  if (!usuario_tipo || !usuario_id) throw new AppError("VALIDATION_FAILED", "usuario_tipo e usuario_id obrigatórios.");
+router.on("chat_conversas_list", authAny, chatFeat, async (ctx) => {
+  // Derive identity from authenticated session, never from body.
+  const usuario_tipo = ctx.user!.tipo;
+  const usuario_id = usuario_tipo === "pais" ? ctx.user!.email : ctx.user!.id;
   const { data: participacoes } = await ctx.sb.from("chat_participantes").select("conversa_id").eq("usuario_tipo", usuario_tipo).eq("usuario_id", usuario_id);
   if (!participacoes?.length) return successResponse([]);
   const convIds = participacoes.map((p: any) => p.conversa_id);
   const { data } = await ctx.sb.from("chat_conversas").select("*, chat_participantes(usuario_nome, usuario_tipo)").in("id", convIds).order("criado_em", { ascending: false });
   const result = [];
   for (const conv of data || []) {
-    const { data: lastMsg } = await ctx.sb.from("chat_mensagens").select("conteudo, remetente_nome, criado_em").eq("conversa_id", conv.id).eq("excluida", false).order("criado_em", { ascending: false }).limit(1).single();
-    const { data: leitura } = await ctx.sb.from("chat_leituras").select("ultima_leitura").eq("conversa_id", conv.id).eq("usuario_tipo", usuario_tipo).eq("usuario_id", usuario_id).single();
+    const { data: lastMsg } = await ctx.sb.from("chat_mensagens").select("conteudo, remetente_nome, criado_em").eq("conversa_id", conv.id).eq("excluida", false).order("criado_em", { ascending: false }).limit(1).maybeSingle();
+    const { data: leitura } = await ctx.sb.from("chat_leituras").select("ultima_leitura").eq("conversa_id", conv.id).eq("usuario_tipo", usuario_tipo).eq("usuario_id", usuario_id).maybeSingle();
     const { count } = await ctx.sb.from("chat_mensagens").select("*", { count: "exact", head: true }).eq("conversa_id", conv.id).eq("excluida", false).gt("criado_em", leitura?.ultima_leitura || "1970-01-01");
     result.push({ ...conv, ultima_mensagem: lastMsg || null, nao_lidas: count || 0 });
   }
   return successResponse(result);
 });
 
-router.on("chat_conversa_create", chatFeat, async (ctx) => {
-  const { tipo, titulo, serie_id, participantes, criado_por_tipo, criado_por_id } = ctx.body as any;
-  if (!tipo || !criado_por_tipo || !criado_por_id) throw new AppError("VALIDATION_FAILED", "tipo, criado_por_tipo e criado_por_id obrigatórios.");
+router.on("chat_conversa_create", authAny, chatFeat, async (ctx) => {
+  const { tipo, titulo, serie_id, participantes } = ctx.body as any;
+  if (!tipo) throw new AppError("VALIDATION_FAILED", "tipo obrigatório.");
+  // Derive creator identity from authenticated session, never from body.
+  const criado_por_tipo = ctx.user!.tipo;
+  const criado_por_id = criado_por_tipo === "pais" ? ctx.user!.email : ctx.user!.id;
   const { data: conv, error } = await ctx.sb.from("chat_conversas").insert({ tipo, titulo, serie_id, criado_por_tipo, criado_por_id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
+  // Always ensure the creator is a participant.
+  const allParticipants: any[] = [{ conversa_id: conv.id, usuario_tipo: criado_por_tipo, usuario_id: criado_por_id, usuario_nome: ctx.user!.nome, papel: "admin" }];
   if (Array.isArray(participantes) && participantes.length) {
-    await ctx.sb.from("chat_participantes").insert(participantes.map((p: any) => ({ conversa_id: conv.id, usuario_tipo: p.tipo, usuario_id: p.id, usuario_nome: p.nome, papel: p.papel || "membro" })));
+    for (const p of participantes) {
+      allParticipants.push({ conversa_id: conv.id, usuario_tipo: p.tipo, usuario_id: p.id, usuario_nome: p.nome, papel: p.papel || "membro" });
+    }
   }
+  await ctx.sb.from("chat_participantes").insert(allParticipants);
   return successResponse(conv);
 });
 
-router.on("chat_mensagem_send", chatFeat, async (ctx) => {
-  const { conversa_id, remetente_tipo, remetente_id, remetente_nome, conteudo, tipo_msg, arquivo_url } = ctx.body as any;
-  if (!conversa_id || !remetente_tipo || !remetente_id || !conteudo) throw new AppError("VALIDATION_FAILED", "conversa_id, remetente e conteudo obrigatórios.");
-  const { data: part } = await ctx.sb.from("chat_participantes").select("id").eq("conversa_id", conversa_id).eq("usuario_tipo", remetente_tipo).eq("usuario_id", remetente_id).single();
+router.on("chat_mensagem_send", authAny, chatFeat, async (ctx) => {
+  const { conversa_id, conteudo, tipo_msg, arquivo_url } = ctx.body as any;
+  if (!conversa_id || !conteudo) throw new AppError("VALIDATION_FAILED", "conversa_id e conteudo obrigatórios.");
+  // Derive sender identity from authenticated session, never from body.
+  const remetente_tipo = ctx.user!.tipo;
+  const remetente_id = remetente_tipo === "pais" ? ctx.user!.email : ctx.user!.id;
+  const remetente_nome = ctx.user!.nome;
+  const { data: part } = await ctx.sb.from("chat_participantes").select("id").eq("conversa_id", conversa_id).eq("usuario_tipo", remetente_tipo).eq("usuario_id", remetente_id).maybeSingle();
   if (!part) throw new AppError("FORBIDDEN", "Você não participa desta conversa.");
   const { data, error } = await ctx.sb.from("chat_mensagens").insert({ conversa_id, remetente_tipo, remetente_id, remetente_nome, conteudo, tipo_msg: tipo_msg || "texto", arquivo_url }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
@@ -128,28 +216,34 @@ router.on("chat_mensagem_send", chatFeat, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("chat_mensagens_list", chatFeat, async (ctx) => {
+router.on("chat_mensagens_list", authAny, chatFeat, async (ctx) => {
   const { conversa_id, antes_de, limite } = ctx.body as any;
   if (!conversa_id) throw new AppError("VALIDATION_FAILED", "conversa_id obrigatório.");
+  // Verify authenticated user is a participant of this conversa.
+  await assertParticipant(ctx, conversa_id);
   let q = ctx.sb.from("chat_mensagens").select("*").eq("conversa_id", conversa_id).eq("excluida", false).order("criado_em", { ascending: false }).limit(limite || 50);
   if (antes_de) q = q.lt("criado_em", antes_de);
   const { data } = await q;
   return successResponse((data ?? []).reverse());
 });
 
-router.on("chat_marcar_lida", chatFeat, async (ctx) => {
-  const { conversa_id, usuario_tipo, usuario_id } = ctx.body as any;
-  if (!conversa_id || !usuario_tipo || !usuario_id) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
+router.on("chat_marcar_lida", authAny, chatFeat, async (ctx) => {
+  const { conversa_id } = ctx.body as any;
+  if (!conversa_id) throw new AppError("VALIDATION_FAILED", "conversa_id obrigatório.");
+  // Verify authenticated user is a participant of this conversa.
+  await assertParticipant(ctx, conversa_id);
+  const usuario_tipo = ctx.user!.tipo;
+  const usuario_id = usuario_tipo === "pais" ? ctx.user!.email : ctx.user!.id;
   await ctx.sb.from("chat_leituras").upsert({ conversa_id, usuario_tipo, usuario_id, ultima_leitura: new Date().toISOString() }, { onConflict: "conversa_id,usuario_tipo,usuario_id" });
   return successResponse({ success: true });
 });
 
-router.on("chat_avisos_turma", chatFeat, async (ctx) => {
+router.on("chat_avisos_turma", authGerente, chatFeat, async (ctx) => {
   const { serie_id, titulo, conteudo } = ctx.body as any;
   if (!conteudo) throw new AppError("VALIDATION_FAILED", "Conteúdo obrigatório.");
   const remetente = ctx.user!;
   let convId: string;
-  const { data: existing } = await ctx.sb.from("chat_conversas").select("id").eq("tipo", "turma").eq("serie_id", serie_id).single();
+  const { data: existing } = await ctx.sb.from("chat_conversas").select("id").eq("tipo", "turma").eq("serie_id", serie_id).maybeSingle();
   if (existing) { convId = existing.id; }
   else {
     const { data: newConv } = await ctx.sb.from("chat_conversas").insert({ tipo: "turma", titulo: titulo || "Avisos", serie_id, criado_por_tipo: "gerente", criado_por_id: remetente.email }).select().single();
@@ -161,9 +255,17 @@ router.on("chat_avisos_turma", chatFeat, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("chat_mensagem_delete", chatFeat, async (ctx) => {
+router.on("chat_mensagem_delete", authAny, chatFeat, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
+  // Only the original sender (or a gerente) can delete a message.
+  const { data: msg } = await ctx.sb.from("chat_mensagens").select("remetente_tipo, remetente_id").eq("id", id).maybeSingle();
+  if (!msg) throw new AppError("NOT_FOUND", "Mensagem não encontrada.");
+  const callerTipo = ctx.user!.tipo;
+  const callerId = callerTipo === "pais" ? ctx.user!.email : ctx.user!.id;
+  const isOwner = (msg as any).remetente_tipo === callerTipo && (msg as any).remetente_id === callerId;
+  const isGerente = callerTipo === "gerente";
+  if (!isOwner && !isGerente) throw new AppError("FORBIDDEN", "Apenas o autor ou um gerente pode excluir esta mensagem.");
   const { error } = await ctx.sb.from("chat_mensagens").update({ excluida: true }).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });

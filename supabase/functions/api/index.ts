@@ -391,11 +391,21 @@ serve(async (req: Request) => {
   if (action === "minha_agenda") {
     const { email } = body as { email: string };
     if (!email) return err("E-mail obrigatório.");
-    const [solicitacoes, alunosAtiv, ausencias] = await Promise.all([
+    // Validate email to prevent PostgREST .or() injection.
+    const EMAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+    if (!EMAIL_RE.test(email)) return err("E-mail inválido.");
+    // Run two separate queries (email match + familia_email match) and merge in code
+    // to avoid PostgREST .or() string interpolation.
+    const alunoCols = "id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em";
+    const [solicitacoes, alunosA, alunosB, ausencias] = await Promise.all([
       admin.from("solicitacoes").select("*").eq("email", email).order("criado_em", { ascending: false }),
-      admin.from("alunos").select("id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").or(`email.eq.${email},familia_email.eq.${email}`).not("atividades_ids", "is", null),
+      admin.from("alunos").select(alunoCols).eq("email", email).not("atividades_ids", "is", null),
+      admin.from("alunos").select(alunoCols).eq("familia_email", email).not("atividades_ids", "is", null),
       admin.from("ausencias").select("*").eq("email_resp", email).gte("data_ausencia", new Date().toISOString().split("T")[0]),
     ]);
+    const alunosMerged: any[] = [...(alunosA.data ?? []), ...(alunosB.data ?? [])];
+    const seenAlunoIds = new Set<string>();
+    const alunosAtiv = { data: alunosMerged.filter(a => { if (seenAlunoIds.has(a.id)) return false; seenAlunoIds.add(a.id); return true; }) };
     // Map alunos to inscricoes format for backwards compat
     const inscricoes = (alunosAtiv.data ?? []).map(a => ({
       id: a.id, email: a.email, nome_crianca: a.nome,
@@ -2617,8 +2627,15 @@ serve(async (req: Request) => {
   // ── Suporte FAQ (público) ─────────────────────────
   if (action === "suporte_faq_list") {
     const { portal: p } = body as any;
+    // Use .in() with a strict allow-list to prevent PostgREST .or() injection.
+    const ALLOWED_PORTALS = ["todos", "pais", "gerente", "professora", "secretaria", "aluno", "admin"];
     let q = admin.from("suporte_faq").select("id, pergunta, resposta, palavras_chave, categoria").eq("ativo", true).order("ordem");
-    if (p && p !== 'todos') q = q.or(`portal.eq.todos,portal.eq.${p}`);
+    if (p && p !== 'todos') {
+      if (typeof p !== "string" || !ALLOWED_PORTALS.includes(p)) {
+        return err("Portal inválido.");
+      }
+      q = q.in("portal", ["todos", p]);
+    }
     const { data: faqData } = await q;
     return ok({ data: faqData ?? [] });
   }

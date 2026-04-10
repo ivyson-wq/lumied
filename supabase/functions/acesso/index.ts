@@ -55,6 +55,40 @@ const authGerenteOrSecretaria: import("../_shared/router.ts").Middleware = async
 };
 
 // ═══════════════════════════════════════════════════════════════
+//  Auth: Pais (Supabase Auth JWT from Authorization: Bearer header)
+//  Returns the authenticated user's email (lowercased).
+//  Throws AUTH_REQUIRED (401) if token is missing/invalid.
+// ═══════════════════════════════════════════════════════════════
+async function getAuthenticatedPaiEmail(ctx: { req: Request; sb: Any }): Promise<string> {
+  const authHeader = ctx.req.headers.get("authorization") || ctx.req.headers.get("Authorization") || "";
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    throw new AppError("AUTH_REQUIRED", "Token de autenticação obrigatório (Authorization: Bearer).");
+  }
+  const token = match[1].trim();
+  if (!token) {
+    throw new AppError("AUTH_REQUIRED", "Token de autenticação obrigatório.");
+  }
+
+  // Validate JWT via Supabase Auth
+  const { data, error } = await ctx.sb.auth.getUser(token);
+  if (error || !data?.user?.email) {
+    throw new AppError("AUTH_REQUIRED", "Token inválido ou expirado.");
+  }
+  return String(data.user.email).toLowerCase();
+}
+
+/** Verify the authenticated user owns the familia (by email). Returns the familia row. */
+async function assertFamiliaOwnership(ctx: { req: Request; sb: Any }, email: string): Promise<Any> {
+  const authedEmail = await getAuthenticatedPaiEmail(ctx);
+  if (authedEmail !== String(email || "").toLowerCase()) {
+    throw new AppError("FORBIDDEN", "Você não tem permissão para acessar dados desta família.");
+  }
+  const { data: familia } = await ctx.sb.from("familias").select("id, nome_resp, email").eq("email", authedEmail).maybeSingle();
+  return familia;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  Helper: HTTP call to Control iD device with timeout
 // ═══════════════════════════════════════════════════════════════
 async function deviceFetch(
@@ -460,7 +494,6 @@ router.on("acesso_evento_callback", async (ctx) => {
   // Validate request comes from a registered device
   const sourceIp = ctx.ip;
   const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
-  const registeredIps = (devices ?? []).map((d: Any) => d.ip);
 
   // Find device by device_id or by source IP
   let dispositivo: Any = null;
@@ -469,6 +502,12 @@ router.on("acesso_evento_callback", async (ctx) => {
   }
   if (!dispositivo) {
     dispositivo = (devices ?? []).find((d: Any) => d.ip === sourceIp);
+  }
+
+  // SECURITY: reject events that did not come from a registered device
+  if (!dispositivo) {
+    console.warn(`[acesso_evento_callback] Rejeitado: origem não reconhecida. sourceIp=${sourceIp} device_id=${device_id}`);
+    throw new AppError("FORBIDDEN", "Evento rejeitado: dispositivo não registrado.");
   }
 
   // Determine direction from device type
@@ -893,8 +932,8 @@ router.on("acesso_presenca_turma", authProfessora, async (ctx) => {
 router.on("acesso_minha_face", async (ctx) => {
   const { email } = ctx.body as Any;
   if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
-  // Buscar familia por email
-  const { data: familia } = await ctx.sb.from("familias").select("id, nome_resp").eq("email", email).maybeSingle();
+  // AUTH: verificar JWT e conferir que email autenticado bate com o email solicitado
+  const familia = await assertFamiliaOwnership(ctx, email);
   if (!familia) return successResponse(null);
   const { data: face } = await ctx.sb.from("acesso_faces")
     .select("*").eq("pessoa_tipo", "responsavel").eq("pessoa_id", familia.id).eq("ativo", true).maybeSingle();
@@ -904,9 +943,12 @@ router.on("acesso_minha_face", async (ctx) => {
 router.on("acesso_presenca_filhos", async (ctx) => {
   const { email } = ctx.body as Any;
   if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
+  // AUTH: verificar JWT e conferir que email autenticado bate com o email solicitado
+  const familiaAuth = await assertFamiliaOwnership(ctx, email);
+  if (!familiaAuth) return successResponse([]);
   const hoje = new Date().toISOString().split("T")[0];
-  // Buscar alunos vinculados a esta familia
-  const { data: familia } = await ctx.sb.from("familias").select("id, filhos").eq("email", email).maybeSingle();
+  // Buscar alunos vinculados a esta familia (inclui coluna `filhos` se disponível)
+  const { data: familia } = await ctx.sb.from("familias").select("id, filhos").eq("id", familiaAuth.id).maybeSingle();
   if (!familia) return successResponse([]);
   // filhos pode ser array de objetos com nome, ou buscar na tabela alunos
   const { data: alunos } = await ctx.sb.from("alunos").select("id, nome, serie").eq("familia_id", familia.id);
@@ -927,7 +969,8 @@ router.on("acesso_presenca_filhos", async (ctx) => {
 router.on("acesso_meus_autorizados", async (ctx) => {
   const { email } = ctx.body as Any;
   if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
-  const { data: familia } = await ctx.sb.from("familias").select("id").eq("email", email).maybeSingle();
+  // AUTH: verificar JWT e conferir que email autenticado bate com o email solicitado
+  const familia = await assertFamiliaOwnership(ctx, email);
   if (!familia) return successResponse([]);
   const { data } = await ctx.sb.from("acesso_permissoes_retirada")
     .select("*").eq("responsavel_id", familia.id).order("criado_em", { ascending: false });
@@ -939,7 +982,8 @@ router.on("acesso_adicionar_autorizado", async (ctx) => {
   if (!email_responsavel || !aluno_id || !responsavel_nome || !parentesco) {
     throw new AppError("VALIDATION_FAILED", "Campos obrigatórios: email, aluno_id, nome, parentesco.");
   }
-  const { data: familia } = await ctx.sb.from("familias").select("id").eq("email", email_responsavel).maybeSingle();
+  // AUTH: verificar JWT e conferir que email autenticado bate com o email_responsavel informado
+  const familia = await assertFamiliaOwnership(ctx, email_responsavel);
   if (!familia) throw new AppError("NOT_FOUND", "Família não encontrada.");
 
   // Processar foto se fornecida
@@ -988,6 +1032,28 @@ router.on("acesso_adicionar_autorizado", async (ctx) => {
 router.on("acesso_cancelar_autorizado", async (ctx) => {
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
+
+  // AUTH: verificar JWT do responsável
+  const authedEmail = await getAuthenticatedPaiEmail(ctx);
+
+  // OWNERSHIP: verificar que o autorizado pertence a uma família cujo email bate com o usuário autenticado
+  const { data: perm } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id, responsavel_id, responsavel_email")
+    .eq("id", id)
+    .maybeSingle();
+  if (!perm) throw new AppError("NOT_FOUND", "Autorização não encontrada.");
+
+  // Buscar família dona do autorizado (responsavel_id aponta para familias.id)
+  const { data: familia } = await ctx.sb.from("familias")
+    .select("id, email")
+    .eq("id", perm.responsavel_id)
+    .maybeSingle();
+
+  const familiaEmail = String(familia?.email || perm.responsavel_email || "").toLowerCase();
+  if (!familiaEmail || familiaEmail !== authedEmail) {
+    throw new AppError("FORBIDDEN", "Você não tem permissão para cancelar esta autorização.");
+  }
+
   await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
   return successResponse({ ok: true });
 });
