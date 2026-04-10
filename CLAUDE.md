@@ -41,7 +41,7 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 
 ---
 
-## Edge Functions (21 ativas)
+## Edge Functions (22 ativas)
 
 | Function | Padrão | Descrição |
 |----------|--------|-----------|
@@ -58,8 +58,10 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 | `financeiro-ext` | **Router v2** | PIX integrado, integração contábil |
 | `rh` | **Router v2** | RH, folha de pagamento, ponto, férias |
 | `loja` | **Router v2** | E-commerce / loja virtual |
+| `lumied-ai` | **Router v2** | IA nativa (Lumi): ask Claude, insights, ROI, **ai_perguntar_mcp** (tool use via MCP) |
+| `mcp` | **JSON-RPC 2.0** | **Model Context Protocol server** — expõe tools staff/gerente/compliance/dev via JSON-RPC para qualquer cliente MCP (Claude Desktop, Code, Cursor) |
 | `health` | Standalone | Health check (DB + Storage latency) |
-| `ticket-resolver` | Standalone | Auto-resposta de tickets via FAQ (pg_cron cada 15min) |
+| `ticket-resolver` | **MCP-powered** | Auto-resposta de tickets: FAQ rápido + Claude com tool use via MCP (pg_cron 1h) |
 | `acesso` | Legado | Controle de acesso famílias |
 | `boletos-list` | Legado | Integração mTLS Banco Inter |
 | `boletos-sync` | Legado | Sync de boletos do Banco Inter |
@@ -71,6 +73,113 @@ Plataforma SaaS de gestão escolar completa com 23 módulos, multi-tenancy, feat
 **Deploy:** `supabase functions deploy <nome> --no-verify-jwt --import-map supabase/functions/deno.json`
 
 > Nota: `--project-ref` não é necessário quando o projeto está linkado (`supabase link`).
+
+---
+
+## MCP Server (Model Context Protocol)
+
+Servidor MCP nativo expondo as capacidades do Lumied como **tools discobríveis** via JSON-RPC 2.0. Qualquer cliente MCP (Claude Desktop, Claude Code, Cursor, custom) pode conectar e chamar ferramentas baseado no **escopo do token** autenticado.
+
+**Endpoint:** `POST https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/mcp`
+**Transport:** Streamable HTTP (JSON-RPC 2.0)
+**Auth:** `Authorization: Bearer <token>` — o token é validado contra as tabelas de sessão e o scope é auto-detectado.
+
+### Arquitetura
+
+```
+supabase/functions/
+├── _shared/
+│   ├── mcp.ts              # Protocolo JSON-RPC + McpServer + auth
+│   └── ai.ts               # askClaudeWithTools (agentic loop)
+├── mcp/
+│   ├── index.ts            # Edge function entry (serve)
+│   ├── tools_staff.ts      # Tools scope=staff
+│   ├── tools_gerente.ts    # Tools scope=gerente / professora
+│   ├── tools_compliance.ts # Tools compliance/ponto
+│   └── tools_dev.ts        # Tools scope=dev (MCP_DEV_KEY)
+└── __tests__/mcp.test.ts   # 12 testes
+```
+
+### Escopos e hierarquia
+
+| Scope | Access | Origem do token |
+|-------|--------|-----------------|
+| `public` | Só tools marcadas public | Qualquer um (initialize/ping) |
+| `professora` | public + professora | `professora_sessoes` ou `sessoes` (papel professora) |
+| `secretaria` | public + secretaria | `secretaria_sessoes` ou `sessoes` (papel secretaria/comercial) |
+| `gerente` | public + professora + gerente + secretaria | `gerente_sessoes` ou `sessoes` (papel gerente/diretor) |
+| `staff` | Tudo exceto dev | `lumied_staff_sessoes` |
+| `dev` | Tudo | `MCP_DEV_KEY` env var |
+
+### Tools registradas
+
+**Staff (`tools_staff.ts`):** `tickets_list_open`, `ticket_get`, `ticket_respond`, `ticket_close`, `escolas_list`, `escola_status`, `sql_query` (read-only), `sentry_recent_errors`, `staff_audit_log`
+
+**Gerente (`tools_gerente.ts`):** `kpis_resumo_dia`, `buscar_aluno`, `analise_inadimplencia`, `alunos_frequencia_critica`, `leads_parados`, `redigir_comunicado`, `analisar_turma` (professora), `modulos_ativos`
+
+**Compliance (`tools_compliance.ts`):** `compliance_score`, `analisar_ponto_mes`, `certificacoes_vencendo`, `gerar_quiz_politica`, `alertas_compliance`
+
+**Dev (`tools_dev.ts`):** `list_migrations`, `describe_table`, `health_check`, `invoke_edge_function`, `get_system_info`
+
+### Exemplo de uso (curl)
+
+```bash
+# Listar tools disponíveis para o staff
+curl -X POST https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/mcp \
+  -H "Authorization: Bearer $STAFF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# Chamar uma tool
+curl -X POST https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/mcp \
+  -H "Authorization: Bearer $STAFF_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call",
+       "params":{"name":"tickets_list_open","arguments":{"limit":5}}}'
+```
+
+### Integração no Lumi (assistente IA)
+
+- **Action:** `ai_perguntar_mcp` (em `lumied-ai`) — usa `askClaudeWithTools` para rodar um **loop agêntico** com as tools MCP filtradas por scope
+- Portais **gerente** e **secretaria** usam `ai_perguntar_mcp` (dados reais via tool use)
+- Portal **professora** continua usando `ai_perguntar_prof` (contexto pré-coletado) por simplicidade
+- O assistente frontend (`lumi-assistant.js`) detecta o portal e escolhe a action automaticamente
+
+### Integração no ticket-resolver
+
+O ticket-resolver (v2, pg_cron 1h) agora:
+1. Faz match rápido via FAQ (sem tokens)
+2. Se não houver match, invoca Claude com tool use + MCP staff tools
+3. Claude pode chamar `sentry_recent_errors`, `escola_status`, `sql_query` para diagnosticar
+4. Se conseguir responder, chama `ticket_respond` (fecha o ticket e envia email)
+5. Senão, escala com diagnóstico da IA no campo `tratamento`
+
+**Substitui o Remote Trigger** (`trig_01PTaCsfDfdNrUGwfUeZJZ96`) que rodava Claude Code cego a cada 1h — agora o loop é auditável (cada tool call fica no histórico) e só consome tokens quando há tickets reais.
+
+### Secrets necessários
+
+Já configurados (ou opcionais):
+- `ANTHROPIC_API_KEY` — askClaude + askClaudeWithTools
+- `SUPABASE_ACCESS_TOKEN` — sql_query, list_migrations, describe_table (via Management API)
+- `SUPABASE_PROJECT_REF` — default `brgorknbrjlfwvrrlwxj`
+- `SENTRY_AUTH_TOKEN` — sentry_recent_errors (opcional)
+- `MCP_DEV_KEY` — token para scope=dev (opcional, só dev local)
+
+### Conectar cliente MCP externo (Claude Desktop)
+
+Adicionar ao `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "lumied": {
+      "url": "https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer <SEU_STAFF_TOKEN>"
+      }
+    }
+  }
+}
+```
 
 ---
 
