@@ -3072,6 +3072,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   var currentGerente=null, pollInterval=null, realtimeChannel=null;
   var sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+  // Globals de papéis — declarados no topo para evitar TDZ/ordem de execução
+  window.PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção', impressao:'Impressão' };
+  window.PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a', impressao:'#8b5cf6' };
+  var PAPEIS = window.PAPEIS;
+  var PAPEL_COLORS = window.PAPEL_COLORS;
+
   // ── TOAST NOTIFICATIONS ────────────────────────────────
   function showToast(msg, type = 'info', duration = 4000) {
     let container = document.getElementById('toastContainer');
@@ -4598,9 +4604,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // Will be handled by existing showPanel — load data when panel opens
 
   // ── EQUIPE UNIFICADA ──────────────────────────────────
+  // PAPEIS e PAPEL_COLORS foram movidos para o topo do script para evitar erros de ordem de execução
   var equipeData = [], equipeFilter = 'todos', equipeSeriesOpts = '';
-  var PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção', impressao:'Impressão' };
-  var PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a', impressao:'#8b5cf6' };
 
   async function loadEquipe() {
     if (!equipeSeriesOpts) {
@@ -4634,14 +4639,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     el.innerHTML = list.map(u => {
       const isMe = u.email === currentGerente?.email;
       const roles = u.papeis?.length ? u.papeis : [u.papel];
-      const cor = PAPEL_COLORS[roles[0]] || '#666';
+      const cor = (window.PAPEL_COLORS||{})[roles[0]] || '#666';
       const isProf = roles.includes('professora') || roles.includes('professora_assistente');
       const turmaSelect = isProf ? `<select onchange="setEquipeSerie('${esc(u.email)}',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;background:#fdfbf8;max-width:130px;">
         <option value="">Sem turma</option>${equipeSeriesOpts}
       </select>` : '';
       const badges = roles.map(r => {
-        const c = PAPEL_COLORS[r] || '#666';
-        return `<span class="role-badge" style="background:${c}15;color:${c};border-color:${c}30;">${PAPEIS[r]||r}</span>`;
+        const c = (window.PAPEL_COLORS||{})[r] || '#666';
+        return `<span class="role-badge" style="background:${c}15;color:${c};border-color:${c}30;">${(window.PAPEIS||{})[r]||r}</span>`;
       }).join(' ');
       return `<div class="list-row" style="flex-wrap:wrap;row-gap:8px;">
         <div class="list-avatar" style="background:${cor}20;color:${cor};">${(u.nome||'?')[0].toUpperCase()}</div>
@@ -4920,10 +4925,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
     // Render checkboxes de papéis
     document.getElementById('editPapeisChecks').innerHTML = ALL_PAPEIS.map(p => {
-      const c = PAPEL_COLORS[p] || '#666';
+      const c = (window.PAPEL_COLORS||{})[p] || '#666';
       const checked = roles.includes(p) ? 'checked' : '';
       return `<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid ${roles.includes(p)?c+'50':'var(--border)'};border-radius:8px;background:${roles.includes(p)?c+'10':'#fdfbf8'};transition:all .15s;">
-        <input type="checkbox" name="editPapel" value="${p}" ${checked} onchange="toggleEditPapelStyle(this);toggleEditFeatures()"> ${PAPEIS[p]||p}
+        <input type="checkbox" name="editPapel" value="${p}" ${checked} onchange="toggleEditPapelStyle(this);toggleEditFeatures()"> ${(window.PAPEIS||{})[p]||p}
       </label>`;
     }).join('');
 
@@ -4941,7 +4946,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   function toggleEditPapelStyle(cb) {
     const label = cb.parentElement;
     const p = cb.value;
-    const c = PAPEL_COLORS[p] || '#666';
+    const c = (window.PAPEL_COLORS||{})[p] || '#666';
     if (cb.checked) { label.style.borderColor = c+'50'; label.style.background = c+'10'; }
     else { label.style.borderColor = 'var(--border)'; label.style.background = '#fdfbf8'; }
   }
