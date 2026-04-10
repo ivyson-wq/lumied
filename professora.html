@@ -3229,8 +3229,31 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   }
 
   function almRenderCartTotal() {
-    const total = almCart.reduce((s, it) => s + it.qty_solicitado * it.preco_unit, 0);
-    document.getElementById('almCartTotal').textContent = fmtBRL(total);
+    // Total do carrinho (itens catálogo)
+    const totalCart = almCart.reduce((s, it) => s + it.qty_solicitado * it.preco_unit, 0);
+    // Total dos novos itens (não cadastrados)
+    let totalNovos = 0;
+    document.querySelectorAll('[id^="almNovoItem_"]').forEach(div => {
+      const qty = parseFloat(div.querySelector('.alm-novo-qty')?.value) || 0;
+      const preco = parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0;
+      totalNovos += qty * preco;
+    });
+    const totalReq = totalCart + totalNovos;
+    document.getElementById('almCartTotal').textContent = fmtBRL(totalReq);
+    // Atualiza barra de orçamento com projeção (gasto atual + carrinho)
+    const turmaId = document.getElementById('almTurmaSelect')?.value;
+    const t = almTurmasData.find(x => x.id === turmaId) || almTurmasData[0];
+    if (t) {
+      const gastoProjetado = (t.gasto || 0) + totalReq;
+      const orc = t.orcamento || 0;
+      const pct = orc > 0 ? Math.min(100, (gastoProjetado / orc) * 100) : 0;
+      document.getElementById('almBudgetBar').style.width = pct + '%';
+      document.getElementById('almBudgetBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+      const gastoPend = t.gasto_pendente || 0;
+      document.getElementById('almGastoVal').innerHTML = fmtBRL(gastoProjetado) +
+        (totalReq > 0 ? ` <span style="font-size:10px;color:#d4830a;">(+${fmtBRL(totalReq)} no carrinho)</span>` : '') +
+        (gastoPend > 0 && totalReq === 0 ? ` <span style="font-size:10px;color:#b07d00;">(${fmtBRL(gastoPend)} pendente)</span>` : '');
+    }
   }
 
   var almNovoItemCount = 0;
@@ -3244,7 +3267,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-size:12px;font-weight:600;">Material #${idx}</span>
-        <button onclick="document.getElementById('almNovoItem_${idx}').remove()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);">×</button>
+        <button onclick="document.getElementById('almNovoItem_${idx}').remove();almRenderCartTotal()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);">×</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div style="grid-column:1/-1;"><input type="text" class="alm-novo-nome" placeholder="Nome do material *" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
@@ -3254,8 +3277,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         <div><select class="alm-novo-categoria" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           <option value="">Categoria</option><option value="Papelaria">Papelaria</option><option value="Artes">Artes</option><option value="Escritório">Escritório</option><option value="Limpeza">Limpeza</option><option value="Decoração">Decoração</option><option value="Pedagógico">Pedagógico</option><option value="Outro">Outro</option>
         </select></div>
-        <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-        <div><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" oninput="almRenderCartTotal()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" oninput="almRenderCartTotal()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
         <div style="grid-column:1/-1;"><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional — ex: tinta guache 250ml)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
       </div>`;
     el.appendChild(div);
