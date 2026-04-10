@@ -190,8 +190,22 @@ router.on("compliance_verificar_ponto", authGerenteOrSecretaria, feat, async (ct
   return successResponse(resultado);
 });
 
-// Chamado automaticamente pelo cron (sem auth — usa service_role_key)
+// Chamado automaticamente pelo cron — exige Authorization Bearer com service_role_key
+// ou CRON_SECRET. Rejeita se nenhum dos dois estiver configurado no env.
 router.on("compliance_verificar_ponto_auto", async (ctx) => {
+  const authHeader = ctx.req.headers.get("Authorization") || "";
+  const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const cronSecret = Deno.env.get("CRON_SECRET") || "";
+  const bodySecret = (ctx.body._cron_secret as string) || "";
+
+  const okService = serviceKey && bearer && bearer === serviceKey;
+  const okCron = cronSecret && (bearer === cronSecret || bodySecret === cronSecret);
+
+  if (!okService && !okCron) {
+    throw new AppError("AUTH_REQUIRED", "Endpoint restrito ao cron (service_role_key ou CRON_SECRET).");
+  }
+
   // Verifica os últimos 2 dias úteis
   const hoje = new Date();
   const dataFim = hoje.toISOString().split("T")[0];

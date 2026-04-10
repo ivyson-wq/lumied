@@ -2217,26 +2217,44 @@ Deno.serve(async (req) => {
   }
 
   // ━━ NOTIFICAÇÕES (qualquer portal) ━━━━━━━━━━━━━━━━━━━━━━━
+  // Helper local: deriva { portal, email } da sessão ativa.
+  // Aceita gerente, professora, secretaria (tokens legados/unificados) ou pai (Supabase Auth JWT).
+  async function getNotifDestinatario(): Promise<{ portal: string; email: string } | null> {
+    const ger = await getGerente(sb, token)
+    if (ger) return { portal: 'gerente', email: ger.email }
+    const prof = await getProfessora(sb, token)
+    if (prof) return { portal: 'professora', email: prof.email }
+    const sec = await getSecretaria(sb, token)
+    if (sec) return { portal: 'secretaria', email: sec.email }
+    const paiEmail = await getPaiEmail(sb, token, undefined)
+    if (paiEmail) return { portal: 'pais', email: paiEmail }
+    return null
+  }
+
   if (action === 'notif_list') {
-    const { portal, email } = body
-    if (!portal || !email) return json({ error: 'portal e email obrigatórios.' }, 400)
+    const who = await getNotifDestinatario()
+    if (!who) return json({ error: 'Sessão inválida.' }, 401)
     const { data } = await sb.from('notificacoes').select('*')
-      .eq('portal', portal).eq('destinatario', email)
+      .eq('portal', who.portal).eq('destinatario', who.email)
       .order('criado_em', { ascending: false }).limit(50)
     return json({ data: data ?? [] })
   }
 
   if (action === 'notif_marcar_lida') {
+    const who = await getNotifDestinatario()
+    if (!who) return json({ error: 'Sessão inválida.' }, 401)
     const { ids } = body
     if (!ids || !Array.isArray(ids)) return json({ error: 'ids obrigatório (array).' }, 400)
-    await sb.from('notificacoes').update({ lida: true }).in('id', ids)
+    // Restringe update às notificações do próprio destinatário
+    await sb.from('notificacoes').update({ lida: true })
+      .in('id', ids).eq('portal', who.portal).eq('destinatario', who.email)
     return json({ ok: true })
   }
 
   if (action === 'notif_marcar_todas') {
-    const { portal, email } = body
-    if (!portal || !email) return json({ error: 'portal e email obrigatórios.' }, 400)
-    await sb.from('notificacoes').update({ lida: true }).eq('portal', portal).eq('destinatario', email).eq('lida', false)
+    const who = await getNotifDestinatario()
+    if (!who) return json({ error: 'Sessão inválida.' }, 401)
+    await sb.from('notificacoes').update({ lida: true }).eq('portal', who.portal).eq('destinatario', who.email).eq('lida', false)
     return json({ ok: true })
   }
 
@@ -2445,7 +2463,10 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'achados_publicar') {
-    // Gerente autoriza publicação imediata
+    // Gerente ou professora autoriza publicação imediata (escreve dado sensível)
+    const ger = await getGerente(sb, token)
+    const prof = !ger ? await getProfessora(sb, token) : null
+    if (!ger && !prof) return json({ error: 'Sessão inválida.' }, 401)
     const { id } = body as { id: string }
     if (!id) return json({ error: 'ID obrigatório.' }, 400)
     await sb.from('achados_perdidos').update({ status: 'publico', publicar_em: new Date().toISOString() }).eq('id', id)
@@ -2468,6 +2489,9 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'achados_excluir') {
+    // Apenas gerente pode excluir definitivamente
+    const ger = await getGerente(sb, token)
+    if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { id } = body as { id: string }
     if (!id) return json({ error: 'ID obrigatório.' }, 400)
     await sb.from('achados_perdidos').delete().eq('id', id)
@@ -2598,17 +2622,21 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'pesquisa_create') {
+    const ger = await getGerente(sb, token)
+    if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { titulo, descricao, tipo, publico_alvo, data_limite } = body as any
     if (!titulo) return json({ error: 'Título obrigatório' }, 400)
     const { data, error } = await sb.from('pesquisas').insert({
       titulo, descricao, tipo: tipo || 'enquete', publico_alvo: publico_alvo || 'todos',
-      data_limite: data_limite || null, criado_por: 'gerente'
+      data_limite: data_limite || null, criado_por: ger.nome || 'gerente'
     }).select().single()
     if (error) return json({ error: error.message }, 400)
     return json(data)
   }
 
   if (action === 'pesquisa_update') {
+    const ger = await getGerente(sb, token)
+    if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { id, ...fields } = body as any
     if (!id) return json({ error: 'ID obrigatório' }, 400)
     delete fields.action; delete fields._token; delete fields._prof_token
@@ -2618,6 +2646,8 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'pesquisa_delete') {
+    const ger = await getGerente(sb, token)
+    if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { id } = body as any
     if (!id) return json({ error: 'ID obrigatório' }, 400)
     const { error } = await sb.from('pesquisas').delete().eq('id', id)
@@ -2633,6 +2663,8 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'pesquisa_perguntas_upsert') {
+    const ger = await getGerente(sb, token)
+    if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { pesquisa_id, perguntas } = body as any
     if (!pesquisa_id || !Array.isArray(perguntas)) return json({ error: 'pesquisa_id e perguntas[] obrigatórios' }, 400)
     // Delete existing and re-insert
@@ -2649,10 +2681,13 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'pesquisa_responder') {
-    const { pesquisa_id, respostas, respondido_por } = body as any
-    if (!pesquisa_id || !Array.isArray(respostas) || !respondido_por) return json({ error: 'pesquisa_id, respostas[] e respondido_por obrigatórios' }, 400)
+    // Pai/responsável autenticado via Supabase Auth JWT
+    const paiEmail = await getPaiEmail(sb, token, undefined)
+    if (!paiEmail) return json({ error: 'Sessão inválida.' }, 401)
+    const { pesquisa_id, respostas } = body as any
+    if (!pesquisa_id || !Array.isArray(respostas)) return json({ error: 'pesquisa_id e respostas[] obrigatórios' }, 400)
     const rows = respostas.map((r: any) => ({
-      pesquisa_id, pergunta_id: r.pergunta_id, respondido_por, valor: r.valor || ''
+      pesquisa_id, pergunta_id: r.pergunta_id, respondido_por: paiEmail, valor: r.valor || ''
     }))
     const { error } = await sb.from('pesquisa_respostas').upsert(rows, { onConflict: 'pergunta_id,respondido_por' })
     if (error) return json({ error: error.message }, 400)
@@ -2660,6 +2695,8 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'pesquisa_resultados') {
+    const ger = await getGerente(sb, token)
+    if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { pesquisa_id } = body as any
     if (!pesquisa_id) return json({ error: 'pesquisa_id obrigatório' }, 400)
     const { data: perguntas } = await sb.from('pesquisa_perguntas').select('*').eq('pesquisa_id', pesquisa_id).order('ordem')
@@ -2670,10 +2707,13 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'autorizacao_assinar') {
-    const { pesquisa_id, familia_email, aluno_nome, autorizado } = body as any
-    if (!pesquisa_id || !familia_email) return json({ error: 'pesquisa_id e familia_email obrigatórios' }, 400)
+    // Pai/responsável via Supabase Auth — email vem do JWT, NÃO do body
+    const paiEmail = await getPaiEmail(sb, token, undefined)
+    if (!paiEmail) return json({ error: 'Sessão inválida.' }, 401)
+    const { pesquisa_id, aluno_nome, autorizado } = body as any
+    if (!pesquisa_id) return json({ error: 'pesquisa_id obrigatório' }, 400)
     const { error } = await sb.from('autorizacoes').upsert({
-      pesquisa_id, familia_email, aluno_nome: aluno_nome || null,
+      pesquisa_id, familia_email: paiEmail, aluno_nome: aluno_nome || null,
       autorizado: autorizado !== false, assinatura_data: new Date().toISOString()
     }, { onConflict: 'pesquisa_id,familia_email' })
     if (error) return json({ error: error.message }, 400)
@@ -2681,6 +2721,8 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'autorizacao_list') {
+    const ger = await getGerente(sb, token)
+    if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { pesquisa_id } = body as any
     if (!pesquisa_id) return json({ error: 'pesquisa_id obrigatório' }, 400)
     const { data } = await sb.from('autorizacoes').select('*').eq('pesquisa_id', pesquisa_id).order('assinatura_data', { ascending: false })

@@ -28,6 +28,51 @@ async function validarSessaoProf(sb: ReturnType<typeof createClient>, token: str
   return validarSessao(sb, "professora_sessoes", "professoras", "professora_id", token, "id, nome, email, serie_id");
 }
 
+// ── Validar sessão de aluno ──
+// Aceita:
+//   1) Token da tabela aluno_sessoes (login aluno email+senha)
+//   2) JWT Supabase Auth (Bearer) — caso o portal use auth nativo
+// Retorna { id, email, nome, serie } do aluno autenticado, ou null
+async function validarSessaoAluno(
+  sb: ReturnType<typeof createClient>,
+  token: string | null,
+): Promise<{ id: string; email: string; nome: string; serie?: string } | null> {
+  if (!token) return null;
+  // 1) Tenta aluno_sessoes
+  const { data: sessao } = await sb
+    .from("aluno_sessoes")
+    .select("aluno_id, expira_em")
+    .eq("token", token)
+    .maybeSingle();
+  if (sessao && new Date((sessao as any).expira_em) >= new Date()) {
+    const { data: aluno } = await sb
+      .from("alunos_login")
+      .select("id, email, aluno_nome, serie")
+      .eq("id", (sessao as any).aluno_id)
+      .maybeSingle();
+    if (aluno) {
+      return {
+        id: (aluno as any).id,
+        email: (aluno as any).email,
+        nome: (aluno as any).aluno_nome,
+        serie: (aluno as any).serie,
+      };
+    }
+  }
+  // 2) Tenta Supabase Auth JWT
+  try {
+    const { data: { user } } = await sb.auth.getUser(token);
+    if (user?.email) {
+      return {
+        id: user.id,
+        email: user.email.toLowerCase().trim(),
+        nome: (user.user_metadata as any)?.full_name || user.email,
+      };
+    }
+  } catch (_) { /* ignore */ }
+  return null;
+}
+
 serve(async (req: Request) => {
   CORS = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -54,6 +99,7 @@ serve(async (req: Request) => {
   const { action } = body;
   const token = (body._token as string) || null;
   const profToken = (body._prof_token as string) || null;
+  const alunoToken = (body._aluno_token as string) || null;
 
   // Resolve enabled modules
   let enabledModules: Set<string>;
@@ -643,9 +689,13 @@ serve(async (req: Request) => {
 
   if (action === "documentos_aluno_list") {
     const blocked = requireModulo(enabledModules, "documentos"); if (blocked) return blocked;
-    const { aluno_email } = body as any;
-    if (!aluno_email) return err("aluno_email obrigatório.");
-    const { data } = await sb.from("documentos_gerados").select("*").eq("aluno_email", aluno_email).order("gerado_em", { ascending: false });
+    // Aluno autenticado vê apenas seus próprios documentos; gerente pode ver de qualquer aluno.
+    const aluno = await validarSessaoAluno(sb, alunoToken || token);
+    const gerente = !aluno ? await validarSessaoGerente(sb, token) : null;
+    if (!aluno && !gerente) return err("Sessão inválida.", 401);
+    const emailFiltro = aluno ? aluno.email : (body as any).aluno_email;
+    if (!emailFiltro) return err("aluno_email obrigatório.");
+    const { data } = await sb.from("documentos_gerados").select("*").eq("aluno_email", emailFiltro).order("gerado_em", { ascending: false });
     return ok(data ?? []);
   }
 
@@ -755,16 +805,20 @@ serve(async (req: Request) => {
 
   if (action === "aluno_notas_get") {
     const blocked = requireModulo(enabledModules, "portal_aluno"); if (blocked) return blocked;
-    const { aluno_email, ano } = body as any;
-    if (!aluno_email) return err("aluno_email obrigatório.");
-    const { data } = await sb.from("boletins").select("*, notas_periodos(nome, numero)").eq("aluno_email", aluno_email).eq("ano", ano || new Date().getFullYear()).order("notas_periodos(numero)");
+    const aluno = await validarSessaoAluno(sb, alunoToken || token);
+    if (!aluno) return err("Sessão inválida.", 401);
+    const { ano } = body as any;
+    const emailFiltro = aluno.email;
+    const { data } = await sb.from("boletins").select("*, notas_periodos(nome, numero)").eq("aluno_email", emailFiltro).eq("ano", ano || new Date().getFullYear()).order("notas_periodos(numero)");
     return ok(data ?? []);
   }
 
   if (action === "aluno_frequencia_get") {
     const blocked = requireModulo(enabledModules, "portal_aluno"); if (blocked) return blocked;
-    const { aluno_email, ano } = body as any;
-    if (!aluno_email) return err("aluno_email obrigatório.");
+    const aluno = await validarSessaoAluno(sb, alunoToken || token);
+    if (!aluno) return err("Sessão inválida.", 401);
+    const { ano } = body as any;
+    const emailFiltro = aluno.email;
     // Reutilizar a lógica de relatório
     const anoFiltro = ano || new Date().getFullYear();
     const { data: chamadas } = await sb.from("frequencia_chamadas").select("id").gte("data", `${anoFiltro}-01-01`).lte("data", `${anoFiltro}-12-31`);
@@ -772,7 +826,7 @@ serve(async (req: Request) => {
     let totalFaltas = 0;
     if (totalAulas > 0) {
       const ids = chamadas!.map((c: any) => c.id);
-      const { count } = await sb.from("frequencia_registros").select("*", { count: "exact", head: true }).eq("aluno_email", aluno_email).in("chamada_id", ids).in("status", ["A", "F"]);
+      const { count } = await sb.from("frequencia_registros").select("*", { count: "exact", head: true }).eq("aluno_email", emailFiltro).in("chamada_id", ids).in("status", ["A", "F"]);
       totalFaltas = count || 0;
     }
     const percent = totalAulas > 0 ? Math.round(((totalAulas - totalFaltas) / totalAulas) * 1000) / 10 : 100;
@@ -870,8 +924,12 @@ serve(async (req: Request) => {
   // ── Respostas dos alunos ──
   if (action === "provas_responder") {
     const blocked = requireModulo(enabledModules, "banco_provas"); if (blocked) return blocked;
-    const { prova_id, aluno_email, aluno_nome, respostas } = body as any;
-    if (!prova_id || !aluno_email) return err("prova_id e aluno_email obrigatórios.");
+    const aluno = await validarSessaoAluno(sb, alunoToken || token);
+    if (!aluno) return err("Sessão inválida.", 401);
+    const { prova_id, respostas } = body as any;
+    const aluno_email = aluno.email;
+    const aluno_nome = aluno.nome;
+    if (!prova_id) return err("prova_id obrigatório.");
     // Verificar se prova está publicada e no prazo
     const { data: prova } = await sb.from("provas").select("status, data_inicio, data_fim, questoes, pontuacao_total").eq("id", prova_id).single();
     if (!prova || prova.status !== "publicada") return err("Prova não disponível.");
@@ -932,8 +990,10 @@ serve(async (req: Request) => {
   // Prova disponível para aluno
   if (action === "provas_disponiveis_aluno") {
     const blocked = requireModulo(enabledModules, "banco_provas"); if (blocked) return blocked;
-    const { aluno_email, serie_id } = body as any;
-    if (!aluno_email) return err("aluno_email obrigatório.");
+    const aluno = await validarSessaoAluno(sb, alunoToken || token);
+    if (!aluno) return err("Sessão inválida.", 401);
+    const { serie_id } = body as any;
+    const aluno_email = aluno.email;
     const agora = new Date().toISOString();
     let q = sb.from("provas").select("id, titulo, notas_disciplinas(nome), data_inicio, data_fim, tempo_limite, pontuacao_total").eq("status", "publicada");
     if (serie_id) q = q.eq("serie_id", serie_id);

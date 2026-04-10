@@ -37,7 +37,61 @@ router.on("rh_funcionarios_update", authGerente, feat, async (ctx) => {
   return successResponse({ success: true });
 });
 
-router.on("rh_ponto_registrar", feat, async (ctx) => {
+// Auth middleware: aceita gerente OU o próprio funcionário (via sessão unificada).
+// Para funcionário, valida que o funcionario_id corresponde ao usuário autenticado.
+const authGerenteOuFuncionario: import("../_shared/router.ts").Middleware = async (ctx, next) => {
+  const token = (ctx.body._token as string) || null;
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
+
+  // Try gerente_sessoes first
+  const { data: gs } = await ctx.sb
+    .from("gerente_sessoes")
+    .select("*, gerentes(id, nome, email)")
+    .eq("token", token)
+    .maybeSingle();
+  if (gs && new Date(gs.expira_em) >= new Date()) {
+    ctx.user = { ...(gs as any).gerentes, tipo: "gerente" };
+    return next();
+  }
+
+  // Try sessão unificada → usuarios (funcionário pode bater ponto no seu próprio ID)
+  const { data: us } = await ctx.sb
+    .from("sessoes")
+    .select("*, usuarios(id, nome, email, papeis, papel)")
+    .eq("token", token)
+    .maybeSingle();
+  if (us && new Date(us.expira_em) >= new Date()) {
+    const usuario = (us as any).usuarios;
+    const papeis: string[] = usuario?.papeis?.length ? usuario.papeis : (usuario?.papel ? [usuario.papel] : []);
+    // Gerente pode bater ponto por qualquer funcionário
+    if (papeis.includes("gerente") || papeis.includes("diretor")) {
+      ctx.user = { ...usuario, tipo: "gerente" };
+      return next();
+    }
+    // Funcionário só pode bater ponto no próprio id
+    const fid = (ctx.body as any).funcionario_id;
+    if (fid && String(fid) === String(usuario?.id)) {
+      ctx.user = { ...usuario, tipo: "funcionario" };
+      return next();
+    }
+    // Tenta casar via tabela rh_funcionarios pelo email (caso id diferente)
+    if (usuario?.email && fid) {
+      const { data: func } = await ctx.sb.from("rh_funcionarios").select("id").eq("id", fid).maybeSingle();
+      if (func) {
+        const { data: funcByEmail } = await ctx.sb.from("rh_funcionarios").select("id").eq("email", usuario.email).eq("id", fid).maybeSingle();
+        if (funcByEmail) {
+          ctx.user = { ...usuario, tipo: "funcionario" };
+          return next();
+        }
+      }
+    }
+    throw new AppError("AUTH_INVALID", "Só é permitido registrar ponto do próprio funcionário.");
+  }
+
+  throw new AppError("AUTH_INVALID", "Sessão inválida.");
+};
+
+router.on("rh_ponto_registrar", authGerenteOuFuncionario, feat, async (ctx) => {
   const { funcionario_id, tipo, localizacao, ip } = ctx.body as any;
   if (!funcionario_id || !tipo) throw new AppError("VALIDATION_FAILED", "funcionario_id e tipo obrigatórios.");
   const { data, error } = await ctx.sb.from("rh_ponto").insert({ funcionario_id, tipo, localizacao, ip }).select().single();

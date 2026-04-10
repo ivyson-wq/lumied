@@ -12,6 +12,49 @@ const log = createLogger("operacional");
 const router = new Router("operacional");
 router.useGlobal(rateLimit());
 
+// Auth middleware: gerente (legado) OU secretaria/equipe (sessão unificada)
+const authGerenteOuSecretaria: import("../_shared/router.ts").Middleware = async (ctx, next) => {
+  const token = (ctx.body._token as string) || null;
+  if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
+
+  const { data: gs } = await ctx.sb
+    .from("gerente_sessoes")
+    .select("*, gerentes(id, nome, email)")
+    .eq("token", token)
+    .maybeSingle();
+  if (gs && new Date(gs.expira_em) >= new Date()) {
+    ctx.user = { ...(gs as any).gerentes, tipo: "gerente" };
+    return next();
+  }
+
+  const { data: ss } = await ctx.sb
+    .from("secretaria_sessoes")
+    .select("*, secretarias(id, nome, email)")
+    .eq("token", token)
+    .maybeSingle();
+  if (ss && new Date(ss.expira_em) >= new Date()) {
+    ctx.user = { ...(ss as any).secretarias, tipo: "secretaria" };
+    return next();
+  }
+
+  const { data: us } = await ctx.sb
+    .from("sessoes")
+    .select("*, usuarios(id, nome, email, papeis, papel)")
+    .eq("token", token)
+    .maybeSingle();
+  if (us && new Date(us.expira_em) >= new Date()) {
+    const usuario = (us as any).usuarios;
+    const papeis: string[] = usuario?.papeis?.length ? usuario.papeis : (usuario?.papel ? [usuario.papel] : []);
+    const permitidos = ["gerente", "diretor", "secretaria", "comercial"];
+    if (papeis.some((p: string) => permitidos.includes(p))) {
+      ctx.user = { ...usuario, tipo: papeis[0] };
+      return next();
+    }
+  }
+
+  throw new AppError("AUTH_INVALID", "Sessão inválida ou sem permissão.");
+};
+
 // ═══ BIBLIOTECA ═══
 const bib = requireFeature("biblioteca");
 
@@ -124,7 +167,7 @@ router.on("cantina_restricoes_list", cant, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("cantina_restricoes_create", cant, async (ctx) => {
+router.on("cantina_restricoes_create", authGerenteOuSecretaria, cant, async (ctx) => {
   const { aluno_email, aluno_nome, tipo, descricao, severidade } = ctx.body as any;
   if (!aluno_email || !tipo || !descricao) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
   const { data, error } = await ctx.sb.from("cantina_restricoes").insert({ aluno_email, aluno_nome, tipo, descricao, severidade }).select().single();
@@ -173,7 +216,7 @@ router.on("transporte_alunos_assign", authGerente, transp, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("transporte_rastreio_update", transp, async (ctx) => {
+router.on("transporte_rastreio_update", authGerente, transp, async (ctx) => {
   const { rota_id, latitude, longitude, velocidade, direcao } = ctx.body as any;
   if (!rota_id || latitude === undefined || longitude === undefined) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
   const { error } = await ctx.sb.from("transporte_rastreio").insert({ rota_id, latitude, longitude, velocidade, direcao });
