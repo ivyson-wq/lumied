@@ -436,6 +436,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <div class="topbar-user">
       <button class="notif-bell" onclick="toggleNotifPanel()" aria-label="Notificações">🔔<span class="notif-dot" id="notifDot"></span></button>
       <span class="user-name" id="userNome"></span>
+      <button class="logout-btn" onclick="switchProfPage('perfil',this)" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">👤 Perfil</button>
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
     </div>
     <div class="notif-panel" id="notifPanel">
@@ -977,6 +978,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         <textarea id="diarioObs" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;" placeholder="Observações..."></textarea>
       </div>
       <button style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;" onclick="salvarDiario()">Salvar Registro</button>
+    </div>
+
+    <!-- ═══ PAGE: PERFIL ═══ -->
+    <div class="prof-page" id="pagePerfil">
+      <div class="sec-title">👤 Meu Perfil</div>
+      <div class="upload-card" style="max-width:400px;">
+        <div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Nome</div>
+          <div style="font-size:15px;color:var(--text);" id="perfilNome">—</div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px;">E-mail</div>
+          <div style="font-size:15px;color:var(--muted);" id="perfilEmail">—</div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:16px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">🔑 Alterar Senha</div>
+          <div class="ff" style="margin-bottom:10px;">
+            <label style="font-size:12px;font-weight:600;">Senha atual</label>
+            <input type="password" id="perfilSenhaAtual" placeholder="••••••••" autocomplete="current-password" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <div class="ff" style="margin-bottom:10px;">
+            <label style="font-size:12px;font-weight:600;">Nova senha (mín. 6 caracteres)</label>
+            <input type="password" id="perfilNovaSenha" placeholder="••••••••" autocomplete="new-password" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <div class="ff" style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;">Confirmar nova senha</label>
+            <input type="password" id="perfilConfirmaSenha" placeholder="••••••••" autocomplete="new-password" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          </div>
+          <button onclick="profAlterarSenha()" class="btn-submit" style="font-size:13px;" id="perfilBtnSenha">Alterar Senha</button>
+          <div class="f-alert error" id="perfilSenhaErr" style="margin-top:8px;display:none;"></div>
+          <div class="f-alert success" id="perfilSenhaOk" style="margin-top:8px;display:none;"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ═══ PAGE: MODULOS CONFIG (gerente only) ═══ -->
@@ -1717,6 +1751,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (page === 'modulosConfig') loadModulosConfig();
     if (page === 'turnos') loadProfTurnos();
     if (page === 'ativExtras') loadProfAtivExtras();
+    if (page === 'perfil') loadPerfil();
   }
 
   // ── CAMERA FAB ──
@@ -3315,6 +3350,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     almFecharModal();
     almLoadReqs();
     almLoadBudget();
+  }
+
+  // ── PERFIL & ALTERAR SENHA ───────────────────────────────
+  function loadPerfil() {
+    document.getElementById('perfilNome').textContent = currentProf?.nome || '—';
+    document.getElementById('perfilEmail').textContent = currentProf?.email || '—';
+    document.getElementById('perfilSenhaAtual').value = '';
+    document.getElementById('perfilNovaSenha').value = '';
+    document.getElementById('perfilConfirmaSenha').value = '';
+    document.getElementById('perfilSenhaErr').style.display = 'none';
+    document.getElementById('perfilSenhaOk').style.display = 'none';
+  }
+
+  async function profAlterarSenha() {
+    const errEl = document.getElementById('perfilSenhaErr');
+    const okEl = document.getElementById('perfilSenhaOk');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    const atual = document.getElementById('perfilSenhaAtual').value;
+    const nova = document.getElementById('perfilNovaSenha').value;
+    const confirma = document.getElementById('perfilConfirmaSenha').value;
+    if (!atual || !nova || !confirma) { errEl.textContent = 'Preencha todos os campos.'; errEl.style.display = 'block'; return; }
+    if (nova.length < 6) { errEl.textContent = 'Senha mínima de 6 caracteres.'; errEl.style.display = 'block'; return; }
+    if (nova !== confirma) { errEl.textContent = 'As senhas não coincidem.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('perfilBtnSenha');
+    btn.disabled = true; btn.textContent = 'Alterando...';
+    const d = await callApi({ action: 'prof_alterar_senha', senha_atual: atual, nova_senha: nova });
+    btn.disabled = false; btn.textContent = 'Alterar Senha';
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+    okEl.textContent = '✅ Senha alterada com sucesso!';
+    okEl.style.display = 'block';
+    document.getElementById('perfilSenhaAtual').value = '';
+    document.getElementById('perfilNovaSenha').value = '';
+    document.getElementById('perfilConfirmaSenha').value = '';
   }
 
   // ── DASHBOARD TURNOS (read-only, espelho do gerente) ─────────

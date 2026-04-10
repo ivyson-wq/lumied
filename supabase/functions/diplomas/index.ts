@@ -2318,6 +2318,25 @@ Deno.serve(async (req) => {
     return json({ data: data ?? [], usado: totalUsado, limite })
   }
 
+  // ━━ ALTERAR SENHA PROFESSORA ━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'prof_alterar_senha') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessão inválida.' }, 401)
+    const { senha_atual, nova_senha } = body as any
+    if (!senha_atual || !nova_senha) return json({ error: 'Preencha todos os campos.' }, 400)
+    if ((nova_senha as string).length < 6) return json({ error: 'Senha mínima de 6 caracteres.' }, 400)
+    // Busca hash atual
+    const { data: profData } = await sb.from('professoras').select('senha_hash').eq('id', prof.id).maybeSingle()
+    if (!profData?.senha_hash) return json({ error: 'Conta sem senha definida.' }, 400)
+    if (!await verificarSenha(senha_atual, profData.senha_hash)) return json({ error: 'Senha atual incorreta.' }, 401)
+    const novoHash = await hashSenha(nova_senha)
+    await sb.from('professoras').update({ senha_hash: novoHash }).eq('id', prof.id)
+    // Atualiza também na tabela usuarios (se existir)
+    await sb.from('usuarios').update({ senha_hash: novoHash }).ilike('email', prof.email)
+    return json({ ok: true })
+  }
+
   // ━━ DASHBOARDS PROFESSORA (read-only) ━━━━━━━━━━━━━━━━━
   if (action === 'prof_turnos_dashboard') {
     const token = (body._token as string) || (body._prof_token as string)
