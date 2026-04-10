@@ -3075,8 +3075,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // Globals de papéis — declarados no topo para evitar TDZ/ordem de execução
   window.PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção', impressao:'Impressão' };
   window.PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a', impressao:'#8b5cf6' };
+  window.ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao','impressao'];
+  window.ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao','impressao'];
+  window.FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção', impressao:'Impressões' };
   var PAPEIS = window.PAPEIS;
   var PAPEL_COLORS = window.PAPEL_COLORS;
+  var ALL_PAPEIS = window.ALL_PAPEIS;
+  var ALL_FEATURES = window.ALL_FEATURES;
+  var FEATURE_LABELS = window.FEATURE_LABELS;
 
   // ── TOAST NOTIFICATIONS ────────────────────────────────
   function showToast(msg, type = 'info', duration = 4000) {
@@ -4909,9 +4915,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   // ── Editar papéis de membro ──
-  var ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao','impressao'];
-  var ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao','impressao'];
-  var FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção', impressao:'Impressões' };
+  // ALL_PAPEIS, ALL_FEATURES, FEATURE_LABELS foram movidos para o topo do script
 
   function openEditPapeis(id) {
     const u = equipeData.find(x => x.id === id);
@@ -4924,7 +4928,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('editPapeisErr').style.display = 'none';
 
     // Render checkboxes de papéis
-    document.getElementById('editPapeisChecks').innerHTML = ALL_PAPEIS.map(p => {
+    document.getElementById('editPapeisChecks').innerHTML = (window.ALL_PAPEIS||[]).map(p => {
       const c = (window.PAPEL_COLORS||{})[p] || '#666';
       const checked = roles.includes(p) ? 'checked' : '';
       return `<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid ${roles.includes(p)?c+'50':'var(--border)'};border-radius:8px;background:${roles.includes(p)?c+'10':'#fdfbf8'};transition:all .15s;">
@@ -4933,9 +4937,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     }).join('');
 
     // Render checkboxes de features
-    document.getElementById('editFeaturesChecks').innerHTML = ALL_FEATURES.map(f =>
+    document.getElementById('editFeaturesChecks').innerHTML = (window.ALL_FEATURES||[]).map(f =>
       `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;background:#fdfbf8;">
-        <input type="checkbox" name="editFeature" value="${f}"> ${FEATURE_LABELS[f]||f}
+        <input type="checkbox" name="editFeature" value="${f}"> ${(window.FEATURE_LABELS||{})[f]||f}
       </label>`
     ).join('');
 
