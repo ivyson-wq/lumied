@@ -5,8 +5,12 @@ on:
     branches: [main]
     paths:
       - 'supabase/migrations/*.sql'
-      - '.github/workflows/apply-migrations.yml'
   workflow_dispatch:
+    inputs:
+      force_migration:
+        description: 'Specific migration file to apply (e.g. 214_papel_impressao.sql). Leave empty to auto-detect.'
+        required: false
+        default: ''
 
 env:
   SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
@@ -24,7 +28,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get install -y jq
 
-      - name: Apply pending migrations
+      - name: Apply migrations
         run: |
           set -euo pipefail
           API="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query"
@@ -52,65 +56,38 @@ jobs:
             return 0
           }
 
-          # Ensure tracking table exists
+          # Ensure tracking table exists (log only, not filter)
           run_sql "CREATE TABLE IF NOT EXISTS public._ci_applied_migrations (version TEXT PRIMARY KEY, name TEXT, applied_at TIMESTAMPTZ DEFAULT NOW())" > /dev/null
 
-          # Count existing entries
-          COUNT=$(curl -sf -X POST "$API" -H "$AUTH" -H "$CT" \
-            -d '{"query":"SELECT COUNT(*)::int AS n FROM public._ci_applied_migrations"}' | jq -r '.[0].n')
-          echo "Tracking table has $COUNT entries"
+          FORCE="${{ github.event.inputs.force_migration || '' }}"
 
-          # Get migrations added/modified in the last commit
-          NEW_FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=AM -r HEAD -- 'supabase/migrations/*.sql' || echo "")
-          echo "New/modified migrations in last commit:"
-          echo "${NEW_FILES:-(none)}"
+          if [ -n "$FORCE" ]; then
+            FILE="supabase/migrations/$FORCE"
+            if [ ! -f "$FILE" ]; then
+              echo "❌ File not found: $FILE"
+              exit 1
+            fi
+            TARGETS="$FILE"
+          else
+            # Auto-detect from last commit
+            TARGETS=$(git diff-tree --no-commit-id --name-only --diff-filter=AM -r HEAD -- 'supabase/migrations/*.sql' || echo "")
+          fi
+
+          if [ -z "$TARGETS" ]; then
+            echo "No migrations to apply."
+            exit 0
+          fi
+
+          echo "Targets:"
+          echo "$TARGETS"
           echo "---"
 
-          if [ "$COUNT" = "0" ]; then
-            echo "🚀 First run — bootstrapping tracking table"
-            for f in $(ls supabase/migrations/*.sql | sort); do
-              base=$(basename "$f" .sql)
-              version=$(echo "$base" | sed 's/^\([0-9]*\)_.*/\1/')
-
-              # If this file is in the current commit changes, mark as "to apply"
-              if echo "$NEW_FILES" | grep -qx "$f"; then
-                echo "▶  [FIRST-RUN] Applying new: $base"
-                if run_sql_file "$f"; then
-                  run_sql "INSERT INTO public._ci_applied_migrations (version, name) VALUES ('$version', '$base') ON CONFLICT (version) DO NOTHING" > /dev/null
-                  echo "✓  Applied $base"
-                else
-                  echo "❌ Failed to apply $base"
-                  exit 1
-                fi
-              else
-                # Historical migration — just mark as already applied (assumed present in DB)
-                run_sql "INSERT INTO public._ci_applied_migrations (version, name) VALUES ('$version', '$base') ON CONFLICT (version) DO NOTHING" > /dev/null
-                echo "⏭  [BOOTSTRAP] Marked as applied: $base"
-              fi
-            done
-            echo "✅ First run complete"
-            exit 0
-          fi
-
-          # Incremental mode: only apply migrations from last commit not yet tracked
-          if [ -z "$NEW_FILES" ]; then
-            echo "No new migrations in last commit."
-            exit 0
-          fi
-
-          APPLIED=$(curl -sf -X POST "$API" -H "$AUTH" -H "$CT" \
-            -d '{"query":"SELECT version FROM public._ci_applied_migrations ORDER BY version"}' | jq -r '.[].version' 2>/dev/null || echo "")
-
-          for f in $(echo "$NEW_FILES" | sort); do
+          for f in $(echo "$TARGETS" | sort); do
             base=$(basename "$f" .sql)
             version=$(echo "$base" | sed 's/^\([0-9]*\)_.*/\1/')
-            if echo "$APPLIED" | grep -qx "$version"; then
-              echo "⏭  Skipping $base (already applied)"
-              continue
-            fi
             echo "▶  Applying $base..."
             if run_sql_file "$f"; then
-              run_sql "INSERT INTO public._ci_applied_migrations (version, name) VALUES ('$version', '$base') ON CONFLICT (version) DO NOTHING" > /dev/null
+              run_sql "INSERT INTO public._ci_applied_migrations (version, name) VALUES ('$version', '$base') ON CONFLICT (version) DO UPDATE SET applied_at = NOW()" > /dev/null
               echo "✓  Applied $base"
             else
               echo "❌ Failed to apply $base"
@@ -118,4 +95,4 @@ jobs:
             fi
           done
 
-          echo "✅ All pending migrations applied"
+          echo "✅ Done"

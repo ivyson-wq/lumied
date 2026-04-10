@@ -1,4 +1,5 @@
 -- Migration 214: Novo papel "impressao" — acesso apenas ao módulo de impressões no portal da secretaria
+-- Idempotente via ON CONFLICT DO NOTHING
 
 -- Permissões RBAC default para o papel impressao:
 -- Único módulo acessível: impressoes (ver + editar)
