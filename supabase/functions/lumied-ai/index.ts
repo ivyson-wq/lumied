@@ -6,10 +6,22 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Router, rateLimit, authGerente, authProfessora } from "../_shared/router.ts";
 import { successResponse, AppError } from "../_shared/errors.ts";
-import { askClaude, SYSTEM_PROMPTS, buildContextFromData } from "../_shared/ai.ts";
+import { askClaude, askClaudeWithTools, SYSTEM_PROMPTS, buildContextFromData } from "../_shared/ai.ts";
+import { McpServer, type McpScope } from "../_shared/mcp.ts";
+import { staffTools } from "../mcp/tools_staff.ts";
+import { gerenteTools } from "../mcp/tools_gerente.ts";
+import { complianceTools } from "../mcp/tools_compliance.ts";
+import { devTools } from "../mcp/tools_dev.ts";
 
 const router = new Router("lumied-ai");
 router.useGlobal(rateLimit({ maxRequests: 30, windowMs: 60000 }));
+
+// ─── Shared MCP server (used by ai_perguntar_mcp) ───
+const mcpServer = new McpServer("lumied-ai-mcp", "1.0.0");
+mcpServer.registerAll(staffTools);
+mcpServer.registerAll(gerenteTools);
+mcpServer.registerAll(complianceTools);
+mcpServer.registerAll(devTools);
 
 // Auth flexível: tenta legado, fallback sessão unificada
 import type { Middleware } from "../_shared/router.ts";
@@ -68,6 +80,81 @@ ${pergunta}`;
   });
 
   return successResponse({ resposta: resposta.text, tokens: resposta.tokens_input + resposta.tokens_output });
+});
+
+// ═══════════════════════════════════════════════════════
+//  MCP — Pergunta com tool use (agentic)
+//  A IA chama tools MCP automaticamente para coletar
+//  contexto real antes de responder
+// ═══════════════════════════════════════════════════════
+
+router.on("ai_perguntar_mcp", authFlexivel, async (ctx) => {
+  const { pergunta, portal = "gerente" } = ctx.body as { pergunta?: string; portal?: string };
+  if (!pergunta) throw new AppError("VALIDATION_FAILED", "Pergunta obrigatória.");
+
+  // Map user tipo → MCP scope
+  const tipoParaScope: Record<string, McpScope> = {
+    gerente: "gerente",
+    professora: "professora",
+    secretaria: "secretaria",
+    staff: "staff",
+    unificado: "gerente", // sessão unificada → assume gerente (checagem fina futura)
+  };
+  const scope = tipoParaScope[ctx.user?.tipo || ""] || "public";
+
+  const tools = mcpServer.asClaudeTools(scope);
+  if (tools.length === 0) {
+    throw new AppError("FORBIDDEN", "Sem tools disponíveis para este perfil.");
+  }
+
+  const mcpCtx = { sb: ctx.sb, user: ctx.user ?? null, scope, req: ctx.req };
+  // deno-lint-ignore no-explicit-any
+  const executor = async (name: string, args: Record<string, any>) => {
+    if (!mcpServer.canCall(name, scope)) {
+      throw new Error(`Tool '${name}' não permitida para scope '${scope}'`);
+    }
+    const tool = mcpServer.getTool(name)!;
+    return await tool.handler(args, mcpCtx);
+  };
+
+  const system = SYSTEM_PROMPTS[portal as keyof typeof SYSTEM_PROMPTS] ||
+    SYSTEM_PROMPTS.gerente;
+  const resposta = await askClaudeWithTools(pergunta, tools, executor, {
+    system: system +
+      "\n\nVocê tem ferramentas (tools) que consultam dados reais da escola. " +
+      "SEMPRE use as tools antes de responder perguntas sobre números, alunos, finanças ou compliance. " +
+      "Nunca invente dados — se não tiver uma tool adequada, diga isso ao usuário.",
+    maxTokens: 1024,
+    maxTurns: 5,
+  });
+
+  if (!resposta) throw new AppError("INTERNAL_ERROR", "IA indisponível no momento.");
+
+  // Registrar conversa
+  await ctx.sb.from("ia_conversas").insert({
+    portal,
+    usuario_id: ctx.user?.id,
+    usuario_nome: ctx.user?.nome,
+    mensagens: [
+      { role: "user", content: pergunta, ts: new Date().toISOString() },
+      {
+        role: "assistant",
+        content: resposta.text,
+        tool_calls: resposta.tool_calls.map((t) => t.name),
+        ts: new Date().toISOString(),
+      },
+    ],
+    total_mensagens: 2,
+    tokens_total: resposta.tokens_input + resposta.tokens_output,
+    custo_total: resposta.cost,
+  });
+
+  return successResponse({
+    resposta: resposta.text,
+    tools_called: resposta.tool_calls.map((t) => ({ name: t.name, input: t.input })),
+    tokens: resposta.tokens_input + resposta.tokens_output,
+    custo: resposta.cost,
+  });
 });
 
 // Professora também pode perguntar

@@ -44,7 +44,12 @@
   function init() {
 
   const isGerente = portal === 'gerente';
-  const API_ACTION = portal === 'professora' ? 'ai_perguntar_prof' : 'ai_perguntar';
+  // MCP mode: gerente/secretaria usam ai_perguntar_mcp (tool use com dados reais)
+  // Professora ainda usa endpoint clássico com contexto pré-coletado
+  const useMcp = (portal === 'gerente' || portal === 'secretaria');
+  const API_ACTION = useMcp
+    ? 'ai_perguntar_mcp'
+    : (portal === 'professora' ? 'ai_perguntar_prof' : 'ai_perguntar');
   const TOKEN_KEYS = { professora: 'prof_token', aluno: 'mb_aluno_token', secretaria: 'sec_token' };
   const TOKEN_KEY = TOKEN_KEYS[portal] || 'mb_token';
 
