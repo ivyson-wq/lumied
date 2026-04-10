@@ -1083,6 +1083,58 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 - Busca de preços (`alm_buscar_precos` e `alm_atualizar_precos`): inclui `descricao` do insumo na query para melhor precisão (ex: "Tinta Guache 250ml")
 - Display do catálogo mostra descrição/especificação ao lado do nome
 
+### Requisições multi-turma (professora)
+- `alm_minha_turma` retorna **todas** as turmas da professora (`serie_id` + `series_monitoras`)
+- Dropdown de turma no budget card (era texto fixo com a primeira turma)
+- `alm_criar_req` aceita `turma_id` do frontend — orçamento debita da turma selecionada
+- Cada turma mostra seu orçamento individual (gasto, pendente, barra)
+
+### Projeção de orçamento em tempo real
+- Barra de orçamento atualiza conforme professora adiciona itens ao carrinho (antes de enviar)
+- Mostra "(+R$ X no carrinho)" ao lado do gasto
+- Novos itens (não cadastrados) com preço também projetam no orçamento
+- Ao remover item ou enviar requisição, barra recalcula
+
+---
+
+## Atividades Extras — Contas a Receber (2026-04-09)
+
+### Repasse à escola por aluno
+- Nova coluna `valor_repasse_aluno` na tabela `atividades`
+- Campo "Repasse à escola (R$/aluno/mês)" no formulário de criar/editar atividade
+- Display no catálogo: "Repasse: R$ X,XX/aluno"
+
+### Tabela `atividades_contas_receber` (Migration 213)
+- `atividade_id`, `atividade_nome`, `mes_apuracao`, `qtd_alunos`, `valor_por_aluno`, `valor_total`
+- `data_vencimento` = dia 05 do mês seguinte à apuração
+- `status`: pendente, pago, cancelado, atrasado
+- UNIQUE(atividade_id, mes_apuracao)
+
+### Apuração mensal
+- Botão "Apurar Mês" no painel de Atividades do gerente
+- Conta alunos por atividade via `alunos.atividades_ids` (mesma criança conta em cada atividade)
+- Gera conta por atividade: `qtd_alunos × valor_repasse_aluno`
+- Upsert (re-apurar atualiza valores sem duplicar)
+
+### Endpoints
+- `atividades_apurar_mes` — apura mês e gera contas (vencimento dia 05 mês seguinte)
+- `atividades_contas_list` — lista contas (filtro por mês)
+- `atividades_conta_pagar` — marca como pago
+- `atividades_conta_cancelar` — cancela conta
+
+### Painel no gerente
+- Cards: Total a Receber, Quantidade de Atividades, Vencimento
+- Tabela: atividade, alunos, valor/aluno, total, status, ações (pagar/cancelar)
+
+---
+
+## Portal da Professora — Perfil & Senha (2026-04-09)
+
+- Botão **"👤 Perfil"** na topbar (ao lado de "Sair")
+- Página de perfil: nome (read-only), email (read-only), formulário de alteração de senha
+- Validação: senha atual obrigatória, nova senha mín 6 chars, confirmação
+- Backend `prof_alterar_senha` (diplomas): verifica senha atual, atualiza hash em `professoras` e `usuarios`
+
 ---
 
 ## Banco de Dados — Migrations Recentes
@@ -1100,3 +1152,4 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 | `210` | alunos: coluna `turno` (text) + `dias_semana` (text[]) |
 | `211` | alunos: colunas `atividades_ids`, `turmas_selecionadas`, `almoco_dias` |
 | `212` | impressoes: coluna `num_paginas` (integer, default 1) para contagem de folhas |
+| `213` | atividades: `valor_repasse_aluno` + tabela `atividades_contas_receber` |
