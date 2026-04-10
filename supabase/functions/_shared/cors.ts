@@ -20,8 +20,10 @@ export function getCorsHeaders(req?: Request): Record<string, string> {
     } else if (reqOrigin.endsWith(".lumied.com.br")) {
       // Allow any escola subdomain
       origin = reqOrigin;
-    } else if (reqOrigin.endsWith(".vercel.app") && reqOrigin.includes("maple-bear")) {
-      // Allow Vercel preview deploys for this project only
+    } else if (/^https:\/\/maple-bear-rs(-[a-z0-9-]+)?\.vercel\.app$/.test(reqOrigin)) {
+      // Allow Vercel preview deploys for this exact project only
+      // Matches: maple-bear-rs.vercel.app and maple-bear-rs-<hash>.vercel.app
+      // Blocks: maple-bear-attack.vercel.app, evil-maple-bear.vercel.app, etc.
       origin = reqOrigin;
     }
     // Unknown origins are rejected — origin stays as default (not echoed back)

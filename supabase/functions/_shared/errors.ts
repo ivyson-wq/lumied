@@ -2,18 +2,36 @@
 //  Shared: Standardized Error Handling
 // ═══════════════════════════════════════════════════════════════
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { getCorsHeaders } from "./cors.ts";
 import { captureException } from "./sentry.ts";
 
-// Current CORS headers — updated per-request via setRequestForCors()
-let _currentCorsHeaders = getCorsHeaders();
+// Per-request CORS headers via AsyncLocalStorage — each request runs in its
+// own async context, so concurrent requests in the same isolate don't race.
+const corsStorage = new AsyncLocalStorage<Record<string, string>>();
+const DEFAULT_CORS = getCorsHeaders();
+
+function currentCorsHeaders(): Record<string, string> {
+  return corsStorage.getStore() ?? DEFAULT_CORS;
+}
 
 /**
- * Update CORS headers based on the current request origin.
- * Call this at the start of each request handler.
+ * Run `fn` within a CORS context derived from the request. All calls to
+ * errorResponse/successResponse/corsResponse inside this context (and any
+ * awaited children) will use the correct per-request headers.
  */
-export function setRequestForCors(req: Request): void {
-  _currentCorsHeaders = getCorsHeaders(req);
+export function runWithCors<T>(req: Request, fn: () => T | Promise<T>): Promise<T> {
+  return Promise.resolve(corsStorage.run(getCorsHeaders(req), fn));
+}
+
+/**
+ * @deprecated Legacy no-op kept for backwards compatibility. The CORS headers
+ * are now managed per-request via runWithCors(). Call sites inside a request
+ * handler wrapped by withErrorHandler() or router.handle() don't need to do
+ * anything — the context is already set up.
+ */
+export function setRequestForCors(_req: Request): void {
+  // no-op: headers are now managed by AsyncLocalStorage
 }
 
 export type ErrorCode =
@@ -70,7 +88,7 @@ export function errorResponse(code: ErrorCode, message: string, details?: unknow
       ...(details ? { details } : {}),
       timestamp: new Date().toISOString(),
     }),
-    { status, headers: _currentCorsHeaders }
+    { status, headers: currentCorsHeaders() }
   );
 }
 
@@ -80,7 +98,7 @@ export function errorResponse(code: ErrorCode, message: string, details?: unknow
 export function successResponse(data: unknown, status = 200): Response {
   return new Response(
     JSON.stringify(data),
-    { status, headers: _currentCorsHeaders }
+    { status, headers: currentCorsHeaders() }
   );
 }
 
@@ -88,16 +106,15 @@ export function successResponse(data: unknown, status = 200): Response {
  * CORS preflight Response
  */
 export function corsResponse(): Response {
-  return new Response("ok", { headers: _currentCorsHeaders });
+  return new Response("ok", { headers: currentCorsHeaders() });
 }
 
 /**
  * Global error handler — wraps a handler function with try/catch
  */
 export function withErrorHandler(handler: (req: Request) => Promise<Response>): (req: Request) => Promise<Response> {
-  return async (req: Request) => {
+  return (req: Request) => runWithCors(req, async () => {
     try {
-      setRequestForCors(req);
       if (req.method === "OPTIONS") return corsResponse();
       return await handler(req);
     } catch (error) {
@@ -112,5 +129,5 @@ export function withErrorHandler(handler: (req: Request) => Promise<Response>): 
       ).catch(() => {});
       return errorResponse("INTERNAL_ERROR", "Erro interno do servidor.");
     }
-  };
+  });
 }

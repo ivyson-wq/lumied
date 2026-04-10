@@ -8,7 +8,6 @@ import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEnco
 import { getModulosHabilitados, getEscolaPadrao } from "../_shared/modulos.ts";
 import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
 import { sanitizeBody } from "../_shared/validation.ts";
-import { errorResponse } from "../_shared/errors.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { hashSenhaV1 as hashSenha, hashSenha as hashSenhaProf, verificarSenhaAuto, gerarToken, validarSessao as _validarSessao } from "../_shared/auth.ts";
@@ -60,7 +59,7 @@ serve(async (req: Request) => {
   const reqAction = (body.action as string) || '';
   const ip = getClientIP(req);
   const rl = checkRateLimit(ip, reqAction.startsWith("login") ? "login" : "api");
-  if (!rl.allowed) return errorResponse("RATE_LIMITED", `Tente novamente em ${rl.retryAfterSeconds}s.`);
+  if (!rl.allowed) return err(`Tente novamente em ${rl.retryAfterSeconds}s.`, 429);
 
   // Sanitize body
   body = sanitizeBody(body) as Record<string, unknown>;
