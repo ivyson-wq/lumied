@@ -44,6 +44,7 @@ export type ErrorCode =
   | 'CONFLICT'
   | 'RATE_LIMITED'
   | 'FEATURE_DISABLED'
+  | 'ESCOLA_REQUIRED'
   | 'INTERNAL_ERROR'
   | 'BAD_REQUEST'
   | 'PAYLOAD_TOO_LARGE';
@@ -56,6 +57,7 @@ const STATUS_MAP: Record<ErrorCode, number> = {
   AUTH_EXPIRED: 401,
   FORBIDDEN: 403,
   FEATURE_DISABLED: 403,
+  ESCOLA_REQUIRED: 400,
   NOT_FOUND: 404,
   CONFLICT: 409,
   RATE_LIMITED: 429,
@@ -107,6 +109,27 @@ export function successResponse(data: unknown, status = 200): Response {
  */
 export function corsResponse(): Response {
   return new Response("ok", { headers: currentCorsHeaders() });
+}
+
+/**
+ * Sanitize PostgREST / PostgreSQL errors into user-friendly Portuguese
+ * messages. Prevents leaking column names, constraint names, and other
+ * internals. The original error should still be logged server-side for
+ * debugging.
+ */
+export function sanitizePgError(
+  error: { message?: string; code?: string; details?: string } | null | undefined,
+): string {
+  if (!error) return 'Erro desconhecido.';
+  const msg = error.message || '';
+  if (msg.includes('duplicate key') || error.code === '23505') return 'Registro duplicado.';
+  if (msg.includes('violates foreign key') || error.code === '23503') return 'Referência inválida.';
+  if (msg.includes('violates not-null') || error.code === '23502') return 'Campo obrigatório faltando.';
+  if (msg.includes('violates check') || error.code === '23514') return 'Valor inválido.';
+  if (error.code === '42501') return 'Sem permissão.';
+  if (error.code === '42P01') return 'Recurso não encontrado.';
+  // Default: generic message (real error logged server-side)
+  return 'Erro ao processar a solicitação.';
 }
 
 /**

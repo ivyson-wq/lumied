@@ -1,5 +1,5 @@
 {
-  "version": "4",
+  "version": "5",
   "specifiers": {
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.12"
@@ -30,6 +30,8 @@
         "npm:@capacitor/status-bar@^8.0.2",
         "npm:@playwright/test@^1.58.2",
         "npm:esbuild@~0.27.4",
+        "npm:pdf-parse@^2.4.5",
+        "npm:pdfjs-dist@^3.11.174",
         "npm:puppeteer@^24.40.0"
       ]
     }

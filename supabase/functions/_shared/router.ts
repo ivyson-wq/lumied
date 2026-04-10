@@ -5,7 +5,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { errorResponse, corsResponse, runWithCors, AppError } from "./errors.ts";
-import { checkRateLimit, getClientIP, RateLimitConfig } from "./ratelimit.ts";
+import { checkRateLimit, checkRateLimitDb, getClientIP, RateLimitConfig } from "./ratelimit.ts";
 import { validate, sanitizeBody, Schema } from "./validation.ts";
 import { createLogger } from "./logger.ts";
 import { getModulosHabilitados, getEscolaPadrao } from "./modulos.ts";
@@ -109,8 +109,35 @@ export class Router {
 //  Built-in Middlewares
 // ═══════════════════════════════════════════════════════════════
 
-/** Rate limiting middleware */
+/**
+ * Rate limiting middleware.
+ *
+ * Uses the DB-backed `rate_limit_check` RPC (migration 218) so counters
+ * are shared across edge function instances and survive cold starts.
+ * Falls back to the in-memory limiter if the RPC is unavailable
+ * (see checkRateLimitDb implementation).
+ */
 export function rateLimit(config?: RateLimitConfig): Middleware {
+  return async (ctx, next) => {
+    const category = ctx.action.startsWith('login') ? 'login' : 'api';
+    const result = await checkRateLimitDb(
+      ctx.sb,
+      ctx.ip,
+      config ? ctx.action : category,
+      config,
+    );
+    if (!result.allowed) {
+      return errorResponse("RATE_LIMITED", `Muitas requisições. Tente novamente em ${result.retryAfterSeconds}s.`);
+    }
+    return next();
+  };
+}
+
+/**
+ * Legacy sync rate-limit middleware kept for actions/functions that
+ * want to opt out of the DB round-trip (e.g. extremely hot paths).
+ */
+export function rateLimitInMemory(config?: RateLimitConfig): Middleware {
   // deno-lint-ignore require-await
   return async (ctx, next) => {
     const category = ctx.action.startsWith('login') ? 'login' : 'api';
@@ -122,15 +149,21 @@ export function rateLimit(config?: RateLimitConfig): Middleware {
   };
 }
 
-/** Auth middleware — validates session token */
+/** Auth middleware — validates session token and loads escola_id */
 export function auth(sessionTable: string, userTable: string, userFields: string, tokenField = '_token'): Middleware {
+  // Always include escola_id in the projection (legacy gerentes/professoras/secretarias all have it
+  // via migration 074). We strip it from userFields if caller already included it to avoid duplicates.
+  const fields = userFields.split(",").map(f => f.trim());
+  if (!fields.includes("escola_id")) fields.push("escola_id");
+  const projection = fields.join(", ");
+
   return async (ctx, next) => {
     const token = (ctx.body[tokenField] as string) || null;
     if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
 
     const { data } = await ctx.sb
       .from(sessionTable)
-      .select(`*, ${userTable}(${userFields})`)
+      .select(`*, ${userTable}(${projection})`)
       .eq("token", token)
       .single();
 
@@ -140,6 +173,9 @@ export function auth(sessionTable: string, userTable: string, userFields: string
     // deno-lint-ignore no-explicit-any
     const user = (data as any)[userTable];
     ctx.user = { ...user, tipo: sessionTable.replace('_sessoes', '') };
+    if (user?.escola_id && !ctx.escola_id) {
+      ctx.escola_id = user.escola_id as string;
+    }
     return next();
   };
 }
@@ -151,12 +187,79 @@ export const authGerente: Middleware = auth("gerente_sessoes", "gerentes", "id, 
 export const authProfessora: Middleware = auth("professora_sessoes", "professoras", "id, nome, email, serie_id", "_prof_token");
 
 
+/**
+ * Unified auth middleware that accepts BOTH gerente (legacy) and
+ * secretaria/equipe (unified session) tokens. Used by operacional, rh,
+ * compliance. Populates ctx.user + ctx.escola_id.
+ *
+ * Allowed papeis can be customised; defaults cover all staff roles that
+ * should have access to operational/rh/compliance modules.
+ */
+export function authGerenteOrSecretaria(
+  allowedPapeis: string[] = ["gerente", "diretor", "secretaria", "comercial", "financeiro"],
+): Middleware {
+  return async (ctx, next) => {
+    const token = (ctx.body._token as string) || null;
+    if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
+
+    // 1. Try legacy gerente_sessoes (gerentes has escola_id via 074)
+    const { data: gs } = await ctx.sb
+      .from("gerente_sessoes")
+      .select("*, gerentes(id, nome, email, escola_id)")
+      .eq("token", token)
+      .maybeSingle();
+    if (gs && new Date(gs.expira_em) >= new Date()) {
+      // deno-lint-ignore no-explicit-any
+      const g = (gs as any).gerentes;
+      ctx.user = { ...g, tipo: "gerente" };
+      if (g?.escola_id) ctx.escola_id = g.escola_id as string;
+      return next();
+    }
+
+    // 2. Try legacy secretaria_sessoes (secretarias has escola_id via 074)
+    const { data: ss } = await ctx.sb
+      .from("secretaria_sessoes")
+      .select("*, secretarias(id, nome, email, escola_id)")
+      .eq("token", token)
+      .maybeSingle();
+    if (ss && new Date(ss.expira_em) >= new Date()) {
+      // deno-lint-ignore no-explicit-any
+      const s = (ss as any).secretarias;
+      ctx.user = { ...s, tipo: "secretaria" };
+      if (s?.escola_id) ctx.escola_id = s.escola_id as string;
+      return next();
+    }
+
+    // 3. Try unified sessoes → usuarios (110 added escola_id to usuarios)
+    const { data: us } = await ctx.sb
+      .from("sessoes")
+      .select("*, usuarios(id, nome, email, papeis, papel, escola_id)")
+      .eq("token", token)
+      .maybeSingle();
+    if (us && new Date(us.expira_em) >= new Date()) {
+      // deno-lint-ignore no-explicit-any
+      const usuario = (us as any).usuarios;
+      const papeis: string[] = usuario?.papeis?.length
+        ? usuario.papeis
+        : (usuario?.papel ? [usuario.papel] : []);
+      if (papeis.some((p: string) => allowedPapeis.includes(p))) {
+        ctx.user = { ...usuario, tipo: papeis[0] };
+        if (usuario?.escola_id) ctx.escola_id = usuario.escola_id as string;
+        return next();
+      }
+    }
+
+    throw new AppError("AUTH_INVALID", "Sessão inválida ou sem permissão.");
+  };
+}
+
 /** Feature module check middleware */
 export function requireFeature(slug: string): Middleware {
   return async (ctx, next) => {
     if (!ctx.modulos) {
-      const escolaId = await getEscolaPadrao(ctx.sb);
-      ctx.escola_id = escolaId || undefined;
+      // Prefer escola_id already loaded by auth; fall back to padrão
+      const escolaId = ctx.escola_id || (await getEscolaPadrao(ctx.sb)) || undefined;
+      ctx.escola_id = escolaId;
       ctx.modulos = escolaId ? await getModulosHabilitados(ctx.sb, escolaId) : new Set();
     }
     if (!ctx.modulos.has(slug)) {
@@ -183,6 +286,18 @@ export const loadEscola: Middleware = async (ctx, next) => {
   if (!ctx.escola_id) {
     const escolaId = await getEscolaPadrao(ctx.sb);
     ctx.escola_id = escolaId || undefined;
+  }
+  return next();
+};
+
+/**
+ * Enforce that ctx.escola_id is set. Used on routes that mutate or read
+ * tenant-scoped tables, to prevent accidental cross-tenant leaks if some
+ * earlier middleware forgot to populate it. Throws 400 otherwise.
+ */
+export const requireEscola: Middleware = async (ctx, next) => {
+  if (!ctx.escola_id) {
+    throw new AppError("ESCOLA_REQUIRED", "escola_id não resolvido para este usuário.");
   }
   return next();
 };

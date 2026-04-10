@@ -11,8 +11,34 @@ import { sanitizeBody } from "../_shared/validation.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { hashSenhaV1 as hashSenha, hashSenha as hashSenhaProf, verificarSenhaAuto, gerarToken, validarSessao as _validarSessao } from "../_shared/auth.ts";
+import { sanitizePgError } from "../_shared/errors.ts";
 
 const log = createLogger("api");
+
+// ── Helpers de segurança para emails (XSS / header injection / brute force) ──
+function escapeHtml(s: unknown): string {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function sanitizeHeaderValue(s: unknown): string {
+  if (s == null) return '';
+  return String(s).replace(/[\r\n\x00-\x1f\x7f]/g, '').substring(0, 200);
+}
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 // ── Validar sessão (gerente ou sessão unificada com papel gerente/secretaria/comercial) ──
 async function validarSessao(admin: ReturnType<typeof createClient>, token: string | null) {
@@ -186,20 +212,24 @@ serve(async (req: Request) => {
     const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_KEY) return err("Serviço de e-mail não configurado.");
 
+    const escolaNomeSafe = escapeHtml(escolaNome);
+    const escolaNomeHeader = sanitizeHeaderValue(escolaNome) || 'Lumied';
+    const corSafe = escapeHtml(cor);
+    const iconeSafe = escapeHtml(cfg.escola_icone || "🎓");
     const logoHtml = logoUrl
-      ? `<img src="${logoUrl}" alt="${escolaNome}" style="max-height:60px;max-width:200px;object-fit:contain;margin-bottom:16px;">`
-      : `<div style="font-size:32px;margin-bottom:16px;">${cfg.escola_icone || "🎓"}</div>`;
+      ? `<img src="${escapeHtml(logoUrl)}" alt="${escolaNomeSafe}" style="max-height:60px;max-width:200px;object-fit:contain;margin-bottom:16px;">`
+      : `<div style="font-size:32px;margin-bottom:16px;">${iconeSafe}</div>`;
 
     const html = `
       <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fff;">
         <div style="text-align:center;margin-bottom:24px;">
           ${logoHtml}
-          <h2 style="color:${cor};margin:0;font-size:20px;">${escolaNome}</h2>
+          <h2 style="color:${corSafe};margin:0;font-size:20px;">${escolaNomeSafe}</h2>
           <p style="color:#888;font-size:12px;margin:4px 0 0;">by <strong>Lumied</strong></p>
         </div>
         <div style="background:#f8f5f0;border-radius:12px;padding:24px;text-align:center;">
           <p style="font-size:15px;color:#333;margin:0 0 16px;">Clique no botão abaixo para acessar o portal:</p>
-          <a href="${magicUrl}" style="display:inline-block;padding:14px 32px;background:${cor};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Acessar Portal</a>
+          <a href="${escapeHtml(magicUrl)}" style="display:inline-block;padding:14px 32px;background:${corSafe};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Acessar Portal</a>
         </div>
         <p style="font-size:12px;color:#999;text-align:center;margin-top:20px;line-height:1.5;">
           Se você não solicitou este acesso, ignore este e-mail.<br>
@@ -207,7 +237,7 @@ serve(async (req: Request) => {
         </p>
         <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
         <p style="font-size:11px;color:#bbb;text-align:center;">
-          Sistema ${escolaNome} by Lumied
+          Sistema ${escolaNomeSafe} by Lumied
         </p>
       </div>`;
 
@@ -215,9 +245,9 @@ serve(async (req: Request) => {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_KEY}` },
       body: JSON.stringify({
-        from: `${escolaNome} <onboarding@resend.dev>`,
+        from: `${escolaNomeHeader} <onboarding@resend.dev>`,
         to: [email],
-        subject: `Seu acesso ao ${escolaNome}`,
+        subject: `Seu acesso ao ${escolaNomeHeader}`,
         html,
       }),
     });
@@ -280,7 +310,7 @@ serve(async (req: Request) => {
     if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
     const senha_hash = await hashSenha(senha as string);
     const { data: g, error } = await admin.from("gerentes").insert({ nome, email, senha_hash }).select().single();
-    if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     const { data: sessao } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
     return ok({ token: sessao!.token, nome: g.nome, email: g.email });
   }
@@ -415,7 +445,7 @@ serve(async (req: Request) => {
       .select("id").eq("email_resp", email_resp).eq("nome_crianca", nome_crianca as string).eq("data_ausencia", data_ausencia as string).single();
     if (exist) return ok({ success: true, already: true });
     const { error } = await admin.from("ausencias").insert({ email_resp, nome_crianca, data_ausencia, tipo: tipo ?? "turno", observacao: observacao ?? null });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -441,7 +471,7 @@ serve(async (req: Request) => {
     const { email, nome_resp, nome_crianca, serie, turno, dias_semana } = body as Record<string, unknown>;
     if (!email || !nome_resp || !nome_crianca || !turno) return err("Campos obrigatórios ausentes.");
     const { error } = await admin.from("solicitacoes").insert({ email, nome_resp, nome_crianca, serie, turno, dias_semana: dias_semana ?? null });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -456,7 +486,7 @@ serve(async (req: Request) => {
         atividades_ids: atividades_ids as string[],
         turmas_selecionadas: turmas_selecionadas ?? [],
       }).eq("id", found.id);
-      if (error) return err(error.message);
+      if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
       // Aluno não cadastrado — cria na tabela alunos
       const { error } = await admin.from("alunos").insert({
@@ -466,7 +496,7 @@ serve(async (req: Request) => {
         turmas_selecionadas: turmas_selecionadas ?? [],
         ativo: true,
       });
-      if (error) return err(error.message);
+      if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     }
     return ok({ success: true });
   }
@@ -498,7 +528,7 @@ serve(async (req: Request) => {
       if (u) insert.usuario_id = u.id;
     }
     const { error } = await admin.from("manutencoes").insert(insert);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -547,12 +577,21 @@ serve(async (req: Request) => {
     const codigo = Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => (b % 10).toString()).join('') +
                    Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => (b % 10).toString()).join('');
 
-    // Salvar código temporariamente (expira em 15 min)
+    // Recuperar dados_preenchidos atual para não sobrescrever campos do contrato
+    const { data: contratoDados } = await admin.from("contratos").select("dados_preenchidos").eq("id", contrato_id).single();
+    const dadosAtual = (contratoDados?.dados_preenchidos && typeof contratoDados.dados_preenchidos === 'object') ? contratoDados.dados_preenchidos : {};
+    // Remove plaintext legado caso exista e grava apenas o hash + expira + tentativas
+    const { _codigo_email: _oldPlain, _codigo_expira: _oldExp, _codigo_email_hash: _oldHash, _codigo_email_expira: _oldExp2, _codigo_email_tentativas: _oldTent, ...dadosLimpo } = dadosAtual as Record<string, unknown>;
+
+    const codigoHash = await sha256Hex(codigo);
+
+    // Salvar hash do código (expira em 15 min) — nunca armazenar o código em plaintext
     await admin.from("contratos").update({
       dados_preenchidos: {
-        ...(typeof contrato === 'object' ? {} : {}),
-        _codigo_email: codigo,
-        _codigo_expira: new Date(Date.now() + 15 * 60000).toISOString(),
+        ...dadosLimpo,
+        _codigo_email_hash: codigoHash,
+        _codigo_email_expira: new Date(Date.now() + 15 * 60000).toISOString(),
+        _codigo_email_tentativas: 0,
       }
     }).eq("id", contrato_id);
 
@@ -560,6 +599,8 @@ serve(async (req: Request) => {
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (resendKey) {
       try {
+        const familiaNomeSafe = escapeHtml(contrato.familia_nome || '');
+        const codigoSafe = escapeHtml(codigo);
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -569,9 +610,9 @@ serve(async (req: Request) => {
             subject: `Código de verificação: ${codigo}`,
             html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;">
               <h2 style="color:#C8102E;margin-bottom:16px;">Código de Verificação</h2>
-              <p style="font-size:15px;margin-bottom:20px;">Olá, ${contrato.familia_nome || ''}! Para assinar o contrato, use o código abaixo:</p>
+              <p style="font-size:15px;margin-bottom:20px;">Olá, ${familiaNomeSafe}! Para assinar o contrato, use o código abaixo:</p>
               <div style="background:#f5f3ee;border:2px solid #C8102E;border-radius:12px;padding:24px;text-align:center;margin-bottom:20px;">
-                <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#C8102E;font-family:monospace;">${codigo}</span>
+                <span style="font-size:36px;font-weight:800;letter-spacing:8px;color:#C8102E;font-family:monospace;">${codigoSafe}</span>
               </div>
               <p style="font-size:13px;color:#7a7169;">Este código expira em <strong>15 minutos</strong>.</p>
               <p style="font-size:12px;color:#999;margin-top:20px;">Se você não solicitou este código, ignore este e-mail.</p>
@@ -597,10 +638,27 @@ serve(async (req: Request) => {
     if (!contrato_id || !codigo) return err("contrato_id e codigo obrigatórios.");
     const { data: contrato } = await admin.from("contratos").select("dados_preenchidos").eq("id", contrato_id).single();
     if (!contrato) return err("Contrato não encontrado.", 404);
-    const dados = contrato.dados_preenchidos || {};
-    if (!dados._codigo_email) return err("Nenhum código foi enviado. Solicite um novo.");
-    if (new Date(dados._codigo_expira) < new Date()) return err("Código expirado. Solicite um novo.");
-    if (dados._codigo_email !== codigo.trim()) return err("Código incorreto.");
+    const dados = (contrato.dados_preenchidos && typeof contrato.dados_preenchidos === 'object') ? contrato.dados_preenchidos as Record<string, unknown> : {};
+    const storedHash = dados._codigo_email_hash as string | undefined;
+    const expira = dados._codigo_email_expira as string | undefined;
+    const tentativas = typeof dados._codigo_email_tentativas === 'number' ? dados._codigo_email_tentativas : 0;
+    if (!storedHash) return err("Nenhum código foi enviado. Solicite um novo.");
+    if (tentativas >= 5) return err("Muitas tentativas incorretas. Solicite um novo código.");
+    if (!expira || new Date(expira) < new Date()) return err("Código expirado. Solicite um novo.");
+
+    const codigoHash = await sha256Hex(String(codigo).trim());
+    if (!timingSafeEqual(codigoHash, storedHash)) {
+      // Incrementa contador de tentativas
+      await admin.from("contratos").update({
+        dados_preenchidos: { ...dados, _codigo_email_tentativas: tentativas + 1 }
+      }).eq("id", contrato_id);
+      return err("Código incorreto.");
+    }
+    // Sucesso — limpa hash e contador para impedir reuso
+    const { _codigo_email_hash: _h, _codigo_email_expira: _e, _codigo_email_tentativas: _t, ...dadosLimpo } = dados;
+    await admin.from("contratos").update({
+      dados_preenchidos: { ...dadosLimpo, _codigo_email_verificado: true, _codigo_email_verificado_em: new Date().toISOString() }
+    }).eq("id", contrato_id);
     return ok({ success: true, verificado: true });
   }
 
@@ -615,10 +673,25 @@ serve(async (req: Request) => {
     if (contrato.status === 'cancelado') return err("Contrato foi cancelado.");
 
     // Validar código de email
-    const dados = contrato.dados_preenchidos || {};
-    if (!dados._codigo_email) return err("Código de e-mail não enviado. Solicite um novo.");
-    if (new Date(dados._codigo_expira) < new Date()) return err("Código expirado. Solicite um novo.");
-    if (dados._codigo_email !== codigo_email.trim()) return err("Código de e-mail incorreto.");
+    const dados = (contrato.dados_preenchidos && typeof contrato.dados_preenchidos === 'object') ? contrato.dados_preenchidos as Record<string, unknown> : {};
+    // Aceita tanto verificação prévia (via contrato_validar_codigo) quanto o código enviado junto
+    if (dados._codigo_email_verificado) {
+      // já verificado previamente — segue em frente
+    } else {
+      const storedHash = dados._codigo_email_hash as string | undefined;
+      const expira = dados._codigo_email_expira as string | undefined;
+      const tentativas = typeof dados._codigo_email_tentativas === 'number' ? dados._codigo_email_tentativas : 0;
+      if (!storedHash) return err("Código de e-mail não enviado. Solicite um novo.");
+      if (tentativas >= 5) return err("Muitas tentativas incorretas. Solicite um novo código.");
+      if (!expira || new Date(expira) < new Date()) return err("Código expirado. Solicite um novo.");
+      const codigoHash = await sha256Hex(String(codigo_email).trim());
+      if (!timingSafeEqual(codigoHash, storedHash)) {
+        await admin.from("contratos").update({
+          dados_preenchidos: { ...dados, _codigo_email_tentativas: tentativas + 1 }
+        }).eq("id", contrato_id);
+        return err("Código de e-mail incorreto.");
+      }
+    }
 
     // Gerar hash SHA-256 do documento para garantir integridade
     const docBytes = new TextEncoder().encode(contrato.html_renderizado || '');
@@ -668,19 +741,21 @@ serve(async (req: Request) => {
         try {
           const { data: contratoFull } = await admin.from("contratos").select("familia_email, familia_nome, html_renderizado, contrato_assinaturas(nome_signatario, tipo, assinado_em)").eq("id", contrato_id).single();
           if (contratoFull) {
-            const signatarios = (contratoFull.contrato_assinaturas || []).map((s: any) => `${s.nome_signatario} (${s.tipo}) — ${new Date(s.assinado_em).toLocaleString('pt-BR')}`).join('<br>');
+            const signatarios = (contratoFull.contrato_assinaturas || []).map((s: any) => `${escapeHtml(s.nome_signatario)} (${escapeHtml(s.tipo)}) — ${escapeHtml(new Date(s.assinado_em).toLocaleString('pt-BR'))}`).join('<br>');
+            const codigoVerificacaoSafe = escapeHtml(codigoVerificacao);
+            const docHashSafe = escapeHtml(docHash);
             const emailHtml = `<div style="font-family:sans-serif;max-width:700px;margin:0 auto;">
               <h2 style="color:#2d7a3a;">✅ Contrato Assinado</h2>
               <p>Todas as partes assinaram o contrato eletronicamente.</p>
               <div style="background:#f5f3ee;border:1px solid #e2dbd1;border-radius:8px;padding:16px;margin:16px 0;">
-                <strong>Código de Verificação:</strong> <code style="font-size:16px;color:#C8102E;">${codigoVerificacao}</code><br>
-                <strong>Hash SHA-256:</strong> <code style="font-size:10px;">${docHash}</code><br><br>
+                <strong>Código de Verificação:</strong> <code style="font-size:16px;color:#C8102E;">${codigoVerificacaoSafe}</code><br>
+                <strong>Hash SHA-256:</strong> <code style="font-size:10px;">${docHashSafe}</code><br><br>
                 <strong>Signatários:</strong><br>${signatarios}
               </div>
               <div style="border:1px solid #e2dbd1;border-radius:8px;padding:16px;margin-top:16px;">
                 ${contratoFull.html_renderizado || ''}
               </div>
-              <p style="font-size:11px;color:#999;margin-top:16px;">Verifique a autenticidade em: lumied.com.br/verificar?c=${codigoVerificacao}<br>Assinatura eletrônica válida conforme Lei 14.063/2020 e MP 2.200-2/2001.</p>
+              <p style="font-size:11px;color:#999;margin-top:16px;">Verifique a autenticidade em: lumied.com.br/verificar?c=${codigoVerificacaoSafe}<br>Assinatura eletrônica válida conforme Lei 14.063/2020 e MP 2.200-2/2001.</p>
             </div>`;
             // Coletar emails de todos os signatários (se tiverem)
             const destinatarios = [contratoFull.familia_email];
@@ -753,15 +828,15 @@ serve(async (req: Request) => {
           body: JSON.stringify({
             from: "Lumied Tickets <onboarding@resend.dev>",
             to: ["ivyson@gmail.com"],
-            subject: `[Ticket #${ticketNumero || '?'} ${tipoLabel[(tipo as string) || 'bug'] || tipo}] ${(descricao as string || '').slice(0, 80)}`,
+            subject: `[Ticket #${sanitizeHeaderValue(String(ticketNumero || '?'))} ${sanitizeHeaderValue(tipoLabel[(tipo as string) || 'bug'] || (tipo as string) || 'bug')}] ${sanitizeHeaderValue((descricao as string || '').slice(0, 80))}`,
             html: `<div style="font-family:sans-serif;max-width:600px;">
               <h2 style="color:#C8102E;">Novo Ticket de Suporte</h2>
               <table style="border-collapse:collapse;width:100%;">
-                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Tipo</td><td style="padding:8px;">${tipoLabel[(tipo as string) || 'bug'] || tipo}</td></tr>
-                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Email</td><td style="padding:8px;">${email}</td></tr>
-                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Portal</td><td style="padding:8px;">${portal}</td></tr>
-                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">URL</td><td style="padding:8px;">${url_pagina || '—'}</td></tr>
-                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Descrição</td><td style="padding:8px;">${descricao}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Tipo</td><td style="padding:8px;">${escapeHtml(tipoLabel[(tipo as string) || 'bug'] || (tipo as string) || 'bug')}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Email</td><td style="padding:8px;">${escapeHtml(email)}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Portal</td><td style="padding:8px;">${escapeHtml(portal)}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">URL</td><td style="padding:8px;">${escapeHtml(url_pagina || '—')}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;color:#7a7169;">Descrição</td><td style="padding:8px;">${escapeHtml(descricao)}</td></tr>
               </table>
               <p style="margin-top:16px;font-size:12px;color:#999;">Acesse o painel admin para responder.</p>
             </div>`
@@ -806,7 +881,7 @@ serve(async (req: Request) => {
   if (action === "solicitacoes_update_turno") {
     const { id, turno } = body as { id: string; turno: string };
     const { error } = await admin.from("solicitacoes").update({ turno }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "solicitacoes_delete") {
@@ -824,13 +899,13 @@ serve(async (req: Request) => {
     const { nome, ordem } = body as { nome: string; ordem: number };
     if (!nome) return err("Nome é obrigatório.");
     const { error } = await admin.from("series").insert({ nome, ordem: ordem ?? 99 });
-    if (error) return err(error.message.includes("unique") ? "Já existe uma série com este nome." : error.message);
+    if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "Já existe uma série com este nome." : sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "series_update") {
     const { id, nome, ordem, ativo } = body as { id: string; nome: string; ordem: number; ativo: boolean };
     const { error } = await admin.from("series").update({ nome, ordem, ativo }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "series_delete") {
@@ -850,15 +925,19 @@ serve(async (req: Request) => {
     if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
     const senha_hash = await hashSenha(senha as string);
     const { error } = await admin.from("gerentes").insert({ nome, email, senha_hash });
-    if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "gerentes_delete") {
     const { id } = body as { id: string };
     if (id === gerente.id) return err("Você não pode remover sua própria conta.");
-    const { count } = await admin.from("gerentes").select("*", { count: "exact", head: true });
-    if ((count ?? 0) <= 1) return err("É necessário manter pelo menos um gerente.");
-    await admin.from("gerentes").delete().eq("id", id);
+    // Atomic safe delete via RPC (migration 217) — previne race condition
+    const { data: okRpc, error: rpcErr } = await admin.rpc("gerentes_safe_delete", { p_id: id });
+    if (rpcErr) {
+      console.error("[gerentes_safe_delete]", rpcErr);
+      return err(sanitizePgError(rpcErr));
+    }
+    if (!okRpc) return err("É necessário manter pelo menos um gerente.");
     return ok({ success: true });
   }
   if (action === "gerentes_change_password") {
@@ -901,7 +980,7 @@ serve(async (req: Request) => {
     const senha_hash = await hashSenhaProf(senha as string);
     const primaryPapel = papeis[0]; // para compatibilidade com coluna legada
     const { error } = await admin.from("usuarios").insert({ nome, email, senha_hash, papel: primaryPapel, papeis });
-    if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     // Sincroniza com tabelas legadas para cada papel
     if (papeis.includes("gerente") || papeis.includes("diretor") || papeis.includes("financeiro")) {
       await admin.from("gerentes").insert({ nome, email, senha_hash: await hashSenha(senha as string) }).catch(() => {});
@@ -939,7 +1018,7 @@ serve(async (req: Request) => {
       update.papel = papeis[0];
     }
     const { error } = await admin.from("usuarios").update(update).eq("id", id);
-    if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     // Sincroniza tabelas legadas se papéis mudaram
     if (papeis) {
       try {
@@ -1010,7 +1089,7 @@ serve(async (req: Request) => {
     if ((nova_senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
     const senha_hash = await hashSenhaProf(nova_senha as string);
     const { error } = await admin.from("usuarios").update({ senha_hash }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -1108,7 +1187,7 @@ serve(async (req: Request) => {
       responsavel_nome: responsavel_nome || null,
       ativo: true,
     }).select("id").single();
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true, id: data?.id });
   }
 
@@ -1120,7 +1199,7 @@ serve(async (req: Request) => {
     const updateData: any = { turno };
     if (dias_semana !== undefined) updateData.dias_semana = dias_semana;
     const { error } = await admin.from("alunos").update(updateData).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -1235,7 +1314,7 @@ serve(async (req: Request) => {
       turma: turma || null, tipo, titulo, descricao: descricao || null,
       registrado_por: gerente.nome, registrado_por_papel: 'coordenacao',
     });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -1261,7 +1340,7 @@ serve(async (req: Request) => {
     const ext = mime.split("/")[1].replace("svg+xml", "svg");
     const path = `logo.${ext}`;
     const { error } = await admin.storage.from("logos").upload(path, bytes, { contentType: mime, upsert: true });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     const { data: { publicUrl } } = admin.storage.from("logos").getPublicUrl(path);
     const url = publicUrl + "?t=" + Date.now();
     await admin.from("configuracoes").upsert({ chave: "logo_url", valor: url });
@@ -1283,7 +1362,7 @@ serve(async (req: Request) => {
     // Garante que o bucket 'relatorios' existe
     await admin.storage.createBucket('relatorios', { public: true, fileSizeLimit: 20971520 }).catch(() => {});
     const { error } = await admin.storage.from("relatorios").upload(path, bytes, { contentType: "application/pdf", upsert: false });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     const { data: { publicUrl } } = admin.storage.from("relatorios").getPublicUrl(path);
     return ok({ url: publicUrl });
   }
@@ -1323,14 +1402,14 @@ serve(async (req: Request) => {
     const { nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno } = body as Record<string, unknown>;
     if (!nome) return err("Nome é obrigatório.");
     const { error } = await admin.from("atividades").insert({ nome, preco: preco ?? 0, descricao: descricao ?? "", cor: cor ?? "#C8102E", horarios: horarios ?? [], ordem: ordem ?? 99, valor_repasse_aluno: valor_repasse_aluno ?? 0 });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "atividades_update") {
     const { id, nome, preco, descricao, cor, horarios, ordem, ativo } = body as Record<string, unknown>;
     if (!id) return err("ID obrigatório.");
     const { error } = await admin.from("atividades").update({ nome, preco, descricao, cor, horarios, ordem, ativo }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -1341,7 +1420,7 @@ serve(async (req: Request) => {
     const updateData: Record<string, unknown> = { nome, preco, descricao, cor, horarios, ordem };
     if (valor_repasse_aluno != null) updateData.valor_repasse_aluno = valor_repasse_aluno;
     const { error } = await admin.from("atividades").update(updateData).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "atividades_delete") {
@@ -1426,7 +1505,7 @@ serve(async (req: Request) => {
     const { id } = body as { id: string };
     // Clear atividades from aluno instead of deleting
     const { error } = await admin.from("alunos").update({ atividades_ids: null, turmas_selecionadas: null, almoco_dias: null }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "aluno_update_atividades") {
@@ -1439,7 +1518,7 @@ serve(async (req: Request) => {
     if (turmas_selecionadas !== undefined) updateData.turmas_selecionadas = turmas_selecionadas;
     if (almoco_dias !== undefined) updateData.almoco_dias = almoco_dias;
     const { error } = await admin.from("alunos").update(updateData).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -1458,7 +1537,7 @@ serve(async (req: Request) => {
       insertData.senha_hash = await hashSenhaProf(senha as string);
     }
     const { error } = await admin.from("professoras").insert(insertData);
-    if (error) return err(error.message.includes("unique") ? "E-mail já cadastrado." : error.message);
+    if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "professoras_reset_senha") {
@@ -1467,7 +1546,7 @@ serve(async (req: Request) => {
     if ((nova_senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
     const senha_hash = await hashSenhaProf(nova_senha as string);
     const { error } = await admin.from("professoras").update({ senha_hash }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "professoras_delete") {
@@ -1482,7 +1561,7 @@ serve(async (req: Request) => {
       .from("manutencoes")
       .select("*, usuarios(nome, email)")
       .order("criado_em", { ascending: false });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Sort by urgencia priority: critica > alta > media > baixa, then by criado_em desc
     const prioridade: Record<string, number> = { critica: 0, alta: 1, media: 2, baixa: 3 };
     const sorted = (data ?? []).sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
@@ -1516,7 +1595,7 @@ serve(async (req: Request) => {
     if (usuario_id) insert.usuario_id = usuario_id;
     else if (gerente?.id) insert.usuario_id = gerente.id;
     const { error } = await admin.from("manutencoes").insert(insert);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "manutencao_update_status") {
@@ -1529,7 +1608,7 @@ serve(async (req: Request) => {
     if (observacao_gerente !== undefined) update.observacao_gerente = observacao_gerente;
     if (status === "concluida") update.data_conclusao = new Date().toISOString().split("T")[0];
     const { error } = await admin.from("manutencoes").update(update).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "manutencao_delete") {
@@ -1558,7 +1637,7 @@ serve(async (req: Request) => {
     if (turno !== undefined) updates.turno = turno;
     if (!Object.keys(updates).length) return err("Nenhum campo para atualizar.");
     const { error } = await admin.from("familias").update(updates).eq("cpf", cpf);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "familias_reset_senha") {
@@ -1605,10 +1684,10 @@ serve(async (req: Request) => {
     if (!nome) return err("Nome obrigatório.");
     if (id) {
       const { error } = await admin.from("manut_equipes").update({ nome }).eq("id", id);
-      if (error) return err(error.message);
+      if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
       const { error } = await admin.from("manut_equipes").insert({ nome });
-      if (error) return err(error.message.includes("unique") ? "Já existe uma equipe com este nome." : error.message);
+      if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "Já existe uma equipe com este nome." : sanitizePgError(error)); }
     }
     return ok({ success: true });
   }
@@ -1633,10 +1712,10 @@ serve(async (req: Request) => {
     if (!nome) return err("Nome obrigatório.");
     if (id) {
       const { error } = await admin.from("alm_categorias").update({ nome }).eq("id", id);
-      if (error) return err(error.message);
+      if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
       const { error } = await admin.from("alm_categorias").insert({ nome });
-      if (error) return err(error.message.includes("unique") ? "Já existe uma categoria com este nome." : error.message);
+      if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "Já existe uma categoria com este nome." : sanitizePgError(error)); }
     }
     return ok({ success: true });
   }
@@ -2186,7 +2265,7 @@ serve(async (req: Request) => {
       data_reserva: st === "reserva" ? new Date().toISOString().split("T")[0] : null,
       data_matricula: st === "matriculado" ? new Date().toISOString().split("T")[0] : null,
     });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Mover lead para estagio correto
     if (lead_id) {
       const estagioNome = st === "matriculado" ? "Matrícula Fechada" : "Negociação";
@@ -2322,7 +2401,7 @@ serve(async (req: Request) => {
         ativo: h.ativo !== false,
       }));
       const { error } = await admin.from("professora_horario_acesso").insert(rows);
-      if (error) return err(error.message);
+      if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     }
     return ok({ success: true });
   }
@@ -2342,7 +2421,7 @@ serve(async (req: Request) => {
       acionado_por: gerente?.nome || "Gerente",
       acionado_por_id: gerente?.id || null,
     });
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Notifica todos os portais
     const { data: users } = await admin.from("usuarios").select("email, papel");
     const tipos: Record<string, string> = { incendio: "INCENDIO", intruso: "INTRUSO", emergencia_medica: "EMERGENCIA MEDICA", evacuacao: "EVACUACAO", outro: "ALERTA" };
@@ -2388,7 +2467,7 @@ serve(async (req: Request) => {
       resolvedId = s?.id || null;
     }
     const { error } = await admin.from("professoras").update({ serie_id: resolvedId }).eq("email", email);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -2452,7 +2531,7 @@ serve(async (req: Request) => {
     const { ano, tipo, titulo, campos } = body as any;
     if (!ano || !tipo) return err("Ano e tipo obrigatórios.");
     const { data, error } = await admin.from("matricula_formularios").upsert({ ano, tipo, titulo, campos: campos || [] }, { onConflict: "ano,tipo" }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -2471,7 +2550,7 @@ serve(async (req: Request) => {
       data_nascimento: dados.data_nascimento || null,
       observacoes: dados.observacoes || null
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(mat);
   }
 
@@ -2485,7 +2564,7 @@ serve(async (req: Request) => {
     if (upErr) return err(upErr.message);
     const { data: { publicUrl } } = admin.storage.from("documentos").getPublicUrl(fileName);
     const { data, error } = await admin.from("matricula_documentos").insert({ matricula_id, tipo, nome_arquivo, arquivo_url: publicUrl }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -2768,7 +2847,7 @@ serve(async (req: Request) => {
     const { nome, tipo, html_template, variaveis } = body as any;
     if (!nome || !html_template) return err("nome e html_template obrigatórios.");
     const { data, error } = await admin.from("contrato_templates").insert({ nome, tipo: tipo || 'matricula', html_template, variaveis: variaveis || [] }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -2781,7 +2860,7 @@ serve(async (req: Request) => {
     if (variaveis !== undefined) fields.variaveis = variaveis;
     if (ativo !== undefined) fields.ativo = ativo;
     const { error } = await admin.from("contrato_templates").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -2809,7 +2888,7 @@ serve(async (req: Request) => {
       familia_nome: familia_nome || '', matricula_id: matricula_id || null,
       dados_preenchidos: vars, html_renderizado: html, status: 'rascunho',
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(contrato);
   }
 
@@ -2817,7 +2896,7 @@ serve(async (req: Request) => {
     const { id } = body as any;
     if (!id) return err("id obrigatório.");
     const { error } = await admin.from("contratos").update({ status: 'enviado', enviado_em: new Date().toISOString() }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // TODO: send email notification to familia
     return ok({ success: true });
   }

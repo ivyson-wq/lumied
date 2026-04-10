@@ -1,10 +1,27 @@
 // ═══════════════════════════════════════════════════════════════
 //  Edge Function: compliance (v2 — Router Pattern)
 //  Controle de hora extra, importação de ponto, alertas
+//
+//  Tenant scoping (escola_id):
+//  Atenção: nenhuma das tabelas compliance_* tem coluna escola_id
+//  atualmente. A autenticação já popula ctx.escola_id (via authGerenteOrSecretaria
+//  compartilhado), mas os filtros .eq("escola_id", ...) ficam pendentes até
+//  uma migration futura adicionar a coluna nas tabelas:
+//    - compliance_horarios, compliance_ponto_registros, compliance_ocorrencias
+//    - compliance_alertas, compliance_incidentes, compliance_certificacoes
+//    - compliance_treinamentos, compliance_inspecoes, compliance_politicas
+//    - compliance_calendario, compliance_ciencias, compliance_quizzes, etc.
+//  Até lá, o sistema continua single-tenant na prática para compliance.
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, authProfessora, requireFeature } from "../_shared/router.ts";
+import {
+  Router,
+  rateLimit,
+  authProfessora,
+  requireFeature,
+  authGerenteOrSecretaria as sharedAuthGerenteOrSecretaria,
+} from "../_shared/router.ts";
 import { successResponse, AppError } from "../_shared/errors.ts";
 
 const router = new Router("compliance");
@@ -12,47 +29,10 @@ router.useGlobal(rateLimit());
 
 const feat = requireFeature("compliance");
 
-/**
- * Auth middleware that accepts BOTH gerente (legacy) and secretaria/equipe (unified) sessions.
- * 1. Tries gerente_sessoes → gerentes (original authGerente logic)
- * 2. If that fails, tries sessoes → usuarios (unified table), checks allowed papeis
- */
-const authGerenteOrSecretaria: import("../_shared/router.ts").Middleware = async (ctx, next) => {
-  const token = (ctx.body._token as string) || null;
-  if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
-
-  // Try 1: gerente_sessoes → gerentes
-  const { data: gerenteSessao } = await ctx.sb
-    .from("gerente_sessoes")
-    .select("*, gerentes(id, nome, email)")
-    .eq("token", token)
-    .single();
-
-  if (gerenteSessao && new Date(gerenteSessao.expira_em) >= new Date()) {
-    const user = (gerenteSessao as any).gerentes;
-    ctx.user = { ...user, tipo: "gerente" };
-    return next();
-  }
-
-  // Try 2: sessoes → usuarios (unified sessions for secretaria/comercial/etc.)
-  const { data: sessaoUnificada } = await ctx.sb
-    .from("sessoes")
-    .select("*, usuarios(id, nome, email, papeis)")
-    .eq("token", token)
-    .single();
-
-  if (sessaoUnificada && new Date(sessaoUnificada.expira_em) >= new Date()) {
-    const usuario = (sessaoUnificada as any).usuarios;
-    const papeisPermitidos = ["gerente", "diretor", "secretaria", "comercial", "financeiro"];
-    const papeis: string[] = usuario?.papeis || [];
-    if (papeis.some((p: string) => papeisPermitidos.includes(p))) {
-      ctx.user = { ...usuario, tipo: papeis[0] };
-      return next();
-    }
-  }
-
-  throw new AppError("AUTH_INVALID", "Sessão inválida ou sem permissão para compliance.");
-};
+// Shared auth that populates ctx.escola_id from legacy gerentes/secretarias or
+// from the unified usuarios table. Papeis permitidos: gerente/diretor/secretaria/
+// comercial/financeiro (default do helper).
+const authGerenteOrSecretaria = sharedAuthGerenteOrSecretaria();
 
 // ═══════════════════════════════════════════════════════════════
 //  Horários pré-configurados das professoras

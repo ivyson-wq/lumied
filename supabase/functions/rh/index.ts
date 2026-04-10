@@ -1,34 +1,49 @@
 // ═══════════════════════════════════════════════════════════════
 //  Edge Function: rh (v2 — Router Pattern)
+//
+//  Tenant scoping (escola_id):
+//    ✓ rh_funcionarios    — escola_id via migration 074
+//    ✗ rh_ponto           — no escola_id column (scoped via funcionario_id)
+//    ✗ rh_ferias          — no escola_id column (scoped via funcionario_id)
+//    ✗ rh_holerites       — no escola_id column (scoped via funcionario_id)
+//    ✗ rh_folha_pagamento — no escola_id column (TODO add in later migration)
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, requireFeature } from "../_shared/router.ts";
+import { Router, rateLimit, authGerenteOrSecretaria, requireFeature, requireEscola, type Middleware } from "../_shared/router.ts";
 import { successResponse, AppError } from "../_shared/errors.ts";
 
 const router = new Router("rh");
 router.useGlobal(rateLimit());
 
 const feat = requireFeature("rh");
+const authRh = authGerenteOrSecretaria(["gerente", "diretor", "financeiro"]);
 
-router.on("rh_funcionarios_list", authGerente, feat, async (ctx) => {
+router.on("rh_funcionarios_list", authRh, requireEscola, feat, async (ctx) => {
   const { status, departamento } = ctx.body as any;
-  let q = ctx.sb.from("rh_funcionarios").select("*").order("nome");
+  let q = ctx.sb
+    .from("rh_funcionarios")
+    .select("*")
+    .eq("escola_id", ctx.escola_id!)
+    .order("nome");
   if (status) q = q.eq("status", status);
   if (departamento) q = q.eq("departamento", departamento);
   const { data } = await q;
   return successResponse(data ?? []);
 });
 
-router.on("rh_funcionarios_create", authGerente, feat, async (ctx) => {
+router.on("rh_funcionarios_create", authRh, requireEscola, feat, async (ctx) => {
   const { nome, cpf, email, telefone, cargo, departamento, tipo_contrato, data_admissao, salario_base, carga_horaria } = ctx.body as any;
   if (!nome) throw new AppError("VALIDATION_FAILED", "Nome obrigatório.");
-  const { data, error } = await ctx.sb.from("rh_funcionarios").insert({ nome, cpf, email, telefone, cargo, departamento, tipo_contrato, data_admissao, salario_base, carga_horaria }).select().single();
+  const { data, error } = await ctx.sb.from("rh_funcionarios").insert({
+    escola_id: ctx.escola_id,
+    nome, cpf, email, telefone, cargo, departamento, tipo_contrato, data_admissao, salario_base, carga_horaria,
+  }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
-router.on("rh_funcionarios_update", authGerente, feat, async (ctx) => {
+router.on("rh_funcionarios_update", authRh, requireEscola, feat, async (ctx) => {
   const body = ctx.body as any;
   const { id } = body;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
@@ -39,37 +54,47 @@ router.on("rh_funcionarios_update", authGerente, feat, async (ctx) => {
   ];
   const update: Record<string, unknown> = {};
   for (const k of ALLOWED) if (k in body) update[k] = body[k];
-  const { error } = await ctx.sb.from("rh_funcionarios").update(update).eq("id", id);
+  const { error } = await ctx.sb
+    .from("rh_funcionarios")
+    .update(update)
+    .eq("id", id)
+    .eq("escola_id", ctx.escola_id!);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
 
 // Auth middleware: aceita gerente OU o próprio funcionário (via sessão unificada).
 // Para funcionário, valida que o funcionario_id corresponde ao usuário autenticado.
-const authGerenteOuFuncionario: import("../_shared/router.ts").Middleware = async (ctx, next) => {
+// Também popula ctx.escola_id a partir do gerente ou do rh_funcionarios.
+const authGerenteOuFuncionario: Middleware = async (ctx, next) => {
   const token = (ctx.body._token as string) || null;
   if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
 
   // Try gerente_sessoes first
   const { data: gs } = await ctx.sb
     .from("gerente_sessoes")
-    .select("*, gerentes(id, nome, email)")
+    .select("*, gerentes(id, nome, email, escola_id)")
     .eq("token", token)
     .maybeSingle();
   if (gs && new Date(gs.expira_em) >= new Date()) {
-    ctx.user = { ...(gs as any).gerentes, tipo: "gerente" };
+    // deno-lint-ignore no-explicit-any
+    const g = (gs as any).gerentes;
+    ctx.user = { ...g, tipo: "gerente" };
+    if (g?.escola_id) ctx.escola_id = g.escola_id as string;
     return next();
   }
 
   // Try sessão unificada → usuarios (funcionário pode bater ponto no seu próprio ID)
   const { data: us } = await ctx.sb
     .from("sessoes")
-    .select("*, usuarios(id, nome, email, papeis, papel)")
+    .select("*, usuarios(id, nome, email, papeis, papel, escola_id)")
     .eq("token", token)
     .maybeSingle();
   if (us && new Date(us.expira_em) >= new Date()) {
+    // deno-lint-ignore no-explicit-any
     const usuario = (us as any).usuarios;
     const papeis: string[] = usuario?.papeis?.length ? usuario.papeis : (usuario?.papel ? [usuario.papel] : []);
+    if (usuario?.escola_id) ctx.escola_id = usuario.escola_id as string;
     // Gerente pode bater ponto por qualquer funcionário
     if (papeis.includes("gerente") || papeis.includes("diretor")) {
       ctx.user = { ...usuario, tipo: "gerente" };
@@ -81,15 +106,18 @@ const authGerenteOuFuncionario: import("../_shared/router.ts").Middleware = asyn
       ctx.user = { ...usuario, tipo: "funcionario" };
       return next();
     }
-    // Tenta casar via tabela rh_funcionarios pelo email (caso id diferente)
-    if (usuario?.email && fid) {
-      const { data: func } = await ctx.sb.from("rh_funcionarios").select("id").eq("id", fid).maybeSingle();
-      if (func) {
-        const { data: funcByEmail } = await ctx.sb.from("rh_funcionarios").select("id").eq("email", usuario.email).eq("id", fid).maybeSingle();
-        if (funcByEmail) {
-          ctx.user = { ...usuario, tipo: "funcionario" };
-          return next();
-        }
+    // Tenta casar via tabela rh_funcionarios pelo email (caso id diferente) — scoped por escola
+    if (usuario?.email && fid && ctx.escola_id) {
+      const { data: funcByEmail } = await ctx.sb
+        .from("rh_funcionarios")
+        .select("id")
+        .eq("email", usuario.email)
+        .eq("id", fid)
+        .eq("escola_id", ctx.escola_id)
+        .maybeSingle();
+      if (funcByEmail) {
+        ctx.user = { ...usuario, tipo: "funcionario" };
+        return next();
       }
     }
     throw new AppError("AUTH_INVALID", "Só é permitido registrar ponto do próprio funcionário.");
@@ -98,17 +126,31 @@ const authGerenteOuFuncionario: import("../_shared/router.ts").Middleware = asyn
   throw new AppError("AUTH_INVALID", "Sessão inválida.");
 };
 
-router.on("rh_ponto_registrar", authGerenteOuFuncionario, feat, async (ctx) => {
+router.on("rh_ponto_registrar", authGerenteOuFuncionario, requireEscola, feat, async (ctx) => {
   const { funcionario_id, tipo, localizacao, ip } = ctx.body as any;
   if (!funcionario_id || !tipo) throw new AppError("VALIDATION_FAILED", "funcionario_id e tipo obrigatórios.");
+  // Verify the funcionario belongs to this escola
+  const { data: func } = await ctx.sb
+    .from("rh_funcionarios")
+    .select("id")
+    .eq("id", funcionario_id)
+    .eq("escola_id", ctx.escola_id!)
+    .maybeSingle();
+  if (!func) throw new AppError("NOT_FOUND", "Funcionário não encontrado nesta escola.");
+  // rh_ponto has no escola_id column; scoped via funcionario_id
   const { data, error } = await ctx.sb.from("rh_ponto").insert({ funcionario_id, tipo, localizacao, ip }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
-router.on("rh_ponto_list", authGerente, feat, async (ctx) => {
+router.on("rh_ponto_list", authRh, requireEscola, feat, async (ctx) => {
   const { funcionario_id, data_inicio, data_fim } = ctx.body as any;
-  let q = ctx.sb.from("rh_ponto").select("*, rh_funcionarios(nome)").order("registrado_em", { ascending: false });
+  // rh_ponto has no escola_id; scope via rh_funcionarios join
+  let q = ctx.sb
+    .from("rh_ponto")
+    .select("*, rh_funcionarios!inner(nome, escola_id)")
+    .eq("rh_funcionarios.escola_id", ctx.escola_id!)
+    .order("registrado_em", { ascending: false });
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
   if (data_inicio) q = q.gte("registrado_em", data_inicio);
   if (data_fim) q = q.lte("registrado_em", data_fim);
@@ -116,26 +158,45 @@ router.on("rh_ponto_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("rh_ferias_list", authGerente, feat, async (ctx) => {
+router.on("rh_ferias_list", authRh, requireEscola, feat, async (ctx) => {
   const { funcionario_id, status } = ctx.body as any;
-  let q = ctx.sb.from("rh_ferias").select("*, rh_funcionarios(nome)").order("data_inicio", { ascending: false });
+  // rh_ferias has no escola_id; scope via rh_funcionarios join
+  let q = ctx.sb
+    .from("rh_ferias")
+    .select("*, rh_funcionarios!inner(nome, escola_id)")
+    .eq("rh_funcionarios.escola_id", ctx.escola_id!)
+    .order("data_inicio", { ascending: false });
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
   if (status) q = q.eq("status", status);
   const { data } = await q;
   return successResponse(data ?? []);
 });
 
-router.on("rh_ferias_create", authGerente, feat, async (ctx) => {
+router.on("rh_ferias_create", authRh, requireEscola, feat, async (ctx) => {
   const { funcionario_id, periodo_aquisitivo_inicio, periodo_aquisitivo_fim, data_inicio, data_fim, dias, abono_pecuniario } = ctx.body as any;
   if (!funcionario_id || !data_inicio || !data_fim) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
+  // Verify the funcionario belongs to this escola
+  const { data: func } = await ctx.sb
+    .from("rh_funcionarios")
+    .select("id")
+    .eq("id", funcionario_id)
+    .eq("escola_id", ctx.escola_id!)
+    .maybeSingle();
+  if (!func) throw new AppError("NOT_FOUND", "Funcionário não encontrado nesta escola.");
   const { data, error } = await ctx.sb.from("rh_ferias").insert({ funcionario_id, periodo_aquisitivo_inicio, periodo_aquisitivo_fim, data_inicio, data_fim, dias, abono_pecuniario }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
-router.on("rh_holerites_list", authGerente, feat, async (ctx) => {
+router.on("rh_holerites_list", authRh, requireEscola, feat, async (ctx) => {
   const { funcionario_id, mes, ano } = ctx.body as any;
-  let q = ctx.sb.from("rh_holerites").select("*, rh_funcionarios(nome)").order("ano", { ascending: false }).order("mes", { ascending: false });
+  // rh_holerites has no escola_id; scope via rh_funcionarios join
+  let q = ctx.sb
+    .from("rh_holerites")
+    .select("*, rh_funcionarios!inner(nome, escola_id)")
+    .eq("rh_funcionarios.escola_id", ctx.escola_id!)
+    .order("ano", { ascending: false })
+    .order("mes", { ascending: false });
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
   if (mes) q = q.eq("mes", mes);
   if (ano) q = q.eq("ano", ano);
@@ -143,7 +204,9 @@ router.on("rh_holerites_list", authGerente, feat, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("rh_folha_list", authGerente, feat, async (ctx) => {
+router.on("rh_folha_list", authRh, requireEscola, feat, async (ctx) => {
+  // NOTE: rh_folha_pagamento doesn't yet have escola_id.
+  // TODO: add column in a later migration and filter here.
   const { ano } = ctx.body as any;
   let q = ctx.sb.from("rh_folha_pagamento").select("*").order("ano", { ascending: false }).order("mes", { ascending: false });
   if (ano) q = q.eq("ano", ano);

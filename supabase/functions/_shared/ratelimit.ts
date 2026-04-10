@@ -1,10 +1,16 @@
 // ═══════════════════════════════════════════════════════════════
-//  Shared: Rate Limiting (in-memory with cleanup)
+//  Shared: Rate Limiting
+//  - checkRateLimit (legacy, sync, in-memory per-instance)
+//  - checkRateLimitDb (new, async, DB-backed via rate_limit_check RPC,
+//    accurate across edge function instances and cold starts).
+//  Migration 218 creates the backing table + RPC.
 // ═══════════════════════════════════════════════════════════════
+
+import { SupabaseClient } from "@supabase/supabase-js";
 
 type RateLimitEntry = { count: number; windowStart: number };
 
-// In-memory store (per edge function instance)
+// In-memory store (per edge function instance) — fast path / fallback.
 const store = new Map<string, RateLimitEntry>();
 
 // Cleanup old entries every 5 minutes
@@ -27,14 +33,22 @@ const DEFAULTS: Record<string, RateLimitConfig> = {
   search:   { windowMs: 60000, maxRequests: 30 },    // 30 per minute
 };
 
+export type RateLimitResult = {
+  allowed: boolean;
+  remaining: number;
+  retryAfterSeconds?: number;
+};
+
 /**
- * Check rate limit. Returns null if OK, or remaining seconds if limited.
+ * Legacy in-memory rate limit. State is per edge function instance,
+ * so it resets on every cold start and doesn't share across instances.
+ * Prefer checkRateLimitDb for anything security-sensitive.
  */
 export function checkRateLimit(
   identifier: string,
   action: string,
   config?: RateLimitConfig
-): { allowed: boolean; remaining: number; retryAfterSeconds?: number } {
+): RateLimitResult {
   const cfg = config || DEFAULTS[action] || DEFAULTS.api;
   const key = `${identifier}:${action}`;
   const now = Date.now();
@@ -53,6 +67,64 @@ export function checkRateLimit(
   }
 
   return { allowed: true, remaining: cfg.maxRequests - entry.count };
+}
+
+/**
+ * DB-backed rate limit (accurate across instances).
+ * Calls the `rate_limit_check` plpgsql RPC which does an atomic
+ * INSERT ... ON CONFLICT DO UPDATE on the rate_limits table.
+ *
+ * If the RPC fails (migration 218 not applied yet, network glitch, etc.)
+ * we fail OPEN (allow the request) and fall back to the in-memory
+ * limiter so the edge function keeps working.
+ */
+export async function checkRateLimitDb(
+  sb: SupabaseClient,
+  identifier: string,
+  action: string,
+  config?: RateLimitConfig
+): Promise<RateLimitResult> {
+  const cfg = config || DEFAULTS[action] || DEFAULTS.api;
+  const key = `${identifier}:${action}`;
+  const windowSeconds = Math.max(1, Math.round(cfg.windowMs / 1000));
+
+  try {
+    const { data, error } = await sb.rpc("rate_limit_check", {
+      p_key: key,
+      p_window_seconds: windowSeconds,
+      p_max_requests: cfg.maxRequests,
+    });
+
+    if (error) {
+      // RPC failed (e.g. migration not applied). Fall back to in-memory.
+      return checkRateLimit(identifier, action, config);
+    }
+
+    // RPC returns a TABLE, Supabase client returns it as array.
+    // deno-lint-ignore no-explicit-any
+    const row = Array.isArray(data) ? (data[0] as any) : (data as any);
+    if (!row) return checkRateLimit(identifier, action, config);
+
+    const allowed = row.allowed === true;
+    const currentCount = Number(row.current_count ?? 0);
+    const retryAfter = Number(row.retry_after ?? 0);
+
+    if (!allowed) {
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfterSeconds: retryAfter || windowSeconds,
+      };
+    }
+
+    return {
+      allowed: true,
+      remaining: Math.max(0, cfg.maxRequests - currentCount),
+    };
+  } catch {
+    // Any unexpected error → fall back to in-memory
+    return checkRateLimit(identifier, action, config);
+  }
 }
 
 /**

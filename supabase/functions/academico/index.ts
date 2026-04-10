@@ -11,6 +11,7 @@ import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
 import { sanitizeBody } from "../_shared/validation.ts";
 import { validarSessao } from "../_shared/auth.ts";
 import { captureException } from "../_shared/sentry.ts";
+import { sanitizePgError } from "../_shared/errors.ts";
 
 // CORS set dynamically per request inside serve()
 let CORS: Record<string, string> = getCorsHeaders();
@@ -154,7 +155,7 @@ serve(async (req: Request) => {
     const { nome, numero, ano, data_inicio, data_fim } = body as any;
     if (!nome || !numero || !ano) return err("Nome, número e ano obrigatórios.");
     const { data, error } = await sb.from("notas_periodos").insert({ nome, numero, ano, data_inicio, data_fim }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -166,7 +167,7 @@ serve(async (req: Request) => {
     if (!id) return err("ID obrigatório.");
     delete fields.action; delete fields._token;
     const { error } = await sb.from("notas_periodos").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -176,7 +177,7 @@ serve(async (req: Request) => {
     if (!gerente) return err("Sessão inválida.", 401);
     const { id } = body as { id: string };
     const { error } = await sb.from("notas_periodos").delete().eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -197,7 +198,7 @@ serve(async (req: Request) => {
     const { nome, serie_id, professora_id, carga_horaria } = body as any;
     if (!nome) return err("Nome obrigatório.");
     const { data, error } = await sb.from("notas_disciplinas").insert({ nome, serie_id, professora_id, carga_horaria }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -209,7 +210,7 @@ serve(async (req: Request) => {
     if (!id) return err("ID obrigatório.");
     delete fields.action; delete fields._token;
     const { error } = await sb.from("notas_disciplinas").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -219,7 +220,7 @@ serve(async (req: Request) => {
     if (!gerente) return err("Sessão inválida.", 401);
     const { id } = body as { id: string };
     const { error } = await sb.from("notas_disciplinas").update({ ativo: false }).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -246,7 +247,7 @@ serve(async (req: Request) => {
       disciplina_id, periodo_id, nome, tipo: tipo || "prova", peso: peso || 1.0,
       data_avaliacao, valor_maximo: valor_maximo || 10.0
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -259,7 +260,7 @@ serve(async (req: Request) => {
     if (!id) return err("ID obrigatório.");
     delete fields.action; delete fields._token; delete fields._prof_token;
     const { error } = await sb.from("notas_avaliacoes").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -270,7 +271,7 @@ serve(async (req: Request) => {
     if (!prof && !gerente) return err("Sessão inválida.", 401);
     const { id } = body as { id: string };
     const { error } = await sb.from("notas_avaliacoes").delete().eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -296,7 +297,7 @@ serve(async (req: Request) => {
     }));
 
     const { error } = await sb.from("notas_lancamentos").upsert(rows, { onConflict: "avaliacao_id,aluno_email" });
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true, count: rows.length });
   }
 
@@ -424,7 +425,7 @@ serve(async (req: Request) => {
       status: "gerado", gerado_por: gerente.nome, gerado_em: new Date().toISOString()
     }, { onConflict: "aluno_email,periodo_id" }).select().single();
 
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(boletim);
   }
 
@@ -487,7 +488,7 @@ serve(async (req: Request) => {
       serie_id, disciplina_id: disciplina_id || null, data: dataStr,
       horario: horario || null, professora_id: prof?.id || null
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -515,7 +516,7 @@ serve(async (req: Request) => {
       status: r.status || "P", observacao: r.observacao || null
     }));
     const { error } = await sb.from("frequencia_registros").upsert(rows, { onConflict: "chamada_id,aluno_email" });
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true, count: rows.length });
   }
 
@@ -591,7 +592,7 @@ serve(async (req: Request) => {
       observacoes: observacoes || null,
       habilidades_bncc: habilidades_bncc || []
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -605,7 +606,7 @@ serve(async (req: Request) => {
     delete fields.action; delete fields._token; delete fields._prof_token;
     fields.atualizado_em = new Date().toISOString();
     const { error } = await sb.from("diario_registros").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -616,7 +617,7 @@ serve(async (req: Request) => {
     if (!prof && !gerente) return err("Sessão inválida.", 401);
     const { id } = body as { id: string };
     const { error } = await sb.from("diario_registros").delete().eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -651,7 +652,7 @@ serve(async (req: Request) => {
     if (template_html !== undefined) fields.template_html = template_html;
     if (variaveis !== undefined) fields.variaveis = variaveis;
     const { error } = await sb.from("documentos_templates").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -682,7 +683,7 @@ serve(async (req: Request) => {
       aluno_email, aluno_nome, tipo, dados_json: varsData,
       gerado_por: gerente.nome, gerado_em: new Date().toISOString()
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
 
     return ok({ ...doc, html_renderizado: html });
   }
@@ -727,7 +728,7 @@ serve(async (req: Request) => {
       aluno_email, aluno_nome, professora_id: prof.id, periodo_id, ano: ano || new Date().getFullYear(),
       tipo: tipo || "descritivo", texto, status: "rascunho"
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -742,7 +743,7 @@ serve(async (req: Request) => {
     fields.atualizado_em = new Date().toISOString();
     if (fields.status === "aprovado" && gerente) { fields.aprovado_por = gerente.nome; fields.aprovado_em = new Date().toISOString(); }
     const { error } = await sb.from("relatorios_pedagogicos").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -754,7 +755,7 @@ serve(async (req: Request) => {
     if (!relatorio_id || !Array.isArray(competencias)) return err("relatorio_id e competencias[] obrigatórios.");
     const rows = competencias.map(c => ({ relatorio_id, competencia_id: c.competencia_id, nivel: c.nivel, observacao: c.observacao || null }));
     const { error } = await sb.from("relatorio_competencias").upsert(rows, { onConflict: "relatorio_id,competencia_id" });
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -862,7 +863,7 @@ serve(async (req: Request) => {
       resposta_correta, dificuldade: dificuldade || "media",
       habilidade_bncc, explicacao, criado_por: prof?.id || null
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -875,7 +876,7 @@ serve(async (req: Request) => {
     if (!id) return err("ID obrigatório.");
     delete fields.action; delete fields._token; delete fields._prof_token;
     const { error } = await sb.from("provas_questoes").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -904,7 +905,7 @@ serve(async (req: Request) => {
       data_inicio, data_fim, tempo_limite, pontuacao_total: pontuacao_total || 10,
       embaralhar: embaralhar || false, criado_por: prof?.id || null, status: "rascunho"
     }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
@@ -917,7 +918,7 @@ serve(async (req: Request) => {
     if (!id) return err("ID obrigatório.");
     delete fields.action; delete fields._token; delete fields._prof_token;
     const { error } = await sb.from("provas").update(fields).eq("id", id);
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
 
@@ -973,7 +974,7 @@ serve(async (req: Request) => {
       pontuacao, pontuacao_detalhada: detalhada, fim: agora.toISOString(),
       corrigido, corrigido_em: corrigido ? agora.toISOString() : null
     }, { onConflict: "prova_id,aluno_email" }).select().single();
-    if (error) return err(error.message);
+    if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
 
