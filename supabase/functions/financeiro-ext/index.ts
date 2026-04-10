@@ -79,13 +79,26 @@ router.on("contabil_exportacoes_list", authGerente, requireFeature("contabil"), 
   return successResponse(data ?? []);
 });
 
+// CRC16-CCITT (poly 0x1021, init 0xFFFF) — obrigatório para EMV PIX (BR Code)
+function crc16Ccitt(payload: string): string {
+  let crc = 0xFFFF;
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+
 function gerarPayloadPix(chave: string, nome: string, cidade: string, valor: number, txid: string): string {
   const pad = (id: string, val: string) => id + val.length.toString().padStart(2, "0") + val;
   const gui = pad("00", "br.gov.bcb.pix");
   const chavePix = pad("01", chave);
   const merchantAccount = pad("26", gui + chavePix);
   const payloadSemCrc = pad("00", "01") + merchantAccount + pad("52", "0000") + pad("53", "986") + pad("54", valor.toFixed(2)) + pad("58", "BR") + pad("59", nome.substring(0, 25)) + pad("60", cidade.substring(0, 15)) + pad("62", pad("05", txid)) + "6304";
-  return payloadSemCrc + "0000";
+  return payloadSemCrc + crc16Ccitt(payloadSemCrc);
 }
 
 serve(async (req) => {

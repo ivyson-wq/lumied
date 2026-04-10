@@ -72,7 +72,7 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
     // Fallback por email
     const { data: profByEmail } = await sb
       .from('professoras').select('id, nome, email')
-      .ilike('email', user.email).maybeSingle()
+      .eq('email', user.email).maybeSingle()
     if (profByEmail) return profByEmail
     // Cria registro na tabela professoras se não existe (auto-provision)
     const { data: novaProfessora } = await sb
@@ -103,7 +103,7 @@ async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
   if (roles.includes('gerente') || roles.includes('diretor') || roles.includes('financeiro')) {
     const { data: ger } = await sb
       .from('gerentes').select('id, nome, email')
-      .ilike('email', user.email).maybeSingle()
+      .eq('email', user.email).maybeSingle()
     if (ger) return ger
     return { id: user.id, nome: user.nome, email: user.email }
   }
@@ -129,7 +129,7 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   if (roles.includes('secretaria') || roles.includes('comercial')) {
     const { data: sec } = await sb
       .from('secretarias').select('id, nome, email, features')
-      .ilike('email', user.email).maybeSingle()
+      .eq('email', user.email).maybeSingle()
     if (sec) return { ...sec, features: sec.features || ['atestados'] }
     // Constrói features baseado nos papéis
     const features: string[] = []
@@ -324,8 +324,9 @@ Deno.serve(async (req) => {
     const senha: string = body.senha || ''
     const papelEsperado: string = body.papel || '' // opcional: filtra por papel
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
-    const query = sb.from('usuarios').select('id, nome, email, senha_hash, papel').ilike('email', email)
-    if (papelEsperado) query.eq('papel', papelEsperado)
+    // .eq() em vez de .ilike() evita wildcard matching com % e _
+    let query = sb.from('usuarios').select('id, nome, email, senha_hash, papel').eq('email', email)
+    if (papelEsperado) query = query.eq('papel', papelEsperado)
     const { data: user } = await query.maybeSingle()
     if (!user || !user.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     if (!await verificarSenha(senha, user.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
@@ -345,7 +346,7 @@ Deno.serve(async (req) => {
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
     const { data: prof } = await sb
-      .from('professoras').select('id, nome, email, senha_hash').ilike('email', email).maybeSingle()
+      .from('professoras').select('id, nome, email, senha_hash').eq('email', email).maybeSingle()
     if (!prof || !prof.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     if (!await verificarSenha(senha, prof.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     // Verificar horário de acesso
@@ -372,7 +373,7 @@ Deno.serve(async (req) => {
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
     const { data: sec } = await sb
-      .from('secretarias').select('id, nome, email, senha_hash').ilike('email', email).maybeSingle()
+      .from('secretarias').select('id, nome, email, senha_hash').eq('email', email).maybeSingle()
     if (!sec || !sec.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     if (!await verificarSenha(senha, sec.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     const tok = randomToken()
@@ -1093,7 +1094,7 @@ Deno.serve(async (req) => {
       // Busca crianças pelo email logado E por outros emails do mesmo responsável
       const { data: meusRegs } = await sb
         .from('solicitacoes').select('nome_resp')
-        .ilike('email', emailPai).limit(1)
+        .eq('email', emailPai).limit(1)
       const nomeResp = meusRegs?.[0]?.nome_resp
 
       let sols: any[] = []
@@ -1107,14 +1108,14 @@ Deno.serve(async (req) => {
         // Fallback: busca apenas pelo email
         const { data } = await sb
           .from('solicitacoes').select('nome_crianca, serie')
-          .ilike('email', emailPai).order('criado_em', { ascending: false })
+          .eq('email', emailPai).order('criado_em', { ascending: false })
         sols = data ?? []
       }
 
       // Fallback: busca também na tabela familias
       const { data: fams } = await sb
         .from('familias').select('nome_aluno, serie')
-        .ilike('email', emailPai)
+        .eq('email', emailPai)
       if (fams?.length) {
         for (const f of fams) {
           sols.push({ nome_crianca: f.nome_aluno, serie: f.serie ?? null })
@@ -1137,7 +1138,7 @@ Deno.serve(async (req) => {
       if (!nome_resp) {
         const { data: respData } = await sb
           .from('solicitacoes').select('nome_resp')
-          .ilike('email', emailPai).limit(1)
+          .eq('email', emailPai).limit(1)
         nome_resp = respData?.[0]?.nome_resp || emailPai
       }
       const lat_pai: number | null = body.lat_pai != null ? parseFloat(body.lat_pai) : null
@@ -2333,7 +2334,7 @@ Deno.serve(async (req) => {
     const novoHash = await hashSenha(nova_senha)
     await sb.from('professoras').update({ senha_hash: novoHash }).eq('id', prof.id)
     // Atualiza também na tabela usuarios (se existir)
-    await sb.from('usuarios').update({ senha_hash: novoHash }).ilike('email', prof.email)
+    await sb.from('usuarios').update({ senha_hash: novoHash }).eq('email', prof.email)
     return json({ ok: true })
   }
 
@@ -2531,10 +2532,10 @@ Deno.serve(async (req) => {
     // Find user
     let usuario_id = ''
     if (portal === 'professora') {
-      const { data: p } = await sb.from('professoras').select('id').ilike('email', email).maybeSingle()
+      const { data: p } = await sb.from('professoras').select('id').eq('email', email).maybeSingle()
       if (p) usuario_id = p.id
     } else if (portal === 'secretaria') {
-      const { data: s } = await sb.from('secretarias').select('id').ilike('email', email).maybeSingle()
+      const { data: s } = await sb.from('secretarias').select('id').eq('email', email).maybeSingle()
       if (s) usuario_id = s.id
     } else if (portal === 'pais') {
       usuario_id = email // parents use email as ID

@@ -84,11 +84,16 @@ async function getDeviceSession(sb: Any, device: Any): Promise<string> {
       if (res.ok) return device.api_session;
     } catch { /* session expired, re-login */ }
   }
-  // Login to device
+  // Login to device — credenciais vêm do próprio registro do dispositivo ou de env var por segurança
+  const deviceLogin = device.api_login || Deno.env.get("CONTROLID_DEFAULT_LOGIN") || "admin";
+  const devicePassword = device.api_password || Deno.env.get("CONTROLID_DEFAULT_PASSWORD");
+  if (!devicePassword) {
+    throw new AppError("BAD_REQUEST", `Senha do dispositivo ${device.nome} não configurada. Defina acesso_dispositivos.api_password ou env CONTROLID_DEFAULT_PASSWORD.`);
+  }
   const res = await deviceFetch(device.ip, device.porta, "/login.fcgi", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ login: "admin", password: "admin" }),
+    body: JSON.stringify({ login: deviceLogin, password: devicePassword }),
   });
   if (!res.ok) throw new AppError("BAD_REQUEST", `Falha ao autenticar no dispositivo ${device.nome}: HTTP ${res.status}`);
   const data = await res.json();
@@ -889,7 +894,7 @@ router.on("acesso_minha_face", async (ctx) => {
   const { email } = ctx.body as Any;
   if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
   // Buscar familia por email
-  const { data: familia } = await ctx.sb.from("familias").select("id, nome_resp").ilike("email", email).maybeSingle();
+  const { data: familia } = await ctx.sb.from("familias").select("id, nome_resp").eq("email", email).maybeSingle();
   if (!familia) return successResponse(null);
   const { data: face } = await ctx.sb.from("acesso_faces")
     .select("*").eq("pessoa_tipo", "responsavel").eq("pessoa_id", familia.id).eq("ativo", true).maybeSingle();
@@ -901,7 +906,7 @@ router.on("acesso_presenca_filhos", async (ctx) => {
   if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
   const hoje = new Date().toISOString().split("T")[0];
   // Buscar alunos vinculados a esta familia
-  const { data: familia } = await ctx.sb.from("familias").select("id, filhos").ilike("email", email).maybeSingle();
+  const { data: familia } = await ctx.sb.from("familias").select("id, filhos").eq("email", email).maybeSingle();
   if (!familia) return successResponse([]);
   // filhos pode ser array de objetos com nome, ou buscar na tabela alunos
   const { data: alunos } = await ctx.sb.from("alunos").select("id, nome, serie").eq("familia_id", familia.id);
@@ -922,7 +927,7 @@ router.on("acesso_presenca_filhos", async (ctx) => {
 router.on("acesso_meus_autorizados", async (ctx) => {
   const { email } = ctx.body as Any;
   if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
-  const { data: familia } = await ctx.sb.from("familias").select("id").ilike("email", email).maybeSingle();
+  const { data: familia } = await ctx.sb.from("familias").select("id").eq("email", email).maybeSingle();
   if (!familia) return successResponse([]);
   const { data } = await ctx.sb.from("acesso_permissoes_retirada")
     .select("*").eq("responsavel_id", familia.id).order("criado_em", { ascending: false });
@@ -934,7 +939,7 @@ router.on("acesso_adicionar_autorizado", async (ctx) => {
   if (!email_responsavel || !aluno_id || !responsavel_nome || !parentesco) {
     throw new AppError("VALIDATION_FAILED", "Campos obrigatórios: email, aluno_id, nome, parentesco.");
   }
-  const { data: familia } = await ctx.sb.from("familias").select("id").ilike("email", email_responsavel).maybeSingle();
+  const { data: familia } = await ctx.sb.from("familias").select("id").eq("email", email_responsavel).maybeSingle();
   if (!familia) throw new AppError("NOT_FOUND", "Família não encontrada.");
 
   // Processar foto se fornecida

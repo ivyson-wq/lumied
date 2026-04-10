@@ -121,7 +121,7 @@ serve(async (req: Request) => {
     if (gs && new Date(gs.expira_em) >= new Date()) {
       const email = (gs as any).gerentes?.email;
       if (email) {
-        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").ilike("email", email).maybeSingle();
+        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", email).maybeSingle();
         if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
         return ok({ logged: true, email, papeis: ["gerente"] });
       }
@@ -131,7 +131,7 @@ serve(async (req: Request) => {
     if (ss && new Date(ss.expira_em) >= new Date()) {
       const email = (ss as any).secretarias?.email;
       if (email) {
-        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").ilike("email", email).maybeSingle();
+        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", email).maybeSingle();
         if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
         return ok({ logged: true, email, papeis: ["secretaria"] });
       }
@@ -141,7 +141,7 @@ serve(async (req: Request) => {
     if (ps && new Date(ps.expira_em) >= new Date()) {
       const email = (ps as any).professoras?.email;
       if (email) {
-        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").ilike("email", email).maybeSingle();
+        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", email).maybeSingle();
         if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
         return ok({ logged: true, email, papeis: ["professora"] });
       }
@@ -499,7 +499,7 @@ serve(async (req: Request) => {
     const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url };
     if (usuario_id) insert.usuario_id = usuario_id;
     else if (_email) {
-      const { data: u } = await admin.from("usuarios").select("id").ilike("email", _email as string).maybeSingle();
+      const { data: u } = await admin.from("usuarios").select("id").eq("email", _email as string).maybeSingle();
       if (u) insert.usuario_id = u.id;
     }
     const { error } = await admin.from("manutencoes").insert(insert);
@@ -511,7 +511,7 @@ serve(async (req: Request) => {
   if (action === "manutencao_minhas") {
     const email = ((body._email as string) || "").toLowerCase().trim();
     if (!email) return err("E-mail obrigatório.");
-    const { data: user } = await admin.from("usuarios").select("id").ilike("email", email).maybeSingle();
+    const { data: user } = await admin.from("usuarios").select("id").eq("email", email).maybeSingle();
     if (!user) return ok([]);
     const { data } = await admin.from("manutencoes").select("*, usuarios(nome, email)")
       .eq("usuario_id", user.id).order("criado_em", { ascending: false });
@@ -794,7 +794,7 @@ serve(async (req: Request) => {
   // ── Role check for sensitive financial actions ────────────────
   const sensitiveActions = ["staff_alterar_resp_financeiro", "financeiro_decisao_aprovar", "financeiro_decisao_rejeitar", "indicacao_b2b_config_salvar"];
   if (sensitiveActions.includes(action as string)) {
-    const { data: usr } = await admin.from("usuarios").select("papeis").ilike("email", gerente.email).maybeSingle();
+    const { data: usr } = await admin.from("usuarios").select("papeis").eq("email", gerente.email).maybeSingle();
     const roles = usr?.papeis || [];
     if (!roles.includes("gerente") && !roles.includes("diretor")) {
       return err("Apenas gerentes e diretores podem realizar esta ação.", 403);

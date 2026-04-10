@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       const { data: sol } = await supabase
         .from('solicitacoes_acesso')
         .select('cpf')
-        .ilike('email', email)
+        .eq('email', email)
         .maybeSingle()
       if (sol?.cpf) cpfRaw = sol.cpf.replace(/\D/g, '')
     }
