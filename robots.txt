@@ -15,5 +15,30 @@ Disallow: /aluno.html
 Disallow: /area-restrita.html
 Disallow: /dist/
 Disallow: /config.js
+Disallow: /setup.html
+Disallow: /cadastro-face.html
+Disallow: /ml-conectado.html
+Disallow: /temas/
+Disallow: /temas-preview.html
+Disallow: /logo-preview.html
+
+# Crawl-delay opcional (Bing respeita, Google ignora)
+User-agent: bingbot
+Crawl-delay: 1
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: GPTBot
+Allow: /site/
+Allow: /ajuda/
+
+User-agent: ClaudeBot
+Allow: /site/
+Allow: /ajuda/
+
+User-agent: PerplexityBot
+Allow: /site/
+Allow: /ajuda/
 
 Sitemap: https://lumied.com.br/sitemap.xml
