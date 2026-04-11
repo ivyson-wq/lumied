@@ -7,8 +7,15 @@
 <meta name="description" content="Sistema de gestão escolar inteligente com IA, WhatsApp nativo, CRM de matrículas, financeiro automatizado e compliance. Para escolas bilíngues e redes de ensino. A partir de R$ 207/mês.">
 <meta name="keywords" content="sistema gestão escolar, software escola, gestão escolar online, plataforma escolar, sistema escolar com IA, CRM escola, financeiro escolar, compliance escolar, WhatsApp escola, boletim digital, controle frequência, matrícula online, Lumied">
 <meta name="author" content="Lumied">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
 <meta name="theme-color" content="#0A0A0F">
+<!-- Google Search Console verification — substituir CONTENT quando obter o código -->
+<!-- Instruções: https://search.google.com/search-console → Adicionar propriedade → URL prefix "https://lumied.com.br" → HTML tag → copiar content → colar aqui abaixo -->
+<!-- <meta name="google-site-verification" content="COLAR_AQUI_O_CODIGO_DO_GSC"> -->
+<!-- Bing Webmaster Tools / IndexNow -->
+<meta name="msvalidate.01" content="">
+<!-- Yandex Webmaster -->
+<meta name="yandex-verification" content="">
 <!-- Open Graph -->
 <meta property="og:title" content="Lumied — Sistema de Gestão Escolar com IA">
 <meta property="og:description" content="A única plataforma que analisa os dados da sua escola e diz o que fazer. 23 módulos, WhatsApp nativo, compliance automatizado.">
@@ -977,6 +984,70 @@ function showProfileTab(tab, btn) {
   </div>
 </section>
 
+<!-- ── SEGURANÇA & CONFIANÇA (DARK) ── -->
+<section class="section" id="seguranca" style="background:linear-gradient(180deg,#0A0A0F 0%,#0F0D18 100%);padding:80px 24px;">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Segurança de nível empresarial</div>
+      <h2 class="section-title section-title-dark">Dados seguros. LGPD nativa. Infraestrutura de banco.</h2>
+      <p class="section-sub section-sub-dark">Por baixo da interface intuitiva, está a mesma stack que grandes empresas brasileiras usam — só que ajustada para escolas.</p>
+    </div>
+    <div class="trust-grid fade-up">
+      <div class="trust-card">
+        <div class="trust-icon" style="background:linear-gradient(135deg,#3ECF8E,#10B981);">🛡️</div>
+        <h3>LGPD Compliance Nativa</h3>
+        <p>Consentimento granular, exportação de dados, anonimização, audit log completo e painel LGPD dedicado. Pronta para fiscalização da ANPD.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon" style="background:linear-gradient(135deg,#0284C7,#0EA5E9);">🔒</div>
+        <h3>Criptografia fim-a-fim</h3>
+        <p>TLS 1.3 em trânsito, criptografia em repouso no PostgreSQL, hash PBKDF2 com 120k iterações para senhas, e WebAuthn/Face ID nos portais.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon" style="background:linear-gradient(135deg,#F59E0B,#F97316);">🏛️</div>
+        <h3>Infra AWS São Paulo</h3>
+        <p>Hospedado no Supabase (AWS região sa-east-1), backups diários, Row Level Security em 20+ tabelas, monitoramento Sentry 24/7 e uptime 99.9%.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon" style="background:linear-gradient(135deg,#8B5CF6,#A78BFA);">🎯</div>
+        <h3>WebAuthn + Face ID</h3>
+        <p>Login biométrico em todos os portais. Senhas nunca mais precisam ser digitadas em cafeterias e tablets compartilhados da escola.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon" style="background:linear-gradient(135deg,#EF4444,#DC2626);">⚡</div>
+        <h3>Rate limiting + WAF</h3>
+        <p>Proteção contra ataques automatizados em 100% das edge functions, CORS whitelist dinâmico e Content Security Policy restritivo.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon" style="background:linear-gradient(135deg,#25D366,#1DA851);">✓</div>
+        <h3>Meta verificado</h3>
+        <p>Número WhatsApp Business API com selo verde de conta verificada pela Meta. Sem risco de banimento e com templates pré-aprovados.</p>
+      </div>
+    </div>
+    <div class="trust-badges fade-up">
+      <div class="trust-badge-item"><span>🇧🇷</span> Dados no Brasil</div>
+      <div class="trust-badge-item"><span>🛡️</span> LGPD-Ready</div>
+      <div class="trust-badge-item"><span>🔐</span> TLS 1.3</div>
+      <div class="trust-badge-item"><span>⚙️</span> 99.9% Uptime SLA</div>
+      <div class="trust-badge-item"><span>📋</span> Audit Log Completo</div>
+      <div class="trust-badge-item"><span>🔑</span> SSO + 2FA</div>
+    </div>
+  </div>
+</section>
+
+<style>
+.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1080px;margin:0 auto 40px;}
+.trust-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:32px 28px;backdrop-filter:blur(20px);transition:all .3s;}
+.trust-card:hover{transform:translateY(-4px);border-color:var(--primary);box-shadow:0 12px 32px var(--primary-glow);}
+.trust-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:20px;box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.trust-card h3{font-family:'Playfair Display',serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:12px;}
+.trust-card p{font-size:14px;color:var(--text-white-muted);line-height:1.7;}
+.trust-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;max-width:900px;margin:0 auto;}
+.trust-badge-item{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);border-radius:100px;font-size:13px;font-weight:600;color:#fff;}
+.trust-badge-item span{font-size:16px;}
+@media (max-width:900px){.trust-grid{grid-template-columns:1fr;}}
+</style>
+
 <!-- ── VIDEO DEMOS (LIGHT) ── -->
 <section class="section section-light" id="videos">
   <div class="container">
@@ -1502,6 +1573,27 @@ calcularROI();
   </div>
 </section>
 
+<!-- ── OBJECTION REMOVAL (LIGHT) ── -->
+<section class="section section-light" style="padding:32px 24px 8px;">
+  <div class="container" style="max-width:960px;">
+    <div class="objection-bar fade-up">
+      <div class="obj-item"><span class="obj-icon">✓</span><div><strong>Sem fidelidade</strong><br><span>Cancele quando quiser</span></div></div>
+      <div class="obj-item"><span class="obj-icon">✓</span><div><strong>Primeiros 30 dias</strong><br><span>Suporte prioritário incluído</span></div></div>
+      <div class="obj-item"><span class="obj-icon">✓</span><div><strong>Migração gratuita</strong><br><span>Trazemos da planilha antiga</span></div></div>
+      <div class="obj-item"><span class="obj-icon">✓</span><div><strong>Preço transparente</strong><br><span>Sem pegadinhas no contrato</span></div></div>
+    </div>
+  </div>
+</section>
+<style>
+.objection-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;background:#fff;border:1px solid var(--border-light);border-radius:16px;padding:28px 24px;box-shadow:0 8px 24px rgba(0,0,0,.04);}
+.obj-item{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-body);line-height:1.4;}
+.obj-item strong{color:var(--text-heading);font-size:14px;}
+.obj-item span{font-size:12px;color:var(--text-muted);}
+.obj-icon{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#10B981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0;}
+@media (max-width:900px){.objection-bar{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:560px){.objection-bar{grid-template-columns:1fr;}}
+</style>
+
 <!-- ── IMPLANTACAO (LIGHT) ── -->
 <section class="section section-light" id="implantacao" style="padding-top:40px;">
   <div class="container" style="text-align:center;max-width:760px;">
@@ -1542,7 +1634,175 @@ calcularROI();
   </div>
 </section>
 
-<!-- ── TESTIMONIALS (DARK) ── -->
+<!-- ── CASE STUDY + TESTIMONIALS (DARK) ── -->
+<section class="section section-dark" id="casos">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-badge section-badge-dark">Caso real</div>
+      <h2 class="section-title section-title-dark">90 dias, resultados reais</h2>
+      <p class="section-sub section-sub-dark">O que aconteceu quando uma escola bilíngue no Rio Grande do Sul adotou o Lumied.</p>
+    </div>
+
+    <div class="case-hero fade-up">
+      <div class="case-left">
+        <div class="case-brand">🍁 Maple Bear Caxias do Sul</div>
+        <div class="case-sub">180 alunos · Ed. Infantil + Fundamental I · Plano Avançado</div>
+        <blockquote class="case-quote">
+          "Antes do Lumied, a gente vivia apagando incêndio. Planilhas que não batiam, inadimplência que ninguém sabia o tamanho real, professoras com dúvida de hora extra no fim do mês. Hoje tudo está num lugar só, e o sistema me diz o que olhar primeiro. É outro nível de tranquilidade."
+        </blockquote>
+        <div class="case-author">
+          <div class="case-avatar">👔</div>
+          <div>
+            <div class="case-name">Direção pedagógica</div>
+            <div class="case-role">Maple Bear Caxias do Sul · RS</div>
+          </div>
+        </div>
+      </div>
+      <div class="case-stats">
+        <div class="case-stat">
+          <div class="case-stat-number">-40%</div>
+          <div class="case-stat-label">Inadimplência em 90 dias<br><span>(de 14% para 8,3%)</span></div>
+        </div>
+        <div class="case-stat">
+          <div class="case-stat-number">12h</div>
+          <div class="case-stat-label">Economizadas por semana<br><span>pela coordenação</span></div>
+        </div>
+        <div class="case-stat">
+          <div class="case-stat-number">R$ 31k</div>
+          <div class="case-stat-label">Receita recuperada/mês<br><span>com régua automática</span></div>
+        </div>
+        <div class="case-stat">
+          <div class="case-stat-number">8min</div>
+          <div class="case-stat-label">Tempo médio resposta<br><span>(antes: 4 horas)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="testimonials-grid fade-up" style="margin-top:48px;">
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"A régua de cobrança automática pelo WhatsApp mudou nossa vida. Em 2 meses, a inadimplência caiu quase pela metade sem a gente precisar ligar para ninguém constrangido."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,#6C63FF,#3B82F6);">DF</div>
+          <div>
+            <div class="testimonial-name">Diretora Financeira</div>
+            <div class="testimonial-role">Escola bilíngue · RS</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"A Lumi, o assistente de IA, me dá um resumo da turma de manhã antes mesmo de eu abrir os emails. Fiquei sabendo de um caso delicado de aluno no segundo dia que talvez levasse semanas para aparecer."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,#10B981,#059669);">CP</div>
+          <div>
+            <div class="testimonial-name">Coordenação Pedagógica</div>
+            <div class="testimonial-role">Maple Bear · RS</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"Fazer a chamada passou a ser 30 segundos em vez de 5 minutos. E o melhor: a agenda da criança vai automática para os pais com foto e humor do dia."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,#F59E0B,#F97316);">PE</div>
+          <div>
+            <div class="testimonial-name">Professora Ed. Infantil</div>
+            <div class="testimonial-role">Maple Bear · RS</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"Implantação foi literalmente em 2 semanas — trouxe a planilha antiga, o suporte migrou tudo, treinou nossa equipe e no dia 15 estávamos usando em produção. Sem dor."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,#8B5CF6,#A78BFA);">GS</div>
+          <div>
+            <div class="testimonial-name">Gestão Escolar</div>
+            <div class="testimonial-role">Escola bilíngue · RS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fade-up" style="text-align:center;margin-top:48px;">
+      <a href="#contact" class="btn-primary">Quero resultados como esses →</a>
+    </div>
+  </div>
+</section>
+
+<style>
+.case-hero{display:grid;grid-template-columns:1.3fr 1fr;gap:48px;max-width:1100px;margin:0 auto;background:linear-gradient(135deg,rgba(108,99,255,.08) 0%,rgba(59,130,246,.04) 100%);border:1px solid rgba(108,99,255,.2);border-radius:24px;padding:48px;backdrop-filter:blur(20px);}
+.case-brand{font-family:'Playfair Display',serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:4px;}
+.case-sub{font-size:13px;color:var(--text-white-muted);margin-bottom:28px;text-transform:uppercase;letter-spacing:1px;}
+.case-quote{font-size:18px;color:#fff;line-height:1.7;margin-bottom:28px;font-style:italic;border-left:4px solid var(--primary);padding-left:20px;}
+.case-author{display:flex;align-items:center;gap:14px;}
+.case-avatar{width:48px;height:48px;background:linear-gradient(135deg,#6C63FF,#3B82F6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.case-name{font-size:15px;font-weight:700;color:#fff;}
+.case-role{font-size:12px;color:var(--text-white-muted);}
+.case-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-content:start;}
+.case-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px 16px;text-align:center;}
+.case-stat-number{font-family:'Playfair Display',serif;font-size:38px;font-weight:800;color:#6C63FF;line-height:1;margin-bottom:8px;}
+.case-stat-label{font-size:12px;color:#fff;font-weight:600;line-height:1.4;}
+.case-stat-label span{color:var(--text-white-muted);font-weight:400;font-size:11px;}
+@media (max-width:900px){.case-hero{grid-template-columns:1fr;padding:32px 24px;gap:32px;}.case-stats{grid-template-columns:repeat(2,1fr);}}
+</style>
+
+<!-- ── TEAM BIO (LIGHT) ── -->
+<section class="section section-light" id="quem-somos" style="padding:80px 24px;">
+  <div class="container" style="max-width:960px;">
+    <div class="section-header fade-up">
+      <div class="section-badge">Quem está por trás</div>
+      <h2 class="section-title section-title-light">Construído por quem entende escola</h2>
+      <p class="section-sub section-sub-light">Não somos uma big tech genérica. Somos um time pequeno e dedicado, construindo o Lumied em parceria direta com diretoras e coordenadoras de escolas bilíngues.</p>
+    </div>
+    <div class="team-grid fade-up">
+      <div class="team-card">
+        <div class="team-avatar" style="background:linear-gradient(135deg,#6C63FF,#3B82F6);">I</div>
+        <div class="team-name">Ivyson</div>
+        <div class="team-role">Fundador &amp; Desenvolvedor Principal</div>
+        <p class="team-bio">Construiu o Lumied do zero depois de observar de perto o dia a dia da Maple Bear Caxias do Sul. Traz experiência profunda em engenharia de software e foco obsessivo em qualidade de produto — cada módulo é testado em operação real antes de liberar para a rede.</p>
+        <div class="team-tags">
+          <span class="team-tag">Full-stack</span>
+          <span class="team-tag">IA &amp; Agentes</span>
+          <span class="team-tag">Brasil · RS</span>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar" style="background:linear-gradient(135deg,#10B981,#059669);">🍁</div>
+        <div class="team-name">Maple Bear Caxias do Sul</div>
+        <div class="team-role">Parceria de desenvolvimento</div>
+        <p class="team-bio">Primeira escola da rede Lumied, atuando como laboratório vivo desde o primeiro dia. 180 alunos, equipe engajada e feedback constante — cada funcionalidade passa pelo crivo de uso real antes de chegar ao catálogo.</p>
+        <div class="team-tags">
+          <span class="team-tag">180 alunos</span>
+          <span class="team-tag">Bilíngue</span>
+          <span class="team-tag">Ed. Infantil + Fund. I</span>
+        </div>
+      </div>
+    </div>
+    <div class="fade-up" style="text-align:center;margin-top:40px;padding:24px;background:var(--primary-light, rgba(108,99,255,.06));border-radius:16px;max-width:760px;margin-left:auto;margin-right:auto;">
+      <p style="color:var(--text-heading);font-size:15px;font-weight:600;margin-bottom:8px;">Suporte direto com quem faz o produto.</p>
+      <p style="color:var(--text-body);font-size:14px;">Quando você nos contrata, fala com o time que constrói o Lumied — não com um call center terceirizado. Tickets, dúvidas e sugestões chegam direto para quem pode resolver.</p>
+    </div>
+  </div>
+</section>
+<style>
+.team-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;}
+.team-card{background:#fff;border:1px solid var(--border-light);border-radius:16px;padding:32px 28px;transition:all .3s;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.03);}
+.team-card:hover{transform:translateY(-4px);border-color:var(--primary);box-shadow:0 16px 40px rgba(108,99,255,.12);}
+.team-avatar{width:80px;height:80px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;font-weight:900;box-shadow:0 8px 24px rgba(108,99,255,.25);}
+.team-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:800;color:var(--text-heading);margin-bottom:4px;}
+.team-role{font-size:12px;color:var(--primary);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
+.team-bio{font-size:14px;color:var(--text-body);line-height:1.75;margin-bottom:20px;}
+.team-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;}
+.team-tag{padding:4px 12px;background:var(--bg-light);border-radius:100px;font-size:11px;font-weight:600;color:var(--text-body);}
+@media (max-width:760px){.team-grid{grid-template-columns:1fr;}}
+</style>
+
+<!-- ── FAQ (DARK) ── -->
 <section class="section section-dark">
   <div class="container">
     <div class="section-header fade-up">
