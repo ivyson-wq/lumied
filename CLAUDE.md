@@ -555,6 +555,71 @@ Extensão Manifest V3 para enviar templates CRM no WhatsApp Web. Pronta para pub
 - getProfessora não aceita mais gerente como professora
 - Ticket escalado agora marca status "escalado" (não "respondido")
 
+### Hardening 2026-04-10/11 — 4 rodadas, ~90 bugs fixados
+
+**Rodada 1 — SRI + auth crítica + injections (14 tasks):**
+- **SRI hash Supabase CDN quebrado** — era a causa raiz de `PAPEL_COLORS is undefined` no gerente.html. Pinado `@supabase/supabase-js@2.45.4` com hash verificado + guard defensivo em `sbClient` pra degradação graceful.
+- **PIX CRC16** — `financeiro-ext/index.ts` retornava `"0000"` hardcoded; todos os QR codes eram rejeitados. Implementado CRC16-CCITT (poly 0x1021, init 0xFFFF).
+- **Control iD admin/admin hardcoded** — removido; usa `acesso_dispositivos.api_login/api_password` ou env `CONTROLID_DEFAULT_PASSWORD`.
+- **`config_escola_setup` privilege escalation** — ação bypassava auth se `gerentes` vazio, permitindo setar `superusuario_email` e escalar a superuser. Retorna 410 Gone.
+- **Auth em ~30 endpoints** (acesso, chat/comunicacao, pesquisa, autorizacao, notif, achados, rh_ponto, regua_executar, compliance_verificar_ponto_auto, provas_*, aluno_*)
+- **`.ilike('email', X)` → `.eq('email', X)`** em 20+ lugares (wildcard `%`/`_` enabling enumeration)
+- **`.or()` PostgREST injection** fixado em `agenda_pais_get`, `minha_agenda`, `suporte_faq_list`, `academico` buscas, `operacional` biblioteca, `boletos-list`
+- **3 XSS em index.html** (nome_crianca, child names, foto.url)
+- **Mass assignment** em 7 actions `*_update` (planos, escolas, transporte, regua, pesquisa, produtos, rh_funcionarios)
+- **9 console.log [Auth Debug]** removidos (LGPD — vazavam emails)
+- **CI pipeline** — removido `|| true` do deno check e `|| echo "Failed"` do deploy; frontend agora depende de functions; `node build.js` adicionado antes do Vercel deploy
+
+**Rodada 2 — HTML escape + race conditions + CORS race (8 tasks):**
+- **Contract email code hashed** (SHA-256 + attempt counter de 5 + expiração 15min + timing-safe compare). Antes era plaintext em `dados_preenchidos._codigo_email`.
+- **HTML escape em Resend emails** (magic link, contratos, ticket_create) via `escapeHtml()` + `sanitizeHeaderValue()` anti-CRLF injection no `from:`
+- **Biblioteca race condition** — read-check-write substituído por RPC atômico `biblioteca_emprestar` (UPDATE ... WHERE disponivel > 0)
+- **gerentes_delete race** — RPC `gerentes_safe_delete` com LOCK TABLE + count + delete atômico
+- **`sanitizePgError()`** — ~70 substituições de `err(error.message)` que vazavam column/constraint names. Real error logado via `console.error`.
+- **`escola_id` scoping** via middleware no router v2 (`auth()` agora carrega escola_id; novo `authGerenteOrSecretaria()` + `requireEscola`)
+- **DB-backed rate limiter** — `rate_limit_check` RPC com bucket windowing (migration 218). Antes era in-memory `Map` que resetava em cold start.
+- **CORS vercel preview regex** — `endsWith('.vercel.app') && includes('maple-bear')` trocado por `^https://maple-bear-rs(-[a-z0-9-]+)?\.vercel\.app$` (antes `maple-bear-attack.vercel.app` passava).
+- **CORS data race** — `_currentCorsHeaders` module-level substituído por `AsyncLocalStorage<Record<string,string>>`. `runWithCors(req, fn)` helper usado por `withErrorHandler` e `Router.handle()`. Concurrent requests no mesmo isolate não racem mais.
+
+**Rodada 3 — escola_id columns + Meta HMAC + cron (6 tasks):**
+- **Migration 219**: `ADD COLUMN escola_id UUID REFERENCES escolas(id)` em 23 tabelas (compliance_*, rh_ponto/ferias/holerites/folha_pagamento, cantina_creditos/transacoes/restricoes, biblioteca_emprestimos/reservas, transporte_alunos/rastreio/notificacoes). Idempotent, backfill via parent FK, index criado.
+- **Meta HMAC hardening** em `whatsapp-worker` e `whatsapp-gateway`: antes era **fail-open** se `META_APP_SECRET` ausente. Agora fail-closed, `sha256=` prefix check, constant-time XOR comparison. POST rejeita 403 (antes 401). `GET /webhook` usa `WHATSAPP_VERIFY_TOKEN` com fallback legacy.
+- **Migration 220**: pg_cron `rate_limits_cleanup()` hourly
+- **Remote Trigger token** movido de query `?token=X` para header `X-Trigger-Token` (lido de env `CLAUDE_TRIGGER_TOKEN`) — antes aparecia em logs/metrics.
+- **Chaves protegidas em `config_escola_save`**: bloqueia `superusuario_email`, `meta_app_secret`, `whatsapp_token`, `inter_*`, `anthropic_api_key`, `resend_api_key`, etc. — gerentes não podem mais se auto-promover.
+- **Migration 215**: colunas `api_login`/`api_password` em `acesso_dispositivos` pra credenciais Control iD por dispositivo.
+- **Migrations 216/217**: RPCs atômicos `biblioteca_emprestar`/`biblioteca_devolver`/`gerentes_safe_delete`.
+
+**Rodada 4 — loja/lumied-ai + Cloudflare Workers full audit (5 tasks):**
+- **loja/index.ts** (20 fixes): produtos_* escola_id + .ilike sanitization, pedidos_list era COMPLETAMENTE PÚBLICO (PII leak), pedido_create race-safe estoque via `.gte()` filter + rollback
+- **lumied-ai/index.ts** (25 fixes): `gerar_insights_diarios` + `roi_gerar_snapshot` eram unauth (abuso de custo AI), agora exigem `SUPABASE_SERVICE_ROLE_KEY` ou `CRON_INTERNAL_KEY`. **Prompt injection** em `ai_perguntar`, `ai_perguntar_mcp`, `ai_perguntar_prof`, `ai_redigir_comunicado`, `ai_parecer_bncc` — sanitizeForPrompt() + length caps. `coletarContexto` cross-tenant → scoped por escola_id. ROI mass assignment corrigido.
+- **whatsapp-worker** (5 high): timing-safe verify_token, top-level try/catch em `fetch`, `ctx.waitUntil` em `scheduled`, `fetchWithTimeout` 10s + null-check em MetaAPI/SaasAPI (fail-closed)
+- **whatsapp-gateway** (16 critical/high): **prompt injection** em faq-bot/relatorio/documento-intake (system prompt + XML-wrapped user data), **btoa stack overflow** em imagens >100KB (chunked base64 + 5MB cap), top-level try/catch em `handleWebhook`, timing-safe `/send` auth + UUID v4 regex, regex strict em `button_reply.id` pra prevenir DB filter injection, path traversal fix em `filename`, timeouts em todas as chamadas Claude/Meta/Storage
+- **cloudflare-monitor** (3 critical/high): **`/run` endpoint era COMPLETAMENTE PÚBLICO** — qualquer um podia queimar quota Claude + enviar emails Resend. Agora requer `ADMIN_TOKEN` secret via timing-safe + POST-only (não GET pra prevenir CSRF). `/status` + `/status/html` + `/` também protegidos (antes leakavam service names, latencies, Sentry issues, Vercel URIs). Novo `/health` público pra uptime monitoring.
+- **Testes validados**: 57/57 Deno unit + 61/62 Playwright E2E passando (atualizados pra v2 redesign).
+
+**Resumo:** 15 commits de segurança, 7 migrations novas, ~10.000 LOC auditadas, 100% das edge functions ativas + 100% dos Cloudflare Workers hardenados.
+
+### Pós-deploy obrigatório (secrets a configurar)
+
+**Cloudflare Workers** (`wrangler secret put`):
+```bash
+cd cloudflare-monitor && wrangler secret put ADMIN_TOKEN      # senão /status retorna 401
+cd whatsapp-worker && wrangler secret put META_APP_SECRET     # senão webhooks 403
+cd whatsapp-gateway && wrangler secret put META_APP_SECRET    # senão webhooks 403
+```
+
+**Supabase Edge Functions** (`supabase secrets set`):
+- `CLAUDE_TRIGGER_TOKEN` — trigger Claude AI via header
+- `CRON_INTERNAL_KEY` — alternativa ao service_role_key pra `gerar_insights_diarios`/`roi_gerar_snapshot`
+- `CONTROLID_DEFAULT_PASSWORD` — ou popular `acesso_dispositivos.api_password` por dispositivo
+
+**Backfill escola_id** — single-tenant atualmente OK, mas antes do 2º tenant:
+```sql
+UPDATE compliance_* SET escola_id = '<first-escola-uuid>' WHERE escola_id IS NULL;
+-- (e similar para rh_ponto, cantina_*, biblioteca_*, transporte_*)
+```
+
 ---
 
 ## Permissões (RBAC)
@@ -621,7 +686,7 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 
 ## Banco de Dados
 
-- **114 migrations** (009-114)
+- **220 migrations** (009-220) — ver "Banco de Dados — Migrations Recentes" abaixo para 202-220
 - Migrations relevantes:
   - `048_planos_modulos.sql` — escolas, planos, modulos, admins
   - `075_multitenancy_limites.sql` — plano_limites, escola_uso
@@ -678,6 +743,45 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 ### Better Stack
 - Monitoramento via API REST (sem CLI)
 - Integrado no painel admin (Status do Sistema)
+
+### Google Analytics (G-QDFKQEVV4P)
+- **Portais autenticados** carregam via `/analytics.js` (gerente, professora, secretaria, admin, admin-central, aluno, index, area-restrita)
+- **Páginas públicas** (blog, site/sobre, assinar, verificar, indicar, parceiros, cadastro-face, setup, ajuda) têm snippet `gtag.js` inline direto no `<head>`
+- **49 páginas HTML** cobertas no total (instalado 2026-04-11)
+- Site landing (`site/index.html`) já tinha snippet inline pré-existente
+- `/analytics.js` skipa `localhost`/`127.0.0.1` automaticamente + seta `user_properties.portal` baseado no path
+
+---
+
+## MCP Client Setup (Desenvolvimento)
+
+Servidores MCP configurados no `.claude.json` do dev (Claude Code) para assistência de desenvolvimento e operação:
+
+| MCP | Tipo | Auth | Uso |
+|-----|------|------|-----|
+| **lumied** | HTTP | Bearer token (staff_login) | Tools internas do Lumied — tickets, KPIs, alunos, compliance, SQL query |
+| **supabase** | HTTP | OAuth via `/mcp` | Gerenciar projetos Supabase, SQL, migrations, logs |
+| **vercel** | HTTP | OAuth via `/mcp` | Deploys, domínios, env vars, logs |
+| **github** | HTTP | Bearer (PAT via env `GITHUB_PERSONAL_ACCESS_TOKEN`) | Repos, issues, PRs, workflows, releases |
+| **meta** | stdio | Env vars (`INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`, `META_APP_ID`, `META_APP_SECRET`) | Instagram Graph API + Threads — 60 tools (publish, comments, insights, DM, hashtag) |
+
+### Gerar token do Lumied MCP
+```bash
+# Via staff_login (requer lumied_staff row + senha)
+curl -X POST https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/admin \
+  -H "Content-Type: application/json" \
+  -H "apikey: <ANON_KEY>" \
+  -d '{"action":"staff_login","email":"ivyson@gmail.com","senha":"<SENHA>"}'
+# Retorna { token, nome, cargo } — inserir token como Bearer em .claude.json
+```
+
+Token inserido como `headers.Authorization: "Bearer <token>"` no bloco `mcpServers.lumied`. Expira em 7 dias.
+
+### Lista de tools por scope (Lumied MCP)
+- **Staff**: tickets_list_open, ticket_get/respond/close, escolas_list, escola_status, sql_query (read-only), sentry_recent_errors, staff_audit_log
+- **Gerente** (herdado em staff): kpis_resumo_dia, buscar_aluno, analise_inadimplencia, alunos_frequencia_critica, leads_parados, redigir_comunicado, analisar_turma, modulos_ativos
+- **Compliance**: compliance_score, analisar_ponto_mes, certificacoes_vencendo, gerar_quiz_politica, alertas_compliance
+- **Dev** (se `MCP_DEV_KEY` env): list_migrations, describe_table, health_check, invoke_edge_function, get_system_info
 
 ---
 
@@ -1262,3 +1366,10 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 | `211` | alunos: colunas `atividades_ids`, `turmas_selecionadas`, `almoco_dias` |
 | `212` | impressoes: coluna `num_paginas` (integer, default 1) para contagem de folhas |
 | `213` | atividades: `valor_repasse_aluno` + tabela `atividades_contas_receber` |
+| `214` | RBAC: papel `impressao` com acesso só ao módulo de impressões (INSERT em permissoes_papel) |
+| `215` | `acesso_dispositivos`: colunas `api_login`/`api_password` (substitui admin/admin hardcoded) |
+| `216` | RPCs atômicos `biblioteca_emprestar` / `biblioteca_devolver` (race-free loan) |
+| `217` | RPC `gerentes_safe_delete` (LOCK TABLE + count check em uma transação) |
+| `218` | Tabela `rate_limits` + RPC `rate_limit_check` (bucket windowing) + `rate_limits_cleanup()` |
+| `219` | `escola_id` UUID REFERENCES escolas(id) em 23 tabelas tenant (compliance_*, rh_ponto/ferias/holerites, cantina_*, biblioteca_emprestimos/reservas, transporte_alunos/rastreio/notificacoes). Idempotent + backfill via parent FK + index |
+| `220` | pg_cron `rate-limits-cleanup-hourly` (chama `rate_limits_cleanup()` no minuto 0) |
