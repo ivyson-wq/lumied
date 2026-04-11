@@ -10,3 +10,4 @@ package-lock.json
 .env.*.local
 supabase/.temp/
 .vercel
+test-results/
