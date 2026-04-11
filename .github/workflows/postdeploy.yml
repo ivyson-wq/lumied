@@ -1,0 +1,72 @@
+name: Post-deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      rotate_staff_password:
+        description: "Rotacionar senha do staff (true/false)"
+        type: boolean
+        default: false
+      staff_new_password:
+        description: "Nova senha do staff (mín 12 chars — deixe vazio se rotate=false)"
+        type: string
+        default: ""
+      backfill_escola_id:
+        description: "Backfill escola_id em tabelas tenant (true/false)"
+        type: boolean
+        default: false
+      skip_supabase_secrets:
+        description: "Pular CLAUDE_TRIGGER_TOKEN / CRON_INTERNAL_KEY"
+        type: boolean
+        default: false
+      skip_cloudflare:
+        description: "Pular Cloudflare monitor ADMIN_TOKEN"
+        type: boolean
+        default: false
+
+env:
+  SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
+
+jobs:
+  postdeploy:
+    name: Run post-deploy automation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate inputs
+        run: |
+          if [ "${{ inputs.rotate_staff_password }}" = "true" ]; then
+            if [ -z "${{ inputs.staff_new_password }}" ]; then
+              echo "::error::rotate_staff_password=true requires staff_new_password"
+              exit 1
+            fi
+          fi
+
+      - name: Run post-deploy script
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ env.SUPABASE_PROJECT_REF }}
+          STAFF_EMAIL: ivyson@gmail.com
+          STAFF_NEW_PASSWORD: ${{ inputs.rotate_staff_password && inputs.staff_new_password || '' }}
+          BACKFILL_ESCOLA_ID: ${{ inputs.backfill_escola_id }}
+          SKIP_SUPABASE_SECRETS: ${{ inputs.skip_supabase_secrets }}
+          SKIP_CLOUDFLARE: ${{ inputs.skip_cloudflare }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/postdeploy.mjs
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Post-deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Rotate password: \`${{ inputs.rotate_staff_password }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Backfill escola_id: \`${{ inputs.backfill_escola_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Skip Supabase secrets: \`${{ inputs.skip_supabase_secrets }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Skip Cloudflare: \`${{ inputs.skip_cloudflare }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "If staff password was rotated, the new Lumied MCP token is in the 'Run post-deploy script' step log as \`LUMIED_MCP_TOKEN=...\` (masked in logs, visible only to repo admins)." >> $GITHUB_STEP_SUMMARY
