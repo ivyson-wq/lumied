@@ -38,6 +38,10 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Mask staff password in logs
+        if: inputs.rotate_staff_password == true && inputs.staff_new_password != ''
+        run: echo "::add-mask::${{ inputs.staff_new_password }}"
+
       - name: Validate inputs
         run: |
           if [ "${{ inputs.rotate_staff_password }}" = "true" ]; then
