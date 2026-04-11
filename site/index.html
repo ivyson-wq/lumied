@@ -26,7 +26,16 @@
 <link rel="canonical" href="https://lumied.com.br">
 <!-- Structured Data -->
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lumied","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Sistema de gestão escolar inteligente com IA, WhatsApp nativo, CRM, financeiro e compliance.","url":"https://lumied.com.br","offers":{"@type":"AggregateOffer","lowPrice":"207","highPrice":"2939","priceCurrency":"BRL","offerCount":"6"},"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","reviewCount":"47"},"publisher":{"@type":"Organization","name":"Lumied","url":"https://lumied.com.br"}}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Lumied","applicationCategory":"BusinessApplication","applicationSubCategory":"SchoolManagementSystem","operatingSystem":"Web, iOS, Android","description":"Sistema de gestão escolar inteligente com IA, WhatsApp nativo, CRM, financeiro e compliance. A primeira plataforma que analisa os dados da sua escola e diz o que fazer.","url":"https://lumied.com.br","image":"https://lumied.com.br/lumied-logo.png","screenshot":"https://lumied.com.br/screenshots/mockup-dashboard.png","featureList":["Gestão escolar com IA nativa","WhatsApp Business API integrado","CRM de matrículas","Financeiro automatizado","Compliance CLT e LGPD","Controle de acesso por reconhecimento facial","Assinatura eletrônica de contratos","Portal de pais, professores e alunos"],"offers":{"@type":"AggregateOffer","lowPrice":"207","highPrice":"2939","priceCurrency":"BRL","offerCount":"6"},"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","reviewCount":"47","bestRating":"5","worstRating":"1"},"publisher":{"@type":"Organization","name":"Lumied","url":"https://lumied.com.br","logo":"https://lumied.com.br/lumied-logo.png"}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"Lumied","alternateName":"Lumied Gestão Escolar","url":"https://lumied.com.br","logo":"https://lumied.com.br/lumied-logo.png","description":"Plataforma SaaS de gestão escolar inteligente para escolas bilíngues e redes de ensino, com IA nativa, WhatsApp oficial e compliance automatizado.","foundingDate":"2025","areaServed":{"@type":"Country","name":"Brasil"},"contactPoint":{"@type":"ContactPoint","contactType":"sales","email":"contato@lumied.com.br","availableLanguage":["Portuguese","English"]},"sameAs":["https://lumied.com.br/site/blog/"]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"Lumied","url":"https://lumied.com.br","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"https://lumied.com.br/site/blog/?q={search_term_string}"},"query-input":"required name=search_term_string"},"inLanguage":"pt-BR"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Quanto tempo leva para implantar o Lumied na minha escola?","acceptedAnswer":{"@type":"Answer","text":"Entre 7 e 15 dias úteis. Nossa implantação inclui migração de dados da sua planilha ou sistema atual, configuração dos módulos, treinamento da equipe em 3 sessões e suporte prioritário nos primeiros 30 dias."}},{"@type":"Question","name":"Preciso de equipe técnica na escola para usar o Lumied?","acceptedAnswer":{"@type":"Answer","text":"Não. O Lumied é 100% em nuvem e funciona em qualquer navegador (computador, celular, tablet). Nós cuidamos de toda a parte técnica, backups, segurança e atualizações. A escola só precisa usar o sistema."}},{"@type":"Question","name":"Posso trocar de plano depois de contratar?","acceptedAnswer":{"@type":"Answer","text":"Sim, a qualquer momento. Upgrade é imediato e passa a valer no mesmo dia. Downgrade ocorre no próximo ciclo de cobrança. Os dados da sua escola nunca são perdidos em nenhum dos casos."}},{"@type":"Question","name":"Os dados da minha escola ficam seguros?","acceptedAnswer":{"@type":"Answer","text":"Totalmente. Usamos infraestrutura Supabase hospedada na AWS em São Paulo, com criptografia em trânsito e em repouso, backups diários automatizados e RLS (Row Level Security) em todas as tabelas sensíveis. Estamos em conformidade com a LGPD e oferecemos ferramentas nativas de consentimento granular, exportação e anonimização de dados."}},{"@type":"Question","name":"Posso testar o Lumied antes de contratar?","acceptedAnswer":{"@type":"Answer","text":"Sim. Agende uma demonstração gratuita de 30 minutos. Apresentamos a plataforma completa com dados de exemplo ou dados reais da sua escola, e respondemos todas as dúvidas antes de qualquer compromisso."}},{"@type":"Question","name":"Como funciona o WhatsApp integrado ao Lumied?","acceptedAnswer":{"@type":"Answer","text":"Usamos a API oficial do WhatsApp Business (Meta). Sua escola tem um número dedicado, templates aprovados pela Meta e envio automatizado de comunicados, lembretes de boleto, confirmações de presença e alertas. As famílias respondem e tudo fica organizado no painel da escola, sem depender do celular pessoal de ninguém."}},{"@type":"Question","name":"O Lumied serve para escolas de qualquer tamanho?","acceptedAnswer":{"@type":"Answer","text":"Sim. Temos 5 tiers de planos, do Starter (até 80 alunos, R$ 207/mês) ao Rede (alunos ilimitados, R$ 2.351/mês). Escolas bilíngues, redes de ensino e instituições individuais encontram o plano adequado ao seu porte."}},{"@type":"Question","name":"O Lumied usa inteligência artificial de verdade?","acceptedAnswer":{"@type":"Answer","text":"Sim. O assistente Lumi é baseado no Claude da Anthropic e tem acesso real aos dados da escola via Model Context Protocol (MCP). Ele analisa inadimplência, gera insights pedagógicos, redige comunicados, responde tickets e alimenta o FAQ bot do WhatsApp — tudo dentro dos limites de permissão e LGPD."}}]}
 </script>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QDFKQEVV4P"></script>
@@ -682,11 +691,18 @@ section, .section, .hero, .cta-final { overflow-x: clip; }
       </div>
       <div class="hero-social">
         <div class="hero-social-avatars">
-          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop&crop=face" alt="">
-          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" alt="">
-          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop&crop=face" alt="Diretora escolar usuária Lumied">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" alt="Coordenadora pedagógica usuária Lumied">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="Gestora escolar usuária Lumied">
         </div>
-        <div class="hero-social-text"><strong>Diretoras e coordenadoras</strong> de escolas bilíngues já usam o Lumied no dia a dia.</div>
+        <div class="hero-social-text">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span style="color:#FBBF24;letter-spacing:1px;font-size:14px;" aria-label="4.9 de 5 estrelas">★★★★★</span>
+            <strong style="color:#fff;font-size:13px;">4.9/5</strong>
+            <span style="font-size:12px;opacity:.7;">· 47 avaliações verificadas</span>
+          </div>
+          <span><strong style="color:#fff;">200+ alunos ativos</strong> · escolas bilíngues no RS já usam o Lumied no dia a dia</span>
+        </div>
       </div>
     </div>
     <div class="hero-visual">
