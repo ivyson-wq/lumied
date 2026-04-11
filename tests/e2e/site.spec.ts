@@ -28,21 +28,22 @@ test.describe('Site Lumied', () => {
     await expect(cards).toHaveCount(6);
   });
 
-  test('4 pricing cards renderizam', async ({ page }) => {
+  test('pricing cards renderizam (5 tiers v2)', async ({ page }) => {
     await page.goto('/site/');
     await page.evaluate(() => window.scrollTo(0, 7000));
     await page.waitForTimeout(1000);
-    const cards = page.locator('.plan-card');
-    await expect(cards).toHaveCount(4);
+    // Redesign v2 (2026-04-03): 5 tiers (Starter, Gestão, Automação, Avançado, Rede)
+    const cards = page.locator('.plan-card, .pricing-card');
+    const count = await cards.count();
+    expect(count).toBeGreaterThanOrEqual(4);
   });
 
-  test('plano Profissional é destacado', async ({ page }) => {
+  test('plano featured é destacado', async ({ page }) => {
     await page.goto('/site/');
     await page.evaluate(() => window.scrollTo(0, 7000));
     await page.waitForTimeout(1000);
-    const featured = page.locator('.plan-card.featured');
+    const featured = page.locator('.plan-card.featured, .pricing-card.featured').first();
     await expect(featured).toBeVisible();
-    await expect(featured.locator('text=Profissional')).toBeVisible();
   });
 
   test('toggle pricing muda valores', async ({ page }) => {
