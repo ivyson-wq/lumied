@@ -36,53 +36,70 @@ async function verifyWebhookSignature(req: Request, rawBody: string, appSecret?:
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
-    const url = new URL(req.url);
+    try {
+      const url = new URL(req.url);
 
-    // Health check
-    if (url.pathname === '/health') {
-      return new Response(JSON.stringify({ status: 'ok', service: 'whatsapp-gateway', ts: new Date().toISOString() }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verificação de webhook (GET)
-    if (req.method === 'GET' && url.pathname === '/webhook') {
-      const mode = url.searchParams.get('hub.mode');
-      const token = url.searchParams.get('hub.verify_token');
-      const challenge = url.searchParams.get('hub.challenge');
-      if (mode === 'subscribe' && token === env.WHATSAPP_VERIFY_TOKEN) {
-        return new Response(challenge, { status: 200 });
+      // Health check
+      if (url.pathname === '/health') {
+        return new Response(JSON.stringify({ status: 'ok', service: 'whatsapp-gateway', ts: new Date().toISOString() }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
-      return new Response('Forbidden', { status: 403 });
-    }
 
-    // Webhook de mensagens (POST)
-    if (req.method === 'POST' && url.pathname === '/webhook') {
-      // Verify Meta signature FIRST — fails closed if META_APP_SECRET is missing.
-      const rawBody = await req.text();
-      if (!(await verifyWebhookSignature(req, rawBody, env.META_APP_SECRET))) {
-        console.error('[WEBHOOK] Invalid or missing signature — rejecting');
+      // Verificação de webhook (GET) — timing-safe verify token comparison.
+      if (req.method === 'GET' && url.pathname === '/webhook') {
+        const mode = url.searchParams.get('hub.mode');
+        const token = url.searchParams.get('hub.verify_token');
+        const challenge = url.searchParams.get('hub.challenge');
+        const expected = env.WHATSAPP_VERIFY_TOKEN;
+        if (
+          mode === 'subscribe' &&
+          expected &&
+          token &&
+          token.length === expected.length &&
+          (() => { let d = 0; for (let i = 0; i < token.length; i++) d |= token.charCodeAt(i) ^ expected.charCodeAt(i); return d === 0; })()
+        ) {
+          return new Response(challenge ?? '', { status: 200 });
+        }
         return new Response('Forbidden', { status: 403 });
       }
-      // Re-create request with parsed body for handler
-      const newReq = new Request(req.url, {
-        method: req.method,
-        headers: req.headers,
-        body: rawBody,
-      });
-      return handleWebhook(newReq, env);
-    }
 
-    // Envio de mensagens aprovadas (POST — chamado pelo app)
-    if (req.method === 'POST' && url.pathname === '/send') {
-      return handleSend(req, env);
-    }
+      // Webhook de mensagens (POST)
+      if (req.method === 'POST' && url.pathname === '/webhook') {
+        // Verify Meta signature FIRST — fails closed if META_APP_SECRET is missing.
+        const rawBody = await req.text();
+        if (!(await verifyWebhookSignature(req, rawBody, env.META_APP_SECRET))) {
+          console.error('[WEBHOOK] Invalid or missing signature — rejecting');
+          return new Response('Forbidden', { status: 403 });
+        }
+        // Re-create request with parsed body for handler
+        const newReq = new Request(req.url, {
+          method: req.method,
+          headers: req.headers,
+          body: rawBody,
+        });
+        return handleWebhook(newReq, env);
+      }
 
-    return new Response('Not Found', { status: 404 });
+      // Envio de mensagens aprovadas (POST — chamado pelo app)
+      if (req.method === 'POST' && url.pathname === '/send') {
+        return handleSend(req, env);
+      }
+
+      return new Response('Not Found', { status: 404 });
+    } catch (err) {
+      console.error('[FETCH] Unhandled error:', (err as Error).message);
+      return new Response('Internal Server Error', { status: 500 });
+    }
   },
 
-  // Cron: relatório semanal (sábados 9h)
-  async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
-    await handleCron(env);
+  // Cron: relatório semanal (sábados 9h). Wrap in try/catch so a single
+  // unhandled error does not leave dangling promises / crash the cron.
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      handleCron(env).catch((err) => {
+        console.error('[CRON] Unhandled error:', (err as Error).message);
+      })
+    );
   },
 };

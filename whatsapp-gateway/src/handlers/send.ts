@@ -2,18 +2,53 @@ import type { Env } from '../types';
 import { getSupabase } from '../services/supabase';
 import { enviarTextoLivre, enviarMensagemComBotao, enviarTemplate } from '../services/whatsapp';
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// UUID v4 format — tightens input validation before hitting Postgres.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Chamado pelo app quando professora/coordenação quer enviar mensagem aprovada
 export async function handleSend(req: Request, env: Env): Promise<Response> {
-  // Autenticação interna
-  const authHeader = req.headers.get('Authorization');
-  if (authHeader !== `Bearer ${env.APP_INTERNAL_SECRET}`) {
+  // Fail closed: if the shared secret is not configured, refuse all requests.
+  if (!env.APP_INTERNAL_SECRET) {
+    console.error('[SEND] APP_INTERNAL_SECRET not configured');
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const body = await req.json() as any;
-  const { mensagem_id, escola_id } = body;
-  if (!mensagem_id) return new Response(JSON.stringify({ error: 'mensagem_id obrigatório' }), { status: 400 });
+  // Autenticação interna — timing-safe comparison.
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const provided = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!provided || !timingSafeEqual(provided, env.APP_INTERNAL_SECRET)) {
+    return new Response('Unauthorized', { status: 401 });
+  }
 
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { mensagem_id, escola_id } = body ?? {};
+  if (typeof mensagem_id !== 'string' || !UUID_RE.test(mensagem_id)) {
+    return new Response(JSON.stringify({ error: 'mensagem_id inválido' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  if (escola_id !== undefined && (typeof escola_id !== 'string' || !UUID_RE.test(escola_id))) {
+    return new Response(JSON.stringify({ error: 'escola_id inválido' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
   const db = getSupabase(env);
 
   // Buscar mensagem
@@ -88,4 +123,11 @@ export async function handleSend(req: Request, env: Env): Promise<Response> {
   return new Response(JSON.stringify({ enviados, falhas, total: familias.length }), {
     headers: { 'Content-Type': 'application/json' },
   });
+  } catch (err) {
+    // Never leak internals to the caller.
+    console.error('[SEND] Unhandled error:', (err as Error).message);
+    return new Response(JSON.stringify({ error: 'internal error' }), {
+      status: 500, headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }

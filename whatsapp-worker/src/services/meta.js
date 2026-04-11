@@ -2,6 +2,18 @@
 //  Meta Cloud API — WhatsApp Business
 // ═══════════════════════════════════════════════════════
 
+// Fetch wrapper with a hard timeout — a stuck Meta response must not
+// hang the whole worker invocation until the CPU limit fires.
+async function fetchWithTimeout(url, init, ms = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export class MetaAPI {
   constructor(env) {
     this.token = env.META_ACCESS_TOKEN;
@@ -79,18 +91,33 @@ export class MetaAPI {
   }
 
   async _send(body) {
-    const resp = await fetch(`${this.baseUrl}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    const data = await resp.json();
-    if (!resp.ok) {
-      console.error('[META] Error:', JSON.stringify(data));
+    // Fail closed if the token is not configured — otherwise we'd send
+    // `Authorization: Bearer undefined` to Meta.
+    if (!this.token || !this.phoneId) {
+      console.error('[META] Missing META_ACCESS_TOKEN or META_PHONE_NUMBER_ID');
+      return null;
     }
-    return data;
+    try {
+      const resp = await fetchWithTimeout(`${this.baseUrl}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      }, 10000);
+      let data = null;
+      try { data = await resp.json(); } catch { /* ignore */ }
+      if (!resp.ok) {
+        // Do NOT dump the full body — templates and Authorization are not
+        // there (we strip via JSON.stringify of `data`), but error payloads
+        // from Meta sometimes echo the original request.
+        console.error('[META] Error status:', resp.status);
+      }
+      return data;
+    } catch (err) {
+      console.error('[META] Fetch error:', err?.message || 'unknown');
+      return null;
+    }
   }
 }

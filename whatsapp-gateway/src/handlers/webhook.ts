@@ -10,7 +10,28 @@ import { processarDocumento, processarConfirmacaoDocumento } from '../features/d
 const KEYWORDS_ESTOU_A_CAMINHO = ['A CAMINHO', 'ACAMINHO', 'BUSCA', 'BUSCANDO', 'ESTOU INDO', 'JA ESTOU'];
 
 export async function handleWebhook(req: Request, env: Env): Promise<Response> {
-  const body = await req.json() as WhatsAppWebhookPayload;
+  // Meta requires us to return 200 even on errors — otherwise Meta retries
+  // the same payload up to 24h and may disable the webhook after enough
+  // failures. We therefore wrap everything in a top-level try/catch and log
+  // to console; the request is always acknowledged.
+  let body: WhatsAppWebhookPayload;
+  try {
+    body = await req.json() as WhatsAppWebhookPayload;
+  } catch (err) {
+    console.error('[WEBHOOK] Invalid JSON body:', (err as Error).message);
+    return new Response('OK', { status: 200 });
+  }
+
+  try {
+    return await processWebhook(body, env);
+  } catch (err) {
+    console.error('[WEBHOOK] Unhandled error:', (err as Error).message);
+    // Always return 200 so Meta does not retry indefinitely.
+    return new Response('OK', { status: 200 });
+  }
+}
+
+async function processWebhook(body: WhatsAppWebhookPayload, env: Env): Promise<Response> {
   const db = getSupabase(env);
 
   for (const entry of body.entry ?? []) {
@@ -20,6 +41,19 @@ export async function handleWebhook(req: Request, env: Env): Promise<Response> {
       const phoneId = value.metadata?.phone_number_id;
 
       for (const msg of value.messages ?? []) {
+        // Per-message try/catch — one poisoned payload must not break the whole batch.
+        try {
+        // Basic shape validation. Meta sometimes delivers partial payloads during
+        // outages; we'd rather skip than crash.
+        if (!msg || typeof msg.from !== 'string' || typeof msg.id !== 'string') {
+          console.warn('[WEBHOOK] Dropping malformed message (missing from/id)');
+          continue;
+        }
+        // Minimal E.164 sanity: digits only, 10–15 chars. Meta always sends digits.
+        if (!/^[0-9]{10,15}$/.test(msg.from)) {
+          console.warn('[WEBHOOK] Dropping message with invalid phone shape');
+          continue;
+        }
         const waId = msg.from;
 
         // Marcar como lida
@@ -102,13 +136,14 @@ export async function handleWebhook(req: Request, env: Env): Promise<Response> {
         // 4. Classificar e rotear
 
         // Opt-in inicial
-        if (msg.type === 'text' && ['OLÁ', 'OLA', 'OI', 'COMEÇAR', 'COMECAR'].includes(msg.text!.body.trim().toUpperCase())) {
+        const textBody = typeof msg.text?.body === 'string' ? msg.text.body : '';
+        if (msg.type === 'text' && ['OLÁ', 'OLA', 'OI', 'COMEÇAR', 'COMECAR'].includes(textBody.trim().toUpperCase())) {
           if (!familia.opt_in) {
             await db.from('wa_familias').update({ opt_in: true, opt_in_at: new Date().toISOString() }).eq('id', familia.id).execute();
           }
           await enviarTextoLivre(env, phoneId, waId,
             `Olá, ${familia.nome}! 👋 Bem-vindo ao canal de comunicação da Maple Bear.\n\nVocê receberá comunicados, avisos de eventos e pode tirar dúvidas por aqui.\n\nAluno(a): *${familia.aluno_nome || '—'}*\n\nPara qualquer dúvida, é só digitar! 🍁`);
-          await db.from('wa_respostas').insert({ familia_id: familia.id, tipo: 'opt_in', conteudo: msg.text!.body, whatsapp_msg_id: msg.id }).select();
+          await db.from('wa_respostas').insert({ familia_id: familia.id, tipo: 'opt_in', conteudo: textBody, whatsapp_msg_id: msg.id }).select();
           continue;
         }
 
@@ -129,11 +164,11 @@ export async function handleWebhook(req: Request, env: Env): Promise<Response> {
         }
 
         // Estou a caminho (keyword)
-        if (msg.type === 'text') {
-          const texto = msg.text!.body.trim().toUpperCase();
+        if (msg.type === 'text' && textBody) {
+          const texto = textBody.trim().toUpperCase();
           if (KEYWORDS_ESTOU_A_CAMINHO.some(k => texto.includes(k))) {
             await ativarEstouACaminho(env, phoneId, familia as any);
-            await db.from('wa_respostas').insert({ familia_id: familia.id, tipo: 'estou_a_caminho', conteudo: msg.text!.body, whatsapp_msg_id: msg.id }).select();
+            await db.from('wa_respostas').insert({ familia_id: familia.id, tipo: 'estou_a_caminho', conteudo: textBody, whatsapp_msg_id: msg.id }).select();
             continue;
           }
         }
@@ -153,6 +188,11 @@ export async function handleWebhook(req: Request, env: Env): Promise<Response> {
           conteudo: msg.text?.body || `[${msg.type}]`,
           whatsapp_msg_id: msg.id,
         }).select();
+        } catch (msgErr) {
+          // Don't let one bad message poison the whole webhook delivery.
+          console.error('[WEBHOOK] Error processing message:', (msgErr as Error).message);
+          continue;
+        }
       }
 
       // Status updates (leitura pela família)

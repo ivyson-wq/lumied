@@ -36,9 +36,19 @@ async function verifyWebhookSignature(request, body, appSecret) {
   return diff === 0;
 }
 
+// Timing-safe string comparison — avoids leaking tokens via response timing.
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 export default {
   // ── HTTP Handler (Webhook da Meta) ──
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    try {
     const url = new URL(request.url);
 
     // Health check
@@ -48,16 +58,16 @@ export default {
       });
     }
 
-    // Webhook verification (GET)
+    // Webhook verification (GET) — timing-safe token comparison.
     if (request.method === 'GET' && url.pathname === '/webhook') {
       const mode = url.searchParams.get('hub.mode');
-      const token = url.searchParams.get('hub.verify_token');
+      const token = url.searchParams.get('hub.verify_token') || '';
       const challenge = url.searchParams.get('hub.challenge');
 
       const expectedToken = env.WHATSAPP_VERIFY_TOKEN || env.META_VERIFY_TOKEN;
-      if (mode === 'subscribe' && expectedToken && token === expectedToken) {
+      if (mode === 'subscribe' && expectedToken && timingSafeEqual(token, expectedToken)) {
         console.log('[WEBHOOK] Verification successful');
-        return new Response(challenge, { status: 200 });
+        return new Response(challenge ?? '', { status: 200 });
       }
       return new Response('Forbidden', { status: 403 });
     }
@@ -120,17 +130,26 @@ export default {
     }
 
     return new Response('Not Found', { status: 404 });
+    } catch (err) {
+      // Catch-all to make sure we never leak stack traces / internals to callers.
+      console.error('[FETCH] Unhandled error:', err?.message || err);
+      return new Response('Internal Server Error', { status: 500 });
+    }
   },
 
   // ── Cron Handler (Push Messages a cada 30 min) ──
   async scheduled(event, env, ctx) {
-    const services = initServices(env);
-    try {
-      const result = await handlePushMessages(services);
-      console.log(`[CRON] Push messages sent: ${result.sent}`);
-    } catch (err) {
-      console.error('[CRON] Error:', err);
-    }
+    // Use waitUntil so the cron run is properly tied to the execution context;
+    // otherwise a pending fetch may get killed when scheduled returns.
+    ctx.waitUntil((async () => {
+      const services = initServices(env);
+      try {
+        const result = await handlePushMessages(services);
+        console.log(`[CRON] Push messages sent: ${result?.sent ?? 0}`);
+      } catch (err) {
+        console.error('[CRON] Error:', err?.message || err);
+      }
+    })());
   },
 };
 

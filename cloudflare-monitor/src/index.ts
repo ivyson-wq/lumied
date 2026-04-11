@@ -17,6 +17,28 @@ interface Env {
   ANTHROPIC_API_KEY: string;
   RESEND_API_KEY: string;
   SUPABASE_ANON_KEY: string;
+  // Secret required to manually trigger `/run` and view `/status`.
+  // Set via: wrangler secret put ADMIN_TOKEN
+  ADMIN_TOKEN?: string;
+}
+
+// Timing-safe string comparison to avoid leaking secrets via response timing.
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function isAuthorized(request: Request, env: Env): boolean {
+  if (!env.ADMIN_TOKEN) return false; // fail closed if token not configured
+  const header = request.headers.get("authorization") ?? "";
+  const bearer = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const url = new URL(request.url);
+  const query = url.searchParams.get("token") ?? "";
+  const provided = bearer || query;
+  if (!provided) return false;
+  return timingSafeEqual(provided, env.ADMIN_TOKEN);
 }
 
 type AlertLevel = "ok" | "warning" | "critical";
@@ -651,30 +673,62 @@ function buildStatusHtml(data: DashboardData | null): string {
 async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
 
+  // Public liveness endpoint (no secrets, no data)
+  if (url.pathname === "/health") {
+    return new Response(JSON.stringify({ status: "ok", ts: now() }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // All dashboards/ops endpoints require ADMIN_TOKEN.
+  // Fails closed: if ADMIN_TOKEN is not set, every endpoint below returns 401.
+  if (
+    url.pathname === "/status/html" ||
+    url.pathname === "/status" ||
+    url.pathname === "/run" ||
+    url.pathname === "/"
+  ) {
+    if (!isAuthorized(request, env)) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", "WWW-Authenticate": "Bearer" } }
+      );
+    }
+  }
+
   if (url.pathname === "/status/html") {
     const data = await getDashboard(env.MONITOR_KV);
     return new Response(buildStatusHtml(data), {
-      headers: { "Content-Type": "text/html;charset=utf-8" },
+      headers: {
+        "Content-Type": "text/html;charset=utf-8",
+        // Do not leak dashboard to search engines / caches.
+        "Cache-Control": "no-store, private",
+        "X-Robots-Tag": "noindex, nofollow",
+      },
     });
   }
 
   if (url.pathname === "/status") {
     const data = await getDashboard(env.MONITOR_KV);
     return new Response(JSON.stringify(data ?? { error: "no data yet" }, null, 2), {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store, private" },
     });
   }
 
   if (url.pathname === "/run") {
+    // Only POST is allowed to trigger expensive checks — avoids CSRF/link-prefetch abuse.
+    if (request.method !== "POST") {
+      return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+    }
     await handleCron(env);
     const data = await getDashboard(env.MONITOR_KV);
     return new Response(JSON.stringify(data, null, 2), {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store, private" },
     });
   }
 
-  // Fallback — redirect to HTML dashboard
-  return Response.redirect(`${url.origin}/status/html`, 302);
+  // Unknown path — do NOT redirect (would leak existence of dashboard).
+  return new Response("Not Found", { status: 404 });
 }
 
 // ---------------------------------------------------------------------------

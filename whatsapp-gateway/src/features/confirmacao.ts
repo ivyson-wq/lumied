@@ -4,11 +4,16 @@ import { enviarTextoLivre } from '../services/whatsapp';
 export async function processarConfirmacao(
   db: any, env: Env, phoneId: string, familia: Familia, msg: any
 ): Promise<void> {
-  const buttonId = msg.interactive.button_reply.id;
+  const buttonId: string = msg?.interactive?.button_reply?.id ?? '';
   // formato: "evento_<evento_id>_confirmado" ou "evento_<evento_id>_recusado"
-  const partes = buttonId.split('_');
-  const eventoId = partes[1];
-  const resposta = partes[2]; // confirmado | recusado
+  // Strict parse to avoid garbage reaching the DB.
+  const m = /^evento_([0-9a-f-]{1,64})_(confirmado|recusado)$/i.exec(buttonId);
+  if (!m) {
+    console.warn('[CONFIRMACAO] Invalid buttonId:', buttonId);
+    return;
+  }
+  const eventoId = m[1];
+  const resposta = m[2]; // confirmado | recusado
 
   await db.from('wa_confirmacoes_evento').upsert({
     evento_id: eventoId,

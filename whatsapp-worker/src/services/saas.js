@@ -2,6 +2,16 @@
 //  SaaS Escolar API Client
 // ═══════════════════════════════════════════════════════
 
+async function fetchWithTimeout(url, init, ms = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export class SaasAPI {
   constructor(env) {
     this.url = env.SAAS_API_URL;
@@ -9,29 +19,31 @@ export class SaasAPI {
   }
 
   async _get(path) {
+    if (!this.url || !this.key) return null;
     try {
-      const resp = await fetch(`${this.url}${path}`, {
+      const resp = await fetchWithTimeout(`${this.url}${path}`, {
         headers: { 'apikey': this.key, 'Authorization': `Bearer ${this.key}`, 'Content-Type': 'application/json' },
-      });
+      }, 10000);
       if (!resp.ok) return null;
       return resp.json();
     } catch (e) {
-      console.error('[SAAS] Error:', e.message);
+      console.error('[SAAS] Error:', e?.message || 'unknown');
       return null;
     }
   }
 
   async _post(path, body) {
+    if (!this.url || !this.key) return null;
     try {
-      const resp = await fetch(`${this.url}${path}`, {
+      const resp = await fetchWithTimeout(`${this.url}${path}`, {
         method: 'POST',
         headers: { 'apikey': this.key, 'Authorization': `Bearer ${this.key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      });
+      }, 10000);
       if (!resp.ok) return null;
       return resp.json();
     } catch (e) {
-      console.error('[SAAS] Error:', e.message);
+      console.error('[SAAS] Error:', e?.message || 'unknown');
       return null;
     }
   }
