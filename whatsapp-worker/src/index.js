@@ -11,20 +11,29 @@ import { ChatwootAPI } from './services/chatwoot.js';
 
 /**
  * Verify Meta webhook signature (X-Hub-Signature-256)
+ * HMAC-SHA256(META_APP_SECRET, raw_body) — compared in constant time.
  * @see https://developers.facebook.com/docs/graph-api/webhooks/getting-started#verification-requests
  */
 async function verifyWebhookSignature(request, body, appSecret) {
-  if (!appSecret) return true; // Skip if not configured yet
+  // Fail closed: if the secret is not configured, we cannot verify — reject.
+  if (!appSecret) {
+    console.error('[WEBHOOK] META_APP_SECRET not configured — rejecting request');
+    return false;
+  }
   const signature = request.headers.get('x-hub-signature-256');
-  if (!signature) return false;
-  const [, hash] = signature.split('=');
-  if (!hash) return false;
+  if (!signature || !signature.startsWith('sha256=')) return false;
   const key = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(appSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
-  const computed = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return computed === hash;
+  const expected = 'sha256=' + Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+  // Timing-safe comparison
+  if (signature.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < signature.length; i++) {
+    diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 export default {
@@ -45,7 +54,8 @@ export default {
       const token = url.searchParams.get('hub.verify_token');
       const challenge = url.searchParams.get('hub.challenge');
 
-      if (mode === 'subscribe' && token === env.META_VERIFY_TOKEN) {
+      const expectedToken = env.WHATSAPP_VERIFY_TOKEN || env.META_VERIFY_TOKEN;
+      if (mode === 'subscribe' && expectedToken && token === expectedToken) {
         console.log('[WEBHOOK] Verification successful');
         return new Response(challenge, { status: 200 });
       }
@@ -57,10 +67,11 @@ export default {
       try {
         const rawBody = await request.text();
 
-        // Verify Meta webhook signature
+        // Verify Meta webhook signature (HMAC-SHA256 over raw body)
+        // MUST run before any other processing — fails closed if secret missing.
         if (!(await verifyWebhookSignature(request, rawBody, env.META_APP_SECRET))) {
-          console.error('[WEBHOOK] Invalid signature — rejecting request');
-          return new Response('Invalid signature', { status: 401 });
+          console.error('[WEBHOOK] Invalid or missing signature — rejecting request');
+          return new Response('Forbidden', { status: 403 });
         }
 
         const body = JSON.parse(rawBody);

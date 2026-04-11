@@ -3,15 +3,16 @@
 //  Controle de hora extra, importação de ponto, alertas
 //
 //  Tenant scoping (escola_id):
-//  Atenção: nenhuma das tabelas compliance_* tem coluna escola_id
-//  atualmente. A autenticação já popula ctx.escola_id (via authGerenteOrSecretaria
-//  compartilhado), mas os filtros .eq("escola_id", ...) ficam pendentes até
-//  uma migration futura adicionar a coluna nas tabelas:
-//    - compliance_horarios, compliance_ponto_registros, compliance_ocorrencias
-//    - compliance_alertas, compliance_incidentes, compliance_certificacoes
-//    - compliance_treinamentos, compliance_inspecoes, compliance_politicas
-//    - compliance_calendario, compliance_ciencias, compliance_quizzes, etc.
-//  Até lá, o sistema continua single-tenant na prática para compliance.
+//  A migration 219 adicionou escola_id às seguintes tabelas:
+//    - compliance_horarios, compliance_ponto_registros, compliance_ponto_importacoes
+//    - compliance_ocorrencias, compliance_alertas, compliance_incidentes
+//    - compliance_certificacoes, compliance_inspecoes, compliance_politicas
+//    - compliance_calendario, compliance_banco_horas, compliance_feriados
+//    - compliance_config_ponto
+//  Todas as queries/inserts neste arquivo passam a usar ctx.escola_id
+//  (populado por authGerenteOrSecretaria). Tabelas ainda single-tenant:
+//  compliance_treinamentos, compliance_ciencias, compliance_quizzes —
+//  escoped via joins ou via política futura.
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -43,6 +44,7 @@ router.on("compliance_horarios_list", authGerenteOrSecretaria, feat, async (ctx)
   let q = ctx.sb
     .from("compliance_horarios")
     .select("*, professoras(id, nome, email)")
+    .eq("escola_id", ctx.escola_id!)
     .eq("ativo", true)
     .order("dia_semana");
   if (professora_id) q = q.eq("professora_id", professora_id);
@@ -58,7 +60,7 @@ router.on("compliance_horarios_upsert", authGerenteOrSecretaria, feat, async (ct
   const { data, error } = await ctx.sb
     .from("compliance_horarios")
     .upsert(
-      { professora_id, dia_semana, hora_entrada, hora_saida, tolerancia_minutos: tolerancia_minutos ?? 10 },
+      { escola_id: ctx.escola_id, professora_id, dia_semana, hora_entrada, hora_saida, tolerancia_minutos: tolerancia_minutos ?? 10 },
       { onConflict: "professora_id,dia_semana" }
     )
     .select()
@@ -73,6 +75,7 @@ router.on("compliance_horarios_bulk", authGerenteOrSecretaria, feat, async (ctx)
     throw new AppError("VALIDATION_FAILED", "professora_id e horarios[] obrigatórios.");
   }
   const rows = horarios.map((h: any) => ({
+    escola_id: ctx.escola_id,
     professora_id,
     dia_semana: h.dia_semana,
     hora_entrada: h.hora_entrada,
@@ -89,7 +92,7 @@ router.on("compliance_horarios_bulk", authGerenteOrSecretaria, feat, async (ctx)
 router.on("compliance_horarios_delete", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
-  const { error } = await ctx.sb.from("compliance_horarios").update({ ativo: false }).eq("id", id);
+  const { error } = await ctx.sb.from("compliance_horarios").update({ ativo: false }).eq("id", id).eq("escola_id", ctx.escola_id!);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -108,6 +111,7 @@ router.on("compliance_importar_ponto", authGerenteOrSecretaria, feat, async (ctx
   const { data: importacao, error: impErr } = await ctx.sb
     .from("compliance_ponto_importacoes")
     .insert({
+      escola_id: ctx.escola_id,
       nome_arquivo,
       tipo: "manual",
       total_registros: registros.length,
@@ -125,6 +129,7 @@ router.on("compliance_importar_ponto", authGerenteOrSecretaria, feat, async (ctx
     try {
       const horasTrabalhadas = calcularHoras(reg.hora_entrada, reg.hora_saida);
       const { error } = await ctx.sb.from("compliance_ponto_registros").insert({
+        escola_id: ctx.escola_id,
         importacao_id: importacao.id,
         professora_id: reg.professora_id,
         data: reg.data,
@@ -155,6 +160,7 @@ router.on("compliance_importacoes_list", authGerenteOrSecretaria, feat, async (c
   const { data } = await ctx.sb
     .from("compliance_ponto_importacoes")
     .select("*")
+    .eq("escola_id", ctx.escola_id!)
     .order("criado_em", { ascending: false })
     .limit(50);
   return successResponse(data ?? []);
@@ -166,7 +172,7 @@ router.on("compliance_importacoes_list", authGerenteOrSecretaria, feat, async (c
 
 router.on("compliance_verificar_ponto", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data_inicio, data_fim } = ctx.body as any;
-  const resultado = await verificarPonto(ctx.sb, data_inicio, data_fim);
+  const resultado = await verificarPonto(ctx.sb, data_inicio, data_fim, ctx.escola_id);
   return successResponse(resultado);
 });
 
@@ -186,11 +192,12 @@ router.on("compliance_verificar_ponto_auto", async (ctx) => {
     throw new AppError("AUTH_REQUIRED", "Endpoint restrito ao cron (service_role_key ou CRON_SECRET).");
   }
 
-  // Verifica os últimos 2 dias úteis
+  // Verifica os últimos 2 dias úteis. Cron roda para todas as escolas —
+  // quando chamado manualmente, usa ctx.escola_id se presente.
   const hoje = new Date();
   const dataFim = hoje.toISOString().split("T")[0];
   const dataInicio = new Date(hoje.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const resultado = await verificarPonto(ctx.sb, dataInicio, dataFim);
+  const resultado = await verificarPonto(ctx.sb, dataInicio, dataFim, ctx.escola_id);
   return successResponse(resultado);
 });
 
@@ -203,6 +210,7 @@ router.on("compliance_ocorrencias_list", authGerenteOrSecretaria, feat, async (c
   let q = ctx.sb
     .from("compliance_ocorrencias")
     .select("*, professoras(id, nome, email)")
+    .eq("escola_id", ctx.escola_id!)
     .order("data_ocorrencia", { ascending: false });
   if (status) q = q.eq("status", status);
   if (professora_id) q = q.eq("professora_id", professora_id);
@@ -221,6 +229,7 @@ router.on("compliance_confirmar_ocorrencia", authGerenteOrSecretaria, feat, asyn
     .from("compliance_ocorrencias")
     .select("*, professoras(id, nome, email)")
     .eq("id", id)
+    .eq("escola_id", ctx.escola_id!)
     .single();
   if (!ocorrencia) throw new AppError("NOT_FOUND", "Ocorrência não encontrada.");
   if (ocorrencia.status !== "pendente") {
@@ -232,7 +241,7 @@ router.on("compliance_confirmar_ocorrencia", authGerenteOrSecretaria, feat, asyn
     status: "confirmada",
     confirmada_por: ctx.user?.nome ?? "gerente",
     confirmada_em: new Date().toISOString(),
-  }).eq("id", id);
+  }).eq("id", id).eq("escola_id", ctx.escola_id!);
 
   // Enviar e-mail de alerta
   const prof = (ocorrencia as any).professoras;
@@ -265,7 +274,7 @@ router.on("compliance_justificar_ocorrencia", authGerenteOrSecretaria, feat, asy
     justificativa,
     confirmada_por: ctx.user?.nome ?? "gerente",
     confirmada_em: new Date().toISOString(),
-  }).eq("id", id);
+  }).eq("id", id).eq("escola_id", ctx.escola_id!);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true, status: novoStatus });
 });
@@ -279,6 +288,7 @@ router.on("compliance_alertas_list", authGerenteOrSecretaria, feat, async (ctx) 
   let q = ctx.sb
     .from("compliance_alertas")
     .select("*, professoras(id, nome, email), compliance_ocorrencias(data_ocorrencia, minutos_excedentes)")
+    .eq("escola_id", ctx.escola_id!)
     .order("criado_em", { ascending: false });
   if (professora_id) q = q.eq("professora_id", professora_id);
   const { data } = await q.limit(100);
@@ -299,13 +309,16 @@ router.on("compliance_dashboard", authGerenteOrSecretaria, feat, async (ctx) => 
   const [ocorrencias, alertas, importacoes] = await Promise.all([
     ctx.sb.from("compliance_ocorrencias")
       .select("status", { count: "exact" })
+      .eq("escola_id", ctx.escola_id!)
       .gte("data_ocorrencia", dataInicio)
       .lte("data_ocorrencia", dataFim),
     ctx.sb.from("compliance_alertas")
       .select("enviado", { count: "exact" })
+      .eq("escola_id", ctx.escola_id!)
       .gte("criado_em", dataInicio),
     ctx.sb.from("compliance_ponto_importacoes")
       .select("status", { count: "exact" })
+      .eq("escola_id", ctx.escola_id!)
       .gte("criado_em", dataInicio),
   ]);
 
@@ -313,6 +326,7 @@ router.on("compliance_dashboard", authGerenteOrSecretaria, feat, async (ctx) => 
   const { data: porStatus } = await ctx.sb
     .from("compliance_ocorrencias")
     .select("status")
+    .eq("escola_id", ctx.escola_id!)
     .gte("data_ocorrencia", dataInicio)
     .lte("data_ocorrencia", dataFim);
 
@@ -325,6 +339,7 @@ router.on("compliance_dashboard", authGerenteOrSecretaria, feat, async (ctx) => 
   const { data: topProf } = await ctx.sb
     .from("compliance_ocorrencias")
     .select("professora_id, professoras(nome)")
+    .eq("escola_id", ctx.escola_id!)
     .gte("data_ocorrencia", dataInicio)
     .lte("data_ocorrencia", dataFim);
 
@@ -357,7 +372,7 @@ router.on("compliance_dashboard", authGerenteOrSecretaria, feat, async (ctx) => 
 
 router.on("compliance_incidentes_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { tipo, gravidade, status } = ctx.body as any;
-  let q = ctx.sb.from("compliance_incidentes").select("*").order("data_ocorrencia", { ascending: false });
+  let q = ctx.sb.from("compliance_incidentes").select("*").eq("escola_id", ctx.escola_id!).order("data_ocorrencia", { ascending: false });
   if (tipo) q = q.eq("tipo", tipo);
   if (gravidade) q = q.eq("gravidade", gravidade);
   if (status) q = q.eq("status", status);
@@ -369,6 +384,7 @@ router.on("compliance_incidente_criar", authGerenteOrSecretaria, feat, async (ct
   const { tipo, gravidade, descricao, data_ocorrencia, local_ocorrencia, vitima_nome, agressor_nome, testemunhas, anonimo } = ctx.body as any;
   if (!tipo || !descricao || !data_ocorrencia) throw new AppError("VALIDATION_FAILED", "tipo, descricao e data_ocorrencia obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_incidentes").insert({
+    escola_id: ctx.escola_id,
     tipo, gravidade: gravidade || "media", descricao, data_ocorrencia, local_ocorrencia,
     vitima_nome, agressor_nome, testemunhas, anonimo: anonimo || false,
     registrado_por: ctx.user?.nome ?? "sistema", registrado_por_tipo: "gerente",
@@ -390,7 +406,7 @@ router.on("compliance_incidente_atualizar", authGerenteOrSecretaria, feat, async
   if (encaminhamento_externo) fields.encaminhamento_externo = encaminhamento_externo;
   if (investigador) fields.investigador = investigador;
   if (pais_notificados) { fields.pais_notificados = true; fields.pais_notificados_em = new Date().toISOString(); }
-  const { error } = await ctx.sb.from("compliance_incidentes").update(fields).eq("id", id);
+  const { error } = await ctx.sb.from("compliance_incidentes").update(fields).eq("id", id).eq("escola_id", ctx.escola_id!);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   if (status) {
     await ctx.sb.from("compliance_incidentes_historico").insert({
@@ -418,7 +434,11 @@ router.on("compliance_cert_tipos_list", authGerenteOrSecretaria, feat, async (ct
 
 router.on("compliance_cert_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { funcionario_id, status } = ctx.body as any;
-  let q = ctx.sb.from("compliance_certificacoes").select("*, rh_funcionarios(nome, cargo, departamento), compliance_certificacoes_tipos(nome)").order("data_vencimento");
+  let q = ctx.sb
+    .from("compliance_certificacoes")
+    .select("*, rh_funcionarios(nome, cargo, departamento), compliance_certificacoes_tipos(nome)")
+    .eq("escola_id", ctx.escola_id!)
+    .order("data_vencimento");
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
   if (status) q = q.eq("status", status);
   const { data } = await q.limit(300);
@@ -436,6 +456,7 @@ router.on("compliance_cert_criar", authGerenteOrSecretaria, feat, async (ctx) =>
     data_vencimento = d.toISOString().split("T")[0];
   }
   const { data, error } = await ctx.sb.from("compliance_certificacoes").insert({
+    escola_id: ctx.escola_id,
     funcionario_id, tipo_id, data_obtencao, data_vencimento, instituicao, numero_certificado, arquivo_url,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
@@ -478,6 +499,7 @@ router.on("compliance_inspecao_realizar", authGerenteOrSecretaria, feat, async (
   const conformidade_pct = totalItens > 0 ? Math.round((conformes / totalItens) * 100) : 0;
   const pendencias = respostasArr.filter((r: any) => r.obrigatorio && (r.resposta === false || r.resposta === "nao")).length;
   const { data, error } = await ctx.sb.from("compliance_inspecoes").insert({
+    escola_id: ctx.escola_id,
     template_id, data_inspecao: data_inspecao || new Date().toISOString().split("T")[0],
     inspetor: ctx.user?.nome ?? "inspetor", respostas, observacoes,
     conformidade_pct, pendencias_criticas: pendencias,
@@ -489,7 +511,11 @@ router.on("compliance_inspecao_realizar", authGerenteOrSecretaria, feat, async (
 
 router.on("compliance_inspecoes_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { template_id } = ctx.body as any;
-  let q = ctx.sb.from("compliance_inspecoes").select("*, compliance_inspecao_templates(nome, categoria)").order("data_inspecao", { ascending: false });
+  let q = ctx.sb
+    .from("compliance_inspecoes")
+    .select("*, compliance_inspecao_templates(nome, categoria)")
+    .eq("escola_id", ctx.escola_id!)
+    .order("data_inspecao", { ascending: false });
   if (template_id) q = q.eq("template_id", template_id);
   const { data } = await q.limit(100);
   return successResponse(data ?? []);
@@ -500,7 +526,11 @@ router.on("compliance_inspecoes_list", authGerenteOrSecretaria, feat, async (ctx
 // ═══════════════════════════════════════════════════════════════
 
 router.on("compliance_politicas_list", authGerenteOrSecretaria, feat, async (ctx) => {
-  const { data } = await ctx.sb.from("compliance_politicas").select("*").order("titulo");
+  const { data } = await ctx.sb
+    .from("compliance_politicas")
+    .select("*")
+    .eq("escola_id", ctx.escola_id!)
+    .order("titulo");
   return successResponse(data ?? []);
 });
 
@@ -508,6 +538,7 @@ router.on("compliance_politica_criar", authGerenteOrSecretaria, feat, async (ctx
   const { titulo, categoria, conteudo_html, arquivo_url, aceite_obrigatorio, aplica_a, vigente_desde, revisao_proxima } = ctx.body as any;
   if (!titulo || !categoria) throw new AppError("VALIDATION_FAILED", "titulo e categoria obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_politicas").insert({
+    escola_id: ctx.escola_id,
     titulo, categoria, conteudo_html, arquivo_url, aceite_obrigatorio, aplica_a: aplica_a || "todos",
     vigente_desde, revisao_proxima, criado_por: ctx.user?.nome,
   }).select().single();
@@ -528,7 +559,11 @@ router.on("compliance_politica_aceites", authGerenteOrSecretaria, feat, async (c
 
 router.on("compliance_calendario_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { categoria, status } = ctx.body as any;
-  let q = ctx.sb.from("compliance_calendario").select("*").order("data_limite");
+  let q = ctx.sb
+    .from("compliance_calendario")
+    .select("*")
+    .eq("escola_id", ctx.escola_id!)
+    .order("data_limite");
   if (categoria) q = q.eq("categoria", categoria);
   if (status) q = q.eq("status", status);
   const { data } = await q;
@@ -540,7 +575,7 @@ router.on("compliance_calendario_concluir", authGerenteOrSecretaria, feat, async
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   const { error } = await ctx.sb.from("compliance_calendario").update({
     status: "concluido", concluido_em: new Date().toISOString(), concluido_por: ctx.user?.nome, evidencia_url, observacoes,
-  }).eq("id", id);
+  }).eq("id", id).eq("escola_id", ctx.escola_id!);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -561,11 +596,11 @@ router.on("compliance_verificar_prazos_auto", async (ctx) => {
 
 router.on("compliance_dashboard_completo", authGerenteOrSecretaria, feat, async (ctx) => {
   const [incidentes, certVencidas, calAtrasados, inspecoes, ocorrencias] = await Promise.all([
-    ctx.sb.from("compliance_incidentes").select("*", { count: "exact", head: true }).in("status", ["registrado", "em_investigacao"]),
-    ctx.sb.from("compliance_certificacoes").select("*", { count: "exact", head: true }).eq("status", "vencida"),
-    ctx.sb.from("compliance_calendario").select("*", { count: "exact", head: true }).eq("status", "atrasado"),
-    ctx.sb.from("compliance_inspecoes").select("*", { count: "exact", head: true }).eq("status", "pendencias"),
-    ctx.sb.from("compliance_ocorrencias").select("*", { count: "exact", head: true }).eq("status", "pendente"),
+    ctx.sb.from("compliance_incidentes").select("*", { count: "exact", head: true }).eq("escola_id", ctx.escola_id!).in("status", ["registrado", "em_investigacao"]),
+    ctx.sb.from("compliance_certificacoes").select("*", { count: "exact", head: true }).eq("escola_id", ctx.escola_id!).eq("status", "vencida"),
+    ctx.sb.from("compliance_calendario").select("*", { count: "exact", head: true }).eq("escola_id", ctx.escola_id!).eq("status", "atrasado"),
+    ctx.sb.from("compliance_inspecoes").select("*", { count: "exact", head: true }).eq("escola_id", ctx.escola_id!).eq("status", "pendencias"),
+    ctx.sb.from("compliance_ocorrencias").select("*", { count: "exact", head: true }).eq("escola_id", ctx.escola_id!).eq("status", "pendente"),
   ]);
   // Score de compliance (simplificado)
   const total_problemas = (incidentes.count ?? 0) + (certVencidas.count ?? 0) + (calAtrasados.count ?? 0) + (inspecoes.count ?? 0) + (ocorrencias.count ?? 0);
@@ -597,8 +632,13 @@ function calcularHoras(entrada: string, saida: string): number {
 }
 
 /** Load all ponto config from compliance_config_ponto as a Map<chave, valor> */
-async function carregarConfigPonto(sb: ReturnType<typeof createClient>): Promise<Map<string, string>> {
-  const { data } = await sb.from("compliance_config_ponto").select("chave, valor");
+async function carregarConfigPonto(
+  sb: ReturnType<typeof createClient>,
+  escolaId?: string,
+): Promise<Map<string, string>> {
+  let q = sb.from("compliance_config_ponto").select("chave, valor");
+  if (escolaId) q = q.eq("escola_id", escolaId);
+  const { data } = await q;
   const map = new Map<string, string>();
   (data ?? []).forEach((r: any) => map.set(r.chave, r.valor));
   return map;
@@ -803,12 +843,14 @@ async function verificarPonto(
   sb: ReturnType<typeof createClient>,
   dataInicio?: string,
   dataFim?: string,
+  escolaId?: string,
 ) {
-  // Load config
-  const cfg = await carregarConfigPonto(sb);
+  // Load config (scoped to escola when provided)
+  const cfg = await carregarConfigPonto(sb, escolaId);
 
   // Load feriados in the date range
   let fQ = sb.from("compliance_feriados").select("data, tipo");
+  if (escolaId) fQ = fQ.eq("escola_id", escolaId);
   if (dataInicio) fQ = fQ.gte("data", dataInicio);
   if (dataFim) fQ = fQ.lte("data", dataFim);
   const { data: feriados } = await fQ;
@@ -821,6 +863,7 @@ async function verificarPonto(
     .select("*, professoras(id, nome, email)")
     .eq("processado", false)
     .order("data");
+  if (escolaId) q = q.eq("escola_id", escolaId);
   if (dataInicio) q = q.gte("data", dataInicio);
   if (dataFim) q = q.lte("data", dataFim);
   const { data: registros } = await q;
@@ -829,11 +872,13 @@ async function verificarPonto(
     return { verificados: 0, ocorrencias_criadas: 0, processados: 0 };
   }
 
-  // Fetch all active schedules
-  const { data: horarios } = await sb
+  // Fetch active schedules (scoped to escola when provided)
+  let horQ = sb
     .from("compliance_horarios")
     .select("*")
     .eq("ativo", true);
+  if (escolaId) horQ = horQ.eq("escola_id", escolaId);
+  const { data: horarios } = await horQ;
 
   const horariosMap = new Map<string, any[]>();
   (horarios ?? []).forEach((h: any) => {
@@ -907,6 +952,7 @@ async function verificarPonto(
           ? "hora_extra_domingo_feriado"
           : "hora_extra_nao_autorizada";
         await sb.from("compliance_ocorrencias").insert({
+          escola_id: reg.escola_id,
           professora_id: reg.professora_id,
           ponto_registro_id: reg.id,
           data_ocorrencia: reg.data,
@@ -952,6 +998,7 @@ async function verificarPonto(
 
         const saldoAnterior = prevBanco?.saldo_final_min ?? 0;
         await sb.from("compliance_banco_horas").insert({
+          escola_id: reg.escola_id,
           professora_id: reg.professora_id,
           mes, ano,
           saldo_anterior_min: saldoAnterior,
@@ -1004,10 +1051,11 @@ async function enviarAlertaHoraExtra(
     </div>
   `;
 
-  // Registrar alerta no banco
+  // Registrar alerta no banco (herda escola_id da ocorrência)
   const { data: alerta, error: alertaErr } = await sb
     .from("compliance_alertas")
     .insert({
+      escola_id: ocorrencia.escola_id,
       ocorrencia_id: ocorrencia.id,
       professora_id: professora.id,
       email_destino: professora.email,
@@ -1391,6 +1439,7 @@ router.on("compliance_ponto_resumo_mensal", authGerenteOrSecretaria, feat, async
   let q = ctx.sb
     .from("compliance_ponto_registros")
     .select("*, professoras(id, nome, email)")
+    .eq("escola_id", ctx.escola_id!)
     .gte("data", dataInicio)
     .lte("data", dataFim)
     .eq("processado", true)
@@ -1408,10 +1457,11 @@ router.on("compliance_ponto_resumo_mensal", authGerenteOrSecretaria, feat, async
     porProf.get(pid)!.registros.push(r);
   });
 
-  // Load banco de horas for the month
+  // Load banco de horas for the month (scoped to escola)
   const { data: bancos } = await ctx.sb
     .from("compliance_banco_horas")
     .select("*")
+    .eq("escola_id", ctx.escola_id!)
     .eq("mes", mesAtual)
     .eq("ano", anoAtual);
   const bancoMap = new Map<string, any>();
@@ -1471,7 +1521,11 @@ router.on("compliance_ponto_resumo_mensal", authGerenteOrSecretaria, feat, async
 
 router.on("compliance_feriados_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { ano } = ctx.body as any;
-  let q = ctx.sb.from("compliance_feriados").select("*").order("data");
+  let q = ctx.sb
+    .from("compliance_feriados")
+    .select("*")
+    .eq("escola_id", ctx.escola_id!)
+    .order("data");
   if (ano) {
     q = q.gte("data", `${ano}-01-01`).lte("data", `${ano}-12-31`);
   }
@@ -1485,13 +1539,17 @@ router.on("compliance_feriados_save", authGerenteOrSecretaria, feat, async (ctx)
   if (id) {
     const { data: updated, error } = await ctx.sb.from("compliance_feriados")
       .update({ data, descricao, tipo: tipo || "feriado" })
-      .eq("id", id).select().single();
+      .eq("id", id)
+      .eq("escola_id", ctx.escola_id!)
+      .select()
+      .single();
     if (error) throw new AppError("BAD_REQUEST", error.message);
     return successResponse(updated);
   }
   const { data: created, error } = await ctx.sb.from("compliance_feriados")
-    .insert({ data, descricao, tipo: tipo || "feriado" })
-    .select().single();
+    .insert({ escola_id: ctx.escola_id, data, descricao, tipo: tipo || "feriado" })
+    .select()
+    .single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(created);
 });
@@ -1499,7 +1557,11 @@ router.on("compliance_feriados_save", authGerenteOrSecretaria, feat, async (ctx)
 router.on("compliance_feriados_delete", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatorio.");
-  const { error } = await ctx.sb.from("compliance_feriados").delete().eq("id", id);
+  const { error } = await ctx.sb
+    .from("compliance_feriados")
+    .delete()
+    .eq("id", id)
+    .eq("escola_id", ctx.escola_id!);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -1509,7 +1571,11 @@ router.on("compliance_feriados_delete", authGerenteOrSecretaria, feat, async (ct
 // ═══════════════════════════════════════════════════════════════
 
 router.on("compliance_config_ponto_list", authGerenteOrSecretaria, feat, async (ctx) => {
-  const { data } = await ctx.sb.from("compliance_config_ponto").select("*").order("chave");
+  const { data } = await ctx.sb
+    .from("compliance_config_ponto")
+    .select("*")
+    .eq("escola_id", ctx.escola_id!)
+    .order("chave");
   return successResponse(data ?? []);
 });
 
@@ -1521,7 +1587,8 @@ router.on("compliance_config_ponto_save", authGerenteOrSecretaria, feat, async (
     if (!c.chave || c.valor === undefined) continue;
     const { error } = await ctx.sb.from("compliance_config_ponto")
       .update({ valor: String(c.valor) })
-      .eq("chave", c.chave);
+      .eq("chave", c.chave)
+      .eq("escola_id", ctx.escola_id!);
     if (!error) updated++;
   }
   return successResponse({ updated });
@@ -1537,6 +1604,7 @@ router.on("compliance_banco_horas_list", authGerenteOrSecretaria, feat, async (c
   let q = ctx.sb
     .from("compliance_banco_horas")
     .select("*, professoras(id, nome)")
+    .eq("escola_id", ctx.escola_id!)
     .eq("ano", anoFiltro)
     .order("mes");
   if (professora_id) q = q.eq("professora_id", professora_id);

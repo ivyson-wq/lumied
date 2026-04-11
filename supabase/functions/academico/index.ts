@@ -19,6 +19,13 @@ let CORS: Record<string, string> = getCorsHeaders();
 const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
 const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
+// ── Sanitiza termo de busca para uso seguro em filtros .or() do PostgREST ──
+// Whitelist: alfanuméricos, acentos latinos, espaços e hífen. Remove , . ( ) * %
+// que alterariam o parser de filtros do PostgREST. Max 100 chars.
+function sanitizeBusca(s: unknown): string {
+  return String(s ?? "").replace(/[^a-zA-Z0-9À-ÿ\s-]/g, "").trim().substring(0, 100);
+}
+
 // ── Validar sessão de gerente (via shared auth) ──
 async function validarSessaoGerente(sb: ReturnType<typeof createClient>, token: string | null) {
   return validarSessao(sb, "gerente_sessoes", "gerentes", "gerente_id", token);
@@ -627,7 +634,10 @@ serve(async (req: Request) => {
     let q = sb.from("diario_bncc_habilidades").select("*").order("codigo");
     if (componente) q = q.eq("componente", componente);
     if (ano_serie) q = q.eq("ano_serie", ano_serie);
-    if (busca) q = q.or(`codigo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
+    if (busca) {
+      const b = sanitizeBusca(busca);
+      if (b) q = q.or(`codigo.ilike.%${b}%,descricao.ilike.%${b}%`);
+    }
     const { data } = await q;
     return ok(data ?? []);
   }
@@ -767,7 +777,10 @@ serve(async (req: Request) => {
     if (componente) q = q.eq("componente", componente);
     if (ano_serie) q = q.eq("ano_serie", ano_serie);
     if (tipo) q = q.eq("tipo", tipo);
-    if (busca) q = q.or(`codigo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
+    if (busca) {
+      const b = sanitizeBusca(busca);
+      if (b) q = q.or(`codigo.ilike.%${b}%,descricao.ilike.%${b}%`);
+    }
     const { data } = await q;
     return ok(data ?? []);
   }

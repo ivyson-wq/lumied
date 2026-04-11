@@ -3,10 +3,10 @@
 //
 //  Tenant scoping (escola_id):
 //    ✓ rh_funcionarios    — escola_id via migration 074
-//    ✗ rh_ponto           — no escola_id column (scoped via funcionario_id)
-//    ✗ rh_ferias          — no escola_id column (scoped via funcionario_id)
-//    ✗ rh_holerites       — no escola_id column (scoped via funcionario_id)
-//    ✗ rh_folha_pagamento — no escola_id column (TODO add in later migration)
+//    ✓ rh_ponto           — escola_id via migration 219
+//    ✓ rh_ferias          — escola_id via migration 219
+//    ✓ rh_holerites       — escola_id via migration 219
+//    ✓ rh_folha_pagamento — escola_id via migration 219
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -137,19 +137,20 @@ router.on("rh_ponto_registrar", authGerenteOuFuncionario, requireEscola, feat, a
     .eq("escola_id", ctx.escola_id!)
     .maybeSingle();
   if (!func) throw new AppError("NOT_FOUND", "Funcionário não encontrado nesta escola.");
-  // rh_ponto has no escola_id column; scoped via funcionario_id
-  const { data, error } = await ctx.sb.from("rh_ponto").insert({ funcionario_id, tipo, localizacao, ip }).select().single();
+  const { data, error } = await ctx.sb.from("rh_ponto")
+    .insert({ escola_id: ctx.escola_id, funcionario_id, tipo, localizacao, ip })
+    .select()
+    .single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
 router.on("rh_ponto_list", authRh, requireEscola, feat, async (ctx) => {
   const { funcionario_id, data_inicio, data_fim } = ctx.body as any;
-  // rh_ponto has no escola_id; scope via rh_funcionarios join
   let q = ctx.sb
     .from("rh_ponto")
-    .select("*, rh_funcionarios!inner(nome, escola_id)")
-    .eq("rh_funcionarios.escola_id", ctx.escola_id!)
+    .select("*, rh_funcionarios(nome)")
+    .eq("escola_id", ctx.escola_id!)
     .order("registrado_em", { ascending: false });
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
   if (data_inicio) q = q.gte("registrado_em", data_inicio);
@@ -160,11 +161,10 @@ router.on("rh_ponto_list", authRh, requireEscola, feat, async (ctx) => {
 
 router.on("rh_ferias_list", authRh, requireEscola, feat, async (ctx) => {
   const { funcionario_id, status } = ctx.body as any;
-  // rh_ferias has no escola_id; scope via rh_funcionarios join
   let q = ctx.sb
     .from("rh_ferias")
-    .select("*, rh_funcionarios!inner(nome, escola_id)")
-    .eq("rh_funcionarios.escola_id", ctx.escola_id!)
+    .select("*, rh_funcionarios(nome)")
+    .eq("escola_id", ctx.escola_id!)
     .order("data_inicio", { ascending: false });
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
   if (status) q = q.eq("status", status);
@@ -183,18 +183,21 @@ router.on("rh_ferias_create", authRh, requireEscola, feat, async (ctx) => {
     .eq("escola_id", ctx.escola_id!)
     .maybeSingle();
   if (!func) throw new AppError("NOT_FOUND", "Funcionário não encontrado nesta escola.");
-  const { data, error } = await ctx.sb.from("rh_ferias").insert({ funcionario_id, periodo_aquisitivo_inicio, periodo_aquisitivo_fim, data_inicio, data_fim, dias, abono_pecuniario }).select().single();
+  const { data, error } = await ctx.sb.from("rh_ferias").insert({
+    escola_id: ctx.escola_id,
+    funcionario_id, periodo_aquisitivo_inicio, periodo_aquisitivo_fim,
+    data_inicio, data_fim, dias, abono_pecuniario,
+  }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
 router.on("rh_holerites_list", authRh, requireEscola, feat, async (ctx) => {
   const { funcionario_id, mes, ano } = ctx.body as any;
-  // rh_holerites has no escola_id; scope via rh_funcionarios join
   let q = ctx.sb
     .from("rh_holerites")
-    .select("*, rh_funcionarios!inner(nome, escola_id)")
-    .eq("rh_funcionarios.escola_id", ctx.escola_id!)
+    .select("*, rh_funcionarios(nome)")
+    .eq("escola_id", ctx.escola_id!)
     .order("ano", { ascending: false })
     .order("mes", { ascending: false });
   if (funcionario_id) q = q.eq("funcionario_id", funcionario_id);
@@ -205,10 +208,13 @@ router.on("rh_holerites_list", authRh, requireEscola, feat, async (ctx) => {
 });
 
 router.on("rh_folha_list", authRh, requireEscola, feat, async (ctx) => {
-  // NOTE: rh_folha_pagamento doesn't yet have escola_id.
-  // TODO: add column in a later migration and filter here.
   const { ano } = ctx.body as any;
-  let q = ctx.sb.from("rh_folha_pagamento").select("*").order("ano", { ascending: false }).order("mes", { ascending: false });
+  let q = ctx.sb
+    .from("rh_folha_pagamento")
+    .select("*")
+    .eq("escola_id", ctx.escola_id!)
+    .order("ano", { ascending: false })
+    .order("mes", { ascending: false });
   if (ano) q = q.eq("ano", ano);
   const { data } = await q;
   return successResponse(data ?? []);

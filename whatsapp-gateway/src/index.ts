@@ -9,19 +9,29 @@ import { handleCron } from './handlers/cron';
 
 /**
  * Verify Meta webhook signature (X-Hub-Signature-256)
+ * HMAC-SHA256(META_APP_SECRET, raw_body) — compared in constant time.
+ * Fails closed: if META_APP_SECRET is not configured, the request is rejected.
+ * @see https://developers.facebook.com/docs/graph-api/webhooks/getting-started#verification-requests
  */
 async function verifyWebhookSignature(req: Request, rawBody: string, appSecret?: string): Promise<boolean> {
-  if (!appSecret) return true; // Skip if not configured yet
+  if (!appSecret) {
+    console.error('[WEBHOOK] META_APP_SECRET not configured — rejecting request');
+    return false;
+  }
   const signature = req.headers.get('x-hub-signature-256');
-  if (!signature) return false;
-  const [, hash] = signature.split('=');
-  if (!hash) return false;
+  if (!signature || !signature.startsWith('sha256=')) return false;
   const key = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(appSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
-  const computed = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return computed === hash;
+  const expected = 'sha256=' + Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+  // Timing-safe comparison
+  if (signature.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < signature.length; i++) {
+    diff |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 export default {
@@ -48,11 +58,11 @@ export default {
 
     // Webhook de mensagens (POST)
     if (req.method === 'POST' && url.pathname === '/webhook') {
-      // Verify Meta signature before processing
+      // Verify Meta signature FIRST — fails closed if META_APP_SECRET is missing.
       const rawBody = await req.text();
       if (!(await verifyWebhookSignature(req, rawBody, env.META_APP_SECRET))) {
-        console.error('[WEBHOOK] Invalid signature — rejecting');
-        return new Response('Invalid signature', { status: 401 });
+        console.error('[WEBHOOK] Invalid or missing signature — rejecting');
+        return new Response('Forbidden', { status: 403 });
       }
       // Re-create request with parsed body for handler
       const newReq = new Request(req.url, {

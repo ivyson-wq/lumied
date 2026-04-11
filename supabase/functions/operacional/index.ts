@@ -4,15 +4,16 @@
 //
 //  Tenant scoping (escola_id):
 //    ✓ biblioteca_acervo       — escola_id via migration 074
-//    ✓ transporte_rotas         — escola_id via migration 074
-//    ✓ cantina_cardapio         — escola_id via migration 074
-//    ✗ biblioteca_emprestimos   — no escola_id column (filtered via acervo_id)
-//    ✗ biblioteca_reservas      — no escola_id column
-//    ✗ cantina_creditos         — no escola_id column (TODO add in later migration)
-//    ✗ cantina_transacoes       — no escola_id column
-//    ✗ cantina_restricoes       — no escola_id column
-//    ✗ transporte_alunos        — no escola_id column (filtered via rota_id)
-//    ✗ transporte_rastreio      — no escola_id column (filtered via rota_id)
+//    ✓ transporte_rotas        — escola_id via migration 074
+//    ✓ cantina_cardapio        — escola_id via migration 074
+//    ✓ biblioteca_emprestimos  — escola_id via migration 219
+//    ✓ biblioteca_reservas     — escola_id via migration 219
+//    ✓ cantina_creditos        — escola_id via migration 219
+//    ✓ cantina_transacoes      — escola_id via migration 219
+//    ✓ cantina_restricoes      — escola_id via migration 219
+//    ✓ transporte_alunos       — escola_id via migration 219
+//    ✓ transporte_rastreio     — escola_id via migration 219
+//    ✓ transporte_notificacoes — escola_id via migration 219
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -23,6 +24,12 @@ import { createLogger } from "../_shared/logger.ts";
 const log = createLogger("operacional");
 const router = new Router("operacional");
 router.useGlobal(rateLimit());
+
+// Whitelist: alfanuméricos, acentos latinos, espaços e hífen. Impede que
+// vírgula/ponto/parêntese quebrem o parser de filtros do PostgREST em .or().
+function sanitizeBusca(s: unknown): string {
+  return String(s ?? "").replace(/[^a-zA-Z0-9À-ÿ\s-]/g, "").trim().substring(0, 100);
+}
 
 // Unified auth: gerente OR secretaria/equipe. Populates ctx.escola_id.
 const authOp = authGerenteOrSecretaria(["gerente", "diretor", "secretaria", "comercial"]);
@@ -39,7 +46,10 @@ router.on("acervo_list", authOp, requireEscola, bib, async (ctx) => {
     .eq("ativo", true)
     .order("titulo");
   if (categoria) q = q.eq("categoria", categoria);
-  if (busca) q = q.or(`titulo.ilike.%${busca}%,autor.ilike.%${busca}%,isbn.ilike.%${busca}%`);
+  if (busca) {
+    const b = sanitizeBusca(busca);
+    if (b) q = q.or(`titulo.ilike.%${b}%,autor.ilike.%${b}%,isbn.ilike.%${b}%`);
+  }
   const { data } = await q;
   return successResponse(data ?? []);
 });
@@ -88,8 +98,8 @@ router.on("emprestimo_create", authOp, requireEscola, bib, async (ctx) => {
     .update({ disponivel: livro.disponivel - 1 })
     .eq("id", acervo_id)
     .eq("escola_id", ctx.escola_id!);
-  // biblioteca_emprestimos does not (yet) have escola_id; tenant scoping is via acervo_id
   const { data, error } = await ctx.sb.from("biblioteca_emprestimos").insert({
+    escola_id: ctx.escola_id,
     acervo_id, aluno_email, aluno_nome,
     data_devolucao_prevista: data_devolucao_prevista || new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
   }).select().single();
@@ -101,12 +111,11 @@ router.on("emprestimo_create", authOp, requireEscola, bib, async (ctx) => {
 router.on("emprestimo_devolver", authOp, requireEscola, bib, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
-  // Join via acervo to enforce escola scope
   const { data: emp } = await ctx.sb
     .from("biblioteca_emprestimos")
-    .select("acervo_id, data_devolucao_prevista, biblioteca_acervo!inner(escola_id)")
+    .select("acervo_id, data_devolucao_prevista")
     .eq("id", id)
-    .eq("biblioteca_acervo.escola_id", ctx.escola_id!)
+    .eq("escola_id", ctx.escola_id!)
     .single();
   if (!emp) throw new AppError("NOT_FOUND", "Empréstimo não encontrado.");
   const hoje = new Date().toISOString().split("T")[0];
@@ -114,7 +123,10 @@ router.on("emprestimo_devolver", authOp, requireEscola, bib, async (ctx) => {
   if (hoje > emp.data_devolucao_prevista) {
     multa = Math.ceil((new Date(hoje).getTime() - new Date(emp.data_devolucao_prevista).getTime()) / 86400000);
   }
-  await ctx.sb.from("biblioteca_emprestimos").update({ data_devolucao_real: hoje, status: "devolvido", multa }).eq("id", id);
+  await ctx.sb.from("biblioteca_emprestimos")
+    .update({ data_devolucao_real: hoje, status: "devolvido", multa })
+    .eq("id", id)
+    .eq("escola_id", ctx.escola_id!);
   const { data: l } = await ctx.sb
     .from("biblioteca_acervo")
     .select("disponivel")
@@ -131,11 +143,10 @@ router.on("emprestimo_devolver", authOp, requireEscola, bib, async (ctx) => {
 
 router.on("emprestimos_list", authOp, requireEscola, bib, async (ctx) => {
   const { status, aluno_email } = ctx.body as any;
-  // biblioteca_emprestimos has no escola_id column; scope via acervo join
   let q = ctx.sb
     .from("biblioteca_emprestimos")
-    .select("*, biblioteca_acervo!inner(titulo, autor, escola_id)")
-    .eq("biblioteca_acervo.escola_id", ctx.escola_id!)
+    .select("*, biblioteca_acervo(titulo, autor)")
+    .eq("escola_id", ctx.escola_id!)
     .order("data_emprestimo", { ascending: false });
   if (status) q = q.eq("status", status);
   if (aluno_email) q = q.eq("aluno_email", aluno_email);
@@ -154,8 +165,10 @@ router.on("reserva_create", authOp, requireEscola, bib, async (ctx) => {
     .eq("escola_id", ctx.escola_id!)
     .maybeSingle();
   if (!ac) throw new AppError("NOT_FOUND", "Livro não encontrado nesta escola.");
-  // biblioteca_reservas has no escola_id column (TODO add in later migration)
-  const { data, error } = await ctx.sb.from("biblioteca_reservas").insert({ acervo_id, aluno_email, aluno_nome }).select().single();
+  const { data, error } = await ctx.sb.from("biblioteca_reservas")
+    .insert({ escola_id: ctx.escola_id, acervo_id, aluno_email, aluno_nome })
+    .select()
+    .single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
@@ -189,32 +202,49 @@ router.on("cantina_cardapio_upsert", authOp, requireEscola, cant, async (ctx) =>
 });
 
 router.on("cantina_credito_add", authOp, requireEscola, cant, async (ctx) => {
-  // NOTE: cantina_creditos and cantina_transacoes don't yet have escola_id.
-  // TODO: add column in a later migration and filter here.
   const { aluno_email, aluno_nome, valor, descricao } = ctx.body as any;
   if (!aluno_email || !valor) throw new AppError("VALIDATION_FAILED", "aluno_email e valor obrigatórios.");
-  const { data: existing } = await ctx.sb.from("cantina_creditos").select("saldo").eq("aluno_email", aluno_email).single();
+  const { data: existing } = await ctx.sb
+    .from("cantina_creditos")
+    .select("saldo")
+    .eq("aluno_email", aluno_email)
+    .eq("escola_id", ctx.escola_id!)
+    .maybeSingle();
   const novoSaldo = (existing?.saldo || 0) + valor;
-  await ctx.sb.from("cantina_creditos").upsert({ aluno_email, aluno_nome, saldo: novoSaldo, atualizado_em: new Date().toISOString() }, { onConflict: "aluno_email" });
-  await ctx.sb.from("cantina_transacoes").insert({ aluno_email, tipo: valor > 0 ? "credito" : "debito", valor: Math.abs(valor), descricao });
+  await ctx.sb.from("cantina_creditos").upsert(
+    { escola_id: ctx.escola_id, aluno_email, aluno_nome, saldo: novoSaldo, atualizado_em: new Date().toISOString() },
+    { onConflict: "aluno_email" },
+  );
+  await ctx.sb.from("cantina_transacoes").insert({
+    escola_id: ctx.escola_id,
+    aluno_email,
+    tipo: valor > 0 ? "credito" : "debito",
+    valor: Math.abs(valor),
+    descricao,
+  });
   return successResponse({ success: true, saldo: novoSaldo });
 });
 
 router.on("cantina_restricoes_list", authOp, requireEscola, cant, async (ctx) => {
-  // NOTE: cantina_restricoes doesn't yet have escola_id.
-  // TODO: add column in a later migration and filter here.
   const { aluno_email } = ctx.body as any;
-  let q = ctx.sb.from("cantina_restricoes").select("*").order("aluno_nome");
+  let q = ctx.sb
+    .from("cantina_restricoes")
+    .select("*")
+    .eq("escola_id", ctx.escola_id!)
+    .order("aluno_nome");
   if (aluno_email) q = q.eq("aluno_email", aluno_email);
   const { data } = await q;
   return successResponse(data ?? []);
 });
 
 router.on("cantina_restricoes_create", authOp, requireEscola, cant, async (ctx) => {
-  // NOTE: cantina_restricoes doesn't yet have escola_id.
   const { aluno_email, aluno_nome, tipo, descricao, severidade } = ctx.body as any;
   if (!aluno_email || !tipo || !descricao) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
-  const { data, error } = await ctx.sb.from("cantina_restricoes").insert({ aluno_email, aluno_nome, tipo, descricao, severidade }).select().single();
+  const { data, error } = await ctx.sb
+    .from("cantina_restricoes")
+    .insert({ escola_id: ctx.escola_id, aluno_email, aluno_nome, tipo, descricao, severidade })
+    .select()
+    .single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
@@ -264,11 +294,10 @@ router.on("transporte_rotas_update", authOp, requireEscola, transp, async (ctx) 
 
 router.on("transporte_alunos_list", authOp, requireEscola, transp, async (ctx) => {
   const { rota_id } = ctx.body as any;
-  // transporte_alunos has no escola_id column; scope via rota join
   let q = ctx.sb
     .from("transporte_alunos")
-    .select("*, transporte_rotas!inner(nome, escola_id)")
-    .eq("transporte_rotas.escola_id", ctx.escola_id!)
+    .select("*, transporte_rotas(nome)")
+    .eq("escola_id", ctx.escola_id!)
     .eq("ativo", true)
     .order("ordem");
   if (rota_id) q = q.eq("rota_id", rota_id);
@@ -287,7 +316,10 @@ router.on("transporte_alunos_assign", authOp, requireEscola, transp, async (ctx)
     .eq("escola_id", ctx.escola_id!)
     .maybeSingle();
   if (!rota) throw new AppError("NOT_FOUND", "Rota não encontrada nesta escola.");
-  const { data, error } = await ctx.sb.from("transporte_alunos").upsert({ rota_id, aluno_email, aluno_nome, ponto_embarque, endereco, ordem }, { onConflict: "rota_id,aluno_email" }).select().single();
+  const { data, error } = await ctx.sb.from("transporte_alunos").upsert(
+    { escola_id: ctx.escola_id, rota_id, aluno_email, aluno_nome, ponto_embarque, endereco, ordem },
+    { onConflict: "rota_id,aluno_email" },
+  ).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
@@ -303,7 +335,10 @@ router.on("transporte_rastreio_update", authOp, requireEscola, transp, async (ct
     .eq("escola_id", ctx.escola_id!)
     .maybeSingle();
   if (!rota) throw new AppError("NOT_FOUND", "Rota não encontrada nesta escola.");
-  const { error } = await ctx.sb.from("transporte_rastreio").insert({ rota_id, latitude, longitude, velocidade, direcao });
+  const { error } = await ctx.sb.from("transporte_rastreio").insert({
+    escola_id: ctx.escola_id,
+    rota_id, latitude, longitude, velocidade, direcao,
+  });
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -319,7 +354,14 @@ router.on("transporte_rastreio_get", authOp, requireEscola, transp, async (ctx) 
     .eq("escola_id", ctx.escola_id!)
     .maybeSingle();
   if (!rota) throw new AppError("NOT_FOUND", "Rota não encontrada nesta escola.");
-  const { data } = await ctx.sb.from("transporte_rastreio").select("*").eq("rota_id", rota_id).order("registrado_em", { ascending: false }).limit(1).single();
+  const { data } = await ctx.sb
+    .from("transporte_rastreio")
+    .select("*")
+    .eq("rota_id", rota_id)
+    .eq("escola_id", ctx.escola_id!)
+    .order("registrado_em", { ascending: false })
+    .limit(1)
+    .single();
   return successResponse(data || {});
 });
 

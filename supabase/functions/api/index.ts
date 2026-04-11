@@ -276,6 +276,30 @@ serve(async (req: Request) => {
     if (!gerente) return err("Sessão inválida.", 401)
     const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
     if (!configs?.length) return err("Nenhuma config fornecida.")
+
+    // Chaves sensíveis que gerentes NÃO podem setar — só lumied_staff via admin-central.
+    // superusuario_email era uma via de escalação (gerente podia se promover a superuser).
+    // API keys, webhook secrets e tokens de serviço devem vir só via ambiente/staff.
+    const CHAVES_PROTEGIDAS = new Set([
+      "superusuario_email",
+      "meta_app_secret",
+      "whatsapp_token",
+      "whatsapp_verify_token",
+      "inter_client_id",
+      "inter_client_secret",
+      "anthropic_api_key",
+      "resend_api_key",
+      "google_service_account",
+      "sentry_auth_token",
+      "supabase_service_key",
+      "app_internal_secret",
+      "relay_secret",
+    ]);
+    const bloqueadas = configs.filter(c => CHAVES_PROTEGIDAS.has(String(c.chave).toLowerCase())).map(c => c.chave);
+    if (bloqueadas.length) {
+      return err(`Chaves protegidas só podem ser alteradas por staff Lumied: ${bloqueadas.join(", ")}`, 403);
+    }
+
     for (const c of configs) {
       await admin.from("escola_config").upsert({
         chave: c.chave,
@@ -845,8 +869,12 @@ serve(async (req: Request) => {
       }
     } catch {}
     // Disparar Claude AI trigger imediatamente via poke (fire-and-forget)
+    // Token no header (não em query) pra não aparecer em logs/metrics
     try {
-      fetch("https://api.claude.ai/v1/code/triggers/trig_01PTaCsfDfdNrUGwfUeZJZ96/poke?token=lumied-ticket-poke-2026", { method: "POST" }).catch(() => {});
+      fetch("https://api.claude.ai/v1/code/triggers/trig_01PTaCsfDfdNrUGwfUeZJZ96/poke", {
+        method: "POST",
+        headers: { "X-Trigger-Token": Deno.env.get("CLAUDE_TRIGGER_TOKEN") || "lumied-ticket-poke-2026" },
+      }).catch(() => {});
     } catch {}
     return ok({ success: true, numero: ticketNumero });
   }
@@ -2651,8 +2679,11 @@ serve(async (req: Request) => {
   if (action === "wa_family_by_phone") {
     const { phone: waPhone } = body as any;
     if (!waPhone) return err("Phone obrigatório.");
-    // Normalizar: remover +55, espaços, hifens
-    const cleanPhone = waPhone.replace(/\D/g, '').replace(/^55/, '');
+    // Normalizar: remover +55, espaços, hifens. `cleanPhone` contém apenas
+    // dígitos (0-9), portanto é seguro interpolar no filtro .or() — não há
+    // caracteres que possam quebrar o parser de filtros do PostgREST.
+    const cleanPhone = String(waPhone).replace(/\D/g, '').replace(/^55/, '');
+    if (!cleanPhone || cleanPhone.length < 8 || cleanPhone.length > 15) return err("Phone inválido.");
     // Buscar família por telefone (pai ou mãe)
     const { data: fam } = await admin.from("familias").select("id, nome_responsavel, email, telefone, alunos(id, nome)").or(`telefone.like.%${cleanPhone}%,telefone2.like.%${cleanPhone}%`).limit(1).single();
     if (!fam) return ok({ data: null });

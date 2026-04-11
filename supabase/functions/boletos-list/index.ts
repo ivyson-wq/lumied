@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
       const { data: cached } = await supabase
         .from('boletos')
         .select('*')
-        .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfRaw}`)
+        .in('cpf', [cpfFormatado, cpfRaw])
         .order('vencimento', { ascending: false })
       return new Response(JSON.stringify({ boletos: cached ?? [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
     const { data: boletos, error: dbError } = await supabase
       .from('boletos')
       .select('*')
-      .or(`cpf.eq.${cpfFormatado},cpf.eq.${cpfRaw}`)
+      .in('cpf', [cpfFormatado, cpfRaw])
       .order('vencimento', { ascending: false })
 
     if (dbError) throw new Error(dbError.message)
