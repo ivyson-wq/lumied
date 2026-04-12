@@ -1,0 +1,22 @@
+name: Ticket Resolver Agent
+
+on:
+  push:
+    branches: [ticket-agent]
+
+jobs:
+  resolve-tickets:
+    name: Resolve open support tickets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run ticket agent
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ticket-resolver-agent.mjs
