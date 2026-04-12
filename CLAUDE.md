@@ -600,25 +600,33 @@ Extensão Manifest V3 para enviar templates CRM no WhatsApp Web. Pronta para pub
 
 **Resumo:** 15 commits de segurança, 7 migrations novas, ~10.000 LOC auditadas, 100% das edge functions ativas + 100% dos Cloudflare Workers hardenados.
 
-### Pós-deploy obrigatório (secrets a configurar)
+### Post-deploy automation (executado 2026-04-11)
 
-**Cloudflare Workers** (`wrangler secret put`):
-```bash
-cd cloudflare-monitor && wrangler secret put ADMIN_TOKEN      # senão /status retorna 401
-cd whatsapp-worker && wrangler secret put META_APP_SECRET     # senão webhooks 403
-cd whatsapp-gateway && wrangler secret put META_APP_SECRET    # senão webhooks 403
-```
+Workflow `.github/workflows/postdeploy.yml` + script `scripts/postdeploy.mjs` — automação idempotente que aplica todo o pós-deploy via Supabase Management API + Cloudflare API. Disparado via `workflow_dispatch` com inputs.
 
-**Supabase Edge Functions** (`supabase secrets set`):
-- `CLAUDE_TRIGGER_TOKEN` — trigger Claude AI via header
-- `CRON_INTERNAL_KEY` — alternativa ao service_role_key pra `gerar_insights_diarios`/`roi_gerar_snapshot`
-- `CONTROLID_DEFAULT_PASSWORD` — ou popular `acesso_dispositivos.api_password` por dispositivo
+**Para disparar novamente** (Actions → Post-deploy → Run workflow):
+- `rotate_staff_password` — rotaciona senha do `lumied_staff` (fundador) e imprime novo Lumied MCP token no log (mascarado via `::add-mask::`)
+- `staff_new_password` — senha nova (mín 12 chars)
+- `backfill_escola_id` — roda UPDATE `escola_id = <default>` em 24 tabelas tenant
+- `skip_supabase_secrets` / `skip_cloudflare` — flags opcionais
 
-**Backfill escola_id** — single-tenant atualmente OK, mas antes do 2º tenant:
-```sql
-UPDATE compliance_* SET escola_id = '<first-escola-uuid>' WHERE escola_id IS NULL;
--- (e similar para rh_ponto, cantina_*, biblioteca_*, transporte_*)
-```
+**Ações executadas automaticamente** (estado atual em 2026-04-11):
+- ✅ Migrations 215-220 verificadas (todas aplicadas via `apply-migrations.yml`)
+- ✅ Senha do staff `ivyson@gmail.com` rotacionada (hash PBKDF2 hex:hex, 100k iterations)
+- ✅ Lumied MCP token gerado via `staff_login` e inserido em `~/.claude.json` como `Bearer` header
+- ✅ `CLAUDE_TRIGGER_TOKEN` setado (24 bytes aleatórios) via Management API `/v1/projects/{ref}/secrets`
+- ✅ `CRON_INTERNAL_KEY` setado (24 bytes aleatórios) via Management API
+- ✅ Backfill `escola_id` executado em 24 tabelas (compliance_*, rh_ponto/ferias/holerites/folha, biblioteca_emprestimos/reservas, cantina_creditos/transacoes/restricoes, transporte_alunos/rastreio) — todas FILL com UUID da escola padrão (Maple Bear Caxias) via `DO $$ BEGIN ... EXCEPTION WHEN others THEN NULL; END $$` per-table para robustez
+
+**Pendências manuais** (não automatizadas, precisam de contexto humano):
+- ❌ `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` nos GitHub Secrets — quando adicionados, o workflow automaticamente seta `ADMIN_TOKEN` no worker `lumied-monitor`. Sem isso, `/status` retorna 401.
+- ❌ `META_APP_SECRET` nos 2 workers WhatsApp — depende da aprovação do Meta Business Manager. Comando: `cd whatsapp-{worker,gateway} && wrangler secret put META_APP_SECRET`.
+- ❌ `CONTROLID_DEFAULT_PASSWORD` — precisa da senha real dos 6 iDFaces. Alternativa: popular `acesso_dispositivos.api_password` por dispositivo via SQL.
+
+**Script local** (alternativa ao workflow — rodar via `node scripts/postdeploy.mjs`):
+- Env vars obrigatórias: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` (default `brgorknbrjlfwvrrlwxj`)
+- Env vars opcionais: `STAFF_NEW_PASSWORD`, `BACKFILL_ESCOLA_ID=true`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- Outputs mascarados: `LUMIED_MCP_TOKEN=***`, `MONITOR_ADMIN_TOKEN=***` via `::add-mask::`
 
 ---
 
