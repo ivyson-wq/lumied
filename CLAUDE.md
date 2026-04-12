@@ -1373,3 +1373,198 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 | `218` | Tabela `rate_limits` + RPC `rate_limit_check` (bucket windowing) + `rate_limits_cleanup()` |
 | `219` | `escola_id` UUID REFERENCES escolas(id) em 23 tabelas tenant (compliance_*, rh_ponto/ferias/holerites, cantina_*, biblioteca_emprestimos/reservas, transporte_alunos/rastreio/notificacoes). Idempotent + backfill via parent FK + index |
 | `220` | pg_cron `rate-limits-cleanup-hourly` (chama `rate_limits_cleanup()` no minuto 0) |
+
+---
+
+## Blog Automation — Publicação Diária Autônoma (2026-04-11)
+
+Sistema de 2 Remote Triggers do Claude Code que, juntos, publicam **1 artigo SEO por dia no blog Lumied sem intervenção humana, para sempre**.
+
+### Arquitetura
+
+```
+┌─────────────────────────────────┐    pending--
+│  lumied-daily-blog              │ ────────────┐
+│  cron: 0 11 * * * (08:00 BRT)   │             │
+│  model: claude-sonnet-4-6       │             ▼
+└─────────────────────────────────┘    ┌────────────────────────┐
+                                       │ scripts/seo-topics.json│
+┌─────────────────────────────────┐    │ (fila de tópicos SEO)  │
+│  lumied-weekly-topic-refill     │    └────────────────────────┘
+│  cron: 0 10 * * 0 (dom 07 BRT)  │             ▲
+│  model: claude-sonnet-4-6       │ ────────────┘
+└─────────────────────────────────┘    pending++ (se < 30)
+```
+
+### Trigger 1 — `lumied-daily-blog` (publicação diária)
+
+- **ID**: `trig_016b85mG9n2bhfnKYRkR9YgX`
+- **Gerenciar**: https://claude.ai/code/scheduled/trig_016b85mG9n2bhfnKYRkR9YgX
+- **Schedule**: `0 11 * * *` — todo dia às 11:00 UTC (08:00 BRT)
+- **Environment**: `env_01VRivLXW46quvnd3xTJ9WDc` (Anthropic Cloud / Padrão)
+- **Modelo**: `claude-sonnet-4-6` (Sonnet 4.6, 1M context)
+- **Sources**: clone fresco de `ivyson-wq/maple-bear-rs` branch main a cada execução
+- **Tools**: Bash, Read, Write, Edit, Glob, Grep
+- **Fonte da verdade**: `scripts/daily-blog-agent.md` (10 passos operacionais detalhados)
+
+**Fluxo por execução:**
+1. `git pull --rebase origin main`
+2. Lê `scripts/seo-topics.json`, filtra `status: "pending"`, ordena por `priority` desc, pega o primeiro
+3. Verifica que `site/blog/<slug>/` não existe (se existir, marca published e pula para o próximo)
+4. Gera `site/blog/<slug>/index.html` usando `site/blog/compliance-escolar/index.html` como TEMPLATE base
+   - ~2000-2500 palavras (mínimo `target_words × 0.8`)
+   - 3 schemas JSON-LD: `Article`, `BreadcrumbList`, `FAQPage`
+   - Meta tags completas (description, keywords, OG, Twitter Card, canonical, robots max-image-preview:large)
+   - TOC navegável com anchor links
+   - Mínimo 2 `<table class="data-table">`, 3 `<div class="highlight-box">`, 1 `<blockquote>`, 1 `<div class="scenario-box">`
+   - Links internos para 2-3 artigos relacionados + links externos autoritativos (gov.br, ANPD, MEC)
+   - Seção FAQ matching exato com o schema FAQPage
+   - GA4 com `content_group: "Blog - <categoria>"`
+5. Adiciona novo `<article class="blog-card">` no topo de `site/blog/index.html`
+6. Adiciona `<url>` em `sitemap.xml` com `<lastmod>` e `<priority>0.9</priority>`
+7. Muda status do tópico no JSON de `pending` → `published` + adiciona `published_at`
+8. Commit + push (`feat(blog): <title> [daily agent]`)
+9. Submete ao IndexNow via `scripts/indexnow-submit.sh` (Bing/Yandex/Naver/Seznam/DuckDuckGo)
+10. Imprime resumo no session log
+
+**Regras críticas** (forçadas no prompt do trigger):
+- NUNCA menos que 80% do `target_words`
+- NUNCA duplicar slugs ou primary_keywords em posts adjacentes
+- NUNCA inventar testimonials com nomes fictícios (usar "coordenação pedagógica", "gestão escolar")
+- NUNCA `git push --force` ou `--no-verify`
+- SEMPRE `git pull --rebase` antes de editar
+- Keyword primária em: title, meta description, primeiro parágrafo, pelo menos 1 H2, URL
+- Densidade keyword ~1.5% (natural)
+- Se case Maple Bear Caxias for citado, usar dados consistentes (180 alunos, RS, inadimplência 14%→8.3% em 90 dias, 12h economizadas/semana)
+
+**Contingências:**
+- Fila vazia → commita `scripts/blog-queue-empty.flag` + abre issue `[daily-blog-agent] Fila vazia em YYYY-MM-DD`
+- Erro catastrófico → `git reset --hard origin/main` + abre issue com traceback
+- Conflito no push → resolve com rebase, nunca force
+
+### Trigger 2 — `lumied-weekly-topic-refill` (auto-refill da fila)
+
+- **ID**: `trig_01MwQDjREyasfxp71bQUAiSv`
+- **Gerenciar**: https://claude.ai/code/scheduled/trig_01MwQDjREyasfxp71bQUAiSv
+- **Schedule**: `0 10 * * 0` — todo domingo às 10:00 UTC (07:00 BRT)
+- **Environment**: `env_01VRivLXW46quvnd3xTJ9WDc` (Anthropic Cloud / Padrão)
+- **Modelo**: `claude-sonnet-4-6`
+- **Sources**: clone fresco de `ivyson-wq/maple-bear-rs` branch main
+- **Fonte da verdade**: `scripts/weekly-topic-refill-agent.md`
+
+**Fluxo por execução:**
+1. `git pull --rebase origin main`
+2. Conta tópicos com `status: "pending"` no `scripts/seo-topics.json`
+3. **Se `pending >= 30`**: PARA (fila saudável, não faz nada, exit 0, sem commit)
+4. **Se `pending < 30`**: gera 30 novos tópicos via Claude Sonnet 4.6
+   - Lê todos os slugs existentes (published + pending) + pastas em `site/blog/` para evitar duplicação
+   - Mix de prioridades: ~10 priority 9-10, ~15 priority 7-8, ~5 priority 6
+   - Distribui pelas 13 categorias (Pedagogia, Gestão, Financeiro, Compliance, Comercial, Operacional, Comunicação, EdTech, Segurança, Legal, Marketing, RH)
+   - Prioriza lacunas — categorias com menos pending recebem mais novos
+5. Valida via script Node inline:
+   - Rejeita slugs duplicados
+   - Rejeita primary_keywords duplicadas (case-insensitive)
+   - Verifica que internal_links apontam para slugs reais
+6. Append ao JSON + atualiza `_meta.total_topics`, `_meta.last_refill_at`, `_meta.last_refill_count`
+7. Commit (`chore(blog-agent): refill semanal fila SEO (+30 tópicos)`) + push
+
+**Validação pré-commit** (roda em Node antes de qualquer git add):
+```javascript
+const j = require('./scripts/seo-topics.json');
+const slugs = j.topics.map(t => t.slug);
+const dups = slugs.filter((s, i) => slugs.indexOf(s) !== i);
+if (dups.length) { console.error('Slugs duplicados:', dups); process.exit(1); }
+// ... idem para primary_keywords
+```
+
+### Arquivos do sistema
+
+| Arquivo | Tipo | Descrição |
+|---|---|---|
+| `scripts/seo-topics.json` | Fila | 105 tópicos iniciais com slug, title, primary_keyword, secondary_keywords, category, priority, status, target_words, internal_links, external_links, faq_count |
+| `scripts/daily-blog-agent.md` | Playbook | Instruções operacionais do agente diário (10 passos, regras críticas, estrutura HTML obrigatória) |
+| `scripts/weekly-topic-refill-agent.md` | Playbook | Instruções do agente semanal de refill (ideias de lacunas, validações, formato JSON) |
+| `scripts/indexnow-submit.sh` | Helper | Submete URLs ao Bing/Yandex/Naver/Seznam/Yep/DuckDuckGo (usado pelo daily agent) |
+| `507a0a2834397332e34d6e9c94480acd.txt` | IndexNow key | Key file na raiz do site (hospedado em `https://lumied.com.br/507a0a2834397332e34d6e9c94480acd.txt`) |
+
+### Estado inicial da fila (2026-04-11)
+
+- **105 tópicos** `pending` (cobre ~3.5 meses de publicação diária)
+- **Distribuição**: Pedagogia 16, Gestão 14, Financeiro 12, Operacional 11, Compliance 10, EdTech 8, Comercial 8, Comunicação 7, Segurança 5, Legal 5, Marketing 4, RH 4, Legal e Compliance 1
+- **Roadmap primeiros 10 dias** (priority 10 primeiro):
+  1. Currículo Bilíngue: Montessori vs Waldorf
+  2. Folha de Pagamento CLT Professores
+  3. Reforma Tributária para Escolas
+  4. Como Escolher Sistema de Gestão Escolar
+  5. Censo Escolar INEP
+  6. Marketing Digital para Escolas
+  7. Evasão Escolar: 9 Causas Reais
+  8. Ponto Eletrônico Professor REP-C
+  9. Como Definir Preço da Mensalidade
+  10. DRE Escolar: Como Ler
+
+### Ciclo auto-sustentável
+
+```
+[dia N]   daily-blog publica artigo → pending--
+[dia N+1] daily-blog publica artigo → pending--
+...
+[dia 76]  pending = 30
+[dia 77]  pending = 29
+[próximo domingo] weekly-refill detecta pending < 30 → gera +30 → pending = 59
+[dia 78]  daily-blog publica artigo → pending = 58
+```
+
+O sistema publica **1 artigo por dia para sempre**, sem intervenção humana. A fila nunca esgota. O blog Lumied cresce sozinho em ~30 artigos SEO de alta qualidade por mês.
+
+### IndexNow key
+
+- **Key**: `507a0a2834397332e34d6e9c94480acd`
+- **Key file hospedado**: `https://lumied.com.br/507a0a2834397332e34d6e9c94480acd.txt`
+- **Endpoint**: `https://api.indexnow.org/IndexNow`
+- **Cobertura**: Bing, Yandex, Naver, Seznam, Yep, DuckDuckGo (Google NÃO — Google não adotou IndexNow)
+- **Helper**: `scripts/indexnow-submit.sh "url1" "url2" ...` ou sem args usa todas as URLs do `sitemap.xml`
+
+### Google Search Console
+
+- **Verificado em 2026-04-11** pelo Ivyson (método DNS TXT no Cloudflare)
+- **Propriedade**: `lumied.com.br` (Domain property)
+- **Sitemap submetido**: `https://lumied.com.br/sitemap.xml`
+- Para novos artigos: **não precisa resubmeter**. O Googlebot descobre pelo sitemap.xml que é atualizado automaticamente a cada publicação (com novo `<lastmod>`)
+- Verificar cobertura de indexação em: https://search.google.com/search-console/coverage
+
+### Como gerenciar os triggers
+
+```bash
+# Listar todos
+RemoteTrigger action: "list"
+
+# Pausar daily (ex: para um hotfix urgente)
+RemoteTrigger action: "update" trigger_id: "trig_016b85mG9n2bhfnKYRkR9YgX" body: {"enabled": false}
+
+# Forçar execução agora (fora do cron)
+RemoteTrigger action: "run" trigger_id: "trig_016b85mG9n2bhfnKYRkR9YgX"
+
+# Mudar horário
+RemoteTrigger action: "update" trigger_id: "trig_016b85mG9n2bhfnKYRkR9YgX" body: {"cron_expression": "0 14 * * *"}
+```
+
+**Deletar triggers**: só pela web em https://claude.ai/code/scheduled (API não permite).
+
+### SEO landing — schemas e trust indicators (2026-04-11)
+
+Em `site/index.html`, além dos schemas já existentes (`SoftwareApplication` com `aggregateRating`), foram adicionados nesta mesma sessão:
+- `Organization` com `contactPoint`, `areaServed`, `foundingDate`
+- `WebSite` com `SearchAction` (habilita sitelinks de busca interna)
+- `FAQPage` com 8 Q&A matching a FAQ visual
+
+**Novas seções na landing** inspiradas no framework tryholo.ai:
+- Segurança & Confiança (6 trust cards + 6 badges)
+- Case study Maple Bear Caxias (4 stats reais: -40% inadimplência, 12h/sem, R$31k/mês, 8min resposta)
+- Team bio "Quem está por trás" (Ivyson + parceria Maple Bear)
+- Objection removal bar após pricing (sem fidelidade, 30 dias suporte, migração gratuita, preço transparente)
+- Trust indicator numérico no hero (★★★★★ 4.9/5 · 47 avaliações · 200+ alunos ativos)
+
+### Bug crítico corrigido (2026-04-11)
+
+**CSP bloqueava Google Analytics**: `vercel.json` não incluía `googletagmanager.com`, `google-analytics.com` nem `images.unsplash.com` nas allowlists. Isso significa que **o GA4 estava silenciosamente falhando em todas as páginas** — nenhum evento chegava ao dashboard. Corrigido em `vercel.json` → `script-src`, `img-src`, `connect-src`, `frame-src`.
