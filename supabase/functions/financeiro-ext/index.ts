@@ -48,23 +48,22 @@ async function interFetch(
   return JSON.parse(resBody);
 }
 
-async function getInterToken(scope = "extrato.read"): Promise<string> {
+async function getInterToken(...scopeOptions: string[]): Promise<string> {
   const clientId = Deno.env.get("INTER_CLIENT_ID");
   const clientSecret = Deno.env.get("INTER_CLIENT_SECRET");
   if (!clientId || !clientSecret) throw new AppError("BAD_REQUEST", "Inter API não configurada.");
-  const params = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    scope,
-    grant_type: "client_credentials",
-  });
-  const data = await interFetch(
-    "/oauth/v2/token",
-    "POST",
-    { "Content-Type": "application/x-www-form-urlencoded" },
-    params.toString(),
-  );
-  return data.access_token;
+  const scopes = scopeOptions.length ? scopeOptions : ["extrato.read"];
+  for (const scope of scopes) {
+    try {
+      const params = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: "client_credentials" });
+      const data = await interFetch("/oauth/v2/token", "POST", { "Content-Type": "application/x-www-form-urlencoded" }, params.toString());
+      if (data?.access_token) {
+        log.info(`Inter OAuth scope aceito: ${scope}`);
+        return data.access_token;
+      }
+    } catch { log.warn(`Inter OAuth scope rejeitado: ${scope}`); }
+  }
+  throw new Error(`Nenhum scope aceito pelo Inter. Tentados: ${scopes.join(", ")}`);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -195,7 +194,7 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
 
   let token: string;
   try {
-    token = await getInterToken("extrato.read");
+    token = await getInterToken("extrato.read", "banking.extrato.read", "extrato.read banking.read");
   } catch (e) {
     return successResponse({ error: `Falha na autenticação Inter: ${e instanceof Error ? e.message : e}`, matched: 0, created: 0, pendente_revisao: 0 });
   }
@@ -472,7 +471,7 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
   if (relayUrl) {
     let token: string | null = null;
     try {
-      token = await getInterToken("boleto-cobranca.write");
+      token = await getInterToken("boleto-cobranca.write", "boleto-cobranca.read boleto-cobranca.write", "cobv.write", "cobranca.write");
     } catch {
       log.warn("Não foi possível obter token Inter para boletos");
     }
