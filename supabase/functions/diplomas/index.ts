@@ -126,7 +126,8 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   const user = await getUsuario(sb, token)
   if (!user) return null
   const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  if (roles.includes('secretaria') || roles.includes('comercial')) {
+  const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao']
+  if (roles.some((r: string) => secRoles.includes(r))) {
     const { data: sec } = await sb
       .from('secretarias').select('id, nome, email, features')
       .eq('email', user.email).maybeSingle()
@@ -137,6 +138,7 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
     if (roles.includes('comercial')) features.push('crm', 'templates', 'metas')
     if (roles.includes('financeiro') || roles.includes('diretor')) features.push('financeiro')
     if (roles.includes('manutencao')) features.push('manutencao')
+    if (roles.includes('impressao')) features.push('impressao')
     return { id: user.id, nome: user.nome, email: user.email, features: features.length ? features : ['atestados'] }
   }
   return null
