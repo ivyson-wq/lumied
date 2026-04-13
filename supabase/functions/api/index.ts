@@ -1080,6 +1080,8 @@ serve(async (req: Request) => {
           if (!secFeatures.length) {
             if (papeis.includes("secretaria")) secFeatures.push("atestados");
             if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
+            if (papeis.includes("financeiro") || papeis.includes("diretor")) secFeatures.push("financeiro");
+            if (papeis.includes("manutencao")) secFeatures.push("manutencao");
             if (papeis.includes("impressao")) secFeatures.push("impressao");
           }
           // Upsert: cria se não existe, atualiza features se existe
