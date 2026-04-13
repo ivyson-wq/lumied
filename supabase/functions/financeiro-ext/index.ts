@@ -189,9 +189,16 @@ router.on("contabil_exportacoes_list", authGerente, requireFeature("contabil"), 
 // ═══════════════════════════════════════════════════════════════
 router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
   const relayUrl = Deno.env.get("INTER_RELAY_URL");
-  if (!relayUrl) throw new AppError("BAD_REQUEST", "Inter API não configurada (INTER_RELAY_URL ausente).");
+  if (!relayUrl) {
+    return successResponse({ error: "Inter API não configurada. Configure INTER_RELAY_URL para habilitar a conciliação automática.", matched: 0, created: 0, pendente_revisao: 0 });
+  }
 
-  const token = await getInterToken("extrato.read");
+  let token: string;
+  try {
+    token = await getInterToken("extrato.read");
+  } catch (e) {
+    return successResponse({ error: `Falha na autenticação Inter: ${e instanceof Error ? e.message : e}`, matched: 0, created: 0, pendente_revisao: 0 });
+  }
   const dataRef = yesterday();
   const interConta = Deno.env.get("INTER_CONTA") || "";
 
@@ -308,7 +315,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
   // Get active alunos with families
   const { data: alunos } = await ctx.sb
     .from("alunos")
-    .select("id, nome, serie, turno, responsavel_email, resp_nome, cpf")
+    .select("id, nome, serie, turno, familia_email, resp_nome, cpf")
     .eq("ativo", true);
 
   if (!alunos || alunos.length === 0) {
@@ -316,7 +323,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
   }
 
   // Get family data
-  const emails = [...new Set(alunos.map((a: any) => a.responsavel_email).filter(Boolean))];
+  const emails = [...new Set(alunos.map((a: any) => a.familia_email).filter(Boolean))];
   const { data: familias } = await ctx.sb
     .from("familias")
     .select("email, nome_resp, cpf")
@@ -328,9 +335,8 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
     .from("fin_boletos_batch")
     .insert({
       mes_referencia: mesRef,
-      status: "rascunho",
-      total_alunos: alunos.length,
-      gerado_por: ctx.user?.nome || "cron",
+      status: "aguardando_aprovacao",
+      total_boletos: alunos.length,
     })
     .select()
     .single();
@@ -346,8 +352,8 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
     const { data: prevMens } = await ctx.sb
       .from("fin_mensalidades")
       .select("valor")
-      .eq("aluno_nome", aluno.nome)
-      .order("mes_referencia", { ascending: false })
+      .eq("crianca_nome", aluno.nome)
+      .order("mes", { ascending: false })
       .limit(1)
       .maybeSingle();
     const turnoValor = prevMens?.valor || 0;
@@ -357,7 +363,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
     items.push({ nome: `Mensalidade ${monthNames[nm.month]}/${nm.year}`, valor: turnoValor });
 
     // Get inscribed activities
-    const famEmail = aluno.responsavel_email;
+    const famEmail = aluno.familia_email;
     if (famEmail) {
       const { data: inscricoes } = await ctx.sb
         .from("inscricoes_atividades")
@@ -386,16 +392,16 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
     const familia = familiaMap.get(famEmail);
     batchItems.push({
       batch_id: batch.id,
-      aluno_nome: aluno.nome,
       aluno_id: aluno.id,
+      crianca_nome: aluno.nome,
       familia_email: famEmail,
       familia_nome: familia?.nome_resp || aluno.resp_nome || "",
-      familia_cpf: familia?.cpf || aluno.cpf || "",
+      cpf_pagador: familia?.cpf || aluno.cpf || "",
       valor_total: valorTotal,
       descricao_detalhada: descDetalhada,
       itens: items,
-      data_vencimento: vencimento,
-      status: "rascunho",
+      vencimento: vencimento,
+      status: "aguardando",
     });
   }
 
@@ -477,10 +483,10 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
           const boletoPayload = {
             seuNumero: `LUM-${item.id.substring(0, 8)}`,
             valorNominal: item.valor_total,
-            dataVencimento: item.data_vencimento,
+            dataVencimento: item.vencimento,
             numDiasAgenda: 30,
             pagador: {
-              cpfCnpj: (item.familia_cpf || "").replace(/\D/g, ""),
+              cpfCnpj: (item.cpf_pagador || "").replace(/\D/g, ""),
               tipoPessoa: "FISICA",
               nome: item.familia_nome,
             },
@@ -497,10 +503,10 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
           );
 
           await ctx.sb.from("fin_boleto_batch_items").update({
-            nosso_numero: result?.nossoNumero,
-            codigo_barras: result?.codigoBarras,
-            linha_digitavel: result?.linhaDigitavel,
-            pix_copia_cola: result?.pixCopiaECola,
+            nosso_numero: result?.cobranca?.nossoNumero || result?.nossoNumero,
+            codigo_barras: result?.boleto?.codigoBarras || result?.codigoBarras,
+            linha_digitavel: result?.boleto?.linhaDigitavel || result?.linhaDigitavel,
+            pix_copia_cola: result?.pix?.pixCopiaECola || result?.pixCopiaECola,
             inter_response: result,
             status: "emitido",
           }).eq("id", item.id);
@@ -508,25 +514,32 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
           // Insert into fin_boletos_emitidos
           await ctx.sb.from("fin_boletos_emitidos").insert({
             batch_item_id: item.id,
-            aluno_nome: item.aluno_nome,
+            crianca_nome: item.crianca_nome,
             familia_email: item.familia_email,
-            nosso_numero: result?.nossoNumero,
-            codigo_barras: result?.codigoBarras,
-            linha_digitavel: result?.linhaDigitavel,
+            familia_nome: item.familia_nome,
+            cpf_pagador: item.cpf_pagador,
+            nosso_numero: result?.cobranca?.nossoNumero || result?.nossoNumero,
+            codigo_barras: result?.boleto?.codigoBarras || result?.codigoBarras,
+            linha_digitavel: result?.boleto?.linhaDigitavel || result?.linhaDigitavel,
+            pix_copia_cola: result?.pix?.pixCopiaECola || result?.pixCopiaECola,
             valor: item.valor_total,
-            data_vencimento: item.data_vencimento,
-          });
+            vencimento: item.vencimento,
+            descricao: item.descricao_detalhada,
+            inter_response: result,
+            status: "emitido",
+          }).catch((e: any) => log.warn("Insert fin_boletos_emitidos failed", { error: e.message }));
 
           // Upsert fin_mensalidades
           await ctx.sb.from("fin_mensalidades").upsert({
-            aluno_nome: item.aluno_nome,
+            crianca_nome: item.crianca_nome,
             familia_email: item.familia_email,
-            mes_referencia: (ctx.body as any).mes_referencia || item.data_vencimento?.substring(0, 7),
-            valor: item.valor_total,
-            data_vencimento: item.data_vencimento,
+            familia_nome: item.familia_nome,
+            mes: item.vencimento?.substring(0, 7),
+            valor_total: item.valor_total,
+            data_vencimento: item.vencimento,
             status: "pendente",
-            nosso_numero: result?.nossoNumero,
-          }, { onConflict: "aluno_nome,mes_referencia" });
+            boleto_batch_item_id: item.id,
+          }, { onConflict: "familia_email,crianca_nome,mes" }).catch(() => {});
 
           emitidos++;
         } catch (err) {
@@ -592,13 +605,20 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
     // Upsert inadimplencia
     await ctx.sb.from("fin_inadimplencia").upsert({
       familia_email: m.familia_email,
-      crianca_nome: m.aluno_nome,
+      crianca_nome: m.crianca_nome,
       dias_atraso: diasAtraso,
-      valor_devido: m.valor,
+      valor_total_devedor: m.valor_total || m.valor_turno || 0,
       bucket,
-      mensalidade_id: m.id,
+      mensalidades_ids: [m.id],
       atualizado_em: new Date().toISOString(),
-    }, { onConflict: "familia_email,crianca_nome" });
+    }, { onConflict: "familia_email,crianca_nome" }).catch(() => {
+      // If no unique constraint, just insert
+      return ctx.sb.from("fin_inadimplencia").insert({
+        familia_email: m.familia_email, crianca_nome: m.crianca_nome,
+        dias_atraso: diasAtraso, valor_total_devedor: m.valor_total || 0,
+        bucket, mensalidades_ids: [m.id],
+      });
+    });
 
     // 28d bucket: send to lawyer
     if (bucket === "28d") {
@@ -606,10 +626,10 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
         .from("fin_inadimplencia")
         .select("status")
         .eq("familia_email", m.familia_email)
-        .eq("crianca_nome", m.aluno_nome)
+        .eq("crianca_nome", m.crianca_nome)
         .maybeSingle();
 
-      if (inadEntry && inadEntry.status !== "cobranca_extrajudicial") {
+      if (inadEntry?.status !== "cobranca_extrajudicial") {
         const { data: cfgAdv } = await ctx.sb
           .from("escola_config")
           .select("valor")
@@ -627,7 +647,7 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
           // Get outstanding debts
           const { data: debts } = await ctx.sb
             .from("fin_mensalidades")
-            .select("mes_referencia, valor, data_vencimento")
+            .select("mes, valor_total, data_vencimento")
             .eq("familia_email", m.familia_email)
             .in("status", ["pendente", "atrasado"])
             .order("data_vencimento");
@@ -643,13 +663,13 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
             .maybeSingle();
 
           const debtList = (debts ?? [])
-            .map((d: any) => `<li>${d.mes_referencia} — R$${d.valor?.toFixed(2)} (venc: ${d.data_vencimento})</li>`)
+            .map((d: any) => `<li>${d.mes} — R$${(d.valor_total||0).toFixed(2)} (venc: ${d.data_vencimento})</li>`)
             .join("");
           const appUrl = Deno.env.get("APP_URL") || "https://lumied.com.br";
           const contratoLink = contrato ? `${appUrl}/verificar.html?id=${contrato.id}` : "N/A";
 
           const html = `
-            <h2>Cobrança Extrajudicial — ${m.aluno_nome}</h2>
+            <h2>Cobrança Extrajudicial — ${m.crianca_nome}</h2>
             <p><strong>Responsável:</strong> ${familia?.nome_resp || m.familia_email}</p>
             <p><strong>Email:</strong> ${m.familia_email}</p>
             <p><strong>Telefone:</strong> ${familia?.telefone || "N/I"}</p>
@@ -659,12 +679,12 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
             <p>Este email foi gerado automaticamente pelo sistema Lumied.</p>
           `;
 
-          await sendEmail(cfgAdv.valor, `Cobrança Extrajudicial — ${m.aluno_nome}`, html);
+          await sendEmail(cfgAdv.valor, `Cobrança Extrajudicial — ${m.crianca_nome}`, html);
 
           await ctx.sb.from("fin_inadimplencia").update({
             status: "cobranca_extrajudicial",
             email_advogado_em: new Date().toISOString(),
-          }).eq("familia_email", m.familia_email).eq("crianca_nome", m.aluno_nome);
+          }).eq("familia_email", m.familia_email).eq("crianca_nome", m.crianca_nome);
         }
       }
     }
@@ -684,7 +704,7 @@ router.on("inadimplencia_dashboard", authGerente, async (ctx) => {
   const all = items ?? [];
   const bucketData = (b: string) => {
     const filtered = all.filter((i: any) => i.bucket === b);
-    return { count: filtered.length, total: filtered.reduce((s: number, i: any) => s + (i.valor_devido || 0), 0) };
+    return { count: filtered.length, total: filtered.reduce((s: number, i: any) => s + (i.valor_total_devedor || 0), 0) };
   };
   const extrajudicial = all.filter((i: any) => i.status === "cobranca_extrajudicial");
 
@@ -696,7 +716,7 @@ router.on("inadimplencia_dashboard", authGerente, async (ctx) => {
     },
     extrajudicial: {
       count: extrajudicial.length,
-      total: extrajudicial.reduce((s: number, i: any) => s + (i.valor_devido || 0), 0),
+      total: extrajudicial.reduce((s: number, i: any) => s + (i.valor_total_devedor || 0), 0),
     },
     items: all,
   });
