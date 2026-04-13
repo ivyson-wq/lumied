@@ -618,10 +618,30 @@ Workflow `.github/workflows/postdeploy.yml` + script `scripts/postdeploy.mjs` �
 - ✅ `CRON_INTERNAL_KEY` setado (24 bytes aleatórios) via Management API
 - ✅ Backfill `escola_id` executado em 24 tabelas (compliance_*, rh_ponto/ferias/holerites/folha, biblioteca_emprestimos/reservas, cantina_creditos/transacoes/restricoes, transporte_alunos/rastreio) — todas FILL com UUID da escola padrão (Maple Bear Caxias) via `DO $$ BEGIN ... EXCEPTION WHEN others THEN NULL; END $$` per-table para robustez
 
-**Pendências manuais** (não automatizadas, precisam de contexto humano):
-- ❌ `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` nos GitHub Secrets — quando adicionados, o workflow automaticamente seta `ADMIN_TOKEN` no worker `lumied-monitor`. Sem isso, `/status` retorna 401.
-- ❌ `META_APP_SECRET` nos 2 workers WhatsApp — depende da aprovação do Meta Business Manager. Comando: `cd whatsapp-{worker,gateway} && wrangler secret put META_APP_SECRET`.
-- ❌ `CONTROLID_DEFAULT_PASSWORD` — precisa da senha real dos 6 iDFaces. Alternativa: popular `acesso_dispositivos.api_password` por dispositivo via SQL.
+**Pendências manuais** (concluídas 2026-04-13):
+- ✅ `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` adicionados aos GitHub Secrets (2026-04-13)
+- ✅ `ADMIN_TOKEN` setado no worker `lumied-monitor` via Cloudflare API. Token salvo em `~/lumied-monitor-admin-token.txt`. Acesso: `https://lumied-monitor.ivyson.workers.dev/status?token=<ADMIN_TOKEN>` ou header `Authorization: Bearer <token>`. Endpoint `/health` é público (sem token).
+- ✅ `META_APP_SECRET` + `WHATSAPP_TOKEN` setados nos 2 workers WhatsApp via Cloudflare API (2026-04-13)
+- ✅ `CONTROLID_DEFAULT_PASSWORD=admin` setado no Supabase Edge Functions (2026-04-13). ⚠️ Trocar a senha nos 6 iDFaces e atualizar este secret quando possível.
+
+**Secrets configurados nos Cloudflare Workers WhatsApp** (2026-04-13):
+
+| Secret | whatsapp-worker | whatsapp-gateway |
+|--------|:-:|:-:|
+| `WHATSAPP_VERIFY_TOKEN` | ✅ | ✅ |
+| `META_PHONE_NUMBER_ID` | ✅ (`1056345077565103`) |  ✅ |
+| `META_WHATSAPP_BUSINESS_ID` | ✅ (`802737572889384`) | ✅ |
+| `APP_INTERNAL_SECRET` | ✅ (24 bytes random) | ✅ |
+| `APP_BASE_URL` | ✅ (`https://brgorknbrjlfwvrrlwxj.supabase.co`) | ✅ |
+| `META_APP_SECRET` | ✅ | ✅ |
+| `WHATSAPP_TOKEN` | ✅ | ✅ |
+
+**Webhook configurado no Meta Developers** (2026-04-13):
+- URL: `https://whatsapp-gateway.ivyson.workers.dev/webhook`
+- Verify Token: salvo em `~/whatsapp-verify-token.txt`
+- Campo subscrito: `messages`
+
+**⚠️ WHATSAPP_TOKEN é temporário** (~24h). Para token permanente: Meta Developers → Configurações do Sistema → System User → gerar token permanente com permissão `whatsapp_business_messaging`. Atualizar via `wrangler secret put WHATSAPP_TOKEN` nos 2 workers.
 
 **Script local** (alternativa ao workflow — rodar via `node scripts/postdeploy.mjs`):
 - Env vars obrigatórias: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` (default `brgorknbrjlfwvrrlwxj`)
