@@ -1759,10 +1759,12 @@ Deno.serve(async (req) => {
         const { data: orc } = await sb.from('alm_orcamentos').select('valor').eq('turma_id', t.id).eq('mes', mes).maybeSingle()
         const { data: reqs } = await sb.from('alm_requisicoes').select('total, status').eq('turma_id', t.id).eq('mes', mes).in('status', ['aprovado', 'pendente'])
         const gasto = (reqs ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
+        const gastoAprovado = (reqs ?? []).filter((r: any) => r.status === 'aprovado').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
         const gastoPendente = (reqs ?? []).filter((r: any) => r.status === 'pendente').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
-        turmasInfo.push({ ...t, orcamento: orc?.valor ?? 0, gasto, gasto_pendente: gastoPendente })
+        const orcVal = orc?.valor ?? 0
+        turmasInfo.push({ ...t, orcamento: orcVal, gasto, gasto_aprovado: gastoAprovado, gasto_pendente: gastoPendente, disponivel: Math.max(0, orcVal - gasto) })
       }
-      return json({ turma, turmas: turmasInfo, orcamento: turmasInfo[0]?.orcamento ?? 0, gasto: turmasInfo[0]?.gasto ?? 0, gasto_pendente: turmasInfo[0]?.gasto_pendente ?? 0 })
+      return json({ turma, turmas: turmasInfo, orcamento: turmasInfo[0]?.orcamento ?? 0, gasto: turmasInfo[0]?.gasto ?? 0, gasto_aprovado: turmasInfo[0]?.gasto_aprovado ?? 0, gasto_pendente: turmasInfo[0]?.gasto_pendente ?? 0, disponivel: turmasInfo[0]?.disponivel ?? 0 })
     }
 
     if (action === 'alm_minhas_reqs') {
@@ -1840,23 +1842,28 @@ Deno.serve(async (req) => {
 
     if (action === 'alm_painel') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
-      const [{ count: pendentes }, { data: aprovadas }, { data: turmas }, { data: orcamentos }] =
+      const [{ count: pendentes }, { data: reqsMes }, { data: turmas }, { data: orcamentos }] =
         await Promise.all([
           sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
-          sb.from('alm_requisicoes').select('total, turma_id').eq('mes', mes).eq('status', 'aprovado'),
+          sb.from('alm_requisicoes').select('total, turma_id, status').eq('mes', mes).in('status', ['aprovado', 'pendente']),
           sb.from('series').select('id, nome').eq('ativo', true),
           sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
         ])
-      const totalAprovado = (aprovadas ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
+      const totalAprovado = (reqsMes ?? []).filter((r: any) => r.status === 'aprovado').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
       const orcMap: Record<string, number> = {}
       for (const o of orcamentos ?? []) orcMap[o.turma_id] = o.valor
-      const gastoMap: Record<string, number> = {}
-      for (const r of aprovadas ?? []) gastoMap[r.turma_id] = (gastoMap[r.turma_id] ?? 0) + r.total
-      const turmasStats = (turmas ?? []).map((t: any) => ({
-        ...t,
-        orcamento: orcMap[t.id] ?? 0,
-        gasto: gastoMap[t.id] ?? 0,
-      }))
+      const gastoAprovMap: Record<string, number> = {}
+      const gastoPendMap: Record<string, number> = {}
+      for (const r of reqsMes ?? []) {
+        if (r.status === 'aprovado') gastoAprovMap[r.turma_id] = (gastoAprovMap[r.turma_id] ?? 0) + r.total
+        if (r.status === 'pendente') gastoPendMap[r.turma_id] = (gastoPendMap[r.turma_id] ?? 0) + r.total
+      }
+      const turmasStats = (turmas ?? []).map((t: any) => {
+        const orc = orcMap[t.id] ?? 0
+        const gastoAprov = gastoAprovMap[t.id] ?? 0
+        const gastoPend = gastoPendMap[t.id] ?? 0
+        return { ...t, orcamento: orc, gasto: gastoAprov + gastoPend, gasto_aprovado: gastoAprov, gasto_pendente: gastoPend, disponivel: Math.max(0, orc - gastoAprov - gastoPend) }
+      })
       return json({ pendentes: pendentes ?? 0, totalAprovado, turmas: turmasStats, mes })
     }
 

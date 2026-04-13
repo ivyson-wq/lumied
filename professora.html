@@ -812,7 +812,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div id="almBudgetBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
-      <span>Gasto: <strong id="almGastoVal">R$ 0</strong></span>
+      <span>Comprometido: <strong id="almGastoVal">R$ 0</strong></span>
+      <span>Disponível: <strong id="almDisponivelVal" style="color:#2d7a2d;">R$ 0</strong></span>
       <span>Orçamento: <strong id="almOrcVal">R$ 0</strong></span>
     </div>
   </div>
@@ -2876,12 +2877,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (!t) return;
     const orc = t.orcamento || 0;
     const gasto = t.gasto || 0;
+    const gastoAprov = t.gasto_aprovado || 0;
     const gastoPend = t.gasto_pendente || 0;
+    const disponivel = Math.max(0, orc - gasto);
     const pct = orc > 0 ? Math.min(100, (gasto / orc) * 100) : 0;
     document.getElementById('almBudgetBar').style.width = pct + '%';
     document.getElementById('almBudgetBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
-    document.getElementById('almGastoVal').innerHTML = fmtBRL(gasto) + (gastoPend > 0 ? ` <span style="font-size:10px;color:#b07d00;">(${fmtBRL(gastoPend)} pendente)</span>` : '');
+    let gastoHtml = '';
+    if (gastoPend > 0) {
+      gastoHtml = `<span style="font-size:12px;">${fmtBRL(gastoAprov)} aprovado + ${fmtBRL(gastoPend)} pendente</span>`;
+    } else {
+      gastoHtml = fmtBRL(gasto);
+    }
+    document.getElementById('almGastoVal').innerHTML = gastoHtml;
     document.getElementById('almOrcVal').textContent = fmtBRL(orc);
+    // Disponível
+    const dispEl = document.getElementById('almDisponivelVal');
+    if (dispEl) {
+      const dispColor = disponivel <= 0 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#2d7a2d';
+      dispEl.innerHTML = `<span style="font-weight:700;color:${dispColor};">${fmtBRL(disponivel)}</span>`;
+    }
   }
 
   async function almLoadReqs() {
@@ -3281,13 +3296,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (t) {
       const gastoProjetado = (t.gasto || 0) + totalReq;
       const orc = t.orcamento || 0;
+      const disponivelProj = Math.max(0, orc - gastoProjetado);
       const pct = orc > 0 ? Math.min(100, (gastoProjetado / orc) * 100) : 0;
       document.getElementById('almBudgetBar').style.width = pct + '%';
       document.getElementById('almBudgetBar').style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
+      const gastoAprov = t.gasto_aprovado || 0;
       const gastoPend = t.gasto_pendente || 0;
-      document.getElementById('almGastoVal').innerHTML = fmtBRL(gastoProjetado) +
-        (totalReq > 0 ? ` <span style="font-size:10px;color:#d4830a;">(+${fmtBRL(totalReq)} no carrinho)</span>` : '') +
-        (gastoPend > 0 && totalReq === 0 ? ` <span style="font-size:10px;color:#b07d00;">(${fmtBRL(gastoPend)} pendente)</span>` : '');
+      let gastoHtml = fmtBRL(gastoProjetado);
+      if (totalReq > 0) {
+        gastoHtml += ` <span style="font-size:10px;color:#d4830a;">(+${fmtBRL(totalReq)} no carrinho)</span>`;
+      } else if (gastoPend > 0) {
+        gastoHtml = `<span style="font-size:12px;">${fmtBRL(gastoAprov)} aprovado + ${fmtBRL(gastoPend)} pendente</span>`;
+      }
+      document.getElementById('almGastoVal').innerHTML = gastoHtml;
+      const dispEl = document.getElementById('almDisponivelVal');
+      if (dispEl) {
+        const dispColor = disponivelProj <= 0 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#2d7a2d';
+        dispEl.innerHTML = `<span style="font-weight:700;color:${dispColor};">${fmtBRL(disponivelProj)}</span>`;
+      }
     }
   }
 

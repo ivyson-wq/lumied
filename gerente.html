@@ -7431,11 +7431,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     turmasEl.innerHTML = d.turmas.map(t => {
       const pct = t.orcamento > 0 ? Math.min(100, (t.gasto/t.orcamento)*100) : 0;
       const barColor = pct>=90 ? '#e53e3e' : pct>=70 ? '#f6a623' : '#48bb78';
+      const pendLabel = t.gasto_pendente > 0 ? ` <span style="font-size:10px;color:#b07d00;">(${almFmtBRL(t.gasto_pendente)} pend.)</span>` : '';
       return `<div class="alm-budget-row">
         <div style="width:12px;height:12px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></div>
         <div style="min-width:120px;font-weight:600;font-size:13px;">${t.nome}</div>
         <div class="alm-budget-bar-wrap"><div class="alm-budget-bar" style="width:${pct}%;background:${barColor};"></div></div>
-        <div style="font-size:12px;color:var(--muted);white-space:nowrap;">${almFmtBRL(t.gasto)} / ${almFmtBRL(t.orcamento)}</div>
+        <div style="font-size:12px;color:var(--muted);white-space:nowrap;">${almFmtBRL(t.gasto)}${pendLabel} / ${almFmtBRL(t.orcamento)}</div>
       </div>`;
     }).join('');
   }
