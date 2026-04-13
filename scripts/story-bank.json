@@ -14,53 +14,53 @@
   },
   "batches": [
     [
-      {"type":"tip","text":"Sabia que o Lumied faz a chamada da turma inteira em 30 segundos?","subtext":"Barra de progresso visual. Toque no nome → presente. Simples assim.","keyword":"sala de aula"},
-      {"type":"stat","number":"23","unit":"módulos","context":"integrados numa única plataforma. De CRM a compliance, tudo conectado.","keyword":"sistema"},
-      {"type":"before_after","before":"Planilha Excel com 47 abas","after":"Dashboard Lumied com 1 clique","keyword":"dashboard"},
+      {"type":"tip","text":"Sua escola ainda faz chamada no papel? No Lumied, são 30 segundos. Toque no nome → presente. Feito.","subtext":"Enquanto você gasta 5 minutos, outras escolas já terminaram.","keyword":"sala de aula"},
+      {"type":"stat","number":"23","unit":"módulos","context":"Uma plataforma. Tudo integrado. Sem costurar 5 sistemas diferentes.","keyword":"sistema"},
+      {"type":"before_after","before":"Planilha Excel com 47 abas que ninguém entende","after":"1 dashboard com tudo que importa, em tempo real","keyword":"dashboard"},
       {"type":"faq","question":"Preciso de equipe de TI na escola?","answer":"Não. Lumied é 100% em nuvem. Funciona em qualquer navegador. Nós cuidamos de tudo.","keyword":"tecnologia"},
-      {"type":"cta","text":"Quer ver o Lumied funcionando com os dados da SUA escola?","subtext":"Demonstração gratuita de 30 min. Sem compromisso.","keyword":"sucesso"}
+      {"type":"cta","text":"Sua escola merece tecnologia de verdade.","subtext":"30 minutos. Uma demo. Zero compromisso.","keyword":"sucesso"}
     ],
     [
-      {"type":"tip","text":"A régua de cobrança do Lumied envia lembretes pelo WhatsApp antes do boleto vencer.","subtext":"98% de taxa de abertura. Inadimplência cai até 40%.","keyword":"cobrança"},
-      {"type":"stat","number":"-40%","unit":"inadimplência","context":"em 90 dias com régua de cobrança automatizada via WhatsApp.","keyword":"financeiro"},
-      {"type":"before_after","before":"Secretária ligando para 30 pais por dia","after":"WhatsApp automático com template aprovado pela Meta","keyword":"WhatsApp"},
+      {"type":"tip","text":"40% das famílias pagam atrasado por um motivo simples: esqueceram. O Lumied lembra por elas — pelo WhatsApp.","subtext":"Régua de cobrança automática. Você dorme, o sistema cobra.","keyword":"cobrança"},
+      {"type":"stat","number":"-40%","unit":"inadimplência","context":"Em 90 dias. Sem ligar. Sem constranger. Só automação.","keyword":"financeiro"},
+      {"type":"before_after","before":"Secretária ligando para 30 pais todo mês","after":"WhatsApp automático com 98% de abertura","keyword":"WhatsApp"},
       {"type":"faq","question":"A escola pode bloquear aluno inadimplente?","answer":"Não. A Lei 9.870/99 proíbe. Mas pode não renovar no ano seguinte com 30 dias de aviso.","keyword":"lei"},
-      {"type":"cta","text":"Reduza sua inadimplência em 40% nos primeiros 90 dias.","subtext":"Agende uma demo e veja como funciona a régua automática.","keyword":"resultado"}
+      {"type":"cta","text":"Inadimplência não é falta de sorte. É falta de processo.","subtext":"Veja como funciona em 30 minutos.","keyword":"resultado"}
     ],
     [
-      {"type":"tip","text":"O assistente Lumi analisa a inadimplência da escola e sugere ações — em linguagem natural.","subtext":"Pergunte: 'quais famílias estão com risco de atraso este mês?'","keyword":"inteligência artificial"},
-      {"type":"stat","number":"12h","unit":"/semana","context":"economizadas pela coordenação com automação de relatórios e insights via IA.","keyword":"gestão"},
-      {"type":"before_after","before":"Relatório pedagógico feito à mão (3 horas)","after":"Lumi gera o relatório em 5 segundos","keyword":"dados"},
+      {"type":"tip","text":"Qual família vai atrasar o boleto este mês? A Lumi já sabe — e já sugeriu a ação.","subtext":"IA que entende sua escola, não um chatbot genérico.","keyword":"inteligência artificial"},
+      {"type":"stat","number":"12h","unit":"por semana","context":"É o que a coordenação economiza com IA gerando relatórios e insights.","keyword":"gestão"},
+      {"type":"before_after","before":"Relatório pedagógico feito à mão: 3 horas","after":"Lumi gera em 5 segundos, com dados reais","keyword":"dados"},
       {"type":"faq","question":"O Lumied usa IA de verdade?","answer":"Sim. Claude AI da Anthropic com acesso real aos dados da escola via MCP. Não é ChatGPT genérico.","keyword":"IA"},
-      {"type":"cta","text":"IA que entende sua escola. Não é ficção — já está funcionando.","subtext":"Conheça a Lumi numa demo personalizada.","keyword":"inovação"}
+      {"type":"cta","text":"Inteligência artificial não é futuro. É agora.","subtext":"Conheça a Lumi na prática.","keyword":"inovação"}
     ],
     [
-      {"type":"tip","text":"Cada família assina o contrato de matrícula pelo celular. Validade legal completa.","subtext":"Verificação por email + assinatura + hash SHA-256 + geolocalização.","keyword":"contrato"},
-      {"type":"stat","number":"10min","unit":"","context":"do envio do contrato à assinatura eletrônica completa. Sem cartório.","keyword":"digital"},
-      {"type":"before_after","before":"Imprimir 3 vias, reconhecer firma, guardar em pasta","after":"Contrato digital com código verificável LUM-XXXXXXXX","keyword":"contrato"},
+      {"type":"tip","text":"Contrato de matrícula pelo celular. Assinado em 10 minutos. Validade jurídica completa.","subtext":"Chega de imprimir 3 vias e ir ao cartório.","keyword":"contrato"},
+      {"type":"stat","number":"10min","unit":"","context":"Do envio à assinatura. Sem papel, sem cartório, sem estresse.","keyword":"digital"},
+      {"type":"before_after","before":"3 vias impressas + reconhecimento de firma + pasta no arquivo","after":"Contrato digital com código verificável LUM-XXXXXXXX","keyword":"contrato"},
       {"type":"faq","question":"Assinatura eletrônica tem validade jurídica?","answer":"Sim. Lei 14.063/2020, Art. 4°. Assinatura eletrônica simples com 2FA. Válida para contratos privados.","keyword":"jurídico"},
-      {"type":"cta","text":"Matrículas fechadas pelo celular. Sem papel, sem cartório.","subtext":"Veja como funciona na prática.","keyword":"matrícula"}
+      {"type":"cta","text":"Matrículas fechadas pelo celular. É real.","subtext":"Veja como funciona.","keyword":"matrícula"}
     ],
     [
-      {"type":"tip","text":"O controle de acesso facial reconhece o responsável e avisa a professora em 2 segundos.","subtext":"6 dispositivos Control iD iDFace. Presença automática.","keyword":"biometria"},
-      {"type":"stat","number":"2s","unit":"","context":"para reconhecer o rosto, verificar permissão e alertar a professora da turma.","keyword":"acesso"},
-      {"type":"before_after","before":"Porteiro grita o nome da criança no pátio","after":"Face ID → alerta na tela da professora → criança liberada","keyword":"segurança"},
+      {"type":"tip","text":"O responsável chegou na portaria. Em 2 segundos: face reconhecida, permissão validada, professora alertada.","subtext":"Sem fila. Sem papel. Sem grito no pátio.","keyword":"biometria"},
+      {"type":"stat","number":"2s","unit":"","context":"Para reconhecer, validar e alertar. Seu porteiro não é tão rápido.","keyword":"acesso"},
+      {"type":"before_after","before":"Porteiro gritando nome da criança no pátio","after":"Face ID → alerta automático → liberação segura","keyword":"segurança"},
       {"type":"faq","question":"E se a avó quiser buscar a criança?","answer":"No app, a família cadastra autorizados com foto, parentesco e período. A portaria valida por reconhecimento facial.","keyword":"família"},
-      {"type":"cta","text":"Segurança que funciona. Sem papel, sem fila, sem grito.","subtext":"Controle de acesso biométrico integrado ao Lumied.","keyword":"segurança"}
+      {"type":"cta","text":"Segurança escolar que funciona de verdade.","subtext":"6 dispositivos. Zero falha.","keyword":"segurança"}
     ],
     [
-      {"type":"tip","text":"O compliance do Lumied monitora 13 obrigações regulatórias com alertas automáticos.","subtext":"RAIS, eSocial, FGTS, Censo, AVCB, LGPD RIPD — nunca mais perca um prazo.","keyword":"compliance"},
-      {"type":"stat","number":"R$42k","unit":"","context":"custo médio de uma ação trabalhista em escola bilíngue. Prevenção é mais barato.","keyword":"CLT"},
-      {"type":"before_after","before":"Prazo do AVCB vencido, multa do Bombeiro","after":"Alerta 30 dias antes + checklist de renovação","keyword":"certificação"},
+      {"type":"tip","text":"13 obrigações regulatórias. O Lumied monitora todas. Com alerta antes do vencimento.","subtext":"RAIS, eSocial, AVCB, LGPD — nunca mais perca um prazo.","keyword":"compliance"},
+      {"type":"stat","number":"R$42k","unit":"","context":"Custo médio de UMA ação trabalhista em escola bilíngue. Prevenção custa 100x menos.","keyword":"CLT"},
+      {"type":"before_after","before":"Prazo do AVCB venceu. Multa do Bombeiro na porta.","after":"Alerta 30 dias antes + checklist automático de renovação","keyword":"certificação"},
       {"type":"faq","question":"A escola precisa de DPO (encarregado LGPD)?","answer":"Sim. É obrigatório independente do porte. Pode ser funcionário ou terceirizado. O contato deve estar no site.","keyword":"LGPD"},
-      {"type":"cta","text":"Compliance escolar sem virar as noites lendo legislação.","subtext":"O Lumied automatiza CLT, LGPD, eSocial, AVCB e mais.","keyword":"compliance"}
+      {"type":"cta","text":"Compliance sem virar as noites lendo legislação.","subtext":"CLT, LGPD, eSocial, AVCB — tudo automatizado.","keyword":"compliance"}
     ],
     [
-      {"type":"tip","text":"Professoras de múltiplas turmas veem o orçamento de cada uma separado no almoxarifado.","subtext":"Requisição → aprovação → debita do orçamento → entrega. Tudo rastreado.","keyword":"almoxarifado"},
-      {"type":"stat","number":"146","unit":"insumos","context":"pré-cadastrados no catálogo com preço atualizado automaticamente.","keyword":"gestão"},
-      {"type":"before_after","before":"Lista de material no caderninho","after":"Catálogo digital com preço, estoque e orçamento por turma","keyword":"escola"},
+      {"type":"tip","text":"Cada professora vê o orçamento da sua turma em tempo real. Requisição → aprovação → entrega. Tudo rastreado.","subtext":"Acabou o 'caderninho de material'.","keyword":"almoxarifado"},
+      {"type":"stat","number":"146","unit":"insumos","context":"Pré-cadastrados com preço atualizado. Sem pesquisar preço no Google.","keyword":"gestão"},
+      {"type":"before_after","before":"Lista de material no caderninho, preço no achismo","after":"Catálogo digital com preço real, estoque e orçamento por turma","keyword":"escola"},
       {"type":"faq","question":"E se a professora precisar de um material que não está no catálogo?","answer":"Ela preenche nome, categoria, quantidade e preço estimado. O gestor aprova e o item é adicionado ao catálogo.","keyword":"almoxarifado"},
-      {"type":"cta","text":"Almoxarifado escolar sem planilha. Com orçamento real por turma.","subtext":"Teste grátis por 30 dias.","keyword":"escola"}
+      {"type":"cta","text":"Almoxarifado escolar inteligente. Sem planilha.","subtext":"Teste grátis por 30 dias.","keyword":"escola"}
     ]
   ]
 }

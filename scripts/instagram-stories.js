@@ -172,7 +172,7 @@ function dayOfYear() {
 }
 
 // --- Story HTML templates ---
-function logoHtml(height = 44) {
+function logoHtml(height = 56) {
   if (LOGO_DATA_URI) {
     return `<img src="${LOGO_DATA_URI}" style="height:${height}px;object-fit:contain;" />`;
   }
@@ -180,7 +180,7 @@ function logoHtml(height = 44) {
 }
 
 function pillHtml(label, color) {
-  return `<div style="display:inline-block;padding:8px 20px;border-radius:20px;background:${color};color:white;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">${label}</div>`;
+  return `<div style="display:inline-block;padding:10px 24px;border-radius:20px;background:${color};color:white;font-family:'Inter',sans-serif;font-size:18px;font-weight:700;letter-spacing:3px;text-transform:uppercase;">${label}</div>`;
 }
 
 function storyTipHtml(story, bgUrl) {
@@ -191,12 +191,12 @@ function storyTipHtml(story, bgUrl) {
   <div style="width:100%;height:100%;background:url('${bgUrl}') center/cover no-repeat;position:absolute;top:0;left:0;"></div>
   <div style="width:100%;height:100%;position:absolute;top:0;left:0;background:linear-gradient(to bottom,rgba(0,0,0,0.5) 0%,rgba(0,0,0,0.9) 100%);"></div>
   <div style="position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;padding:80px 60px;">
-    <div style="margin-bottom:24px;">${logoHtml(44)}</div>
+    <div style="margin-bottom:24px;">${logoHtml(56)}</div>
     <div style="margin-bottom:60px;">${pillHtml('DICA LUMIED', '#6C63FF')}</div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-      <div style="font-size:80px;margin-bottom:32px;">💡</div>
-      <div style="font-size:36px;font-weight:700;color:white;line-height:1.4;max-width:900px;margin-bottom:24px;">${story.text}</div>
-      <div style="font-size:20px;color:rgba(255,255,255,0.7);line-height:1.5;max-width:800px;">${story.subtext || ''}</div>
+      <div style="font-size:80px;margin-bottom:32px;text-shadow:0 0 60px rgba(108,99,255,0.5);">💡</div>
+      <div style="font-size:52px;font-weight:700;color:white;line-height:1.3;max-width:880px;margin-bottom:32px;padding:0 40px;">${story.text}</div>
+      <div style="font-size:28px;color:rgba(255,255,255,0.7);line-height:1.5;max-width:800px;">${story.subtext || ''}</div>
     </div>
     <div style="text-align:center;padding-bottom:40px;">
       <div style="font-size:28px;color:rgba(255,255,255,0.5);margin-bottom:12px;">↑</div>
@@ -216,11 +216,13 @@ function storyStatHtml(story, bgUrl) {
   <div style="position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;padding:80px 60px;">
     <div style="margin-bottom:24px;">${pillHtml('NUMERO DO DIA', '#10B981')}</div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-      <div style="font-family:'Playfair Display',serif;font-size:120px;font-weight:700;color:white;line-height:1.1;margin-bottom:16px;">${story.number}</div>
-      <div style="font-size:28px;font-weight:700;color:white;margin-bottom:20px;">${story.unit || ''}</div>
-      <div style="font-size:20px;color:rgba(255,255,255,0.8);line-height:1.5;max-width:800px;">${story.context || ''}</div>
+      <div style="width:60%;height:2px;background:rgba(255,255,255,0.2);margin-bottom:40px;"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:180px;font-weight:700;color:white;line-height:1.0;margin-bottom:16px;text-shadow:0 4px 30px rgba(0,0,0,0.3);">${story.number}</div>
+      <div style="font-size:36px;font-weight:700;color:white;margin-bottom:24px;">${story.unit || ''}</div>
+      <div style="width:60%;height:2px;background:rgba(255,255,255,0.2);margin-bottom:32px;"></div>
+      <div style="font-size:26px;color:rgba(255,255,255,0.85);line-height:1.5;max-width:70%;">${story.context || ''}</div>
     </div>
-    <div style="padding-bottom:40px;">${logoHtml(36)}</div>
+    <div style="padding-bottom:40px;">${logoHtml(56)}</div>
   </div>
 </body></html>`;
 }
@@ -236,24 +238,23 @@ function storyBeforeAfterHtml(story, bgUrl) {
   <!-- Bottom half - DEPOIS -->
   <div style="width:100%;height:50%;position:absolute;bottom:0;left:0;background:url('${bgUrl}') center bottom/cover no-repeat;"></div>
   <div style="width:100%;height:50%;position:absolute;bottom:0;left:0;background:rgba(16,185,129,0.6);"></div>
-  <!-- Diagonal divider -->
-  <div style="position:absolute;top:50%;left:0;width:100%;height:4px;background:white;transform:translateY(-2px) rotate(-2deg);z-index:3;"></div>
+  <!-- Zigzag divider -->
   <svg style="position:absolute;top:calc(50% - 20px);left:0;width:100%;height:40px;z-index:3;" viewBox="0 0 1080 40">
-    <path d="M0,20 ${Array.from({length:27},(_,i)=>`L${i*40+20},${i%2===0?0:40}`).join(' ')} L1080,20" fill="none" stroke="white" stroke-width="3"/>
+    <path d="M0,20 ${Array.from({length:27},(_,i)=>`L${i*40+20},${i%2===0?0:40}`).join(' ')} L1080,20" fill="none" stroke="white" stroke-width="4"/>
   </svg>
   <div style="position:relative;z-index:4;width:100%;height:100%;display:flex;flex-direction:column;">
     <!-- Logo at very top -->
-    <div style="text-align:center;padding-top:60px;">${logoHtml(36)}</div>
+    <div style="text-align:center;padding-top:60px;">${logoHtml(56)}</div>
     <div style="text-align:center;margin-top:16px;">${pillHtml('ANTES vs DEPOIS', '#F59E0B')}</div>
     <!-- ANTES section -->
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 80px;text-align:center;">
-      <div style="font-size:18px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:3px;margin-bottom:16px;">ANTES</div>
-      <div style="font-size:24px;font-weight:600;color:white;line-height:1.4;">${story.before}</div>
+      <div style="font-size:24px;font-weight:700;color:rgba(255,255,255,0.9);letter-spacing:4px;margin-bottom:20px;text-transform:uppercase;">&#10060; ANTES</div>
+      <div style="font-size:38px;font-weight:700;color:white;line-height:1.3;">${story.before}</div>
     </div>
     <!-- DEPOIS section -->
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 80px;text-align:center;">
-      <div style="font-size:18px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:3px;margin-bottom:16px;">DEPOIS</div>
-      <div style="font-size:24px;font-weight:600;color:white;line-height:1.4;">${story.after}</div>
+      <div style="font-size:24px;font-weight:700;color:rgba(255,255,255,0.9);letter-spacing:4px;margin-bottom:20px;text-transform:uppercase;">&#9989; DEPOIS</div>
+      <div style="font-size:38px;font-weight:700;color:white;line-height:1.3;">${story.after}</div>
     </div>
   </div>
 </body></html>`;
@@ -268,14 +269,14 @@ function storyFaqHtml(story, bgUrl) {
   <div style="width:100%;height:100%;position:absolute;top:0;left:0;background:rgba(0,0,0,0.75);"></div>
   <div style="position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;padding:80px 60px;">
     <div style="margin-bottom:60px;">${pillHtml('PERGUNTA FREQUENTE', '#0284C7')}</div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:900px;">
-      <div style="font-size:60px;margin-bottom:24px;">❓</div>
-      <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:white;line-height:1.4;margin-bottom:48px;">${story.question}</div>
-      <div style="background:rgba(255,255,255,0.1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:40px;width:100%;">
-        <div style="font-size:22px;color:rgba(255,255,255,0.9);line-height:1.6;">${story.answer}</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:920px;">
+      <div style="font-size:80px;margin-bottom:28px;">&#10067;</div>
+      <div style="font-family:'Playfair Display',serif;font-size:56px;font-weight:700;color:white;line-height:1.3;margin-bottom:48px;">${story.question}</div>
+      <div style="background:rgba(255,255,255,0.1);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:40px;width:85%;">
+        <div style="font-size:30px;color:rgba(255,255,255,0.9);line-height:1.6;">${story.answer}</div>
       </div>
     </div>
-    <div style="padding-bottom:40px;">${logoHtml(36)}</div>
+    <div style="padding-bottom:40px;">${logoHtml(56)}</div>
   </div>
 </body></html>`;
 }
@@ -287,14 +288,14 @@ function storyCtaHtml(story) {
 </head><body style="width:1080px;height:1920px;overflow:hidden;position:relative;font-family:'Inter',sans-serif;">
   <div style="width:100%;height:100%;background:#0F172A;position:absolute;top:0;left:0;"></div>
   <!-- Purple glow orb -->
-  <div style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);width:500px;height:500px;background:radial-gradient(circle,rgba(108,99,255,0.4) 0%,transparent 70%);border-radius:50%;filter:blur(60px);"></div>
+  <div style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(108,99,255,0.4) 0%,transparent 70%);border-radius:50%;filter:blur(60px);"></div>
   <div style="position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 60px;text-align:center;">
-    <div style="margin-bottom:48px;">${logoHtml(64)}</div>
-    <div style="font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:white;line-height:1.4;max-width:800px;margin-bottom:24px;">${story.text}</div>
-    <div style="font-size:20px;color:#94A3B8;line-height:1.5;max-width:700px;margin-bottom:48px;">${story.subtext || ''}</div>
-    <div style="display:inline-block;padding:18px 48px;border-radius:12px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:white;font-size:20px;font-weight:700;margin-bottom:24px;">Agende uma Demo →</div>
-    <div style="font-size:18px;color:rgba(255,255,255,0.6);margin-bottom:auto;">Link na bio 👆</div>
-    <div style="font-size:16px;color:rgba(255,255,255,0.4);padding-bottom:40px;">lumied.com.br</div>
+    <div style="margin-bottom:48px;">${logoHtml(72)}</div>
+    <div style="font-family:'Playfair Display',serif;font-size:52px;font-weight:700;color:white;line-height:1.3;max-width:860px;margin-bottom:24px;">${story.text}</div>
+    <div style="font-family:'Inter',sans-serif;font-size:30px;font-weight:700;color:#94A3B8;line-height:1.4;max-width:780px;margin-bottom:48px;">${story.subtext || ''}</div>
+    <div style="display:inline-block;padding:20px 48px;border-radius:12px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:white;font-size:24px;font-weight:700;margin-bottom:24px;box-shadow:0 0 40px rgba(108,99,255,0.5);">Agende uma Demo &rarr;</div>
+    <div style="font-size:24px;color:rgba(255,255,255,0.7);margin-bottom:auto;font-weight:600;">Link na bio &#128070;</div>
+    <div style="font-size:18px;color:rgba(255,255,255,0.4);padding-bottom:40px;">lumied.com.br</div>
   </div>
 </body></html>`;
 }
