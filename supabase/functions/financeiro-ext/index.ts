@@ -51,17 +51,29 @@ async function interFetch(
 async function getInterToken(...scopeOptions: string[]): Promise<string> {
   const clientId = Deno.env.get("INTER_CLIENT_ID");
   const clientSecret = Deno.env.get("INTER_CLIENT_SECRET");
-  if (!clientId || !clientSecret) throw new AppError("BAD_REQUEST", "Inter API não configurada.");
+  const relayUrl = Deno.env.get("INTER_RELAY_URL");
+  const relaySecret = Deno.env.get("RELAY_SECRET");
+  if (!clientId || !clientSecret || !relayUrl || !relaySecret) throw new AppError("BAD_REQUEST", "Inter API não configurada.");
   const scopes = scopeOptions.length ? scopeOptions : ["extrato.read"];
   for (const scope of scopes) {
     try {
       const params = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: "client_credentials" });
-      const data = await interFetch("/oauth/v2/token", "POST", { "Content-Type": "application/x-www-form-urlencoded" }, params.toString());
-      if (data?.access_token) {
-        log.info(`Inter OAuth scope aceito: ${scope}`);
-        return data.access_token;
+      // Call relay directly (don't use interFetch which throws on non-2xx)
+      const res = await fetch(`${relayUrl}/inter-proxy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${relaySecret}` },
+        body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() }),
+      });
+      const { status, body } = await res.json() as { status: number; body: string };
+      if (status >= 200 && status < 300) {
+        const parsed = JSON.parse(body);
+        if (parsed?.access_token) {
+          log.info(`Inter OAuth scope aceito: ${scope}`);
+          return parsed.access_token;
+        }
       }
-    } catch { log.warn(`Inter OAuth scope rejeitado: ${scope}`); }
+      log.warn(`Inter OAuth scope rejeitado: ${scope} (status ${status})`);
+    } catch (e) { log.warn(`Inter OAuth scope erro: ${scope}: ${e}`); }
   }
   throw new Error(`Nenhum scope aceito pelo Inter. Tentados: ${scopes.join(", ")}`);
 }
@@ -194,18 +206,23 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
 
   let token: string;
   try {
-    token = await getInterToken("extrato.read", "banking.extrato.read", "extrato.read banking.read");
+    token = await getInterToken("extrato.read", "boleto-cobranca.read extrato.read");
   } catch (e) {
     return successResponse({ error: `Falha na autenticação Inter: ${e instanceof Error ? e.message : e}`, matched: 0, created: 0, pendente_revisao: 0 });
   }
   const dataRef = yesterday();
   const interConta = Deno.env.get("INTER_CONTA") || "";
 
-  const extrato = await interFetch(
-    `/banking/v2/extrato?dataInicio=${dataRef}&dataFim=${dataRef}`,
-    "GET",
-    { Authorization: `Bearer ${token}`, "x-conta-corrente": interConta },
-  );
+  let extrato: any;
+  try {
+    extrato = await interFetch(
+      `/banking/v2/extrato?dataInicio=${dataRef}&dataFim=${dataRef}`,
+      "GET",
+      { Authorization: `Bearer ${token}`, "x-conta-corrente": interConta },
+    );
+  } catch (e) {
+    return successResponse({ error: `Falha ao buscar extrato Inter: ${e instanceof Error ? e.message : e}. Verifique se o escopo 'extrato.read' está habilitado no app Inter (Internet Banking → Desenvolvedores → Editar App).`, matched: 0, created: 0, pendente_revisao: 0 });
+  }
 
   const transacoes: any[] = extrato?.transacoes ?? [];
   let matched = 0;
