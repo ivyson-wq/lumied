@@ -78,31 +78,104 @@ Deno.serve(async (req) => {
     const payload = await req.json()
     console.log('Webhook Inter recebido:', JSON.stringify(payload))
 
-    const situacao = payload.situacao ?? payload.evento
-    if (situacao !== 'EMITIDO') {
-      return new Response(JSON.stringify({ ok: true, msg: `Situação ${situacao} ignorada` }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    const nossoNumero: string = payload.nossoNumero
-    const codigoSolicitacao: string = payload.codigoSolicitacao
-    const cpf: string = payload.pagador?.cpfCnpj?.replace(/\D/g, '')
-    const valor: number = payload.valorNominal ?? payload.valor
-    const vencimento: string = payload.dataVencimento
+    const situacao: string = (payload.situacao ?? payload.evento ?? '').toUpperCase()
+    const nossoNumero: string = payload.nossoNumero ?? ''
+    const codigoSolicitacao: string = payload.codigoSolicitacao ?? ''
+    const cpf: string = (payload.pagador?.cpfCnpj ?? '').replace(/\D/g, '')
+    const valor: number = payload.valorNominal ?? payload.valor ?? 0
+    const vencimento: string = payload.dataVencimento ?? ''
     const linhaDigitavel: string = payload.linhaDigitavel ?? ''
-
-    if (!nossoNumero || !codigoSolicitacao || !cpf) {
-      return new Response(JSON.stringify({ error: 'nossoNumero, codigoSolicitacao ou CPF ausente' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
+
+    // ── PAGO: baixa automática ──
+    if (situacao === 'PAGO') {
+      const dataPagamento = payload.dataPagamento ?? new Date().toISOString().slice(0, 10)
+      const valorRecebido = payload.valorTotalRecebido ?? valor
+      console.log(`[inter-webhook] PAGO nossoNumero=${nossoNumero} valor=${valorRecebido} data=${dataPagamento}`)
+
+      // 1. Busca e atualiza fin_boletos_emitidos
+      const { data: boleto } = await supabase.from('fin_boletos_emitidos')
+        .select('id, mensalidade_id, batch_item_id')
+        .eq('nosso_numero', nossoNumero).maybeSingle()
+
+      if (boleto) {
+        // Download comprovante PDF
+        let comprovanteUrl: string | null = null
+        try {
+          const token = await getInterToken()
+          const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
+          const fileName = `comprovantes/${nossoNumero}_pago.pdf`
+          await supabase.storage.from('boletos').upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
+          const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
+          comprovanteUrl = urlData.publicUrl
+        } catch (e) { console.warn('[inter-webhook] PDF comprovante indisponível:', e) }
+
+        await supabase.from('fin_boletos_emitidos').update({
+          status: 'pago', pago_em: dataPagamento, comprovante_url: comprovanteUrl,
+        }).eq('id', boleto.id)
+
+        // 2. Atualiza mensalidade vinculada
+        if (boleto.mensalidade_id) {
+          await supabase.from('fin_mensalidades').update({
+            status: 'pago', data_pagamento: dataPagamento,
+          }).eq('id', boleto.mensalidade_id)
+        }
+
+        // 3. Atualiza batch item se houver
+        if (boleto.batch_item_id) {
+          await supabase.from('fin_boleto_batch_items').update({ status: 'pago' }).eq('id', boleto.batch_item_id)
+        }
+
+        console.log(`[inter-webhook] Boleto ${nossoNumero} marcado como PAGO`)
+      }
+
+      // 4. Atualiza tabela legada boletos
+      await supabase.from('boletos').update({ situacao: 'PAGO' }).eq('nosso_numero', nossoNumero)
+
+      return new Response(JSON.stringify({ ok: true, action: 'pago', nossoNumero }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── VENCIDO / CANCELADO / EXPIRADO: atualizar status ──
+    if (['VENCIDO', 'CANCELADO', 'EXPIRADO'].includes(situacao)) {
+      const statusMap: Record<string, string> = { VENCIDO: 'vencido', CANCELADO: 'cancelado', EXPIRADO: 'vencido' }
+      const newStatus = statusMap[situacao] ?? 'vencido'
+      console.log(`[inter-webhook] ${situacao} nossoNumero=${nossoNumero}`)
+
+      await supabase.from('fin_boletos_emitidos').update({ status: newStatus }).eq('nosso_numero', nossoNumero)
+      await supabase.from('boletos').update({ situacao }).eq('nosso_numero', nossoNumero)
+
+      // Marcar mensalidade como atrasado se VENCIDO
+      if (situacao === 'VENCIDO') {
+        const { data: boleto } = await supabase.from('fin_boletos_emitidos')
+          .select('mensalidade_id').eq('nosso_numero', nossoNumero).maybeSingle()
+        if (boleto?.mensalidade_id) {
+          await supabase.from('fin_mensalidades').update({ status: 'atrasado' }).eq('id', boleto.mensalidade_id)
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true, action: situacao.toLowerCase(), nossoNumero }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── EMITIDO: fluxo original (download PDF + salvar) ──
+    if (situacao !== 'EMITIDO') {
+      return new Response(JSON.stringify({ ok: true, msg: `Situação ${situacao} não processada` }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!nossoNumero || !codigoSolicitacao || !cpf) {
+      return new Response(JSON.stringify({ error: 'nossoNumero, codigoSolicitacao ou CPF ausente' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
     const token = await getInterToken()
     const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
@@ -119,7 +192,7 @@ Deno.serve(async (req) => {
 
     const cpfFormatado = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
-    const { error: dbError } = await supabase.from('boletos').insert({
+    await supabase.from('boletos').upsert({
       cpf: cpfFormatado,
       nosso_numero: nossoNumero,
       valor,
@@ -127,11 +200,15 @@ Deno.serve(async (req) => {
       linha_digitavel: linhaDigitavel,
       situacao: 'EMITIDO',
       pdf_url: pdfUrl,
+    }, { onConflict: 'nosso_numero' }).catch(() => {
+      // Fallback: insert if upsert fails (no unique constraint)
+      return supabase.from('boletos').insert({
+        cpf: cpfFormatado, nosso_numero: nossoNumero, valor, vencimento,
+        linha_digitavel: linhaDigitavel, situacao: 'EMITIDO', pdf_url: pdfUrl,
+      })
     })
 
-    if (dbError) throw new Error(`Inserção no banco falhou: ${dbError.message}`)
-
-    console.log(`Boleto ${nossoNumero} salvo para CPF ${cpfFormatado}`)
+    console.log(`[inter-webhook] Boleto ${nossoNumero} EMITIDO para CPF ${cpfFormatado}`)
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { 'Content-Type': 'application/json' },
