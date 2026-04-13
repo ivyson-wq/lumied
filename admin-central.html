@@ -194,6 +194,22 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div class="lf"><label>Email</label><input id="loginEmail" type="email" placeholder="voce@lumied.com.br"></div>
         <div class="lf"><label>Senha</label><input id="loginSenha" type="password" placeholder="Sua senha"></div>
         <button class="login-btn" onclick="doLogin()">Entrar</button>
+        <p style="text-align:center;margin-top:12px;"><a href="#" onclick="showRecuperarSenha();return false" style="font-size:13px;color:var(--purple);text-decoration:none;padding:8px;">Esqueci minha senha</a></p>
+      </div>
+      <div id="recuperarForm" style="display:none;">
+        <h2>Recuperar Senha</h2>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Informe seu email para receber um código de recuperação.</p>
+        <div id="recuperarStep1">
+          <div class="lf"><label>Email</label><input id="recuperarEmail" type="email" placeholder="voce@lumied.com.br"></div>
+          <button class="login-btn" onclick="enviarCodigoRecuperacao()">Enviar Código</button>
+        </div>
+        <div id="recuperarStep2" style="display:none;">
+          <div class="lf"><label>Código (6 dígitos)</label><input id="recuperarCodigo" type="text" maxlength="6" placeholder="000000" style="letter-spacing:4px;text-align:center;font-size:20px;font-weight:700;"></div>
+          <div class="lf"><label>Nova Senha</label><input id="recuperarSenhaNova" type="password" placeholder="Mínimo 6 caracteres"></div>
+          <div class="lf"><label>Confirmar Nova Senha</label><input id="recuperarSenhaConfirm" type="password" placeholder="Repita a nova senha"></div>
+          <button class="login-btn" onclick="resetarSenha()">Redefinir Senha</button>
+        </div>
+        <p style="text-align:center;margin-top:12px;"><a href="#" onclick="voltarLogin();return false" style="font-size:13px;color:var(--purple);text-decoration:none;padding:8px;">Voltar ao login</a></p>
       </div>
       <div id="loginError"></div>
     </div>
@@ -219,7 +235,10 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     </div>
     <div class="sb-footer">
       <div class="user-info"><strong id="staffNome">Staff</strong><span id="staffEmail">staff@lumied.com.br</span></div>
-      <button class="logout-btn" onclick="doLogout()">&#8617; Sair</button>
+      <div style="display:flex;gap:8px;">
+        <button class="logout-btn" onclick="abrirAlterarSenha()" style="flex:1;" title="Alterar Senha">&#128274; Senha</button>
+        <button class="logout-btn" onclick="doLogout()" style="flex:1;">&#8617; Sair</button>
+      </div>
     </div>
   </nav>
 
@@ -417,6 +436,21 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <div class="btn-bar">
       <button class="btn-primary" onclick="enviarRespostaTicket()">Enviar Resposta</button>
       <button class="btn-secondary" onclick="fecharModal('modalResponderTicket')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ALTERAR SENHA -->
+<div class="modal-overlay" id="modalAlterarSenha" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:440px;">
+    <h3>Alterar Senha</h3>
+    <div class="ff"><label>Senha Atual</label><input id="senhaAtual" type="password" placeholder="Sua senha atual"></div>
+    <div class="ff"><label>Nova Senha</label><input id="senhaNova" type="password" placeholder="Mínimo 6 caracteres"></div>
+    <div class="ff"><label>Confirmar Nova Senha</label><input id="senhaNovaConfirm" type="password" placeholder="Repita a nova senha"></div>
+    <div id="alterarSenhaError" style="display:none;font-size:13px;color:var(--red);margin-bottom:12px;"></div>
+    <div class="btn-bar">
+      <button class="btn-primary" onclick="salvarAlterarSenha()">Salvar</button>
+      <button class="btn-secondary" onclick="fecharModal('modalAlterarSenha')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -957,6 +991,76 @@ async function fecharTicket(id) {
   if (d.error) return showToast(d.error, 'error');
   showToast('Ticket fechado.');
   loadTickets();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALTERAR SENHA (logado)
+// ═══════════════════════════════════════════════════════════
+function abrirAlterarSenha() {
+  document.getElementById('senhaAtual').value = '';
+  document.getElementById('senhaNova').value = '';
+  document.getElementById('senhaNovaConfirm').value = '';
+  document.getElementById('alterarSenhaError').style.display = 'none';
+  document.getElementById('modalAlterarSenha').classList.add('show');
+}
+
+async function salvarAlterarSenha() {
+  const senha_atual = document.getElementById('senhaAtual').value;
+  const senha_nova = document.getElementById('senhaNova').value;
+  const confirm = document.getElementById('senhaNovaConfirm').value;
+  const errEl = document.getElementById('alterarSenhaError');
+  errEl.style.display = 'none';
+  if (!senha_atual || !senha_nova) { errEl.textContent = 'Preencha todos os campos.'; errEl.style.display = 'block'; return; }
+  if (senha_nova.length < 6) { errEl.textContent = 'Nova senha deve ter no mínimo 6 caracteres.'; errEl.style.display = 'block'; return; }
+  if (senha_nova !== confirm) { errEl.textContent = 'As senhas não coincidem.'; errEl.style.display = 'block'; return; }
+  const d = await api({ action: 'staff_alterar_senha', senha_atual, senha_nova });
+  if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+  showToast('Senha alterada com sucesso!');
+  fecharModal('modalAlterarSenha');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RECUPERAR SENHA (tela de login)
+// ═══════════════════════════════════════════════════════════
+function showRecuperarSenha() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('recuperarForm').style.display = 'block';
+  document.getElementById('recuperarStep1').style.display = 'block';
+  document.getElementById('recuperarStep2').style.display = 'none';
+  document.getElementById('recuperarEmail').value = document.getElementById('loginEmail').value || '';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+function voltarLogin() {
+  document.getElementById('recuperarForm').style.display = 'none';
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+async function enviarCodigoRecuperacao() {
+  const email = document.getElementById('recuperarEmail').value.trim();
+  if (!email) return showError('Informe seu email.');
+  const d = await api({ action: 'staff_recuperar_senha', email });
+  if (d.error) return showError(d.error);
+  document.getElementById('recuperarStep1').style.display = 'none';
+  document.getElementById('recuperarStep2').style.display = 'block';
+  showError(''); // limpa
+  document.getElementById('loginError').style.display = 'none';
+  showToast('Código enviado para ' + email);
+}
+
+async function resetarSenha() {
+  const email = document.getElementById('recuperarEmail').value.trim();
+  const codigo = document.getElementById('recuperarCodigo').value.trim();
+  const senha_nova = document.getElementById('recuperarSenhaNova').value;
+  const confirm = document.getElementById('recuperarSenhaConfirm').value;
+  if (!codigo || !senha_nova) return showError('Preencha todos os campos.');
+  if (senha_nova.length < 6) return showError('Senha deve ter no mínimo 6 caracteres.');
+  if (senha_nova !== confirm) return showError('As senhas não coincidem.');
+  const d = await api({ action: 'staff_resetar_senha', email, codigo, senha_nova });
+  if (d.error) return showError(d.error);
+  showToast('Senha redefinida! Faça login.');
+  voltarLogin();
 }
 
 // ═══════════════════════════════════════════════════════════

@@ -506,6 +506,94 @@ router.on("staff_perfil", authStaff, async (ctx) => {
   return successResponse({ nome: ctx.user!.nome, email: ctx.user!.email, cargo: (ctx.user as any).cargo });
 });
 
+// Staff alterar senha
+router.on("staff_alterar_senha", authStaff, async (ctx) => {
+  const { senha_atual, senha_nova } = ctx.body as { senha_atual: string; senha_nova: string };
+  if (!senha_atual || !senha_nova) throw new AppError("VALIDATION_FAILED", "Senha atual e nova são obrigatórias.");
+  if (senha_nova.length < 6) throw new AppError("VALIDATION_FAILED", "Nova senha deve ter no mínimo 6 caracteres.");
+  const { data: staff } = await ctx.sb.from("lumied_staff").select("id, senha_hash").eq("id", ctx.user!.id).single();
+  if (!staff) throw new AppError("NOT_FOUND", "Staff não encontrado.");
+  if (!(await verificarSenhaAuto(senha_atual, staff.senha_hash))) throw new AppError("AUTH_INVALID", "Senha atual incorreta.");
+  const novaHash = await hashSenha(senha_nova);
+  await ctx.sb.from("lumied_staff").update({ senha_hash: novaHash }).eq("id", staff.id);
+  log.info("Staff password changed", { staff_id: staff.id });
+  return successResponse({ success: true });
+});
+
+// Staff recuperar senha (public — envia código por email)
+router.on("staff_recuperar_senha", rateLimit({ windowMs: 300000, maxRequests: 3 }), async (ctx) => {
+  const { email } = ctx.body as { email: string };
+  if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
+  const { data: staff } = await ctx.sb.from("lumied_staff").select("id, nome, email, ativo").eq("email", email.toLowerCase().trim()).single();
+  // Always return success to prevent email enumeration
+  if (!staff || !staff.ativo) return successResponse({ success: true });
+  // Generate 6-digit code with 15min expiry
+  const codigo = String(Math.floor(100000 + Math.random() * 900000));
+  const codigoHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codigo)))).map(b => b.toString(16).padStart(2, "0")).join("");
+  const expiraEm = new Date(Date.now() + 15 * 60000).toISOString();
+  await ctx.sb.from("lumied_staff").update({ reset_codigo_hash: codigoHash, reset_expira_em: expiraEm, reset_tentativas: 0 }).eq("id", staff.id);
+  // Send email via Resend
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (resendKey) {
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Lumied <noreply@lumied.com.br>",
+          to: [staff.email],
+          subject: "Código de recuperação — Lumied",
+          html: `<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+            <div style="text-align:center;margin-bottom:24px;">
+              <span style="font-size:28px;font-weight:700;color:#6C63FF;">Lumied</span>
+            </div>
+            <h2 style="font-size:18px;color:#1a1a1a;margin-bottom:8px;">Recuperação de senha</h2>
+            <p style="color:#5a5249;font-size:14px;line-height:1.6;">Olá, <strong>${staff.nome}</strong>. Use o código abaixo para redefinir sua senha no Painel Central:</p>
+            <div style="background:#f3f0ff;border:2px solid #6C63FF;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
+              <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#6C63FF;">${codigo}</span>
+            </div>
+            <p style="color:#5a5249;font-size:13px;">Este código expira em <strong>15 minutos</strong>. Se você não solicitou, ignore este email.</p>
+            <hr style="border:none;border-top:1px solid #e2dbd1;margin:24px 0;">
+            <p style="color:#999;font-size:11px;text-align:center;">Lumied — Gestão Escolar Inteligente</p>
+          </div>`,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (e) { log.error("Recovery email error", { error: String(e) }); }
+  }
+  log.info("Password recovery requested", { staff_id: staff.id });
+  return successResponse({ success: true });
+});
+
+// Staff resetar senha (public — valida código e seta nova senha)
+router.on("staff_resetar_senha", rateLimit({ windowMs: 300000, maxRequests: 5 }), async (ctx) => {
+  const { email, codigo, senha_nova } = ctx.body as { email: string; codigo: string; senha_nova: string };
+  if (!email || !codigo || !senha_nova) throw new AppError("VALIDATION_FAILED", "Email, código e nova senha são obrigatórios.");
+  if (senha_nova.length < 6) throw new AppError("VALIDATION_FAILED", "Nova senha deve ter no mínimo 6 caracteres.");
+  const { data: staff } = await ctx.sb.from("lumied_staff").select("id, reset_codigo_hash, reset_expira_em, reset_tentativas").eq("email", email.toLowerCase().trim()).single();
+  if (!staff || !staff.reset_codigo_hash || !staff.reset_expira_em) throw new AppError("AUTH_INVALID", "Código inválido ou expirado.");
+  if ((staff.reset_tentativas || 0) >= 5) {
+    await ctx.sb.from("lumied_staff").update({ reset_codigo_hash: null, reset_expira_em: null, reset_tentativas: 0 }).eq("id", staff.id);
+    throw new AppError("AUTH_INVALID", "Muitas tentativas. Solicite um novo código.");
+  }
+  if (new Date(staff.reset_expira_em) < new Date()) {
+    await ctx.sb.from("lumied_staff").update({ reset_codigo_hash: null, reset_expira_em: null, reset_tentativas: 0 }).eq("id", staff.id);
+    throw new AppError("AUTH_INVALID", "Código expirado. Solicite um novo.");
+  }
+  // Timing-safe compare via hash
+  const codigoHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codigo)))).map(b => b.toString(16).padStart(2, "0")).join("");
+  if (codigoHash !== staff.reset_codigo_hash) {
+    await ctx.sb.from("lumied_staff").update({ reset_tentativas: (staff.reset_tentativas || 0) + 1 }).eq("id", staff.id);
+    throw new AppError("AUTH_INVALID", "Código incorreto.");
+  }
+  const novaHash = await hashSenha(senha_nova);
+  await ctx.sb.from("lumied_staff").update({ senha_hash: novaHash, reset_codigo_hash: null, reset_expira_em: null, reset_tentativas: 0 }).eq("id", staff.id);
+  // Invalidate all existing sessions
+  await ctx.sb.from("lumied_staff_sessoes").delete().eq("staff_id", staff.id);
+  log.info("Password reset completed", { staff_id: staff.id });
+  return successResponse({ success: true });
+});
+
 // Staff logout
 router.on("staff_logout", authStaff, async (ctx) => {
   await ctx.sb.from("lumied_staff_sessoes").delete().eq("token", ctx.body._staff_token);
