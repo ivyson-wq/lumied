@@ -971,29 +971,34 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 
 ---
 
-## Planos Comerciais (5 tiers)
+## Planos Comerciais (3 tiers — atualizado 2026-04-13)
 
-| Tier | Preço/mês | Anual | Alunos | Módulos | WhatsApp |
-|------|-----------|-------|--------|---------|----------|
-| **Starter** | R$ 259 | R$ 207 | 80 | 6 | — |
-| **Gestão** | R$ 649 | R$ 519 | 300 | 19 | — |
-| **Automação** | R$ 1.249 | R$ 999 | 800 | 30 | 200 msgs/mês |
-| **Avançado** | R$ 2.079 | R$ 1.659 | 1.500 | 35 | 500 msgs/mês |
-| **Rede** | R$ 2.939 | R$ 2.351 | Ilimitado | Todos | 2.000 msgs/mês |
-| **Público** | Sob consulta | — | Rede municipal | Gestão + Gov | Licitação/Pregão |
+| Tier | Preço/mês | Anual (20% off) | Alunos | Módulos | WhatsApp | Implantação |
+|------|-----------|-----------------|--------|---------|----------|-------------|
+| **Start** | R$ 1.200 | R$ 960 | 300 | 15 | — | R$ 1.990 |
+| **Evolução** | R$ 1.800 | R$ 1.440 | 800 | 23 | 500 msgs/mês | R$ 2.990 |
+| **Prestige** | R$ 3.300 | R$ 2.640 | Ilimitado | Todos | 2.000 msgs/mês | R$ 4.990 |
+
+### Módulos por plano
+
+**Start (15):** dashboard, alunos, turmas, notas, frequência, comunicação, CRM, financeiro, almoxarifado, diplomas, atestados, analytics, equipe, famílias, config
+
+**Evolução (23):** tudo do Start + turnos, atividades, compliance, biblioteca, cantina, transporte, whatsapp, histórico_aluno
+
+**Prestige (todos):** tudo do Evolução + rh, loja, controle de acesso biométrico, multi-escola, API dedicada, SLA 99.9%
+
+### Planos antigos (desativados, mantidos por FK)
+Starter (R$ 259), Gestão (R$ 649), Automação (R$ 1.249), Avançado (R$ 2.079), Rede (R$ 2.939) — `ativo = false` na tabela `planos`. Escolas existentes nesses planos continuam funcionando até migração manual.
 
 ### Pacotes Extras (aprovação do resp financeiro)
 
-| Extra | Preço | Margem |
-|-------|-------|--------|
-| 100 msgs WhatsApp | R$ 69,90/mês | 50% |
-| 500 msgs WhatsApp | R$ 299,90/mês | 42% |
-| 1.000 msgs WhatsApp | R$ 549,90/mês | 36% |
-| Excedente avulso | R$ 0,75/msg | 53% |
-| 10 GB storage | R$ 19,90/mês | 94% |
-| 50 GB storage | R$ 79,90/mês | 93% |
-| 5 usuários | R$ 29,90/mês | ~100% |
-| 20 usuários | R$ 89,90/mês | ~100% |
+| Extra | Preço |
+|-------|-------|
+| 500 msgs WhatsApp | R$ 299,90/mês |
+| 1.000 msgs WhatsApp | R$ 549,90/mês |
+| Excedente avulso | R$ 0,75/msg |
+| 50 GB storage | R$ 79,90/mês |
+| 20 usuários | R$ 89,90/mês |
 
 ### WhatsApp — Travas de consumo
 - **80%** cota: alerta informativo ao gerente
