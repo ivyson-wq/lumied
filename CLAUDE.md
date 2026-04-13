@@ -524,6 +524,7 @@ Extensão Manifest V3 para enviar templates CRM no WhatsApp Web. Pronta para pub
 - **Input Validation** com schemas + sanitização XSS recursiva (`sanitizeBody`: nested objects/arrays)
 - **CORS Whitelist** dinâmico por request — aceita `*.lumied.com.br` + whitelist + Vercel previews
 - **PBKDF2** 100k-120k iterações para senhas — `_shared/auth.ts` com `verificarSenhaAuto()`
+- **Password Recovery** staff: código 6 dígitos via email, SHA-256 hash, 15min expiry, 5 tentativas max, rate limited
 - **WebAuthn/Face ID** nos portais principais
 - **CSP** Content-Security-Policy header no Vercel (script-src, connect-src, frame-ancestors none)
 - **SRI** (Subresource Integrity) sha384 em todos os scripts CDN (Supabase JS, SheetJS, jsPDF, html2canvas)
@@ -714,7 +715,7 @@ Staff (coordenação/direção/secretaria) envia documentos via WhatsApp → cla
 
 ## Banco de Dados
 
-- **220 migrations** (009-220) — ver "Banco de Dados — Migrations Recentes" abaixo para 202-220
+- **222 migrations** (009-222) — ver "Banco de Dados — Migrations Recentes" abaixo para 202-222
 - Migrations relevantes:
   - `048_planos_modulos.sql` — escolas, planos, modulos, admins
   - `075_multitenancy_limites.sql` — plano_limites, escola_uso
@@ -1401,6 +1402,32 @@ CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACC
 | `218` | Tabela `rate_limits` + RPC `rate_limit_check` (bucket windowing) + `rate_limits_cleanup()` |
 | `219` | `escola_id` UUID REFERENCES escolas(id) em 23 tabelas tenant (compliance_*, rh_ponto/ferias/holerites, cantina_*, biblioteca_emprestimos/reservas, transporte_alunos/rastreio/notificacoes). Idempotent + backfill via parent FK + index |
 | `220` | pg_cron `rate-limits-cleanup-hourly` (chama `rate_limits_cleanup()` no minuto 0) |
+| `221` | Fix sync triggers all roles |
+| `222` | `lumied_staff`: colunas `reset_codigo_hash`, `reset_expira_em`, `reset_tentativas` para recuperação de senha |
+
+---
+
+## Staff — Alterar e Recuperar Senha (2026-04-13)
+
+### Alterar Senha (logado)
+- Botão "Senha" no sidebar footer do `admin-central.html`
+- Modal: senha atual + nova senha + confirmação
+- Backend `staff_alterar_senha`: verifica senha atual via `verificarSenhaAuto()`, gera novo hash PBKDF2
+
+### Recuperar Senha (tela de login)
+- Link "Esqueci minha senha" na tela de login
+- **Fluxo em 2 etapas:**
+  1. Informa email → `staff_recuperar_senha` gera código 6 dígitos, salva SHA-256 hash no banco, envia via Resend
+  2. Digita código + nova senha → `staff_resetar_senha` valida e reseta
+- **Segurança:**
+  - Código expira em 15 minutos
+  - Máximo 5 tentativas (depois invalida o código)
+  - Hash SHA-256 do código (não plaintext no banco)
+  - Timing-safe via comparação de hashes
+  - Rate limit: 3 requests/5min (recuperar), 5 requests/5min (resetar)
+  - Resposta sempre `success: true` no envio (previne enumeração de emails)
+  - Invalida todas as sessões ativas ao resetar
+- **Endpoints:** `staff_alterar_senha` (auth), `staff_recuperar_senha` (public), `staff_resetar_senha` (public)
 
 ---
 
