@@ -2,7 +2,7 @@
 /**
  * Instagram Carousel Image Generator for Lumied Blog
  * Usage: node scripts/instagram-render.js <slug>
- * Generates 5 slides (1080x1080) as PNGs in /tmp/ig-slides/
+ * Generates 7 slides (1080x1080) as PNGs in /tmp/ig-slides/
  */
 
 const fs = require('fs');
@@ -44,6 +44,164 @@ const DEFAULT_BG_IMAGE = 'https://images.unsplash.com/photo-1503676260728-1c00da
 
 function getCategoryImage(category) {
   return CATEGORY_IMAGES[category] || DEFAULT_BG_IMAGE;
+}
+
+// --- Keyword-based Image Bank (~80 keywords mapped to Unsplash photo IDs) ---
+const IMAGE_BANK = {
+  // Education
+  'escola': 'photo-1503676260728-1c00da094a0b',
+  'educação': 'photo-1503676260728-1c00da094a0b',
+  'sala de aula': 'photo-1580582932707-520aed937b7b',
+  'professor': 'photo-1544717305-2782549b5136',
+  'professora': 'photo-1544717305-2782549b5136',
+  'aluno': 'photo-1427504494785-3a9ca7044f45',
+  'criança': 'photo-1503454537195-1dcabb73ffb9',
+  'bilíngue': 'photo-1546410531-bb4caa6b424d',
+  'aprendizagem': 'photo-1488190211105-8b0e65b80b4e',
+  'pedagogia': 'photo-1509062522246-3755977927d7',
+  'bncc': 'photo-1456513080510-7bf3a84b82f8',
+  'currículo': 'photo-1456513080510-7bf3a84b82f8',
+  // Finance
+  'financeiro': 'photo-1554224155-6726b3ff858f',
+  'inadimplência': 'photo-1554224155-6726b3ff858f',
+  'cobrança': 'photo-1554224155-6726b3ff858f',
+  'mensalidade': 'photo-1526304640581-d334cdbbf45e',
+  'boleto': 'photo-1526304640581-d334cdbbf45e',
+  'dinheiro': 'photo-1526304640581-d334cdbbf45e',
+  'PIX': 'photo-1556742049-0cfed4f6a45d',
+  'DRE': 'photo-1460925895917-afdab827c52f',
+  'orçamento': 'photo-1460925895917-afdab827c52f',
+  'receita': 'photo-1579621970563-ebec7560ff3e',
+  'investimento': 'photo-1579621970563-ebec7560ff3e',
+  // Legal/Compliance
+  'LGPD': 'photo-1589829545856-d10d557cf95f',
+  'compliance': 'photo-1450101499163-c8848c66ca85',
+  'CLT': 'photo-1450101499163-c8848c66ca85',
+  'lei': 'photo-1589829545856-d10d557cf95f',
+  'contrato': 'photo-1450101499163-c8848c66ca85',
+  'jurídico': 'photo-1589829545856-d10d557cf95f',
+  'ANPD': 'photo-1563013544-824ae1b704d3',
+  'auditoria': 'photo-1563013544-824ae1b704d3',
+  'eSocial': 'photo-1554224155-8d2636023188',
+  'AVCB': 'photo-1558618666-fcd25c85f82e',
+  'certificação': 'photo-1554224155-8d2636023188',
+  // Technology
+  'IA': 'photo-1677442135703-1787eea5ce01',
+  'inteligência artificial': 'photo-1677442135703-1787eea5ce01',
+  'tecnologia': 'photo-1581091226825-a6a2a5aee158',
+  'software': 'photo-1517694712202-14dd9538aa97',
+  'sistema': 'photo-1517694712202-14dd9538aa97',
+  'digital': 'photo-1518770660439-4636190af475',
+  'app': 'photo-1512941937669-90a1b58e7e9c',
+  'automação': 'photo-1485827404703-89b55fcc595e',
+  'dashboard': 'photo-1551288049-bebda4e38f71',
+  'dados': 'photo-1551288049-bebda4e38f71',
+  // Communication
+  'WhatsApp': 'photo-1611605698335-8b1569810432',
+  'comunicação': 'photo-1577563908411-5077b6dc7624',
+  'família': 'photo-1609220136736-443140cffec6',
+  'reunião': 'photo-1552664730-d307ca884978',
+  'email': 'photo-1596526131083-e8c633c948d2',
+  // Management
+  'gestão': 'photo-1552664730-d307ca884978',
+  'liderança': 'photo-1519389950473-47ba0277781c',
+  'equipe': 'photo-1521737604893-d14cc237f11d',
+  'KPI': 'photo-1551288049-bebda4e38f71',
+  'meta': 'photo-1454165804606-c3d57bc86b40',
+  'planejamento': 'photo-1484480974693-6ca0a78fb36b',
+  'estratégia': 'photo-1454165804606-c3d57bc86b40',
+  // Security
+  'segurança': 'photo-1558002038-1055907df827',
+  'biometria': 'photo-1558002038-1055907df827',
+  'acesso': 'photo-1558002038-1055907df827',
+  'portaria': 'photo-1497366216548-37526070297c',
+  // HR
+  'recrutamento': 'photo-1521737604893-d14cc237f11d',
+  'professor bilíngue': 'photo-1544717305-2782549b5136',
+  'entrevista': 'photo-1573497620053-ea5300f94f21',
+  'desempenho': 'photo-1552664730-d307ca884978',
+  // Operations
+  'manutenção': 'photo-1581091226825-a6a2a5aee158',
+  'almoxarifado': 'photo-1497366216548-37526070297c',
+  'biblioteca': 'photo-1507842217343-583bb7270b66',
+  'cantina': 'photo-1567521464027-f127ff144326',
+  'transporte': 'photo-1570125909232-eb263c188f7e',
+  // Marketing
+  'marketing': 'photo-1460925895917-afdab827c52f',
+  'Instagram': 'photo-1611162616305-c69b3fa7fbe0',
+  'Google': 'photo-1573804633927-bfcbcd909acd',
+  'SEO': 'photo-1460925895917-afdab827c52f',
+  'captação': 'photo-1556742049-0cfed4f6a45d',
+  'matrícula': 'photo-1556742049-0cfed4f6a45d',
+  'CRM': 'photo-1556742049-0cfed4f6a45d',
+  // General
+  'sucesso': 'photo-1533227268428-f9ed0900fb3b',
+  'resultado': 'photo-1533227268428-f9ed0900fb3b',
+  'crescimento': 'photo-1543286386-713bdd548da4',
+  'inovação': 'photo-1485827404703-89b55fcc595e',
+  'futuro': 'photo-1485827404703-89b55fcc595e',
+};
+
+// Pre-sort keywords by length descending for longest-match-first
+const IMAGE_BANK_KEYS_SORTED = Object.keys(IMAGE_BANK).sort((a, b) => b.length - a.length);
+
+/**
+ * Find the best matching Unsplash image for a given text.
+ * Uses keyword matching (longest match first), deduplicates via usedPhotos set,
+ * falls back to category image, then default.
+ */
+function findBestImage(text, usedPhotos, category) {
+  const lower = (text || '').toLowerCase();
+
+  // Scan IMAGE_BANK keys (longest first for specificity)
+  for (const keyword of IMAGE_BANK_KEYS_SORTED) {
+    if (lower.includes(keyword.toLowerCase())) {
+      const photoId = IMAGE_BANK[keyword];
+      if (!usedPhotos.has(photoId)) {
+        usedPhotos.add(photoId);
+        return `https://images.unsplash.com/${photoId}?w=1080&h=1080&fit=crop`;
+      }
+    }
+  }
+
+  // Second pass: allow any keyword match even if we need to find a different one
+  // (all best matches were used, try next best)
+  for (const keyword of IMAGE_BANK_KEYS_SORTED) {
+    if (lower.includes(keyword.toLowerCase())) {
+      const photoId = IMAGE_BANK[keyword];
+      // Already used but still a match — continue to find another keyword match
+      continue;
+    }
+  }
+
+  // Fallback: category image
+  if (category) {
+    const catUrl = getCategoryImage(category);
+    const catPhotoId = catUrl.match(/unsplash\.com\/(photo-[^?]+)/);
+    if (catPhotoId && !usedPhotos.has(catPhotoId[1])) {
+      usedPhotos.add(catPhotoId[1]);
+      return catUrl;
+    }
+  }
+
+  // Final fallback: default education photo
+  const defaultPhotoId = 'photo-1503676260728-1c00da094a0b';
+  if (!usedPhotos.has(defaultPhotoId)) {
+    usedPhotos.add(defaultPhotoId);
+    return DEFAULT_BG_IMAGE;
+  }
+
+  // Absolute last resort: return any unused photo from the bank
+  for (const key of IMAGE_BANK_KEYS_SORTED) {
+    const photoId = IMAGE_BANK[key];
+    if (!usedPhotos.has(photoId)) {
+      usedPhotos.add(photoId);
+      return `https://images.unsplash.com/${photoId}?w=1080&h=1080&fit=crop`;
+    }
+  }
+
+  // Truly exhausted — return default (will repeat, but at least we tried)
+  return DEFAULT_BG_IMAGE;
 }
 
 // --- Brand ---
@@ -120,6 +278,150 @@ function extractData(html) {
   return data;
 }
 
+/**
+ * Extract 2-3 impactful short phrases ("insights") from the article HTML.
+ * Looks for:
+ *  - <strong> inside <p> with stats/numbers/strong claims
+ *  - <td> elements with numbers/percentages
+ *  - <li> items starting with <strong>
+ * Prefers phrases 8-15 words long.
+ * Returns array of { text, context } where context = the H2 section it was found in.
+ */
+function extractInsights(html) {
+  const insights = [];
+  const candidates = [];
+
+  // Determine H2 sections for context mapping
+  const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  const h2Positions = [];
+  let h2m;
+  while ((h2m = h2Regex.exec(html)) !== null) {
+    h2Positions.push({
+      index: h2m.index,
+      text: h2m[1].replace(/<[^>]+>/g, '').trim(),
+    });
+  }
+
+  function getContextForIndex(idx) {
+    let ctx = '';
+    for (const h2 of h2Positions) {
+      if (h2.index < idx) ctx = h2.text;
+      else break;
+    }
+    return ctx || 'Destaque';
+  }
+
+  function wordCount(str) {
+    return str.split(/\s+/).filter(w => w.length > 0).length;
+  }
+
+  function hasImpact(str) {
+    // Contains a number, percentage, currency, or strong claim word
+    return /\d/.test(str) || /R\$/.test(str) || /%/.test(str) ||
+           /\b(reduz|aumenta|elimina|garante|economiz|diminui|melhora|transforma|impacta|evita|previne|dobr|tripl|quadruplic)\w*/i.test(str);
+  }
+
+  // Strategy 1: <strong> inside <p> tags
+  const strongInPRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let pm;
+  while ((pm = strongInPRegex.exec(html)) !== null) {
+    const pContent = pm[1];
+    const strongRegex = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
+    let sm;
+    while ((sm = strongRegex.exec(pContent)) !== null) {
+      const text = sm[1].replace(/<[^>]+>/g, '').trim();
+      const wc = wordCount(text);
+      if (wc >= 4 && wc <= 20 && hasImpact(text)) {
+        candidates.push({
+          text,
+          context: getContextForIndex(pm.index),
+          score: (wc >= 8 && wc <= 15 ? 10 : 5) + (hasImpact(text) ? 5 : 0),
+        });
+      }
+    }
+  }
+
+  // Strategy 2: <td> elements with numbers/percentages
+  const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+  let tdm;
+  while ((tdm = tdRegex.exec(html)) !== null) {
+    const text = tdm[1].replace(/<[^>]+>/g, '').trim();
+    const wc = wordCount(text);
+    if (wc >= 4 && wc <= 20 && hasImpact(text)) {
+      candidates.push({
+        text,
+        context: getContextForIndex(tdm.index),
+        score: 7,
+      });
+    }
+  }
+
+  // Strategy 3: <li> items starting with <strong>
+  const liStrongRegex = /<li[^>]*>\s*<strong[^>]*>([\s\S]*?)<\/strong>([\s\S]*?)<\/li>/gi;
+  let lsm;
+  while ((lsm = liStrongRegex.exec(html)) !== null) {
+    const strongText = lsm[1].replace(/<[^>]+>/g, '').trim();
+    const restText = lsm[2].replace(/<[^>]+>/g, '').trim();
+    // Combine strong + a bit of rest for context
+    // Clean trailing colons/punctuation from strong text
+    let cleanStrong = strongText.replace(/[:;,.\s]+$/, '').trim();
+    let combined = cleanStrong;
+    if (restText) {
+      const cleanRest = restText.replace(/^[:;,.\s]+/, '').trim();
+      const restWords = cleanRest.split(/\s+/).slice(0, 8).join(' ');
+      combined = cleanStrong + ': ' + restWords;
+    }
+    const wc = wordCount(combined);
+    if (wc >= 4 && wc <= 20) {
+      candidates.push({
+        text: combined,
+        context: getContextForIndex(lsm.index),
+        score: (hasImpact(combined) ? 12 : 6),
+      });
+    }
+  }
+
+  // Strategy 4: Sentences with numbers/stats from <p> tags (broader net)
+  const pRegex2 = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+  let pm2;
+  while ((pm2 = pRegex2.exec(html)) !== null) {
+    const plainText = pm2[1].replace(/<[^>]+>/g, '').trim();
+    // Split into sentences
+    const sentences = plainText.split(/(?<=[.!?])\s+/).filter(s => s.length > 20);
+    for (const sentence of sentences) {
+      const wc = wordCount(sentence);
+      if (wc >= 8 && wc <= 18 && hasImpact(sentence)) {
+        candidates.push({
+          text: sentence.replace(/[.!?]+$/, ''),
+          context: getContextForIndex(pm2.index),
+          score: 4,
+        });
+      }
+    }
+  }
+
+  // Sort by score descending, deduplicate, take top 3
+  candidates.sort((a, b) => b.score - a.score);
+  const seen = new Set();
+  for (const c of candidates) {
+    const key = c.text.toLowerCase().substring(0, 40);
+    if (!seen.has(key) && insights.length < 3) {
+      seen.add(key);
+      insights.push({ text: c.text, context: c.context });
+    }
+  }
+
+  // Fallback if we couldn't find enough
+  if (insights.length === 0) {
+    insights.push({ text: 'Dados que todo gestor escolar precisa conhecer', context: 'Destaque' });
+  }
+  if (insights.length === 1) {
+    insights.push({ text: 'Tecnologia transforma a gestao educacional', context: 'Destaque' });
+  }
+
+  return insights;
+}
+
 function extractStat(text) {
   // Split text into sentences first for cleaner context
   const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.length > 10);
@@ -182,9 +484,8 @@ ${FONTS_IMPORT}
 body { width: ${SIZE}px; height: ${SIZE}px; overflow: hidden; }
 `;
 
-function slideHero(data) {
+function slideHero(data, photoUrl) {
   const title = truncateTitle(data.title);
-  const bgUrl = getCategoryImage(data.category);
   return `<!DOCTYPE html><html><head><style>
 ${BASE_STYLE}
 body {
@@ -194,7 +495,7 @@ body {
 }
 .bg {
   position: absolute; inset: 0;
-  background-image: linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%), url('${bgUrl}');
+  background-image: linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%), url('${photoUrl}');
   background-size: cover;
   background-position: center;
   z-index: 0;
@@ -262,8 +563,11 @@ h1 {
 </body></html>`;
 }
 
-function slideStat(data) {
-  const bgUrl = getCategoryImage(data.category);
+function slideInsightCard1(insight, photoUrl) {
+  // Insight Card 1: badge "Voce sabia?" at top, text centered, heavy dark overlay
+  const insightText = insight.text.length > 120
+    ? insight.text.substring(0, 117).replace(/\s+\S*$/, '') + '...'
+    : insight.text;
   return `<!DOCTYPE html><html><head><style>
 ${BASE_STYLE}
 body {
@@ -273,7 +577,134 @@ body {
 }
 .bg {
   position: absolute; inset: 0;
-  background-image: linear-gradient(135deg, rgba(108,99,255,0.88) 0%, rgba(59,130,246,0.88) 100%), url('${bgUrl}');
+  background-image: linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.75) 100%), url('${photoUrl}');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+.content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  height: 100%; padding: 80px 72px;
+  text-align: center;
+}
+.badge {
+  display: inline-block;
+  background: ${BRAND.primary};
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: 6px 20px;
+  border-radius: 100px;
+  font-family: 'Inter', sans-serif;
+  margin-bottom: 48px;
+}
+.insight-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.4;
+  max-width: 850px;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+}
+.brand-logo {
+  position: absolute;
+  bottom: 48px;
+  right: 64px;
+  z-index: 1;
+}
+</style></head><body>
+<div class="bg"></div>
+<div class="content">
+  <div class="badge">Voc&ecirc; sabia?</div>
+  <div class="insight-text">${insightText}</div>
+</div>
+<div class="brand-logo">${logoImg(28)}</div>
+</body></html>`;
+}
+
+function slideInsightCard2(insight, photoUrl) {
+  // Insight Card 2: accent bar on left, text left-aligned
+  const insightText = insight.text.length > 120
+    ? insight.text.substring(0, 117).replace(/\s+\S*$/, '') + '...'
+    : insight.text;
+  return `<!DOCTYPE html><html><head><style>
+${BASE_STYLE}
+body {
+  font-family: 'Inter', sans-serif;
+  color: #fff;
+  position: relative;
+}
+.bg {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(180deg, rgba(15,23,42,0.75) 0%, rgba(15,23,42,0.75) 100%), url('${photoUrl}');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+.content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  height: 100%; padding: 80px 80px 80px 96px;
+  position: relative;
+}
+.accent-bar {
+  position: absolute;
+  left: 72px; top: 50%; transform: translateY(-50%);
+  width: 5px; height: 200px;
+  background: ${BRAND.primary};
+  border-radius: 3px;
+  box-shadow: 0 0 20px rgba(108,99,255,0.4);
+}
+.context-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: ${BRAND.primary};
+  margin-bottom: 24px;
+  font-family: 'Inter', sans-serif;
+}
+.insight-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.4;
+  max-width: 850px;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+}
+.brand-logo {
+  position: absolute;
+  bottom: 48px;
+  right: 64px;
+  z-index: 1;
+}
+</style></head><body>
+<div class="bg"></div>
+<div class="content">
+  <div class="accent-bar"></div>
+  <div class="context-label">Dado importante</div>
+  <div class="insight-text">${insightText}</div>
+</div>
+<div class="brand-logo">${logoImg(28)}</div>
+</body></html>`;
+}
+
+function slideStat(data, photoUrl) {
+  return `<!DOCTYPE html><html><head><style>
+${BASE_STYLE}
+body {
+  font-family: 'Inter', sans-serif;
+  color: #fff;
+  position: relative;
+}
+.bg {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(135deg, rgba(108,99,255,0.88) 0%, rgba(59,130,246,0.88) 100%), url('${photoUrl}');
   background-size: cover;
   background-position: center;
   z-index: 0;
@@ -327,13 +758,12 @@ body {
 </body></html>`;
 }
 
-function slideQuote(data) {
+function slideQuote(data, photoUrl) {
   // Truncate quote to ~200 chars for readability
   let quote = data.quote;
   if (quote.length > 220) {
     quote = quote.substring(0, 220).replace(/\s+\S*$/, '') + '...';
   }
-  const bgUrl = getCategoryImage(data.category);
   return `<!DOCTYPE html><html><head><style>
 ${BASE_STYLE}
 body {
@@ -345,7 +775,7 @@ body {
 }
 .image-strip {
   width: 100%; height: 320px;
-  background-image: url('${bgUrl}');
+  background-image: url('${photoUrl}');
   background-size: cover;
   background-position: center;
   border-radius: 0 0 24px 24px;
@@ -417,7 +847,7 @@ body {
 </body></html>`;
 }
 
-function slideList(data) {
+function slideList(data, photoUrl) {
   const items = data.tocItems.map((item, i) => `
     <div class="item">
       <div class="num">${i + 1}</div>
@@ -426,7 +856,6 @@ function slideList(data) {
     ${i < data.tocItems.length - 1 ? '<div class="separator"></div>' : ''}
   `).join('');
 
-  const bgUrl = getCategoryImage(data.category);
   return `<!DOCTYPE html><html><head><style>
 ${BASE_STYLE}
 body {
@@ -436,7 +865,7 @@ body {
 }
 .bg {
   position: absolute; inset: 0;
-  background-image: linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.92) 100%), url('${bgUrl}');
+  background-image: linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.92) 100%), url('${photoUrl}');
   background-size: cover;
   background-position: center;
   z-index: 0;
@@ -615,20 +1044,51 @@ async function main() {
   console.log(`Reading: ${articlePath}`);
   const html = fs.readFileSync(articlePath, 'utf-8');
   const data = extractData(html);
+  const insights = extractInsights(html);
 
   console.log(`Title: ${data.title}`);
   console.log(`Category: ${data.category}`);
   console.log(`Stat: ${data.stat.number} — ${data.stat.context}`);
   console.log(`TOC items: ${data.tocItems.length}`);
-  console.log(`Background: ${getCategoryImage(data.category)}`);
+  console.log(`Insights found: ${insights.length}`);
+  for (let i = 0; i < insights.length; i++) {
+    console.log(`  Insight ${i + 1}: "${insights[i].text}" [${insights[i].context}]`);
+  }
 
-  // Generate slide HTML
+  // Track used photos across all slides for visual variety
+  const usedPhotos = new Set();
+
+  // Pick photos for each slide
+  const heroPhoto = findBestImage(data.title, usedPhotos, data.category);
+  const insight1Photo = findBestImage(
+    (insights[0] ? insights[0].context + ' ' + insights[0].text : data.category),
+    usedPhotos, data.category
+  );
+  const statPhoto = findBestImage(data.stat.context || data.category, usedPhotos, data.category);
+  const insight2Photo = findBestImage(
+    (insights[1] ? insights[1].context + ' ' + insights[1].text : data.title),
+    usedPhotos, data.category
+  );
+  const quotePhoto = findBestImage(data.quote, usedPhotos, data.category);
+  const listPhoto = findBestImage(data.tocItems.join(' '), usedPhotos, data.category);
+
+  console.log(`\nPhoto assignments:`);
+  console.log(`  Hero: ${heroPhoto}`);
+  console.log(`  Insight 1: ${insight1Photo}`);
+  console.log(`  Stat: ${statPhoto}`);
+  console.log(`  Insight 2: ${insight2Photo}`);
+  console.log(`  Quote: ${quotePhoto}`);
+  console.log(`  List: ${listPhoto}`);
+
+  // Generate slide HTML — 7 slides
   const slides = [
-    { name: 'slide-1-hero', html: slideHero(data) },
-    { name: 'slide-2-stat', html: slideStat(data) },
-    { name: 'slide-3-quote', html: slideQuote(data) },
-    { name: 'slide-4-list', html: slideList(data) },
-    { name: 'slide-5-cta', html: slideCTA(data) },
+    { name: 'slide-1-hero', html: slideHero(data, heroPhoto) },
+    { name: 'slide-2-insight1', html: slideInsightCard1(insights[0] || { text: 'Dados que todo gestor escolar precisa conhecer', context: 'Destaque' }, insight1Photo) },
+    { name: 'slide-3-stat', html: slideStat(data, statPhoto) },
+    { name: 'slide-4-insight2', html: slideInsightCard2(insights[1] || { text: 'Tecnologia transforma a gestao educacional', context: 'Destaque' }, insight2Photo) },
+    { name: 'slide-5-quote', html: slideQuote(data, quotePhoto) },
+    { name: 'slide-6-list', html: slideList(data, listPhoto) },
+    { name: 'slide-7-cta', html: slideCTA(data) },
   ];
 
   // Ensure output dir

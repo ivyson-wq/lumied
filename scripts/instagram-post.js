@@ -183,12 +183,15 @@ async function main() {
 
   const caption = generateCaption(slug, title, category, lead);
 
-  // Find slide PNGs
+  // Find slide PNGs — read all slide-*.png from the directory (supports variable count)
   const tmpDir = path.join(require('os').tmpdir(), 'ig-slides');
-  const slideFiles = [
-    'slide-1-hero.png', 'slide-2-stat.png', 'slide-3-quote.png',
-    'slide-4-list.png', 'slide-5-cta.png'
-  ].map(f => path.join(tmpDir, f)).filter(f => fs.existsSync(f));
+  let slideFiles = [];
+  if (fs.existsSync(tmpDir)) {
+    slideFiles = fs.readdirSync(tmpDir)
+      .filter(f => /^slide-\d+-.*\.png$/.test(f))
+      .sort() // lexicographic sort ensures slide-1 < slide-2 < ... < slide-7
+      .map(f => path.join(tmpDir, f));
+  }
 
   if (slideFiles.length === 0) {
     console.error('No slide PNGs found. Run instagram-render.js first.');
