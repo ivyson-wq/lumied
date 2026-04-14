@@ -326,15 +326,32 @@ Deno.serve(async (req) => {
     const senha: string = body.senha || ''
     const papelEsperado: string = body.papel || '' // opcional: filtra por papel
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
-    // .eq() em vez de .ilike() evita wildcard matching com % e _
-    let query = sb.from('usuarios').select('id, nome, email, senha_hash, papel').eq('email', email)
-    if (papelEsperado) query = query.eq('papel', papelEsperado)
-    const { data: user } = await query.maybeSingle()
+    // Seleciona papeis (array) além de papel (legado) para suportar multi-role
+    const { data: user } = await sb
+      .from('usuarios')
+      .select('id, nome, email, senha_hash, papel, papeis, ativo')
+      .eq('email', email)
+      .maybeSingle()
     if (!user || !user.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    if (user.ativo === false) return json({ error: 'Conta desativada. Contate o gerente.' }, 403)
     if (!await verificarSenha(senha, user.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    const userRoles: string[] = (user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []))
+    if (papelEsperado && !userRoles.includes(papelEsperado)) {
+      return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    }
     const tok = randomToken()
-    await sb.from('sessoes').insert({ usuario_id: user.id, token: tok, expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
-    return json({ token: tok, nome: user.nome, email: user.email, papel: user.papel })
+    // IMPORTANTE: checar erro do INSERT. Trigger sync_sessao_to_legacy pode falhar
+    // (FK) e se ignorarmos retornamos token sem sessão persistida → loop de login.
+    const { error: sessErr } = await sb.from('sessoes').insert({
+      usuario_id: user.id,
+      token: tok,
+      expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    if (sessErr) {
+      console.error('[unified_login] falha ao criar sessão', sessErr)
+      return json({ error: 'Não foi possível criar a sessão. Tente novamente.' }, 500)
+    }
+    return json({ token: tok, nome: user.nome, email: user.email, papel: user.papel, papeis: userRoles })
   }
 
   if (action === 'unified_logout') {
