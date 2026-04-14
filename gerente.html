@@ -467,6 +467,47 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
+      <!-- ═══ ALMOXARIFADO ═══ -->
+      <div data-modulo="almoxarifado">
+      <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
+        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
+        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
+        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
+        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
+        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Por Turma</a>
+        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
+        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
+      </div>
+      </div>
+
+      <!-- ═══ INFRAESTRUTURA ═══ -->
+      <div data-modulo="manutencao">
+      <div class="sb-label" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
+        <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
+        <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Turnos & Horários</a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Atividades Extra</a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
+      </div>
+      </div>
+
+      <!-- ═══ PESSOAS (Equipe + Famílias) ═══ -->
+      <div class="sb-label" onclick="toggleSbSection(this)">Pessoas <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
+        <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
+        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔑</span> Acesso de Famílias</a>
+        <a class="nav-item" href="#" data-modulo="diplomas" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
+        <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
+        <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
+        <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
+        <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> Horários de Acesso</a>
+        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
+      </div>
+
       <!-- ═══ ACADÊMICO ═══ -->
       <div data-modulo="notas">
       <div class="sb-label" onclick="toggleSbSection(this)">Acadêmico <span class="sb-arrow collapsed">▼</span></div>
@@ -520,20 +561,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
       </div>
 
-      <!-- ═══ PESSOAS (Equipe + Famílias) ═══ -->
-      <div class="sb-label" onclick="toggleSbSection(this)">Pessoas <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
-        <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
-        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔑</span> Acesso de Famílias</a>
-        <a class="nav-item" href="#" data-modulo="diplomas" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
-        <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
-        <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
-        <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
-        <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> Horários de Acesso</a>
-        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
-      </div>
-
       <!-- ═══ BIBLIOTECA & CANTINA ═══ -->
       <div class="sb-label" onclick="toggleSbSection(this)">Biblioteca & Cantina <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
@@ -541,33 +568,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('bibEmprestimos',this)"><span class="ic">📖</span> Empréstimos</a>
         <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantina',this)"><span class="ic">🍽️</span> Cardápio</a>
         <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantCreditos',this)"><span class="ic">💳</span> Créditos</a>
-      </div>
-
-      <!-- ═══ OPERACIONAL ═══ -->
-      <div data-modulo="almoxarifado">
-      <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
-        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
-        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
-        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
-        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Por Turma</a>
-        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
-        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
-      </div>
-      </div>
-
-      <!-- ═══ INFRAESTRUTURA ═══ -->
-      <div data-modulo="manutencao">
-      <div class="sb-label" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
-        <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
-        <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Turnos & Horários</a>
-        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Atividades Extra</a>
-        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
-      </div>
       </div>
 
       <!-- ═══ CONTROLE DE ACESSO (Face/RFID) ═══ -->
@@ -609,11 +609,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
       </div>
 
-      <!-- ═══ CONFIGURAÇÃO ═══ -->
-      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:12px;padding-top:8px;">
-        <a class="nav-item" href="#" onclick="showPanel('roi',this)"><span class="ic">📈</span> ROI & Economia</a>
-        <a class="nav-item" href="#" onclick="showPanel('logo',this)"><span class="ic">🖼️</span> Logotipo</a>
-      </div>
+      <!-- ROI & Economia e Logotipo movidos para admin.html (painel Admin da Escola).
+           Panels 'roi' e 'logo' continuam existindo e acessíveis via gerente.html#roi / #logo. -->
 
       <!-- ═══ PORTAIS ═══ -->
       <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
@@ -3277,6 +3274,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     restoreMiniSidebar();
     renderTopbarPills();
     renderBottomBar();
+    // Deep link via hash: gerente.html#roi ou #logo (usado pelo painel Admin)
+    const hash = (location.hash || '').replace('#', '').trim();
+    if (hash && document.getElementById('panel' + hash[0].toUpperCase() + hash.slice(1))) {
+      showPanel(hash, null);
+    }
     }, 0);
     // Realtime: atualiza dashboard quando dados mudam no banco
     if (realtimeChannel) sbClient.removeChannel(realtimeChannel);
