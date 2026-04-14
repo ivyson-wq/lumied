@@ -140,8 +140,8 @@ router.on("admin_login", rateLimit({ windowMs: 60000, maxRequests: 5 }), validat
   // 1. Try admins table
   const { data: admin } = await ctx.sb.from("admins").select("id, nome, email, senha_hash, ativo").eq("email", email).single();
   if (admin) {
-    if (!admin.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
-    if (!(await verificarSenhaAuto(senha, admin.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+    if (!admin.ativo) throw new AppError("AUTH_USER_DISABLED", "Conta desativada.");
+    if (!(await verificarSenhaAuto(senha, admin.senha_hash))) throw new AppError("AUTH_BAD_CREDENTIALS", "Credenciais inválidas.");
     const tkn = gerarToken();
     await ctx.sb.from("admin_sessoes").insert({ admin_id: admin.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
     log.info("Admin login", { user_id: admin.id, action: "admin_login" });
@@ -150,9 +150,9 @@ router.on("admin_login", rateLimit({ windowMs: 60000, maxRequests: 5 }), validat
 
   // 2. Fallback: try staff (fundador) credentials
   const { data: staff } = await ctx.sb.from("lumied_staff").select("id, nome, email, senha_hash, cargo, ativo").eq("email", email.toLowerCase().trim()).single();
-  if (!staff) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
-  if (!staff.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
-  if (!(await verificarSenhaAuto(senha, staff.senha_hash))) throw new AppError("AUTH_INVALID", "Credenciais inválidas.");
+  if (!staff) throw new AppError("AUTH_BAD_CREDENTIALS", "Credenciais inválidas.");
+  if (!staff.ativo) throw new AppError("AUTH_USER_DISABLED", "Conta desativada.");
+  if (!(await verificarSenhaAuto(senha, staff.senha_hash))) throw new AppError("AUTH_BAD_CREDENTIALS", "Credenciais inválidas.");
   const tkn = gerarToken();
   await ctx.sb.from("lumied_staff_sessoes").insert({ staff_id: staff.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
   log.info("Staff login via admin panel", { user_id: staff.id, action: "admin_login_staff" });

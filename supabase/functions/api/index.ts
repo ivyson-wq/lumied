@@ -66,7 +66,7 @@ serve(async (req: Request) => {
   // Dynamic CORS based on request origin
   const CORS = getCorsHeaders(req);
   const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
-  const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
+  const err = (msg: string, s = 400, code?: string) => new Response(JSON.stringify({ error: msg, ...(code ? { code } : {}) }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -336,24 +336,26 @@ serve(async (req: Request) => {
     const { data: g, error } = await admin.from("gerentes").insert({ nome, email, senha_hash }).select().single();
     if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     const { data: sessao, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
-    if (sErr || !sessao?.token) { console.error("[setup] sessão falhou", sErr); return err("Não foi possível criar a sessão.", 500); }
+    if (sErr || !sessao?.token) {
+      console.error("[auth] setup AUTH_SESSION_FAILED", { email: g.email, err: sErr });
+      return err("Não foi possível criar a sessão.", 500, "AUTH_SESSION_FAILED");
+    }
     return ok({ token: sessao.token, nome: g.nome, email: g.email });
   }
 
   // Login
   if (action === "login") {
     const { email, senha } = body as { email: string; senha: string };
-    if (!email || !senha) return err("E-mail e senha são obrigatórios.");
+    if (!email || !senha) return err("E-mail e senha são obrigatórios.", 400, "VALIDATION_FAILED");
     const { data: g } = await admin.from("gerentes").select("id, nome, email, senha_hash").eq("email", email).single();
-    if (!g) return err("E-mail ou senha incorretos.", 401);
+    if (!g) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
     const ok2 = await verificarSenhaAuto(senha as string, g.senha_hash);
-    if (!ok2) return err("E-mail ou senha incorretos.", 401);
-    // Limpa sessões expiradas
+    if (!ok2) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
     await admin.from("gerente_sessoes").delete().lt("expira_em", new Date().toISOString());
     const { data: sessao, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
     if (sErr || !sessao?.token) {
-      console.error("[login] falha ao criar sessão", sErr);
-      return err("Não foi possível criar a sessão. Tente novamente.", 500);
+      console.error("[auth] gerente login AUTH_SESSION_FAILED", { email, err: sErr });
+      return err("Não foi possível criar a sessão. Tente novamente.", 500, "AUTH_SESSION_FAILED");
     }
     return ok({ token: sessao.token, nome: g.nome, email: g.email });
   }
@@ -391,7 +393,10 @@ serve(async (req: Request) => {
       const { data: g } = await admin.from("gerentes").select("nome, email").eq("id", cred.usuario_id).maybeSingle();
       if (!g) return err("Gerente não encontrado.", 404);
       const { data: sess, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: cred.usuario_id }).select("token").single();
-      if (sErr || !sess?.token) { console.error("[webauthn gerente] sessão falhou", sErr); return err("Não foi possível criar a sessão.", 500); }
+      if (sErr || !sess?.token) {
+        console.error("[auth] webauthn gerente AUTH_SESSION_FAILED", { user: cred.usuario_id, err: sErr });
+        return err("Não foi possível criar a sessão.", 500, "AUTH_SESSION_FAILED");
+      }
       return ok({ token: sess.token, nome: g.nome, email: g.email });
     } catch (e) { return err("Verificação falhou: " + (e as Error).message, 400); }
   }

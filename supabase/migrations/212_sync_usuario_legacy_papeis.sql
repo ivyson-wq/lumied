@@ -1,7 +1,13 @@
 -- ═══════════════════════════════════════════════════════
--- 212 — Corrige sync usuarios → tabelas legadas
+-- 212 — [SUPERSEDED] Corrige sync usuarios → tabelas legadas
 --
--- Bug: trigger sync_usuario_to_legacy usava NEW.papel (string),
+-- ⚠️  Esta migration foi SOBRESCRITA pela 223 e deveria ter sido
+--    um no-op após a 221. O trigger definitivo é o da 223 (gerentes/
+--    professoras/secretarias com features derivadas + suporte a
+--    diretor/comercial/financeiro/impressao). A 224 corrige o FK
+--    do sync de sessões. Mantida aqui só pelo histórico — NÃO edite.
+--
+-- Bug original: trigger sync_usuario_to_legacy usava NEW.papel (string),
 -- mas usuários podem ter múltiplos papéis em NEW.papeis (array).
 -- Resultado: quando gerente também era professora, só `gerentes`
 -- recebia senha_hash/escola_id; `professoras` ficava com NULL e

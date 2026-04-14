@@ -17,7 +17,7 @@ import { sanitizePgError } from "../_shared/errors.ts";
 let CORS: Record<string, string> = getCorsHeaders();
 
 const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
-const err = (msg: string, s = 400) => new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
+const err = (msg: string, s = 400, code?: string) => new Response(JSON.stringify({ error: msg, ...(code ? { code } : {}) }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
 // ── Sanitiza termo de busca para uso seguro em filtros .or() do PostgREST ──
 // Whitelist: alfanuméricos, acentos latinos, espaços e hífen. Remove , . ( ) * %
@@ -792,22 +792,27 @@ serve(async (req: Request) => {
   if (action === "aluno_login") {
     const blocked = requireModulo(enabledModules, "portal_aluno"); if (blocked) return blocked;
     const { email, senha } = body as { email: string; senha: string };
-    if (!email || !senha) return err("Email e senha obrigatórios.");
+    if (!email || !senha) return err("Email e senha obrigatórios.", 400, "VALIDATION_FAILED");
     const { data: aluno } = await sb.from("alunos_login").select("id, aluno_nome, email, senha_hash, familia_email, serie, ativo").eq("email", email).single();
-    if (!aluno || !aluno.ativo) return err("Credenciais inválidas.", 401);
-    // Verificar senha (hex:hex format)
+    if (!aluno) return err("Credenciais inválidas.", 401, "AUTH_BAD_CREDENTIALS");
+    if (!aluno.ativo) return err("Conta desativada.", 403, "AUTH_USER_DISABLED");
     try {
       const [saltHex, storedHash] = aluno.senha_hash.split(":");
       const salt = Uint8Array.from((saltHex.match(/.{2}/g) || []).map((h: string) => parseInt(h, 16)));
       const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
       const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" }, key, 256);
       const hashHex = Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, "0")).join("");
-      if (hashHex !== storedHash) return err("Credenciais inválidas.", 401);
-    } catch { return err("Erro na verificação.", 500); }
-    // Criar sessão
+      if (hashHex !== storedHash) return err("Credenciais inválidas.", 401, "AUTH_BAD_CREDENTIALS");
+    } catch (e) {
+      console.error("[auth] aluno_login hash error", e);
+      return err("Erro na verificação.", 500, "INTERNAL_ERROR");
+    }
     const tkn = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, "0")).join("");
     const { error: asErr } = await sb.from("aluno_sessoes").insert({ aluno_id: aluno.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
-    if (asErr) { console.error("[aluno_login] sessão falhou", asErr); return err("Não foi possível criar a sessão.", 500); }
+    if (asErr) {
+      console.error("[auth] aluno_login AUTH_SESSION_FAILED", { email, err: asErr });
+      return err("Não foi possível criar a sessão.", 500, "AUTH_SESSION_FAILED");
+    }
     return ok({ token: tkn, nome: aluno.aluno_nome, email: aluno.email, serie: aluno.serie });
   }
 

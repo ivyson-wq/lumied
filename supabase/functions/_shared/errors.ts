@@ -38,7 +38,12 @@ export type ErrorCode =
   | 'VALIDATION_FAILED'
   | 'AUTH_REQUIRED'
   | 'AUTH_INVALID'
+  | 'AUTH_BAD_CREDENTIALS'   // email/senha incorretos (distinto de AUTH_INVALID genérico)
+  | 'AUTH_USER_DISABLED'     // usuário existe mas ativo=false
+  | 'AUTH_ROLE_MISMATCH'     // papel esperado no login não está nos papeis do usuário
   | 'AUTH_EXPIRED'
+  | 'AUTH_SESSION_FAILED'    // INSERT em *_sessoes falhou — bug estrutural, NÃO credencial
+  | 'AUTH_OUT_OF_HOURS'      // fora do horário de acesso permitido
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'
@@ -54,7 +59,12 @@ const STATUS_MAP: Record<ErrorCode, number> = {
   BAD_REQUEST: 400,
   AUTH_REQUIRED: 401,
   AUTH_INVALID: 401,
+  AUTH_BAD_CREDENTIALS: 401,
+  AUTH_USER_DISABLED: 403,
+  AUTH_ROLE_MISMATCH: 401,
   AUTH_EXPIRED: 401,
+  AUTH_SESSION_FAILED: 500,
+  AUTH_OUT_OF_HOURS: 403,
   FORBIDDEN: 403,
   FEATURE_DISABLED: 403,
   ESCOLA_REQUIRED: 400,

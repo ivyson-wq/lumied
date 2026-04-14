@@ -324,32 +324,29 @@ Deno.serve(async (req) => {
   if (action === 'unified_login') {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
-    const papelEsperado: string = body.papel || '' // opcional: filtra por papel
-    if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
-    // Seleciona papeis (array) além de papel (legado) para suportar multi-role
+    const papelEsperado: string = body.papel || ''
+    if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
     const { data: user } = await sb
       .from('usuarios')
       .select('id, nome, email, senha_hash, papel, papeis, ativo')
       .eq('email', email)
       .maybeSingle()
-    if (!user || !user.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
-    if (user.ativo === false) return json({ error: 'Conta desativada. Contate o gerente.' }, 403)
-    if (!await verificarSenha(senha, user.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    if (!user || !user.senha_hash) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    if (user.ativo === false) return json({ error: 'Conta desativada. Contate o gerente.', code: 'AUTH_USER_DISABLED' }, 403)
+    if (!await verificarSenha(senha, user.senha_hash)) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
     const userRoles: string[] = (user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []))
     if (papelEsperado && !userRoles.includes(papelEsperado)) {
-      return json({ error: 'E-mail ou senha incorretos.' }, 401)
+      return json({ error: 'Este acesso não está disponível para o seu papel.', code: 'AUTH_ROLE_MISMATCH' }, 401)
     }
     const tok = randomToken()
-    // IMPORTANTE: checar erro do INSERT. Trigger sync_sessao_to_legacy pode falhar
-    // (FK) e se ignorarmos retornamos token sem sessão persistida → loop de login.
     const { error: sessErr } = await sb.from('sessoes').insert({
       usuario_id: user.id,
       token: tok,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
     if (sessErr) {
-      console.error('[unified_login] falha ao criar sessão', sessErr)
-      return json({ error: 'Não foi possível criar a sessão. Tente novamente.' }, 500)
+      console.error('[auth] unified_login AUTH_SESSION_FAILED', { email, err: sessErr })
+      return json({ error: 'Não foi possível criar a sessão. Tente novamente.', code: 'AUTH_SESSION_FAILED' }, 500)
     }
     return json({ token: tok, nome: user.nome, email: user.email, papel: user.papel, papeis: userRoles })
   }
@@ -363,20 +360,22 @@ Deno.serve(async (req) => {
   if (action === 'professora_login') {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
-    if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
+    if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
     const { data: prof } = await sb
       .from('professoras').select('id, nome, email, senha_hash').eq('email', email).maybeSingle()
-    if (!prof || !prof.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
-    if (!await verificarSenha(senha, prof.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
-    // Verificar horário de acesso
+    if (!prof || !prof.senha_hash) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    if (!await verificarSenha(senha, prof.senha_hash)) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
     const horario = await verificarHorarioAcesso(sb, prof.id)
-    if (!horario.permitido) return json({ error: horario.mensagem || 'Acesso fora do horário permitido.' }, 403)
+    if (!horario.permitido) return json({ error: horario.mensagem || 'Acesso fora do horário permitido.', code: 'AUTH_OUT_OF_HOURS' }, 403)
     const tok = randomToken()
     const { error: psErr } = await sb.from('professora_sessoes').insert({
       professora_id: prof.id, token: tok,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
-    if (psErr) { console.error('[professora_login] sessão falhou', psErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
+    if (psErr) {
+      console.error('[auth] professora_login AUTH_SESSION_FAILED', { email, err: psErr })
+      return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
+    }
     return json({ token: tok, nome: prof.nome, email: prof.email })
   }
 
@@ -391,17 +390,20 @@ Deno.serve(async (req) => {
   if (action === 'secretaria_login') {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
-    if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.' }, 400)
+    if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
     const { data: sec } = await sb
       .from('secretarias').select('id, nome, email, senha_hash').eq('email', email).maybeSingle()
-    if (!sec || !sec.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
-    if (!await verificarSenha(senha, sec.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
+    if (!sec || !sec.senha_hash) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    if (!await verificarSenha(senha, sec.senha_hash)) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
     const tok = randomToken()
     const { error: ssErr } = await sb.from('secretaria_sessoes').insert({
       secretaria_id: sec.id, token: tok,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
-    if (ssErr) { console.error('[secretaria_login] sessão falhou', ssErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
+    if (ssErr) {
+      console.error('[auth] secretaria_login AUTH_SESSION_FAILED', { email, err: ssErr })
+      return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
+    }
     return json({ token: tok, nome: sec.nome, email: sec.email })
   }
 
@@ -2630,15 +2632,21 @@ Deno.serve(async (req) => {
       const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       if (cred.usuario_tipo === 'professora') {
         const { data: p } = await sb.from('professoras').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
-        if (!p) return json({ error: 'Professora não encontrada.' }, 404)
+        if (!p) return json({ error: 'Professora não encontrada.', code: 'NOT_FOUND' }, 404)
         const { error: sErr } = await sb.from('professora_sessoes').insert({ professora_id: cred.usuario_id, token: tkn, expira_em: exp })
-        if (sErr) { console.error('[webauthn prof] sessão falhou', sErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
+        if (sErr) {
+          console.error('[auth] webauthn professora AUTH_SESSION_FAILED', { user: cred.usuario_id, err: sErr })
+          return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
+        }
         token = tkn; nome = p.nome; email = p.email
       } else if (cred.usuario_tipo === 'secretaria') {
         const { data: s } = await sb.from('secretarias').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
-        if (!s) return json({ error: 'Secretária não encontrada.' }, 404)
+        if (!s) return json({ error: 'Secretária não encontrada.', code: 'NOT_FOUND' }, 404)
         const { error: sErr } = await sb.from('secretaria_sessoes').insert({ secretaria_id: cred.usuario_id, token: tkn, expira_em: exp })
-        if (sErr) { console.error('[webauthn sec] sessão falhou', sErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
+        if (sErr) {
+          console.error('[auth] webauthn secretaria AUTH_SESSION_FAILED', { user: cred.usuario_id, err: sErr })
+          return json({ error: 'Não foi possível criar a sessão.', code: 'AUTH_SESSION_FAILED' }, 500)
+        }
         token = tkn; nome = s.nome; email = s.email
       }
       return json({ token, nome, email })
