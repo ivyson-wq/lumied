@@ -372,10 +372,11 @@ Deno.serve(async (req) => {
     const horario = await verificarHorarioAcesso(sb, prof.id)
     if (!horario.permitido) return json({ error: horario.mensagem || 'Acesso fora do horário permitido.' }, 403)
     const tok = randomToken()
-    await sb.from('professora_sessoes').insert({
+    const { error: psErr } = await sb.from('professora_sessoes').insert({
       professora_id: prof.id, token: tok,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
+    if (psErr) { console.error('[professora_login] sessão falhou', psErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
     return json({ token: tok, nome: prof.nome, email: prof.email })
   }
 
@@ -396,10 +397,11 @@ Deno.serve(async (req) => {
     if (!sec || !sec.senha_hash) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     if (!await verificarSenha(senha, sec.senha_hash)) return json({ error: 'E-mail ou senha incorretos.' }, 401)
     const tok = randomToken()
-    await sb.from('secretaria_sessoes').insert({
+    const { error: ssErr } = await sb.from('secretaria_sessoes').insert({
       secretaria_id: sec.id, token: tok,
       expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
+    if (ssErr) { console.error('[secretaria_login] sessão falhou', ssErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
     return json({ token: tok, nome: sec.nome, email: sec.email })
   }
 
@@ -2620,16 +2622,24 @@ Deno.serve(async (req) => {
       await sb.from('webauthn_credentials').update({ sign_count: result.newSignCount }).eq('id', cred.id)
       // Create session
       let token = '', nome = '', email = ''
+      // IMPORTANTE: professora_sessoes e secretaria_sessoes não têm defaults
+      // para `token` e `expira_em`. Se não forem fornecidos, INSERT viola
+      // NOT NULL, `.single()` retorna data=null, `sess!.token` vira undefined,
+      // e o frontend salva "undefined" como token → loop de login.
+      const tkn = randomToken()
+      const exp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       if (cred.usuario_tipo === 'professora') {
         const { data: p } = await sb.from('professoras').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
         if (!p) return json({ error: 'Professora não encontrada.' }, 404)
-        const { data: sess } = await sb.from('professora_sessoes').insert({ professora_id: cred.usuario_id }).select('token').single()
-        token = sess!.token; nome = p.nome; email = p.email
+        const { error: sErr } = await sb.from('professora_sessoes').insert({ professora_id: cred.usuario_id, token: tkn, expira_em: exp })
+        if (sErr) { console.error('[webauthn prof] sessão falhou', sErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
+        token = tkn; nome = p.nome; email = p.email
       } else if (cred.usuario_tipo === 'secretaria') {
         const { data: s } = await sb.from('secretarias').select('nome, email').eq('id', cred.usuario_id).maybeSingle()
         if (!s) return json({ error: 'Secretária não encontrada.' }, 404)
-        const { data: sess } = await sb.from('secretaria_sessoes').insert({ secretaria_id: cred.usuario_id }).select('token').single()
-        token = sess!.token; nome = s.nome; email = s.email
+        const { error: sErr } = await sb.from('secretaria_sessoes').insert({ secretaria_id: cred.usuario_id, token: tkn, expira_em: exp })
+        if (sErr) { console.error('[webauthn sec] sessão falhou', sErr); return json({ error: 'Não foi possível criar a sessão.' }, 500) }
+        token = tkn; nome = s.nome; email = s.email
       }
       return json({ token, nome, email })
     } catch (e) { return json({ error: 'Verificação falhou: ' + (e as Error).message }, 400) }

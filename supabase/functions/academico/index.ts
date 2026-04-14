@@ -806,7 +806,8 @@ serve(async (req: Request) => {
     } catch { return err("Erro na verificação.", 500); }
     // Criar sessão
     const tkn = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, "0")).join("");
-    await sb.from("aluno_sessoes").insert({ aluno_id: aluno.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
+    const { error: asErr } = await sb.from("aluno_sessoes").insert({ aluno_id: aluno.id, token: tkn, expira_em: new Date(Date.now() + 7 * 86400000).toISOString() });
+    if (asErr) { console.error("[aluno_login] sessão falhou", asErr); return err("Não foi possível criar a sessão.", 500); }
     return ok({ token: tkn, nome: aluno.aluno_nome, email: aluno.email, serie: aluno.serie });
   }
 

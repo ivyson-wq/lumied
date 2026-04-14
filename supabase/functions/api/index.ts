@@ -335,8 +335,9 @@ serve(async (req: Request) => {
     const senha_hash = await hashSenha(senha as string);
     const { data: g, error } = await admin.from("gerentes").insert({ nome, email, senha_hash }).select().single();
     if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
-    const { data: sessao } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
-    return ok({ token: sessao!.token, nome: g.nome, email: g.email });
+    const { data: sessao, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
+    if (sErr || !sessao?.token) { console.error("[setup] sessão falhou", sErr); return err("Não foi possível criar a sessão.", 500); }
+    return ok({ token: sessao.token, nome: g.nome, email: g.email });
   }
 
   // Login
@@ -349,8 +350,12 @@ serve(async (req: Request) => {
     if (!ok2) return err("E-mail ou senha incorretos.", 401);
     // Limpa sessões expiradas
     await admin.from("gerente_sessoes").delete().lt("expira_em", new Date().toISOString());
-    const { data: sessao } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
-    return ok({ token: sessao!.token, nome: g.nome, email: g.email });
+    const { data: sessao, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
+    if (sErr || !sessao?.token) {
+      console.error("[login] falha ao criar sessão", sErr);
+      return err("Não foi possível criar a sessão. Tente novamente.", 500);
+    }
+    return ok({ token: sessao.token, nome: g.nome, email: g.email });
   }
 
   // Logout
@@ -385,8 +390,9 @@ serve(async (req: Request) => {
       await admin.from("webauthn_credentials").update({ sign_count: result.newSignCount }).eq("id", cred.id);
       const { data: g } = await admin.from("gerentes").select("nome, email").eq("id", cred.usuario_id).maybeSingle();
       if (!g) return err("Gerente não encontrado.", 404);
-      const { data: sess } = await admin.from("gerente_sessoes").insert({ gerente_id: cred.usuario_id }).select("token").single();
-      return ok({ token: sess!.token, nome: g.nome, email: g.email });
+      const { data: sess, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: cred.usuario_id }).select("token").single();
+      if (sErr || !sess?.token) { console.error("[webauthn gerente] sessão falhou", sErr); return err("Não foi possível criar a sessão.", 500); }
+      return ok({ token: sess.token, nome: g.nome, email: g.email });
     } catch (e) { return err("Verificação falhou: " + (e as Error).message, 400); }
   }
 
