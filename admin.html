@@ -37,6 +37,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .sb-nav{flex:1;padding:14px 12px;}
 .sb-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:14px 12px 7px;font-weight:700;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,.85);font-size:13.5px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;margin-bottom:2px;text-decoration:none;}
+.nav-badge{margin-left:auto;background:#e53e3e;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;min-width:18px;text-align:center;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}.nav-item.active{background:rgba(200,16,46,.9);color:#fff;}
 .nav-item .ic{width:18px;text-align:center;font-size:15px;}
 .sb-footer{padding:16px 12px;border-top:1px solid rgba(255,255,255,.07);}
@@ -184,7 +185,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" onclick="showPanel('adicionais',this)"><span class="ic">🛒</span> Adicionais</a>
       <a class="nav-item" onclick="showPanel('modulos',this)"><span class="ic">🧩</span> Modulos</a>
       <div class="sb-label">Governança</div>
-      <a class="nav-item" onclick="showPanel('tickets',this)"><span class="ic">🎫</span> Tickets</a>
+      <a class="nav-item" onclick="showPanel('tickets',this)" id="navTickets"><span class="ic">🎫</span> Tickets<span class="nav-badge" id="badgeTickets" style="display:none;"></span></a>
       <a class="nav-item" onclick="showPanel('lgpd',this)"><span class="ic">🔒</span> LGPD</a>
       <a class="nav-item" onclick="showPanel('admins',this)"><span class="ic">👤</span> Admins</a>
       <div class="sb-label">Escola</div>
@@ -414,6 +415,13 @@ async function loadDashboard() {
     <div class="kpi"><div class="kpi-label">Modulos Ativos</div><div class="kpi-value">${d.modulos_ativos || 0}</div></div>
     <div class="kpi"><div class="kpi-label">Tickets Abertos</div><div class="kpi-value">${d.tickets_abertos || 0}</div></div>
     <div class="kpi"><div class="kpi-label">Decisoes Pendentes</div><div class="kpi-value">${d.decisoes_pendentes || 0}</div></div>`;
+  // Badge no sidebar
+  const badge = document.getElementById('badgeTickets');
+  if (badge) {
+    const n = d.tickets_abertos || 0;
+    badge.textContent = n > 0 ? String(n) : '';
+    badge.style.display = n > 0 ? '' : 'none';
+  }
   let alertsHtml = '';
   for (const a of (d.alerts || [])) alertsHtml += `<div class="alert ${a.type}">${esc(a.msg)}</div>`;
   document.getElementById('dashAlerts').innerHTML = alertsHtml;
