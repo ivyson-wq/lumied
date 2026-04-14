@@ -357,6 +357,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .prof-sidebar .ps-item:hover{background:rgba(255,255,255,.06);color:#fff;}
 .prof-sidebar .ps-item.active{background:rgba(200,16,46,.9);color:#fff;}
 .prof-sidebar .ps-icon{font-size:16px;width:20px;text-align:center;}
+.prof-sidebar .ps-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);padding:14px 20px 4px;font-weight:700;}
+.prof-sidebar .ps-label:first-child{padding-top:0;}
 
 /* Module config toggles */
 .mc-section{margin-bottom:20px;}
@@ -447,21 +449,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   <div class="prof-sidebar" id="profSidebar">
     <button class="ps-item active" onclick="switchProfPage('dashboard',this)" data-page="dashboard"><span class="ps-icon">🏠</span> Dashboard</button>
+
+    <div class="ps-label">Rotina</div>
+    <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> Chamada</button>
     <button class="ps-item" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup"><span class="ps-icon">🚗</span> Fila de Retirada</button>
+    <button class="ps-item" onclick="switchProfPage('agenda',this)" data-page="agenda" data-modulo="agenda_digital"><span class="ps-icon">📅</span> Agenda Digital</button>
+    <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> Notas</button>
+    <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> Diário</button>
+    <button class="ps-item" onclick="switchProfPage('turnos',this)" data-page="turnos" data-modulo="turno"><span class="ps-icon">📊</span> Turnos</button>
+
+    <div class="ps-label">Acadêmico</div>
     <button class="ps-item" onclick="switchProfPage('diplomas',this)" data-page="diplomas" data-modulo="diplomas"><span class="ps-icon">🏆</span> Diplomas & Ranking</button>
     <button class="ps-item" onclick="switchProfPage('pdi',this)" data-page="pdi" data-modulo="pdi"><span class="ps-icon">📈</span> Annual Growth Plan</button>
+    <button class="ps-item" onclick="switchProfPage('ativExtras',this)" data-page="ativExtras" data-modulo="atividades"><span class="ps-icon">🎯</span> Atividades Extras</button>
+
+    <div class="ps-label">Operações</div>
     <button class="ps-item" onclick="switchProfPage('almox',this)" data-page="almox" data-modulo="almoxarifado"><span class="ps-icon">📦</span> Materiais</button>
     <button class="ps-item" onclick="switchProfPage('atestados',this)" data-page="atestados" data-modulo="atestados"><span class="ps-icon">🏥</span> Atestados</button>
     <button class="ps-item" onclick="switchProfPage('manut',this)" data-page="manut" data-modulo="manutencao"><span class="ps-icon">🔧</span> Manutenção</button>
     <button class="ps-item" onclick="switchProfPage('impressoes',this)" data-page="impressoes" data-modulo="impressoes"><span class="ps-icon">🖨️</span> Impressões</button>
     <button class="ps-item" onclick="switchProfPage('achados',this)" data-page="achados" data-modulo="achados"><span class="ps-icon">🔍</span> Achados & Perdidos</button>
-    <button class="ps-item" onclick="switchProfPage('agenda',this)" data-page="agenda" data-modulo="agenda_digital"><span class="ps-icon">📅</span> Agenda Digital</button>
-    <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> Notas</button>
-    <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> Chamada</button>
-    <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> Diário</button>
-    <button class="ps-item" onclick="switchProfPage('turnos',this)" data-page="turnos" data-modulo="turno"><span class="ps-icon">📊</span> Turnos</button>
-    <button class="ps-item" onclick="switchProfPage('ativExtras',this)" data-page="ativExtras" data-modulo="atividades"><span class="ps-icon">🎯</span> Atividades Extras</button>
-    <button class="ps-item" onclick="switchProfPage('modulosConfig',this)" data-page="modulosConfig" id="sidebarModulosBtn" style="display:none;border-top:1px solid rgba(255,255,255,.1);margin-top:8px;"><span class="ps-icon">⚙️</span> Modulos</button>
+
+    <button class="ps-item" onclick="switchProfPage('modulosConfig',this)" data-page="modulosConfig" id="sidebarModulosBtn" style="display:none;border-top:1px solid rgba(255,255,255,.1);margin-top:12px;"><span class="ps-icon">⚙️</span> Módulos</button>
   </div>
 
   <div class="greeting-bar" id="greetingBar">
@@ -1672,6 +1681,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         window._enabledModules = new Set(d.modulos);
         document.querySelectorAll('[data-modulo]').forEach(el => {
           el.style.display = window._enabledModules.has(el.dataset.modulo) ? '' : 'none';
+        });
+        // Esconde labels de grupo quando TODOS os itens daquele grupo estão ocultos
+        document.querySelectorAll('.prof-sidebar .ps-label').forEach(label => {
+          var next = label.nextElementSibling;
+          var hasVisible = false;
+          while (next && !next.classList.contains('ps-label')) {
+            if (next.classList.contains('ps-item') && next.style.display !== 'none') { hasVisible = true; break; }
+            next = next.nextElementSibling;
+          }
+          label.style.display = hasVisible ? '' : 'none';
         });
       }
     } catch(e) { console.warn('Feature gating não disponível:', e); }
