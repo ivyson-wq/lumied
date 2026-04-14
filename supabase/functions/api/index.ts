@@ -984,7 +984,7 @@ serve(async (req: Request) => {
     const { data } = await admin.from("usuarios").select("id, nome, email, papel, papeis, ativo, criado_em").order("papel").order("nome");
     const users = (data ?? []).map((u: any) => ({ ...u, papeis: u.papeis?.length ? u.papeis : (u.papel ? [u.papel] : []) }));
     // Enriquece professoras com serie_id
-    const profEmails = users.filter(u => u.papel === 'professora' || u.papel === 'professora_assistente').map(u => u.email);
+    const profEmails = users.filter(u => u.papeis.includes('professora') || u.papeis.includes('professora_assistente')).map(u => u.email);
     if (profEmails.length) {
       const { data: profs } = await admin.from("professoras").select("email, serie_id, series(id, nome)").in("email", profEmails);
       const profMap = new Map((profs ?? []).map((p: any) => [p.email, { serie_id: p.serie_id, serie_nome: p.series?.nome }]));
@@ -1103,7 +1103,11 @@ serve(async (req: Request) => {
     if (u.email === gerente.email) return err("Você não pode remover sua própria conta.");
     const roles = u.papeis?.length ? u.papeis : [u.papel];
     if (roles.includes("gerente")) {
-      const { count } = await admin.from("usuarios").select("*", { count: "exact", head: true }).eq("papel", "gerente");
+      // Conta gerentes em papeis (array) OR papel (singular legado)
+      const { count } = await admin.from("usuarios")
+        .select("*", { count: "exact", head: true })
+        .or("papeis.cs.{gerente},papel.eq.gerente")
+        .eq("ativo", true);
       if ((count ?? 0) <= 1) return err("É necessário manter pelo menos um gerente.");
     }
     await admin.from("usuarios").delete().eq("id", id);
@@ -1128,14 +1132,17 @@ serve(async (req: Request) => {
     const { usuario_id } = body as { usuario_id: string };
     if (!usuario_id) return err("usuario_id obrigatório.");
 
-    // Get user's papel
-    const { data: user } = await admin.from("usuarios").select("papel").eq("id", usuario_id).single();
+    // Get user's papeis (array) com fallback ao singular
+    const { data: user } = await admin.from("usuarios").select("papel, papeis").eq("id", usuario_id).single();
     if (!user) return err("Usuário não encontrado.", 404);
+    const userRoles: string[] = (user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])) as string[];
 
-    // Get defaults for papel
-    const { data: defaults } = await admin.from("permissoes_papel")
-      .select("modulo, pode_ver, pode_editar")
-      .eq("papel", user.papel);
+    // Get defaults de TODOS os papéis e faz UNIÃO (permissão mais permissiva vence)
+    const { data: defaults } = userRoles.length
+      ? await admin.from("permissoes_papel")
+          .select("modulo, pode_ver, pode_editar")
+          .in("papel", userRoles)
+      : { data: [] as Array<{modulo:string;pode_ver:boolean;pode_editar:boolean}> };
 
     // Get user-specific overrides
     const { data: overrides } = await admin.from("permissoes_usuario")
@@ -1144,7 +1151,14 @@ serve(async (req: Request) => {
 
     // Merge: overrides take precedence
     const permsMap: Record<string, {pode_ver: boolean, pode_editar: boolean}> = {};
-    for (const d of defaults || []) permsMap[d.modulo] = { pode_ver: d.pode_ver, pode_editar: d.pode_editar };
+    for (const d of defaults || []) {
+      const cur = permsMap[d.modulo];
+      // União OR — se QUALQUER papel do usuário permite, permite
+      permsMap[d.modulo] = {
+        pode_ver: (cur?.pode_ver ?? false) || d.pode_ver,
+        pode_editar: (cur?.pode_editar ?? false) || d.pode_editar,
+      };
+    }
     for (const o of overrides || []) permsMap[o.modulo] = { pode_ver: o.pode_ver, pode_editar: o.pode_editar };
 
     const result = Object.entries(permsMap).map(([modulo, p]) => ({ modulo, ...p }));
@@ -2453,11 +2467,15 @@ serve(async (req: Request) => {
     });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Notifica todos os portais
-    const { data: users } = await admin.from("usuarios").select("email, papel");
+    const { data: users } = await admin.from("usuarios").select("email, papel, papeis");
     const tipos: Record<string, string> = { incendio: "INCENDIO", intruso: "INTRUSO", emergencia_medica: "EMERGENCIA MEDICA", evacuacao: "EVACUACAO", outro: "ALERTA" };
     const tipoLabel = tipos[tipo] || tipo.toUpperCase();
     for (const u of users ?? []) {
-      const portal = u.papel === "gerente" ? "gerente" : u.papel === "secretaria" ? "secretaria" : "professora";
+      const uRoles: string[] = (u.papeis?.length ? u.papeis : (u.papel ? [u.papel] : [])) as string[];
+      // Emergência: enviar para o portal mais privilegiado do usuário
+      const portal = uRoles.includes("gerente") ? "gerente"
+        : uRoles.includes("secretaria") || uRoles.includes("comercial") || uRoles.includes("financeiro") ? "secretaria"
+        : "professora";
       await admin.from("notificacoes").insert({
         portal, destinatario: u.email,
         titulo: "EMERGENCIA: " + tipoLabel,

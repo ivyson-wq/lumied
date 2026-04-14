@@ -99,7 +99,23 @@ export async function modulosHabilitados(ctx: Context) {
 }
 
 export async function permissoesUsuario(ctx: Context) {
-  const papel = (ctx.body as any).papel || "gerente";
-  const { data } = await ctx.sb.from("permissoes_papel").select("modulo, pode_ver, pode_editar").eq("papel", papel);
-  return successResponse(data ?? []);
+  // Aceita `papeis` (array) ou `papel` (singular legado). Sem default "gerente"
+  // — usar default engana quem chama sem contexto (ex: secretária via UI).
+  const b = ctx.body as { papeis?: string[]; papel?: string };
+  const roles: string[] = b.papeis?.length ? b.papeis : (b.papel ? [b.papel] : []);
+  if (!roles.length) return successResponse([]);
+  const { data } = await ctx.sb.from("permissoes_papel")
+    .select("modulo, pode_ver, pode_editar")
+    .in("papel", roles);
+  // União OR entre papéis: se QUALQUER papel permite, permite
+  const merged: Record<string, {modulo:string;pode_ver:boolean;pode_editar:boolean}> = {};
+  for (const d of data ?? []) {
+    const cur = merged[d.modulo];
+    merged[d.modulo] = {
+      modulo: d.modulo,
+      pode_ver: (cur?.pode_ver ?? false) || d.pode_ver,
+      pode_editar: (cur?.pode_editar ?? false) || d.pode_editar,
+    };
+  }
+  return successResponse(Object.values(merged));
 }
