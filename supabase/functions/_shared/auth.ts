@@ -82,15 +82,16 @@ export async function validarSessao(
   userFields = "id, nome, email"
 ): Promise<{ id: string; nome: string; email: string } | null> {
   if (!token) return null;
-  const { data } = await sb
+  const { data: raw } = await sb
     .from(table)
     .select(`${userIdField}, expira_em, ${userTable}(${userFields})`)
     .eq("token", token)
     .single();
+  // deno-lint-ignore no-explicit-any
+  const data = raw as any;
   if (!data) return null;
   if (new Date(data.expira_em) < new Date()) return null;
-  // deno-lint-ignore no-explicit-any
-  return (data as any)[userTable] as { id: string; nome: string; email: string };
+  return data[userTable] as { id: string; nome: string; email: string };
 }
 
 // ── Upload file to Supabase Storage ──
