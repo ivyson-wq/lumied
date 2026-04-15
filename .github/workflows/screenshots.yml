@@ -1,0 +1,68 @@
+name: Capturar screenshots da Central de Ajuda
+
+# Executa o spec screenshots.spec.ts contra a escola demo e comita os
+# PNGs em site/screenshots/ajuda/. Execute manualmente via workflow_dispatch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      demo_url:
+        description: "URL da escola demo"
+        required: true
+        default: "https://demo.lumied.com.br"
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run screenshot spec
+        env:
+          DEMO_URL:      ${{ github.event.inputs.demo_url }}
+          DEMO_EMAIL:    ${{ secrets.DEMO_EMAIL || 'demo@lumied.com.br' }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+        run: |
+          if [ -z "$DEMO_PASSWORD" ]; then
+            echo "::error::Secret DEMO_PASSWORD não configurado"
+            exit 1
+          fi
+          npx playwright test tests/e2e/screenshots.spec.ts --project="Desktop Chrome"
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: site/screenshots/ajuda/
+          retention-days: 14
+
+      - name: Commit screenshots
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/screenshots/ajuda/
+          if git diff --cached --quiet; then
+            echo "Nenhuma mudança nos screenshots."
+          else
+            git commit -m "chore(ajuda): atualiza screenshots via CI
+
+            Capturados automaticamente da escola Demo Lumied pelo workflow
+            .github/workflows/screenshots.yml"
+            git push origin main
+          fi
