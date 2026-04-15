@@ -1,0 +1,71 @@
+name: Add demo.lumied.com.br subdomain
+
+# Adiciona o subdomínio demo ao projeto Vercel. Rode 1x manualmente.
+# Idempotente: se o domínio já existir, retorna 409 e o workflow continua.
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Subdomínio a adicionar"
+        required: true
+        default: "demo.lumied.com.br"
+
+jobs:
+  add-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add domain to Vercel project
+        env:
+          VERCEL_TOKEN:   ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID:  ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          DOMAIN: ${{ github.event.inputs.domain }}
+        run: |
+          set -e
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::Faltam secrets VERCEL_TOKEN e/ou VERCEL_PROJECT_ID"
+            exit 1
+          fi
+
+          echo "Adicionando domínio $DOMAIN ao projeto $VERCEL_PROJECT_ID..."
+          TEAM_PARAM=""
+          if [ -n "$VERCEL_ORG_ID" ]; then TEAM_PARAM="?teamId=$VERCEL_ORG_ID"; fi
+
+          RESP=$(curl -sS -w "\n%{http_code}" \
+            -X POST \
+            "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/domains$TEAM_PARAM" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"name\":\"$DOMAIN\"}")
+
+          BODY=$(echo "$RESP" | head -n -1)
+          CODE=$(echo "$RESP" | tail -n 1)
+
+          echo "HTTP $CODE"
+          echo "$BODY"
+
+          if [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+            echo "✅ Domínio $DOMAIN adicionado."
+          elif [ "$CODE" = "409" ] || echo "$BODY" | grep -qi "already"; then
+            echo "ℹ️  Domínio $DOMAIN já existe — seguindo."
+          else
+            echo "::error::Falha ao adicionar domínio (HTTP $CODE)"
+            exit 1
+          fi
+
+      - name: Verificar resolução DNS
+        env:
+          DOMAIN: ${{ github.event.inputs.domain }}
+        run: |
+          echo "Resolvendo $DOMAIN..."
+          for i in 1 2 3 4 5; do
+            if host "$DOMAIN" >/dev/null 2>&1; then
+              echo "✅ $DOMAIN resolve via DNS"
+              host "$DOMAIN"
+              exit 0
+            fi
+            echo "Aguardando propagação DNS... (tentativa $i/5)"
+            sleep 10
+          done
+          echo "⚠️  DNS ainda propagando — pode levar alguns minutos. Teste manualmente em breve."
