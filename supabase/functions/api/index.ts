@@ -65,8 +65,16 @@ async function validarSessao(admin: ReturnType<typeof createClient>, token: stri
 serve(async (req: Request) => {
   // Dynamic CORS based on request origin
   const CORS = getCorsHeaders(req);
-  const ok  = (data: unknown)        => new Response(JSON.stringify(data),        { headers: { ...CORS, "Content-Type": "application/json" } });
-  const err = (msg: string, s = 400, code?: string) => new Response(JSON.stringify({ error: msg, ...(code ? { code } : {}) }), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
+  const startTime = Date.now();
+  let currentAction = 'unknown';
+  const timingHeader = () => {
+    const ms = Date.now() - startTime;
+    if (ms > 1000) console.warn(`[slow] ${currentAction} ${ms}ms`);
+    return { "X-Response-Time": String(ms) };
+  };
+  const ok  = (data: unknown, extraHeaders: Record<string, string> = {}) => new Response(JSON.stringify(data), { headers: { ...CORS, "Content-Type": "application/json", ...timingHeader(), ...extraHeaders } });
+  const err = (msg: string, s = 400, code?: string) => new Response(JSON.stringify({ error: msg, ...(code ? { code } : {}) }), { status: s, headers: { ...CORS, "Content-Type": "application/json", ...timingHeader() } });
+  const PUBLIC_CACHE = { "Cache-Control": "public, max-age=60, s-maxage=60" };
 
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -90,9 +98,8 @@ serve(async (req: Request) => {
   // Sanitize body
   body = sanitizeBody(body) as Record<string, unknown>;
 
-  // Log request
-  const startTime = Date.now();
   const { action } = body;
+  currentAction = String(action || 'unknown');
 
   // ════════════════════════════════════════════════════════════
   //  AÇÕES PÚBLICAS (sem autenticação)
@@ -290,7 +297,8 @@ serve(async (req: Request) => {
       if (u) whoami = { logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] };
     }
 
-    return ok({ config: cfg, modulos, tema, whoami });
+    const hasToken = tokens.length > 0;
+    return ok({ config: cfg, modulos, tema, whoami }, hasToken ? {} : PUBLIC_CACHE);
   }
 
   // ── Config pública da escola (carregada por todos os portais) ──
@@ -300,7 +308,7 @@ serve(async (req: Request) => {
     for (const r of rows ?? []) {
       cfg[r.chave] = r.valor
     }
-    return ok(cfg)
+    return ok(cfg, PUBLIC_CACHE)
   }
 
   // ── Salvar config (gerente autenticado) ──
@@ -867,7 +875,7 @@ serve(async (req: Request) => {
       if (!escolaId) return ok({ modulos: [], tema: 'corporativo' });
       const modulos = await getModulosHabilitados(admin, escolaId);
       const { data: escola } = await admin.from("escolas").select("tema").eq("id", escolaId).single();
-      return ok({ modulos: [...modulos], tema: escola?.tema || 'corporativo' });
+      return ok({ modulos: [...modulos], tema: escola?.tema || 'corporativo' }, PUBLIC_CACHE);
     } catch { return ok({ modulos: [], tema: 'corporativo' }); }
   }
 

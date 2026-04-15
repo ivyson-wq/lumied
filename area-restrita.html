@@ -35,6 +35,10 @@ body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px
 
 .back-link{display:block;text-align:center;margin-top:24px;color:rgba(255,255,255,.5);font-size:13px;text-decoration:none;transition:color .2s;}
 .back-link:hover{color:#fff;}
+
+/* Skeleton shimmer enquanto bootstrap carrega */
+.skel{background:linear-gradient(90deg,#f0e9de 0%,#faf7f2 50%,#f0e9de 100%);background-size:200% 100%;animation:skel 1.4s ease-in-out infinite;border-radius:14px;margin-bottom:12px;height:92px;}
+@keyframes skel{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 </style>
 </head>
 <body>
@@ -47,7 +51,7 @@ body::before{content:'🍁';position:fixed;font-size:320px;opacity:.03;top:-60px
     <div class="user-greeting" id="userGreeting"></div>
   </div>
 
-  <div id="portais"></div>
+  <div id="portais"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
 
   <a href="index.html" class="back-link">← Voltar ao Portal dos Pais</a>
 </div>
@@ -73,11 +77,21 @@ const PORTAIS = [
     modulo: 'portal_aluno' },
 ];
 
+const prefetched = new Set();
+function prefetch(href) {
+  if (prefetched.has(href)) return;
+  prefetched.add(href);
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.href = href;
+  document.head.appendChild(link);
+}
+
 function renderPortais(modulos) {
   const el = document.getElementById('portais');
   el.innerHTML = PORTAIS.map(p => {
     const hasAccess = !p.modulo || !modulos || modulos.includes(p.modulo);
-    return `<a href="${p.href}" class="portal-card${hasAccess ? '' : ' disabled'}">
+    return `<a href="${p.href}" class="portal-card${hasAccess ? '' : ' disabled'}" data-href="${p.href}" data-access="${hasAccess ? '1' : '0'}">
       <div class="portal-icon" style="background:${p.iconBg};color:${p.iconColor};">${p.icon}</div>
       <div class="portal-info">
         <h3>${p.title}</h3>
@@ -86,6 +100,9 @@ function renderPortais(modulos) {
       <span class="portal-arrow">→</span>
     </a>`;
   }).join('');
+  el.querySelectorAll('.portal-card[data-access="1"]').forEach(card => {
+    card.addEventListener('mouseenter', () => prefetch(card.dataset.href), { once: true });
+  });
 }
 
 // Render imediato (sem gating) — atualiza quando bootstrap chegar

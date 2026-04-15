@@ -198,6 +198,33 @@
     };
   }
 
+  // Toast de erro com ação opcional ("Tentar novamente")
+  if (!window.showError) {
+    window.showError = function (msg, onRetry) {
+      let c = document.getElementById('lumiedToasts');
+      if (!c) {
+        c = document.createElement('div');
+        c.id = 'lumiedToasts';
+        c.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99997;display:flex;flex-direction:column;gap:8px;max-width:360px;pointer-events:none;';
+        document.body.appendChild(c);
+      }
+      const t = document.createElement('div');
+      t.style.cssText = `pointer-events:auto;background:#C8102E;color:#fff;padding:12px 18px;border-radius:10px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.2);display:flex;align-items:center;gap:10px;`;
+      const txt = document.createElement('span');
+      txt.innerHTML = `❌ ${msg}`;
+      t.appendChild(txt);
+      if (typeof onRetry === 'function') {
+        const btn = document.createElement('button');
+        btn.textContent = 'Tentar novamente';
+        btn.style.cssText = 'background:rgba(255,255,255,.2);color:#fff;border:0;padding:6px 12px;border-radius:6px;font:inherit;cursor:pointer;';
+        btn.onclick = () => { t.remove(); onRetry(); };
+        t.appendChild(btn);
+      }
+      c.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 6000);
+    };
+  }
+
   // ═══════════════════════════════════════════════════
   // 6. TOUCH TARGETS — aumentar áreas clicáveis no mobile
   // ═══════════════════════════════════════════════════

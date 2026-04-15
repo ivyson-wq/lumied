@@ -1373,7 +1373,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   //  ALERTAS DE ACESSO — Polling em tempo real
   // ═══════════════════════════════════════════════════
   async function startAcessoPolling() {
-    setInterval(async () => {
+    let acessoTimer = null;
+    async function fetchAlertas() {
       try {
         const d = await callApi({ action: 'acesso_alertas_professora' });
         const alerts = d.data || d || [];
@@ -1390,7 +1391,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
           </div>
         `).join('');
       } catch(_) {}
-    }, 10000);
+    }
+    function start() {
+      if (acessoTimer) return;
+      fetchAlertas();
+      acessoTimer = setInterval(fetchAlertas, 15000);
+    }
+    function stop() {
+      if (acessoTimer) { clearInterval(acessoTimer); acessoTimer = null; }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop(); else start();
+    });
+    if (!document.hidden) start();
   }
 
   function createAcessoBanner() {

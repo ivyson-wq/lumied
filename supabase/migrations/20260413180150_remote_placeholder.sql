@@ -1,0 +1,1 @@
+-- Placeholder para migration aplicada via CLI em 2026-04-13 (SQL não rastreado)
