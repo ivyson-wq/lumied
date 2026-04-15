@@ -226,6 +226,8 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="sidebar-section-title" onclick="toggleSection(this)">👔 Portal do Gerente <span class="chevron">▸</span></div>
     <div class="sidebar-links">
       <a href="#gerente-login">Login e Navegação</a>
+      <a href="#gerente-onboarding">🎯 Primeiros Passos</a>
+      <a href="#gerente-billing">💳 Meu Plano Lumied</a>
       <a href="#gerente-dashboard" data-modulo="dashboard">Dashboard Analytics</a>
       <a href="#gerente-equipe" data-modulo="equipe">Gestão da Equipe</a>
       <a href="#gerente-permissoes" data-modulo="equipe">Permissões (RBAC)</a>
@@ -233,10 +235,12 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
       <a href="#gerente-atividades" data-modulo="atividades">Atividades</a>
       <a href="#gerente-academico" data-modulo="alunos">Acadêmico</a>
       <a href="#gerente-financeiro" data-modulo="financeiro">Financeiro</a>
+      <a href="#gerente-cobranca" data-modulo="financeiro">Cobrança e Tratativas</a>
       <a href="#gerente-crm" data-modulo="crm">CRM</a>
       <a href="#gerente-matricula" data-modulo="crm">Matrícula Online</a>
       <a href="#gerente-comunicacao" data-modulo="comunicacao">Comunicação</a>
       <a href="#gerente-almoxarifado" data-modulo="almoxarifado">Almoxarifado</a>
+      <a href="#gerente-almox-pdfs" data-modulo="almoxarifado">Almoxarifado — PDFs e Guia</a>
       <a href="#gerente-manutencao">Manutenção</a>
       <a href="#gerente-achados">Achados e Perdidos</a>
       <a href="#gerente-calendario">Calendário</a>
@@ -318,6 +322,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
       <a href="#setup-escola">Dados da Escola</a>
       <a href="#setup-cores">Cores e Branding</a>
       <a href="#setup-modulos">Módulos</a>
+      <a href="#setup-contratos-pdf">Contratos com PDF Automático</a>
       <a href="#setup-gerente">Primeiro Gerente</a>
     </div>
   </div>
@@ -335,11 +340,11 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   <div style="max-width:820px;margin:0 auto 32px;background:linear-gradient(135deg,rgba(108,99,255,.08),rgba(59,130,246,.04));border:1px solid rgba(108,99,255,.2);border-radius:14px;padding:20px 24px;text-align:left;">
     <div style="font-family:'Lora',serif;font-size:1.1rem;font-weight:700;margin-bottom:10px;">✨ Novidades recentes (abril/2026)</div>
     <ul style="padding-left:20px;font-size:.92rem;color:var(--muted);line-height:1.8;">
-      <li><strong>Cobrança:</strong> log auditável de todos os envios automáticos, tratativas manuais (ligações, promessas, acordos) e envio ao advogado com contrato em PDF + relatório de débitos + histórico de tentativas anexados.</li>
-      <li><strong>Almoxarifado:</strong> PDFs em todas as etapas — pendentes, ordem de compra por fornecedor, guia de recebimento (para identificar itens que chegam sem etiqueta pelos correios) e romaneio de entrega por turma.</li>
-      <li><strong>Contratos digitais:</strong> PDF nativo gerado e arquivado no momento exato da assinatura; contratos antigos são regenerados automaticamente quando necessário.</li>
-      <li><strong>Onboarding:</strong> checklist interativo dentro do portal do gerente com progresso em tempo real, derivado dos seus dados reais (alunos, professoras, financeiro, comunicados).</li>
-      <li><strong>Billing SaaS:</strong> avisos in-app 7 dias antes do vencimento, grace period de 7 dias, bloqueio gradual conforme dias de atraso — sem surpresas.</li>
+      <li><a href="#gerente-cobranca"><strong>Cobrança e Tratativas</strong></a> — log auditável + observações manuais + envio ao advogado com 3 PDFs anexados.</li>
+      <li><a href="#gerente-almox-pdfs"><strong>Almoxarifado — PDFs e Guia de Recebimento</strong></a> — resolve a dor de identificar itens que chegam sem etiqueta dos correios.</li>
+      <li><a href="#setup-contratos-pdf"><strong>Contratos digitais com PDF automático</strong></a> — nativo no momento da assinatura + regeneração lazy para antigos.</li>
+      <li><a href="#gerente-onboarding"><strong>Onboarding interativo</strong></a> — checklist de 7 etapas derivado dos seus dados reais.</li>
+      <li><a href="#gerente-billing"><strong>Meu Plano Lumied (Billing SaaS)</strong></a> — avisos in-app de vencimento + grace de 7 dias + bloqueio gradual.</li>
       <li><strong>Páginas legais:</strong> <a href="/sla/">SLA público</a>, <a href="/termos/">Termos</a>, <a href="/privacidade/">Privacidade LGPD</a>, <a href="/dpa/">DPA</a>.</li>
     </ul>
     <div style="margin-top:12px;font-size:.85rem;"><strong>Dúvidas sobre novidades?</strong> Abra um ticket pelo widget flutuante "?" em qualquer portal, ou fale com o suporte.</div>
@@ -3736,6 +3741,167 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <details><summary>Posso refazer o setup?</summary><p>O Setup Wizard é executado apenas uma vez. Após conclusão, todas as configurações ficam acessíveis via menu Configurações no painel do gerente.</p></details>
     <details><summary>O gerente cadastrado aqui pode ser removido depois?</summary><p>Sim, mas é necessário ter pelo menos um gerente ativo. Você pode adicionar novos gerentes e depois desativar o original, se necessário.</p></details>
     <details><summary>E se eu errar algum dado?</summary><p>Todos os dados podem ser editados depois em Configurações. Não se preocupe — nada no setup é irreversível.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--  NOVIDADES 2026 — ONBOARDING, BILLING, COBRANÇA,        -->
+<!--  ALMOXARIFADO PDFs, CONTRATOS PDF                       -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="gerente-onboarding" class="help-article" data-portal="gerente" data-keywords="onboarding checklist primeiros passos inicio começar configurar escola guia novo cliente implantacao">
+  <h2>🎯 Primeiros Passos — Checklist de Onboarding</h2>
+  <p class="article-desc">Ao entrar pela primeira vez, o painel do gerente exibe um checklist com 7 etapas essenciais. Ele guia você pelos primeiros 7 dias de uso.</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Dashboard (topo)</div>
+
+  <h3>As 7 etapas</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><strong>Cadastrar alunos</strong> — importe sua planilha Excel existente ou cadastre manualmente. Marca automaticamente quando houver pelo menos 1 aluno.</div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><strong>Cadastrar professoras</strong> — convide a equipe docente por e-mail. Elas recebem link de primeiro acesso.</div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><strong>Configurar financeiro</strong> — defina valores de mensalidade, forma de pagamento e integre o Banco Inter se for o caso.</div></div>
+    <div class="step"><div class="step-number">4</div><div class="step-content"><strong>Configurar WhatsApp/Email</strong> — ative comunicação oficial via Meta. Marque manualmente ao concluir a configuração no admin.</div></div>
+    <div class="step"><div class="step-number">5</div><div class="step-content"><strong>Primeiro comunicado</strong> — teste enviando um recado para sua equipe. Detecta automaticamente quando houver pelo menos 1 comunicado salvo.</div></div>
+    <div class="step"><div class="step-number">6</div><div class="step-content"><strong>Aceitar Termos + DPA</strong> — leia e aceite os documentos legais (<a href="/termos/">Termos</a>, <a href="/privacidade/">Privacidade</a>, <a href="/dpa/">DPA</a>).</div></div>
+    <div class="step"><div class="step-number">7</div><div class="step-content"><strong>Convidar famílias</strong> — dispare o link de primeiro acesso ao portal dos pais.</div></div>
+  </div>
+
+  <div class="tip-box"><strong>💡 Dica:</strong> A barra de progresso exibe em tempo real quantas etapas já estão concluídas. Você pode dispensar o checklist a qualquer momento — ele pode ser reaberto em Configurações.</div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso pular o checklist?</summary><p>Sim. Clique em "Dispensar" e o banner some. O onboarding continua registrado no sistema, mas não aparece mais no topo.</p></details>
+    <details><summary>Por que algumas etapas estão marcadas sem eu fazer nada?</summary><p>Etapas 1, 2, 3 e 5 são detectadas automaticamente quando o sistema identifica dados reais (alunos, professoras, mensalidades, comunicados). As demais exigem marcação manual.</p></details>
+    <details><summary>O checklist aparece para as professoras?</summary><p>Não. Só para gerente/diretor, que é quem faz a configuração inicial.</p></details>
+  </div>
+</article>
+
+<article id="gerente-billing" class="help-article" data-portal="gerente" data-keywords="billing plano assinatura lumied mensalidade vencimento pagamento saas suspenso bloqueado grace atraso status fatura">
+  <h2>💳 Meu Plano Lumied (Billing SaaS)</h2>
+  <p class="article-desc">A escola recebe avisos in-app sobre o status da própria assinatura Lumied — sem precisar abrir e-mail ou contatar o suporte.</p>
+
+  <h3>Onde aparece</h3>
+  <div class="path-indicator">Portal do Gerente → Dashboard → Banner no topo (quando aplicável)</div>
+
+  <h3>Os 5 estados</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">✓</div><div class="step-content"><strong>Ativo</strong> — sem banner. Tudo funcionando, vencimento ainda longe.</div></div>
+    <div class="step"><div class="step-number">⏰</div><div class="step-content"><strong>Aviso (7 dias antes do vencimento)</strong> — banner amarelo. "Sua mensalidade vence em X dias."</div></div>
+    <div class="step"><div class="step-number">⚠️</div><div class="step-content"><strong>Atraso / Grace (1 a 7 dias vencido)</strong> — banner vermelho. Envios automáticos e novas funcionalidades podem ser suspensos.</div></div>
+    <div class="step"><div class="step-number">🚫</div><div class="step-content"><strong>Suspenso (8 a 15 dias vencido)</strong> — banner vermelho escuro. Alguns módulos são desativados temporariamente.</div></div>
+    <div class="step"><div class="step-number">🔒</div><div class="step-content"><strong>Bloqueado (16+ dias vencido)</strong> — banner preto. Acesso bloqueado. Dados preservados por 90 dias para regularização.</div></div>
+  </div>
+
+  <div class="tip-box"><strong>💡 Importante:</strong> Os dados da escola nunca são perdidos por inadimplência. Eles ficam em cofre por 90 dias após o bloqueio. Em caso de dúvida: <strong>financeiro@lumied.com.br</strong>.</div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>O que acontece quando o plano fica "Suspenso"?</summary><p>Envios automáticos de e-mail e WhatsApp são pausados; IA (Lumi) fica indisponível; login dos pais continua permitido para preservar a operação mínima. Ao regularizar, tudo volta em minutos.</p></details>
+    <details><summary>Posso antecipar pagamento?</summary><p>Sim. Entre em contato com <strong>financeiro@lumied.com.br</strong> pedindo antecipação — aplicável desconto conforme contrato.</p></details>
+    <details><summary>Como altero a forma de pagamento?</summary><p>Também via <strong>financeiro@lumied.com.br</strong>. Em breve essa opção ficará disponível no painel admin da escola.</p></details>
+  </div>
+</article>
+
+<article id="gerente-cobranca" class="help-article" data-portal="gerente" data-modulo="financeiro" data-keywords="cobranca inadimplencia tratativa advogado extrajudicial regua email log historico observacao ligacao promessa acordo negativacao">
+  <h2>💰 Cobrança, Tratativas e Histórico</h2>
+  <p class="article-desc">Cada família inadimplente tem um histórico completo: todo envio automático fica logado, e a equipe pode registrar observações sobre cada tentativa de contato (ligações, promessas de pagamento, acordos).</p>
+
+  <h3>Como acessar</h3>
+  <div class="path-indicator">Portal do Gerente → Financeiro → Inadimplência → botão "📜 Histórico"</div>
+
+  <h3>O que você verá</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content"><strong>Timeline unificada</strong> — envios automáticos da régua (📧 lembretes de vencimento, pós-vencimento, extrajudicial ⚖️) intercalados com tratativas manuais (🗣️ ligações, reuniões, promessas). Cada evento mostra data, autor e status.</div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content"><strong>Registrar nova tratativa</strong> — no modal, selecione o tipo (nota, ligação, WhatsApp, reunião, promessa de pagamento, acordo, negativação, cartório), escreva a observação e, se for promessa, informe data prevista e valor negociado.</div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content"><strong>Log de envios auditável</strong> — cada e-mail enviado pela régua registra assunto, corpo, destinatário, provider ID (Resend) e status (enviado/erro/aberto). Nada se perde.</div>
+    </div>
+  </div>
+
+  <h3>Envio ao advogado (extrajudicial)</h3>
+  <p>Quando uma família atinge 28 dias de atraso, o sistema automaticamente:</p>
+  <ol style="padding-left:22px;margin:8px 0;">
+    <li>Envia e-mail para o advogado configurado em <strong>Configurações → Financeiro → Email do advogado</strong>.</li>
+    <li>Anexa <strong>contrato em PDF</strong> (nativo, gerado no momento da assinatura) — se o contrato for antigo, o sistema regenera o PDF automaticamente do HTML arquivado.</li>
+    <li>Anexa <strong>relatório de débitos</strong> em PDF formal (responsável, parcelas, total devedor, dias de atraso).</li>
+    <li>Anexa <strong>declaração de tentativas</strong> em PDF (todos os envios da régua + todas as tratativas manuais da equipe).</li>
+    <li>Registra o envio na timeline com ícone ⚖️.</li>
+  </ol>
+
+  <div class="tip-box"><strong>💡 Dica:</strong> Só o autor da tratativa ou o gerente/diretor podem editar ou remover uma observação. Histórico preservado por auditoria.</div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>O advogado consegue abrir os PDFs anexados?</summary><p>Sim. São PDFs nativos, A4, imprimíveis e anexáveis ao processo. O contrato carrega selo probatório (código de verificação, hash SHA-256, data de assinatura, base legal Lei 14.063/2020).</p></details>
+    <details><summary>Posso desfazer o envio automático para o advogado?</summary><p>Não — mas o sistema dispara apenas 1 vez por família (guard por status "cobrança extrajudicial"). Para evitar, marque a inadimplência como resolvida antes dos 28 dias.</p></details>
+    <details><summary>Como vejo todos os e-mails enviados para uma família específica?</summary><p>Abra o modal Histórico — a timeline mostra tudo. Alternativamente, via API/MCP é possível filtrar `regua_execucoes` por `familia_email`.</p></details>
+  </div>
+</article>
+
+<article id="gerente-almox-pdfs" class="help-article" data-portal="gerente" data-modulo="almoxarifado" data-keywords="almoxarifado pdf relatorio guia recebimento romaneio correios caixa etiqueta materiais impressao exportar">
+  <h2>📄 Almoxarifado — PDFs e Guia de Recebimento</h2>
+  <p class="article-desc">Cinco PDFs prontos para imprimir nas três etapas do ciclo de compras. O "Guia de Recebimento" resolve a dor de organizar materiais que chegam dos correios sem identificação.</p>
+
+  <h3>Onde ficam os botões</h3>
+  <div class="path-indicator">Portal do Gerente → Almoxarifado → abas Pendentes / Compras</div>
+
+  <h3>Os 5 PDFs</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><strong>📄 PDF Pendentes</strong> — todas as requisições aguardando aprovação, agrupadas por turma e professora, com total estimado. Para uso em reuniões de aprovação.</div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><strong>📄 Ordem de Compra</strong> — itens aprovados agrupados por fornecedor (Mercado Livre, Shopee, Reval, Zoom), com link do produto, preço e subtotal por loja. Para o comprador executar.</div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><strong>📦 Guia de Recebimento</strong> — <em>este é o que resolve a dor real</em>. Lista completa de itens aprovados aguardando chegada, com descrição, categoria, unidade e turma/professora destino. Leva o PDF na mão ao abrir a caixa dos correios.</div></div>
+    <div class="step"><div class="step-number">4</div><div class="step-content"><strong>🚚 Romaneio Turmas</strong> — agrupamento final para entrega, com checkbox ao lado de cada item e espaço para assinatura da professora.</div></div>
+    <div class="step"><div class="step-number">5</div><div class="step-content"><strong>📄 Recibo Entregas</strong> — histórico mensal por turma, para arquivo fiscal e pedagógico.</div></div>
+  </div>
+
+  <h3>Fluxo recomendado ao chegar caixa dos correios</h3>
+  <ol style="padding-left:22px;margin:8px 0;">
+    <li>Imprima o <strong>Guia de Recebimento</strong> pela manhã (ou tenha no celular/tablet).</li>
+    <li>Ao abrir a caixa, pegue cada item e folheie pelo guia procurando pela descrição.</li>
+    <li>Achou? Marque o ▢ na lateral e leia: "Destino: Turma X · Prof. Y".</li>
+    <li>No fim do dia, gere o <strong>Romaneio de Turmas</strong> para fazer as entregas e colher assinaturas.</li>
+  </ol>
+
+  <div class="tip-box"><strong>💡 Dica:</strong> Itens que chegam parcialmente (só 3 de 5 pedidos, por exemplo) ainda aparecem no Guia com a quantidade pendente. A cada entrega registrada, o sistema abate automaticamente do saldo.</div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>O Guia de Recebimento tem foto dos produtos?</summary><p>Ainda não. Hoje usa descrição textual + categoria + unidade do catálogo. Em roadmap.</p></details>
+    <details><summary>Posso imprimir em celular/tablet?</summary><p>Sim. O PDF abre em qualquer leitor. Também pode navegar no próprio painel sem imprimir.</p></details>
+    <details><summary>Como marco um item como "recebido" no sistema?</summary><p>Na aba Compras → selecione os itens → botão "Marcar selecionados como comprado". Em roadmap: câmera + scanner QR para recebimento por item.</p></details>
+  </div>
+</article>
+
+<article id="setup-contratos-pdf" class="help-article" data-portal="setup" data-modulo="crm" data-keywords="contratos digitais pdf automatico storage assinatura eletronica juridico validade verificacao backfill">
+  <h2>📑 Contratos com PDF Automático</h2>
+  <p class="article-desc">No momento em que o último signatário confirma a assinatura, o sistema gera um PDF nativo do contrato (com o selo probatório) e arquiva em storage privado. Automático, sem clique extra.</p>
+
+  <h3>Como funciona</h3>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><strong>Assinatura completa</strong> — família ou escola conclui com código de verificação por e-mail.</div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><strong>PDF gerado no browser</strong> — biblioteca html2pdf renderiza o contrato (com código, hash SHA-256, base legal) em A4.</div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><strong>Upload silencioso</strong> — o PDF vai para o bucket privado <code>contratos-pdf</code>. A assinatura fica válida mesmo se o upload falhar (é só otimização).</div></div>
+    <div class="step"><div class="step-number">4</div><div class="step-content"><strong>Uso posterior</strong> — em cobranças extrajudiciais, o advogado recebe o PDF nativo anexado.</div></div>
+  </div>
+
+  <h3>Contratos antigos (antes desta feature)</h3>
+  <p>Contratos assinados antes de abril/2026 não têm PDF arquivado. Na primeira vez que forem utilizados (ex.: cobrança extrajudicial), o sistema extrai as cláusulas do HTML original, gera um PDF server-side com pdf-lib, arquiva no storage e reusa dali em diante. Regeneração acontece 1 vez por contrato.</p>
+
+  <div class="tip-box"><strong>💡 Validade jurídica:</strong> Todo PDF inclui código único de verificação (visível publicamente em <code>/verificar.html?codigo=LUM-XXXXXXXX</code>), hash SHA-256 do documento e assinatura eletrônica com 2FA — Art. 4º, Lei 14.063/2020 + MP 2.200-2/2001.</div>
+
+  <div class="faq-section">
+    <h3>Perguntas Frequentes</h3>
+    <details><summary>Posso baixar o PDF depois?</summary><p>Sim. No painel do gerente → CRM → Contratos → abrir contrato assinado → botão "Baixar PDF". Disponível também via portal dos pais para a família.</p></details>
+    <details><summary>E se o browser fechar antes do upload terminar?</summary><p>A assinatura já está registrada no banco. Na primeira reutilização do contrato, o PDF é gerado server-side automaticamente.</p></details>
+    <details><summary>O PDF server-side tem a mesma qualidade visual?</summary><p>Não exatamente — o server-side é preto e branco com formatação simples (via pdf-lib), enquanto o browser gera com CSS completo. Ambos contêm todo o conteúdo textual e selo probatório; para contratos novos, sempre será usada a versão do browser.</p></details>
   </div>
 </article>
 
