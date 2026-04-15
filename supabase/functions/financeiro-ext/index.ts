@@ -104,6 +104,53 @@ async function sendEmail(to: string, subject: string, html: string, attachments?
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  HTML → Seções de texto (para PDFs server-side de contratos antigos)
+// ═══════════════════════════════════════════════════════════════
+function htmlToSections(html: string): Array<{ heading: string; lines: string[] }> {
+  const decode = (s: string) => s
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&(#\d+);/g, (_, n) => String.fromCharCode(parseInt(n.slice(1))));
+
+  // Quebra blocos por tags de parágrafo/título antes de strip
+  let normalized = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr)>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<(td|th)[^>]*>/gi, "  ");
+
+  // Particiona por headings (h1-h3)
+  const parts = normalized.split(/<h[1-3][^>]*>/i);
+  const headings: string[] = [];
+  const headRegex = /<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi;
+  let match: RegExpExecArray | null;
+  const htmlCopy = normalized;
+  while ((match = headRegex.exec(htmlCopy)) !== null) {
+    headings.push(decode(match[1].replace(/<[^>]+>/g, "").trim()));
+  }
+
+  const strip = (s: string) => decode(s.replace(/<[^>]+>/g, ""))
+    .split("\n").map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+
+  // parts[0] = antes do primeiro heading; parts[1..] = depois de cada heading
+  const sections: Array<{ heading: string; lines: string[] }> = [];
+  if (parts[0] && strip(parts[0]).length) {
+    sections.push({ heading: "Contrato", lines: strip(parts[0]) });
+  }
+  for (let i = 1; i < parts.length; i++) {
+    // remover o fechamento do heading que ficou no início
+    const body = parts[i].replace(/^[^<]*<\/h[1-3]>/i, "");
+    sections.push({ heading: headings[i - 1] || "Cláusula", lines: strip(body) });
+  }
+  if (!sections.length) sections.push({ heading: "Contrato", lines: strip(html) });
+  return sections;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  PDF helper — gera PDF simples (header + linhas) via pdf-lib
 // ═══════════════════════════════════════════════════════════════
 async function generatePdfReport(
@@ -840,36 +887,59 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
           // ── Anexos: contrato + relatório de débitos + relatório de tratativas ──
           const attachments: Attachment[] = [];
           try {
-            // 1. Contrato — prefere PDF do storage; fallback HTML
+            // 1. Contrato — prefere PDF do storage; regenera do HTML se faltar
             if (contrato?.id) {
               const { data: contratoFull } = await ctx.sb
                 .from("contratos")
-                .select("html_renderizado, pdf_path")
+                .select("id, html_renderizado, pdf_path, codigo_verificacao, documento_hash, assinado_em, familia_nome")
                 .eq("id", contrato.id)
                 .maybeSingle();
+              const fname = `contrato-${m.crianca_nome.replace(/\W+/g,"_")}.pdf`;
+
+              const downloadAndAttach = async (path: string): Promise<boolean> => {
+                const { data: pdfBlob } = await ctx.sb.storage.from("contratos-pdf").download(path);
+                if (!pdfBlob) return false;
+                const buf = new Uint8Array(await pdfBlob.arrayBuffer());
+                let bin = "";
+                const chunk = 0x8000;
+                for (let i = 0; i < buf.length; i += chunk) bin += String.fromCharCode(...buf.subarray(i, i + chunk));
+                attachments.push({ filename: fname, content: btoa(bin), content_type: "application/pdf" });
+                return true;
+              };
+
               let attached = false;
-              if (contratoFull?.pdf_path) {
-                const { data: pdfBlob } = await ctx.sb.storage.from("contratos-pdf").download(contratoFull.pdf_path);
-                if (pdfBlob) {
-                  const buf = new Uint8Array(await pdfBlob.arrayBuffer());
-                  let bin = "";
-                  const chunk = 0x8000;
-                  for (let i = 0; i < buf.length; i += chunk) bin += String.fromCharCode(...buf.subarray(i, i + chunk));
-                  attachments.push({
-                    filename: `contrato-${m.crianca_nome.replace(/\W+/g,"_")}.pdf`,
-                    content: btoa(bin),
-                    content_type: "application/pdf",
-                  });
-                  attached = true;
-                }
-              }
+              if (contratoFull?.pdf_path) attached = await downloadAndAttach(contratoFull.pdf_path);
+
+              // Fallback automático: gera PDF server-side a partir do html_renderizado, salva e reusa
               if (!attached && contratoFull?.html_renderizado) {
-                const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contrato — ${m.crianca_nome}</title></head><body>${contratoFull.html_renderizado}</body></html>`;
-                attachments.push({
-                  filename: `contrato-${m.crianca_nome.replace(/\W+/g,"_")}.html`,
-                  content: btoa(unescape(encodeURIComponent(htmlDoc))),
-                  content_type: "text/html",
-                });
+                try {
+                  const sections = htmlToSections(contratoFull.html_renderizado);
+                  const subtitle = [
+                    `Responsável: ${contratoFull.familia_nome || m.familia_email}`,
+                    contratoFull.assinado_em ? `Assinado em: ${new Date(contratoFull.assinado_em).toLocaleString("pt-BR")}` : "",
+                    contratoFull.codigo_verificacao ? `Código de verificação: ${contratoFull.codigo_verificacao}` : "",
+                    contratoFull.documento_hash ? `Hash SHA-256: ${contratoFull.documento_hash}` : "",
+                    "Validade: Lei 14.063/2020 · MP 2.200-2/2001",
+                  ].filter(Boolean).join("\n");
+                  const pdfB64 = await generatePdfReport(`Contrato — ${m.crianca_nome}`, subtitle, sections);
+                  // Upload para reusar em cobranças futuras
+                  const bin2 = atob(pdfB64);
+                  const bytes2 = new Uint8Array(bin2.length);
+                  for (let i = 0; i < bin2.length; i++) bytes2[i] = bin2.charCodeAt(i);
+                  const newPath = `${contratoFull.id}.pdf`;
+                  const { error: upErr } = await ctx.sb.storage.from("contratos-pdf")
+                    .upload(newPath, bytes2, { contentType: "application/pdf", upsert: true });
+                  if (!upErr) {
+                    await ctx.sb.from("contratos").update({
+                      pdf_path: newPath,
+                      pdf_gerado_em: new Date().toISOString(),
+                    }).eq("id", contratoFull.id);
+                  }
+                  attachments.push({ filename: fname, content: pdfB64, content_type: "application/pdf" });
+                  attached = true;
+                } catch (e) {
+                  log.warn("Falha gerando PDF server-side do contrato", { metadata: { err: (e as Error).message } });
+                }
               }
             }
 
