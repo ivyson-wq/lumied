@@ -695,7 +695,39 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
             <p>Este email foi gerado automaticamente pelo sistema Lumied.</p>
           `;
 
-          await sendEmail(cfgAdv.valor, `Cobrança Extrajudicial — ${m.crianca_nome}`, html);
+          const assuntoAdv = `Cobrança Extrajudicial — ${m.crianca_nome}`;
+          let envioStatus = "enviado";
+          let envioErro: string | null = null;
+          try {
+            await sendEmail(cfgAdv.valor, assuntoAdv, html);
+          } catch (e) {
+            envioStatus = "erro";
+            envioErro = (e as Error).message;
+          }
+
+          // Log unificado em regua_execucoes (aparece na timeline de cobrança)
+          await ctx.sb.from("regua_execucoes").insert({
+            escola_id: m.escola_id || null,
+            mensalidade_id: m.id || null,
+            aluno_id: m.aluno_id || null,
+            familia_email: m.familia_email,
+            destinatario: cfgAdv.valor,
+            canal: "email_advogado",
+            assunto: assuntoAdv,
+            corpo: `Envio extrajudicial para ${cfgAdv.valor}. Responsável: ${familia?.nome_resp || m.familia_email}. Débitos: ${(debts ?? []).length}. Contrato: ${contratoLink}`,
+            corpo_html: html,
+            provider: "resend",
+            status: envioStatus,
+            erro_msg: envioErro,
+            disparado_auto: true,
+            metadata: {
+              tipo: "extrajudicial",
+              bucket: "28d",
+              dias_atraso: diasAtraso,
+              debitos_qtd: (debts ?? []).length,
+              valor_total: m.valor_total || 0,
+            },
+          });
 
           await ctx.sb.from("fin_inadimplencia").update({
             status: "cobranca_extrajudicial",

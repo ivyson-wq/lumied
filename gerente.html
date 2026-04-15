@@ -10317,7 +10317,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhum evento registrado.</div>'; return; }
     el.innerHTML = items.map(function(ev) {
       var isEnvio = ev.tipo_evento === 'envio';
-      var icon = isEnvio ? (ev.canal_ou_tipo === 'email' ? '📧' : ev.canal_ou_tipo === 'whatsapp' ? '💬' : '📤') : '🗣️';
+      var icon = isEnvio ? (ev.canal_ou_tipo === 'email_advogado' ? '⚖️' : ev.canal_ou_tipo === 'email' ? '📧' : ev.canal_ou_tipo === 'whatsapp' ? '💬' : '📤') : '🗣️';
       var cor = isEnvio ? (ev.status === 'erro' ? '#EF4444' : '#2563EB') : '#16A34A';
       var data = new Date(ev.ocorrido_em).toLocaleString('pt-BR');
       var autor = isEnvio ? ('Automático · ' + esc(ev.canal_ou_tipo||'')) : (esc(ev.usuario_nome||'—') + (ev.extras && ev.extras.usuario_papel ? ' ('+esc(ev.extras.usuario_papel)+')' : ''));
