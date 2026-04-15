@@ -462,6 +462,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="ps-item" onclick="switchProfPage('diplomas',this)" data-page="diplomas" data-modulo="diplomas"><span class="ps-icon">🏆</span> Diplomas & Ranking</button>
     <button class="ps-item" onclick="switchProfPage('pdi',this)" data-page="pdi" data-modulo="pdi"><span class="ps-icon">📈</span> Growth Plan</button>
     <button class="ps-item" onclick="switchProfPage('ativExtras',this)" data-page="ativExtras" data-modulo="atividades"><span class="ps-icon">🎯</span> Atividades Extras</button>
+    <button class="ps-item" onclick="switchProfPage('cozinha',this)" data-page="cozinha" data-modulo="cozinha"><span class="ps-icon">🍳</span> Cozinha</button>
 
     <div class="ps-label">Operações</div>
     <button class="ps-item" onclick="switchProfPage('almox',this)" data-page="almox" data-modulo="almoxarifado"><span class="ps-icon">📦</span> Materiais</button>
@@ -1101,6 +1102,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       </div>
     </div>
 
+    <!-- ═══ COZINHA (Professora) ═══ -->
+    <div class="prof-page" id="pageCozinha" data-modulo="cozinha">
+      <div class="sec-title">🍳 Cozinha — Cardápio da Semana</div>
+      <div id="profCozCardapio" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;">Carregando…</div>
+
+      <div class="sec-title">🚨 Alergias da Minha Turma</div>
+      <div id="profCozAlergias" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px;">Carregando…</div>
+
+      <div class="sec-title">➕ Registrar Restrição Alimentar</div>
+      <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <input type="email" id="profRestAluno" placeholder="Email do aluno" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;">
+          <input type="text" id="profRestNome" placeholder="Nome do aluno" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;">
+          <select id="profRestTipo" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;">
+            <option value="alergia">Alergia</option><option value="intolerancia">Intolerância</option>
+            <option value="religioso">Religioso</option><option value="vegetariano">Vegetariano</option>
+            <option value="vegano">Vegano</option><option value="outro">Outro</option>
+          </select>
+          <select id="profRestSev" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;">
+            <option value="leve">Leve</option><option value="moderada">Moderada</option><option value="grave">Grave</option>
+          </select>
+        </div>
+        <input type="text" id="profRestDesc" placeholder="Descrição (ex: lactose, amendoim, glúten)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:10px;">
+        <button onclick="salvarRestricaoProf()" style="padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Salvar Restrição</button>
+      </div>
+    </div>
+
   </div><!-- /content -->
 
 <!-- BOTTOM NAV PROFESSORAS -->
@@ -1147,6 +1175,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <button class="pbnav-more-item" onclick="switchProfPage('diario',this);closeProfMore()" data-modulo="diario_classe"><span>📖</span>Diário</button>
     <button class="pbnav-more-item" onclick="switchProfPage('turnos',this);closeProfMore()" data-modulo="turno"><span>📊</span>Turnos</button>
     <button class="pbnav-more-item" onclick="switchProfPage('ativExtras',this);closeProfMore()" data-modulo="atividades"><span>🎯</span>Ativ. Extras</button>
+    <button class="pbnav-more-item" onclick="switchProfPage('cozinha',this);closeProfMore()" data-modulo="cozinha"><span>🍳</span>Cozinha</button>
     <button class="pbnav-more-item" onclick="switchProfPage('modulosConfig',this);closeProfMore()" id="bnavModulosBtn" style="display:none;"><span>⚙️</span>Modulos</button>
   </div>
 </div>
@@ -1786,6 +1815,64 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     if (page === 'turnos') loadProfTurnos();
     if (page === 'ativExtras') loadProfAtivExtras();
     if (page === 'perfil') loadPerfil();
+    if (page === 'cozinha') loadProfCozinha();
+  }
+
+  // ═══ COZINHA (Professora) ═══
+  async function profCozApi(body) {
+    try {
+      const r = await fetch(SUPABASE_URL + '/functions/v1/cozinha', {
+        method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+        body: JSON.stringify({...body, _token: (typeof getToken==='function'?getToken():localStorage.getItem('prof_session'))})
+      });
+      return await r.json();
+    } catch(e) { return { error: String(e) }; }
+  }
+
+  async function loadProfCozinha() {
+    const hoje = new Date().toISOString().split('T')[0];
+    const fim = new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+    const d = await profCozApi({ action:'cardapio_list', data_inicio:hoje, data_fim:fim });
+    const items = d.data || [];
+    const byDate = {};
+    items.forEach(i => { (byDate[i.data] = byDate[i.data] || []).push(i); });
+    const dates = Object.keys(byDate).sort();
+    const host = document.getElementById('profCozCardapio');
+    if (!dates.length) { host.innerHTML = '<div style="color:var(--muted);">Nenhum cardápio publicado.</div>'; }
+    else host.innerHTML = dates.map(d =>
+      `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+        <strong>${new Date(d).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'short'})}</strong>
+        <ul style="margin:4px 0 0 18px;font-size:13px;">
+          ${byDate[d].map(i => `<li>${i.refeicao}: ${i.cozinha_receitas?.nome || i.descricao_livre || '—'}</li>`).join('')}
+        </ul>
+      </div>`).join('');
+
+    const conf = await profCozApi({ action:'alergias_conflito_dia' });
+    const cs = conf.data || [];
+    const al = document.getElementById('profCozAlergias');
+    al.innerHTML = cs.length ? cs.map(c =>
+      `<div style="padding:6px 0;border-bottom:1px solid var(--border);">⚠️ <strong>${c.aluno_nome||c.aluno_email}</strong> — ${c.alergeno} em ${c.receita} (${c.refeicao}) • ${c.severidade}</div>`
+    ).join('') : '<div style="color:var(--green);">✓ Sem conflitos hoje.</div>';
+  }
+
+  async function salvarRestricaoProf() {
+    const aluno_email = document.getElementById('profRestAluno').value;
+    const aluno_nome = document.getElementById('profRestNome').value;
+    const tipo = document.getElementById('profRestTipo').value;
+    const severidade = document.getElementById('profRestSev').value;
+    const descricao = document.getElementById('profRestDesc').value;
+    if (!aluno_email || !descricao) return (typeof showToast==='function'? showToast('Preencha email e descrição','error') : alert('Preencha email e descrição'));
+    const r = await fetch(SUPABASE_URL + '/functions/v1/operacional', {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+      body: JSON.stringify({ action:'cantina_restricoes_create', aluno_email, aluno_nome, tipo, descricao, severidade, _token: (typeof getToken==='function'?getToken():localStorage.getItem('prof_session')) })
+    });
+    const d = await r.json();
+    if (d.error) return (typeof showToast==='function'?showToast(d.error,'error'):alert(d.error));
+    (typeof showToast==='function'?showToast('Restrição registrada','success'):alert('Registrada!'));
+    document.getElementById('profRestAluno').value='';
+    document.getElementById('profRestNome').value='';
+    document.getElementById('profRestDesc').value='';
+    loadProfCozinha();
   }
 
   // ── CAMERA FAB ──

@@ -23,6 +23,7 @@ import { staffTools } from "./tools_staff.ts";
 import { gerenteTools } from "./tools_gerente.ts";
 import { complianceTools } from "./tools_compliance.ts";
 import { devTools } from "./tools_dev.ts";
+import { cozinhaTools } from "./tools_cozinha.ts";
 
 // ─── Build server ────────────────────────────────────────────
 const server = new McpServer("lumied-mcp", "1.0.0");
@@ -30,6 +31,7 @@ server.registerAll(staffTools);
 server.registerAll(gerenteTools);
 server.registerAll(complianceTools);
 server.registerAll(devTools);
+server.registerAll(cozinhaTools);
 
 // Expose for use by other edge functions (ticket-resolver, lumied-ai)
 export function getServer(): McpServer {

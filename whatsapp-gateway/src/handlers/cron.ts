@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import { getSupabase } from '../services/supabase';
 import { gerarEEnviarRelatorio } from '../features/relatorio';
+import { enviarCardapioSemanal } from '../features/cardapio-semanal';
 
 // Cron: sábados 9h UTC — relatório semanal por aluno
 export async function handleCron(env: Env): Promise<void> {
@@ -19,7 +20,7 @@ export async function handleCron(env: Env): Promise<void> {
       .from('wa_familias').select('id,nome,aluno_nome,whatsapp,turma_id,escola_id,familia_id_saas')
       .eq('escola_id', escola.id).eq('opt_in', true).execute();
 
-    let enviados = 0;
+    let enviados = 0, cardapios = 0;
     for (const familia of familias ?? []) {
       try {
         await gerarEEnviarRelatorio(db, env, escola.whatsapp_phone_id, familia);
@@ -27,7 +28,13 @@ export async function handleCron(env: Env): Promise<void> {
       } catch (e) {
         console.error(`[CRON] Erro relatório ${familia.aluno_nome}:`, e);
       }
+      try {
+        await enviarCardapioSemanal(db, env, escola.whatsapp_phone_id, familia);
+        cardapios++;
+      } catch (e) {
+        console.error(`[CRON] Erro cardápio ${familia.aluno_nome}:`, e);
+      }
     }
-    console.log(`[CRON] Escola ${escola.id}: ${enviados} relatórios enviados`);
+    console.log(`[CRON] Escola ${escola.id}: ${enviados} relatórios, ${cardapios} cardápios enviados`);
   }
 }
