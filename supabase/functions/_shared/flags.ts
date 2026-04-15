@@ -1,7 +1,7 @@
 // Feature flags — cache in-memory por instância de edge function.
 // TTL 30s: balanceia rollout rápido vs. DB load.
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type FlagRow = { chave: string; ativo: boolean; escolas: string[] | null; rollout_pct: number };
 let cache: { at: number; rows: FlagRow[] } | null = null;

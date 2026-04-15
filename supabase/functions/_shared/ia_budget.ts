@@ -1,7 +1,7 @@
 // Budget guard para chamadas Anthropic — verifica e registra uso.
 // Combina com feature flag kill_switch_ia para shutdown global.
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { isFlagOn } from "./flags.ts";
 
 // Preços Claude (USD / 1M tokens). Mantém conservador; pode ajustar.
@@ -15,7 +15,7 @@ const PRECO = {
 
 export function estimarCustoUsd(model: string, tokensIn: number, tokensOut: number): number {
   const key = Object.keys(PRECO).find(k => model.includes(k)) || 'default';
-  const p = (PRECO as any)[key];
+  const p = (PRECO as Record<string, { input: number; output: number }>)[key];
   return (tokensIn / 1_000_000) * p.input + (tokensOut / 1_000_000) * p.output;
 }
 

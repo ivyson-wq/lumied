@@ -27,30 +27,28 @@ function buildTestServer(): McpServer {
     description: "Public echo tool",
     inputSchema: { type: "object", properties: { msg: { type: "string" } } },
     scope: "public",
-    handler: async (args) => ({ echoed: args.msg }),
+    handler: (args) => Promise.resolve({ echoed: args.msg }),
   };
   const gerenteTool: McpTool = {
     name: "gerente_kpis",
     description: "Gerente KPIs",
     inputSchema: { type: "object" },
     scope: "gerente",
-    handler: async () => ({ alunos: 100 }),
+    handler: () => Promise.resolve({ alunos: 100 }),
   };
   const staffTool: McpTool = {
     name: "staff_admin",
     description: "Staff-only admin",
     inputSchema: { type: "object" },
     scope: "staff",
-    handler: async () => ({ ok: true }),
+    handler: () => Promise.resolve({ ok: true }),
   };
   const errorTool: McpTool = {
     name: "throws",
     description: "Tool that throws",
     inputSchema: { type: "object" },
     scope: "public",
-    handler: async () => {
-      throw new Error("boom");
-    },
+    handler: () => { throw new Error("boom"); },
   };
   return server.register(publicTool).register(gerenteTool).register(staffTool).register(errorTool);
 }
@@ -73,7 +71,7 @@ Deno.test("McpServer: duplicate registration throws", () => {
     description: "",
     inputSchema: { type: "object" },
     scope: "public",
-    handler: async () => ({}),
+    handler: () => Promise.resolve({}),
   };
   server.register(tool);
   let threw = false;

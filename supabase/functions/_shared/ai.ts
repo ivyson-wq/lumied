@@ -4,7 +4,7 @@
 //  + Budget cap por escola + kill-switch via feature flag
 // ═══════════════════════════════════════════════════════
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkIAQuota, registrarIAUso } from "./ia_budget.ts";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";

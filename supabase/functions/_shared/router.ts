@@ -295,7 +295,7 @@ export const loadEscola: Middleware = async (ctx, next) => {
  * tenant-scoped tables, to prevent accidental cross-tenant leaks if some
  * earlier middleware forgot to populate it. Throws 400 otherwise.
  */
-export const requireEscola: Middleware = async (ctx, next) => {
+export const requireEscola: Middleware = (ctx, next) => {
   if (!ctx.escola_id) {
     throw new AppError("ESCOLA_REQUIRED", "escola_id não resolvido para este usuário.");
   }
