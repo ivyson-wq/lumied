@@ -684,6 +684,48 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
           const appUrl = Deno.env.get("APP_URL") || "https://lumied.com.br";
           const contratoLink = contrato ? `${appUrl}/verificar.html?id=${contrato.id}` : "N/A";
 
+          // Histórico de envios (régua) e tratativas manuais
+          const esc = (s: unknown) => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"} as any)[c]);
+          const fmtDt = (d: string | null) => d ? new Date(d).toLocaleString("pt-BR") : "";
+
+          const { data: envios } = await ctx.sb
+            .from("regua_execucoes")
+            .select("enviado_em, canal, assunto, status, erro_msg, destinatario")
+            .eq("familia_email", m.familia_email)
+            .order("enviado_em", { ascending: true })
+            .limit(200);
+
+          const { data: tratativas } = await ctx.sb
+            .from("cobranca_tratativas")
+            .select("created_at, tipo, observacao, usuario_nome, usuario_papel, data_prevista_pagamento, valor_negociado, resultado")
+            .eq("familia_email", m.familia_email)
+            .is("deleted_at", null)
+            .order("created_at", { ascending: true })
+            .limit(200);
+
+          const enviosHtml = (envios ?? []).length
+            ? `<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:12px;width:100%;">
+                <thead style="background:#f3f4f6;"><tr><th>Data</th><th>Canal</th><th>Destinatário</th><th>Assunto</th><th>Status</th></tr></thead>
+                <tbody>${(envios as any[]).map(e => `<tr>
+                  <td>${fmtDt(e.enviado_em)}</td>
+                  <td>${esc(e.canal)}</td>
+                  <td>${esc(e.destinatario || "")}</td>
+                  <td>${esc(e.assunto || "—")}</td>
+                  <td>${esc(e.status)}${e.erro_msg ? ` <span style="color:#b91c1c;">(${esc(e.erro_msg)})</span>` : ""}</td>
+                </tr>`).join("")}</tbody></table>`
+            : "<p><em>Nenhum envio registrado.</em></p>";
+
+          const tratativasHtml = (tratativas ?? []).length
+            ? (tratativas as any[]).map(t => `
+                <div style="border-left:3px solid #2563eb;padding:8px 12px;margin:8px 0;background:#f9fafb;font-size:13px;">
+                  <div><strong>${esc(t.tipo)}</strong> — ${fmtDt(t.created_at)} — ${esc(t.usuario_nome)}${t.usuario_papel ? ` (${esc(t.usuario_papel)})` : ""}</div>
+                  <div style="white-space:pre-wrap;margin-top:4px;">${esc(t.observacao)}</div>
+                  ${t.data_prevista_pagamento ? `<div style="color:#555;font-size:12px;margin-top:4px;">📅 Prevista: ${esc(t.data_prevista_pagamento)}</div>` : ""}
+                  ${t.valor_negociado ? `<div style="color:#555;font-size:12px;">💰 Negociado: R$ ${Number(t.valor_negociado).toFixed(2)}</div>` : ""}
+                  ${t.resultado ? `<div style="color:#555;font-size:12px;">Resultado: ${esc(t.resultado)}</div>` : ""}
+                </div>`).join("")
+            : "<p><em>Nenhuma tratativa registrada.</em></p>";
+
           const html = `
             <h2>Cobrança Extrajudicial — ${m.crianca_nome}</h2>
             <p><strong>Responsável:</strong> ${familia?.nome_resp || m.familia_email}</p>
@@ -692,7 +734,14 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
             <h3>Débitos em aberto:</h3>
             <ul>${debtList}</ul>
             <p><strong>Contrato:</strong> <a href="${contratoLink}">${contratoLink}</a></p>
-            <p>Este email foi gerado automaticamente pelo sistema Lumied.</p>
+
+            <h3>Histórico de comunicações enviadas</h3>
+            ${enviosHtml}
+
+            <h3>Tratativas registradas pela equipe</h3>
+            ${tratativasHtml}
+
+            <p style="color:#666;font-size:12px;margin-top:20px;">Este email foi gerado automaticamente pelo sistema Lumied. Histórico completo disponível no painel do gerente.</p>
           `;
 
           const assuntoAdv = `Cobrança Extrajudicial — ${m.crianca_nome}`;
