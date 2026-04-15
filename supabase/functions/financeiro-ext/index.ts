@@ -81,22 +81,111 @@ async function getInterToken(...scopeOptions: string[]): Promise<string> {
 // ═══════════════════════════════════════════════════════════════
 //  Resend Email Helper
 // ═══════════════════════════════════════════════════════════════
-async function sendEmail(to: string, subject: string, html: string) {
+type Attachment = { filename: string; content: string; content_type?: string };
+
+async function sendEmail(to: string, subject: string, html: string, attachments?: Attachment[]) {
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (!resendKey) {
     log.warn("RESEND_API_KEY not configured");
     return;
   }
+  const body: Record<string, unknown> = {
+    from: "Lumied Financeiro <onboarding@resend.dev>",
+    to: [to],
+    subject,
+    html,
+  };
+  if (attachments?.length) body.attachments = attachments;
   await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-    body: JSON.stringify({
-      from: "Lumied Financeiro <onboarding@resend.dev>",
-      to: [to],
-      subject,
-      html,
-    }),
+    body: JSON.stringify(body),
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PDF helper — gera PDF simples (header + linhas) via pdf-lib
+// ═══════════════════════════════════════════════════════════════
+async function generatePdfReport(
+  title: string,
+  subtitle: string,
+  sections: Array<{ heading: string; lines: string[] }>,
+): Promise<string> {
+  const { PDFDocument, StandardFonts, rgb } = await import("https://esm.sh/pdf-lib@1.17.1");
+  const doc = await PDFDocument.create();
+  doc.setTitle(title);
+  doc.setProducer("Lumied");
+  doc.setCreator("Lumied SaaS Escolar");
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  const MARGIN = 50;
+  const PAGE_W = 595;
+  const PAGE_H = 842;
+  const LINE_H = 13;
+  const MAX_W = PAGE_W - MARGIN * 2;
+
+  let page = doc.addPage([PAGE_W, PAGE_H]);
+  let y = PAGE_H - MARGIN;
+
+  const newPage = () => { page = doc.addPage([PAGE_W, PAGE_H]); y = PAGE_H - MARGIN; };
+  const ensure = (needed: number) => { if (y - needed < MARGIN) newPage(); };
+
+  const wrap = (text: string, f: typeof font, size: number): string[] => {
+    const words = text.split(/\s+/);
+    const out: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      const test = cur ? cur + " " + w : w;
+      if (f.widthOfTextAtSize(test, size) > MAX_W) {
+        if (cur) out.push(cur);
+        cur = w;
+      } else cur = test;
+    }
+    if (cur) out.push(cur);
+    return out.length ? out : [""];
+  };
+
+  // Header
+  page.drawText(title, { x: MARGIN, y, size: 16, font: bold, color: rgb(0.1, 0.2, 0.5) });
+  y -= 22;
+  if (subtitle) {
+    for (const ln of wrap(subtitle, font, 10)) { page.drawText(ln, { x: MARGIN, y, size: 10, font, color: rgb(0.3,0.3,0.3) }); y -= LINE_H; }
+  }
+  page.drawLine({ start:{x:MARGIN,y:y-4}, end:{x:PAGE_W-MARGIN,y:y-4}, thickness:0.5, color: rgb(0.7,0.7,0.7) });
+  y -= 16;
+
+  for (const sec of sections) {
+    ensure(LINE_H * 2);
+    page.drawText(sec.heading, { x: MARGIN, y, size: 12, font: bold, color: rgb(0,0,0) });
+    y -= LINE_H + 4;
+    for (const raw of sec.lines) {
+      for (const ln of wrap(raw, font, 10)) {
+        ensure(LINE_H);
+        page.drawText(ln, { x: MARGIN, y, size: 10, font });
+        y -= LINE_H;
+      }
+    }
+    y -= 8;
+  }
+
+  // Footer em cada página
+  const pages = doc.getPages();
+  const stamp = `Gerado automaticamente em ${new Date().toLocaleString("pt-BR")} — Lumied`;
+  pages.forEach((p, i) => {
+    p.drawText(`${stamp}  ·  Página ${i + 1}/${pages.length}`, {
+      x: MARGIN, y: 30, size: 8, font, color: rgb(0.5, 0.5, 0.5),
+    });
+  });
+
+  const bytes = await doc.save();
+  // base64 encode (Deno-safe)
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -747,8 +836,84 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
           const assuntoAdv = `Cobrança Extrajudicial — ${m.crianca_nome}`;
           let envioStatus = "enviado";
           let envioErro: string | null = null;
+
+          // ── Anexos: contrato + relatório de débitos + relatório de tratativas ──
+          const attachments: Attachment[] = [];
           try {
-            await sendEmail(cfgAdv.valor, assuntoAdv, html);
+            // 1. Contrato (HTML completo assinado)
+            if (contrato?.id) {
+              const { data: contratoFull } = await ctx.sb
+                .from("contratos")
+                .select("html_renderizado, familia_nome, assinado_em")
+                .eq("id", contrato.id)
+                .maybeSingle();
+              if (contratoFull?.html_renderizado) {
+                const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contrato — ${m.crianca_nome}</title></head><body>${contratoFull.html_renderizado}</body></html>`;
+                attachments.push({
+                  filename: `contrato-${m.crianca_nome.replace(/\W+/g,"_")}.html`,
+                  content: btoa(unescape(encodeURIComponent(htmlDoc))),
+                  content_type: "text/html",
+                });
+              }
+            }
+
+            // 2. Relatório de débitos (PDF)
+            const totalDebito = (debts ?? []).reduce((s: number, d: any) => s + (d.valor_total || 0), 0);
+            const debtLines = (debts ?? []).map((d: any) =>
+              `• ${d.mes}   Venc: ${d.data_vencimento}   Valor: R$ ${Number(d.valor_total||0).toFixed(2)}`
+            );
+            const pdfDebitos = await generatePdfReport(
+              "Relatório de Débitos em Aberto",
+              `Aluno(a): ${m.crianca_nome}\nResponsável: ${familia?.nome_resp || m.familia_email}\nEmail: ${m.familia_email}\nTelefone: ${familia?.telefone || "N/I"}`,
+              [
+                { heading: "Débitos em aberto", lines: debtLines.length ? debtLines : ["(nenhum)"] },
+                { heading: "Total devedor", lines: [`R$ ${totalDebito.toFixed(2)}   —   ${(debts ?? []).length} parcela(s)`] },
+                { heading: "Situação", lines: [`Em atraso há ${diasAtraso} dia(s). Cobrança extrajudicial acionada em ${new Date().toLocaleString("pt-BR")}.`] },
+              ],
+            );
+            attachments.push({
+              filename: `relatorio-debitos-${m.crianca_nome.replace(/\W+/g,"_")}.pdf`,
+              content: pdfDebitos,
+              content_type: "application/pdf",
+            });
+
+            // 3. Declaração de tentativas (PDF) — envios da régua + tratativas
+            const enviosLines = (envios ?? []).length
+              ? (envios as any[]).map(e =>
+                  `${new Date(e.enviado_em).toLocaleString("pt-BR")}  ·  ${e.canal}  →  ${e.destinatario || "—"}  ·  ${e.status}${e.erro_msg ? ` (erro: ${e.erro_msg})` : ""}\n   Assunto: ${e.assunto || "—"}`
+                )
+              : ["(nenhum envio automático registrado)"];
+            const tratLines: string[] = [];
+            if ((tratativas ?? []).length) {
+              for (const t of tratativas as any[]) {
+                tratLines.push(`[${t.tipo}] ${new Date(t.created_at).toLocaleString("pt-BR")} — ${t.usuario_nome}${t.usuario_papel ? ` (${t.usuario_papel})` : ""}`);
+                tratLines.push(`   ${t.observacao}`);
+                if (t.data_prevista_pagamento) tratLines.push(`   Prevista: ${t.data_prevista_pagamento}`);
+                if (t.valor_negociado) tratLines.push(`   Valor negociado: R$ ${Number(t.valor_negociado).toFixed(2)}`);
+                tratLines.push("");
+              }
+            } else {
+              tratLines.push("(nenhuma tratativa manual registrada)");
+            }
+            const pdfTentativas = await generatePdfReport(
+              "Declaração de Tentativas de Cobrança",
+              `Aluno(a): ${m.crianca_nome}\nResponsável: ${familia?.nome_resp || m.familia_email}\nDocumento gerado para fins de cobrança extrajudicial.`,
+              [
+                { heading: "Comunicações enviadas (régua automática)", lines: enviosLines },
+                { heading: "Tratativas registradas pela equipe", lines: tratLines },
+              ],
+            );
+            attachments.push({
+              filename: `tentativas-cobranca-${m.crianca_nome.replace(/\W+/g,"_")}.pdf`,
+              content: pdfTentativas,
+              content_type: "application/pdf",
+            });
+          } catch (e) {
+            log.error("Erro gerando anexos", { metadata: { err: (e as Error).message } });
+          }
+
+          try {
+            await sendEmail(cfgAdv.valor, assuntoAdv, html, attachments);
           } catch (e) {
             envioStatus = "erro";
             envioErro = (e as Error).message;
@@ -775,6 +940,7 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
               dias_atraso: diasAtraso,
               debitos_qtd: (debts ?? []).length,
               valor_total: m.valor_total || 0,
+              anexos: attachments.map(a => a.filename),
             },
           });
 
