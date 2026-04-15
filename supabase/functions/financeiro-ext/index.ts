@@ -840,14 +840,30 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
           // ── Anexos: contrato + relatório de débitos + relatório de tratativas ──
           const attachments: Attachment[] = [];
           try {
-            // 1. Contrato (HTML completo assinado)
+            // 1. Contrato — prefere PDF do storage; fallback HTML
             if (contrato?.id) {
               const { data: contratoFull } = await ctx.sb
                 .from("contratos")
-                .select("html_renderizado, familia_nome, assinado_em")
+                .select("html_renderizado, pdf_path")
                 .eq("id", contrato.id)
                 .maybeSingle();
-              if (contratoFull?.html_renderizado) {
+              let attached = false;
+              if (contratoFull?.pdf_path) {
+                const { data: pdfBlob } = await ctx.sb.storage.from("contratos-pdf").download(contratoFull.pdf_path);
+                if (pdfBlob) {
+                  const buf = new Uint8Array(await pdfBlob.arrayBuffer());
+                  let bin = "";
+                  const chunk = 0x8000;
+                  for (let i = 0; i < buf.length; i += chunk) bin += String.fromCharCode(...buf.subarray(i, i + chunk));
+                  attachments.push({
+                    filename: `contrato-${m.crianca_nome.replace(/\W+/g,"_")}.pdf`,
+                    content: btoa(bin),
+                    content_type: "application/pdf",
+                  });
+                  attached = true;
+                }
+              }
+              if (!attached && contratoFull?.html_renderizado) {
                 const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Contrato — ${m.crianca_nome}</title></head><body>${contratoFull.html_renderizado}</body></html>`;
                 attachments.push({
                   filename: `contrato-${m.crianca_nome.replace(/\W+/g,"_")}.html`,

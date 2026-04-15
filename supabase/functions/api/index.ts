@@ -647,6 +647,34 @@ serve(async (req: Request) => {
     return ok(data);
   }
 
+  // Upload PDF do contrato assinado (chamado pelo browser após assinatura completa)
+  if (action === "contrato_salvar_pdf") {
+    const { contrato_id, pdf_base64 } = body as any;
+    if (!contrato_id || !pdf_base64) return err("contrato_id e pdf_base64 obrigatórios.");
+    const { data: c } = await admin.from("contratos").select("id, status").eq("id", contrato_id).maybeSingle();
+    if (!c) return err("Contrato não encontrado.", 404);
+    if (c.status !== "assinado") return err("Só é possível salvar PDF de contrato assinado.");
+    try {
+      // Decode base64 (strip possible data URL prefix)
+      const clean = String(pdf_base64).replace(/^data:application\/pdf;base64,/, "");
+      const bin = atob(clean);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const path = `${contrato_id}.pdf`;
+      const { error: upErr } = await admin.storage
+        .from("contratos-pdf")
+        .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+      if (upErr) return err("Falha no upload: " + upErr.message);
+      await admin.from("contratos").update({
+        pdf_path: path,
+        pdf_gerado_em: new Date().toISOString(),
+      }).eq("id", contrato_id);
+      return ok({ success: true, pdf_path: path });
+    } catch (e) {
+      return err("Erro ao processar PDF: " + (e as Error).message);
+    }
+  }
+
   // Verificar autenticidade de contrato por código
   if (action === "contrato_verificar") {
     const { codigo } = body as any;

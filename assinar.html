@@ -42,6 +42,7 @@ canvas{width:100%;height:180px;cursor:crosshair;display:block;touch-action:none;
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QDFKQEVV4P"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js" integrity="sha512-KFzR+l1MsR6rqECZnPeLDzsjKW6TbibezOa8btLtiEgIA9epyIfZxxAxG+VMzu/9veWv4bTvptTkTM/Erk7avw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -393,6 +394,9 @@ async function assinarContrato() {
             </div>
           </div>`;
       }
+
+      // Gerar PDF e enviar para storage (automático, best-effort)
+      gerarEnviarPdfContrato(contratoId).catch(e => console.warn('PDF contract upload failed:', e));
     } else {
       // Assinatura parcial — mostrar progresso
       const parcialDiv = document.createElement('div');
@@ -407,6 +411,46 @@ async function assinarContrato() {
     btn.disabled = false; btn.textContent = 'Assinar Contrato';
     alert('Erro ao assinar. Tente novamente.');
   }
+}
+
+// Gera PDF do contrato assinado e faz upload para storage via edge function.
+// Rodado em background após assinatura completa. Silencioso em caso de erro
+// (a assinatura já está válida no BD; fallback HTML continua funcionando).
+async function gerarEnviarPdfContrato(contratoId) {
+  if (typeof html2pdf === 'undefined') return;
+  const wrap = document.getElementById('contractWrap') || document.getElementById('contractBody');
+  if (!wrap) return;
+
+  // Clone para evitar afetar layout visível; força estilo print-friendly
+  const clone = wrap.cloneNode(true);
+  clone.style.background = '#fff';
+  clone.style.color = '#000';
+  clone.style.padding = '24px';
+
+  const opts = {
+    margin: [10, 10, 15, 10],
+    filename: `contrato-${contratoId}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'] },
+  };
+
+  const blob = await html2pdf().set(opts).from(clone).output('blob');
+  const base64 = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(String(r.result).split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+
+  const url = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : '') + '/functions/v1/api';
+  const anon = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : '';
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + anon },
+    body: JSON.stringify({ action: 'contrato_salvar_pdf', contrato_id: contratoId, pdf_base64: base64 }),
+  });
 }
 </script>
 </body>
