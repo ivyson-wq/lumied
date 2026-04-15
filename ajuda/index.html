@@ -772,20 +772,28 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">3</div>
       <div class="step-content">
-        <p>Para pagar via PIX, toque em <strong>"Pagar com PIX"</strong>. Um QR Code será exibido. Escaneie com seu app bancário. A confirmação é automática e leva até 30 minutos.</p>
+        <p>Para pagar via PIX, toque em <strong>"Pagar com PIX"</strong>. Um QR Code é exibido. Escaneie com seu app bancário — a confirmação chega quase instantaneamente (segundos a minutos) via webhook do Banco Inter. O status muda para "Pago" automaticamente.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <p><strong>Lembretes automáticos:</strong> a escola configura uma régua que envia lembretes antes do vencimento (ex.: D-5 por e-mail, D-1 por WhatsApp) e avisos pós-vencimento (D+1, D+15). Você pode desativar se preferir, em Perfil → Preferências.</p>
       </div>
     </div>
   </div>
 
   <div class="tip-box">
-    <strong>💡 Dica:</strong> Pagamentos via PIX são confirmados automaticamente. Se usar boleto bancário, a compensação pode levar até 3 dias úteis.
+    <strong>💡 Dica:</strong> PIX é sempre a opção mais rápida — confirmação em segundos. Se usar boleto bancário, a compensação pode levar até 3 dias úteis.
   </div>
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>Paguei mas ainda aparece como "Aberto".</summary><p>Se pagou via boleto bancário, aguarde até 3 dias úteis para compensação. Se pagou via PIX e após 1 hora ainda não atualizou, entre em contato com a escola.</p></details>
+    <details><summary>Paguei via PIX e ainda aparece "Aberto" depois de 10 minutos.</summary><p>Geralmente é questão de segundos. Se após 10 minutos ainda não atualizou, entre em contato com a escola — o webhook pode ter falhado e a conciliação manual resolve rapidamente.</p></details>
+    <details><summary>Pagamento via boleto bancário demora quanto?</summary><p>Até 3 dias úteis para compensação. Para urgência, prefira PIX.</p></details>
     <details><summary>Como gero uma segunda via?</summary><p>Toque no boleto vencido e selecione "Gerar 2ª via". O novo boleto terá juros e multa calculados automaticamente.</p></details>
-    <details><summary>Onde vejo o detalhamento do valor?</summary><p>Ao abrir o boleto, toque em "Ver detalhamento". Lá você encontrará a mensalidade base, atividades extracurriculares e possíveis descontos.</p></details>
+    <details><summary>Onde vejo o detalhamento do valor?</summary><p>Ao abrir o boleto, toque em "Ver detalhamento". Encontra mensalidade base, atividades extracurriculares e descontos.</p></details>
+    <details><summary>Recebi uma cobrança do advogado da escola. É oficial?</summary><p>Sim — quando há 28 dias de atraso, a escola pode acionar cobrança extrajudicial. O e-mail vem com o contrato assinado em PDF e relatório de débitos para transparência. Entre em contato com a escola para negociar.</p></details>
   </div>
 </article>
 
@@ -1217,13 +1225,19 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   </div>
 
   <div class="tip-box">
-    <strong>💡 Dica:</strong> Configure alertas de estoque mínimo em cada item. Quando a quantidade atingir o mínimo definido, você receberá uma notificação.
+    <strong>💡 Dica:</strong> Configure orçamento mensal por turma (Almoxarifado → Orçamentos). O sistema mostra em tempo real <em>aprovado + pendente</em> para evitar estouro. Requisições pendentes já são consideradas no gasto, com aviso antes do gerente aprovar.
+  </div>
+
+  <div class="tip-box" style="background:#eef2ff;border-left:4px solid #6366f1;">
+    <strong>📄 Para organizar materiais chegando dos correios, use os PDFs:</strong> veja <a href="#gerente-almox-pdfs">Almoxarifado — PDFs e Guia de Recebimento</a>.
   </div>
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>As professoras veem o estoque disponível?</summary><p>Não. As professoras apenas fazem pedidos. Quem vê e gerencia o estoque é o gerente. Isso evita pedidos desnecessários.</p></details>
-    <details><summary>Posso gerar relatório de consumo?</summary><p>Sim. Acesse Almoxarifado → Relatórios para ver consumo por período, por turma ou por item. Exporte em CSV ou PDF.</p></details>
+    <details><summary>As professoras veem o estoque disponível?</summary><p>Sim, veem o catálogo com preço estimado e orçamento disponível da turma em tempo real. Isso evita pedidos fora do orçamento.</p></details>
+    <details><summary>Posso buscar preços automaticamente?</summary><p>Sim. Na aprovação, o sistema busca em Mercado Livre, Shopee, Reval e Zoom. Integração ML permite checkout direto.</p></details>
+    <details><summary>Itens não cadastrados podem ser pedidos?</summary><p>Sim. A professora pode solicitar um item livre com preço estimado — ao aprovar, o sistema cria automaticamente no catálogo.</p></details>
+    <details><summary>Importar catálogo em massa?</summary><p>Sim. Almoxarifado → Insumos → Importar XLSX. Matching por word-overlap com itens existentes para evitar duplicação.</p></details>
   </div>
 </article>
 
@@ -1387,26 +1401,33 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">2</div>
       <div class="step-content">
-        <p>Clique em uma família inadimplente para ver o histórico de pagamentos e enviar um lembrete automático por email ou WhatsApp.</p>
+        <p>Na aba <strong>Inadimplência</strong>, clique em <strong>"📜 Histórico"</strong> ao lado de cada família para abrir o modal com a timeline completa: envios automáticos da régua + tratativas manuais da equipe. Registre ligações, promessas de pagamento, acordos. Veja <a href="#gerente-cobranca">Cobrança e Tratativas</a> para detalhes.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-number">3</div>
       <div class="step-content">
-        <p>Use a aba <strong>"Relatórios"</strong> para gerar demonstrativos por período, turma ou tipo de receita. Exporte em PDF ou CSV.</p>
+        <p>Aos 28 dias de atraso, o sistema envia automaticamente um e-mail para o advogado configurado (em Configurações → Financeiro → Email do advogado), já com 3 anexos: contrato em PDF, relatório de débitos e declaração de tentativas.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <p>Boletos em lote são gerados automaticamente no dia 28 do mês via integração com o Banco Inter (API mTLS). Aprovação requerida pelo gerente antes da emissão definitiva.</p>
       </div>
     </div>
   </div>
 
   <div class="tip-box">
-    <strong>💡 Dica:</strong> Configure lembretes automáticos para boletos próximos do vencimento. Vá em Configurações → Notificações → Financeiro.
+    <strong>💡 Dica:</strong> A régua de cobrança é configurada em <strong>Configurações → Régua de Cobrança</strong>: defina os gatilhos (D-5, D-1, D+1, D+15, D+30), canais (email, WhatsApp) e templates com variáveis {{nome}}, {{valor}}, {{data_vencimento}}.
   </div>
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>Como faço para dar desconto em um boleto?</summary><p>Acesse o boleto do aluno, clique em "Editar" e aplique o desconto (percentual ou valor fixo). Adicione um motivo para registro interno.</p></details>
-    <details><summary>A integração com o banco é automática?</summary><p>Sim. Pagamentos via PIX são confirmados automaticamente. Boletos bancários são reconciliados via arquivo de retorno do banco (CNAB 240).</p></details>
-    <details><summary>Posso emitir nota fiscal?</summary><p>A emissão de NFS-e depende da integração configurada com a prefeitura local. Consulte Configurações → Integrações → Nota Fiscal.</p></details>
+    <details><summary>Como aplico desconto em uma mensalidade?</summary><p>Acesse a mensalidade, clique em "Editar" e aplique desconto (percentual ou valor fixo). Adicione motivo para registro interno.</p></details>
+    <details><summary>A conciliação bancária é automática?</summary><p>Sim. PIX é confirmado em tempo real via webhook Inter. Boletos são reconciliados via API Inter (integração mTLS). Quando a API não retorna, funciona fallback CNAB 240.</p></details>
+    <details><summary>Posso emitir NFS-e?</summary><p>Sim, em Notas Fiscais. A emissão depende da integração com a prefeitura local — consulte Configurações → Integrações → Nota Fiscal.</p></details>
+    <details><summary>Como vejo o log completo de e-mails enviados para uma família?</summary><p>Botão "📜 Histórico" em cada linha de Inadimplência. Log auditável com assunto, corpo, provider ID e status.</p></details>
   </div>
 </article>
 
@@ -1454,15 +1475,22 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">3</div>
       <div class="step-content">
-        <p>Leads novos podem vir da <strong>Matrícula Online</strong> (formulário público) ou ser cadastrados manualmente.</p>
+        <p>Leads novos podem vir da <strong>Matrícula Online</strong> (formulário público) ou ser cadastrados manualmente. Quando um lead vira matrícula, o sistema gera automaticamente o contrato digital a partir do template configurado.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <p><strong>Contratos digitais com PDF automático:</strong> ao completar a assinatura (verificação por e-mail + canvas), o sistema gera e arquiva o PDF do contrato em storage privado, incluindo selo probatório (código de verificação, hash SHA-256, base legal). Disponível para download por gerente e família. Veja <a href="#setup-contratos-pdf">Contratos com PDF Automático</a>.</p>
       </div>
     </div>
   </div>
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>Posso personalizar as etapas do funil?</summary><p>Sim. Acesse CRM → Configurações para adicionar, renomear ou reordenar as etapas do funil conforme o processo da sua escola.</p></details>
+    <details><summary>Posso personalizar as etapas do funil?</summary><p>Sim. Acesse CRM → Configurações para adicionar, renomear ou reordenar as etapas do funil.</p></details>
     <details><summary>Como importar leads de uma planilha?</summary><p>Clique em "Importar" e faça upload de um CSV com colunas: Nome, Email, Telefone, Ano Desejado. O sistema mapeia automaticamente os campos.</p></details>
+    <details><summary>Os contratos assinados têm validade jurídica?</summary><p>Sim. Assinatura eletrônica com 2FA (código por e-mail) + hash SHA-256 + código público de verificação em <code>/verificar.html</code> — Art. 4º Lei 14.063/2020 e MP 2.200-2/2001.</p></details>
   </div>
 </article>
 
@@ -2058,21 +2086,31 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">2</div>
       <div class="step-content">
-        <p>Clique em <strong>"+ Novo Pedido"</strong>. Selecione os itens necessários e as quantidades. Adicione uma justificativa se necessário (ex: "Projeto de artes semana que vem").</p>
+        <p>Clique em <strong>"+ Novo Pedido"</strong>. Selecione os itens do catálogo ou digite um item novo com preço estimado — o sistema cria no catálogo automaticamente. Você vê em tempo real o orçamento da sua turma: <em>aprovado + pendente = comprometido</em>, <em>disponível</em> e <em>total</em>.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-number">3</div>
       <div class="step-content">
-        <p>Aguarde a aprovação do gerente. Você será notificada quando o pedido for aprovado e os materiais estiverem prontos para retirada.</p>
+        <p>O gerente aprova, rejeita ou aprova parcialmente (ajustando quantidades). Você recebe notificação in-app. Itens aprovados entram na fila de compra.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <p><strong>Entrega:</strong> quando os materiais chegarem à escola, a coordenação usa o <em>romaneio</em> para entregar em cada turma — você confirma o recebimento e assina.</p>
       </div>
     </div>
   </div>
 
+  <div class="tip-box"><strong>💡 Dica:</strong> Requisições pendentes <em>já</em> são descontadas do orçamento exibido. Isso evita que várias professoras pedindo no mesmo mês estourem o limite sem perceber.</div>
+
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>O que acontece se o item não está em estoque?</summary><p>O gerente pode aprovar parcialmente o pedido ou informar a previsão de reposição. Você será notificada sobre o status.</p></details>
+    <details><summary>Posso pedir um item que não está no catálogo?</summary><p>Sim. Escreva o nome e um preço estimado — ao aprovar, o gerente cadastra definitivamente.</p></details>
+    <details><summary>Por que meu orçamento parece menor do que o valor aprovado?</summary><p>Porque o sistema soma <em>pendentes + aprovados</em> no "comprometido". Quando o gerente rejeita uma requisição, o valor volta para o disponível.</p></details>
     <details><summary>Posso cancelar um pedido pendente?</summary><p>Sim. Acesse o pedido e toque em "Cancelar" enquanto o status for "Pendente".</p></details>
+    <details><summary>Como sei o que foi aprovado e o que ainda vai chegar?</summary><p>A tela "Minha Turma" mostra por item: quantidade aprovada, quantidade já entregue e pendente de chegada.</p></details>
   </div>
 </article>
 
@@ -2460,7 +2498,13 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">3</div>
       <div class="step-content">
-        <p>Clique em <strong>"Salvar Chamada"</strong>. Os dados ficam disponíveis imediatamente no dashboard do gerente e no relatório de frequência.</p>
+        <p>Clique em <strong>"Salvar Chamada"</strong>. Os dados ficam disponíveis imediatamente no dashboard do gerente, no portal dos pais e no relatório de frequência.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <p><strong>Controle de Acesso integrado (se habilitado):</strong> se a escola usa Control iD / iDFace, o reconhecimento facial na entrada cria um registro de presença automático. Um banner no topo do portal da professora avisa em tempo real (polling 10s) quando um aluno chega ou sai.</p>
       </div>
     </div>
   </div>
@@ -2473,6 +2517,7 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <h3>Perguntas Frequentes</h3>
     <details><summary>Posso fazer chamada em mais de um horário?</summary><p>Sim, a escola pode configurar chamada dupla (entrada e saída). Consulte a gestão sobre a política de chamada.</p></details>
     <details><summary>Faltas com atestado são contabilizadas?</summary><p>Faltas com atestado validado são marcadas como "Falta Justificada" e não contam negativamente no percentual de frequência.</p></details>
+    <details><summary>Quanto tempo leva para os pais verem a chamada?</summary><p>Imediato. Ao salvar, o status aparece no portal dos pais em segundos. Se configurado, o Diário de Classe também publica automaticamente com a presença do dia.</p></details>
   </div>
 </article>
 
