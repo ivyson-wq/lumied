@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
       // Retorna erro de sync para diagnóstico
       const { data: cached } = await supabase
         .from('boletos')
-        .select('*')
+        .select('id, cpf, nosso_numero, valor, vencimento, linha_digitavel, situacao, pdf_url, criado_em')
         .in('cpf', [cpfFormatado, cpfRaw])
         .order('vencimento', { ascending: false })
       return new Response(JSON.stringify({ boletos: cached ?? [] }), {

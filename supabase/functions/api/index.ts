@@ -137,44 +137,27 @@ serve(async (req: Request) => {
     return ok({ ok: true, saved: configs.length })
   }
 
-  // ── Hub: identifica usuário por qualquer token ativo ──
+  // ── Hub: identifica usuário por qualquer token ativo (4 probes em paralelo) ──
   if (action === "hub_whoami") {
     const hubToken = (body._token as string) || (body._prof_token as string) || req.headers.get("authorization")?.replace("Bearer ", "") || null;
     if (!hubToken) return ok({ logged: false });
-    // Tenta gerente_sessoes
-    const { data: gs } = await admin.from("gerente_sessoes").select("gerente_id, expira_em, gerentes(email)").eq("token", hubToken).maybeSingle();
-    if (gs && new Date(gs.expira_em) >= new Date()) {
-      const email = (gs as any).gerentes?.email;
-      if (email) {
-        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", email).maybeSingle();
-        if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
-        return ok({ logged: true, email, papeis: ["gerente"] });
-      }
-    }
-    // Tenta secretaria_sessoes
-    const { data: ss } = await admin.from("secretaria_sessoes").select("secretaria_id, expira_em, secretarias(email)").eq("token", hubToken).maybeSingle();
-    if (ss && new Date(ss.expira_em) >= new Date()) {
-      const email = (ss as any).secretarias?.email;
-      if (email) {
-        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", email).maybeSingle();
-        if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
-        return ok({ logged: true, email, papeis: ["secretaria"] });
-      }
-    }
-    // Tenta professora_sessoes
-    const { data: ps } = await admin.from("professora_sessoes").select("professora_id, expira_em, professoras(email)").eq("token", hubToken).maybeSingle();
-    if (ps && new Date(ps.expira_em) >= new Date()) {
-      const email = (ps as any).professoras?.email;
-      if (email) {
-        const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", email).maybeSingle();
-        if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
-        return ok({ logged: true, email, papeis: ["professora"] });
-      }
-    }
-    // Tenta sessões unificadas
-    const { data: us } = await admin.from("sessoes").select("usuario_id, expira_em").eq("token", hubToken).maybeSingle();
-    if (us && new Date(us.expira_em) >= new Date()) {
-      const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("id", us.usuario_id).maybeSingle();
+    const [gs, ss, ps, us] = await Promise.all([
+      admin.from("gerente_sessoes").select("gerente_id, expira_em, gerentes(email)").eq("token", hubToken).maybeSingle(),
+      admin.from("secretaria_sessoes").select("secretaria_id, expira_em, secretarias(email)").eq("token", hubToken).maybeSingle(),
+      admin.from("professora_sessoes").select("professora_id, expira_em, professoras(email)").eq("token", hubToken).maybeSingle(),
+      admin.from("sessoes").select("usuario_id, expira_em").eq("token", hubToken).maybeSingle(),
+    ]);
+    const now = new Date();
+    const resolveByEmail = async (email: string, fallbackRole: string) => {
+      const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", email).maybeSingle();
+      if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
+      return ok({ logged: true, email, papeis: [fallbackRole] });
+    };
+    if (gs.data && new Date(gs.data.expira_em) >= now && (gs.data as any).gerentes?.email) return resolveByEmail((gs.data as any).gerentes.email, "gerente");
+    if (ss.data && new Date(ss.data.expira_em) >= now && (ss.data as any).secretarias?.email) return resolveByEmail((ss.data as any).secretarias.email, "secretaria");
+    if (ps.data && new Date(ps.data.expira_em) >= now && (ps.data as any).professoras?.email) return resolveByEmail((ps.data as any).professoras.email, "professora");
+    if (us.data && new Date(us.data.expira_em) >= now) {
+      const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("id", us.data.usuario_id).maybeSingle();
       if (u) return ok({ logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] });
     }
     return ok({ logged: false });
