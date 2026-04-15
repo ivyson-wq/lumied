@@ -1,5 +1,5 @@
-// Lumied — Service Worker v5 (Network-First HTML + Push Notifications)
-const CACHE_NAME = 'lumied-v6';
+// Lumied — Service Worker v7 (SWR em JS/CSS, Network-First HTML, Push)
+const CACHE_NAME = 'lumied-v7';
 const OFFLINE_ASSETS = [
   '/themes.css',
   '/webauthn-client.js',
@@ -59,16 +59,19 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // JS files: network-first (cache for offline)
+  // JS files: stale-while-revalidate — entrega cache imediato, atualiza em background.
   if (url.pathname.endsWith('.js')) {
     e.respondWith(
-      fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => caches.match(e.request).then(cached => cached || new Response('Offline', { status: 503 })))
+      caches.match(e.request).then(cached => {
+        const networkPromise = fetch(e.request).then(res => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+          }
+          return res;
+        }).catch(() => cached || new Response('Offline', { status: 503 }));
+        return cached || networkPromise;
+      })
     );
     return;
   }
