@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lumied — Sistema de Gestão Escolar com IA | Plataforma Completa</title>
-<meta name="description" content="Sistema de gestão escolar inteligente com IA, WhatsApp nativo, CRM de matrículas, financeiro automatizado e compliance. Para escolas bilíngues e redes de ensino. A partir de R$ 960/mês.">
+<meta name="description" content="Sistema de gestão escolar inteligente com IA, WhatsApp nativo, CRM de matrículas, financeiro automatizado e compliance. Para escolas bilíngues e redes de ensino. A partir de R$ 632/mês.">
 <meta name="keywords" content="sistema gestão escolar, software escola, gestão escolar online, plataforma escolar, sistema escolar com IA, CRM escola, financeiro escolar, compliance escolar, WhatsApp escola, boletim digital, controle frequência, matrícula online, Lumied">
 <meta name="author" content="Lumied">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -27,7 +27,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Lumied — Gestão Escolar com IA">
-<meta name="twitter:description" content="3 planos (Start, Evolução, Prestige). WhatsApp nativo, IA e compliance. A partir de R$ 960/mês.">
+<meta name="twitter:description" content="4 planos (Starter, Start, Evolução, Prestige). WhatsApp nativo, IA e compliance. A partir de R$ 632/mês.">
 <meta name="twitter:image" content="https://lumied.com.br/lumied-logo.png">
 <!-- Canonical -->
 <link rel="canonical" href="https://lumied.com.br">
@@ -691,7 +691,7 @@ section, .section, .hero, .cta-final { overflow-x: clip; }
     <div>
       <div class="hero-badge">✨ Gestão escolar com IA nativa</div>
       <h1>Sua escola<br>no automático.</h1>
-      <p>A primeira plataforma que <strong style="color:#fff;">analisa seus dados e diz o que fazer</strong>. 23 módulos integrados, WhatsApp oficial, compliance automatizado e assinatura eletrônica — tudo num só lugar, com <strong style="color:#fff;">preços transparentes</strong> a partir de R$ 960/mês.</p>
+      <p>A primeira plataforma que <strong style="color:#fff;">analisa seus dados e diz o que fazer</strong>. 23 módulos integrados, WhatsApp oficial, compliance automatizado e assinatura eletrônica — tudo num só lugar, com <strong style="color:#fff;">preços transparentes</strong> a partir de R$ 632/mês.</p>
       <div class="hero-ctas">
         <a href="#contact" class="btn-primary">Agendar Demo Gratuita</a>
         <a href="#videos" class="btn-ghost">Ver em Ação ▶</a>
@@ -1428,7 +1428,7 @@ calcularROI();
   <div class="container">
     <div class="section-header fade-up">
       <div class="section-badge">Planos & Preços</div>
-      <h2 class="section-title section-title-light">3 planos. Tudo incluso. Sem surpresas.</h2>
+      <h2 class="section-title section-title-light">4 planos. Tudo incluso. Sem surpresas.</h2>
       <p class="section-sub section-sub-light">Todos os planos incluem implantação profissional com treinamento e acompanhamento.</p>
     </div>
     <div class="pricing-toggle fade-up">
@@ -1437,7 +1437,34 @@ calcularROI();
       <span class="active">Anual</span>
       <span class="save-badge">Economize 20%</span>
     </div>
-    <div class="pricing-grid fade-up" style="grid-template-columns:repeat(3,1fr);max-width:1100px;">
+    <div class="pricing-grid fade-up" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));max-width:1400px;gap:16px;">
+
+      <!-- STARTER (entrada, compete Sponte/Escolaweb) -->
+      <div class="plan-card">
+        <div class="plan-badge" style="background:linear-gradient(135deg,#84CC16,#16A34A);">Entrada</div>
+        <div class="plan-name">Starter</div>
+        <div class="plan-desc">O básico digital, sem complicação</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="790" data-annual="632">632</span><span class="period">/mês</span>
+          <div class="per-student">Até 200 alunos · Ideal p/ trocar Sponte/Escolaweb</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Portal Pais, Professora, Secretaria</li>
+          <li><span class="check">&#10003;</span> Notas, Frequência, Diário</li>
+          <li><span class="check">&#10003;</span> Matrículas e Documentos</li>
+          <li><span class="check">&#10003;</span> Financeiro (Boletos + PIX)</li>
+          <li><span class="check">&#10003;</span> Agenda Digital e Calendário</li>
+          <li><span class="check">&#10003;</span> CRM de Matrículas (básico)</li>
+          <li><span class="check">&#10003;</span> Portal Web Responsivo</li>
+          <li><span class="check">&#10003;</span> Migração Sponte/Escolaweb inclusa</li>
+          <li><span class="check">&#10003;</span> Central de Ajuda + Suporte</li>
+          <li><span class="x">&mdash;</span> Almoxarifado / Compliance CLT</li>
+          <li><span class="x">&mdash;</span> WhatsApp Business API</li>
+          <li><span class="x">&mdash;</span> IA (Lumi Assistente)</li>
+        </ul>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 990</strong><br><span style="font-size:10px;">em até 2x de R$ 495,00</span></div>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Começar</button>
+      </div>
 
       <!-- START -->
       <div class="plan-card">
@@ -1919,8 +1946,8 @@ function togglePricing(el) {
     a.textContent = isAnnual ? a.dataset.annual : a.dataset.monthly;
   });
   const perStudents = document.querySelectorAll('.per-student');
-  const annualPrices = ['~R$ 1,20/aluno para 200 alunos','~R$ 2,40/aluno para 200 alunos','~R$ 4,00/aluno para 200 alunos','Sob consulta para redes'];
-  const monthlyPrices = ['~R$ 1,50/aluno para 200 alunos','~R$ 3,00/aluno para 200 alunos','~R$ 5,00/aluno para 200 alunos','Sob consulta para redes'];
+  const annualPrices = ['Até 200 alunos · trocar Sponte/Escolaweb','~R$ 1,20/aluno para 200 alunos','~R$ 2,40/aluno para 200 alunos','~R$ 4,00/aluno para 200 alunos'];
+  const monthlyPrices = ['Até 200 alunos · trocar Sponte/Escolaweb','~R$ 1,50/aluno para 200 alunos','~R$ 3,00/aluno para 200 alunos','~R$ 5,00/aluno para 200 alunos'];
   perStudents.forEach((ps, i) => { ps.textContent = isAnnual ? annualPrices[i] : monthlyPrices[i]; });
 }
 
