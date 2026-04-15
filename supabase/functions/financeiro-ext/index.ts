@@ -159,7 +159,7 @@ async function generatePdfReport(
   subtitle: string,
   sections: Array<{ heading: string; lines: string[] }>,
 ): Promise<string> {
-  const { PDFDocument, StandardFonts, rgb } = await import("https://esm.sh/pdf-lib@1.17.1");
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
   const doc = await PDFDocument.create();
   doc.setTitle(title);
   doc.setProducer("Lumied");

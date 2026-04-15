@@ -12,8 +12,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { gzip } from "https://deno.land/x/compress@v0.4.5/mod.ts";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { gzip } from "compress/mod.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logger.ts";
 

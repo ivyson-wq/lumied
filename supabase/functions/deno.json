@@ -1,6 +1,8 @@
 {
   "imports": {
     "@std/testing/asserts": "jsr:@std/assert",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "pdf-lib": "https://esm.sh/pdf-lib@1.17.1",
+    "compress/": "https://deno.land/x/compress@v0.4.5/"
   }
 }

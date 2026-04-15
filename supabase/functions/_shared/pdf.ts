@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 //  Shared PDF helpers — pdf-lib
 // ═══════════════════════════════════════════════════════════════
-import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "https://esm.sh/pdf-lib@1.17.1";
+import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "pdf-lib";
 
 export type PdfSection = { heading: string; lines: string[] };
 
