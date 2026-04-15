@@ -127,12 +127,17 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   const user = await getUsuario(sb, token)
   if (!user) return null
   const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao']
+  const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao', 'nutricionista']
   if (roles.some((r: string) => secRoles.includes(r))) {
     const { data: sec } = await sb
       .from('secretarias').select('id, nome, email, features')
       .eq('email', user.email).maybeSingle()
-    if (sec) return { ...sec, features: sec.features || ['atestados'] }
+    if (sec) {
+      // Garante que nutricionista tenha feature cozinha mesmo em registros antigos
+      const feats = new Set<string>(sec.features || ['atestados'])
+      if (roles.includes('nutricionista')) feats.add('cozinha')
+      return { ...sec, features: Array.from(feats) }
+    }
     // Constrói features baseado nos papéis
     const features: string[] = []
     if (roles.includes('secretaria')) features.push('atestados')
@@ -140,6 +145,7 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
     if (roles.includes('financeiro') || roles.includes('diretor')) features.push('financeiro')
     if (roles.includes('manutencao')) features.push('manutencao')
     if (roles.includes('impressao')) features.push('impressao')
+    if (roles.includes('nutricionista')) features.push('cozinha')
     return { id: user.id, nome: user.nome, email: user.email, features: features.length ? features : ['atestados'] }
   }
   return null

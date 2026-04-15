@@ -13,7 +13,7 @@ const log = createLogger("cozinha");
 const router = new Router("cozinha");
 router.useGlobal(rateLimit());
 
-const authCoz = authGerenteOrSecretaria(["gerente", "diretor", "secretaria", "manutencao"]);
+const authCoz = authGerenteOrSecretaria(["gerente", "diretor", "secretaria", "manutencao", "nutricionista"]);
 const coz = requireFeature("cozinha");
 
 // Nutricionista também pode ser secretaria com papel específico
