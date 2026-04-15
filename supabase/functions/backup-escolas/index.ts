@@ -158,7 +158,11 @@ serve(async (req) => {
     // ── CRON: run_all ──
     if (action === "run_all") {
       const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
-      if (token !== cronKey) return err("Apenas cron interno pode disparar run_all.", 403);
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+      // Aceita qualquer um dos dois — service_role é o caminho oficial do pg_cron
+      // (vide migration 238), cronKey mantém compatibilidade com postdeploy.mjs.
+      const authorized = token && (token === cronKey || token === serviceRoleKey);
+      if (!authorized) return err("Apenas cron interno pode disparar run_all.", 403);
 
       const { data: escolas } = await sb.from("escolas").select("id, nome").eq("ativo", true);
       const resultados: any[] = [];
