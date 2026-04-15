@@ -219,6 +219,7 @@ router.on("plano_modulos_set", authAdmin, async (ctx) => {
     const { error } = await ctx.sb.from("plano_modulos").insert(modulo_ids.map(mid => ({ plano_id, modulo_id: mid })));
     if (error) throw new AppError("BAD_REQUEST", error.message);
   }
+  logAudit(ctx.sb, { ator_tipo: 'gerente', ator_email: ctx.user?.email, recurso: 'plano', recurso_id: plano_id, acao: 'modulos_set', depois: { modulo_ids } });
   return successResponse({ success: true });
 });
 
@@ -418,6 +419,12 @@ router.on("lgpd_solicitacoes_process", authAdmin, async (ctx) => {
     await ctx.sb.from("lgpd_solicitacoes").update({ status: "recusada", motivo_recusa, processado_por: ctx.user!.email, processado_em: new Date().toISOString() }).eq("id", id);
   }
   log.info("LGPD solicitação processada", { metadata: { id, acao } });
+  logAudit(ctx.sb, {
+    ator_tipo: 'gerente', ator_email: ctx.user?.email,
+    recurso: 'lgpd_solicitacao', recurso_id: id,
+    acao: acao === 'aprovar' ? `lgpd_${sol.tipo}` : 'lgpd_recusar',
+    depois: { email_alvo: sol.email, tipo: sol.tipo, motivo_recusa: motivo_recusa ?? null },
+  });
   return successResponse({ success: true });
 });
 
@@ -663,8 +670,9 @@ router.on("staff_criar", authStaff, async (ctx) => {
   const senha_hash = await hashSenha(senha);
   const { error } = await ctx.sb.from("lumied_staff").insert({ nome, email: email.toLowerCase().trim(), senha_hash, cargo: cargo || 'suporte' });
   if (error) throw new AppError("BAD_REQUEST", error.message);
-  // Audit
+  // Audit (legacy + unificado)
   await ctx.sb.from("lumied_staff_audit").insert({ staff_id: ctx.user!.id, staff_nome: ctx.user!.nome, acao: 'staff_criar', detalhes: { email } });
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'lumied_staff', acao: 'criar', depois: { email, cargo: cargo || 'suporte' } });
   return successResponse({ success: true });
 });
 
@@ -673,6 +681,7 @@ router.on("staff_desativar", authStaff, async (ctx) => {
   if (id === ctx.user!.id) throw new AppError("FORBIDDEN", "Não pode desativar a si mesmo.");
   await ctx.sb.from("lumied_staff").update({ ativo: false }).eq("id", id);
   await ctx.sb.from("lumied_staff_audit").insert({ staff_id: ctx.user!.id, staff_nome: ctx.user!.nome, acao: 'staff_desativar', detalhes: { target_id: id } });
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'lumied_staff', recurso_id: id, acao: 'desativar' });
   return successResponse({ success: true });
 });
 
@@ -680,6 +689,59 @@ router.on("staff_desativar", authStaff, async (ctx) => {
 router.on("staff_audit_log", authStaff, async (ctx) => {
   const { data } = await ctx.sb.from("lumied_staff_audit").select("*").order("criado_em", { ascending: false }).limit(100);
   return successResponse(data ?? []);
+});
+
+// ── Governance: audit unificado (audit_eventos) ──
+router.on("staff_audit_eventos", authStaff, async (ctx) => {
+  const { limit = 100, recurso, escola_id } = ctx.body as any;
+  let q = ctx.sb.from("audit_eventos").select("*").order("at", { ascending: false }).limit(Math.min(Number(limit) || 100, 500));
+  if (recurso) q = q.eq("recurso", recurso);
+  if (escola_id) q = q.eq("escola_id", escola_id);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+// ── Governance: cobertura RLS (lacunas em tabelas tenant) ──
+router.on("staff_rls_coverage", authStaff, async (ctx) => {
+  const { data } = await ctx.sb.from("v_rls_coverage").select("*");
+  const rows = data ?? [];
+  const tenant = rows.filter((r: any) => r.is_tenant);
+  const lacunas = tenant.filter((r: any) => !r.rls_enabled || r.policy_count === 0);
+  return successResponse({
+    total_tabelas: rows.length,
+    tenant_tables: tenant.length,
+    cobertura_ok: tenant.length - lacunas.length,
+    lacunas,
+  });
+});
+
+// ── Governance: consumo de IA por escola (mês corrente) ──
+router.on("staff_ia_uso", authStaff, async (ctx) => {
+  const mes = new Date().toISOString().slice(0, 7) + '-01';
+  const { data } = await ctx.sb.from("escola_ia_uso")
+    .select("escola_id, custo_usd, cap_usd, bloqueado, requests, tokens_input, tokens_output, escolas(nome, subdominio)")
+    .eq("mes", mes)
+    .order("custo_usd", { ascending: false });
+  return successResponse({ mes, escolas: data ?? [] });
+});
+
+// ── Governance: feature flags CRUD ──
+router.on("staff_flags_list", authStaff, async (ctx) => {
+  const { data } = await ctx.sb.from("feature_flags").select("*").order("chave");
+  return successResponse(data ?? []);
+});
+
+router.on("staff_flag_set", authStaff, async (ctx) => {
+  const { chave, ativo, rollout_pct, escolas } = ctx.body as any;
+  if (!chave) throw new AppError("VALIDATION_FAILED", "chave obrigatória.");
+  const patch: any = { atualizado_por: ctx.user?.email, atualizado_em: new Date().toISOString() };
+  if (typeof ativo === 'boolean') patch.ativo = ativo;
+  if (typeof rollout_pct === 'number') patch.rollout_pct = Math.max(0, Math.min(100, rollout_pct));
+  if (Array.isArray(escolas) || escolas === null) patch.escolas = escolas;
+  const { error } = await ctx.sb.from("feature_flags").update(patch).eq("chave", chave);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'feature_flag', recurso_id: chave, acao: 'set', depois: patch });
+  return successResponse({ success: true });
 });
 
 // ═══════════════════════════════════════════════════════════════

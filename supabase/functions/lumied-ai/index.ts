@@ -8,6 +8,7 @@ import { Router, rateLimit, authGerente, authProfessora, type Middleware } from 
 import { successResponse, AppError, sanitizePgError } from "../_shared/errors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { askClaude, askClaudeWithTools, SYSTEM_PROMPTS, buildContextFromData } from "../_shared/ai.ts";
+import { isFlagOn } from "../_shared/flags.ts";
 import { McpServer, type McpScope } from "../_shared/mcp.ts";
 import { staffTools } from "../mcp/tools_staff.ts";
 import { gerenteTools } from "../mcp/tools_gerente.ts";
@@ -245,6 +246,10 @@ router.on("ai_perguntar_prof", authFlexivel, async (ctx) => {
   // Restrict to teachers only (this endpoint gives turma-specific context)
   if (ctx.user?.tipo !== "professora" && ctx.user?.tipo !== "unificado") {
     throw new AppError("FORBIDDEN", "Apenas professoras podem usar este recurso.");
+  }
+  // Feature flag: rollout controlado (% e allow-list de escolas)
+  if (!(await isFlagOn(ctx.sb, 'beta_lumi_ai_professora', ctx.escola_id))) {
+    throw new AppError("FORBIDDEN", "Recurso em rollout restrito para sua escola.");
   }
 
   const contexto = await coletarContextoProfessora(ctx.sb, ctx.user?.id);

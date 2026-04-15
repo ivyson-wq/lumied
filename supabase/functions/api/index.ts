@@ -12,6 +12,7 @@ import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { hashSenhaV1 as hashSenha, hashSenha as hashSenhaProf, verificarSenhaAuto, gerarToken, validarSessao as _validarSessao } from "../_shared/auth.ts";
 import { sanitizePgError } from "../_shared/errors.ts";
+import { logAudit } from "../_shared/audit.ts";
 
 const log = createLogger("api");
 
@@ -854,6 +855,17 @@ serve(async (req: Request) => {
       // Parcialmente assinado — atualizar hash mas manter status como 'visualizado'
       await admin.from("contratos").update({ documento_hash: docHash }).eq("id", contrato_id);
     }
+
+    logAudit(admin, {
+      ator_tipo: 'pai',
+      ator_email: (body.email as string) || null,
+      recurso: 'contrato',
+      recurso_id: contrato_id,
+      acao: completo ? 'assinar_completo' : 'assinar_parcial',
+      ip,
+      user_agent: ua,
+      metadata: { codigo_verificacao: codigoVerificacao, assinaturas_registradas: totalAssinaturas, assinaturas_necessarias: totalNecessario },
+    });
 
     return ok({
       success: true,

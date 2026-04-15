@@ -232,6 +232,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" onclick="showPanel('staff',this)"><span class="ic">👥</span> Staff Lumied</a>
       <a class="nav-item" onclick="showPanel('audit',this)"><span class="ic">📋</span> Audit Log</a>
       <a class="nav-item" onclick="showPanel('tickets',this)"><span class="ic">🎫</span> Tickets <span class="nav-badge" id="ticketsBadge" style="display:none;">0</span></a>
+      <div class="sb-label">Governance</div>
+      <a class="nav-item" onclick="showPanel('governance',this)"><span class="ic">🛡️</span> Governance</a>
     </div>
     <div class="sb-footer">
       <div class="user-info"><strong id="staffNome">Staff</strong><span id="staffEmail">staff@lumied.com.br</span></div>
@@ -392,6 +394,34 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <table>
             <thead><tr><th>#</th><th>Escola</th><th>Email</th><th>Portal</th><th>Tipo</th><th>Descricao</th><th>URL</th><th>Status</th><th>Data</th></tr></thead>
             <tbody id="ticketsBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PAINEL: GOVERNANCE -->
+      <div id="panelGovernance" class="panel">
+        <div class="sec-title">Governance <span style="font-size:11px;color:#888;font-weight:400;">— observabilidade de segurança, custo e rollouts</span></div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:20px;">
+          <div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:10px;">🛡️ Cobertura RLS</h4>
+            <div id="govRls">Carregando…</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:10px;">💰 Consumo IA — mês corrente</h4>
+            <div id="govIa">Carregando…</div>
+          </div>
+          <div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;">
+            <h4 style="font-size:13px;font-weight:700;margin-bottom:10px;">🚩 Feature flags</h4>
+            <div id="govFlags">Carregando…</div>
+          </div>
+        </div>
+
+        <div class="sec-title" style="font-size:14px;">Audit unificado (últimos 50)</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Quando</th><th>Ator</th><th>Recurso</th><th>Ação</th><th>Escola</th><th>IP</th></tr></thead>
+            <tbody id="govAuditBody"><tr><td colspan="6" class="empty-state">Carregando…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -576,7 +606,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -591,6 +621,73 @@ function showPanel(id, el) {
   if (id === 'staff') loadStaff();
   if (id === 'audit') loadAudit();
   if (id === 'tickets') loadTickets();
+  if (id === 'governance') loadGovernance();
+}
+
+async function loadGovernance() {
+  // Paralelo — 4 widgets
+  const [rls, ia, flags, audit] = await Promise.all([
+    api({ action: 'staff_rls_coverage' }),
+    api({ action: 'staff_ia_uso' }),
+    api({ action: 'staff_flags_list' }),
+    api({ action: 'staff_audit_eventos', limit: 50 }),
+  ]);
+
+  const rlsEl = document.getElementById('govRls');
+  if (rls?.error) { rlsEl.textContent = rls.error; }
+  else {
+    const ok = rls.cobertura_ok, total = rls.tenant_tables, lac = rls.lacunas || [];
+    const cor = lac.length === 0 ? '#2d7a3a' : lac.length < 3 ? '#d4830a' : '#C8102E';
+    rlsEl.innerHTML = `<div style="font-size:22px;font-weight:700;color:${cor};">${ok} / ${total}</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;">tabelas tenant cobertas</div>
+      ${lac.length ? `<div style="font-size:11px;color:#C8102E;">Lacunas: ${lac.map(l=>l.table_name).join(', ')}</div>` : `<div style="font-size:11px;color:#2d7a3a;">✓ cobertura total</div>`}`;
+  }
+
+  const iaEl = document.getElementById('govIa');
+  if (ia?.error) { iaEl.textContent = ia.error; }
+  else {
+    const rows = ia.escolas || [];
+    const total = rows.reduce((s,r)=>s+Number(r.custo_usd||0),0);
+    const bloq = rows.filter(r=>r.bloqueado).length;
+    iaEl.innerHTML = `<div style="font-size:22px;font-weight:700;">$${total.toFixed(2)}</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;">${rows.length} escolas — ${bloq} bloqueadas</div>
+      ${rows.slice(0,3).map(r=>`<div style="font-size:11px;display:flex;justify-content:space-between;"><span>${r.escolas?.nome||r.escola_id.slice(0,8)}</span><strong>$${Number(r.custo_usd).toFixed(2)}${r.cap_usd?` / $${Number(r.cap_usd).toFixed(0)}`:''}</strong></div>`).join('')}`;
+  }
+
+  const fEl = document.getElementById('govFlags');
+  if (flags?.error) { fEl.textContent = flags.error; }
+  else {
+    fEl.innerHTML = (flags || []).map(f =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f0ebe3;font-size:12px;">
+        <span>${f.chave}</span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" ${f.ativo?'checked':''} onchange="toggleFlag('${f.chave}', this.checked)">
+          <span style="font-size:10px;color:#888;">${f.rollout_pct}%</span>
+        </label>
+      </div>`
+    ).join('') || '<div style="font-size:12px;color:#888;">Sem flags.</div>';
+  }
+
+  const aEl = document.getElementById('govAuditBody');
+  if (audit?.error) { aEl.innerHTML = `<tr><td colspan="6">${audit.error}</td></tr>`; }
+  else {
+    aEl.innerHTML = (audit || []).map(e =>
+      `<tr>
+        <td style="font-size:11px;">${new Date(e.at).toLocaleString('pt-BR')}</td>
+        <td style="font-size:11px;">${e.ator_tipo||'-'} ${e.ator_email||''}</td>
+        <td style="font-size:11px;">${e.recurso}${e.recurso_id?` #${String(e.recurso_id).slice(0,8)}`:''}</td>
+        <td style="font-size:11px;"><strong>${e.acao}</strong></td>
+        <td style="font-size:11px;">${e.escola_id?String(e.escola_id).slice(0,8):'-'}</td>
+        <td style="font-size:11px;color:#888;">${e.ip||'-'}</td>
+      </tr>`
+    ).join('') || '<tr><td colspan="6" class="empty-state">Sem eventos ainda.</td></tr>';
+  }
+}
+
+async function toggleFlag(chave, ativo) {
+  const d = await api({ action: 'staff_flag_set', chave, ativo });
+  if (d?.error) showToast(d.error, 'error');
+  else showToast(`Flag ${chave} → ${ativo?'ON':'OFF'}`, 'success');
 }
 
 // ═══════════════════════════════════════════════════════════
