@@ -235,6 +235,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">Governance</div>
       <a class="nav-item" onclick="showPanel('governance',this)"><span class="ic">🛡️</span> Governance</a>
       <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
+      <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💳</span> Billing SaaS</a>
     </div>
     <div class="sb-footer">
       <div class="user-info"><strong id="staffNome">Staff</strong><span id="staffEmail">staff@lumied.com.br</span></div>
@@ -423,6 +424,30 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <table>
             <thead><tr><th>Quando</th><th>Ator</th><th>Recurso</th><th>Ação</th><th>Escola</th><th>IP</th></tr></thead>
             <tbody id="govAuditBody"><tr><td colspan="6" class="empty-state">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BILLING SAAS (staff) -->
+      <div id="panelBilling" class="panel">
+        <div class="sec-title">Billing SaaS — Faturas Lumied</div>
+        <p style="font-size:13px;color:#555;margin-bottom:12px;">
+          Todas as cobranças das escolas (mensalidade Lumied via Asaas). Staff pode criar assinaturas via CLI/API.
+        </p>
+        <div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;margin-bottom:16px;font-size:13px;">
+          <strong>Para criar assinatura de uma escola:</strong>
+          <ol style="margin:6px 0 0 20px;">
+            <li>Primeiro setup_customer (cria customer no Asaas): informe escola_id, name, cpfCnpj.</li>
+            <li>Depois create_subscription: escola_id, valor (mensalidade), dia_vencimento, forma_pagamento (BOLETO/CREDIT_CARD/PIX).</li>
+            <li>Webhook do Asaas atualiza automaticamente cada pagamento via <code>POST /saas-billing</code> com <code>action=webhook</code>.</li>
+          </ol>
+          <div style="margin-top:10px;">Configurar URL webhook no Asaas: <code>https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/saas-billing?action=webhook</code></div>
+        </div>
+        <button class="action-btn" onclick="loadBillingCentral()">🔄 Atualizar</button>
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <thead><tr><th>Escola</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Forma</th><th>Pago em</th></tr></thead>
+            <tbody id="billingBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -629,7 +654,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Billing SaaS' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -646,6 +671,31 @@ function showPanel(id, el) {
   if (id === 'tickets') loadTickets();
   if (id === 'governance') loadGovernance();
   if (id === 'backups') loadBackupsCentral();
+  if (id === 'billing') loadBillingCentral();
+}
+
+// ═══ BILLING SAAS (staff) ═══
+const BILLING_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/saas-billing';
+async function callBillingStaff(body) {
+  const r = await fetch(BILLING_URL, {
+    method:'POST',
+    headers: {'Content-Type':'application/json','apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY},
+    body: JSON.stringify({ ...body, _token: getToken() }),
+  });
+  return r.json();
+}
+async function loadBillingCentral() {
+  const d = await callBillingStaff({ action: 'list_faturas_all' });
+  const items = d?.faturas || [];
+  const tbody = document.getElementById('billingBody');
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma fatura ainda. Configure uma assinatura via API para começar.</td></tr>'; return; }
+  tbody.innerHTML = items.map(f => {
+    const venc = new Date(f.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR');
+    const pag = f.data_pagamento ? new Date(f.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+    const valor = (f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2, style:'currency', currency:'BRL'});
+    const stColor = ['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'].includes(f.status) ? 'ativo' : f.status === 'OVERDUE' ? 'inativo' : 'warn';
+    return `<tr><td><strong>${esc(f.escola_nome || '—')}</strong></td><td>${venc}</td><td>${valor}</td><td><span class="status-pill ${stColor}">${esc(f.status)}</span></td><td>${esc(f.forma_pagamento||'—')}</td><td>${pag}</td></tr>`;
+  }).join('');
 }
 
 // ═══ BACKUPS (staff) ═══

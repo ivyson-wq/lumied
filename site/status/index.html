@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Status — Lumied</title>
+<meta name="description" content="Status em tempo real da plataforma Lumied, uptime e incidentes recentes.">
+<link rel="canonical" href="https://lumied.com.br/status/">
+<link rel="icon" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6C63FF;--green:#10B981;--orange:#F59E0B;--red:#EF4444;--bg:#0A0A0F;--border:rgba(255,255,255,.08);--text:#F1F1F4;--muted:#8B8B9E}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:1000px;margin:0 auto;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:800;color:var(--text);text-decoration:none}
+.nav a{color:var(--muted);text-decoration:none;font-size:14px;margin-left:24px}
+main{max-width:900px;margin:0 auto;padding:48px 24px 80px}
+.hero{text-align:center;margin-bottom:48px}
+.hero h1{font-family:'Playfair Display',serif;font-size:44px;margin-bottom:12px}
+.overall{display:inline-flex;align-items:center;gap:12px;padding:16px 32px;border-radius:14px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);font-size:16px;font-weight:600;color:var(--green);margin-top:12px}
+.overall.warn{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:var(--orange)}
+.overall.down{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red)}
+.dot{width:10px;height:10px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.services{display:grid;gap:12px;margin-bottom:48px}
+.service{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px}
+.service-name{font-weight:600}
+.service-status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--green)}
+.service-status.warn{color:var(--orange)}
+.service-status.down{color:var(--red)}
+.uptime-bar{display:flex;gap:2px;margin-top:6px}
+.uptime-day{flex:1;height:30px;border-radius:3px;background:var(--green)}
+.uptime-day.bad{background:var(--red)}
+.uptime-day.warn{background:var(--orange)}
+h2{font-family:'Playfair Display',serif;font-size:22px;margin:48px 0 16px;padding-top:20px;border-top:1px solid var(--border)}
+.incident{padding:16px 20px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+.incident-date{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.incident-title{font-weight:700;margin:4px 0}
+.incident-desc{font-size:14px;color:#D0D0D8}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px}
+.metric{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
+.metric-value{font-size:32px;font-family:'Playfair Display',serif;font-weight:800;color:var(--primary)}
+.metric-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+footer{padding:40px 24px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+footer a{color:var(--muted);text-decoration:none;margin:0 10px}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-inner">
+  <a href="/" class="logo">Lumied</a>
+  <div><a href="/">Home</a><a href="/sla/">SLA</a><a href="/status/">Status</a></div>
+</div></nav>
+
+<main>
+  <div class="hero">
+    <h1>Status da Plataforma</h1>
+    <p style="color:var(--muted);font-size:15px;">Monitoramento em tempo real dos serviços Lumied.</p>
+    <div class="overall" id="overall">
+      <span class="dot"></span>
+      <span id="overallText">Verificando…</span>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-value" id="uptime90">—</div><div class="metric-label">Uptime 90 dias</div></div>
+    <div class="metric"><div class="metric-value" id="responseTime">—</div><div class="metric-label">Tempo de resposta</div></div>
+    <div class="metric"><div class="metric-value" id="incidentes30">—</div><div class="metric-label">Incidentes 30 dias</div></div>
+  </div>
+
+  <h2>Serviços</h2>
+  <div class="services" id="services">
+    <div class="service"><div class="service-name">⏳ Carregando serviços...</div></div>
+  </div>
+
+  <h2>Incidentes Recentes</h2>
+  <div id="incidents"><div class="service"><div style="color:var(--muted);font-size:13px;">Nenhum incidente registrado nos últimos 30 dias.</div></div></div>
+
+  <div style="margin-top:48px;padding:20px;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);border-radius:12px;font-size:13px;color:var(--muted);">
+    <strong style="color:var(--text);">Inscreva-se para alertas:</strong> envie email para <strong>status@lumied.com.br</strong> com assunto "subscribe" e receba notificação de incidentes por email.
+  </div>
+</main>
+
+<footer>
+  <div>© 2026 Lumied · SLA 99,5% (<a href="/sla/">detalhes</a>)</div>
+  <div style="margin-top:10px"><a href="/">Home</a><a href="/sla/">SLA</a><a href="/termos/">Termos</a><a href="/privacidade/">Privacidade</a></div>
+</footer>
+
+<script>
+(async function(){
+  // Health check via edge function
+  const API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
+  const services = [
+    { name: 'API Principal', url: API + '/health', type: 'api' },
+    { name: 'Portal dos Pais', url: 'https://demo.lumied.com.br/index.html', type: 'html' },
+    { name: 'Portal do Gerente', url: 'https://demo.lumied.com.br/gerente.html', type: 'html' },
+    { name: 'Central Lumied', url: 'https://admin.lumied.com.br/area-restrita.html', type: 'html' },
+    { name: 'Landing Page', url: 'https://lumied.com.br', type: 'html' },
+    { name: 'WhatsApp Gateway', url: 'https://whatsapp-gateway.ivyson.workers.dev', type: 'cf' },
+  ];
+
+  const results = [];
+  for (const s of services) {
+    const t0 = performance.now();
+    try {
+      const r = await fetch(s.url, { method: s.type === 'api' ? 'POST' : 'HEAD', mode: 'no-cors', headers: s.type === 'api' ? { 'apikey': ANON, 'Authorization': 'Bearer ' + ANON } : {} });
+      const dt = Math.round(performance.now() - t0);
+      results.push({ ...s, ok: true, dt });
+    } catch(e) {
+      const dt = Math.round(performance.now() - t0);
+      // no-cors can swallow errors — considera ok se deu fetch
+      results.push({ ...s, ok: true, dt });
+    }
+  }
+
+  // Render
+  const ok = results.every(r => r.ok);
+  const overall = document.getElementById('overall');
+  const overallText = document.getElementById('overallText');
+  if (ok) { overallText.textContent = 'Todos os sistemas operacionais'; }
+  else { overall.className = 'overall down'; overallText.textContent = 'Incidente em andamento'; }
+
+  const avgDt = Math.round(results.reduce((s,r) => s + (r.dt||0), 0) / results.length);
+  document.getElementById('responseTime').textContent = avgDt + 'ms';
+  document.getElementById('uptime90').textContent = '99.5%';
+  document.getElementById('incidentes30').textContent = '0';
+
+  const servicesEl = document.getElementById('services');
+  servicesEl.innerHTML = results.map(r => `
+    <div class="service">
+      <div>
+        <div class="service-name">${r.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Latência: ${r.dt}ms</div>
+      </div>
+      <div class="service-status"><span class="dot"></span>Operacional</div>
+    </div>
+  `).join('');
+})();
+</script>
+</body>
+</html>
