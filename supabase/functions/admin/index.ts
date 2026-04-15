@@ -229,6 +229,21 @@ router.on("escolas_list", authAdmin, async (ctx) => {
   return successResponse(data ?? []);
 });
 
+router.on("backups_resumo", authAdmin, async (ctx) => {
+  // Resumo consolidado: últimos 30 dias, joined com nome da escola
+  const dias = Math.min(Number((ctx.body as any).dias || 30), 180);
+  const desde = new Date(); desde.setDate(desde.getDate() - dias);
+  const { data } = await ctx.sb
+    .from("backups_log")
+    .select("id, escola_id, data_backup, status, tamanho_bytes, tabelas_inc, linhas_total, iniciado_em, concluido_em, escolas(nome)")
+    .gte("data_backup", desde.toISOString().slice(0, 10))
+    .order("data_backup", { ascending: false })
+    .order("escola_id")
+    .limit(500);
+  const backups = (data ?? []).map((b: any) => ({ ...b, escola_nome: b.escolas?.nome || null }));
+  return successResponse({ backups });
+});
+
 router.on("escolas_create", authAdmin, async (ctx) => {
   const { nome, cnpj, slug, plano_id, contato_nome, contato_email, contato_telefone, tema } = ctx.body as any;
   if (!nome) throw new AppError("VALIDATION_FAILED", "Nome obrigatório.");

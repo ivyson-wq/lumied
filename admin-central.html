@@ -234,6 +234,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" onclick="showPanel('tickets',this)"><span class="ic">🎫</span> Tickets <span class="nav-badge" id="ticketsBadge" style="display:none;">0</span></a>
       <div class="sb-label">Governance</div>
       <a class="nav-item" onclick="showPanel('governance',this)"><span class="ic">🛡️</span> Governance</a>
+      <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
     </div>
     <div class="sb-footer">
       <div class="user-info"><strong id="staffNome">Staff</strong><span id="staffEmail">staff@lumied.com.br</span></div>
@@ -426,6 +427,28 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- BACKUPS (staff) -->
+      <div id="panelBackups" class="panel">
+        <div class="sec-title">Backups diários — todas as escolas</div>
+        <div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;margin-bottom:16px;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <label style="font-size:13px;color:#555;">Escola:</label>
+            <select id="backupEscolaSelect" style="padding:6px 10px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;min-width:240px;" onchange="loadBackupsCentralList()">
+              <option value="">-- todas --</option>
+            </select>
+            <button class="action-btn" onclick="runBackupManual()" style="background:#1a6bb5;color:#fff;">▶ Rodar backup agora</button>
+            <button class="action-btn" onclick="rotateBackupsManual()" style="background:#666;color:#fff;">🗑️ Rodar rotate</button>
+            <button class="action-btn" onclick="loadBackupsCentralList()">🔄 Atualizar</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Escola</th><th>Data</th><th>Status</th><th>Tabelas</th><th>Linhas</th><th>Tamanho</th><th>Ação</th></tr></thead>
+            <tbody id="backupsCentralBody"><tr><td colspan="7" class="empty-state">Selecione uma escola ou carregue o resumo consolidado.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Modal detalhes do ticket -->
       <div id="ticketDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;overflow-y:auto;padding:24px;">
         <div style="background:#fff;border-radius:16px;max-width:700px;margin:0 auto;padding:28px;">
@@ -606,7 +629,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -622,6 +645,95 @@ function showPanel(id, el) {
   if (id === 'audit') loadAudit();
   if (id === 'tickets') loadTickets();
   if (id === 'governance') loadGovernance();
+  if (id === 'backups') loadBackupsCentral();
+}
+
+// ═══ BACKUPS (staff) ═══
+const BACKUP_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/backup-escolas';
+async function callBackupStaff(body) {
+  const r = await fetch(BACKUP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY },
+    body: JSON.stringify({ ...body, _token: getToken() }),
+  });
+  return r.json();
+}
+async function loadBackupsCentral() {
+  // Popula select de escolas
+  const sel = document.getElementById('backupEscolaSelect');
+  if (sel && sel.children.length <= 1) {
+    const d = await api({ action: 'escolas_list' });
+    const escolas = Array.isArray(d) ? d : (d?.data || []);
+    escolas.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id; opt.textContent = e.nome + (e.ativo ? '' : ' (inativa)');
+      sel.appendChild(opt);
+    });
+  }
+  loadBackupsCentralList();
+}
+async function loadBackupsCentralList() {
+  const escolaId = document.getElementById('backupEscolaSelect').value;
+  const tbody = document.getElementById('backupsCentralBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Carregando...</td></tr>';
+
+  if (!escolaId) {
+    // Consolidado: últimos 30 dias do audit backups_log
+    const d = await api({ action: 'backups_resumo' }).catch(() => ({ error: 'action inexistente' }));
+    if (d?.error) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Selecione uma escola para ver o histórico detalhado.</td></tr>';
+      return;
+    }
+    const items = d.backups || [];
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum backup registrado ainda.</td></tr>'; return; }
+    tbody.innerHTML = items.map(b => {
+      const st = b.status === 'sucesso' ? 'ativo' : b.status === 'erro' ? 'inativo' : 'warn';
+      const mb = b.tamanho_bytes ? (b.tamanho_bytes / 1024 / 1024).toFixed(2) + ' MB' : '—';
+      const dt = new Date(b.data_backup + 'T00:00:00').toLocaleDateString('pt-BR');
+      const btn = b.status === 'sucesso'
+        ? `<button class="action-btn" onclick="baixarBackupCentral('${b.escola_id}','${b.data_backup}')">⬇ Baixar</button>`
+        : '—';
+      return `<tr><td><strong>${esc(b.escola_nome || b.escola_id.slice(0,8))}</strong></td><td>${dt}</td><td><span class="status-pill ${st}">${esc(b.status)}</span></td><td>${b.tabelas_inc || '—'}</td><td>${(b.linhas_total || 0).toLocaleString('pt-BR')}</td><td>${mb}</td><td>${btn}</td></tr>`;
+    }).join('');
+    return;
+  }
+
+  // Escola específica
+  const d = await callBackupStaff({ action: 'list', escola_id: escolaId });
+  const items = d?.backups || [];
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum backup para esta escola ainda.</td></tr>'; return; }
+  const nome = document.getElementById('backupEscolaSelect').selectedOptions[0]?.textContent || '—';
+  tbody.innerHTML = items.map(b => {
+    const st = b.status === 'sucesso' ? 'ativo' : 'inativo';
+    const mb = b.tamanho_bytes ? (b.tamanho_bytes / 1024 / 1024).toFixed(2) + ' MB' : '—';
+    const dt = new Date(b.data_backup + 'T00:00:00').toLocaleDateString('pt-BR');
+    const btn = b.status === 'sucesso'
+      ? `<button class="action-btn" onclick="baixarBackupCentral('${escolaId}','${b.data_backup}')">⬇ Baixar</button>`
+      : '—';
+    return `<tr><td>${esc(nome)}</td><td><strong>${dt}</strong></td><td><span class="status-pill ${st}">${esc(b.status)}</span></td><td>${b.tabelas_inc || '—'}</td><td>${(b.linhas_total || 0).toLocaleString('pt-BR')}</td><td>${mb}</td><td>${btn}</td></tr>`;
+  }).join('');
+}
+async function baixarBackupCentral(escolaId, dataBackup) {
+  const d = await callBackupStaff({ action: 'download', escola_id: escolaId, data_backup: dataBackup });
+  if (d.error) return showToast(d.error, 'error');
+  window.open(d.url, '_blank');
+}
+async function runBackupManual() {
+  const escolaId = document.getElementById('backupEscolaSelect').value;
+  if (!escolaId) return showToast('Selecione uma escola primeiro', 'error');
+  if (!confirm('Rodar backup agora para a escola selecionada?')) return;
+  showToast('Executando... pode levar até 2 min', 'info');
+  const d = await callBackupStaff({ action: 'run_one', escola_id: escolaId });
+  if (d.error) return showToast('Erro: ' + d.error, 'error');
+  showToast(`Backup ok (${d.linhas} linhas, ${(d.size / 1024 / 1024).toFixed(2)} MB)`);
+  loadBackupsCentralList();
+}
+async function rotateBackupsManual() {
+  if (!confirm('Remover backups acima do retention (por tier)?')) return;
+  const d = await callBackupStaff({ action: 'rotate' });
+  if (d.error) return showToast('Erro: ' + d.error, 'error');
+  showToast(`${d.removidos} backup(s) removido(s)`);
+  loadBackupsCentralList();
 }
 
 async function loadGovernance() {
