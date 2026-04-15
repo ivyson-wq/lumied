@@ -134,7 +134,7 @@ export function bytesToBase64(bytes: Uint8Array): string {
 }
 
 export function pdfResponse(bytes: Uint8Array, filename: string): Response {
-  return new Response(bytes, {
+  return new Response(bytes as BlobPart as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,

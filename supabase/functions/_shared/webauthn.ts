@@ -22,7 +22,7 @@ export function generateChallenge(): string {
 
 // ── SHA-256 ───────────────────────────────────────────
 async function sha256(data: Uint8Array): Promise<Uint8Array> {
-  const hash = await crypto.subtle.digest('SHA-256', data);
+  const hash = await crypto.subtle.digest('SHA-256', data as BufferSource);
   return new Uint8Array(hash);
 }
 
@@ -173,7 +173,7 @@ export async function verifyAuthentication(
 
   const valid = await crypto.subtle.verify(
     { name: 'ECDSA', hash: 'SHA-256' },
-    cryptoKey, rawSig, signedData
+    cryptoKey, rawSig as BufferSource, signedData as BufferSource
   );
   if (!valid) throw new Error('Signature invalid');
 

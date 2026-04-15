@@ -161,17 +161,18 @@ export function auth(sessionTable: string, userTable: string, userFields: string
     const token = (ctx.body[tokenField] as string) || null;
     if (!token) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
 
-    const { data } = await ctx.sb
+    const { data: raw } = await ctx.sb
       .from(sessionTable)
       .select(`*, ${userTable}(${projection})`)
       .eq("token", token)
       .single();
+    // deno-lint-ignore no-explicit-any
+    const data = raw as any;
 
     if (!data) throw new AppError("AUTH_INVALID", "Sessão inválida.");
     if (new Date(data.expira_em) < new Date()) throw new AppError("AUTH_EXPIRED", "Sessão expirada.");
 
-    // deno-lint-ignore no-explicit-any
-    const user = (data as any)[userTable];
+    const user = data[userTable];
     ctx.user = { ...user, tipo: sessionTable.replace('_sessoes', '') };
     if (user?.escola_id && !ctx.escola_id) {
       ctx.escola_id = user.escola_id as string;
