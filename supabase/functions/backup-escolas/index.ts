@@ -143,7 +143,7 @@ async function rotateBackups(sb: SupabaseClient): Promise<{ removidos: number }>
 }
 
 serve(async (req) => {
-  CORS = getCorsHeaders(req.headers.get("origin"));
+  CORS = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { autoRefreshToken: false, persistSession: false } });
