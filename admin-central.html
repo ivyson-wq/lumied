@@ -715,8 +715,17 @@ async function loadBackupsCentralList() {
 }
 async function baixarBackupCentral(escolaId, dataBackup) {
   const d = await callBackupStaff({ action: 'download', escola_id: escolaId, data_backup: dataBackup });
-  if (d.error) return showToast(d.error, 'error');
-  window.open(d.url, '_blank');
+  if (d?.error || !d?.url) return showToast('Erro: ' + (d?.error || 'URL não retornada'), 'error');
+  // Cria anchor invisível com download atributo — evita popup blocker
+  const a = document.createElement('a');
+  a.href = d.url;
+  a.download = `backup-${escolaId.slice(0,8)}-${dataBackup}.json.gz`;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 1000);
+  showToast('Download iniciado');
 }
 async function runBackupManual() {
   const escolaId = document.getElementById('backupEscolaSelect').value;

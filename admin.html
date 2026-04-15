@@ -653,8 +653,16 @@ async function loadBackups() {
 }
 async function baixarBackup(data_backup) {
   const d = await callBackup({ action: 'download', escola_id: ESCOLA_ID, data_backup });
-  if (d.error) return showToast(d.error, 'error');
-  window.open(d.url, '_blank');
+  if (d?.error || !d?.url) return showToast('Erro: ' + (d?.error || 'URL não retornada'), 'error');
+  const a = document.createElement('a');
+  a.href = d.url;
+  a.download = `backup-${data_backup}.json.gz`;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 1000);
+  showToast('Download iniciado');
 }
 
 // ═══ LGPD ═══
