@@ -643,6 +643,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
         <button style="position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()" aria-label="Notificações">🔔<span id="notifDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
         <div class="live-badge" id="liveBadge"><div class="live-dot"></div>Atualizando…</div>
+        <div id="iaUsoChip" onclick="abrirIaUsoDetalhe()" style="display:none;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-weight:600;border:1px solid transparent;" title="Consumo de IA no mês"></div>
         <button class="btn-export" id="btnExportPdf" onclick="exportarPDF()" style="display:none;">
           📄 Exportar PDF
         </button>
@@ -3176,6 +3177,42 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     return d;
   }
 
+  // Chip de consumo de IA no topbar — mostra só se houver cap ou proximidade
+  let _iaUsoData = null;
+  async function carregarIaUsoChip() {
+    try {
+      const d = await api({ action: 'ia_uso_self' });
+      if (!d || d.error) return;
+      _iaUsoData = d;
+      const chip = document.getElementById('iaUsoChip');
+      if (!chip) return;
+      const custo = Number(d.custo_usd || 0);
+      const cap = d.cap_usd ? Number(d.cap_usd) : null;
+      const pct = cap ? (custo / cap) * 100 : 0;
+      if (!cap && custo < 0.5) { chip.style.display = 'none'; return; }
+      let bg = '#e8f4ec', fg = '#2d7a3a', border = '#b8dfc4';
+      let label = `🧠 IA $${custo.toFixed(2)}`;
+      if (cap) {
+        label += ` / $${cap.toFixed(0)} (${pct.toFixed(0)}%)`;
+        if (d.bloqueado) { bg = '#fde7ea'; fg = '#C8102E'; border = '#f4b4bd'; label = `🚫 IA bloqueada (cap atingido)`; }
+        else if (pct >= 80) { bg = '#fdf4e0'; fg = '#8a5a00'; border = '#f0d48c'; }
+      }
+      chip.style.background = bg;
+      chip.style.color = fg;
+      chip.style.borderColor = border;
+      chip.textContent = label;
+      chip.style.display = 'block';
+    } catch (_) {}
+  }
+  function abrirIaUsoDetalhe() {
+    if (!_iaUsoData) return;
+    const d = _iaUsoData;
+    const msg = d.bloqueado
+      ? `IA bloqueada — limite mensal de $${d.cap_usd} atingido. Contate o suporte Lumied para aumentar o cap.`
+      : `Consumo do mês: $${Number(d.custo_usd).toFixed(2)}${d.cap_usd ? ' de $' + d.cap_usd : ''}\n${d.requests || 0} requisições\n${(d.tokens_input || 0) + (d.tokens_output || 0)} tokens totais`;
+    alert(msg);
+  }
+
   async function apiFinExt(body) {
     const token = getToken();
     const headers = {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON};
@@ -3260,6 +3297,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('userEmail').textContent = user.email || '';
     const firstName = (user.nome || 'Gerente').split(/\s/)[0];
     document.getElementById('greetingTopbar').textContent = 'Olá, ' + firstName;
+    carregarIaUsoChip();
     // Defer loads to after all script declarations are initialized
     setTimeout(function() {
     loadAnalytics();

@@ -12,6 +12,7 @@ import { sanitizeBody } from "../_shared/validation.ts";
 import { validarSessao } from "../_shared/auth.ts";
 import { captureException } from "../_shared/sentry.ts";
 import { sanitizePgError } from "../_shared/errors.ts";
+import { logAudit } from "../_shared/audit.ts";
 
 // CORS set dynamically per request inside serve()
 let CORS: Record<string, string> = getCorsHeaders();
@@ -305,6 +306,15 @@ serve(async (req: Request) => {
 
     const { error } = await sb.from("notas_lancamentos").upsert(rows, { onConflict: "avaliacao_id,aluno_email" });
     if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
+    logAudit(sb, {
+      ator_tipo: prof ? 'professora' : 'gerente',
+      ator_id: (prof?.id ?? gerente?.id) as string | undefined,
+      ator_email: (prof?.email ?? gerente?.email) as string | undefined,
+      recurso: 'notas_lancamento',
+      recurso_id: avaliacao_id,
+      acao: 'upsert',
+      metadata: { alunos: rows.length },
+    });
     return ok({ success: true, count: rows.length });
   }
 

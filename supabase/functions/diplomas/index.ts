@@ -6,6 +6,7 @@ import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
 import { sanitizeBody } from '../_shared/validation.ts'
 import { createLogger } from '../_shared/logger.ts'
 import { hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken } from '../_shared/auth.ts'
+import { logAudit } from '../_shared/audit.ts'
 
 const log = createLogger('diplomas')
 
@@ -705,6 +706,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       const profEmail = atest?.professoras?.email
       if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado aprovado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ✅ aprovado pela secretaria.`, 'success')
+      logAudit(sb, { ator_tipo: 'secretaria', ator_email: sec.email, recurso: 'atestado', recurso_id: id, acao: 'aprovar', metadata: { observacao: body.observacao } })
       return json({ ok: true })
     }
 
@@ -721,6 +723,7 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
       const profEmail = atest?.professoras?.email
       if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado rejeitado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error')
+      logAudit(sb, { ator_tipo: 'secretaria', ator_email: sec.email, recurso: 'atestado', recurso_id: id, acao: 'rejeitar', metadata: { observacao: body.observacao } })
       return json({ ok: true })
     }
 

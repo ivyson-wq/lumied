@@ -303,6 +303,19 @@ serve(async (req: Request) => {
   }
 
   // ── Config pública da escola (carregada por todos os portais) ──
+  // ── Consumo IA da própria escola (gerente) ──
+  if (action === "ia_uso_self") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const escolaId = await getEscolaPadrao(admin);
+    if (!escolaId) return ok({ custo_usd: 0, cap_usd: null, bloqueado: false, requests: 0 });
+    const mes = new Date().toISOString().slice(0, 7) + '-01';
+    const { data } = await admin.from("escola_ia_uso")
+      .select("custo_usd, cap_usd, bloqueado, requests, tokens_input, tokens_output")
+      .eq("escola_id", escolaId).eq("mes", mes).maybeSingle();
+    return ok(data ?? { custo_usd: 0, cap_usd: null, bloqueado: false, requests: 0, tokens_input: 0, tokens_output: 0 });
+  }
+
   if (action === "config_publica") {
     const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria")
     const cfg: Record<string, unknown> = {}
@@ -1297,6 +1310,12 @@ serve(async (req: Request) => {
       ativo: true,
     }).select("id").single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+    logAudit(admin, {
+      ator_tipo: 'gerente', ator_id: gerente.id, ator_email: gerente.email,
+      recurso: 'aluno', recurso_id: data?.id,
+      acao: 'criar', ip, user_agent: req.headers.get('user-agent'),
+      depois: { nome, email, serie, responsavel_nome },
+    });
     return ok({ success: true, id: data?.id });
   }
 
