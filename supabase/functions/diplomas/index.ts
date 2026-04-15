@@ -7,6 +7,7 @@ import { sanitizeBody } from '../_shared/validation.ts'
 import { createLogger } from '../_shared/logger.ts'
 import { hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken } from '../_shared/auth.ts'
 import { logAudit } from '../_shared/audit.ts'
+import { generatePdf, pdfResponse } from '../_shared/pdf.ts'
 
 const log = createLogger('diplomas')
 
@@ -1864,6 +1865,8 @@ Deno.serve(async (req) => {
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
+    'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_entregues',
+    'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
   ].includes(action)
 
   if (isAlmGerenteAction) {
@@ -1903,6 +1906,257 @@ Deno.serve(async (req) => {
         .select('*, professoras(nome, email), series(nome)')
         .eq('status', 'pendente').order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
+    }
+
+    // ── PDFs do Almoxarifado ──
+    if (action === 'alm_pdf_pendentes') {
+      const { data: reqs } = await sb.from('alm_requisicoes')
+        .select('*, professoras(nome), series(nome)')
+        .eq('status', 'pendente').order('criado_em', { ascending: true })
+      const rows: string[][] = []
+      let totalGeral = 0
+      for (const r of (reqs ?? []) as any[]) {
+        for (const it of (r.itens || [])) {
+          const qty = Number(it.qty_solicitado || 0)
+          const pu = Number(it.preco_unit || 0)
+          const tot = qty * pu
+          totalGeral += tot
+          rows.push([
+            r.series?.nome || '—',
+            r.professoras?.nome || '—',
+            it.nome || '—',
+            `${qty} ${it.unidade || ''}`,
+            `R$ ${pu.toFixed(2)}`,
+            `R$ ${tot.toFixed(2)}`,
+          ])
+        }
+      }
+      const bytes = await generatePdf({
+        title: 'Requisições Pendentes de Aprovação',
+        subtitle: `${(reqs ?? []).length} requisição(ões)  ·  ${rows.length} item(ns)  ·  Total estimado: R$ ${totalGeral.toFixed(2)}`,
+        tables: [{
+          columns: [
+            { label: 'Turma',   width: 80 },
+            { label: 'Prof.',   width: 90 },
+            { label: 'Item',    width: 160 },
+            { label: 'Qtd',     width: 60, align: 'right' },
+            { label: 'P. Unit', width: 55, align: 'right' },
+            { label: 'Total',   width: 70, align: 'right' },
+          ],
+          rows: rows.length ? rows : [['(nenhum item pendente)', '', '', '', '', '']],
+          footer: ['', '', '', '', 'TOTAL', `R$ ${totalGeral.toFixed(2)}`],
+        }],
+      })
+      return pdfResponse(bytes, `pendentes-${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    if (action === 'alm_pdf_aprovados') {
+      // "Ordem de compra" — agrupada por fornecedor/plataforma
+      const { data: compras } = await sb.from('alm_compras')
+        .select('*, alm_requisicoes!inner(professora_id, turma_id, series(nome), professoras(nome))')
+        .eq('status', 'pendente')
+        .order('plataforma')
+      const grupos: Record<string, any[]> = {}
+      for (const c of (compras ?? []) as any[]) {
+        const k = c.plataforma || 'Sem fornecedor'
+        ;(grupos[k] ||= []).push(c)
+      }
+      const tables = [] as any[]
+      let totalGeral = 0
+      for (const [plat, items] of Object.entries(grupos)) {
+        let sub = 0
+        const rows = items.map((c: any) => {
+          const turma = c.alm_requisicoes?.series?.nome || '—'
+          const prof = c.alm_requisicoes?.professoras?.nome || '—'
+          const qty = Number(c.qty || 0)
+          const pu = Number(c.preco_unit || 0)
+          const tot = Number(c.preco_total || qty * pu)
+          sub += tot
+          return [
+            c.produto_nome || c.insumo_nome,
+            `${qty}`,
+            `R$ ${pu.toFixed(2)}`,
+            `R$ ${tot.toFixed(2)}`,
+            `${turma} / ${prof}`,
+            c.url_produto || '',
+          ]
+        })
+        totalGeral += sub
+        tables.push({
+          heading: `${plat}  —  R$ ${sub.toFixed(2)}`,
+          columns: [
+            { label: 'Produto', width: 180 },
+            { label: 'Qtd',     width: 40, align: 'right' },
+            { label: 'P. Unit', width: 60, align: 'right' },
+            { label: 'Subtotal',width: 65, align: 'right' },
+            { label: 'Turma/Prof.', width: 110 },
+            { label: 'Link',    width: 60 },
+          ],
+          rows,
+          footer: ['', '', '', `R$ ${sub.toFixed(2)}`, '', ''],
+        })
+      }
+      if (!tables.length) {
+        tables.push({
+          columns: [{ label: 'Info', width: 515 }],
+          rows: [['Nenhuma compra pendente.']],
+        })
+      }
+      const bytes = await generatePdf({
+        title: 'Ordem de Compra — Itens Aprovados',
+        subtitle: `Total geral: R$ ${totalGeral.toFixed(2)}  ·  Agrupado por fornecedor`,
+        tables,
+      })
+      return pdfResponse(bytes, `ordem-compra-${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    if (action === 'alm_pdf_entregues') {
+      const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const ini = mes + '-01T00:00:00'
+      const fim = mes + '-31T23:59:59'
+      const { data: entregas } = await sb.from('alm_entregas')
+        .select('*, alm_requisicoes(professoras(nome), series(nome)), alm_insumos(nome, unidade)')
+        .gte('entregue_em', ini).lte('entregue_em', fim)
+        .order('entregue_em', { ascending: true })
+      // Agrupa por turma
+      const porTurma: Record<string, any[]> = {}
+      for (const e of (entregas ?? []) as any[]) {
+        const t = e.alm_requisicoes?.series?.nome || '—'
+        ;(porTurma[t] ||= []).push(e)
+      }
+      const tables = Object.entries(porTurma).map(([turma, items]) => ({
+        heading: `Turma: ${turma}  —  ${items.length} entrega(s)`,
+        columns: [
+          { label: 'Data',    width: 110 },
+          { label: 'Item',    width: 200 },
+          { label: 'Qtd',     width: 60, align: 'right' as const },
+          { label: 'Professora', width: 110 },
+          { label: 'Por',     width: 35 },
+        ],
+        rows: items.map((e: any) => [
+          new Date(e.entregue_em).toLocaleString('pt-BR'),
+          e.alm_insumos?.nome || '—',
+          `${Number(e.qty_entregue || 0)} ${e.alm_insumos?.unidade || ''}`,
+          e.alm_requisicoes?.professoras?.nome || '—',
+          e.entregue_por || '—',
+        ]),
+      }))
+      if (!tables.length) tables.push({ columns: [{ label: 'Info', width: 515 }], rows: [['Nenhuma entrega neste mês.']] })
+      const bytes = await generatePdf({
+        title: `Recibo de Entregas — ${mes}`,
+        subtitle: `Total: ${(entregas ?? []).length} entrega(s) realizadas em ${mes}.  Arquivar para comprovação fiscal/pedagógica.`,
+        tables,
+      })
+      return pdfResponse(bytes, `entregas-${mes}.pdf`)
+    }
+
+    if (action === 'alm_pdf_guia_recebimento') {
+      // Itens aprovados e AINDA não entregues — com descrição completa p/ identificar quando chegar pelos correios
+      const { data: reqs } = await sb.from('alm_requisicoes')
+        .select('*, professoras(nome), series(nome)')
+        .eq('status', 'aprovado').order('aprovado_em', { ascending: true })
+      // Quantidade já entregue por (requisicao, insumo)
+      const { data: entregasTodas } = await sb.from('alm_entregas')
+        .select('requisicao_id, insumo_id, qty_entregue')
+      const entregueMap: Record<string, number> = {}
+      for (const e of (entregasTodas ?? []) as any[]) {
+        const k = `${e.requisicao_id}|${e.insumo_id || ''}`
+        entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
+      }
+      // Catálogo p/ descrição/categoria
+      const insumoIds = Array.from(new Set(
+        (reqs ?? []).flatMap((r: any) => (r.itens || []).map((it: any) => it.insumo_id).filter(Boolean))
+      ))
+      const catMap: Record<string, any> = {}
+      if (insumoIds.length) {
+        const { data: ins } = await sb.from('alm_insumos').select('id, descricao, categoria, unidade').in('id', insumoIds as string[])
+        for (const i of ins ?? []) catMap[i.id] = i
+      }
+
+      const sections: any[] = []
+      let count = 0
+      for (const r of (reqs ?? []) as any[]) {
+        for (const it of (r.itens || [])) {
+          const aprov = Number(it.qty_aprovado || it.qty_solicitado || 0)
+          const jaEntregue = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
+          const aReceber = aprov - jaEntregue
+          if (aReceber <= 0) continue
+          count++
+          const cat = it.insumo_id ? catMap[it.insumo_id] : null
+          sections.push({
+            heading: `▢  ${it.nome}  —  ${aReceber} ${it.unidade || cat?.unidade || 'un'}`,
+            lines: [
+              `Destino: Turma ${r.series?.nome || '—'}  ·  Professora: ${r.professoras?.nome || '—'}`,
+              `Descrição: ${cat?.descricao || it.descricao || '(sem descrição cadastrada)'}`,
+              `Categoria: ${cat?.categoria || '—'}  ·  Requisição #${String(r.id).slice(0,8)}  ·  Aprovado em ${new Date(r.aprovado_em || r.criado_em).toLocaleDateString('pt-BR')}`,
+              `Preço estimado: R$ ${Number(it.preco_unit || 0).toFixed(2)} / ${it.unidade || 'un'}`,
+              `Já recebido: ${jaEntregue}  ·  A receber: ${aReceber}`,
+              '─────────────────────────────────────────────',
+            ],
+          })
+        }
+      }
+      if (!sections.length) sections.push({ heading: 'Tudo em dia', lines: ['Nenhum item aprovado aguardando chegada.'] })
+      const bytes = await generatePdf({
+        title: 'Guia de Recebimento — Itens aguardando chegada',
+        subtitle: `${count} item(ns) aguardando chegada dos fornecedores.\n` +
+          'Use este guia ao abrir as caixas dos correios: localize o item pela descrição, marque o ▢ e veja para qual turma/professora ele vai.',
+        sections,
+      })
+      return pdfResponse(bytes, `guia-recebimento-${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    if (action === 'alm_pdf_romaneio_turma') {
+      // Romaneio para entrega às professoras: itens aprovados prontos para entrega agrupados por turma
+      const { data: reqs } = await sb.from('alm_requisicoes')
+        .select('*, professoras(nome, email), series(nome)')
+        .eq('status', 'aprovado').order('criado_em')
+      const { data: entregasTodas } = await sb.from('alm_entregas').select('requisicao_id, insumo_id, qty_entregue')
+      const entregueMap: Record<string, number> = {}
+      for (const e of (entregasTodas ?? []) as any[]) {
+        const k = `${e.requisicao_id}|${e.insumo_id || ''}`
+        entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
+      }
+      const porTurma: Record<string, { profs: Set<string>; items: any[] }> = {}
+      for (const r of (reqs ?? []) as any[]) {
+        const t = r.series?.nome || '—'
+        const p = r.professoras?.nome || '—'
+        const bucket = (porTurma[t] ||= { profs: new Set(), items: [] })
+        bucket.profs.add(p)
+        for (const it of (r.itens || [])) {
+          const aprov = Number(it.qty_aprovado || it.qty_solicitado || 0)
+          const ja = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
+          const pend = aprov - ja
+          if (pend > 0) bucket.items.push({ ...it, pend, prof: p, req: r.id })
+        }
+      }
+      const tables = Object.entries(porTurma)
+        .filter(([, b]) => b.items.length)
+        .map(([turma, b]) => ({
+          heading: `TURMA ${turma}  —  Professoras: ${[...b.profs].join(', ')}`,
+          columns: [
+            { label: '▢', width: 20, align: 'center' as const },
+            { label: 'Item', width: 220 },
+            { label: 'Qtd a entregar', width: 85, align: 'right' as const },
+            { label: 'Professora', width: 130 },
+            { label: 'Req', width: 60 },
+          ],
+          rows: b.items.map((it: any) => [
+            '',
+            it.nome,
+            `${it.pend} ${it.unidade || 'un'}`,
+            it.prof,
+            `#${String(it.req).slice(0, 8)}`,
+          ]),
+          footer: ['', `Assinatura: ________________________________`, '', '', `Data: ___/___/____`],
+        }))
+      if (!tables.length) tables.push({ columns: [{ label: 'Info', width: 515 }], rows: [['Nada a entregar no momento.']] })
+      const bytes = await generatePdf({
+        title: 'Romaneio de Entrega por Turma',
+        subtitle: 'Marque os itens entregues e peça a assinatura da professora ao final de cada turma.',
+        tables,
+      })
+      return pdfResponse(bytes, `romaneio-${new Date().toISOString().slice(0,10)}.pdf`)
     }
 
     if (action === 'alm_todas_reqs') {

@@ -1354,8 +1354,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <div id="panelAlmPend" class="panel">
-          <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-            <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-bottom:12px;">📝 Criar Requisição</button>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <button onclick="almBaixarPdf('alm_pdf_pendentes')" class="btn-create" style="padding:7px 16px;background:#0b7a4b;">📄 PDF Pendentes</button>
+            <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;">📝 Criar Requisição</button>
           </div>
           <div id="almPendLoading" class="empty-state">⏳ Carregando…</div>
           <div id="almPendEmpty" class="empty-state" style="display:none;">✅ Nenhuma requisição pendente.</div>
@@ -1553,6 +1554,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             </select>
             <button onclick="almLoadCompras()" class="btn-create" style="padding:7px 16px;">Atualizar</button>
             <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado">✅ Marcar selecionados como comprado</button>
+            <button onclick="almBaixarPdf('alm_pdf_aprovados')" class="btn-create" style="padding:7px 16px;background:#0b7a4b;">📄 Ordem de Compra</button>
+            <button onclick="almBaixarPdf('alm_pdf_guia_recebimento')" class="btn-create" style="padding:7px 16px;background:#b5591a;" title="Leve este PDF na mão ao abrir caixas dos correios">📦 Guia Recebimento</button>
+            <button onclick="almBaixarPdf('alm_pdf_romaneio_turma')" class="btn-create" style="padding:7px 16px;background:#6b46c1;">🚚 Romaneio Turmas</button>
+            <button onclick="almBaixarPdf('alm_pdf_entregues','mes='+(document.getElementById('almTodasMes')?.value||new Date().toISOString().slice(0,7)))" class="btn-create" style="padding:7px 16px;background:#334155;">📄 Recibo Entregas</button>
             <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
           </div>
           <div id="almComprasLoading" class="empty-state">⏳ Carregando…</div>
@@ -11420,6 +11425,40 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const token = getToken();
     const r = await fetch(DIPLOMAS_FN, { method:'POST', headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON}, body: JSON.stringify({...body, _token: token}) });
     return r.json();
+  }
+
+  async function almBaixarPdf(action, extraQS) {
+    const token = getToken();
+    const extras = {};
+    if (extraQS) {
+      String(extraQS).split('&').forEach(function(p) {
+        const [k, v] = p.split('=');
+        if (k) extras[k] = decodeURIComponent(v || '');
+      });
+    }
+    try {
+      const r = await fetch(DIPLOMAS_FN, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON },
+        body: JSON.stringify({ action, _token: token, ...extras }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(()=>({error:'Falha'}));
+        alert('Erro: ' + (j.error || r.status));
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cd = r.headers.get('Content-Disposition') || '';
+      const m = /filename="([^"]+)"/.exec(cd);
+      a.download = m ? m[1] : (action + '.pdf');
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    } catch (e) {
+      alert('Erro ao gerar PDF: ' + e.message);
+    }
   }
 
   async function loadPesquisasPanel() {
