@@ -187,6 +187,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">Governança</div>
       <a class="nav-item" onclick="showPanel('tickets',this)" id="navTickets"><span class="ic">🎫</span> Tickets<span class="nav-badge" id="badgeTickets" style="display:none;"></span></a>
       <a class="nav-item" onclick="showPanel('lgpd',this)"><span class="ic">🔒</span> LGPD</a>
+      <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
       <a class="nav-item" onclick="showPanel('admins',this)"><span class="ic">👤</span> Admins</a>
       <div class="sb-label">Escola</div>
       <a class="nav-item" href="/gerente.html#logo" target="_blank" rel="noopener"><span class="ic">🖼️</span> Logotipo</a>
@@ -263,6 +264,20 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div class="table-wrap"><table>
           <thead><tr><th>Tipo</th><th>Solicitante</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
           <tbody id="lgpdBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <!-- BACKUPS -->
+      <div id="panelBackups" class="panel">
+        <div class="sec-title">Backups Diários</div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+          Um backup completo da sua escola é gerado automaticamente todo dia às 03:00 BRT.
+          Retenção conforme plano: <strong>Starter/Start</strong> 14 dias, <strong>Evolução</strong> 30 dias, <strong>Prestige</strong> 90 dias.
+          Você pode baixar o arquivo (formato <code>.json.gz</code>) a qualquer momento — inclui todos os cadastros, financeiro, acadêmico, almoxarifado e comunicações.
+        </p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Data</th><th>Status</th><th>Tabelas</th><th>Linhas</th><th>Tamanho</th><th>Ação</th></tr></thead>
+          <tbody id="backupsBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
         </table></div>
       </div>
 
@@ -382,7 +397,7 @@ function showApp(nome, email) {
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin(); });
 
 // ═══ NAV ═══
-const titles = { dashboard:'Dashboard', plano:'Meu Plano', adicionais:'Adicionais', modulos:'Modulos', tickets:'Tickets', lgpd:'LGPD', config:'Configuracoes', api:'API & Integracoes', admins:'Administradores' };
+const titles = { dashboard:'Dashboard', plano:'Meu Plano', adicionais:'Adicionais', modulos:'Modulos', tickets:'Tickets', lgpd:'LGPD', backups:'Backups', config:'Configuracoes', api:'API & Integracoes', admins:'Administradores' };
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel' + id.charAt(0).toUpperCase() + id.slice(1)).classList.add('active');
@@ -392,7 +407,7 @@ function showPanel(id, el) {
   // Close sidebar on mobile after navigation
   document.querySelector('.sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('show');
-  const loaders = { dashboard: loadDashboard, plano: loadPlano, adicionais: loadAdicionais, modulos: loadModulos, tickets: loadTickets, lgpd: loadLgpd, config: loadConfig, api: loadApi, admins: loadAdmins };
+  const loaders = { dashboard: loadDashboard, plano: loadPlano, adicionais: loadAdicionais, modulos: loadModulos, tickets: loadTickets, lgpd: loadLgpd, backups: loadBackups, config: loadConfig, api: loadApi, admins: loadAdmins };
   if (loaders[id]) loaders[id]();
 }
 
@@ -609,6 +624,37 @@ async function fecharTicket() {
   const d = await api({ action: 'ticket_close', id: _currentTicketId });
   if (d.error) return showToast(d.error, 'error');
   showToast('Ticket fechado'); fecharModal('modalTicket'); loadTickets();
+}
+
+// ═══ BACKUPS ═══
+const BACKUP_API = SUPABASE_URL + '/functions/v1/backup-escolas';
+async function callBackup(body) {
+  const r = await fetch(BACKUP_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+    body: JSON.stringify({ ...body, _token: getToken() }),
+  });
+  return r.json();
+}
+async function loadBackups() {
+  const d = await callBackup({ action: 'list' });
+  const items = d?.backups || [];
+  const tbody = document.getElementById('backupsBody');
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum backup disponível ainda. O próximo rodará automaticamente às 03:00.</td></tr>'; return; }
+  tbody.innerHTML = items.map(b => {
+    const st = b.status === 'sucesso' ? 'ativo' : 'inativo';
+    const mb = b.tamanho_bytes ? (b.tamanho_bytes / 1024 / 1024).toFixed(2) + ' MB' : '—';
+    const dt = new Date(b.data_backup + 'T00:00:00').toLocaleDateString('pt-BR');
+    const btn = b.status === 'sucesso'
+      ? `<button class="action-btn" onclick="baixarBackup('${b.data_backup}')">⬇ Baixar</button>`
+      : '—';
+    return `<tr><td><strong>${dt}</strong></td><td><span class="status-pill ${st}">${esc(b.status)}</span></td><td>${b.tabelas_inc || '—'}</td><td>${(b.linhas_total || 0).toLocaleString('pt-BR')}</td><td>${mb}</td><td>${btn}</td></tr>`;
+  }).join('');
+}
+async function baixarBackup(data_backup) {
+  const d = await callBackup({ action: 'download', escola_id: ESCOLA_ID, data_backup });
+  if (d.error) return showToast(d.error, 'error');
+  window.open(d.url, '_blank');
 }
 
 // ═══ LGPD ═══
