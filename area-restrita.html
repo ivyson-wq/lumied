@@ -88,39 +88,33 @@ function renderPortais(modulos) {
   }).join('');
 }
 
-// Render imediato (sem gating) — atualiza quando módulos chegarem
+// Render imediato (sem gating) — atualiza quando bootstrap chegar
 document.getElementById('brandName').textContent = 'Escola';
 renderPortais(null);
 
-const post = (body) => fetch(API, { method: 'POST', headers: H, body: JSON.stringify(body) }).then(r => r.json());
-
-// Config da escola (não bloqueia portais)
-post({ action: 'config_publica' }).then(cfg => {
-  const nome = cfg.escola_nome || 'Escola';
-  const icone = cfg.escola_icone || '🍁';
-  document.getElementById('pageTitle').textContent = nome + ' — Área Restrita';
-  document.getElementById('brandName').textContent = nome;
-  document.getElementById('brandLeaf').textContent = icone;
-  if (cfg.cor_primaria) document.documentElement.style.setProperty('--red', cfg.cor_primaria);
-}).catch(() => {});
-
-// Módulos habilitados — re-renderiza ao chegar
-post({ action: 'modulos_habilitados' }).then(d => {
-  if (d && Array.isArray(d.modulos)) renderPortais(d.modulos);
-}).catch(() => {});
-
-// Saudação — todos os tokens em paralelo
 const tokens = [
   localStorage.getItem('mb_token'),
   localStorage.getItem('sec_token'),
   localStorage.getItem('prof_token'),
 ].filter(Boolean);
-Promise.all(tokens.map(token =>
-  post({ action: 'hub_whoami', _token: token }).catch(() => null)
-)).then(results => {
-  const d = results.find(x => x && x.logged);
-  if (d) document.getElementById('userGreeting').textContent = `Olá, ${d.nome || d.email}`;
-});
+
+// 1 roundtrip: config + módulos + whoami
+fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'hub_bootstrap', _tokens: tokens }) })
+  .then(r => r.json())
+  .then(d => {
+    const cfg = d.config || {};
+    const nome = cfg.escola_nome || 'Escola';
+    const icone = cfg.escola_icone || '🍁';
+    document.getElementById('pageTitle').textContent = nome + ' — Área Restrita';
+    document.getElementById('brandName').textContent = nome;
+    document.getElementById('brandLeaf').textContent = icone;
+    if (cfg.cor_primaria) document.documentElement.style.setProperty('--red', cfg.cor_primaria);
+    if (Array.isArray(d.modulos)) renderPortais(d.modulos);
+    if (d.whoami?.logged) {
+      document.getElementById('userGreeting').textContent = `Olá, ${d.whoami.nome || d.whoami.email}`;
+    }
+  })
+  .catch(() => {});
 </script>
 <script src="/lumied-ux.js" defer></script>
 </body>

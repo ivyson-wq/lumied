@@ -259,6 +259,57 @@ serve(async (req: Request) => {
     return ok({ sent: true });
   }
 
+  // ── Bootstrap do hub (área-restrita): config + módulos + whoami em 1 request ──
+  if (action === "hub_bootstrap") {
+    const tokens: string[] = Array.isArray(body._tokens) ? (body._tokens as string[]).filter(Boolean) : [];
+    const [cfgRes, escolaIdRes, ...sessionProbes] = await Promise.all([
+      admin.from("escola_config").select("chave, valor, categoria"),
+      getEscolaPadrao(admin).catch(() => null),
+      ...tokens.map(t => Promise.all([
+        admin.from("gerente_sessoes").select("gerente_id, expira_em, gerentes(email)").eq("token", t).maybeSingle(),
+        admin.from("secretaria_sessoes").select("secretaria_id, expira_em, secretarias(email)").eq("token", t).maybeSingle(),
+        admin.from("professora_sessoes").select("professora_id, expira_em, professoras(email)").eq("token", t).maybeSingle(),
+        admin.from("sessoes").select("usuario_id, expira_em").eq("token", t).maybeSingle(),
+      ])),
+    ]);
+
+    const cfg: Record<string, unknown> = {};
+    for (const r of (cfgRes as any).data ?? []) cfg[r.chave] = r.valor;
+
+    let modulos: string[] = [];
+    let tema = 'corporativo';
+    const escolaId = escolaIdRes as string | null;
+    if (escolaId) {
+      const [mods, escRes] = await Promise.all([
+        getModulosHabilitados(admin, escolaId).catch(() => new Set<string>()),
+        admin.from("escolas").select("tema").eq("id", escolaId).single(),
+      ]);
+      modulos = [...mods];
+      tema = (escRes.data as any)?.tema || 'corporativo';
+    }
+
+    let whoami: any = { logged: false };
+    const emailsToResolve: string[] = [];
+    const uidsToResolve: string[] = [];
+    for (const [gs, ss, ps, us] of sessionProbes as any[]) {
+      const now = new Date();
+      if (gs?.data && new Date(gs.data.expira_em) >= now && gs.data.gerentes?.email) { emailsToResolve.push(gs.data.gerentes.email); break; }
+      if (ss?.data && new Date(ss.data.expira_em) >= now && ss.data.secretarias?.email) { emailsToResolve.push(ss.data.secretarias.email); break; }
+      if (ps?.data && new Date(ps.data.expira_em) >= now && ps.data.professoras?.email) { emailsToResolve.push(ps.data.professoras.email); break; }
+      if (us?.data && new Date(us.data.expira_em) >= now) { uidsToResolve.push(us.data.usuario_id); break; }
+    }
+    if (emailsToResolve.length) {
+      const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("email", emailsToResolve[0]).maybeSingle();
+      if (u) whoami = { logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] };
+      else whoami = { logged: true, email: emailsToResolve[0] };
+    } else if (uidsToResolve.length) {
+      const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("id", uidsToResolve[0]).maybeSingle();
+      if (u) whoami = { logged: true, nome: u.nome, email: u.email, papeis: u.papeis?.length ? u.papeis : [u.papel] };
+    }
+
+    return ok({ config: cfg, modulos, tema, whoami });
+  }
+
   // ── Config pública da escola (carregada por todos os portais) ──
   if (action === "config_publica") {
     const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria")
