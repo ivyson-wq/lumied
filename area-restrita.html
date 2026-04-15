@@ -88,49 +88,39 @@ function renderPortais(modulos) {
   }).join('');
 }
 
-// Carrega módulos da escola e sessão do usuário
-(async function() {
-  // Config da escola
-  try {
-    const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'config_publica' }) });
-    const cfg = await res.json();
-    const nome = cfg.escola_nome || 'Escola';
-    const icone = cfg.escola_icone || '🍁';
-    document.getElementById('pageTitle').textContent = nome + ' — Área Restrita';
-    document.getElementById('brandName').textContent = nome;
-    document.getElementById('brandLeaf').textContent = icone;
-    if (cfg.cor_primaria) document.documentElement.style.setProperty('--red', cfg.cor_primaria);
-  } catch(_) {
-    document.getElementById('brandName').textContent = 'Escola';
-  }
+// Render imediato (sem gating) — atualiza quando módulos chegarem
+document.getElementById('brandName').textContent = 'Escola';
+renderPortais(null);
 
-  // Módulos habilitados da escola (gating por escola, não por role)
-  let modulos = null;
-  try {
-    const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'modulos_habilitados' }) });
-    const d = await res.json();
-    if (d && Array.isArray(d.modulos)) modulos = d.modulos;
-  } catch(_) {}
+const post = (body) => fetch(API, { method: 'POST', headers: H, body: JSON.stringify(body) }).then(r => r.json());
 
-  // Detecta sessão ativa para saudação
-  const tokens = [
-    localStorage.getItem('mb_token'),
-    localStorage.getItem('sec_token'),
-    localStorage.getItem('prof_token'),
-  ].filter(Boolean);
-  for (const token of tokens) {
-    try {
-      const res = await fetch(API, { method: 'POST', headers: H, body: JSON.stringify({ action: 'hub_whoami', _token: token }) });
-      const d = await res.json();
-      if (d.logged) {
-        document.getElementById('userGreeting').textContent = `Olá, ${d.nome || d.email}`;
-        break;
-      }
-    } catch(_) {}
-  }
+// Config da escola (não bloqueia portais)
+post({ action: 'config_publica' }).then(cfg => {
+  const nome = cfg.escola_nome || 'Escola';
+  const icone = cfg.escola_icone || '🍁';
+  document.getElementById('pageTitle').textContent = nome + ' — Área Restrita';
+  document.getElementById('brandName').textContent = nome;
+  document.getElementById('brandLeaf').textContent = icone;
+  if (cfg.cor_primaria) document.documentElement.style.setProperty('--red', cfg.cor_primaria);
+}).catch(() => {});
 
-  renderPortais(modulos);
-})();
+// Módulos habilitados — re-renderiza ao chegar
+post({ action: 'modulos_habilitados' }).then(d => {
+  if (d && Array.isArray(d.modulos)) renderPortais(d.modulos);
+}).catch(() => {});
+
+// Saudação — todos os tokens em paralelo
+const tokens = [
+  localStorage.getItem('mb_token'),
+  localStorage.getItem('sec_token'),
+  localStorage.getItem('prof_token'),
+].filter(Boolean);
+Promise.all(tokens.map(token =>
+  post({ action: 'hub_whoami', _token: token }).catch(() => null)
+)).then(results => {
+  const d = results.find(x => x && x.logged);
+  if (d) document.getElementById('userGreeting').textContent = `Olá, ${d.nome || d.email}`;
+});
 </script>
 <script src="/lumied-ux.js" defer></script>
 </body>
