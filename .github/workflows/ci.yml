@@ -31,7 +31,7 @@ jobs:
           set -e
           for f in supabase/functions/_shared/*.ts; do
             echo "Checking $f..."
-            deno check "$f"
+            deno check --config supabase/functions/deno.json "$f"
           done
 
   # ═══ 2. UNIT TESTS ═══

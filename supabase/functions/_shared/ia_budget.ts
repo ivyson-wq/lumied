@@ -57,7 +57,7 @@ export function registrarIAUso(
     p_input: tokensIn,
     p_output: tokensOut,
     p_custo: custo,
-  }).then(({ error }) => {
+  }).then(({ error }: { error: { message: string } | null }) => {
     if (error) console.error('[ia_budget] falha ao registrar:', error.message);
   });
 }
