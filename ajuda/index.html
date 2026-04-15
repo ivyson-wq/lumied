@@ -937,9 +937,10 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>Não consigo acessar. O que faço?</summary><p>Verifique se está acessando /area-restrita (e não a URL do portal dos pais). Use o Magic Link se esqueceu a senha. Caso persista, entre em contato com o suporte Lumied.</p></details>
-    <details><summary>Posso ter mais de um gerente?</summary><p>Sim. Na seção Configurações → Usuários, você pode adicionar múltiplos gerentes com diferentes níveis de permissão.</p></details>
-    <details><summary>O painel funciona no celular?</summary><p>Sim. A interface é responsiva, mas recomendamos desktop para tarefas administrativas complexas como relatórios e configurações.</p></details>
+    <details><summary>Não consigo acessar. O que faço?</summary><p>Verifique se está acessando /area-restrita (e não a URL do portal dos pais). Use Magic Link se esqueceu a senha. Biometria (Face ID/impressão) está disponível após o primeiro login. Persistindo, abra um ticket pelo widget "?" ou em suporte@lumied.com.br.</p></details>
+    <details><summary>Posso ter mais de um gerente ou diretor?</summary><p>Sim. Um usuário pode ter múltiplos papéis simultâneos (gerente, diretor, financeiro, secretaria, comercial, manutenção, compliance, RH). Configure em Equipe → Gestão ou Equipe → Permissões (RBAC).</p></details>
+    <details><summary>O painel funciona no celular?</summary><p>Sim. Interface responsiva, PWA instalável. Recomendamos desktop para tarefas administrativas complexas (relatórios, configurações, importações XLSX).</p></details>
+    <details><summary>Primeiros passos após o primeiro login?</summary><p>Veja <a href="#gerente-onboarding">Primeiros Passos</a> — o checklist in-app guia as 7 etapas essenciais.</p></details>
   </div>
 </article>
 
@@ -1170,8 +1171,10 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>Uma professora pode ter acesso a mais de uma turma?</summary><p>Sim. Ao editar o cadastro, você pode atribuir múltiplas turmas. Isso é útil para professoras de atividades especiais.</p></details>
-    <details><summary>Como revogar o acesso de uma professora?</summary><p>Acesse o perfil da professora e clique em "Desativar Acesso". O login será bloqueado imediatamente, mas os dados históricos serão preservados.</p></details>
+    <details><summary>Uma professora pode ter acesso a mais de uma turma?</summary><p>Sim. Ao editar o cadastro, você pode atribuir múltiplas turmas. Também existe o papel "Professora Assistente" (tipo especial de professora com permissões reduzidas — só agenda e chamada).</p></details>
+    <details><summary>Como revogar o acesso de uma professora?</summary><p>Acesse o perfil da professora e clique em "Desativar Acesso". O login é bloqueado imediatamente; dados históricos são preservados (auditoria).</p></details>
+    <details><summary>Posso restringir o que cada professora vê?</summary><p>Sim via RBAC. Veja <a href="#gerente-permissoes">Permissões</a> — 7 papéis × 25 módulos com defaults + overrides por usuária.</p></details>
+    <details><summary>Importar planilha de professoras?</summary><p>Sim. Equipe → Cadastrar em massa → XLSX. Também funciona pra importar staff (secretaria, financeiro, etc.).</p></details>
   </div>
 </article>
 
@@ -1634,16 +1637,24 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
         <p>Após enviar, acompanhe a taxa de leitura em tempo real. Use o ícone 📌 para fixar comunicados importantes na tela inicial dos pais.</p>
       </div>
     </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <p><strong>WhatsApp oficial (Meta Business API):</strong> envios usam número dedicado da escola e templates aprovados pela Meta. Famílias podem responder; as respostas entram no <em>worker</em> de atendimento departamental. Consumo contabilizado contra a cota do plano (Evolução: 500/mês, Prestige: 2.000/mês).</p>
+      </div>
+    </div>
   </div>
 
   <div class="tip-box">
-    <strong>💡 Dica:</strong> Comunicados fixados (📌) ficam no topo da tela inicial dos pais até que você os desafixe. Use com moderação para não saturar.
+    <strong>💡 Dica:</strong> Use a Lumi (IA) para <em>redigir comunicados</em>. Peça "redigir comunicado sobre reunião de pais em 10 de abril, tom acolhedor, destacar presença obrigatória" e ela gera o texto pronto para revisar.
   </div>
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>Os pais podem responder aos comunicados?</summary><p>Depende da configuração. Ao criar o comunicado, marque "Permitir respostas" se desejar. As respostas ficam visíveis apenas para o gerente.</p></details>
-    <details><summary>Posso agendar um comunicado para envio futuro?</summary><p>Sim. Ao criar o comunicado, selecione "Agendar" e defina a data e hora de envio desejadas.</p></details>
+    <details><summary>Os pais podem responder aos comunicados?</summary><p>Depende da configuração. Marque "Permitir respostas" ao criar o comunicado. Respostas ficam visíveis só para o gerente e secretaria.</p></details>
+    <details><summary>Posso agendar envio futuro?</summary><p>Sim. Selecione "Agendar" com data e hora.</p></details>
+    <details><summary>O que acontece quando a cota de WhatsApp está acabando?</summary><p>Alertas aos 80% (amarelo), 95% (urgente) e 100% (bloqueio de envios não-críticos). Dá pra contratar pacote adicional sem mudar de plano.</p></details>
+    <details><summary>Existe bot de FAQ automático?</summary><p>Sim. No plano Prestige, o WhatsApp Gateway tem um bot de FAQ baseado no Claude que responde perguntas comuns das famílias automaticamente (horários, cardápio, calendário, pagamentos).</p></details>
   </div>
 </article>
 
@@ -1757,8 +1768,10 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
 
   <div class="faq-section">
     <h3>Perguntas Frequentes</h3>
-    <details><summary>Posso dar acesso de gerente a outra pessoa?</summary><p>Sim. Em Usuários e Permissões, adicione o email da pessoa e selecione o perfil "Gerente" ou crie um perfil personalizado com permissões específicas.</p></details>
-    <details><summary>Alterar as cores afeta o portal dos pais imediatamente?</summary><p>Sim. As cores são aplicadas em tempo real. Os pais verão as novas cores ao recarregar o app.</p></details>
+    <details><summary>Posso dar acesso de gerente a outra pessoa?</summary><p>Sim. Em Equipe → Gestão, adicione o usuário com papel "gerente" ou "diretor". Múltiplos papéis por usuário são suportados (gerente+financeiro, por exemplo). Permissões finas via <a href="#gerente-permissoes">RBAC</a>.</p></details>
+    <details><summary>Alterar as cores afeta o portal dos pais imediatamente?</summary><p>Sim — cores são aplicadas em tempo real via PWA. Os pais veem ao recarregar.</p></details>
+    <details><summary>Posso escolher um dos 4 temas visuais prontos?</summary><p>Sim. Temas disponíveis: Lúdico, Sério, Interativo, Corporativo. Cada um muda cores, tipografia e animações em todos os portais automaticamente.</p></details>
+    <details><summary>Como ligo/desligo o módulo de Controle de Acesso facial?</summary><p>Configurações → Módulos → Controle de Acesso. O plano precisa incluir (Evolução ou Prestige). Depois configure dispositivos Control iD em Controle de Acesso → Dispositivos.</p></details>
   </div>
 </article>
 
