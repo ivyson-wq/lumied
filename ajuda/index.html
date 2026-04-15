@@ -138,6 +138,10 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
 .no-results{display:none;text-align:center;padding:60px 20px;color:var(--muted)}
 .no-results.visible{display:block}
 
+/* ── Screenshots reais (captura automática via Playwright) ── */
+.screenshot-real{width:100%;max-width:820px;height:auto;border-radius:8px;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.08);margin:12px 0;display:block}
+.screenshot-caption{font-size:.78rem;color:var(--muted);text-align:center;margin:4px 0 16px;font-style:italic}
+
 /* ── Mobile ── */
 @media(max-width:768px){
   .hamburger{display:block}
@@ -382,20 +386,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <p>Acesse o endereço da sua escola (ex: <strong>maplebearcaxias.lumied.com.br</strong>) no navegador do celular ou computador.</p>
-        <div class="mockup">
-          <div class="mockup-header"><span>Lumied</span><div class="dots"><span></span><span></span><span></span></div></div>
-          <div class="mockup-content" style="text-align:center;padding:24px">
-            <div style="font-size:2rem;margin-bottom:8px">📚</div>
-            <div style="font-family:'Lora',serif;font-weight:700;font-size:1.1rem;margin-bottom:16px">Maple Bear Caxias</div>
-            <div class="mockup-input" style="text-align:left">📧 seu.email@exemplo.com</div>
-            <div class="mockup-input" style="text-align:left">🔒 ••••••••</div>
-            <div class="mockup-btn primary" style="width:100%;margin-top:8px">Entrar</div>
-            <div style="margin:12px 0;color:var(--muted);font-size:.75rem">— ou —</div>
-            <div class="mockup-btn secondary" style="width:100%">G  Entrar com Google</div>
-            <div style="margin-top:12px;font-size:.78rem"><a href="#">Esqueci minha senha</a> · <a href="#">Magic Link</a></div>
-          </div>
-        </div>
+        <p>Acesse o endereço da sua escola (ex: <strong>suaescola.lumied.com.br</strong>) no navegador do celular ou computador.</p>
+        <img src="/site/screenshots/ajuda/pais-login.png" alt="Tela de login do Portal dos Pais" class="screenshot-real" loading="lazy">
+        <div class="screenshot-caption">Portal dos Pais — tela de acesso</div>
       </div>
     </div>
     <div class="step">
@@ -883,17 +876,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <p>Acesse <strong>suaescola.lumied.com.br/area-restrita</strong> e entre com suas credenciais de gerente. Use email e senha ou Magic Link.</p>
-        <div class="mockup">
-          <div class="mockup-header"><span>📚 Lumied — Acesso Restrito</span><div class="dots"><span></span><span></span><span></span></div></div>
-          <div class="mockup-content" style="text-align:center;padding:20px">
-            <div style="font-size:1.5rem;margin-bottom:6px">👔</div>
-            <div style="font-family:'Lora',serif;font-weight:700;margin-bottom:14px">Área Restrita</div>
-            <div class="mockup-input" style="text-align:left">📧 gerente@escola.com.br</div>
-            <div class="mockup-input" style="text-align:left">🔒 ••••••••</div>
-            <div class="mockup-btn primary" style="width:100%;margin-top:6px">Entrar</div>
-          </div>
-        </div>
+        <p>Acesse <strong>suaescola.lumied.com.br/gerente.html</strong> e entre com suas credenciais. Login com e-mail + senha, Magic Link ou biometria (Face ID / impressão digital) após o primeiro acesso.</p>
+        <img src="/site/screenshots/ajuda/gerente-login.png" alt="Tela de login do gerente" class="screenshot-real" loading="lazy">
+        <div class="screenshot-caption">Tela de login — Portal do Gerente</div>
       </div>
     </div>
     <div class="step">
@@ -956,34 +941,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <p>O Dashboard é a primeira tela após o login. Ele exibe cartões de resumo com os principais indicadores do dia.</p>
-        <div class="mockup">
-          <div class="mockup-header"><span>📊 Dashboard</span><span>Hoje: 28/03/2026</span></div>
-          <div class="mockup-content">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-              <div class="mockup-card">
-                <div class="mockup-stat"><div class="num" style="color:var(--green)">247</div><div class="lbl">Alunos Presentes</div></div>
-              </div>
-              <div class="mockup-card">
-                <div class="mockup-stat"><div class="num" style="color:var(--red)">12</div><div class="lbl">Ausências Hoje</div></div>
-              </div>
-              <div class="mockup-card">
-                <div class="mockup-stat"><div class="num" style="color:var(--blue)">95,4%</div><div class="lbl">Adimplência</div></div>
-              </div>
-              <div class="mockup-card">
-                <div class="mockup-stat"><div class="num">18</div><div class="lbl">Leads Novos</div></div>
-              </div>
-            </div>
-            <div style="font-weight:600;font-size:.82rem;margin-bottom:4px">📈 Presença Semanal</div>
-            <div class="mockup-card" style="height:50px;display:flex;align-items:flex-end;gap:4px;padding:8px">
-              <div style="flex:1;background:var(--green);height:80%;border-radius:2px"></div>
-              <div style="flex:1;background:var(--green);height:90%;border-radius:2px"></div>
-              <div style="flex:1;background:var(--green);height:75%;border-radius:2px"></div>
-              <div style="flex:1;background:var(--green);height:95%;border-radius:2px"></div>
-              <div style="flex:1;background:var(--green);opacity:.4;height:40%;border-radius:2px"></div>
-            </div>
-          </div>
-        </div>
+        <p>O Dashboard é a primeira tela após o login. Exibe cartões de resumo com presença, ausências, adimplência e leads — com gráfico de presença semanal. Dados atualizados em tempo real.</p>
+        <img src="/site/screenshots/ajuda/gerente-dashboard.png" alt="Dashboard Analytics do gerente" class="screenshot-real" loading="lazy">
+        <div class="screenshot-caption">Dashboard Analytics — visão geral da escola</div>
       </div>
     </div>
     <div class="step">
@@ -1190,27 +1150,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <p>Acesse <strong>Almoxarifado</strong> na sidebar. Veja o inventário atual e os pedidos pendentes das professoras.</p>
-        <div class="mockup">
-          <div class="mockup-header"><span>📦 Almoxarifado</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Item</span></div>
-          <div class="mockup-content">
-            <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Pedidos Pendentes <span class="mockup-pill red">3</span></div>
-            <div class="mockup-card" style="font-size:.78rem">
-              <div style="display:flex;justify-content:space-between">
-                <div><strong>Profa. Beatriz</strong> — Year 2B</div>
-                <div class="mockup-pill yellow">Pendente</div>
-              </div>
-              <div style="color:var(--muted);margin-top:4px">10x Folha A4, 5x Cola bastão, 2x Tesoura</div>
-            </div>
-            <div style="font-weight:600;font-size:.82rem;margin:10px 0 6px">Estoque</div>
-            <table class="mockup-table">
-              <tr><th>Item</th><th>Qtd</th><th>Status</th></tr>
-              <tr><td>Folha A4 (resma)</td><td>24</td><td><span class="mockup-pill green">OK</span></td></tr>
-              <tr><td>Cola bastão</td><td>8</td><td><span class="mockup-pill yellow">Baixo</span></td></tr>
-              <tr><td>Tesoura escolar</td><td>2</td><td><span class="mockup-pill red">Crítico</span></td></tr>
-            </table>
-          </div>
-        </div>
+        <p>Acesse <strong>Almoxarifado</strong> na sidebar. Dashboard mostra total gasto/previsto do mês, orçamento por turma (com pendências já descontadas), requisições pendentes e catálogo.</p>
+        <img src="/site/screenshots/ajuda/gerente-almox-dash.png" alt="Dashboard do Almoxarifado" class="screenshot-real" loading="lazy">
+        <div class="screenshot-caption">Almoxarifado — painel com orçamentos por turma</div>
       </div>
     </div>
     <div class="step">
@@ -1381,24 +1323,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <p>Acesse <strong>Financeiro</strong> na sidebar. O módulo exibe um resumo financeiro do mês com boletos emitidos, pagos e atrasados.</p>
-        <div class="mockup">
-          <div class="mockup-header"><span>💰 Financeiro — Março/2026</span><span></span></div>
-          <div class="mockup-content">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
-              <div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--green);font-size:1rem">R$ 428k</div><div class="lbl">Recebido</div></div></div>
-              <div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--blue);font-size:1rem">R$ 450k</div><div class="lbl">Previsto</div></div></div>
-              <div class="mockup-card"><div class="mockup-stat"><div class="num" style="color:var(--red);font-size:1rem">R$ 22k</div><div class="lbl">Inadimplente</div></div></div>
-            </div>
-            <div style="font-weight:600;font-size:.82rem;margin-bottom:6px">Inadimplentes</div>
-            <table class="mockup-table">
-              <tr><th>Família</th><th>Valor</th><th>Atraso</th></tr>
-              <tr><td>Pereira</td><td>R$ 2.850</td><td><span class="mockup-pill red">15 dias</span></td></tr>
-              <tr><td>Silva</td><td>R$ 3.100</td><td><span class="mockup-pill yellow">5 dias</span></td></tr>
-              <tr><td>Oliveira</td><td>R$ 2.850</td><td><span class="mockup-pill yellow">3 dias</span></td></tr>
-            </table>
-          </div>
-        </div>
+        <p>Acesse <strong>Financeiro</strong> na sidebar. O dashboard exibe recebido no mês, previsto, inadimplência e lista das famílias em atraso.</p>
+        <img src="/site/screenshots/ajuda/gerente-fin-dash.png" alt="Dashboard do módulo Financeiro" class="screenshot-real" loading="lazy">
+        <div class="screenshot-caption">Financeiro — dashboard do mês</div>
       </div>
     </div>
     <div class="step">
@@ -1446,27 +1373,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <p>Acesse <strong>CRM</strong> na sidebar. Visualize o funil de vendas com leads organizados por etapa.</p>
-        <div class="mockup">
-          <div class="mockup-header"><span>📞 CRM — Funil de Matrículas</span><span></span></div>
-          <div class="mockup-content">
-            <div style="display:flex;gap:6px;font-size:.72rem;overflow-x:auto">
-              <div style="min-width:100px;background:var(--bg);border-radius:6px;padding:6px">
-                <div style="font-weight:600;margin-bottom:6px;text-align:center">Novo Lead<br><span class="mockup-pill blue">12</span></div>
-                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>Maria Souza</strong><br>Year 1 · ☎ 📧</div>
-                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>João Lima</strong><br>Year 3 · ☎</div>
-              </div>
-              <div style="min-width:100px;background:var(--bg);border-radius:6px;padding:6px">
-                <div style="font-weight:600;margin-bottom:6px;text-align:center">Visita<br><span class="mockup-pill yellow">5</span></div>
-                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>Ana Costa</strong><br>Year 2 · 30/03</div>
-              </div>
-              <div style="min-width:100px;background:var(--bg);border-radius:6px;padding:6px">
-                <div style="font-weight:600;margin-bottom:6px;text-align:center">Matriculado<br><span class="mockup-pill green">3</span></div>
-                <div class="mockup-card" style="padding:6px;font-size:.68rem"><strong>Pedro Alves</strong><br>Year 1 · ✅</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <p>Acesse <strong>CRM</strong> na sidebar. Visualize o funil de matrículas em formato Kanban com leads organizados por etapa — arraste-e-solte para mover entre etapas.</p>
+        <img src="/site/screenshots/ajuda/gerente-crm-kanban.png" alt="Funil de matrículas CRM" class="screenshot-real" loading="lazy">
+        <div class="screenshot-caption">CRM — funil Kanban de matrículas</div>
       </div>
     </div>
     <div class="step">
@@ -1609,20 +1518,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-content">
-        <p>Acesse <strong>Comunicação</strong> na sidebar. Veja o histórico de comunicados enviados e crie novos.</p>
-        <div class="mockup">
-          <div class="mockup-header"><span>📢 Comunicação</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Novo Comunicado</span></div>
-          <div class="mockup-content">
-            <div class="mockup-card">
-              <div style="font-weight:600;font-size:.82rem">📌 Reunião de Pais — Abril</div>
-              <div style="font-size:.72rem;color:var(--muted)">Enviado em 25/03 · Para: Todos os pais · ✅ Lido por 78%</div>
-            </div>
-            <div class="mockup-card">
-              <div style="font-weight:600;font-size:.82rem">Cardápio da Semana 31/03</div>
-              <div style="font-size:.72rem;color:var(--muted)">Enviado em 28/03 · Para: Pais Year 1 e 2 · ✅ Lido por 65%</div>
-            </div>
-          </div>
-        </div>
+        <p>Acesse <strong>Comunicação</strong> na sidebar (ícone "Chat Famílias"). Veja o histórico de comunicados enviados, taxa de leitura em tempo real e crie novos.</p>
+        <img src="/site/screenshots/ajuda/gerente-comunicacao.png" alt="Módulo de Comunicação" class="screenshot-real" loading="lazy">
+        <div class="screenshot-caption">Comunicação — chat e comunicados com as famílias</div>
       </div>
     </div>
     <div class="step">
@@ -2588,8 +2486,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   <div class="path-indicator">Portal do Gerente → Equipe</div>
   <h3>Passo a passo</h3>
   <div class="steps">
-    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Equipe</strong> na sidebar. Veja todos os membros com seus papéis, turmas e status.</p>
-      <div class="mockup"><div class="mockup-header"><span>👥 Equipe</span><span class="mockup-btn primary" style="padding:3px 8px;font-size:.7rem">+ Cadastrar</span></div><div class="mockup-content"><div class="mockup-row"><div class="mockup-avatar">AC</div><div style="flex:1"><div style="font-weight:600;font-size:.82rem">Ana Clara</div><div style="font-size:.7rem"><span class="mockup-pill blue">professora</span> <span class="mockup-pill blue">secretaria</span></div></div><div class="mockup-pill green">Ativa</div></div><div class="mockup-row"><div class="mockup-avatar">RM</div><div style="flex:1"><div style="font-weight:600;font-size:.82rem">Roberto Mendes</div><div style="font-size:.7rem"><span class="mockup-pill blue">financeiro</span> <span class="mockup-pill blue">comercial</span></div></div><div class="mockup-pill green">Ativo</div></div></div></div>
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse <strong>Equipe</strong> na sidebar. Veja todos os membros com seus papéis múltiplos, turmas e status.</p>
+      <img src="/site/screenshots/ajuda/gerente-equipe.png" alt="Gestão da Equipe" class="screenshot-real" loading="lazy">
+      <div class="screenshot-caption">Equipe — cadastro com múltiplos papéis por usuário</div>
     </div></div>
     <div class="step"><div class="step-number">2</div><div class="step-content"><p>Clique em <strong>"+ Cadastrar"</strong>. Preencha nome, email, selecione os <strong>papéis</strong> (checkboxes: gerente, diretor, financeiro, professora, secretaria, comercial, manutenção) e as <strong>features</strong> (atestados, crm, financeiro, etc.).</p></div></div>
     <div class="step"><div class="step-number">3</div><div class="step-content"><p>Para importar em massa, clique em <strong>"Importar XLSX"</strong>. Baixe o modelo, preencha e faça upload. O sistema mostra um preview antes de confirmar.</p></div></div>
@@ -3873,6 +3772,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
   <h3>Como acessar</h3>
   <div class="path-indicator">Portal do Gerente → Financeiro → Inadimplência → botão "📜 Histórico"</div>
 
+  <img src="/site/screenshots/ajuda/gerente-fin-inadimplencia.png" alt="Painel de Inadimplência" class="screenshot-real" loading="lazy">
+  <div class="screenshot-caption">Inadimplência — botão "📜 Histórico" em cada linha abre a timeline</div>
+
   <h3>O que você verá</h3>
   <div class="steps">
     <div class="step">
@@ -3915,6 +3817,9 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
 
   <h3>Onde ficam os botões</h3>
   <div class="path-indicator">Portal do Gerente → Almoxarifado → abas Pendentes / Compras</div>
+
+  <img src="/site/screenshots/ajuda/gerente-almox-compras.png" alt="Barra de ações com os botões de PDF" class="screenshot-real" loading="lazy">
+  <div class="screenshot-caption">Aba Compras — 5 botões de PDF disponíveis na barra superior</div>
 
   <h3>Os 5 PDFs</h3>
   <div class="steps">
