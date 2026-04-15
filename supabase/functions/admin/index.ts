@@ -10,6 +10,7 @@ import { getModulosResolvidos } from "../_shared/modulos.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { hashSenha, verificarSenhaAuto, gerarToken, criarSessao } from "../_shared/auth.ts";
 import type { Schema } from "../_shared/validation.ts";
+import { logAudit } from "../_shared/audit.ts";
 
 const log = createLogger("admin");
 
@@ -455,6 +456,7 @@ router.on("ticket_respond", authAdmin, async (ctx) => {
   const { error } = await ctx.sb.from("tickets").update({ resposta, respondido_por: ctx.user!.email, status: "respondido" }).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   log.info("Ticket respondido", { metadata: { id } });
+  logAudit(ctx.sb, { ator_tipo: 'gerente', ator_email: ctx.user!.email, recurso: 'ticket', recurso_id: id, acao: 'respond' });
   return successResponse({ success: true });
 });
 
@@ -463,6 +465,7 @@ router.on("ticket_close", authAdmin, async (ctx) => {
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
   const { error } = await ctx.sb.from("tickets").update({ status: "fechado" }).eq("id", id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
+  logAudit(ctx.sb, { ator_tipo: 'gerente', ator_email: ctx.user!.email, recurso: 'ticket', recurso_id: id, acao: 'close' });
   return successResponse({ success: true });
 });
 
@@ -698,6 +701,7 @@ router.on("staff_ticket_respond", authStaff, async (ctx) => {
     resposta, respondido_por: ctx.user!.email, status: "respondido", atualizado_em: new Date().toISOString()
   }).eq("id", ticket_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user!.email, recurso: 'ticket', recurso_id: ticket_id, acao: 'respond' });
   return successResponse({ success: true });
 });
 
@@ -706,6 +710,7 @@ router.on("staff_ticket_close", authStaff, async (ctx) => {
   if (!ticket_id) throw new AppError("VALIDATION_FAILED", "ticket_id obrigatório.");
   const { error } = await ctx.sb.from("tickets").update({ status: "fechado", atualizado_em: new Date().toISOString() }).eq("id", ticket_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user!.email, recurso: 'ticket', recurso_id: ticket_id, acao: 'close' });
   return successResponse({ success: true });
 });
 
@@ -858,6 +863,17 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
   pendencias.push('Testar login do gerente em https://' + slug + '.lumied.com.br/gerente.html');
 
   log.info("Nova escola criada", { escola_id: escola.id, nome, slug, plano: planoSlug, modulos: modulosAtivados.length });
+
+  logAudit(ctx.sb, {
+    escola_id: escola.id,
+    ator_tipo: 'staff',
+    ator_id: ctx.user?.id,
+    ator_email: ctx.user?.email,
+    recurso: 'escola',
+    recurso_id: escola.id,
+    acao: 'criar',
+    depois: { nome, subdominio: slug, plano: planoSlug, modulos: modulosAtivados.length },
+  });
 
   return successResponse({
     success: true,

@@ -1,7 +1,11 @@
 // ═══════════════════════════════════════════════════════
 //  Shared: AI Service — Claude API wrapper (Anthropic)
 //  Camada nativa de inteligência operacional
+//  + Budget cap por escola + kill-switch via feature flag
 // ═══════════════════════════════════════════════════════
+
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkIAQuota, registrarIAUso } from "./ia_budget.ts";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
@@ -10,6 +14,13 @@ export interface AIResponse {
   tokens_input: number;
   tokens_output: number;
   cost: number; // R$ estimado
+  blocked?: 'kill_switch' | 'cap_atingido';
+}
+
+// Contexto opcional para budget/kill-switch. Se omitido, chamada passa sem guard.
+export interface AIBudgetCtx {
+  sb: SupabaseClient;
+  escolaId?: string | null;
 }
 
 export async function askClaude(
@@ -19,10 +30,20 @@ export async function askClaude(
     maxTokens?: number;
     model?: string;
     temperature?: number;
+    budget?: AIBudgetCtx;
   } = {}
 ): Promise<AIResponse | null> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) { console.log("[AI] ANTHROPIC_API_KEY não configurada"); return null; }
+
+  // Budget guard: kill-switch global ou cap mensal da escola.
+  if (options.budget) {
+    const q = await checkIAQuota(options.budget.sb, options.budget.escolaId);
+    if (!q.ok) {
+      console.warn(`[AI] bloqueado: ${q.motivo} (escola=${options.budget.escolaId})`);
+      return { text: '', tokens_input: 0, tokens_output: 0, cost: 0, blocked: q.motivo };
+    }
+  }
 
   const model = options.model || "claude-haiku-4-5-20251001";
   // deno-lint-ignore no-explicit-any
@@ -58,6 +79,9 @@ export async function askClaude(
     // Haiku: $0.80/M input, $4.00/M output
     const cost = (tokensIn * 0.0000044) + (tokensOut * 0.000022);
 
+    // Registra uso (fire-and-forget) para tracking de budget
+    if (options.budget) registrarIAUso(options.budget.sb, options.budget.escolaId, model, tokensIn, tokensOut);
+
     return { text, tokens_input: tokensIn, tokens_output: tokensOut, cost };
   } catch (e) {
     console.error("[AI] Fetch error:", e);
@@ -72,10 +96,15 @@ export async function askWithImage(
   prompt: string,
   imageBase64: string,
   mimeType: string,
-  options: { system?: string; maxTokens?: number } = {}
+  options: { system?: string; maxTokens?: number; budget?: AIBudgetCtx } = {}
 ): Promise<AIResponse | null> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) { console.log("[AI] ANTHROPIC_API_KEY não configurada"); return null; }
+
+  if (options.budget) {
+    const q = await checkIAQuota(options.budget.sb, options.budget.escolaId);
+    if (!q.ok) return { text: '', tokens_input: 0, tokens_output: 0, cost: 0, blocked: q.motivo };
+  }
 
   // deno-lint-ignore no-explicit-any
   const body: any = {
@@ -113,6 +142,8 @@ export async function askWithImage(
     const tokensIn = data.usage?.input_tokens || 0;
     const tokensOut = data.usage?.output_tokens || 0;
     const cost = (tokensIn * 0.0000044) + (tokensOut * 0.000022);
+
+    if (options.budget) registrarIAUso(options.budget.sb, options.budget.escolaId, 'claude-haiku-4-5', tokensIn, tokensOut);
 
     return { text, tokens_input: tokensIn, tokens_output: tokensOut, cost };
   } catch (e) {
@@ -189,10 +220,19 @@ export async function askClaudeWithTools(
     maxTokens?: number;
     maxTurns?: number;
     temperature?: number;
+    budget?: AIBudgetCtx;
   } = {},
 ): Promise<AgenticResponse | null> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) { console.log("[AI] ANTHROPIC_API_KEY não configurada"); return null; }
+
+  if (options.budget) {
+    const q = await checkIAQuota(options.budget.sb, options.budget.escolaId);
+    if (!q.ok) {
+      console.warn(`[AI] tools bloqueado: ${q.motivo}`);
+      return { text: `IA temporariamente indisponível (${q.motivo === 'cap_atingido' ? 'limite mensal atingido' : 'manutenção'}).`, tool_calls: [], tokens_input: 0, tokens_output: 0, cost: 0, stop_reason: 'blocked' };
+    }
+  }
 
   const model = options.model || "claude-haiku-4-5-20251001";
   const maxTurns = options.maxTurns ?? 6;
@@ -289,6 +329,7 @@ export async function askClaudeWithTools(
   }
 
   const cost = tokensIn * 0.0000044 + tokensOut * 0.000022;
+  if (options.budget) registrarIAUso(options.budget.sb, options.budget.escolaId, model, tokensIn, tokensOut);
   return {
     text: finalText,
     tool_calls: toolCalls,

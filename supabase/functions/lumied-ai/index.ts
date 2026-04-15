@@ -16,6 +16,10 @@ import { devTools } from "../mcp/tools_dev.ts";
 
 const log = createLogger("lumied-ai");
 
+// Helper: extrai budget ctx do router ctx para passar ao askClaude*
+// deno-lint-ignore no-explicit-any
+const bCtx = (ctx: any) => ({ sb: ctx.sb, escolaId: ctx.escola_id ?? null });
+
 // ── Helpers ────────────────────────────────────────────────────
 function str(v: unknown, max: number): string | null {
   if (typeof v !== "string") return null;
@@ -136,8 +140,9 @@ ${buildContextFromData(contexto)}
 PERGUNTA DO USUÁRIO:
 ${sanitizeForPrompt(pergunta, 2000)}`;
 
-  const resposta = await askClaude(prompt, { system, maxTokens: 600 });
+  const resposta = await askClaude(prompt, { system, maxTokens: 600, budget: bCtx(ctx) });
   if (!resposta) throw new AppError("INTERNAL_ERROR", "IA indisponível no momento.");
+  if (resposta.blocked) throw new AppError("QUOTA_EXCEEDED", resposta.blocked === 'cap_atingido' ? "Limite mensal de IA atingido." : "IA em manutenção.");
 
   // Registrar conversa
   await ctx.sb.from("ia_conversas").insert({
@@ -201,6 +206,7 @@ router.on("ai_perguntar_mcp", authFlexivel, async (ctx) => {
       "Nunca invente dados — se não tiver uma tool adequada, diga isso ao usuário.",
     maxTokens: 1024,
     maxTurns: 5,
+    budget: bCtx(ctx),
   });
 
   if (!resposta) throw new AppError("INTERNAL_ERROR", "IA indisponível no momento.");
@@ -248,7 +254,7 @@ ${buildContextFromData(contexto)}
 PERGUNTA DA PROFESSORA:
 ${sanitizeForPrompt(pergunta, 2000)}`;
 
-  const resposta = await askClaude(prompt, { system: SYSTEM_PROMPTS.professora, maxTokens: 400 });
+  const resposta = await askClaude(prompt, { system: SYSTEM_PROMPTS.professora, maxTokens: 400, budget: bCtx(ctx) });
   if (!resposta) throw new AppError("INTERNAL_ERROR", "IA indisponível.");
 
   return successResponse({ resposta: resposta.text });
@@ -268,7 +274,7 @@ router.on("gerar_insights_diarios", async (ctx) => {
   if (dados.inadimplencia_pct > 5) {
     const ai = await askClaude(
       `A inadimplência da escola está em ${dados.inadimplencia_pct}%. Total em aberto: R$ ${dados.total_em_aberto}. ${dados.total_alunos} alunos. Gere 1 insight com análise e ação sugerida.`,
-      { system: SYSTEM_PROMPTS.gerente, maxTokens: 200 }
+      { system: SYSTEM_PROMPTS.gerente, maxTokens: 200, budget: bCtx(ctx) }
     );
     if (ai) insights.push({
       portal: "gerente", categoria: "alerta", modulo: "financeiro",
@@ -284,7 +290,7 @@ router.on("gerar_insights_diarios", async (ctx) => {
   if (dados.alunos_frequencia_baixa > 0) {
     const ai = await askClaude(
       `${dados.alunos_frequencia_baixa} alunos têm frequência abaixo de 75% este mês. Total de alunos: ${dados.total_alunos}. Gere 1 insight com análise e ação.`,
-      { system: SYSTEM_PROMPTS.gerente, maxTokens: 200 }
+      { system: SYSTEM_PROMPTS.gerente, maxTokens: 200, budget: bCtx(ctx) }
     );
     if (ai) insights.push({
       portal: "gerente", categoria: "alerta", modulo: "frequencia",
@@ -326,7 +332,7 @@ router.on("gerar_insights_diarios", async (ctx) => {
 - CRM: ${dados.leads_novos_semana || 0} leads novos esta semana
 
 Gere um resumo de 2-3 frases sobre o dia da escola. Tom: direto e útil.`,
-    { system: SYSTEM_PROMPTS.gerente, maxTokens: 150 }
+    { system: SYSTEM_PROMPTS.gerente, maxTokens: 150, budget: bCtx(ctx) }
   );
   if (resumoAi) insights.push({
     portal: "gerente", categoria: "resumo", modulo: "geral",
@@ -395,7 +401,7 @@ router.on("ai_redigir_comunicado", authGerente, async (ctx) => {
   const ai = await askClaude(
     `Redija um comunicado escolar para os pais sobre: "${sanitizeForPrompt(assunto, 300)}". ${contexto_extra}
 Tom: ${tom}. Máximo 5 linhas. Comece com saudação. Termine com assinatura "Equipe [escola]".`,
-    { system: "Você é redator de comunicados escolares. Escreva em português brasileiro, tom adequado ao público (famílias).", maxTokens: 300 }
+    { system: "Você é redator de comunicados escolares. Escreva em português brasileiro, tom adequado ao público (famílias).", maxTokens: 300, budget: bCtx(ctx) }
   );
   if (!ai) throw new AppError("INTERNAL_ERROR", "IA indisponível.");
   return successResponse({ texto: ai.text });
@@ -406,7 +412,7 @@ router.on("ai_analisar_turma", authProfessora, async (ctx) => {
   const dados = await coletarContextoProfessora(ctx.sb, ctx.user?.id);
   const ai = await askClaude(
     `Dados da turma:\n${buildContextFromData(dados)}\n\nFaça uma análise breve: pontos fortes, pontos de atenção e 1 sugestão pedagógica.`,
-    { system: SYSTEM_PROMPTS.professora, maxTokens: 300 }
+    { system: SYSTEM_PROMPTS.professora, maxTokens: 300, budget: bCtx(ctx) }
   );
   if (!ai) throw new AppError("INTERNAL_ERROR", "IA indisponível.");
   return successResponse({ analise: ai.text });
@@ -433,7 +439,7 @@ Observações da professora: ${observacoes || "Nenhuma"}
 
 Parecer deve ter 3-4 frases, mencionando competências da BNCC.
 Tom: profissional, positivo, construtivo.`,
-    { system: "Você é especialista em pareceres pedagógicos escolares alinhados à BNCC. Escreva em português brasileiro.", maxTokens: 300 }
+    { system: "Você é especialista em pareceres pedagógicos escolares alinhados à BNCC. Escreva em português brasileiro.", maxTokens: 300, budget: bCtx(ctx) }
   );
   if (!ai) throw new AppError("INTERNAL_ERROR", "IA indisponível.");
   return successResponse({ parecer: ai.text });
@@ -451,7 +457,7 @@ router.on("ai_previsao_inadimplencia", authGerente, async (ctx) => {
 - Boletos vencendo esta semana: ${dados.boletos_vencendo_semana}
 
 Com base nesses dados, qual a tendência para o próximo mês? Sugira ações preventivas.`,
-    { system: SYSTEM_PROMPTS.gerente, maxTokens: 300 }
+    { system: SYSTEM_PROMPTS.gerente, maxTokens: 300, budget: bCtx(ctx) }
   );
   if (!ai) throw new AppError("INTERNAL_ERROR", "IA indisponível.");
   return successResponse({ previsao: ai.text });

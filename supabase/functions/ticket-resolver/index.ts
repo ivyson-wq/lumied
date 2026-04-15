@@ -175,7 +175,16 @@ Seja direto e útil. Use tools antes de chutar.`;
           "Nunca invente informações — use as tools.",
         maxTokens: 1024,
         maxTurns: 5,
+        // Budget: ticket-resolver roda por escola_id do ticket (se houver)
+        budget: { sb, escolaId: ticket.escola_id ?? null },
       });
+
+      // Kill-switch ou cap: registra como escalado, não como resolvido
+      if (ai?.stop_reason === 'blocked') {
+        escalated++;
+        details.push({ id: ticket.id, numero: ticket.numero, action: "escalated_ia_blocked" });
+        continue;
+      }
 
       if (ai && ai.tool_calls.some((t) => t.name === "ticket_respond")) {
         // IA resolveu o ticket via tool use
