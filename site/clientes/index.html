@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escolas que confiam na Lumied — Casos e depoimentos</title>
+<meta name="description" content="Conheça as escolas que usam a Lumied todos os dias. Depoimentos de diretoras e casos reais de transformação da gestão escolar.">
+<link rel="canonical" href="https://lumied.com.br/clientes/">
+<meta property="og:title" content="Escolas que confiam na Lumied">
+<meta property="og:description" content="Depoimentos e casos reais de diretoras que usam a Lumied.">
+<meta property="og:url" content="https://lumied.com.br/clientes/">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root { --primary:#6C63FF; --bg:#0A0A0F; --bg2:#12121A; --card:rgba(255,255,255,.03); --border:rgba(255,255,255,.08); --text:#F1F1F4; --muted:#8B8B9E; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:1200px;margin:0 auto;padding:18px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:var(--text);text-decoration:none}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500}
+.nav-links a:hover{color:var(--text)}
+.btn-primary{display:inline-block;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;padding:12px 24px;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none;transition:transform .2s}
+.btn-primary:hover{transform:translateY(-2px)}
+.hero{padding:120px 24px 80px;text-align:center;background:linear-gradient(135deg,#0A0A0F 0%,#1A1030 50%,#0A0A0F 100%)}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(36px,5vw,56px);font-weight:800;margin-bottom:16px;background:linear-gradient(135deg,#F1F1F4,#8B8B9E);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto}
+.section{padding:80px 24px}
+.container{max-width:1100px;margin:0 auto}
+.schools-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:48px}
+.school-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center}
+.school-logo{font-size:48px;margin-bottom:16px}
+.school-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:6px}
+.school-loc{font-size:13px;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px}
+.school-stats{display:flex;justify-content:center;gap:24px;margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.school-stat strong{display:block;font-size:22px;color:#6C63FF;font-weight:800}
+.school-stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.section-title{font-family:'Playfair Display',serif;font-size:clamp(28px,4vw,40px);font-weight:800;text-align:center;margin-bottom:16px}
+.section-sub{text-align:center;color:var(--muted);max-width:640px;margin:0 auto 48px}
+.testimonials{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.testimonial{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;transition:transform .3s,border-color .3s}
+.testimonial:hover{transform:translateY(-4px);border-color:rgba(108,99,255,.3)}
+.stars{color:#FBBF24;letter-spacing:2px;margin-bottom:14px}
+.quote{font-size:15px;color:var(--text);line-height:1.7;margin-bottom:20px;font-style:italic}
+.author{display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid var(--border)}
+.avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px}
+.author-name{font-weight:700;font-size:15px}
+.author-role{font-size:12px;color:var(--muted)}
+.cta-band{background:linear-gradient(135deg,rgba(108,99,255,.1),rgba(59,130,246,.05));border:1px solid rgba(108,99,255,.2);border-radius:24px;padding:48px;text-align:center;margin-top:64px}
+.cta-band h3{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:12px}
+.cta-band p{color:var(--muted);margin-bottom:24px}
+footer{padding:48px 24px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+footer a{color:var(--muted);text-decoration:none;margin:0 12px}
+footer a:hover{color:var(--text)}
+@media(max-width:640px){.nav-links a:not(.btn-primary){display:none}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="logo">Lumied</a>
+    <div class="nav-links">
+      <a href="/#funcionalidades">Funcionalidades</a>
+      <a href="/#planos">Planos</a>
+      <a href="/clientes/">Clientes</a>
+      <a href="/site/blog/">Blog</a>
+      <a href="/#contact" class="btn-primary">Falar com vendas</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Escolas que confiam na Lumied</h1>
+  <p>Diretoras que já deixaram as planilhas para trás e gerem suas escolas com tranquilidade.</p>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="schools-grid">
+      <div class="school-card">
+        <div class="school-logo">🍁</div>
+        <div class="school-name">Maple Bear Caxias do Sul</div>
+        <div class="school-loc">Caxias do Sul · RS</div>
+        <p style="font-size:14px;color:var(--muted);margin-top:10px;">Educação Infantil + Fundamental I. Rede bilíngue canadense com ~180 alunos.</p>
+        <div class="school-stats">
+          <div class="school-stat"><strong>-40%</strong><span>inadimplência em 90d</span></div>
+          <div class="school-stat"><strong>12h/sem</strong><span>devolvidas à direção</span></div>
+        </div>
+      </div>
+      <div class="school-card">
+        <div class="school-logo">🍁</div>
+        <div class="school-name">Maple Bear Bento Gonçalves</div>
+        <div class="school-loc">Bento Gonçalves · RS</div>
+        <p style="font-size:14px;color:var(--muted);margin-top:10px;">Educação Infantil + Fundamental I. Referência em comunicação família-escola.</p>
+        <div class="school-stats">
+          <div class="school-stat"><strong>3×</strong><span>mais agilidade no suporte</span></div>
+          <div class="school-stat"><strong>100%</strong><span>comunicados centralizados</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:var(--bg2)">
+  <div class="container">
+    <h2 class="section-title">O que as diretoras dizem</h2>
+    <p class="section-sub">Direção que vivencia o dia a dia da escola — não é marketing, é rotina.</p>
+
+    <div class="testimonials">
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p class="quote">"Antes do Lumied, a gente vivia apagando incêndio. Planilhas que não batiam, inadimplência que ninguém sabia o tamanho real, professoras com dúvida de hora extra no fim do mês. Hoje tudo está num lugar só, e o sistema me diz o que olhar primeiro. É outro nível de tranquilidade."</p>
+        <div class="author">
+          <div class="avatar" style="background:linear-gradient(135deg,#6C63FF,#3B82F6)">DM</div>
+          <div>
+            <div class="author-name">Denise Magnus</div>
+            <div class="author-role">Diretora · Maple Bear Caxias do Sul</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p class="quote">"A Lumi me traz de manhã o resumo que eu levaria meia manhã para montar — quem faltou, quem precisa de atenção, onde a turma está atrás. Antes eu reagia ao dia; agora eu chego sabendo onde agir. Isso muda completamente a energia da equipe."</p>
+        <div class="author">
+          <div class="avatar" style="background:linear-gradient(135deg,#10B981,#059669)">SO</div>
+          <div>
+            <div class="author-name">Simone Onzi</div>
+            <div class="author-role">Diretora · Maple Bear Caxias do Sul</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p class="quote">"A comunicação com as famílias era o que mais drenava a equipe. Com o WhatsApp oficial integrado e os comunicados automáticos, as professoras voltaram a ter tempo para o que importa: as crianças. Ganhamos consistência e uma imagem muito mais profissional."</p>
+        <div class="author">
+          <div class="avatar" style="background:linear-gradient(135deg,#F59E0B,#F97316)">LR</div>
+          <div>
+            <div class="author-name">Larissa Rama</div>
+            <div class="author-role">Diretora · Maple Bear Bento Gonçalves</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-band">
+      <h3>Quer ver o Lumied em ação?</h3>
+      <p>Demonstração de 30 minutos com dados reais, sem compromisso.</p>
+      <a href="/#contact" class="btn-primary">Agendar demonstração</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>© 2026 Lumied · Sistema de Gestão Escolar</div>
+  <div style="margin-top:12px">
+    <a href="/">Home</a>
+    <a href="/sla/">SLA</a>
+    <a href="/termos/">Termos</a>
+    <a href="/privacidade/">Privacidade</a>
+    <a href="/dpa/">DPA (LGPD)</a>
+    <a href="/site/blog/">Blog</a>
+  </div>
+</footer>
+
+</body>
+</html>

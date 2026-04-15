@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLA — Acordo de Nível de Serviço | Lumied</title>
+<meta name="description" content="Compromissos de disponibilidade, tempo de resposta e resolução do Lumied por plano contratado.">
+<link rel="canonical" href="https://lumied.com.br/sla/">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6C63FF;--bg:#0A0A0F;--bg2:#12121A;--card:rgba(255,255,255,.03);--border:rgba(255,255,255,.08);--text:#F1F1F4;--muted:#8B8B9E}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:1100px;margin:0 auto;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:800;color:var(--text);text-decoration:none}
+.nav a{color:var(--muted);text-decoration:none;font-size:14px;margin-left:24px}
+.nav a:hover{color:var(--text)}
+.hero{padding:80px 24px 40px;text-align:center}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,48px);margin-bottom:12px}
+.hero p{color:var(--muted);max-width:640px;margin:0 auto}
+.container{max-width:900px;margin:0 auto;padding:24px 24px 80px}
+h2{font-family:'Playfair Display',serif;font-size:26px;margin:40px 0 16px;padding-top:16px;border-top:1px solid var(--border)}
+h3{font-size:17px;margin:24px 0 8px;color:var(--primary)}
+p,li{color:#D0D0D8;margin-bottom:12px}
+ul{padding-left:22px}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin:24px 0}
+.tier{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.tier h4{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:12px;color:var(--primary)}
+.tier dl{font-size:13px}
+.tier dt{color:var(--muted);margin-top:10px;text-transform:uppercase;font-size:10px;letter-spacing:1px}
+.tier dd{color:var(--text);font-weight:600;font-size:14px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.badge{display:inline-block;padding:4px 10px;background:rgba(108,99,255,.15);border:1px solid rgba(108,99,255,.3);border-radius:6px;font-size:11px;color:var(--primary);font-weight:600}
+.callout{background:rgba(16,185,129,.08);border-left:4px solid #10B981;padding:16px 20px;border-radius:8px;margin:20px 0}
+footer{padding:40px 24px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+footer a{color:var(--muted);text-decoration:none;margin:0 10px}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-inner">
+  <a href="/" class="logo">Lumied</a>
+  <div>
+    <a href="/">Home</a>
+    <a href="/clientes/">Clientes</a>
+    <a href="/termos/">Termos</a>
+  </div>
+</div></nav>
+
+<section class="hero">
+  <h1>Acordo de Nível de Serviço (SLA)</h1>
+  <p>Compromissos formais de disponibilidade, resposta e resolução. Vigência: 1º de janeiro de 2026.</p>
+</section>
+
+<main class="container">
+
+<div class="callout">
+  <strong>Resumo executivo:</strong> Lumied garante 99,5% de disponibilidade mensal da plataforma, com tempos de resposta e resolução escalonados conforme o plano contratado e a severidade do incidente.
+</div>
+
+<h2>1. Disponibilidade da plataforma</h2>
+<p>Compromisso de <strong>99,5% de uptime</strong> mensal (todos os planos), medido sobre o conjunto de portais públicos (pais, professora, gerente, admin). Manutenções programadas são comunicadas com no mínimo 48h de antecedência e não entram no cômputo.</p>
+<table>
+  <thead><tr><th>Uptime medido</th><th>Crédito sobre mensalidade</th></tr></thead>
+  <tbody>
+    <tr><td>≥ 99,5%</td><td>Nenhum</td></tr>
+    <tr><td>99,0% – 99,49%</td><td>10%</td></tr>
+    <tr><td>97,0% – 98,99%</td><td>25%</td></tr>
+    <tr><td>&lt; 97,0%</td><td>50%</td></tr>
+  </tbody>
+</table>
+
+<h2>2. Classificação de severidade</h2>
+<ul>
+  <li><strong>Crítico (P1):</strong> plataforma indisponível para a escola, perda de dados ou falha em envio de comunicados urgentes.</li>
+  <li><strong>Alto (P2):</strong> módulo inteiro indisponível (ex.: financeiro, controle de acesso), mas a operação essencial continua.</li>
+  <li><strong>Médio (P3):</strong> funcionalidade parcialmente degradada ou bug com workaround.</li>
+  <li><strong>Baixo (P4):</strong> dúvidas de uso, pedidos de configuração, melhorias cosméticas.</li>
+</ul>
+
+<h2>3. Tempos de resposta e resolução por plano</h2>
+
+<div class="tiers">
+  <div class="tier">
+    <h4>Starter</h4>
+    <dl>
+      <dt>P1 resposta</dt><dd>Próximo dia útil</dd>
+      <dt>P1 resolução alvo</dt><dd>48h úteis</dd>
+      <dt>P2 resposta</dt><dd>2 dias úteis</dd>
+      <dt>Canais</dt><dd>Tickets + e-mail</dd>
+      <dt>Horário</dt><dd>Seg-Sex 9h-18h</dd>
+    </dl>
+  </div>
+  <div class="tier">
+    <h4>Start</h4>
+    <dl>
+      <dt>P1 resposta</dt><dd>8h úteis</dd>
+      <dt>P1 resolução alvo</dt><dd>24h úteis</dd>
+      <dt>P2 resposta</dt><dd>1 dia útil</dd>
+      <dt>Canais</dt><dd>Tickets + e-mail + WhatsApp</dd>
+      <dt>Horário</dt><dd>Seg-Sex 8h-19h</dd>
+    </dl>
+  </div>
+  <div class="tier">
+    <h4>Evolução <span class="badge">Popular</span></h4>
+    <dl>
+      <dt>P1 resposta</dt><dd>2h úteis</dd>
+      <dt>P1 resolução alvo</dt><dd>8h úteis</dd>
+      <dt>P2 resposta</dt><dd>4h úteis</dd>
+      <dt>Canais</dt><dd>Tickets + WhatsApp prioritário</dd>
+      <dt>Horário</dt><dd>Seg-Sáb 7h-22h</dd>
+    </dl>
+  </div>
+  <div class="tier">
+    <h4>Prestige</h4>
+    <dl>
+      <dt>P1 resposta</dt><dd>30 minutos</dd>
+      <dt>P1 resolução alvo</dt><dd>4h corridas</dd>
+      <dt>P2 resposta</dt><dd>2h úteis</dd>
+      <dt>Canais</dt><dd>Ramal dedicado + CS</dd>
+      <dt>Horário</dt><dd>24×7 para P1</dd>
+    </dl>
+  </div>
+</div>
+
+<h2>4. Suporte — canais oficiais</h2>
+<ul>
+  <li>Widget de tickets flutuante dentro de todos os portais (recomendado).</li>
+  <li>E-mail: <strong>suporte@lumied.com.br</strong></li>
+  <li>WhatsApp de suporte (planos Start+): informado no onboarding.</li>
+  <li>Gerente de sucesso dedicado (plano Prestige): contato direto 24×7 para P1.</li>
+</ul>
+
+<h2>5. Backup e recuperação de dados</h2>
+<ul>
+  <li>Backups automáticos diários da base de dados (retenção 14 dias nos planos Starter/Start, 30 dias em Evolução, 90 dias em Prestige).</li>
+  <li>RPO (recovery point objective): ≤ 24 horas.</li>
+  <li>RTO (recovery time objective): ≤ 4 horas para restauração completa.</li>
+  <li>Export de dados da escola a qualquer momento (JSON/CSV) — a escola é titular dos dados.</li>
+</ul>
+
+<h2>6. Exclusões do SLA</h2>
+<ul>
+  <li>Indisponibilidade causada por falhas de internet ou provedor de energia da escola.</li>
+  <li>Uso em desacordo com os Termos de Uso.</li>
+  <li>Manutenções programadas comunicadas com 48h de antecedência.</li>
+  <li>Ataques de negação de serviço (DDoS) com mitigação em andamento.</li>
+  <li>Serviços de terceiros integrados (WhatsApp Meta, Banco Inter, Mercado Livre, Resend) — nestes casos o Lumied acompanha e comunica, mas o SLA do fornecedor prevalece.</li>
+</ul>
+
+<h2>7. Solicitação de crédito</h2>
+<p>Em caso de descumprimento verificado, a escola deve solicitar o crédito em até 30 dias corridos após o incidente, via e-mail para <strong>sla@lumied.com.br</strong>. O crédito é aplicado na fatura do mês seguinte.</p>
+
+<h2>8. Revisões</h2>
+<p>Este SLA pode ser revisto anualmente. Alterações são comunicadas com 60 dias de antecedência e não se aplicam retroativamente.</p>
+
+<p style="margin-top:40px;color:var(--muted);font-size:13px"><strong>Última atualização:</strong> 15 de abril de 2026 · <strong>Versão:</strong> 1.0</p>
+
+</main>
+
+<footer>
+  <div>© 2026 Lumied</div>
+  <div style="margin-top:10px"><a href="/">Home</a><a href="/clientes/">Clientes</a><a href="/sla/">SLA</a><a href="/termos/">Termos</a><a href="/privacidade/">Privacidade</a><a href="/dpa/">DPA</a></div>
+</footer>
+
+</body>
+</html>

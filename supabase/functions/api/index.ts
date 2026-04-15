@@ -316,6 +316,96 @@ serve(async (req: Request) => {
     return ok(data ?? { custo_usd: 0, cap_usd: null, bloqueado: false, requests: 0, tokens_input: 0, tokens_output: 0 });
   }
 
+  // ── Onboarding + Billing SaaS ──
+  if (action === "onboarding_status") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const escolaId = await getEscolaPadrao(admin);
+    if (!escolaId) return ok({ checklist: {}, saas: { estado: 'ativo' }, etapas: [] });
+    const { data: e } = await admin.from("escolas")
+      .select("id, nome, onboarding_checklist, onboarding_dismissed_em, saas_proximo_vencimento, saas_ultimo_pagamento, saas_valor_mensal, saas_forma_pagamento, saas_grace_ate, saas_status")
+      .eq("id", escolaId).maybeSingle();
+    if (!e) return ok({ checklist: {}, saas: { estado: 'ativo' }, etapas: [] });
+
+    // Compute SaaS state
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const toDate = (d: string | null) => d ? new Date(d + 'T00:00:00') : null;
+    const venc = toDate(e.saas_proximo_vencimento);
+    const grace = toDate(e.saas_grace_ate);
+    const dias = venc ? Math.ceil((venc.getTime() - hoje.getTime()) / 86400000) : null;
+    let estado = e.saas_status || 'ativo';
+    if (!['cancelado', 'bloqueado'].includes(estado) && venc) {
+      if (dias! > 7) estado = 'ativo';
+      else if (dias! >= 0) estado = 'aviso';
+      else if (grace && hoje <= grace) estado = 'grace';
+      else if (dias! >= -7) estado = 'atraso';
+      else if (dias! >= -15) estado = 'suspenso';
+      else estado = 'bloqueado';
+    }
+
+    // Compute etapas automáticas (derivadas de dados reais)
+    const [{ count: alunosN }, { count: profsN }, { count: mensN }, { count: comunicN }] = await Promise.all([
+      admin.from("alunos").select("*", { count: 'exact', head: true }),
+      admin.from("professoras").select("*", { count: 'exact', head: true }),
+      admin.from("fin_mensalidades").select("*", { count: 'exact', head: true }),
+      admin.from("comunicados").select("*", { count: 'exact', head: true }).catch(() => ({ count: 0 })),
+    ]);
+    const manual = (e.onboarding_checklist || {}) as Record<string, any>;
+    const etapas = [
+      { id: 'cadastrar_alunos',      titulo: 'Cadastrar alunos',           descricao: 'Importe sua planilha ou cadastre manualmente.',         concluido: (alunosN ?? 0) > 0 || !!manual.cadastrar_alunos,      link: '/gerente.html#alunos' },
+      { id: 'cadastrar_professoras', titulo: 'Cadastrar professoras',      descricao: 'Convide sua equipe docente.',                             concluido: (profsN ?? 0) > 0 || !!manual.cadastrar_professoras, link: '/gerente.html#professoras' },
+      { id: 'configurar_financeiro', titulo: 'Configurar financeiro',      descricao: 'Defina valores de mensalidade e integre o Banco Inter.', concluido: (mensN ?? 0) > 0 || !!manual.configurar_financeiro,  link: '/gerente.html#financeiro' },
+      { id: 'configurar_comunicacao',titulo: 'Configurar WhatsApp/Email',  descricao: 'Habilite comunicação oficial com as famílias.',           concluido: !!manual.configurar_comunicacao,                     link: '/gerente.html#comunicacao' },
+      { id: 'primeiro_comunicado',   titulo: 'Enviar primeiro comunicado', descricao: 'Teste o envio para sua equipe.',                          concluido: (comunicN ?? 0) > 0 || !!manual.primeiro_comunicado, link: '/gerente.html#comunicacao' },
+      { id: 'aceitar_termos_dpa',    titulo: 'Aceitar Termos + DPA (LGPD)',descricao: 'Formalize o acordo de tratamento de dados.',              concluido: !!manual.aceitar_termos_dpa,                         link: '/dpa/' },
+      { id: 'convidar_familias',     titulo: 'Convidar famílias',          descricao: 'Envie o link de acesso ao portal dos pais.',              concluido: !!manual.convidar_familias,                          link: '/gerente.html#alunos' },
+    ];
+    const total = etapas.length;
+    const feitas = etapas.filter(x => x.concluido).length;
+
+    return ok({
+      escola_id: e.id,
+      escola_nome: e.nome,
+      dismissed: !!e.onboarding_dismissed_em,
+      checklist: { etapas, total, feitas, completo: feitas === total },
+      saas: {
+        estado,
+        dias_para_vencimento: dias,
+        proximo_vencimento: e.saas_proximo_vencimento,
+        valor_mensal: e.saas_valor_mensal,
+        forma_pagamento: e.saas_forma_pagamento,
+      },
+    });
+  }
+
+  if (action === "onboarding_marcar") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const { etapa, concluido } = body as any;
+    if (!etapa) return err("etapa obrigatória.");
+    const escolaId = await getEscolaPadrao(admin);
+    if (!escolaId) return err("Escola não encontrada.");
+    const { data: e } = await admin.from("escolas").select("onboarding_checklist").eq("id", escolaId).maybeSingle();
+    const cur = (e?.onboarding_checklist || {}) as Record<string, any>;
+    if (concluido === false) {
+      delete cur[etapa];
+    } else {
+      cur[etapa] = { concluido_em: new Date().toISOString(), por: (gerente as any)?.nome || null };
+    }
+    await admin.from("escolas").update({ onboarding_checklist: cur }).eq("id", escolaId);
+    return ok({ success: true });
+  }
+
+  if (action === "onboarding_dismiss") {
+    const gerente = await validarSessao(admin, token);
+    if (!gerente) return err("Sessão inválida.", 401);
+    const escolaId = await getEscolaPadrao(admin);
+    if (!escolaId) return err("Escola não encontrada.");
+    await admin.from("escolas").update({ onboarding_dismissed_em: new Date().toISOString() }).eq("id", escolaId);
+    return ok({ success: true });
+  }
+
   if (action === "config_publica") {
     const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria")
     const cfg: Record<string, unknown> = {}

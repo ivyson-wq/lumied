@@ -1053,6 +1053,25 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
+      <!-- Banners globais (billing + onboarding) -->
+      <div id="billingBanner" style="display:none;margin:12px 0 20px;padding:14px 18px;border-radius:12px;font-size:14px;line-height:1.5;"></div>
+      <div id="onbBanner" style="display:none;margin:0 0 20px;background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;">🎯 Primeiros passos na Lumied</div>
+            <div style="color:var(--muted);font-size:13px;margin-top:4px;" id="onbProgresso">—</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="onbToggleDetalhe()" id="onbBtnToggle" style="padding:6px 14px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Ver checklist</button>
+            <button onclick="onbDismiss()" style="padding:6px 12px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;" title="Dispensar">Dispensar</button>
+          </div>
+        </div>
+        <div id="onbProgressBar" style="height:8px;background:#eef;border-radius:99px;overflow:hidden;margin-bottom:12px;">
+          <div id="onbProgressFill" style="height:100%;background:linear-gradient(90deg,#6C63FF,#3B82F6);width:0;transition:width .4s;"></div>
+        </div>
+        <div id="onbEtapas" style="display:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"></div>
+      </div>
+
       <!-- DASHBOARD -->
       <div id="panelDashboard" class="panel">
         <div class="stats-grid">
@@ -11383,6 +11402,92 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   checkSession();
+
+  // ═══ ONBOARDING + BILLING BANNERS ═══
+  async function loadOnboardingBilling() {
+    try {
+      const d = await api({ action: 'onboarding_status' });
+      if (!d || d.error) return;
+
+      // Billing banner
+      const saas = d.saas || {};
+      const bb = document.getElementById('billingBanner');
+      if (bb) {
+        const state = saas.estado;
+        const dias = saas.dias_para_vencimento;
+        if (state === 'aviso') {
+          bb.style.display = 'block';
+          bb.style.background = '#FEF3C7'; bb.style.color = '#92400E'; bb.style.border = '1px solid #FCD34D';
+          bb.innerHTML = `⏰ <strong>Sua mensalidade vence em ${dias} dia(s)</strong> — ${saas.proximo_vencimento ? new Date(saas.proximo_vencimento+'T00:00:00').toLocaleDateString('pt-BR') : ''}. Garanta a continuidade do serviço.`;
+        } else if (state === 'atraso' || state === 'grace') {
+          bb.style.display = 'block';
+          bb.style.background = '#FEE2E2'; bb.style.color = '#991B1B'; bb.style.border = '1px solid #FCA5A5';
+          bb.innerHTML = `⚠️ <strong>Mensalidade em atraso</strong> (${Math.abs(dias || 0)} dia(s)). Envios automáticos e novas funcionalidades podem ser suspensos. Regularize para manter o acesso integral.`;
+        } else if (state === 'suspenso') {
+          bb.style.display = 'block';
+          bb.style.background = '#FEE2E2'; bb.style.color = '#7F1D1D'; bb.style.border = '2px solid #DC2626';
+          bb.innerHTML = `🚫 <strong>Plano suspenso.</strong> Alguns módulos foram desativados. Entre em contato com <a href="mailto:financeiro@lumied.com.br" style="color:inherit;font-weight:700;">financeiro@lumied.com.br</a> para regularizar.`;
+        } else if (state === 'bloqueado') {
+          bb.style.display = 'block';
+          bb.style.background = '#1F2937'; bb.style.color = '#F9FAFB'; bb.style.border = '2px solid #111827';
+          bb.innerHTML = `🔒 <strong>Acesso bloqueado por inadimplência.</strong> Dados preservados por 90 dias. Contato: <a href="mailto:financeiro@lumied.com.br" style="color:#93C5FD;">financeiro@lumied.com.br</a>.`;
+        } else {
+          bb.style.display = 'none';
+        }
+      }
+
+      // Onboarding checklist
+      const cl = d.checklist || {};
+      const total = cl.total || 0;
+      const feitas = cl.feitas || 0;
+      const ob = document.getElementById('onbBanner');
+      if (ob && total > 0 && feitas < total && !d.dismissed) {
+        ob.style.display = 'block';
+        const pct = Math.round((feitas / total) * 100);
+        document.getElementById('onbProgresso').textContent = `${feitas}/${total} etapas concluídas · ${pct}%`;
+        document.getElementById('onbProgressFill').style.width = pct + '%';
+        const el = document.getElementById('onbEtapas');
+        el.innerHTML = (cl.etapas || []).map(function(e) {
+          const check = e.concluido ? '✅' : '⬜';
+          const txt = e.concluido ? '<s style="color:var(--muted);">'+e.titulo+'</s>' : '<strong>'+e.titulo+'</strong>';
+          const action = e.concluido
+            ? '<button onclick="onbMarcar(\''+e.id+'\',false)" style="padding:4px 10px;background:none;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;margin-top:6px;">Desfazer</button>'
+            : '<div style="display:flex;gap:6px;margin-top:6px;">'
+              + (e.link ? '<a href="'+e.link+'" style="padding:4px 10px;background:#1a6bb5;color:#fff;border-radius:6px;font-size:11px;text-decoration:none;">Ir para</a>' : '')
+              + '<button onclick="onbMarcar(\''+e.id+'\',true)" style="padding:4px 10px;background:#16A34A;color:#fff;border:0;border-radius:6px;font-size:11px;cursor:pointer;">Concluir</button>'
+              + '</div>';
+          return '<div style="padding:10px 12px;background:'+(e.concluido?'#F0FDF4':'#F8FAFC')+';border:1px solid '+(e.concluido?'#86EFAC':'var(--border)')+';border-radius:10px;">'
+            + '<div style="display:flex;gap:8px;align-items:start;">'
+            + '<span style="font-size:16px;">'+check+'</span>'
+            + '<div style="flex:1;">'+txt+'<div style="color:var(--muted);font-size:12px;margin-top:2px;">'+(e.descricao||'')+'</div>'+action+'</div>'
+            + '</div></div>';
+        }).join('');
+      } else if (ob) {
+        ob.style.display = 'none';
+      }
+    } catch (e) {
+      console.warn('onboarding/billing load failed', e);
+    }
+  }
+  function onbToggleDetalhe() {
+    const el = document.getElementById('onbEtapas');
+    const btn = document.getElementById('onbBtnToggle');
+    if (!el) return;
+    const showing = el.style.display !== 'none' && el.style.display !== '';
+    el.style.display = showing ? 'none' : 'grid';
+    btn.textContent = showing ? 'Ver checklist' : 'Ocultar';
+  }
+  async function onbMarcar(etapa, concluido) {
+    await api({ action: 'onboarding_marcar', etapa, concluido });
+    loadOnboardingBilling();
+  }
+  async function onbDismiss() {
+    if (!confirm('Dispensar o checklist? Pode reabri-lo no menu de configurações.')) return;
+    await api({ action: 'onboarding_dismiss' });
+    document.getElementById('onbBanner').style.display = 'none';
+  }
+  // Dispara após pequeno delay pra sessão estar validada
+  setTimeout(loadOnboardingBilling, 2000);
 
   // ═══════════════════════════════════════════════════════════
   //  COMUNICAÇÃO — CHAT

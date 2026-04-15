@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acordo de Tratamento de Dados (DPA) — Lumied</title>
+<meta name="description" content="Data Processing Agreement entre Escola (Controladora) e Lumied (Operadora), conforme LGPD.">
+<link rel="canonical" href="https://lumied.com.br/dpa/">
+<link rel="icon" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6C63FF;--bg:#0A0A0F;--border:rgba(255,255,255,.08);--text:#F1F1F4;--muted:#8B8B9E}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.75}
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:900px;margin:0 auto;padding:16px 24px;display:flex;justify-content:space-between}
+.logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:800;color:var(--text);text-decoration:none}
+.nav a{color:var(--muted);text-decoration:none;font-size:14px;margin-left:24px}
+.hero{padding:64px 24px 24px;text-align:center}
+.hero h1{font-family:'Playfair Display',serif;font-size:34px;margin-bottom:8px}
+.hero p{color:var(--muted);font-size:14px;max-width:600px;margin:0 auto}
+main{max-width:800px;margin:0 auto;padding:24px 24px 80px}
+h2{font-family:'Playfair Display',serif;font-size:22px;margin:32px 0 12px;padding-top:16px;border-top:1px solid var(--border);color:var(--primary)}
+p,li{color:#D0D0D8;margin-bottom:10px;font-size:15px}
+ul,ol{padding-left:22px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.callout{background:rgba(108,99,255,.08);border-left:4px solid var(--primary);padding:16px 20px;border-radius:8px;margin:20px 0}
+footer{padding:40px 24px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+footer a{color:var(--muted);text-decoration:none;margin:0 10px}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-inner">
+  <a href="/" class="logo">Lumied</a>
+  <div><a href="/">Home</a><a href="/privacidade/">Privacidade</a><a href="/termos/">Termos</a></div>
+</div></nav>
+
+<section class="hero">
+  <h1>Acordo de Tratamento de Dados (DPA)</h1>
+  <p>Anexo contratual que formaliza o papel da Lumied como Operadora de dados pessoais em nome da Escola (Controladora), nos termos da LGPD.</p>
+</section>
+
+<main>
+
+<div class="callout">
+  <strong>Como aceitar:</strong> este DPA é parte integrante do contrato de prestação de serviços. Ao contratar a Lumied, a Escola declara ter lido e aceitado estas cláusulas. Caso sua instituição exija instrumento próprio assinado, solicite em <strong>dpo@lumied.com.br</strong>.
+</div>
+
+<h2>1. Papéis</h2>
+<ul>
+  <li><strong>Controladora:</strong> a Escola, que define as finalidades e os meios do tratamento dos dados dos alunos, responsáveis e funcionários.</li>
+  <li><strong>Operadora:</strong> Lumied Tecnologia Ltda., que trata os dados em nome e conforme instrução da Escola.</li>
+  <li><strong>Titulares:</strong> alunos, responsáveis, funcionários e quaisquer pessoas naturais cujos dados sejam inseridos na plataforma.</li>
+</ul>
+
+<h2>2. Finalidades autorizadas</h2>
+<p>A Lumied trata dados pessoais exclusivamente para:</p>
+<ul>
+  <li>Prestar os módulos contratados (acadêmico, financeiro, comunicação, compliance, acesso).</li>
+  <li>Oferecer suporte técnico e operacional.</li>
+  <li>Garantir segurança da informação e prevenir fraudes.</li>
+  <li>Cumprir obrigações legais e regulatórias.</li>
+</ul>
+<p>Qualquer uso secundário (incluindo treinamento de modelos de IA) é <strong>vedado</strong> sem autorização expressa da Controladora.</p>
+
+<h2>3. Categorias de dados tratados</h2>
+<table>
+  <tr><th>Categoria</th><th>Sensível?</th></tr>
+  <tr><td>Identificação de alunos, responsáveis e funcionários</td><td>Não</td></tr>
+  <tr><td>Dados acadêmicos (notas, frequência, comportamento)</td><td>Não (cuidado redobrado)</td></tr>
+  <tr><td>Dados financeiros (mensalidades, boletos)</td><td>Não</td></tr>
+  <tr><td>Biometria facial (Control iD)</td><td>Sim</td></tr>
+  <tr><td>Saúde declarada (alergias, restrições, receitas)</td><td>Sim</td></tr>
+  <tr><td>Comunicações (WhatsApp, e-mail)</td><td>Não</td></tr>
+</table>
+
+<h2>4. Sub-operadores autorizados</h2>
+<p>A Escola autoriza a subcontratação dos seguintes operadores, todos com contratos de confidencialidade e proteção de dados equivalentes:</p>
+<table>
+  <tr><th>Sub-operador</th><th>Finalidade</th><th>País</th></tr>
+  <tr><td>Supabase (AWS)</td><td>Banco de dados e storage</td><td>Brasil (São Paulo)</td></tr>
+  <tr><td>Vercel</td><td>Hospedagem front-end e CDN</td><td>Global (EUA/EU)</td></tr>
+  <tr><td>Cloudflare</td><td>DNS, proteção DDoS</td><td>Global</td></tr>
+  <tr><td>Meta / WhatsApp</td><td>Comunicação oficial</td><td>EUA</td></tr>
+  <tr><td>Resend</td><td>E-mails transacionais</td><td>EUA</td></tr>
+  <tr><td>Anthropic (Claude)</td><td>IA assistiva (Lumi)</td><td>EUA</td></tr>
+  <tr><td>Banco Inter</td><td>Boletos e PIX</td><td>Brasil</td></tr>
+</table>
+<p>Alterações na lista são comunicadas com 30 dias de antecedência. A Controladora pode objetar, resolvendo-se por acordo; persistindo divergência, a Controladora pode rescindir sem multa.</p>
+
+<h2>5. Transferência internacional</h2>
+<p>Sub-operadores sediados fora do Brasil atuam sob cláusulas-padrão de transferência e tratamento compatível com a LGPD, conforme Art. 33 da Lei. Dados sensíveis (biometria, saúde) <strong>não</strong> são transferidos internacionalmente.</p>
+
+<h2>6. Segurança da informação</h2>
+<ul>
+  <li>Criptografia em trânsito (TLS 1.2+) e em repouso (AES-256).</li>
+  <li>Row Level Security, rate limiting e WAF.</li>
+  <li>Controle de acesso por papel (RBAC), logs de auditoria de ações administrativas.</li>
+  <li>Backups diários criptografados com retenção escalonada por plano.</li>
+  <li>Testes de penetração anuais e hardening contínuo.</li>
+</ul>
+
+<h2>7. Incidentes de segurança</h2>
+<p>Em caso de incidente que possa acarretar risco ou dano relevante aos titulares, a Lumied comunicará a Escola em até <strong>48 horas</strong> após tomar conhecimento, contendo: natureza do incidente, dados afetados, medidas técnicas e de segurança adotadas, riscos associados e medidas de mitigação (Art. 48 LGPD).</p>
+
+<h2>8. Atendimento a titulares</h2>
+<p>Pedidos dos titulares (Art. 18 LGPD) recebidos pela Lumied são encaminhados imediatamente à Escola. A plataforma já dispõe de ferramentas nativas para: export de dados, anonimização, exclusão, consentimento granular e histórico de consentimentos.</p>
+
+<h2>9. Retenção e devolução</h2>
+<ul>
+  <li>Durante o contrato: dados ativos conforme uso.</li>
+  <li>Ao término: 90 dias para export completo em JSON/CSV; após, exclusão irreversível.</li>
+  <li>Dados com retenção legal obrigatória (fiscais, contábeis) são mantidos pelo prazo legal, em ambiente segregado.</li>
+</ul>
+
+<h2>10. Auditoria</h2>
+<p>A Controladora pode, uma vez ao ano e mediante aviso de 30 dias, auditar remotamente o cumprimento deste DPA (revisão documental e relatórios SOC-like). Auditorias presenciais são avaliadas caso a caso e podem envolver custos a combinar.</p>
+
+<h2>11. Vigência e rescisão</h2>
+<p>Este DPA vigora enquanto houver tratamento de dados em nome da Escola. Rescindido o contrato, persistem obrigações de confidencialidade, segurança e retenção de logs conforme previsto.</p>
+
+<h2>12. Contato</h2>
+<ul>
+  <li>Encarregado Lumied (DPO): <strong>dpo@lumied.com.br</strong></li>
+  <li>Solicitações de DPA assinado: <strong>juridico@lumied.com.br</strong></li>
+</ul>
+
+<p style="margin-top:40px;color:var(--muted);font-size:13px"><strong>Versão:</strong> 1.0 · <strong>Vigência:</strong> 15 de abril de 2026</p>
+
+</main>
+<footer>
+  <div>© 2026 Lumied</div>
+  <div style="margin-top:10px"><a href="/">Home</a><a href="/clientes/">Clientes</a><a href="/sla/">SLA</a><a href="/termos/">Termos</a><a href="/privacidade/">Privacidade</a><a href="/dpa/">DPA</a></div>
+</footer>
+</body>
+</html>

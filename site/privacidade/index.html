@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Política de Privacidade — Lumied</title>
+<meta name="description" content="Como a Lumied coleta, trata e protege dados pessoais, em conformidade com a LGPD.">
+<link rel="canonical" href="https://lumied.com.br/privacidade/">
+<link rel="icon" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6C63FF;--bg:#0A0A0F;--border:rgba(255,255,255,.08);--text:#F1F1F4;--muted:#8B8B9E}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.75}
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:900px;margin:0 auto;padding:16px 24px;display:flex;justify-content:space-between}
+.logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:800;color:var(--text);text-decoration:none}
+.nav a{color:var(--muted);text-decoration:none;font-size:14px;margin-left:24px}
+.hero{padding:64px 24px 24px;text-align:center}
+.hero h1{font-family:'Playfair Display',serif;font-size:38px;margin-bottom:8px}
+.hero p{color:var(--muted);font-size:14px}
+main{max-width:800px;margin:0 auto;padding:24px 24px 80px}
+h2{font-family:'Playfair Display',serif;font-size:22px;margin:32px 0 12px;padding-top:16px;border-top:1px solid var(--border);color:var(--primary)}
+h3{font-size:15px;margin:18px 0 6px;color:var(--text)}
+p,li{color:#D0D0D8;margin-bottom:10px;font-size:15px}
+ul,ol{padding-left:22px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+footer{padding:40px 24px;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--border)}
+footer a{color:var(--muted);text-decoration:none;margin:0 10px}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-inner">
+  <a href="/" class="logo">Lumied</a>
+  <div><a href="/">Home</a><a href="/termos/">Termos</a><a href="/dpa/">DPA</a></div>
+</div></nav>
+
+<section class="hero">
+  <h1>Política de Privacidade</h1>
+  <p>Em conformidade com a Lei 13.709/2018 (LGPD). Versão 1.0 · 15 de abril de 2026.</p>
+</section>
+
+<main>
+
+<h2>1. Quem somos</h2>
+<p><strong>Lumied Tecnologia Ltda.</strong>, operadora da plataforma Lumied, é a <strong>Controladora</strong> dos dados pessoais dos usuários do site público (lumied.com.br) e <strong>Operadora</strong> dos dados pessoais tratados em nome das Escolas contratantes (nesse caso, a Escola é Controladora).</p>
+<p>Encarregado (DPO): <strong>dpo@lumied.com.br</strong></p>
+
+<h2>2. Quais dados tratamos</h2>
+<table>
+  <thead><tr><th>Categoria</th><th>Exemplos</th><th>Finalidade</th><th>Base legal</th></tr></thead>
+  <tbody>
+    <tr><td>Cadastrais de usuários</td><td>Nome, e-mail, telefone, CPF</td><td>Acesso, suporte, faturamento</td><td>Execução de contrato</td></tr>
+    <tr><td>Cadastrais de alunos</td><td>Nome, data nasc., filiação, série</td><td>Gestão acadêmica</td><td>Execução de contrato / tutela do menor</td></tr>
+    <tr><td>Biométricos</td><td>Foto facial (Control iD)</td><td>Controle de acesso</td><td>Consentimento específico</td></tr>
+    <tr><td>Financeiros</td><td>Boletos, mensalidades, inadimplência</td><td>Cobrança</td><td>Execução de contrato / legítimo interesse</td></tr>
+    <tr><td>Comunicações</td><td>Mensagens WhatsApp, e-mails</td><td>Comunicação escola-família</td><td>Execução de contrato</td></tr>
+    <tr><td>Navegação</td><td>IP, user-agent, páginas visitadas</td><td>Segurança, analytics</td><td>Legítimo interesse</td></tr>
+  </tbody>
+</table>
+
+<h2>3. Como coletamos</h2>
+<ul>
+  <li>Diretamente dos usuários quando preenchem cadastros ou formulários.</li>
+  <li>Automaticamente via cookies e logs de acesso.</li>
+  <li>Da Escola contratante, quando esta insere dados dos alunos e responsáveis.</li>
+  <li>De parceiros autorizados (gateway de pagamento, provedores de e-mail/WhatsApp).</li>
+</ul>
+
+<h2>4. Com quem compartilhamos</h2>
+<ul>
+  <li><strong>Infraestrutura:</strong> Supabase (AWS São Paulo), Vercel, Cloudflare — apenas hospedagem e CDN.</li>
+  <li><strong>Comunicação:</strong> Meta (WhatsApp Business API), Resend (e-mails transacionais).</li>
+  <li><strong>Financeiro:</strong> Banco Inter (boletos), conforme o módulo contratado.</li>
+  <li><strong>IA:</strong> Anthropic (Claude) — com acordos de não-treinamento em dados do cliente.</li>
+  <li><strong>Autoridades:</strong> apenas mediante ordem judicial ou obrigação legal.</li>
+</ul>
+<p>Todos os operadores são formalmente contratados com cláusulas de confidencialidade e encarregados próprios.</p>
+
+<h2>5. Por quanto tempo guardamos</h2>
+<ul>
+  <li>Dados de uso ativo: durante a vigência do contrato com a Escola.</li>
+  <li>Dados fiscais e contábeis: 5 anos após encerramento (obrigação legal).</li>
+  <li>Logs de segurança: 6 meses.</li>
+  <li>Após encerramento: 90 dias de grace para export pela Escola, depois exclusão definitiva.</li>
+</ul>
+
+<h2>6. Direitos dos titulares</h2>
+<p>Nos termos do Art. 18 da LGPD, você pode solicitar:</p>
+<ul>
+  <li>Confirmação e acesso aos seus dados</li>
+  <li>Correção de dados incompletos ou desatualizados</li>
+  <li>Anonimização, bloqueio ou exclusão de dados desnecessários</li>
+  <li>Portabilidade (export em formato legível)</li>
+  <li>Revogação de consentimento</li>
+  <li>Informação sobre compartilhamentos</li>
+</ul>
+<p>Solicitações: <strong>dpo@lumied.com.br</strong> — respondemos em até 15 dias corridos.</p>
+
+<h2>7. Segurança</h2>
+<ul>
+  <li>Criptografia em trânsito (TLS 1.2+) e em repouso (AES-256).</li>
+  <li>Row Level Security no banco de dados.</li>
+  <li>Autenticação multifator (biometria ou código por e-mail).</li>
+  <li>Hashing de senhas com PBKDF2 (100-120k iterações).</li>
+  <li>Logs de auditoria de acessos administrativos.</li>
+  <li>Testes periódicos de penetração e hardening (última rodada: abril/2026).</li>
+</ul>
+
+<h2>8. Crianças e adolescentes</h2>
+<p>O Lumied trata dados de menores exclusivamente para finalidades educacionais, com consentimento dos responsáveis legais, em conformidade com o ECA, LGPD e Resolução CD/ANPD nº 2/2022. Dados sensíveis (biométricos, saúde) exigem consentimento específico e podem ser revogados a qualquer momento.</p>
+
+<h2>9. Cookies</h2>
+<p>Usamos cookies essenciais (autenticação, preferências) e analíticos (Google Analytics). Banner de consentimento apresentado no primeiro acesso.</p>
+
+<h2>10. Atualizações</h2>
+<p>Alterações materiais nesta política são comunicadas por e-mail e banner in-app com 30 dias de antecedência. Histórico de versões disponível sob solicitação.</p>
+
+<h2>11. Contato da ANPD</h2>
+<p>Caso não consiga resolver uma questão conosco, você pode contatar a Autoridade Nacional de Proteção de Dados: <a href="https://www.gov.br/anpd" style="color:var(--primary)">gov.br/anpd</a>.</p>
+
+</main>
+<footer>
+  <div>© 2026 Lumied · dpo@lumied.com.br</div>
+  <div style="margin-top:10px"><a href="/">Home</a><a href="/clientes/">Clientes</a><a href="/sla/">SLA</a><a href="/termos/">Termos</a><a href="/privacidade/">Privacidade</a><a href="/dpa/">DPA</a></div>
+</footer>
+</body>
+</html>
