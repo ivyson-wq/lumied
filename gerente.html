@@ -416,6 +416,15 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
         <div id="sidebarLeafLogin" style="font-size:28px;">🍁</div>
         <div><div id="loginBrandName" style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Painel do Gerente</div></div>
+        <script>
+          // Rebrand imediato para subdomínio demo — evita flash de "Maple Bear"
+          if (/^demo\./i.test(location.hostname)) {
+            document.getElementById('loginBrandName').textContent = 'Demo Lumied';
+            const leaf = document.getElementById('sidebarLeafLogin');
+            if (leaf) leaf.innerHTML = '<img src="/lumied-logo-preto.png" style="height:28px;object-fit:contain;" alt="Lumied">';
+            document.title = 'Demo Lumied — Painel do Gerente';
+          }
+        </script>
       </div>
       <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;">Bem-vindo de volta</h2>
       <p style="font-size:13px;color:#7a7169;margin-bottom:24px;">Entre com suas credenciais para acessar o painel.</p>
@@ -440,6 +449,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <img class="sb-logo-img" id="sidebarLogo" alt="">
       <img src="/lumied-logo-branco.png" id="sidebarLeaf" class="sb-leaf" style="height:36px;object-fit:contain;" alt="Lumied">
       <h1>Maple Bear</h1><span>Painel do Gerente</span>
+      <script>
+        if (/^demo\./i.test(location.hostname)) {
+          document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = 'Demo Lumied');
+          document.title = 'Demo Lumied — Painel do Gerente';
+        }
+      </script>
     </div>
     <nav class="sb-nav" role="navigation" aria-label="Menu principal">
       <!-- Favoritos (populated by JS) -->
@@ -4420,7 +4435,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('wizardOverlay')?.remove();
   };
 
+  // Detecta subdomínio de demonstração (demo.lumied.com.br) — força branding Lumied
+  // para não expor nome/logo da escola cujos dados seedados estão no banco global.
+  const IS_DEMO_HOST = /^demo\./i.test(location.hostname);
+
   async function loadSidebarLogo() {
+    if (IS_DEMO_HOST) {
+      document.getElementById('sidebarLogo').style.display = 'none';
+      const leaf = document.getElementById('sidebarLeaf');
+      if (leaf) { leaf.src = '/lumied-logo-branco.png'; leaf.style.display = 'block'; leaf.alt = 'Lumied'; }
+      document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = 'Demo Lumied');
+      document.title = 'Demo Lumied — Painel do Gerente';
+      const lb = document.getElementById('loginBrandName');
+      if (lb) lb.textContent = 'Demo Lumied';
+      return;
+    }
     const d = await api({ action:'config_get', chave:'logo_url' });
     if(d.valor){ document.getElementById('sidebarLogo').src=d.valor; document.getElementById('sidebarLogo').style.display='block'; document.getElementById('sidebarLeaf').style.display='none'; }
     // Carregar nome da escola
