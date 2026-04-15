@@ -22,6 +22,25 @@ const OUT_DIR = path.join(process.cwd(), 'site', 'screenshots', 'ajuda');
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
 /**
+ * Instala interceptor de rede: swap de "Maple Bear" por "Demo Lumied" em
+ * TODAS as respostas JSON (cobre config_publica e outras APIs). Chamar
+ * UMA vez antes de page.goto().
+ */
+async function installNetworkRebrand(page: Page) {
+  await page.route('**/functions/v1/**', async (route) => {
+    const resp = await route.fetch();
+    const ct = resp.headers()['content-type'] || '';
+    if (!ct.includes('json')) { await route.fulfill({ response: resp }); return; }
+    let body = await resp.text();
+    body = body
+      .replace(/Maple Bear[^"\\\\·\-\n|]*/g, 'Demo Lumied')
+      .replace(/🍁/g, '')
+      .replace(/maplebear[a-z]*/gi, 'lumied');
+    await route.fulfill({ response: resp, body });
+  });
+}
+
+/**
  * Aplica rebrand da UI: substitui "Maple Bear" por "Demo Lumied" e troca
  * as imagens de logo por /lumied-logo-branco.png. Rodado antes de cada
  * screenshot para não vazar branding de cliente nas capturas.
@@ -60,13 +79,25 @@ async function applyDemoBranding(page: Page) {
     // Heading H1 e brand name do login (IDs conhecidos)
     const brand = document.getElementById('loginBrandName');
     if (brand) brand.textContent = 'Demo Lumied';
-    document.querySelectorAll('h1').forEach(h1 => {
-      if ((h1.textContent || '').match(/Maple Bear/i)) h1.textContent = 'Demo Lumied';
+    document.querySelectorAll('h1, h2, h3, h4').forEach(h => {
+      if ((h.textContent || '').match(/Maple Bear/i)) h.textContent = h.textContent!.replace(/Maple Bear[^·\-\n|]*/gi, 'Demo Lumied');
+    });
+
+    // Atributos comuns (placeholder, title, aria-label, value em inputs)
+    document.querySelectorAll<HTMLElement>('[placeholder], [title], [aria-label]').forEach(el => {
+      ['placeholder', 'title', 'aria-label'].forEach(attr => {
+        const v = el.getAttribute(attr);
+        if (v && /Maple Bear/i.test(v)) el.setAttribute(attr, v.replace(/Maple Bear[^·\-\n|]*/gi, 'Demo Lumied'));
+      });
+    });
+    document.querySelectorAll<HTMLInputElement>('input[value], input[type="hidden"]').forEach(inp => {
+      if (/Maple Bear/i.test(inp.value)) inp.value = inp.value.replace(/Maple Bear[^·\-\n|]*/gi, 'Demo Lumied');
     });
   });
 }
 
 async function loginGerente(page: Page) {
+  await installNetworkRebrand(page);
   await page.goto(`${DEMO_URL}/gerente.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#loginEmail', { timeout: 15000 });
   await page.fill('#loginEmail', DEMO_EMAIL);
@@ -168,6 +199,7 @@ test.describe('Screenshots Central de Ajuda — Portal do Gerente', () => {
 
   test('captura telas de login e inicial', async ({ page }) => {
     page.setViewportSize({ width: 1440, height: 900 });
+    await installNetworkRebrand(page);
     await page.goto(`${DEMO_URL}/gerente.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#loginEmail', { timeout: 15000 });
     await applyDemoBranding(page);
