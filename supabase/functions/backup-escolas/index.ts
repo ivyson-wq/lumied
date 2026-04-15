@@ -70,7 +70,7 @@ async function validarGerente(sb: SupabaseClient, token: string): Promise<{ ok: 
   return { ok: false };
 }
 
-async function runBackup(sb: SupabaseClient, escola_id: string): Promise<{ path: string; size: number; linhas: number; tabelas: number }> {
+async function runBackup(sb: SupabaseClient, escola_id: string): Promise<{ path: string; size: number; linhas: number; tabelas: number; faces: number }> {
   const hoje = new Date().toISOString().slice(0, 10);
 
   // Insere/atualiza row de log (em_andamento)
@@ -78,7 +78,16 @@ async function runBackup(sb: SupabaseClient, escola_id: string): Promise<{ path:
     escola_id, data_backup: hoje, status: "em_andamento", iniciado_em: new Date().toISOString(),
   }, { onConflict: "escola_id,data_backup" });
 
-  const payload: any = { meta: { escola_id, data_backup: hoje, gerado_em: new Date().toISOString(), versao: 1 }, tabelas: {} };
+  // Config: incluir faces?
+  const { data: escolaRow } = await sb.from("escolas").select("saas_backup_incluir_faces").eq("id", escola_id).maybeSingle();
+  const incluirFaces = !!(escolaRow as { saas_backup_incluir_faces?: boolean } | null)?.saas_backup_incluir_faces;
+
+  // deno-lint-ignore no-explicit-any
+  const payload: any = {
+    meta: { escola_id, data_backup: hoje, gerado_em: new Date().toISOString(), versao: 2, incluir_faces: incluirFaces },
+    tabelas: {},
+    faces: {} as Record<string, string>, // aluno_id/face_id → base64 jpg
+  };
   let totalLinhas = 0;
   let tabelasOk = 0;
 
@@ -100,6 +109,28 @@ async function runBackup(sb: SupabaseClient, escola_id: string): Promise<{ path:
     }
   }
 
+  // Faces (opt-in)
+  let facesBaixadas = 0;
+  if (incluirFaces) {
+    try {
+      const { data: faces } = await sb.from("acesso_faces").select("id, pessoa_id, foto_url").eq("escola_id", escola_id);
+      for (const f of (faces ?? []) as Array<{ id: string; pessoa_id: string; foto_url: string }>) {
+        if (!f.foto_url) continue;
+        try {
+          const resp = await fetch(f.foto_url, { signal: AbortSignal.timeout(5000) });
+          if (!resp.ok) continue;
+          const bytes = new Uint8Array(await resp.arrayBuffer());
+          let bin = ""; const chunk = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunk) bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+          payload.faces[f.id] = btoa(bin);
+          facesBaixadas++;
+        } catch { /* face individual falhou — pula */ }
+      }
+    } catch (e) {
+      log.warn(`faces: ${(e as Error).message}`);
+    }
+  }
+
   const jsonBytes = new TextEncoder().encode(JSON.stringify(payload));
   const gzBytes = gzip(jsonBytes);
   const storagePath = `${escola_id}/${hoje}.json.gz`;
@@ -118,7 +149,37 @@ async function runBackup(sb: SupabaseClient, escola_id: string): Promise<{ path:
     concluido_em: new Date().toISOString(),
   }).eq("escola_id", escola_id).eq("data_backup", hoje);
 
-  return { path: storagePath, size: gzBytes.byteLength, linhas: totalLinhas, tabelas: tabelasOk };
+  return { path: storagePath, size: gzBytes.byteLength, linhas: totalLinhas, tabelas: tabelasOk, faces: facesBaixadas };
+}
+
+async function enviarAlertaFalha(sb: SupabaseClient, escolaId: string, escolaNome: string, erro: string) {
+  try {
+    // Busca email de alerta: coluna própria > superusuario_email config > skip
+    const { data: e } = await sb.from("escolas").select("saas_backup_alert_email").eq("id", escolaId).maybeSingle();
+    let email = (e as { saas_backup_alert_email?: string } | null)?.saas_backup_alert_email || null;
+    if (!email) {
+      const { data: c } = await sb.from("escola_config").select("valor")
+        .eq("chave", "superusuario_email").eq("escola_id", escolaId).maybeSingle();
+      email = (c?.valor as string | null)?.replace(/^"|"$/g, "") || null;
+    }
+    if (!email) return;
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        tipo: "generic",
+        to: email,
+        subject: `Falha no backup diário — ${escolaNome}`,
+        html: `<h2>Backup diário falhou</h2><p>Escola: <strong>${escolaNome}</strong></p><p>Data: ${new Date().toLocaleString("pt-BR")}</p><p>Erro: <code>${erro}</code></p><p>Tentaremos novamente no próximo ciclo. Se persistir, contate suporte@lumied.com.br.</p>`,
+        escola_id: escolaId,
+      }),
+    });
+  } catch (e) {
+    log.warn(`alerta email falhou: ${(e as Error).message}`);
+  }
 }
 
 async function rotateBackups(sb: SupabaseClient): Promise<{ removidos: number }> {
@@ -172,11 +233,14 @@ serve(async (req) => {
           resultados.push({ escola_id: e.id, nome: e.nome, ok: true, ...r });
           log.info(`Backup ok: ${e.nome}`, { metadata: r });
         } catch (ex) {
+          const errMsg = (ex as Error).message;
           await sb.from("backups_log").update({
-            status: "erro", erro_msg: (ex as Error).message, concluido_em: new Date().toISOString(),
+            status: "erro", erro_msg: errMsg, concluido_em: new Date().toISOString(),
           }).eq("escola_id", e.id).eq("data_backup", new Date().toISOString().slice(0,10));
-          resultados.push({ escola_id: e.id, nome: e.nome, ok: false, erro: (ex as Error).message });
-          log.error(`Backup falhou: ${e.nome}`, { metadata: { err: (ex as Error).message } });
+          resultados.push({ escola_id: e.id, nome: e.nome, ok: false, erro: errMsg });
+          log.error(`Backup falhou: ${e.nome}`, { metadata: { err: errMsg } });
+          // Alerta por email (best-effort — não bloqueia outras escolas)
+          enviarAlertaFalha(sb, e.id, e.nome, errMsg).catch(() => {});
         }
       }
       const rot = await rotateBackups(sb).catch(() => ({ removidos: 0 }));
@@ -244,6 +308,141 @@ serve(async (req) => {
       if (!v.ok) return err("Staff apenas.", 403);
       const r = await rotateBackups(sb);
       return json({ ok: true, ...r });
+    }
+
+    // ── restore_preview (staff, dry-run) ──
+    if (action === "restore_preview") {
+      const v = await validarStaff(sb, token);
+      if (!v.ok) return err("Staff apenas.", 403);
+      const escola_id = body.escola_id as string;
+      const data_backup = body.data_backup as string;
+      if (!escola_id || !data_backup) return err("escola_id e data_backup obrigatórios.");
+
+      const path = `${escola_id}/${data_backup}.json.gz`;
+      const { data: blob, error: dlErr } = await sb.storage.from("backups-escolas").download(path);
+      if (dlErr || !blob) return err("Backup não encontrado.", 404);
+
+      const { gunzip } = await import("compress/mod.ts");
+      const gzBytes = new Uint8Array(await blob.arrayBuffer());
+      const jsonBytes = gunzip(gzBytes);
+      // deno-lint-ignore no-explicit-any
+      const payload = JSON.parse(new TextDecoder().decode(jsonBytes)) as any;
+
+      // Summary: para cada tabela, quantas linhas no backup vs quantas atualmente
+      const resumo: Array<{ tabela: string; no_backup: number; atual: number; diff: number }> = [];
+      for (const [tabela, rowsRaw] of Object.entries(payload.tabelas || {})) {
+        const rows = rowsRaw as unknown[];
+        let atual = 0;
+        try {
+          const q = tabela === "escolas"
+            ? sb.from(tabela).select("*", { count: "exact", head: true }).eq("id", escola_id)
+            : sb.from(tabela).select("*", { count: "exact", head: true }).eq("escola_id", escola_id);
+          const { count } = await q;
+          atual = count ?? 0;
+        } catch { /* tabela pode não existir agora */ }
+        resumo.push({ tabela, no_backup: rows.length, atual, diff: rows.length - atual });
+      }
+
+      await sb.from("restores_log").insert({
+        escola_id, backup_data: data_backup, modo: "preview",
+        iniciado_por: ((v.staff as { email?: string })?.email || "staff"),
+        tabelas_afetadas: resumo.length,
+        linhas_afetadas: resumo.reduce((s, r) => s + r.no_backup, 0),
+        status: "sucesso",
+        concluido_em: new Date().toISOString(),
+      });
+
+      return json({
+        ok: true,
+        meta: payload.meta,
+        resumo,
+        faces_count: Object.keys(payload.faces || {}).length,
+        avisos: [
+          "Este é um preview. Nenhum dado foi alterado.",
+          "restore_apply é DESTRUTIVO — apaga dados atuais da escola e substitui pelos do backup.",
+          "Só staff sênior deve executar apply, e apenas após validar este resumo com o cliente.",
+        ],
+      });
+    }
+
+    // ── restore_apply (staff, DESTRUTIVO) ──
+    if (action === "restore_apply") {
+      const v = await validarStaff(sb, token);
+      if (!v.ok) return err("Staff apenas.", 403);
+      const escola_id = body.escola_id as string;
+      const data_backup = body.data_backup as string;
+      const confirm = body.confirm_destructive as string;
+      if (!escola_id || !data_backup) return err("escola_id e data_backup obrigatórios.");
+      if (confirm !== `RESTAURAR_${escola_id}`) {
+        return err(`Para confirmar restore destrutivo, envie confirm_destructive = "RESTAURAR_${escola_id}"`, 400);
+      }
+
+      const path = `${escola_id}/${data_backup}.json.gz`;
+      const { data: blob, error: dlErr } = await sb.storage.from("backups-escolas").download(path);
+      if (dlErr || !blob) return err("Backup não encontrado.", 404);
+
+      const { gunzip } = await import("compress/mod.ts");
+      const gzBytes = new Uint8Array(await blob.arrayBuffer());
+      const jsonBytes = gunzip(gzBytes);
+      // deno-lint-ignore no-explicit-any
+      const payload = JSON.parse(new TextDecoder().decode(jsonBytes)) as any;
+
+      const { data: logRow } = await sb.from("restores_log").insert({
+        escola_id, backup_data: data_backup, modo: "apply",
+        iniciado_por: ((v.staff as { email?: string })?.email || "staff"),
+        status: "em_andamento",
+      }).select().single();
+
+      let tabelasProcessadas = 0;
+      let linhasInseridas = 0;
+      const erros: string[] = [];
+
+      try {
+        // DELETE então INSERT. Tabelas na ordem reversa das FKs idealmente; aqui
+        // confiamos em ON DELETE CASCADE de escolas (mas muitas tabelas não têm).
+        // Skip de tabelas sensíveis que NUNCA devem ser restauradas (staff_sessoes etc).
+        const SKIP_TABLES = new Set(["backups_log", "restores_log"]);
+
+        for (const [tabela, rowsRaw] of Object.entries(payload.tabelas || {})) {
+          if (SKIP_TABLES.has(tabela)) continue;
+          const rows = rowsRaw as Record<string, unknown>[];
+          try {
+            // DELETE atuais
+            if (tabela !== "escolas") {
+              await sb.from(tabela).delete().eq("escola_id", escola_id);
+            }
+            // INSERT do backup
+            if (rows.length) {
+              const { error } = await sb.from(tabela).upsert(rows, { onConflict: "id" });
+              if (error) throw new Error(error.message);
+              linhasInseridas += rows.length;
+            }
+            tabelasProcessadas++;
+          } catch (e) {
+            erros.push(`${tabela}: ${(e as Error).message}`);
+          }
+        }
+
+        await sb.from("restores_log").update({
+          status: erros.length ? "erro" : "sucesso",
+          tabelas_afetadas: tabelasProcessadas,
+          linhas_afetadas: linhasInseridas,
+          erro_msg: erros.length ? erros.join(" | ") : null,
+          concluido_em: new Date().toISOString(),
+        }).eq("id", (logRow as { id: string }).id);
+
+        return json({
+          ok: erros.length === 0,
+          tabelas_processadas: tabelasProcessadas,
+          linhas_inseridas: linhasInseridas,
+          erros,
+        });
+      } catch (e) {
+        await sb.from("restores_log").update({
+          status: "erro", erro_msg: (e as Error).message, concluido_em: new Date().toISOString(),
+        }).eq("id", (logRow as { id: string }).id);
+        throw e;
+      }
     }
 
     return err("Ação inválida.", 400);

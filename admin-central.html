@@ -710,8 +710,32 @@ async function loadBackupsCentralList() {
     const btn = b.status === 'sucesso'
       ? `<button class="action-btn" onclick="baixarBackupCentral('${escolaId}','${b.data_backup}')">⬇ Baixar</button>`
       : '—';
-    return `<tr><td>${esc(nome)}</td><td><strong>${dt}</strong></td><td><span class="status-pill ${st}">${esc(b.status)}</span></td><td>${b.tabelas_inc || '—'}</td><td>${(b.linhas_total || 0).toLocaleString('pt-BR')}</td><td>${mb}</td><td>${btn}</td></tr>`;
+    const btnRestore = b.status === 'sucesso'
+      ? ` <button class="action-btn" style="background:#b5591a;color:#fff;" onclick="restorePreviewBackup('${escolaId}','${b.data_backup}')">🔄 Restaurar</button>`
+      : '';
+    return `<tr><td>${esc(nome)}</td><td><strong>${dt}</strong></td><td><span class="status-pill ${st}">${esc(b.status)}</span></td><td>${b.tabelas_inc || '—'}</td><td>${(b.linhas_total || 0).toLocaleString('pt-BR')}</td><td>${mb}</td><td>${btn}${btnRestore}</td></tr>`;
   }).join('');
+}
+async function restorePreviewBackup(escolaId, dataBackup) {
+  showToast('Carregando preview...', 'info');
+  const d = await callBackupStaff({ action: 'restore_preview', escola_id: escolaId, data_backup: dataBackup });
+  if (d?.error) return showToast('Erro: ' + d.error, 'error');
+  const linhasTotal = d.resumo.reduce((s, r) => s + r.no_backup, 0);
+  const topTabelas = d.resumo.filter(r => r.no_backup > 0).sort((a,b) => b.no_backup - a.no_backup).slice(0, 10)
+    .map(r => `  • ${r.tabela}: ${r.no_backup} no backup (atual: ${r.atual}, diff: ${r.diff > 0 ? '+' : ''}${r.diff})`).join('\n');
+  const msg = `⚠️ RESTORE DESTRUTIVO — Preview\n\nEscola: ${escolaId.slice(0,8)}\nBackup: ${dataBackup}\n\nTotal linhas: ${linhasTotal.toLocaleString('pt-BR')}\nFaces: ${d.faces_count}\n\nTop 10 tabelas:\n${topTabelas}\n\nApply APAGA os dados atuais da escola e substitui pelos do backup.\nTem certeza? (digite RESTAURAR para confirmar)`;
+  const resp = prompt(msg);
+  if (resp !== 'RESTAURAR') { showToast('Restore cancelado.', 'info'); return; }
+  showToast('Aplicando restore... pode levar 1-2 min', 'info');
+  const r = await callBackupStaff({ action: 'restore_apply', escola_id: escolaId, data_backup: dataBackup, confirm_destructive: `RESTAURAR_${escolaId}` });
+  if (r?.error) return showToast('Erro: ' + r.error, 'error');
+  if (r.erros?.length) {
+    showToast(`Restore parcial: ${r.tabelas_processadas} tabelas, ${r.linhas_inseridas} linhas, ${r.erros.length} erros`, 'error');
+    console.error('Restore erros:', r.erros);
+  } else {
+    showToast(`Restore ok: ${r.tabelas_processadas} tabelas, ${r.linhas_inseridas.toLocaleString('pt-BR')} linhas`);
+  }
+  loadBackupsCentralList();
 }
 async function baixarBackupCentral(escolaId, dataBackup) {
   const d = await callBackupStaff({ action: 'download', escola_id: escolaId, data_backup: dataBackup });

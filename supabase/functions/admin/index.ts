@@ -978,11 +978,25 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
 // deno-lint-ignore no-explicit-any
 async function resolveEscola(sb: any, subdominio: string) {
   const { data } = await sb.from("escolas")
-    .select("id, nome, subdominio, slug, plano, plano_id, plano_fim, ativo, supabase_url, supabase_anon_key, planos(id, slug, nome, preco_mensal, preco_anual)")
+    .select("id, nome, subdominio, slug, plano, plano_id, plano_fim, ativo, supabase_url, supabase_anon_key, saas_backup_incluir_faces, saas_retention_dias_override, saas_backup_alert_email, planos(id, slug, nome, preco_mensal, preco_anual)")
     .eq("subdominio", subdominio).single();
   if (!data) throw new AppError("NOT_FOUND", "Escola não encontrada: " + subdominio);
   return data;
 }
+
+// ── Save backup preferences (per-escola admin) ──
+router.on("escola_prefs_backup_save", authAdmin, async (ctx) => {
+  const { subdominio, prefs } = ctx.body as { subdominio: string; prefs: Record<string, unknown> };
+  if (!subdominio) throw new AppError("VALIDATION_FAILED", "subdominio obrigatório.");
+  const escola = await resolveEscola(ctx.sb, subdominio) as { id: string };
+  const ALLOWED = ["saas_backup_incluir_faces", "saas_retention_dias_override", "saas_backup_alert_email"];
+  const update: Record<string, unknown> = {};
+  for (const k of ALLOWED) if (k in prefs) update[k] = prefs[k];
+  if (!Object.keys(update).length) return successResponse({ ok: true, noop: true });
+  const { error } = await ctx.sb.from("escolas").update(update).eq("id", escola.id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ ok: true });
+});
 
 // ── School Dashboard ──
 router.on("escola_dashboard", authAdmin, async (ctx) => {

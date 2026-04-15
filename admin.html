@@ -273,8 +273,26 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
           Um backup completo da sua escola é gerado automaticamente todo dia às 03:00 BRT.
           Retenção conforme plano: <strong>Starter/Start</strong> 14 dias, <strong>Evolução</strong> 30 dias, <strong>Prestige</strong> 90 dias.
-          Você pode baixar o arquivo (formato <code>.json.gz</code>) a qualquer momento — inclui todos os cadastros, financeiro, acadêmico, almoxarifado e comunicações.
+          Você pode baixar o arquivo (formato <code>.json.gz</code>) a qualquer momento — inclui cadastros, financeiro, acadêmico, almoxarifado e comunicações.
         </p>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+          <div class="sec-title" style="font-size:14px;margin-bottom:10px;">Preferências</div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-bottom:10px;">
+            <input type="checkbox" id="bkFaces" onchange="saveBackupPrefs()">
+            <span>Incluir fotos de reconhecimento facial no backup (aumenta tamanho consideravelmente)</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap;">
+            <span>Retenção customizada (dias):</span>
+            <input type="number" id="bkRetention" min="1" max="365" placeholder="usa default do plano" style="width:120px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;" onchange="saveBackupPrefs()">
+            <span style="font-size:12px;color:var(--muted);">(em branco = default do tier)</span>
+          </div>
+          <div style="margin-top:10px;font-size:13px;">
+            <span>Email para alertas de falha:</span>
+            <input type="email" id="bkAlertEmail" placeholder="deixe em branco para usar superusuário" style="width:280px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;" onchange="saveBackupPrefs()">
+          </div>
+        </div>
+
         <div class="table-wrap"><table>
           <thead><tr><th>Data</th><th>Status</th><th>Tabelas</th><th>Linhas</th><th>Tamanho</th><th>Ação</th></tr></thead>
           <tbody id="backupsBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
@@ -637,6 +655,13 @@ async function callBackup(body) {
   return r.json();
 }
 async function loadBackups() {
+  // Carrega prefs atuais da escola
+  const prefs = await api({ action: 'escola_dashboard' }).catch(() => null);
+  if (prefs?.escola) {
+    document.getElementById('bkFaces').checked = !!prefs.escola.saas_backup_incluir_faces;
+    document.getElementById('bkRetention').value = prefs.escola.saas_retention_dias_override || '';
+    document.getElementById('bkAlertEmail').value = prefs.escola.saas_backup_alert_email || '';
+  }
   const d = await callBackup({ action: 'list' });
   const items = d?.backups || [];
   const tbody = document.getElementById('backupsBody');
@@ -651,6 +676,17 @@ async function loadBackups() {
     return `<tr><td><strong>${dt}</strong></td><td><span class="status-pill ${st}">${esc(b.status)}</span></td><td>${b.tabelas_inc || '—'}</td><td>${(b.linhas_total || 0).toLocaleString('pt-BR')}</td><td>${mb}</td><td>${btn}</td></tr>`;
   }).join('');
 }
+async function saveBackupPrefs() {
+  const prefs = {
+    saas_backup_incluir_faces: document.getElementById('bkFaces').checked,
+    saas_retention_dias_override: parseInt(document.getElementById('bkRetention').value) || null,
+    saas_backup_alert_email: document.getElementById('bkAlertEmail').value.trim() || null,
+  };
+  const d = await api({ action: 'escola_prefs_backup_save', prefs });
+  if (d?.error) return showToast('Erro: ' + d.error, 'error');
+  showToast('Preferências salvas');
+}
+
 async function baixarBackup(data_backup) {
   const d = await callBackup({ action: 'download', escola_id: ESCOLA_ID, data_backup });
   if (d?.error || !d?.url) return showToast('Erro: ' + (d?.error || 'URL não retornada'), 'error');
