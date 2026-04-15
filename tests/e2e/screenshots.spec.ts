@@ -21,6 +21,51 @@ const OUT_DIR = path.join(process.cwd(), 'site', 'screenshots', 'ajuda');
 // Garantir pasta de saída
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
+/**
+ * Aplica rebrand da UI: substitui "Maple Bear" por "Demo Lumied" e troca
+ * as imagens de logo por /lumied-logo-branco.png. Rodado antes de cada
+ * screenshot para não vazar branding de cliente nas capturas.
+ */
+async function applyDemoBranding(page: Page) {
+  await page.evaluate(() => {
+    const LUMIED_LOGO = '/lumied-logo-branco.png';
+    const LUMIED_LOGO_DARK = '/lumied-logo-preto.png';
+
+    // Substituições textuais
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const t = node.textContent || '';
+        if (t.includes('Maple Bear')) {
+          node.textContent = t.replace(/Maple Bear[^·\-\n|]*/g, 'Demo Lumied').replace(/🍁/g, '');
+        }
+      } else {
+        node.childNodes.forEach(walk);
+      }
+    };
+    walk(document.body);
+
+    // Título da aba
+    document.title = document.title.replace(/Maple Bear[^—\-|]*/gi, 'Lumied');
+
+    // Trocar imagens cujo alt/src menciona Maple Bear
+    document.querySelectorAll('img').forEach((img) => {
+      const alt = (img.getAttribute('alt') || '').toLowerCase();
+      const src = img.getAttribute('src') || '';
+      if (alt.includes('maple') || src.includes('Design%20sem%20nome') || src.includes('maple')) {
+        img.src = LUMIED_LOGO_DARK;
+        img.alt = 'Lumied';
+      }
+    });
+
+    // Heading H1 e brand name do login (IDs conhecidos)
+    const brand = document.getElementById('loginBrandName');
+    if (brand) brand.textContent = 'Demo Lumied';
+    document.querySelectorAll('h1').forEach(h1 => {
+      if ((h1.textContent || '').match(/Maple Bear/i)) h1.textContent = 'Demo Lumied';
+    });
+  });
+}
+
 async function loginGerente(page: Page) {
   await page.goto(`${DEMO_URL}/gerente.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#loginEmail', { timeout: 15000 });
@@ -30,12 +75,14 @@ async function loginGerente(page: Page) {
   // Espera sidebar aparecer (logado)
   await page.waitForSelector('#appShell .sidebar', { state: 'visible', timeout: 20000 });
   await page.waitForTimeout(1500); // dashboard carrega dados
+  await applyDemoBranding(page);
 }
 
 async function snap(page: Page, panel: string, filename: string, opts: { selector?: string; fullPage?: boolean } = {}) {
   // Alterna o painel usando a função interna do app
   await page.evaluate((p) => (window as any).showPanel && (window as any).showPanel(p), panel);
   await page.waitForTimeout(2000); // espera dados renderizarem
+  await applyDemoBranding(page); // re-aplica rebrand (se painel recriar DOM)
 
   const outPath = path.join(OUT_DIR, filename);
   if (opts.selector) {
@@ -123,18 +170,21 @@ test.describe('Screenshots Central de Ajuda — Portal do Gerente', () => {
     page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${DEMO_URL}/gerente.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#loginEmail', { timeout: 15000 });
+    await applyDemoBranding(page);
     await page.screenshot({ path: path.join(OUT_DIR, 'gerente-login.png') });
     console.log('✓ gerente-login.png');
 
     // Portal dos pais — landing page pública
     await page.goto(`${DEMO_URL}/index.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1500);
+    await applyDemoBranding(page);
     await page.screenshot({ path: path.join(OUT_DIR, 'pais-login.png') });
     console.log('✓ pais-login.png');
 
     // Hub (area-restrita)
     await page.goto(`${DEMO_URL}/area-restrita.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1500);
+    await applyDemoBranding(page);
     await page.screenshot({ path: path.join(OUT_DIR, 'area-restrita.png') });
     console.log('✓ area-restrita.png');
   });
