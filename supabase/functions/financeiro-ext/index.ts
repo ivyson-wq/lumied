@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Router, rateLimit, authGerente, requireFeature } from "../_shared/router.ts";
 import { successResponse, AppError } from "../_shared/errors.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { getEscolaPadrao } from "../_shared/modulos.ts";
 import type { Middleware } from "../_shared/router.ts";
 
 const log = createLogger("financeiro-ext");
@@ -455,11 +456,13 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
   const nm = nextMonth();
   const mesRef = nm.label;
 
-  // Get dia vencimento from escola_config
+  // Get dia vencimento from escola_config (multi-tenant desde mig 236)
+  const escolaIdCron = (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const { data: cfgDia } = await ctx.sb
     .from("escola_config")
     .select("valor")
     .eq("chave", "dia_vencimento_boleto")
+    .eq("escola_id", escolaIdCron)
     .maybeSingle();
   const diaVencimento = cfgDia?.valor || "10";
   const vencimento = `${nm.year}-${String(nm.month).padStart(2, "0")}-${diaVencimento.padStart(2, "0")}`;
@@ -782,10 +785,12 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
         .maybeSingle();
 
       if (inadEntry?.status !== "cobranca_extrajudicial") {
+        const escolaIdAdv = m.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
         const { data: cfgAdv } = await ctx.sb
           .from("escola_config")
           .select("valor")
           .eq("chave", "email_advogado")
+          .eq("escola_id", escolaIdAdv)
           .maybeSingle();
 
         if (cfgAdv?.valor) {

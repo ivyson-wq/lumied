@@ -835,7 +835,7 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
   }).select("id").single();
   if (errEscola || !escola) throw new AppError("BAD_REQUEST", errEscola?.message || "Erro ao criar escola.");
 
-  // 3. Configurações (escola_config não tem escola_id — usa chave única por escola via prefixo ou upsert por chave)
+  // 3. Configurações (multi-tenant desde mig 236: PK composta chave+escola_id)
   const configs: Array<{ chave: string; valor: unknown }> = [
     { chave: 'escola_nome', valor: nome },
     { chave: 'escola_icone', valor: escola_icone || '🏫' },
@@ -850,7 +850,13 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
   if (cnpj) configs.push({ chave: 'escola_cnpj', valor: cnpj });
   if (escola_logo_url) configs.push({ chave: 'escola_logo_url', valor: escola_logo_url });
   for (const cfg of configs) {
-    await ctx.sb.from("escola_config").upsert({ chave: cfg.chave, valor: cfg.valor }, { onConflict: "chave" }).catch(() => {});
+    await ctx.sb.from("escola_config").upsert({
+      chave: cfg.chave,
+      valor: cfg.valor,
+      escola_id: escola.id,
+    }, { onConflict: "chave,escola_id" }).catch((e: unknown) => {
+      console.warn(`[staff_criar_escola] falha ao upsert config ${cfg.chave}:`, e);
+    });
   }
 
   // 4. Criar gerente com escola_id

@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode } from "../_shared/webauthn.ts";
 import { getModulosHabilitados, getEscolaPadrao } from "../_shared/modulos.ts";
+import { resolveEscolaId } from "../_shared/tenant.ts";
 import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
 import { sanitizeBody } from "../_shared/validation.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
@@ -115,8 +116,9 @@ serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await admin.auth.getUser(userToken)
     if (authErr || !user) return err("Sessão inválida.", 401)
     const userEmail = (user.email || "").toLowerCase().trim()
-    // Busca email do superusuário no banco
-    const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").maybeSingle()
+    // Busca email do superusuário no banco (config da escola atual)
+    const escolaIdAdmin = await resolveEscolaId(req, admin)
+    const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").eq("escola_id", escolaIdAdmin).maybeSingle()
     const superEmail = cfgRow?.valor?.toLowerCase().trim() || ''
     if (!superEmail || userEmail !== superEmail) return err("Acesso negado. Apenas o superusuário pode acessar esta página.", 403)
     return ok({ ok: true, email: userEmail })
@@ -129,7 +131,9 @@ serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await admin.auth.getUser(userToken)
     if (authErr || !user) return err("Sessão inválida.", 401)
     const userEmail = (user.email || "").toLowerCase().trim()
-    const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").maybeSingle()
+    const escolaIdAdmin = await resolveEscolaId(req, admin)
+    if (!escolaIdAdmin) return err("Escola não resolvida.", 400)
+    const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").eq("escola_id", escolaIdAdmin).maybeSingle()
     const superEmail = cfgRow?.valor?.toLowerCase().trim() || ''
     if (!superEmail || userEmail !== superEmail) return err("Acesso negado.", 403)
     const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
@@ -140,7 +144,8 @@ serve(async (req: Request) => {
         valor: typeof c.valor === 'string' ? JSON.stringify(c.valor) : c.valor,
         descricao: c.descricao || null,
         categoria: c.categoria || 'geral',
-      }, { onConflict: 'chave' })
+        escola_id: escolaIdAdmin,
+      }, { onConflict: 'chave,escola_id' })
     }
     return ok({ ok: true, saved: configs.length })
   }
@@ -181,8 +186,9 @@ serve(async (req: Request) => {
     const rlMagic = checkRateLimit(ip, "login");
     if (!rlMagic.allowed) return err(`Tente novamente em ${rlMagic.retryAfterSeconds}s.`, 429);
 
-    // Busca config da escola
-    const { data: cfgRows } = await admin.from("escola_config").select("chave, valor");
+    // Busca config da escola atual
+    const escolaIdCfg = await resolveEscolaId(req, admin);
+    const { data: cfgRows } = await admin.from("escola_config").select("chave, valor").eq("escola_id", escolaIdCfg);
     const cfg: Record<string, string> = {};
     for (const r of cfgRows ?? []) cfg[r.chave] = typeof r.valor === "string" ? r.valor.replace(/^"|"$/g, "") : (r.valor ?? "");
     const escolaNome = cfg.escola_nome || "Escola";
@@ -253,9 +259,10 @@ serve(async (req: Request) => {
   // ── Bootstrap do hub (área-restrita): config + módulos + whoami em 1 request ──
   if (action === "hub_bootstrap") {
     const tokens: string[] = Array.isArray(body._tokens) ? (body._tokens as string[]).filter(Boolean) : [];
+    const escolaIdHub = await resolveEscolaId(req, admin);
     const [cfgRes, escolaIdRes, ...sessionProbes] = await Promise.all([
-      admin.from("escola_config").select("chave, valor, categoria"),
-      getEscolaPadrao(admin).catch(() => null),
+      admin.from("escola_config").select("chave, valor, categoria").eq("escola_id", escolaIdHub),
+      Promise.resolve(escolaIdHub),
       ...tokens.map(t => Promise.all([
         admin.from("gerente_sessoes").select("gerente_id, expira_em, gerentes(email)").eq("token", t).maybeSingle(),
         admin.from("secretaria_sessoes").select("secretaria_id, expira_em, secretarias(email)").eq("token", t).maybeSingle(),
@@ -407,7 +414,8 @@ serve(async (req: Request) => {
   }
 
   if (action === "config_publica") {
-    const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria")
+    const escolaIdPub = await resolveEscolaId(req, admin)
+    const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria").eq("escola_id", escolaIdPub)
     const cfg: Record<string, unknown> = {}
     for (const r of rows ?? []) {
       cfg[r.chave] = r.valor
@@ -420,6 +428,8 @@ serve(async (req: Request) => {
     const token = (req.headers.get("authorization") ?? "").replace("Bearer ", "")
     const gerente = await validarSessao(admin, token)
     if (!gerente) return err("Sessão inválida.", 401)
+    const escolaIdSave = (gerente as any)?.escola_id || await resolveEscolaId(req, admin, gerente as any)
+    if (!escolaIdSave) return err("Escola não resolvida.", 400)
     const { configs } = body as { configs: { chave: string; valor: unknown; descricao?: string; categoria?: string }[] }
     if (!configs?.length) return err("Nenhuma config fornecida.")
 
@@ -452,7 +462,8 @@ serve(async (req: Request) => {
         valor: typeof c.valor === 'string' ? JSON.stringify(c.valor) : c.valor,
         descricao: c.descricao || null,
         categoria: c.categoria || 'geral',
-      }, { onConflict: 'chave' })
+        escola_id: escolaIdSave,
+      }, { onConflict: 'chave,escola_id' })
     }
     return ok({ ok: true, saved: configs.length })
   }

@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts'
 import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
 import { captureException } from '../_shared/sentry.ts'
+import { resolveEscolaId } from '../_shared/tenant.ts'
 
 let CORS: Record<string, string> = getCorsHeaders()
 
@@ -96,9 +97,10 @@ Deno.serve(async (req) => {
 
   const { tipo } = body
 
-  // Carrega config da escola para branding
+  // Carrega config da escola para branding (multi-tenant desde mig 236)
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-  const { data: cfgRows } = await sb.from('escola_config').select('chave, valor')
+  const escolaIdEmail = body.escola_id || await resolveEscolaId(req, sb)
+  const { data: cfgRows } = await sb.from('escola_config').select('chave, valor').eq('escola_id', escolaIdEmail)
   const cfg: Record<string, any> = {}
   for (const r of cfgRows ?? []) cfg[r.chave] = r.valor
   const escolaNome = cfg.escola_nome || 'Escola'
