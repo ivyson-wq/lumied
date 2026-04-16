@@ -314,8 +314,8 @@ serve(async (req: Request) => {
   if (action === "ia_uso_self") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
-    const escolaId = await getEscolaPadrao(admin);
-    if (!escolaId) return ok({ custo_usd: 0, cap_usd: null, bloqueado: false, requests: 0 });
+    const escolaId = (gerente as any).escola_id;
+    if (!escolaId) return err("Sessão sem escola associada.", 403);
     const mes = new Date().toISOString().slice(0, 7) + '-01';
     const { data } = await admin.from("escola_ia_uso")
       .select("custo_usd, cap_usd, bloqueado, requests, tokens_input, tokens_output")
@@ -327,8 +327,8 @@ serve(async (req: Request) => {
   if (action === "onboarding_status") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
-    const escolaId = await getEscolaPadrao(admin);
-    if (!escolaId) return ok({ checklist: {}, saas: { estado: 'ativo' }, etapas: [] });
+    const escolaId = (gerente as any).escola_id;
+    if (!escolaId) return err("Sessão sem escola associada.", 403);
     const { data: e } = await admin.from("escolas")
       .select("id, nome, onboarding_checklist, onboarding_dismissed_em, saas_proximo_vencimento, saas_ultimo_pagamento, saas_valor_mensal, saas_forma_pagamento, saas_grace_ate, saas_status")
       .eq("id", escolaId).maybeSingle();
@@ -351,12 +351,12 @@ serve(async (req: Request) => {
       else estado = 'bloqueado';
     }
 
-    // Compute etapas automáticas (derivadas de dados reais)
+    // Compute etapas automáticas (derivadas de dados reais — TODAS escopadas por escola_id)
     const [{ count: alunosN }, { count: profsN }, { count: mensN }, { count: comunicN }] = await Promise.all([
-      admin.from("alunos").select("*", { count: 'exact', head: true }),
-      admin.from("professoras").select("*", { count: 'exact', head: true }),
-      admin.from("fin_mensalidades").select("*", { count: 'exact', head: true }),
-      admin.from("comunicados").select("*", { count: 'exact', head: true }).catch(() => ({ count: 0 })),
+      admin.from("alunos").select("*", { count: 'exact', head: true }).eq("escola_id", escolaId),
+      admin.from("professoras").select("*", { count: 'exact', head: true }).eq("escola_id", escolaId),
+      admin.from("fin_mensalidades").select("*", { count: 'exact', head: true }).eq("escola_id", escolaId),
+      admin.from("comunicados").select("*", { count: 'exact', head: true }).eq("escola_id", escolaId).catch(() => ({ count: 0 })),
     ]);
     const manual = (e.onboarding_checklist || {}) as Record<string, any>;
     const etapas = [
@@ -391,8 +391,8 @@ serve(async (req: Request) => {
     if (!gerente) return err("Sessão inválida.", 401);
     const { etapa, concluido } = body as any;
     if (!etapa) return err("etapa obrigatória.");
-    const escolaId = await getEscolaPadrao(admin);
-    if (!escolaId) return err("Escola não encontrada.");
+    const escolaId = (gerente as any).escola_id;
+    if (!escolaId) return err("Sessão sem escola associada.", 403);
     const { data: e } = await admin.from("escolas").select("onboarding_checklist").eq("id", escolaId).maybeSingle();
     const cur = (e?.onboarding_checklist || {}) as Record<string, any>;
     if (concluido === false) {
@@ -407,8 +407,8 @@ serve(async (req: Request) => {
   if (action === "onboarding_dismiss") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
-    const escolaId = await getEscolaPadrao(admin);
-    if (!escolaId) return err("Escola não encontrada.");
+    const escolaId = (gerente as any).escola_id;
+    if (!escolaId) return err("Sessão sem escola associada.", 403);
     await admin.from("escolas").update({ onboarding_dismissed_em: new Date().toISOString() }).eq("id", escolaId);
     return ok({ success: true });
   }
@@ -500,12 +500,23 @@ serve(async (req: Request) => {
     return ok({ token: sessao.token, nome: g.nome, email: g.email });
   }
 
-  // Login
+  // Login — gerente: derivar escola via Origin para evitar colisão de email cross-tenant
   if (action === "login") {
     const { email, senha } = body as { email: string; senha: string };
     if (!email || !senha) return err("E-mail e senha são obrigatórios.", 400, "VALIDATION_FAILED");
-    const { data: g } = await admin.from("gerentes").select("id, nome, email, senha_hash").eq("email", email).single();
-    if (!g) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+    const escolaIdLogin = await resolveEscolaId(req, admin);
+    // Busca gerente no escopo da escola (Origin) se disponível; senão busca globalmente
+    // (permite login em domínio customizado/dev). Single-tenant legado preservado via null.
+    let q = admin.from("gerentes").select("id, nome, email, senha_hash, escola_id").eq("email", email);
+    if (escolaIdLogin) q = q.eq("escola_id", escolaIdLogin);
+    const { data: matches } = await q.limit(2);
+    if (!matches?.length) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+    // Se multi-match sem Origin: não podemos decidir qual escola — erro genérico
+    if (matches.length > 1) {
+      console.warn("[login] multiple gerentes com email", { email, n: matches.length });
+      return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+    }
+    const g = matches[0];
     const ok2 = await verificarSenhaAuto(senha as string, g.senha_hash);
     if (!ok2) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
     await admin.from("gerente_sessoes").delete().lt("expira_em", new Date().toISOString());
@@ -524,11 +535,14 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
-  // WebAuthn login (público)
+  // WebAuthn login (público) — escopado por Origin
   if (action === "webauthn_login_challenge") {
     const { email, rp_id } = body as { email: string; rp_id: string };
     if (!email || !rp_id) return err("email e rp_id obrigatórios.", 400);
-    const { data: g } = await admin.from("gerentes").select("id").eq("email", email).maybeSingle();
+    const escolaIdWA = await resolveEscolaId(req, admin);
+    let q = admin.from("gerentes").select("id").eq("email", email);
+    if (escolaIdWA) q = q.eq("escola_id", escolaIdWA);
+    const { data: g } = await q.maybeSingle();
     if (!g) return err("Usuário não encontrado.", 404);
     const { data: creds } = await admin.from("webauthn_credentials").select("credential_id, transports").eq("usuario_tipo", "gerente").eq("usuario_id", g.id);
     if (!creds?.length) return err("Nenhuma biometria cadastrada.", 404);
@@ -619,14 +633,16 @@ serve(async (req: Request) => {
     // Validate email to prevent PostgREST .or() injection.
     const EMAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
     if (!EMAIL_RE.test(email)) return err("E-mail inválido.");
+    // Deriva escola via Origin para escopar o pais-portal corretamente
+    const escolaIdPais = await resolveEscolaId(req, admin);
+    if (!escolaIdPais) return err("Escola não identificada (Origin).", 400);
     // Run two separate queries (email match + familia_email match) and merge in code
-    // to avoid PostgREST .or() string interpolation.
     const alunoCols = "id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em";
     const [solicitacoes, alunosA, alunosB, ausencias] = await Promise.all([
-      admin.from("solicitacoes").select("*").eq("email", email).order("criado_em", { ascending: false }),
-      admin.from("alunos").select(alunoCols).eq("email", email).not("atividades_ids", "is", null),
-      admin.from("alunos").select(alunoCols).eq("familia_email", email).not("atividades_ids", "is", null),
-      admin.from("ausencias").select("*").eq("email_resp", email).gte("data_ausencia", new Date().toISOString().split("T")[0]),
+      admin.from("solicitacoes").select("*").eq("escola_id", escolaIdPais).eq("email", email).order("criado_em", { ascending: false }),
+      admin.from("alunos").select(alunoCols).eq("escola_id", escolaIdPais).eq("email", email).not("atividades_ids", "is", null),
+      admin.from("alunos").select(alunoCols).eq("escola_id", escolaIdPais).eq("familia_email", email).not("atividades_ids", "is", null),
+      admin.from("ausencias").select("*").eq("escola_id", escolaIdPais).eq("email_resp", email).gte("data_ausencia", new Date().toISOString().split("T")[0]),
     ]);
     const alunosMerged: any[] = [...(alunosA.data ?? []), ...(alunosB.data ?? [])];
     const seenAlunoIds = new Set<string>();
@@ -666,24 +682,36 @@ serve(async (req: Request) => {
   if (action === "ausencia_delete") {
     const { id, email_resp } = body as { id: string; email_resp: string };
     if (!id || !email_resp) return err("ID e email_resp obrigatórios.");
-    const { data: ausencia } = await admin.from("ausencias").select("id").eq("id", id).eq("email_resp", email_resp).maybeSingle();
+    const escolaIdPais = await resolveEscolaId(req, admin);
+    if (!escolaIdPais) return err("Escola não identificada.", 400);
+    const { data: ausencia } = await admin.from("ausencias").select("id").eq("id", id).eq("escola_id", escolaIdPais).eq("email_resp", email_resp).maybeSingle();
     if (!ausencia) return err("Ausência não encontrada ou não pertence a este responsável.", 404);
-    await admin.from("ausencias").delete().eq("id", id).eq("email_resp", email_resp);
+    await admin.from("ausencias").delete().eq("id", id).eq("escola_id", escolaIdPais).eq("email_resp", email_resp);
     return ok({ success: true });
   }
 
-  // Leitura pública de configurações (logo)
+  // Leitura pública de configurações (escopada por Origin para evitar cross-tenant)
   if (action === "config_get") {
     const { chave } = body as { chave: string };
-    const { data } = await admin.from("configuracoes").select("valor").eq("chave", chave).single();
-    return ok({ valor: data?.valor ?? null });
+    const escolaIdCfg = await resolveEscolaId(req, admin);
+    if (!escolaIdCfg) {
+      // Multi-tenant: tabela global `configuracoes` é descontinuada; retornar null em vez de leak
+      return ok({ valor: null });
+    }
+    // Preferir escola_config (tenant-scoped); fallback para configuracoes legado
+    const { data: ec } = await admin.from("escola_config").select("valor").eq("escola_id", escolaIdCfg).eq("chave", chave).maybeSingle();
+    if (ec) return ok({ valor: (ec as any).valor ?? null });
+    const { data } = await admin.from("configuracoes").select("valor").eq("chave", chave).maybeSingle();
+    return ok({ valor: (data as any)?.valor ?? null });
   }
 
-  // Envio público do formulário de turno
+  // Envio público do formulário de turno — escopado por Origin
   if (action === "public_submit") {
     const { email, nome_resp, nome_crianca, serie, turno, dias_semana } = body as Record<string, unknown>;
     if (!email || !nome_resp || !nome_crianca || !turno) return err("Campos obrigatórios ausentes.");
-    const { error } = await admin.from("solicitacoes").insert({ email, nome_resp, nome_crianca, serie, turno, dias_semana: dias_semana ?? null });
+    const escolaIdSub = await resolveEscolaId(req, admin);
+    if (!escolaIdSub) return err("Escola não identificada.", 400);
+    const { error } = await admin.from("solicitacoes").insert({ email, nome_resp, nome_crianca, serie, turno, dias_semana: dias_semana ?? null, escola_id: escolaIdSub });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -738,10 +766,12 @@ serve(async (req: Request) => {
       const { data: { publicUrl } } = admin.storage.from("manutencoes").getPublicUrl(path);
       foto_url = publicUrl;
     }
-    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url };
+    const escolaIdMan = await resolveEscolaId(req, admin);
+    if (!escolaIdMan) return err("Escola não identificada.", 400);
+    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, escola_id: escolaIdMan };
     if (usuario_id) insert.usuario_id = usuario_id;
     else if (_email) {
-      const { data: u } = await admin.from("usuarios").select("id").eq("email", _email as string).maybeSingle();
+      const { data: u } = await admin.from("usuarios").select("id").eq("escola_id", escolaIdMan).eq("email", _email as string).maybeSingle();
       if (u) insert.usuario_id = u.id;
     }
     const { error } = await admin.from("manutencoes").insert(insert);
@@ -749,14 +779,16 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
-  // ── Manutenção — meus chamados (professora/equipe) ──
+  // ── Manutenção — meus chamados (professora/equipe) — escopado por Origin ──
   if (action === "manutencao_minhas") {
     const email = ((body._email as string) || "").toLowerCase().trim();
     if (!email) return err("E-mail obrigatório.");
-    const { data: user } = await admin.from("usuarios").select("id").eq("email", email).maybeSingle();
+    const escolaIdMin = await resolveEscolaId(req, admin);
+    if (!escolaIdMin) return err("Escola não identificada.", 400);
+    const { data: user } = await admin.from("usuarios").select("id").eq("escola_id", escolaIdMin).eq("email", email).maybeSingle();
     if (!user) return ok([]);
     const { data } = await admin.from("manutencoes").select("*, usuarios(nome, email)")
-      .eq("usuario_id", user.id).order("criado_em", { ascending: false });
+      .eq("escola_id", escolaIdMin).eq("usuario_id", user.id).order("criado_em", { ascending: false });
     return ok(data ?? []);
   }
 

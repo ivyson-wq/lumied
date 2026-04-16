@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode, b64urlDecode } from '../_shared/webauthn.ts'
 import { getModulosHabilitados, getModulosResolvidos, getEscolaPadrao } from '../_shared/modulos.ts'
+import { resolveEscolaId } from '../_shared/tenant.ts'
 import { getCorsHeaders } from '../_shared/cors.ts'
 import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
 import { sanitizeBody } from '../_shared/validation.ts'
@@ -376,9 +377,18 @@ Deno.serve(async (req) => {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
-    const { data: prof } = await sb
-      .from('professoras').select('id, nome, email, senha_hash').eq('email', email).maybeSingle()
-    if (!prof || !prof.senha_hash) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    // Deriva escola via Origin para evitar colisão de email cross-tenant
+    const escolaIdProf = await resolveEscolaId(req, sb)
+    let q = sb.from('professoras').select('id, nome, email, senha_hash, escola_id').eq('email', email)
+    if (escolaIdProf) q = q.eq('escola_id', escolaIdProf)
+    const { data: matches } = await q.limit(2)
+    if (!matches?.length) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    if (matches.length > 1) {
+      console.warn('[professora_login] multi-match', { email })
+      return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    }
+    const prof = matches[0]
+    if (!prof.senha_hash) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
     if (!await verificarSenha(senha, prof.senha_hash)) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
     const horario = await verificarHorarioAcesso(sb, prof.id)
     if (!horario.permitido) return json({ error: horario.mensagem || 'Acesso fora do horário permitido.', code: 'AUTH_OUT_OF_HOURS' }, 403)
@@ -406,9 +416,17 @@ Deno.serve(async (req) => {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
-    const { data: sec } = await sb
-      .from('secretarias').select('id, nome, email, senha_hash').eq('email', email).maybeSingle()
-    if (!sec || !sec.senha_hash) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    const escolaIdSec = await resolveEscolaId(req, sb)
+    let qs = sb.from('secretarias').select('id, nome, email, senha_hash, escola_id').eq('email', email)
+    if (escolaIdSec) qs = qs.eq('escola_id', escolaIdSec)
+    const { data: secMatches } = await qs.limit(2)
+    if (!secMatches?.length) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    if (secMatches.length > 1) {
+      console.warn('[secretaria_login] multi-match', { email })
+      return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
+    }
+    const sec = secMatches[0]
+    if (!sec.senha_hash) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
     if (!await verificarSenha(senha, sec.senha_hash)) return json({ error: 'E-mail ou senha incorretos.', code: 'AUTH_BAD_CREDENTIALS' }, 401)
     const tok = randomToken()
     const { error: ssErr } = await sb.from('secretaria_sessoes').insert({

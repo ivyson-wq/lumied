@@ -6,6 +6,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getModulosHabilitados, getEscolaPadrao, requireModulo } from "../_shared/modulos.ts";
+import { resolveEscolaId } from "../_shared/tenant.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
 import { sanitizeBody } from "../_shared/validation.ts";
@@ -110,10 +111,10 @@ serve(async (req: Request) => {
   const profToken = (body._prof_token as string) || null;
   const alunoToken = (body._aluno_token as string) || null;
 
-  // Resolve enabled modules
+  // Resolve enabled modules via Origin (multi-tenant safe) + fallback single-tenant
   let enabledModules: Set<string>;
   try {
-    const escolaId = await getEscolaPadrao(sb);
+    const escolaId = await resolveEscolaId(req, sb) || await getEscolaPadrao(sb);
     enabledModules = escolaId ? await getModulosHabilitados(sb, escolaId) : new Set();
   } catch { enabledModules = new Set(); }
 

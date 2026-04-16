@@ -61,18 +61,29 @@ export async function getModulosHabilitados(
 }
 
 /**
- * Busca a escola padrão (primeira ativa).
- * Em modo single-tenant, retorna a única escola.
+ * Busca a escola padrão (única ativa em single-tenant).
+ *
+ * SEGURANÇA: Em multi-tenant (>1 escolas ativas), esta função retorna `null`
+ * para forçar o caller a usar autenticação/Origin header. Retornar a primeira
+ * escola ativa cegamente causaria vazamento cross-tenant (incidente 16/04/2026).
+ *
+ * Callers devem:
+ *   1. Preferir session.escola_id quando autenticado
+ *   2. Usar resolveEscolaId() que já faz Origin → slug → escola_id
+ *   3. Se nada resolver, retornar 400 "Escola não identificada"
  */
 export async function getEscolaPadrao(sb: SupabaseClient): Promise<string | null> {
-  const { data } = await sb
+  const { data, count } = await sb
     .from("escolas")
-    .select("id")
+    .select("id", { count: "exact" })
     .eq("ativo", true)
-    .order("criado_em", { ascending: true })
-    .limit(1)
-    .single();
-  return data?.id ?? null;
+    .limit(2); // precisa saber se é 1 ou 2+
+  if (!data?.length) return null;
+  if ((count ?? data.length) > 1) {
+    // Multi-tenant: não retorna fallback para evitar leak cross-tenant.
+    return null;
+  }
+  return data[0].id;
 }
 
 /**
