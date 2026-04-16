@@ -8,6 +8,7 @@ import { Router, rateLimit, authGerente, authProfessora, type Middleware } from 
 import { successResponse, AppError, sanitizePgError } from "../_shared/errors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { askClaude, askClaudeWithTools, SYSTEM_PROMPTS, buildContextFromData } from "../_shared/ai.ts";
+import { STAFF_GTM_SYSTEM_PROMPT } from "../_shared/playbooks.ts";
 import { isFlagOn } from "../_shared/flags.ts";
 import { McpServer, type McpScope } from "../_shared/mcp.ts";
 import { staffTools } from "../mcp/tools_staff.ts";
@@ -234,6 +235,52 @@ router.on("ai_perguntar_mcp", authFlexivel, async (ctx) => {
   return successResponse({
     resposta: resposta.text,
     tools_called: resposta.tool_calls.map((t) => ({ name: t.name, input: t.input })),
+    tokens: resposta.tokens_input + resposta.tokens_output,
+    custo: resposta.cost,
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+//  GTM/CS — Pergunta ancorada nos playbooks comerciais
+//  Apenas staff ou usuários com papel comercial/cs
+// ═══════════════════════════════════════════════════════
+
+router.on("ai_perguntar_gtm", authFlexivel, async (ctx) => {
+  const pergunta = str((ctx.body as any).pergunta, 2000);
+  if (!pergunta) throw new AppError("VALIDATION_FAILED", "Pergunta obrigatória.");
+
+  const tipo = ctx.user?.tipo;
+  const papeis: string[] = (ctx.user as any)?.papeis || [];
+  const papel: string = (ctx.user as any)?.papel || "";
+  const papelStr = [...papeis, papel].join(",").toLowerCase();
+  const staffLike = tipo === "staff" || papelStr.includes("comercial") || papelStr.includes("cs") || papelStr.includes("gerente") || papelStr.includes("diretor");
+  if (!staffLike) throw new AppError("FORBIDDEN", "Recurso disponível para staff, comercial, CS, gerente e diretor.");
+
+  const prompt = `PERGUNTA:\n${sanitizeForPrompt(pergunta, 2000)}`;
+  const resposta = await askClaude(prompt, {
+    system: STAFF_GTM_SYSTEM_PROMPT,
+    maxTokens: 800,
+    budget: bCtx(ctx),
+  });
+  if (!resposta) throw new AppError("INTERNAL_ERROR", "IA indisponível no momento.");
+  if (resposta.blocked) throw new AppError("QUOTA_EXCEEDED", resposta.blocked === 'cap_atingido' ? "Limite mensal de IA atingido." : "IA em manutenção.");
+
+  // Registrar conversa (portal "gtm" — separa de gerente/professora)
+  await ctx.sb.from("ia_conversas").insert({
+    portal: "gtm",
+    usuario_id: ctx.user?.id,
+    usuario_nome: ctx.user?.nome,
+    mensagens: [
+      { role: "user", content: pergunta, ts: new Date().toISOString() },
+      { role: "assistant", content: resposta.text, ts: new Date().toISOString() },
+    ],
+    total_mensagens: 2,
+    tokens_total: resposta.tokens_input + resposta.tokens_output,
+    custo_total: resposta.cost,
+  });
+
+  return successResponse({
+    resposta: resposta.text,
     tokens: resposta.tokens_input + resposta.tokens_output,
     custo: resposta.cost,
   });

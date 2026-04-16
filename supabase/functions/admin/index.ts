@@ -244,6 +244,83 @@ router.on("backups_resumo", authAdmin, async (ctx) => {
   return successResponse({ backups });
 });
 
+// ═══════════════════════════════════════════════════════
+//  CS — Saúde das escolas (sinais-gatilho 🟡/🔴)
+//  Fonte: CS_PLAYBOOK.md §4.3
+// ═══════════════════════════════════════════════════════
+router.on("cs_saude_list", authAdmin, async (ctx) => {
+  const hoje = new Date();
+  const ms = (d: number) => new Date(hoje.getTime() - d * 86400000).toISOString();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString();
+
+  // safeQuery — retorna { data, count, error } sem lançar
+  const safe = async <T = any>(q: any): Promise<{ data: T[] | null; count: number | null; ok: boolean }> => {
+    try { const r = await q; return { data: (r as any).data || null, count: (r as any).count ?? null, ok: !(r as any).error }; }
+    catch { return { data: null, count: null, ok: false }; }
+  };
+
+  const { data: escolas } = await ctx.sb.from("escolas").select("id, nome, slug, plano_id, plano, ativo, criado_em").eq("ativo", true);
+  if (!escolas || escolas.length === 0) return successResponse({ escolas: [] });
+
+  // Coletas paralelas por escola (pequenas queries escopadas)
+  const resultado = await Promise.all(escolas.map(async (e: any) => {
+    const eid = e.id;
+    const sinais: Array<{ cor: 'verde'|'amarelo'|'vermelho'; nome: string; detalhe: string }> = [];
+
+    // 🔴 Login gestor > 14 dias
+    const ultimaSessao = await safe(ctx.sb.from("sessoes").select("criado_em").gte("criado_em", ms(30)).in("usuario_id",
+      (await safe(ctx.sb.from("usuarios").select("id").eq("escola_id", eid).limit(200))).data?.map((u: any) => u.id) || []
+    ).order("criado_em", { ascending: false }).limit(1));
+    const ultLoginMs = ultimaSessao.data?.[0]?.criado_em ? new Date(ultimaSessao.data[0].criado_em).getTime() : 0;
+    const diasSemLogin = ultLoginMs ? Math.floor((hoje.getTime() - ultLoginMs) / 86400000) : 999;
+    if (diasSemLogin >= 14) sinais.push({ cor: 'vermelho', nome: 'login_gestor', detalhe: `Sem login há ${diasSemLogin === 999 ? '30+' : diasSemLogin} dias` });
+
+    // 🔴 0 boletos emitidos no mês (guarda para tabelas sem escola_id)
+    const boletosMes = await safe(ctx.sb.from("boletos").select("*", { count: "exact", head: true }).gte("criado_em", inicioMes).eq("escola_id", eid));
+    if (boletosMes.ok && (boletosMes.count ?? 0) === 0) {
+      sinais.push({ cor: 'vermelho', nome: 'zero_boletos_mes', detalhe: 'Nenhum boleto emitido este mês' });
+    }
+
+    // 🔴 Pagamento da escola (fatura SaaS) atrasado > 10 dias
+    const vencendo = await safe(ctx.sb.from("saas_faturas").select("data_vencimento, status").eq("escola_id", eid).in("status", ["PENDING","OVERDUE"]).lte("data_vencimento", ms(10).slice(0,10)).limit(1));
+    if (vencendo.ok && (vencendo.data?.length ?? 0) > 0) {
+      sinais.push({ cor: 'vermelho', nome: 'fatura_saas_atrasada', detalhe: 'Fatura SaaS atrasada há 10+ dias' });
+    }
+
+    // 🟡 <50% professoras com chamada em 7 dias
+    const profs = await safe(ctx.sb.from("professoras").select("*", { count: "exact", head: true }).eq("escola_id", eid).eq("ativa", true));
+    const chamadas7d = await safe(ctx.sb.from("frequencia").select("professora_id").gte("data", ms(7).slice(0,10)).eq("escola_id", eid).limit(2000));
+    const profsAtivasChamada = new Set((chamadas7d.data || []).map((r: any) => r.professora_id).filter(Boolean)).size;
+    const totalProfs = profs.count ?? 0;
+    if (totalProfs > 0 && (profsAtivasChamada / totalProfs) < 0.5) {
+      const pct = Math.round((profsAtivasChamada / totalProfs) * 100);
+      sinais.push({ cor: 'amarelo', nome: 'chamada_baixa', detalhe: `${pct}% das professoras (${profsAtivasChamada}/${totalProfs}) usaram chamada em 7d` });
+    }
+
+    // 🟡 Ticket aberto > 48h sem resposta
+    const ticketStuck = await safe(ctx.sb.from("tickets").select("id", { count: "exact", head: true }).eq("escola_id", eid).eq("status", "aberto").lte("criado_em", ms(2)));
+    if (ticketStuck.ok && (ticketStuck.count ?? 0) > 0) {
+      sinais.push({ cor: 'amarelo', nome: 'ticket_parado', detalhe: `${ticketStuck.count} ticket(s) aberto(s) há mais de 48h` });
+    }
+
+    const piorCor = sinais.some(s => s.cor === 'vermelho') ? 'vermelho' : sinais.some(s => s.cor === 'amarelo') ? 'amarelo' : 'verde';
+    return {
+      escola_id: e.id,
+      escola_nome: e.nome,
+      escola_slug: e.slug,
+      plano: e.plano || e.plano_id,
+      status: piorCor,
+      dias_sem_login: diasSemLogin,
+      sinais,
+    };
+  }));
+
+  // Ordena: vermelho > amarelo > verde, depois por mais dias sem login
+  const ord = { vermelho: 0, amarelo: 1, verde: 2 } as const;
+  resultado.sort((a, b) => (ord[a.status as keyof typeof ord] - ord[b.status as keyof typeof ord]) || (b.dias_sem_login - a.dias_sem_login));
+  return successResponse({ escolas: resultado, gerado_em: hoje.toISOString() });
+});
+
 router.on("escolas_create", authAdmin, async (ctx) => {
   const { nome, cnpj, slug, plano_id, contato_nome, contato_email, contato_telefone, tema } = ctx.body as any;
   if (!nome) throw new AppError("VALIDATION_FAILED", "Nome obrigatório.");
