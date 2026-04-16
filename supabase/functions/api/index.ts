@@ -1079,26 +1079,32 @@ serve(async (req: Request) => {
     });
   }
 
-  // ── Módulos habilitados (público — usado por todos os portais) ──
+  // ── Módulos habilitados (per-session — resolve escola via token OU Origin) ──
   if (action === "modulos_habilitados") {
     try {
-      const escolaId = await getEscolaPadrao(admin);
-      if (!escolaId) return ok({ modulos: [], tema: 'corporativo' });
+      // Prioridade: token da sessão no body → Origin → single-tenant fallback
+      const escolaId = await resolveEscolaId(req, admin, null, body);
+      if (!escolaId) {
+        console.warn("[modulos_habilitados] escola não identificada");
+        // Sem cache — deixa o cliente re-tentar quando tiver token/Origin válido
+        return ok({ modulos: [], tema: 'corporativo' }, { "Cache-Control": "no-store" });
+      }
       const modulos = await getModulosHabilitados(admin, escolaId);
-      const { data: escola } = await admin.from("escolas").select("tema").eq("id", escolaId).single();
-      return ok({ modulos: [...modulos], tema: escola?.tema || 'corporativo' }, PUBLIC_CACHE);
-    } catch { return ok({ modulos: [], tema: 'corporativo' }); }
+      const { data: escola } = await admin.from("escolas").select("tema").eq("id", escolaId).maybeSingle();
+      // Cache PRIVATE (por usuário/sessão, não compartilhado entre tenants)
+      return ok(
+        { modulos: [...modulos], tema: (escola as any)?.tema || 'corporativo' },
+        { "Cache-Control": "private, max-age=30", "Vary": "Authorization" }
+      );
+    } catch (e) { console.error("[modulos_habilitados]", e); return ok({ modulos: [], tema: 'corporativo' }, { "Cache-Control": "no-store" }); }
   }
 
   // ── Ticket de suporte (público — antes do auth check) ──
   if (action === "ticket_create") {
     const { email, nome, portal, tipo, descricao, url_pagina, user_agent, resolucao_tela } = body as any;
     if (!email || !descricao || !portal) return err("email, descricao e portal obrigatórios.");
-    let escola_id = null;
-    try {
-      const { data: esc } = await admin.from("escolas").select("id").eq("ativo", true).limit(1).single();
-      escola_id = esc?.id || null;
-    } catch {}
+    // Escola via Origin + token (não assumir "primeira escola ativa")
+    const escola_id = await resolveEscolaId(req, admin, null, body);
     const { data: ticketData, error: insErr } = await admin.from("tickets").insert({
       escola_id, email, nome: nome || null, portal, tipo: tipo || "bug",
       descricao, url_pagina: url_pagina || null, user_agent: user_agent || null,
