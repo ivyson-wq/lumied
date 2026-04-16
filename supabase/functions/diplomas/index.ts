@@ -130,15 +130,16 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   const user = await getUsuario(sb, token)
   if (!user) return null
   const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao', 'nutricionista']
+  const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao', 'nutricionista', 'almoxarifado']
   if (roles.some((r: string) => secRoles.includes(r))) {
     const { data: sec } = await sb
       .from('secretarias').select('id, nome, email, features, escola_id')
       .eq('email', user.email).maybeSingle()
     if (sec) {
-      // Garante que nutricionista tenha feature cozinha mesmo em registros antigos
+      // Garante que papéis tenham features correspondentes mesmo em registros antigos
       const feats = new Set<string>(sec.features || ['atestados'])
       if (roles.includes('nutricionista')) feats.add('cozinha')
+      if (roles.includes('almoxarifado')) feats.add('almoxarifado')
       return { ...sec, features: Array.from(feats) }
     }
     // Constrói features baseado nos papéis
@@ -149,8 +150,16 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
     if (roles.includes('manutencao')) features.push('manutencao')
     if (roles.includes('impressao')) features.push('impressao')
     if (roles.includes('nutricionista')) features.push('cozinha')
-    return { id: user.id, nome: user.nome, email: user.email, features: features.length ? features : ['atestados'] }
+    if (roles.includes('almoxarifado')) features.push('almoxarifado')
+    return { id: user.id, nome: user.nome, email: user.email, escola_id: (user as any).escola_id, features: features.length ? features : ['atestados'] }
   }
+  return null
+}
+
+// ── Almoxarifado: acesso secretaria com feature/papel 'almoxarifado' ──────
+async function getAlmoxarifado(sb: ReturnType<typeof createClient>, token: string) {
+  const sec = await getSecretaria(sb, token)
+  if (sec && ((sec as any).features || []).includes('almoxarifado')) return sec
   return null
 }
 
@@ -1715,7 +1724,12 @@ Deno.serve(async (req) => {
   ].includes(action)
 
   if (isAlmCompraAction) {
-    const gerente = await getGerente(sb, token)
+    // Almoxarifado também pode operar compras (parte do fluxo aprovar → comprar)
+    let gerente: any = await getGerente(sb, token)
+    if (!gerente) {
+      const almox = await getAlmoxarifado(sb, token)
+      if (almox) gerente = almox
+    }
     if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
 
     // Record items selected for purchase when approving a requisition
@@ -1890,6 +1904,19 @@ Deno.serve(async (req) => {
   }
 
   // ━━ ALMOXARIFADO: MANAGER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
+  // Duas camadas:
+  //   • READ + APROVAR/REJEITAR: gerente OU almoxarifado
+  //   • EDITAR (orçamento, catálogo, turma, mass price, set_turma): APENAS gerente
+
+  const isAlmEditOnlyAction = [
+    'alm_orcamento_set',                      // definir orçamento (papel almox NÃO pode)
+    'alm_insumo_save', 'alm_insumo_del',
+    'alm_insumo_set_referencia', 'alm_insumo_atualizar_auto',
+    'alm_entrada_estoque',
+    'alm_turma_save', 'alm_turma_del',
+    'alm_atualizar_precos', 'alm_prof_set_turma',
+    'alm_criar_req_gerente',
+  ].includes(action)
 
   const isAlmGerenteAction = [
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
@@ -1904,7 +1931,17 @@ Deno.serve(async (req) => {
   ].includes(action)
 
   if (isAlmGerenteAction) {
-    const gerente = await getGerente(sb, token)
+    // Tenta gerente primeiro; se não for, aceita almoxarifado para ações permitidas
+    let gerente: any = await getGerente(sb, token)
+    if (!gerente) {
+      const almox = await getAlmoxarifado(sb, token)
+      if (almox) {
+        if (isAlmEditOnlyAction) {
+          return json({ error: 'Almoxarifado não pode editar este recurso — restrito ao gerente.', code: 'FORBIDDEN_ALMOXARIFADO' }, 403)
+        }
+        gerente = almox // adapta para o shape esperado abaixo (id, nome, email, escola_id)
+      }
+    }
     if (!gerente) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
 
     if (action === 'alm_painel') {

@@ -1279,7 +1279,7 @@ serve(async (req: Request) => {
     // Aceita papeis (array) ou papel (string legado)
     let papeis: string[] = Array.isArray(rawPapeis) && rawPapeis.length ? rawPapeis : (papel ? [papel] : []);
     if (!papeis.length) return err("Selecione pelo menos um papel.");
-    const papeisValidos = ["gerente", "diretor", "financeiro", "professora", "professora_assistente", "secretaria", "comercial", "manutencao", "impressao"];
+    const papeisValidos = ["gerente", "diretor", "financeiro", "professora", "professora_assistente", "secretaria", "comercial", "manutencao", "impressao", "nutricionista", "almoxarifado"];
     const invalidos = papeis.filter((p: string) => !papeisValidos.includes(p));
     if (invalidos.length) return err("Papel inválido: " + invalidos.join(", "));
     if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
@@ -1297,7 +1297,7 @@ serve(async (req: Request) => {
       const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
       await admin.from("professoras").insert({ nome, email, senha_hash, tipo, escola_id }).catch(() => {});
     }
-    const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao"];
+    const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao","nutricionista","almoxarifado"];
     if (papeis.some((p: string) => secRoles.includes(p))) {
       let secFeatures = features || [];
       if (!secFeatures.length) {
@@ -1306,6 +1306,8 @@ serve(async (req: Request) => {
         if (papeis.includes("financeiro") || papeis.includes("diretor")) secFeatures.push("financeiro");
         if (papeis.includes("manutencao")) secFeatures.push("manutencao");
         if (papeis.includes("impressao")) secFeatures.push("impressao");
+        if (papeis.includes("nutricionista")) secFeatures.push("cozinha");
+        if (papeis.includes("almoxarifado")) secFeatures.push("almoxarifado");
       }
       await admin.from("secretarias").upsert({ nome, email, senha_hash, features: secFeatures, ativo: true, escola_id }, { onConflict: "email" }).catch(() => {});
     }
@@ -1352,7 +1354,7 @@ serve(async (req: Request) => {
           await admin.from("professoras").delete().eq("email", uEmail).catch(() => {});
         }
         // Secretaria/Comercial
-        const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao"];
+        const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao","nutricionista","almoxarifado"];
         const needsSec = papeis.some((p: string) => secRoles.includes(p));
         const hadSec = oldRoles.some((p: string) => secRoles.includes(p));
         if (needsSec) {
@@ -1363,6 +1365,8 @@ serve(async (req: Request) => {
             if (papeis.includes("financeiro") || papeis.includes("diretor")) secFeatures.push("financeiro");
             if (papeis.includes("manutencao")) secFeatures.push("manutencao");
             if (papeis.includes("impressao")) secFeatures.push("impressao");
+            if (papeis.includes("nutricionista")) secFeatures.push("cozinha");
+            if (papeis.includes("almoxarifado")) secFeatures.push("almoxarifado");
           }
           // Upsert: cria se não existe, atualiza features se existe
           await admin.from("secretarias").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, features: secFeatures, ativo: true }, { onConflict: "email" }).catch(() => {});

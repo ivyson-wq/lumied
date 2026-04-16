@@ -3357,11 +3357,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   if (!sbClient) console.error('[gerente] Supabase JS CDN falhou ao carregar — realtime desabilitado');
 
   // Globals de papéis — declarados no topo para evitar TDZ/ordem de execução
-  window.PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção', impressao:'Impressão' };
-  window.PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a', impressao:'#8b5cf6' };
-  window.ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao','impressao'];
-  window.ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao','impressao'];
-  window.FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção', impressao:'Impressões' };
+  window.PAPEIS = { diretor:'Diretor(a)', gerente:'Gerente', financeiro:'Financeiro', professora:'Professora', professora_assistente:'Prof. Assistente', secretaria:'Secretaria', comercial:'Comercial', manutencao:'Manutenção', impressao:'Impressão', nutricionista:'Nutricionista', almoxarifado:'Almoxarifado' };
+  window.PAPEL_COLORS = { diretor:'#6b3fa0', gerente:'#C8102E', financeiro:'#0d5a9e', professora:'#1a6bb5', professora_assistente:'#6b8cb5', secretaria:'#2d7a3a', comercial:'#e67e22', manutencao:'#d4830a', impressao:'#8b5cf6', nutricionista:'#16a34a', almoxarifado:'#78350f' };
+  window.ALL_PAPEIS = ['diretor','gerente','financeiro','professora','professora_assistente','secretaria','comercial','manutencao','impressao','nutricionista','almoxarifado'];
+  window.ALL_FEATURES = ['atestados','crm','templates','metas','financeiro','manutencao','impressao','cozinha','almoxarifado'];
+  window.FEATURE_LABELS = { atestados:'Atestados', crm:'CRM / Leads', templates:'Templates WhatsApp', metas:'Metas Comerciais', financeiro:'Financeiro', manutencao:'Manutenção', impressao:'Impressões', cozinha:'Cozinha', almoxarifado:'Almoxarifado' };
   var PAPEIS = window.PAPEIS;
   var PAPEL_COLORS = window.PAPEL_COLORS;
   var ALL_PAPEIS = window.ALL_PAPEIS;
