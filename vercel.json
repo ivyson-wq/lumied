@@ -31,6 +31,54 @@
       "has": [{ "type": "host", "value": "lumied.com.br" }],
       "destination": "https://lumied.com.br/:path*",
       "permanent": true
+    },
+    {
+      "source": "/familia.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/area-restrita.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/gerente.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/professora.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/secretaria.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/aluno.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/admin.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
     }
   ],
   "rewrites": [
@@ -138,6 +186,10 @@
       "source": "/whatsapp-float.js",
       "has": [{ "type": "host", "value": "lumied.com.br" }],
       "destination": "/site/whatsapp-float.js"
+    },
+    {
+      "source": "/",
+      "destination": "/familia.html"
     }
   ],
   "headers": [

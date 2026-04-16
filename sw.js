@@ -54,7 +54,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return res;
-      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/index.html')))
+      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/familia.html')))
     );
     return;
   }

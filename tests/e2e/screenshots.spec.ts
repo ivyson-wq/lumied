@@ -207,7 +207,7 @@ test.describe('Screenshots Central de Ajuda — Portal do Gerente', () => {
     console.log('✓ gerente-login.png');
 
     // Portal dos pais — landing page pública
-    await page.goto(`${DEMO_URL}/index.html`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${DEMO_URL}/familia.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1500);
     await applyDemoBranding(page);
     await page.screenshot({ path: path.join(OUT_DIR, 'pais-login.png') });

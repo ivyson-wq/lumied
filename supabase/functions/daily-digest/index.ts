@@ -123,7 +123,7 @@ serve(async (req: Request) => {
         categoria: "informativo",
         titulo: `📅 O dia de ${dados.nome}`,
         corpo: `${dados.itens.length} atividades registradas hoje. Abra para ver!`,
-        dados: { tipo: "daily_digest", url: "/index.html" },
+        dados: { tipo: "daily_digest", url: "/familia.html" },
         lote_id: `digest_push_${hoje}`,
       });
 

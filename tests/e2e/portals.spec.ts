@@ -3,20 +3,20 @@ import { test, expect } from '@playwright/test';
 // ═══ PORTAL DOS PAIS ═══
 test.describe('Portal dos Pais', () => {
   test('página de login carrega corretamente', async ({ page }) => {
-    await page.goto('/index.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/familia.html', { waitUntil: 'domcontentloaded' });
     // Login form deve estar visível (input de email)
     // Usa .locator('input[type="email"]:visible') ao invés de .first() pra evitar inputs escondidos
 await expect(page.locator('input[type="email"]:visible').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('login por email visível', async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/familia.html');
     // Magic link + email/senha + biometria — Google removido em 2026-04-06
     await expect(page.locator('input[type="email"]:visible').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('não mostra conteúdo sem login', async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/familia.html');
     // Bottom nav não deve estar visível sem login
     const bottomNav = page.locator('#bottomNav');
     await expect(bottomNav).not.toHaveClass(/visible/);

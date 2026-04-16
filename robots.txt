@@ -15,7 +15,7 @@ Allow: /verificar.html
 Allow: /assinar.html
 
 Disallow: /site/
-Disallow: /index.html
+Disallow: /familia.html
 Disallow: /admin.html
 Disallow: /admin-central.html
 Disallow: /gerente.html
@@ -39,7 +39,7 @@ Crawl-delay: 1
 User-agent: Googlebot
 Allow: /
 Disallow: /site/
-Disallow: /index.html
+Disallow: /familia.html
 Disallow: /admin.html
 Disallow: /admin-central.html
 Disallow: /gerente.html
