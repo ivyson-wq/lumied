@@ -2749,13 +2749,17 @@ async function loadCr() {
     const venc = hoje > c.data_vencimento && c.status === 'aberto';
     const statusCls = c.status === 'recebido' ? 'ativo' : (venc || c.status === 'vencido') ? 'inativo' : 'aberto';
     const statusTxt = venc && c.status === 'aberto' ? 'Vencido' : (c.status || '—');
-    const acoes = c.status === 'aberto' || c.status === 'vencido'
-      ? `<button class="action-btn purple" onclick='receberCr("${c.id}",${Number(c.valor)})'>💰 Receber</button>
-         <button class="action-btn" onclick='editarCr(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏️</button>
-         <button class="action-btn del" onclick="deletarCr('${c.id}')">🗑️</button>`
-      : `<button class="action-btn" onclick='editarCr(${JSON.stringify(c).replace(/'/g,"&#39;")})'>👁️</button>`;
-    return `<tr>
-      <td><strong style="text-transform:capitalize;">${esc(c.origem)}</strong></td>
+    const isSaas = c.origem === 'saas' && c.saas_fatura_id;
+    const badgeSaas = isSaas ? ' <span style="background:#ede9fe;color:#6B3FA0;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;" title="Espelho automático de saas_faturas — gerencie em Cobrança SaaS">SaaS 🔗</span>' : '';
+    const acoes = isSaas
+      ? `<button class="action-btn" onclick="showPanel('billing',document.querySelector('[onclick*=billing]'))" title="Gerenciar em Cobrança SaaS">↗ Cobrança SaaS</button>`
+      : (c.status === 'aberto' || c.status === 'vencido'
+        ? `<button class="action-btn purple" onclick='receberCr("${c.id}",${Number(c.valor)})'>💰 Receber</button>
+           <button class="action-btn" onclick='editarCr(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏️</button>
+           <button class="action-btn del" onclick="deletarCr('${c.id}')">🗑️</button>`
+        : `<button class="action-btn" onclick='editarCr(${JSON.stringify(c).replace(/'/g,"&#39;")})'>👁️</button>`);
+    return `<tr${isSaas ? ' style="background:#fafaff;"' : ''}>
+      <td><strong style="text-transform:capitalize;">${esc(c.origem)}</strong>${badgeSaas}</td>
       <td style="font-size:12px;">${esc(c.descricao || '—')}</td>
       <td style="font-size:12px;">${esc(c.escola?.nome || '—')}</td>
       <td>${fmtDate(c.data_vencimento)}</td>

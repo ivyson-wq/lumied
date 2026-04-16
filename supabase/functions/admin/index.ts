@@ -1636,8 +1636,11 @@ router.on("cr_receber", authStaff, async (ctx) => {
   await requirePerm(ctx, 'financeiro_lumied', 'editar_cr');
   const { id, data_recebimento, valor_recebido, forma_pagamento, observacao } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
-  const { data: c } = await ctx.sb.from("lumied_contas_receber").select("valor").eq("id", id).single();
+  const { data: c } = await ctx.sb.from("lumied_contas_receber").select("valor, origem, saas_fatura_id").eq("id", id).single();
   if (!c) throw new AppError("NOT_FOUND", "Conta não encontrada.");
+  if ((c as any).origem === 'saas' && (c as any).saas_fatura_id) {
+    throw new AppError("FORBIDDEN", "Fatura SaaS — registre o pagamento em 'Cobrança SaaS' (o valor aparecerá aqui automaticamente).");
+  }
   await ctx.sb.from("lumied_contas_receber").update({
     status: 'recebido',
     data_recebimento: data_recebimento || new Date().toISOString().slice(0, 10),
@@ -1652,6 +1655,11 @@ router.on("cr_delete", authStaff, async (ctx) => {
   await requirePerm(ctx, 'financeiro_lumied', 'editar_cr');
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  // Bloqueia deleção de linhas origem=saas (espelho de saas_faturas)
+  const { data: cr } = await ctx.sb.from("lumied_contas_receber").select("origem, saas_fatura_id").eq("id", id).maybeSingle();
+  if (cr && (cr as any).origem === 'saas' && (cr as any).saas_fatura_id) {
+    throw new AppError("FORBIDDEN", "Esta linha é um espelho de uma fatura SaaS. Gerencie em 'Cobrança SaaS'.");
+  }
   await ctx.sb.from("lumied_contas_receber").delete().eq("id", id);
   return successResponse({ success: true });
 });
