@@ -84,9 +84,9 @@ async function enviarEmail(to: string, subject: string, html: string, replyTo?: 
       method: "POST",
       headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Lumied <comercial@lumied.com.br>",
+        from: "Lumied <noreply@lumied.com.br>",
         to: [to],
-        reply_to: replyTo || "ivyson@lumied.com.br",
+        reply_to: replyTo || "ivyson@gmail.com",
         subject,
         html,
       }),
@@ -247,7 +247,7 @@ router.on("lead_capture", rateLimit({ windowMs: 60000, maxRequests: 5 }), async 
     await ctx.sb.from("leads_comerciais").update(upd).eq("id", leadId);
   } else {
     const ins = await ctx.sb.from("leads_comerciais").insert({
-      nome_escola,
+      nome_escola: nomeEscola,
       email: email.toLowerCase(),
       telefone, cidade, uf,
       alunos_estimados: alunos,
@@ -513,7 +513,7 @@ const NURTURE_EMAILS: Record<number, { subject: (nome: string) => string; html: 
       <p>Abraço,<br>Ivyson</p>`,
   },
   5: {
-    subject: () => `Última mensagem minha — ${''.padEnd(0)}`,
+    subject: () => `Última mensagem minha`,
     html: (l) => `
       <p>Olá,</p>
       <p>Imagino que agora não é o momento certo — e tudo bem.</p>

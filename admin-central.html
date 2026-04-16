@@ -236,7 +236,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">Governance</div>
       <a class="nav-item" onclick="showPanel('governance',this)"><span class="ic">🛡️</span> Governance</a>
       <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
-      <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💳</span> Billing SaaS</a>
+      <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💰</span> Financeiro</a>
       <div class="sb-label">GTM</div>
       <a class="nav-item" onclick="showPanel('crm',this)"><span class="ic">🎯</span> CRM Lumied</a>
       <a class="nav-item" onclick="showPanel('funil',this)"><span class="ic">📉</span> Funil</a>
@@ -434,27 +434,116 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
-      <!-- BILLING SAAS (staff) -->
+      <!-- FINANCEIRO (staff) -->
       <div id="panelBilling" class="panel">
-        <div class="sec-title">Billing SaaS — Faturas Lumied</div>
-        <p style="font-size:13px;color:#555;margin-bottom:12px;">
-          Todas as cobranças das escolas (mensalidade Lumied via Asaas). Staff pode criar assinaturas via CLI/API.
-        </p>
-        <div style="background:#fff;border:1px solid #e2dbd1;border-radius:12px;padding:16px;margin-bottom:16px;font-size:13px;">
-          <strong>Para criar assinatura de uma escola:</strong>
-          <ol style="margin:6px 0 0 20px;">
-            <li>Primeiro setup_customer (cria customer no Asaas): informe escola_id, name, cpfCnpj.</li>
-            <li>Depois create_subscription: escola_id, valor (mensalidade), dia_vencimento, forma_pagamento (BOLETO/CREDIT_CARD/PIX).</li>
-            <li>Webhook do Asaas atualiza automaticamente cada pagamento via <code>POST /saas-billing</code> com <code>action=webhook</code>.</li>
-          </ol>
-          <div style="margin-top:10px;">Configurar URL webhook no Asaas: <code>https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/saas-billing?action=webhook</code></div>
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-left:4px solid #16A34A;"><div class="kpi-icon">💰</div><div class="kpi-value" id="finMrr">R$ 0</div><div class="kpi-label">MRR (ativas)</div></div>
+          <div class="kpi-card" style="border-left:4px solid #6B3FA0;"><div class="kpi-icon">📈</div><div class="kpi-value" id="finArr">R$ 0</div><div class="kpi-label">ARR</div></div>
+          <div class="kpi-card"><div class="kpi-icon">✅</div><div class="kpi-value" id="finRecebido">R$ 0</div><div class="kpi-label">Recebido 30d</div></div>
+          <div class="kpi-card" style="border-left:4px solid #CA8A04;"><div class="kpi-icon">⏳</div><div class="kpi-value" id="finPendente">R$ 0</div><div class="kpi-label">Pendente</div></div>
+          <div class="kpi-card" style="border-left:4px solid #DC2626;"><div class="kpi-icon">⚠️</div><div class="kpi-value" id="finVencido">R$ 0</div><div class="kpi-label">Vencido</div></div>
+          <div class="kpi-card"><div class="kpi-icon">📊</div><div class="kpi-value" id="finInad">0%</div><div class="kpi-label">Inadimplência</div></div>
         </div>
-        <button class="action-btn" onclick="loadBillingCentral()">🔄 Atualizar</button>
-        <div class="table-wrap" style="margin-top:12px;">
-          <table>
-            <thead><tr><th>Escola</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Forma</th><th>Pago em</th></tr></thead>
-            <tbody id="billingBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody>
-          </table>
+
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <button class="filter-tab active" data-fin="resumo" onclick="switchFinTab(this,'resumo')">📋 Resumo</button>
+          <button class="filter-tab" data-fin="faturas" onclick="switchFinTab(this,'faturas')">🧾 Faturas</button>
+          <button class="filter-tab" data-fin="assinaturas" onclick="switchFinTab(this,'assinaturas')">🔁 Assinaturas</button>
+          <button class="filter-tab" data-fin="vencidas" onclick="switchFinTab(this,'vencidas')">⚠️ Vencidas</button>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn-primary" onclick="showNovaCobrancaModal()">+ Nova cobrança avulsa</button>
+            <button class="action-btn" onclick="loadFinanceiro()">🔄</button>
+          </div>
+        </div>
+
+        <!-- Tab: Resumo -->
+        <div id="finTabResumo" class="fin-tab" style="margin-top:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;">
+              <h4 style="font-size:14px;margin-bottom:10px;color:#DC2626;">⚠️ Faturas vencidas (ação urgente)</h4>
+              <div id="finVencidasList" style="font-size:13px;"></div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;">
+              <h4 style="font-size:14px;margin-bottom:10px;color:#CA8A04;">⏳ Próximas a vencer</h4>
+              <div id="finPendentesList" style="font-size:13px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Faturas -->
+        <div id="finTabFaturas" class="fin-tab" style="display:none;margin-top:14px;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Escola</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Forma</th><th>Pago em</th><th>Ações</th></tr></thead>
+              <tbody id="billingBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Assinaturas -->
+        <div id="finTabAssinaturas" class="fin-tab" style="display:none;margin-top:14px;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Escola</th><th>Valor</th><th>Ciclo</th><th>Próx. vencimento</th><th>Status Asaas</th><th>Status escola</th><th>Ações</th></tr></thead>
+              <tbody id="finAssinBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Vencidas -->
+        <div id="finTabVencidas" class="fin-tab" style="display:none;margin-top:14px;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Escola</th><th>Valor</th><th>Vencido desde</th><th>Dias atraso</th><th>Ações</th></tr></thead>
+              <tbody id="finVencidasTableBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <p style="font-size:11px;color:var(--muted);margin-top:16px;">
+          Webhook Asaas: <code>https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/saas-billing?action=webhook</code> · atualiza faturas automaticamente.
+        </p>
+      </div>
+
+      <!-- MODAL: Nova cobrança avulsa -->
+      <div id="novaCobrancaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:16px;max-width:560px;margin:0 auto;padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="font-size:17px;font-weight:700;">💰 Nova cobrança avulsa</h3>
+            <button onclick="document.getElementById('novaCobrancaModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Use para setup, hora técnica extra, treinamento adicional — não vira assinatura recorrente.</p>
+          <div style="display:grid;gap:10px;">
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Escola *</label><select id="ncEscola" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></select></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Valor (R$) *</label><input id="ncValor" type="number" step="0.01" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Vencimento</label><input id="ncVenc" type="date" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            </div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Descrição *</label><input id="ncDesc" type="text" placeholder="Ex: Setup + migração de dados" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Forma pagamento</label><select id="ncForma" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"><option value="BOLETO">Boleto</option><option value="PIX">PIX</option><option value="CREDIT_CARD">Cartão crédito</option><option value="UNDEFINED">A escolher</option></select></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:18px;">
+            <button class="btn-primary" onclick="criarCobrancaAvulsa()">Gerar cobrança</button>
+            <button onclick="document.getElementById('novaCobrancaModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Lembrete de cobrança -->
+      <div id="lembreteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:16px;max-width:540px;margin:0 auto;padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h3 style="font-size:17px;font-weight:700;">✉️ Enviar lembrete</h3>
+            <button onclick="document.getElementById('lembreteModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+          </div>
+          <p id="lembreteInfo" style="font-size:13px;color:var(--muted);margin-bottom:12px;"></p>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;">Mensagem extra (opcional)</label>
+          <textarea id="lembreteMsg" rows="3" placeholder="Ex: Oi Maria, lembrete amigável da fatura..." style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+          <div style="display:flex;gap:10px;margin-top:14px;">
+            <button class="btn-primary" onclick="enviarLembreteConfirm()">Enviar lembrete</button>
+            <button onclick="document.getElementById('lembreteModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;">Cancelar</button>
+          </div>
         </div>
       </div>
 
@@ -807,7 +896,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Billing SaaS', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Financeiro Lumied', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -841,18 +930,170 @@ async function callBillingStaff(body) {
   });
   return r.json();
 }
-async function loadBillingCentral() {
-  const d = await callBillingStaff({ action: 'list_faturas_all' });
-  const items = d?.faturas || [];
-  const tbody = document.getElementById('billingBody');
-  if (!items.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma fatura ainda. Configure uma assinatura via API para começar.</td></tr>'; return; }
-  tbody.innerHTML = items.map(f => {
-    const venc = new Date(f.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR');
-    const pag = f.data_pagamento ? new Date(f.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
-    const valor = (f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2, style:'currency', currency:'BRL'});
-    const stColor = ['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'].includes(f.status) ? 'ativo' : f.status === 'OVERDUE' ? 'inativo' : 'warn';
-    return `<tr><td><strong>${esc(f.escola_nome || '—')}</strong></td><td>${venc}</td><td>${valor}</td><td><span class="status-pill ${stColor}">${esc(f.status)}</span></td><td>${esc(f.forma_pagamento||'—')}</td><td>${pag}</td></tr>`;
-  }).join('');
+let _finLembreteCtx = null;
+
+function fmtBRL(v) { return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2, style:'currency', currency:'BRL'}); }
+function fmtDate(d) { return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—'; }
+
+async function loadBillingCentral() { await loadFinanceiro(); }
+
+async function loadFinanceiro() {
+  // Carrega tudo em paralelo
+  const [stats, faturas, assinaturas] = await Promise.all([
+    callBillingStaff({ action:'dashboard_stats' }),
+    callBillingStaff({ action:'list_faturas_all' }),
+    callBillingStaff({ action:'list_subscriptions' }),
+  ]);
+
+  // KPIs
+  if (!stats.error) {
+    document.getElementById('finMrr').textContent = fmtBRL(stats.mrr);
+    document.getElementById('finArr').textContent = fmtBRL(stats.arr);
+    document.getElementById('finRecebido').textContent = fmtBRL(stats.recebido_30d);
+    document.getElementById('finPendente').textContent = fmtBRL(stats.total_pendente);
+    document.getElementById('finVencido').textContent = fmtBRL(stats.total_vencido);
+    document.getElementById('finInad').textContent = (stats.inadimplencia_pct || 0) + '%';
+  }
+
+  // Resumo: listas rápidas
+  const venc = (stats.vencidas || []);
+  document.getElementById('finVencidasList').innerHTML = venc.length
+    ? venc.map(v => '<div style="padding:8px 0;border-bottom:1px dashed var(--border);"><b>' + esc(v.escola_nome || '—') + '</b><br><span style="color:#DC2626;">' + fmtBRL(v.valor) + ' · ' + v.dias_atraso + ' dia(s)</span></div>').join('')
+    : '<em style="color:#16A34A;">Nenhuma vencida 🎉</em>';
+  const pend = (stats.pendentes_proximas || []);
+  document.getElementById('finPendentesList').innerHTML = pend.length
+    ? pend.map(p => '<div style="padding:8px 0;border-bottom:1px dashed var(--border);"><b>' + esc(p.escola_nome || '—') + '</b><br><span>' + fmtBRL(p.valor) + ' · vence ' + fmtDate(p.data_vencimento) + '</span></div>').join('')
+    : '<em>Nenhuma pendente.</em>';
+
+  // Tab Faturas
+  const tbF = document.getElementById('billingBody');
+  const fats = faturas.faturas || [];
+  if (!fats.length) {
+    tbF.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhuma fatura ainda.</td></tr>';
+  } else {
+    tbF.innerHTML = fats.map(f => {
+      const stColor = ['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'].includes(f.status) ? 'ativo' : f.status === 'OVERDUE' ? 'inativo' : 'warn';
+      const canReceberManual = !['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'].includes(f.status);
+      const acoes = [
+        '<button class="action-btn" onclick="abrirLembrete(\'' + f.escola_id + '\',\'' + f.id + '\',\'' + esc(f.escola_nome||'') + '\',' + (f.valor||0) + ',\'' + f.data_vencimento + '\')">✉️ Lembrar</button>',
+        canReceberManual ? '<button class="action-btn" onclick="registrarPagtoManual(\'' + f.id + '\',' + (f.valor||0) + ')">✅ Pago</button>' : '',
+      ].filter(Boolean).join(' ');
+      return '<tr>' +
+        '<td><strong>' + esc(f.escola_nome || '—') + '</strong></td>' +
+        '<td>' + fmtDate(f.data_vencimento) + '</td>' +
+        '<td>' + fmtBRL(f.valor) + '</td>' +
+        '<td><span class="status-pill ' + stColor + '">' + esc(f.status) + '</span></td>' +
+        '<td>' + esc(f.forma_pagamento || '—') + '</td>' +
+        '<td>' + fmtDate(f.data_pagamento) + '</td>' +
+        '<td style="white-space:nowrap;">' + acoes + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // Tab Assinaturas
+  const tbA = document.getElementById('finAssinBody');
+  const assins = assinaturas.subscriptions || [];
+  if (!assins.length) {
+    tbA.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhuma assinatura ativa.</td></tr>';
+  } else {
+    tbA.innerHTML = assins.map(s => {
+      const stEsc = s.saas_status || '—';
+      const stColor = stEsc === 'ativo' ? '#16A34A' : (stEsc === 'atraso' ? '#CA8A04' : (['suspenso','bloqueado'].includes(stEsc) ? '#DC2626' : '#64748B'));
+      return '<tr>' +
+        '<td><strong>' + esc(s.escola_nome || '—') + '</strong><br><span style="font-size:11px;color:var(--muted);">' + esc(s.escola_slug || '') + '</span></td>' +
+        '<td>' + fmtBRL(s.valor) + '</td>' +
+        '<td>' + esc(s.ciclo) + '</td>' +
+        '<td>' + fmtDate(s.proximo_vencimento) + '</td>' +
+        '<td><span class="status-pill ' + (s.status === 'ACTIVE' ? 'ativo' : 'inativo') + '">' + esc(s.status) + '</span></td>' +
+        '<td><span style="background:' + stColor + ';color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;">' + esc(stEsc) + '</span></td>' +
+        '<td><button class="action-btn" onclick="marcarStatusEscola(\'' + s.escola_id + '\',\'' + esc(s.escola_nome||'') + '\',\'' + stEsc + '\')">Mudar status</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // Tab Vencidas (tabela completa)
+  const tbV = document.getElementById('finVencidasTableBody');
+  if (!venc.length) {
+    tbV.innerHTML = '<tr><td colspan="5" class="empty-state" style="color:#16A34A;">Nenhuma fatura vencida 🎉</td></tr>';
+  } else {
+    tbV.innerHTML = venc.map(v => {
+      return '<tr>' +
+        '<td><strong>' + esc(v.escola_nome || '—') + '</strong></td>' +
+        '<td>' + fmtBRL(v.valor) + '</td>' +
+        '<td>' + fmtDate(v.data_vencimento) + '</td>' +
+        '<td style="color:#DC2626;font-weight:700;">' + v.dias_atraso + ' dia(s)</td>' +
+        '<td><button class="action-btn" onclick="abrirLembrete(\'' + v.escola_id + '\',null,\'' + esc(v.escola_nome||'') + '\',' + v.valor + ',\'' + v.data_vencimento + '\')">✉️ Lembrar</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+}
+
+function switchFinTab(el, kind) {
+  document.querySelectorAll('#panelBilling [data-fin]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.fin-tab').forEach(t => t.style.display = 'none');
+  document.getElementById('finTab' + kind.charAt(0).toUpperCase() + kind.slice(1)).style.display = 'block';
+}
+
+async function showNovaCobrancaModal() {
+  // Popula select de escolas
+  const d = await callBillingStaff({ action:'escolas_faturaveis' });
+  const sel = document.getElementById('ncEscola');
+  const escolas = d.escolas || [];
+  sel.innerHTML = escolas.length
+    ? escolas.map(e => '<option value="' + e.id + '" data-customer="' + (e.tem_customer_asaas ? '1' : '0') + '">' + esc(e.nome) + (e.tem_customer_asaas ? '' : ' ⚠️ sem customer Asaas') + '</option>').join('')
+    : '<option value="">Nenhuma escola disponível</option>';
+  document.getElementById('ncVenc').value = new Date(Date.now() + 5*86400000).toISOString().slice(0,10);
+  document.getElementById('novaCobrancaModal').style.display = 'block';
+}
+
+async function criarCobrancaAvulsa() {
+  const escola_id = document.getElementById('ncEscola').value;
+  const valor = Number(document.getElementById('ncValor').value);
+  const descricao = document.getElementById('ncDesc').value.trim();
+  const data_vencimento = document.getElementById('ncVenc').value;
+  const forma_pagamento = document.getElementById('ncForma').value;
+  if (!escola_id || !valor || !descricao) return alert('Preencha escola, valor e descrição.');
+  const d = await callBillingStaff({ action:'fatura_avulsa', escola_id, valor, descricao, data_vencimento, forma_pagamento });
+  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
+  alert('Cobrança gerada!\n\nFatura: ' + (d.invoice_url || '—') + '\nBoleto: ' + (d.boleto_url || '—'));
+  document.getElementById('novaCobrancaModal').style.display = 'none';
+  loadFinanceiro();
+}
+
+async function registrarPagtoManual(fatura_id, valor) {
+  const obs = prompt('Registrar pagamento manual de R$ ' + valor + ' para essa fatura?\n\nObservação (opcional):', '');
+  if (obs === null) return;
+  const d = await callBillingStaff({ action:'registrar_pagto_manual', fatura_id, valor_pago: valor, observacao: obs });
+  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
+  showToast('Pagamento registrado');
+  loadFinanceiro();
+}
+
+function abrirLembrete(escola_id, fatura_id, nome, valor, venc) {
+  _finLembreteCtx = { escola_id, fatura_id };
+  document.getElementById('lembreteInfo').textContent = nome + ' — ' + fmtBRL(valor) + ' · vencimento ' + fmtDate(venc);
+  document.getElementById('lembreteMsg').value = '';
+  document.getElementById('lembreteModal').style.display = 'block';
+}
+
+async function enviarLembreteConfirm() {
+  if (!_finLembreteCtx) return;
+  const mensagem_extra = document.getElementById('lembreteMsg').value.trim();
+  const d = await callBillingStaff({ action:'enviar_lembrete', escola_id: _finLembreteCtx.escola_id, fatura_id: _finLembreteCtx.fatura_id, mensagem_extra });
+  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
+  showToast('Lembrete enviado para ' + (d.sent_to || '?'));
+  document.getElementById('lembreteModal').style.display = 'none';
+}
+
+async function marcarStatusEscola(escola_id, nome, atual) {
+  const opcoes = ['ativo','atraso','suspenso','bloqueado','cancelado'];
+  const novo = prompt('Escola "' + nome + '"\nStatus atual: ' + atual + '\n\nNovo status? (' + opcoes.join('/') + ')', atual);
+  if (!novo || !opcoes.includes(novo)) return;
+  const d = await callBillingStaff({ action:'marcar_inadimplente', escola_id, novo_status: novo });
+  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
+  showToast('Status atualizado');
+  loadFinanceiro();
 }
 
 // ═══ BACKUPS (staff) ═══
