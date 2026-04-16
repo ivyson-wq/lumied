@@ -1120,6 +1120,12 @@ serve(async (req: Request) => {
   const token = (body._token as string) || authHeader;
   const gerente = await validarSessao(admin, token);
   if (!gerente) return err("Sessão inválida ou expirada. Faça login novamente.", 401);
+  // TENANT ISOLATION GUARD — todas ações autenticadas abaixo exigem escola_id na sessão.
+  // Isso é a defesa em profundidade contra leaks: actions que esquecerem de filtrar por
+  // escola_id ainda têm um gerente.escola_id disponível; se gerente.escola_id for null,
+  // bloqueamos toda operação.
+  if (!(gerente as any).escola_id) return err("Sessão sem escola associada. Contate o suporte.", 403);
+  const sessionEscolaId = (gerente as any).escola_id as string;
 
   // ── Role check for sensitive financial actions ────────────────
   const sensitiveActions = ["staff_alterar_resp_financeiro", "financeiro_decisao_aprovar", "financeiro_decisao_rejeitar", "indicacao_b2b_config_salvar"];
@@ -1135,7 +1141,7 @@ serve(async (req: Request) => {
   if (action === "solicitacoes_list") {
     const limite = Number(body.limite) || 100;
     const offset = Number(body.offset) || 0;
-    const { data } = await admin.from("solicitacoes").select("id, email, nome_resp, nome_crianca, turno, serie, dias_semana, mes_vigencia, criado_em").order("criado_em", { ascending: false }).range(offset, offset + limite - 1);
+    const { data } = await admin.from("solicitacoes").select("id, email, nome_resp, nome_crianca, turno, serie, dias_semana, mes_vigencia, criado_em").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false }).range(offset, offset + limite - 1);
     return ok(data ?? []);
   }
   if (action === "solicitacoes_update_turno") {
@@ -1152,7 +1158,7 @@ serve(async (req: Request) => {
 
   // ── Séries (CRUD completo) ────────────────────────────────────
   if (action === "series_list_all") {
-    const { data } = await admin.from("series").select("*").order("ordem");
+    const { data } = await admin.from("series").select("*").eq("escola_id", sessionEscolaId).order("ordem");
     return ok(data ?? []);
   }
   if (action === "series_create") {
@@ -1437,19 +1443,15 @@ serve(async (req: Request) => {
   }
 
   if (action === "aluno_documentos_list") {
-    const gerente = await validarSessao(admin, token);
-    if (!gerente) return err("Sessão inválida.", 401);
     const { aluno_email } = body as { aluno_email: string };
     if (!aluno_email) return err("aluno_email obrigatório.");
-    const { data } = await admin.from("matricula_documentos").select("*").ilike("aluno_email", aluno_email).order("criado_em", { ascending: false });
+    const { data } = await admin.from("matricula_documentos").select("*").eq("escola_id", sessionEscolaId).ilike("aluno_email", aluno_email).order("criado_em", { ascending: false });
     return ok(data ?? []);
   }
 
   if (action === "aluno_historico_list") {
-    const gerente = await validarSessao(admin, token);
-    if (!gerente) return err("Sessão inválida.", 401);
     const { aluno_nome, aluno_email } = body as { aluno_nome?: string; aluno_email?: string };
-    let q = admin.from("aluno_historico").select("*").order("criado_em", { ascending: false });
+    let q = admin.from("aluno_historico").select("*").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
     if (aluno_email) q = q.ilike("aluno_email", aluno_email);
     else if (aluno_nome) q = q.ilike("aluno_nome", `%${aluno_nome}%`);
     else return err("aluno_nome ou aluno_email obrigatório.");
@@ -1656,15 +1658,15 @@ serve(async (req: Request) => {
     return ok({ url: publicUrl });
   }
 
-  // ── Atividades (públicas) ─────────────────────────────────────
+  // ── Atividades (autenticado — duplicata de linha 568) ─────────
   if (action === "atividades_list") {
-    const { data } = await admin.from("atividades").select("*").eq("ativo", true).order("ordem");
+    const { data } = await admin.from("atividades").select("*").eq("escola_id", sessionEscolaId).eq("ativo", true).order("ordem");
     return ok(data ?? []);
   }
 
   // ── Atividades CRUD (autenticado) ─────────────────────────────
   if (action === "atividades_list_all") {
-    const { data: atividades } = await admin.from("atividades").select("*").order("ordem");
+    const { data: atividades } = await admin.from("atividades").select("*").eq("escola_id", sessionEscolaId).order("ordem");
     if (!atividades?.length) return ok([]);
 
     const { data: alunosAtiv } = await admin.from("alunos").select("turmas_selecionadas").not("turmas_selecionadas", "is", null);
@@ -1723,8 +1725,8 @@ serve(async (req: Request) => {
   if (action === "atividades_apurar_mes") {
     // Apura e gera contas a receber para cada atividade no mês informado
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
-    const { data: atividades } = await admin.from("atividades").select("id, nome, valor_repasse_aluno").eq("ativo", true);
-    const { data: alunos } = await admin.from("alunos").select("atividades_ids").eq("ativo", true).not("atividades_ids", "is", null);
+    const { data: atividades } = await admin.from("atividades").select("id, nome, valor_repasse_aluno").eq("escola_id", sessionEscolaId).eq("ativo", true);
+    const { data: alunos } = await admin.from("alunos").select("atividades_ids").eq("escola_id", sessionEscolaId).eq("ativo", true).not("atividades_ids", "is", null);
     if (!atividades?.length) return ok({ gerados: 0 });
 
     // Conta alunos por atividade
@@ -1756,7 +1758,7 @@ serve(async (req: Request) => {
   }
   if (action === "atividades_contas_list") {
     const mes = (body as any).mes;
-    let q = admin.from("atividades_contas_receber").select("*").order("atividade_nome");
+    let q = admin.from("atividades_contas_receber").select("*").eq("escola_id", sessionEscolaId).order("atividade_nome");
     if (mes) q = q.eq("mes_apuracao", mes);
     const { data } = await q;
     return ok(data ?? []);
@@ -1776,7 +1778,7 @@ serve(async (req: Request) => {
 
   // ── Inscrições em atividades (autenticado) ────────────────────
   if (action === "inscricoes_atividades_list") {
-    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").not("atividades_ids", "is", null).order("nome");
+    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").eq("escola_id", sessionEscolaId).not("atividades_ids", "is", null).order("nome");
     // Map to expected frontend fields
     const mapped = (data ?? []).map(a => ({
       id: a.id,
@@ -1852,6 +1854,7 @@ serve(async (req: Request) => {
     const { data, error } = await admin
       .from("manutencoes")
       .select("*, usuarios(nome, email)")
+      .eq("escola_id", sessionEscolaId)
       .order("criado_em", { ascending: false });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Sort by urgencia priority: critica > alta > media > baixa, then by criado_em desc
@@ -1965,11 +1968,11 @@ serve(async (req: Request) => {
 
   // ── Equipes de manutenção (CRUD) ────────────────────────
   if (action === "manut_equipes_list") {
-    const { data } = await admin.from("manut_equipes").select("*").eq("ativo", true).order("nome");
+    const { data } = await admin.from("manut_equipes").select("*").eq("escola_id", sessionEscolaId).eq("ativo", true).order("nome");
     return ok(data ?? []);
   }
   if (action === "manut_equipes_list_all") {
-    const { data } = await admin.from("manut_equipes").select("*").order("nome");
+    const { data } = await admin.from("manut_equipes").select("*").eq("escola_id", sessionEscolaId).order("nome");
     return ok(data ?? []);
   }
   if (action === "manut_equipe_save") {
@@ -1993,11 +1996,11 @@ serve(async (req: Request) => {
 
   // ── Categorias de insumos ───────────────────────────────
   if (action === "alm_categorias_list") {
-    const { data } = await admin.from("alm_categorias").select("*").eq("ativo", true).order("nome");
+    const { data } = await admin.from("alm_categorias").select("*").eq("escola_id", sessionEscolaId).eq("ativo", true).order("nome");
     return ok(data ?? []);
   }
   if (action === "alm_categorias_list_all") {
-    const { data } = await admin.from("alm_categorias").select("*").order("nome");
+    const { data } = await admin.from("alm_categorias").select("*").eq("escola_id", sessionEscolaId).order("nome");
     return ok(data ?? []);
   }
   if (action === "alm_categoria_save") {
@@ -2089,7 +2092,7 @@ serve(async (req: Request) => {
     }
 
     // Manutencao por status
-    const { data: manuts } = await admin.from("manutencoes").select("status, urgencia, criado_em").gte("criado_em", `${ano}-01-01`);
+    const { data: manuts } = await admin.from("manutencoes").select("status, urgencia, criado_em").eq("escola_id", sessionEscolaId).gte("criado_em", `${ano}-01-01`);
     const manutStatus: Record<string, number> = {};
     const manutPorMes = Array(12).fill(0);
     for (const m of manuts ?? []) {
@@ -2099,7 +2102,7 @@ serve(async (req: Request) => {
     }
 
     // Atividades inscritos
-    const { data: ativs } = await admin.from("atividades").select("nome, horarios").eq("ativo", true);
+    const { data: ativs } = await admin.from("atividades").select("nome, horarios").eq("escola_id", sessionEscolaId).eq("ativo", true);
     const atividadesData = (ativs ?? []).map((a: any) => ({
       nome: a.nome,
       inscritos: (a.horarios || []).reduce((s: number, h: any) => s + (h.inscritos || 0), 0),
@@ -2124,7 +2127,7 @@ serve(async (req: Request) => {
 
   // ── Financeiro ────────────────────────────────────────
   if (action === "fin_plano_contas_list") {
-    const { data } = await admin.from("fin_plano_contas").select("*").order("codigo");
+    const { data } = await admin.from("fin_plano_contas").select("*").eq("escola_id", sessionEscolaId).order("codigo");
     return ok(data ?? []);
   }
   if (action === "fin_plano_contas_save") {
@@ -2386,7 +2389,7 @@ serve(async (req: Request) => {
   }
   if (action === "fin_boletos_emitidos_list") {
     const mes = (body as any).mes;
-    let query = admin.from("fin_boletos_emitidos").select("*").order("criado_em", { ascending: false });
+    let query = admin.from("fin_boletos_emitidos").select("*").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
     if (mes) query = query.gte("vencimento", mes + "-01").lte("vencimento", mes + "-31");
     const { data } = await query.limit(100);
     return ok(data ?? []);
@@ -2413,7 +2416,7 @@ serve(async (req: Request) => {
   }
   if (action === "fin_nf_list") {
     const mes = (body as any).mes;
-    let query = admin.from("fin_notas_fiscais").select("*").order("criado_em", { ascending: false });
+    let query = admin.from("fin_notas_fiscais").select("*").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
     if (mes) query = query.gte("criado_em", mes + "-01").lte("criado_em", mes + "-31T23:59:59");
     const { data } = await query.limit(100);
     return ok(data ?? []);
@@ -2461,6 +2464,9 @@ serve(async (req: Request) => {
   if (action === "crm_interacoes_list") {
     const { lead_id } = body as any;
     if (!lead_id) return err("lead_id obrigatorio.");
+    // Validar que o lead pertence à escola do gerente (evita enumerar leads cross-tenant)
+    const { data: lead } = await admin.from("crm_leads").select("id").eq("id", lead_id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!lead) return err("Lead não encontrado.", 404);
     const { data } = await admin.from("crm_interacoes").select("*").eq("lead_id", lead_id).order("criado_em", { ascending: false });
     return ok(data ?? []);
   }
@@ -2541,9 +2547,9 @@ serve(async (req: Request) => {
   // Vagas
   if (action === "crm_vagas_list") {
     const ano = parseInt((body as any).ano) || new Date().getFullYear();
-    const { data: turmas } = await admin.from("crm_turmas_vagas").select("*").eq("ano", ano).order("ordem");
+    const { data: turmas } = await admin.from("crm_turmas_vagas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano).order("ordem");
     // Contar matriculas/reservas por serie
-    const { data: matrs } = await admin.from("crm_matriculas").select("serie, status").eq("ano", ano).in("status", ["reserva", "matriculado"]);
+    const { data: matrs } = await admin.from("crm_matriculas").select("serie, status").eq("escola_id", sessionEscolaId).eq("ano", ano).in("status", ["reserva", "matriculado"]);
     const ocupMap: Record<string, { reservas: number; matriculados: number }> = {};
     for (const m of matrs ?? []) {
       if (!ocupMap[m.serie]) ocupMap[m.serie] = { reservas: 0, matriculados: 0 };
@@ -2605,11 +2611,11 @@ serve(async (req: Request) => {
   }
   if (action === "crm_matriculas_list") {
     const ano = parseInt((body as any).ano) || new Date().getFullYear();
-    const { data } = await admin.from("crm_matriculas").select("*").eq("ano", ano).order("serie").order("turma").order("criado_em");
+    const { data } = await admin.from("crm_matriculas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano).order("serie").order("turma").order("criado_em");
     return ok(data ?? []);
   }
   if (action === "crm_dashboard") {
-    const { data: leads } = await admin.from("crm_leads").select("estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome)");
+    const { data: leads } = await admin.from("crm_leads").select("estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome)").eq("escola_id", sessionEscolaId);
     const { data: estagios } = await admin.from("crm_estagios").select("id, nome, cor, ordem").eq("ativo", true).order("ordem");
     const porEstagio: Record<string, number> = {};
     const porOrigem: Record<string, number> = {};
@@ -2677,9 +2683,9 @@ serve(async (req: Request) => {
   }
   if (action === "impressoes_orcamento_list") {
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
-    const { data: turmas } = await admin.from("series").select("id, nome").eq("ativo", true).order("nome");
-    const { data: orcs } = await admin.from("impressoes_orcamento").select("turma_id, limite").eq("mes", mes);
-    const { data: usadas } = await admin.from("impressoes").select("turma_id, copias, num_paginas").gte("criado_em", mes + "-01").in("status", ["pendente", "aprovado", "impresso", "entregue"]);
+    const { data: turmas } = await admin.from("series").select("id, nome").eq("escola_id", sessionEscolaId).eq("ativo", true).order("nome");
+    const { data: orcs } = await admin.from("impressoes_orcamento").select("turma_id, limite").eq("escola_id", sessionEscolaId).eq("mes", mes);
+    const { data: usadas } = await admin.from("impressoes").select("turma_id, copias, num_paginas").eq("escola_id", sessionEscolaId).gte("criado_em", mes + "-01").in("status", ["pendente", "aprovado", "impresso", "entregue"]);
     const orcMap: Record<string, number> = {};
     for (const o of orcs ?? []) orcMap[o.turma_id] = o.limite;
     const usadoMap: Record<string, number> = {};
@@ -2696,8 +2702,8 @@ serve(async (req: Request) => {
 
   // ── Horário de Acesso Professoras ────────────────────────
   if (action === "prof_horario_acesso_list") {
-    const { data } = await admin.from("professora_horario_acesso").select("*").order("professora_id").order("dia_semana");
-    const { data: profs } = await admin.from("professoras").select("id, nome, email").eq("ativo", true).order("nome");
+    const { data } = await admin.from("professora_horario_acesso").select("*").eq("escola_id", sessionEscolaId).order("professora_id").order("dia_semana");
+    const { data: profs } = await admin.from("professoras").select("id, nome, email").eq("escola_id", sessionEscolaId).eq("ativo", true).order("nome");
     return ok({ data: data ?? [], professoras: profs ?? [] });
   }
   if (action === "prof_horario_acesso_salvar") {
@@ -2793,6 +2799,7 @@ serve(async (req: Request) => {
     const { portal, email } = body as { portal: string; email: string };
     if (!portal || !email) return err("portal e email obrigatórios.");
     const { data } = await admin.from("notificacoes").select("*")
+      .eq("escola_id", sessionEscolaId)
       .eq("portal", portal).eq("destinatario", email)
       .order("criado_em", { ascending: false }).limit(50);
     return ok(data ?? []);
@@ -2919,7 +2926,7 @@ serve(async (req: Request) => {
 
   if (action === "matricula_status_list") {
     const { ano, status } = body as any;
-    let q = admin.from("crm_matriculas").select("*, matricula_documentos(tipo, validado)").order("criado_em", { ascending: false });
+    let q = admin.from("crm_matriculas").select("*, matricula_documentos(tipo, validado)").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
     if (ano) q = q.eq("ano", ano);
     if (status) q = q.eq("status", status);
     const { data } = await q;
@@ -3079,7 +3086,7 @@ serve(async (req: Request) => {
 
   if (action === "financeiro_decisoes_list") {
     const { status: st } = body as any;
-    let q2 = admin.from("escola_decisoes_financeiras").select("*").order("criado_em", { ascending: false });
+    let q2 = admin.from("escola_decisoes_financeiras").select("*").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
     if (st) q2 = q2.eq("status", st);
     const { data } = await q2.limit(100);
     return ok({ data: data ?? [] });
@@ -3239,7 +3246,7 @@ serve(async (req: Request) => {
   }
 
   if (action === "contratos_list") {
-    const { data } = await admin.from("contratos").select("*, contrato_templates(nome, tipo), contrato_assinaturas(id, tipo, nome_signatario, assinado_em)").order("criado_em", { ascending: false });
+    const { data } = await admin.from("contratos").select("*, contrato_templates(nome, tipo), contrato_assinaturas(id, tipo, nome_signatario, assinado_em)").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
     return ok(data ?? []);
   }
 

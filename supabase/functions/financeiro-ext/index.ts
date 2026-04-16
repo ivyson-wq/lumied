@@ -430,9 +430,11 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
 });
 
 router.on("conciliacao_pendentes_list", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb
     .from("fin_lancamentos")
     .select("*")
+    .eq("escola_id", ctx.escola_id)
     .eq("status", "pendente_revisao")
     .order("data_lancamento", { ascending: false });
   return successResponse(data ?? []);
@@ -1057,9 +1059,11 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
 });
 
 router.on("inadimplencia_dashboard", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data: items } = await ctx.sb
     .from("fin_inadimplencia")
     .select("*")
+    .eq("escola_id", ctx.escola_id)
     .neq("status", "resolvido")
     .order("dias_atraso", { ascending: false });
 

@@ -1191,9 +1191,11 @@ router.on("compliance_ciencia_criar", authGerenteOrSecretaria, feat, async (ctx)
 
 // Gerente: listar ciências (com filtros)
 router.on("compliance_ciencias_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { professora_id, status } = ctx.body as any;
   let q = ctx.sb.from("compliance_ciencias")
     .select("*, professoras(id, nome, email)")
+    .eq("escola_id", ctx.escola_id)
     .order("criado_em", { ascending: false });
   if (professora_id) q = q.eq("professora_id", professora_id);
   if (status) q = q.eq("status", status);

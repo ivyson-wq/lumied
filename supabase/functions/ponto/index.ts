@@ -129,7 +129,8 @@ function calculateDay(events: AfdEvent[]): DaySummary {
 // ═══════════════════════════════════════════════════════
 
 router.on("ponto_employees_list", authGerente, feat, async (ctx) => {
-  const { data } = await ctx.sb.from("ponto_employees").select("*, rh_funcionarios(nome, cargo)").eq("ativo", true).order("nome");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("ponto_employees").select("*, rh_funcionarios(nome, cargo)").eq("escola_id", ctx.escola_id).eq("ativo", true).order("nome");
   return successResponse(data ?? []);
 });
 
@@ -256,13 +257,15 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
 // ═══════════════════════════════════════════════════════
 
 router.on("ponto_imports_list", authGerente, feat, async (ctx) => {
-  const { data } = await ctx.sb.from("afd_imports").select("*").order("criado_em", { ascending: false }).limit(50);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("afd_imports").select("*").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false }).limit(50);
   return successResponse(data ?? []);
 });
 
 router.on("ponto_events_list", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { employee_id, data_inicio, data_fim, import_id } = ctx.body as any;
-  let q = ctx.sb.from("afd_events").select("*, ponto_employees(nome)").order("data_evento").order("hora_evento");
+  let q = ctx.sb.from("afd_events").select("*, ponto_employees(nome)").eq("escola_id", ctx.escola_id).order("data_evento").order("hora_evento");
   if (employee_id) q = q.eq("employee_id", employee_id);
   if (data_inicio) q = q.gte("data_evento", data_inicio);
   if (data_fim) q = q.lte("data_evento", data_fim);

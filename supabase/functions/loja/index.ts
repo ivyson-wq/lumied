@@ -112,9 +112,11 @@ router.on("produtos_update", authGerente, requireEscola, feat, async (ctx) => {
 
 // Pedidos — listagem exige auth de gerente (PII: emails/nomes de famílias)
 router.on("pedidos_list", authGerente, requireEscola, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { familia_email, status } = ctx.body as Record<string, unknown>;
   let q = ctx.sb.from("loja_pedidos")
     .select("*, loja_itens_pedido(*, loja_produtos(nome, imagem_url))")
+    .eq("escola_id", ctx.escola_id)
     .order("criado_em", { ascending: false });
   if (familia_email) {
     if (!validEmail(familia_email)) throw new AppError("VALIDATION_FAILED", "Email inválido.");

@@ -154,9 +154,11 @@ async function getConfig(sb: Any, chave: string): Promise<string | null> {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_dispositivos_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb
     .from("acesso_dispositivos")
     .select("*")
+    .eq("escola_id", ctx.escola_id)
     .eq("ativo", true)
     .order("criado_em", { ascending: false });
   return successResponse(data ?? []);
@@ -740,8 +742,10 @@ router.on("acesso_evento_callback", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_eventos_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data_inicio, data_fim, pessoa_tipo, direcao, limit: lim } = ctx.body as Any;
   let q = ctx.sb.from("acesso_eventos").select("*, acesso_dispositivos(nome, localizacao)")
+    .eq("escola_id", ctx.escola_id)
     .order("criado_em", { ascending: false })
     .limit(lim || 100);
 
@@ -755,10 +759,11 @@ router.on("acesso_eventos_list", authGerenteOrSecretaria, async (ctx) => {
 });
 
 router.on("acesso_presenca_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data: dataFiltro, turma, status } = ctx.body as Any;
   const hoje = dataFiltro || new Date().toISOString().split("T")[0];
 
-  let q = ctx.sb.from("acesso_presenca").select("*").eq("data", hoje).order("aluno_nome");
+  let q = ctx.sb.from("acesso_presenca").select("*").eq("escola_id", ctx.escola_id).eq("data", hoje).order("aluno_nome");
   if (status) q = q.eq("status", status);
 
   const { data } = await q;
@@ -767,7 +772,7 @@ router.on("acesso_presenca_list", authGerenteOrSecretaria, async (ctx) => {
   if (turma && data) {
     const alunoIds = data.map((p: Any) => p.aluno_id);
     if (alunoIds.length > 0) {
-      const { data: alunos } = await ctx.sb.from("alunos").select("id, serie").in("id", alunoIds);
+      const { data: alunos } = await ctx.sb.from("alunos").select("id, serie").eq("escola_id", ctx.escola_id).in("id", alunoIds);
       const alunoSerie = new Map((alunos ?? []).map((a: Any) => [a.id, a.serie]));
       const filtered = data.filter((p: Any) => alunoSerie.get(p.aluno_id) === turma);
       return successResponse(filtered);
@@ -778,8 +783,10 @@ router.on("acesso_presenca_list", authGerenteOrSecretaria, async (ctx) => {
 });
 
 router.on("acesso_alertas_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { lido, limit: lim } = ctx.body as Any;
   let q = ctx.sb.from("acesso_alertas").select("*")
+    .eq("escola_id", ctx.escola_id)
     .order("lido", { ascending: true })
     .order("criado_em", { ascending: false })
     .limit(lim || 50);
