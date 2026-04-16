@@ -577,7 +577,7 @@ async function authStaff(ctx: Context, next: () => Promise<Response>): Promise<R
   const token = (ctx.body._staff_token as string) || null;
   if (!token) throw new AppError("AUTH_REQUIRED", "Token de staff obrigatório.");
   const { data } = await ctx.sb.from("lumied_staff_sessoes")
-    .select("staff_id, expira_em, lumied_staff(id, nome, email, cargo, ativo)")
+    .select("staff_id, expira_em, lumied_staff(id, nome, email, cargo, ativo, papel_id)")
     .eq("token", token).single();
   if (!data) throw new AppError("AUTH_INVALID", "Sessão de staff inválida.");
   if (new Date(data.expira_em) < new Date()) throw new AppError("AUTH_EXPIRED", "Sessão expirada.");
@@ -586,6 +586,18 @@ async function authStaff(ctx: Context, next: () => Promise<Response>): Promise<R
   if (!staff?.ativo) throw new AppError("FORBIDDEN", "Conta desativada.");
   ctx.user = { ...staff, tipo: 'staff' };
   return next();
+}
+
+// Checa permissão granular via papel. Fundador ou admin têm bypass total.
+async function requirePerm(ctx: Context, recurso: string, acao: string): Promise<void> {
+  const user = ctx.user as any;
+  if (!user) throw new AppError("AUTH_REQUIRED", "Sessão obrigatória.");
+  if (user.tipo === 'admin') return;              // admin de escola: bypass (é outro contexto)
+  if (user.cargo === 'fundador') return;          // fundador: bypass
+  const { data } = await ctx.sb.rpc("staff_tem_permissao", {
+    p_staff_id: user.id, p_recurso: recurso, p_acao: acao,
+  });
+  if (!data) throw new AppError("FORBIDDEN", `Sem permissão: ${recurso}/${acao}.`);
 }
 
 // Staff login
@@ -1262,6 +1274,418 @@ router.on("escola_api_info", authAdmin, async (ctx) => {
       pais: `https://${escola.subdominio}.lumied.com.br/`,
       aluno: `https://${escola.subdominio}.lumied.com.br/aluno.html`,
     },
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  STAFF — Papéis & Permissões granulares
+// ═══════════════════════════════════════════════════════════════
+
+// Catálogo de recursos × ações (usado pela UI matriz). Manter sincronizado
+// com seed da migration 246. É declarado no server para a UI não precisar
+// adivinhar.
+const RECURSOS_CATALOGO = [
+  { recurso: 'escolas',           nome: 'Escolas',              acoes: ['ver','criar','editar','suspender'] },
+  { recurso: 'staff',              nome: 'Staff Lumied',        acoes: ['ver','criar','editar','desativar','gerenciar_papeis'] },
+  { recurso: 'tickets',            nome: 'Tickets de Suporte',  acoes: ['ver','responder','fechar','escalar'] },
+  { recurso: 'crm',                nome: 'CRM / Funil',         acoes: ['ver','editar','mover_funil'] },
+  { recurso: 'saas_billing',       nome: 'Cobrança SaaS',       acoes: ['ver','criar_fatura','cancelar','registrar_pagto'] },
+  { recurso: 'financeiro_lumied',  nome: 'Financeiro Interno',  acoes: ['ver_cp','criar_cp','editar_cp','pagar_cp','ver_cr','criar_cr','editar_cr'] },
+  { recurso: 'centros_custo',      nome: 'Centros de Custo',    acoes: ['ver','gerenciar'] },
+  { recurso: 'backups',            nome: 'Backups',             acoes: ['ver','restaurar','download'] },
+  { recurso: 'audit',              nome: 'Audit Log',           acoes: ['ver'] },
+  { recurso: 'governance',         nome: 'Governance',          acoes: ['ver','editar_flags'] },
+  { recurso: 'saude_cs',           nome: 'Saúde CS',            acoes: ['ver','ack_alerta'] },
+  { recurso: 'playbooks',          nome: 'Playbooks',           acoes: ['ver','executar'] },
+  { recurso: 'ia_uso',             nome: 'Uso de IA',           acoes: ['ver','ajustar_budget'] },
+];
+
+router.on("staff_recursos_catalogo", authStaff, async (_ctx) => {
+  return successResponse({ recursos: RECURSOS_CATALOGO });
+});
+
+router.on("staff_papeis_list", authStaff, async (ctx) => {
+  const { data: papeis } = await ctx.sb.from("lumied_staff_papeis")
+    .select("id, slug, nome, descricao, sistema, criado_em")
+    .order("nome");
+  const { data: perms } = await ctx.sb.from("lumied_staff_permissoes")
+    .select("papel_id, recurso, acao");
+  const { data: staffs } = await ctx.sb.from("lumied_staff")
+    .select("papel_id")
+    .eq("ativo", true);
+  const byPapel: Record<string, { recurso: string; acao: string }[]> = {};
+  // deno-lint-ignore no-explicit-any
+  (perms || []).forEach((p: any) => {
+    if (!byPapel[p.papel_id]) byPapel[p.papel_id] = [];
+    byPapel[p.papel_id].push({ recurso: p.recurso, acao: p.acao });
+  });
+  const countByPapel: Record<string, number> = {};
+  // deno-lint-ignore no-explicit-any
+  (staffs || []).forEach((s: any) => { if (s.papel_id) countByPapel[s.papel_id] = (countByPapel[s.papel_id] || 0) + 1; });
+  return successResponse({
+    papeis: (papeis || []).map((p: any) => ({
+      ...p,
+      permissoes: byPapel[p.id] || [],
+      staff_count: countByPapel[p.id] || 0,
+    })),
+  });
+});
+
+router.on("staff_papel_upsert", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'staff', 'gerenciar_papeis');
+  const { id, slug, nome, descricao, permissoes } = ctx.body as any;
+  if (!nome) throw new AppError("VALIDATION_FAILED", "Nome obrigatório.");
+  if (!Array.isArray(permissoes)) throw new AppError("VALIDATION_FAILED", "permissoes deve ser array.");
+
+  let papelId = id as string | null;
+  if (papelId) {
+    // Update
+    const { data: existing } = await ctx.sb.from("lumied_staff_papeis").select("sistema, slug").eq("id", papelId).single();
+    if (!existing) throw new AppError("NOT_FOUND", "Papel não encontrado.");
+    const patch: any = { nome, descricao: descricao || null, atualizado_em: new Date().toISOString() };
+    // Slug de papéis sistema não pode mudar
+    if (!(existing as any).sistema && slug) patch.slug = slug;
+    await ctx.sb.from("lumied_staff_papeis").update(patch).eq("id", papelId);
+  } else {
+    // Insert
+    if (!slug) throw new AppError("VALIDATION_FAILED", "Slug obrigatório para papel novo.");
+    const { data: novo, error } = await ctx.sb.from("lumied_staff_papeis")
+      .insert({ slug, nome, descricao: descricao || null, sistema: false })
+      .select("id").single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    papelId = (novo as any).id;
+  }
+
+  // Sincroniza permissões (substitui inteira a matriz do papel)
+  await ctx.sb.from("lumied_staff_permissoes").delete().eq("papel_id", papelId);
+  if (permissoes.length > 0) {
+    const rows = (permissoes as { recurso: string; acao: string }[]).map(p => ({ papel_id: papelId, recurso: p.recurso, acao: p.acao }));
+    const { error } = await ctx.sb.from("lumied_staff_permissoes").insert(rows);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  }
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'staff_papel', recurso_id: papelId, acao: id ? 'editar' : 'criar', depois: { nome, permissoes: permissoes.length } });
+  return successResponse({ success: true, id: papelId });
+});
+
+router.on("staff_papel_delete", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'staff', 'gerenciar_papeis');
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const { data: p } = await ctx.sb.from("lumied_staff_papeis").select("sistema, nome").eq("id", id).single();
+  if (!p) throw new AppError("NOT_FOUND", "Papel não encontrado.");
+  if ((p as any).sistema) throw new AppError("FORBIDDEN", "Papel do sistema não pode ser deletado.");
+  // Staff com esse papel passam a papel_id=null (não bloqueia — mas ficarão sem acesso)
+  await ctx.sb.from("lumied_staff").update({ papel_id: null }).eq("papel_id", id);
+  await ctx.sb.from("lumied_staff_papeis").delete().eq("id", id);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'staff_papel', recurso_id: id, acao: 'deletar', antes: { nome: (p as any).nome } });
+  return successResponse({ success: true });
+});
+
+router.on("staff_set_papel", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'staff', 'gerenciar_papeis');
+  const { staff_id, papel_id } = ctx.body as any;
+  if (!staff_id) throw new AppError("VALIDATION_FAILED", "staff_id obrigatório.");
+  // papel_id pode ser null (remover vínculo)
+  await ctx.sb.from("lumied_staff").update({ papel_id: papel_id || null }).eq("id", staff_id);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'lumied_staff', recurso_id: staff_id, acao: 'set_papel', depois: { papel_id } });
+  return successResponse({ success: true });
+});
+
+router.on("staff_minhas_permissoes", authStaff, async (ctx) => {
+  const user = ctx.user as any;
+  if (user.cargo === 'fundador') {
+    // Fundador tem tudo
+    const all: { recurso: string; acao: string }[] = [];
+    RECURSOS_CATALOGO.forEach(r => r.acoes.forEach(a => all.push({ recurso: r.recurso, acao: a })));
+    return successResponse({ fundador: true, permissoes: all });
+  }
+  if (!user.papel_id) return successResponse({ fundador: false, permissoes: [] });
+  const { data } = await ctx.sb.from("lumied_staff_permissoes")
+    .select("recurso, acao")
+    .eq("papel_id", user.papel_id);
+  return successResponse({ fundador: false, permissoes: data || [] });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD — Alertas (CS + Contas a Receber vencidas)
+// ═══════════════════════════════════════════════════════════════
+router.on("staff_dashboard_alertas", authStaff, async (ctx) => {
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  // Saúde CS: escolas com sinais vermelho/amarelo (reusa os sinais da cs_saude_list)
+  const { data: escolas } = await ctx.sb.from("escolas")
+    .select("id, nome, subdominio, saas_status, saas_proximo_vencimento")
+    .eq("ativo", true).limit(200);
+
+  // Consultas que podem falhar se a tabela ainda não existir (ex: antes da mig 247 aplicar) — tolerar.
+  const safeSelect = async <T>(fn: () => Promise<{ data: T[] | null }>): Promise<T[]> => {
+    try { const r = await fn(); return r.data || []; } catch { return []; }
+  };
+  const [gerentesRes, faturasVenRes, cpVenData, crVenData] = await Promise.all([
+    ctx.sb.from("gerentes").select("escola_id, ultimo_login"),
+    ctx.sb.from("saas_faturas").select("escola_id, valor, data_vencimento, escolas(nome)").eq("status","OVERDUE").order("data_vencimento").limit(50),
+    safeSelect<any>(() => ctx.sb.from("lumied_contas_pagar").select("id, fornecedor, valor, data_vencimento").eq("status","aberto").lt("data_vencimento", hoje).limit(20)),
+    safeSelect<any>(() => ctx.sb.from("lumied_contas_receber").select("id, origem, valor, data_vencimento").eq("status","aberto").lt("data_vencimento", hoje).limit(20)),
+  ]);
+
+  // deno-lint-ignore no-explicit-any
+  const gerMap: Record<string, string> = {};
+  (gerentesRes.data || []).forEach((g: any) => { if (g.escola_id && g.ultimo_login) gerMap[g.escola_id] = g.ultimo_login; });
+
+  const saudeAlertas: any[] = [];
+  (escolas || []).forEach((e: any) => {
+    const sinais: { cor: string; texto: string }[] = [];
+    const ult = gerMap[e.id];
+    const diasSemLogin = ult ? Math.floor((Date.now() - new Date(ult).getTime()) / 86400000) : 999;
+    if (diasSemLogin > 14) sinais.push({ cor: 'vermelho', texto: `Gestor sem login há ${diasSemLogin}d` });
+    if (e.saas_status === 'atraso') sinais.push({ cor: 'amarelo', texto: 'Fatura SaaS em atraso' });
+    if (e.saas_status === 'suspenso' || e.saas_status === 'bloqueado') sinais.push({ cor: 'vermelho', texto: `SaaS ${e.saas_status}` });
+    if (sinais.length > 0) {
+      const cor = sinais.some(s => s.cor === 'vermelho') ? 'vermelho' : 'amarelo';
+      saudeAlertas.push({ escola_id: e.id, escola_nome: e.nome, subdominio: e.subdominio, cor, sinais, dias_sem_login: diasSemLogin });
+    }
+  });
+  saudeAlertas.sort((a, b) => (a.cor === 'vermelho' ? -1 : 1) - (b.cor === 'vermelho' ? -1 : 1) || b.dias_sem_login - a.dias_sem_login);
+
+  // deno-lint-ignore no-explicit-any
+  const crSaas: any[] = (faturasVenRes.data || []).map((f: any) => ({
+    tipo: 'saas', escola_id: f.escola_id, escola_nome: f.escolas?.nome,
+    valor: Number(f.valor), data_vencimento: f.data_vencimento,
+    dias_atraso: Math.floor((new Date(hoje).getTime() - new Date(f.data_vencimento).getTime()) / 86400000),
+  }));
+  const crLumied = (crVenData || []).map((c: any) => ({
+    tipo: 'lumied', id: c.id, origem: c.origem, valor: Number(c.valor), data_vencimento: c.data_vencimento,
+    dias_atraso: Math.floor((new Date(hoje).getTime() - new Date(c.data_vencimento).getTime()) / 86400000),
+  }));
+  const cpVencidas = (cpVenData || []).map((c: any) => ({
+    id: c.id, fornecedor: c.fornecedor, valor: Number(c.valor), data_vencimento: c.data_vencimento,
+    dias_atraso: Math.floor((new Date(hoje).getTime() - new Date(c.data_vencimento).getTime()) / 86400000),
+  }));
+
+  return successResponse({
+    saude_cs: {
+      total: saudeAlertas.length,
+      vermelho: saudeAlertas.filter(a => a.cor === 'vermelho').length,
+      amarelo: saudeAlertas.filter(a => a.cor === 'amarelo').length,
+      top10: saudeAlertas.slice(0, 10),
+    },
+    contas_receber_vencidas: {
+      total: crSaas.length + crLumied.length,
+      total_valor: [...crSaas, ...crLumied].reduce((s, c) => s + c.valor, 0),
+      itens: [...crSaas, ...crLumied].slice(0, 15),
+    },
+    contas_pagar_vencidas: {
+      total: cpVencidas.length,
+      total_valor: cpVencidas.reduce((s, c) => s + c.valor, 0),
+      itens: cpVencidas.slice(0, 15),
+    },
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  FINANCEIRO INTERNO — Contas a Pagar / Receber da própria Lumied
+// ═══════════════════════════════════════════════════════════════
+
+// Centros de Custo
+router.on("cc_list", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'centros_custo', 'ver');
+  const { data } = await ctx.sb.from("lumied_centros_custo").select("*").order("nome");
+  return successResponse(data ?? []);
+});
+
+router.on("cc_upsert", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'centros_custo', 'gerenciar');
+  const { id, nome, codigo, descricao, ativo } = ctx.body as any;
+  if (!nome) throw new AppError("VALIDATION_FAILED", "Nome obrigatório.");
+  if (id) {
+    const { error } = await ctx.sb.from("lumied_centros_custo").update({ nome, codigo: codigo || null, descricao: descricao || null, ativo: ativo !== false }).eq("id", id);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  } else {
+    const { error } = await ctx.sb.from("lumied_centros_custo").insert({ nome, codigo: codigo || null, descricao: descricao || null, ativo: ativo !== false });
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  }
+  return successResponse({ success: true });
+});
+
+// Categorias de Despesa (hierárquica)
+router.on("categoria_list", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'ver_cp');
+  const { data } = await ctx.sb.from("lumied_categorias_despesa")
+    .select("id, nome, parent_id, tipo, ativo").order("nome");
+  return successResponse(data ?? []);
+});
+
+router.on("categoria_upsert", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'criar_cp');
+  const { id, nome, parent_id, tipo, ativo } = ctx.body as any;
+  if (!nome) throw new AppError("VALIDATION_FAILED", "Nome obrigatório.");
+  const payload = { nome, parent_id: parent_id || null, tipo: tipo || 'despesa', ativo: ativo !== false };
+  if (id) {
+    const { error } = await ctx.sb.from("lumied_categorias_despesa").update(payload).eq("id", id);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  } else {
+    const { error } = await ctx.sb.from("lumied_categorias_despesa").insert(payload);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  }
+  return successResponse({ success: true });
+});
+
+// Contas a Pagar
+router.on("cp_list", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'ver_cp');
+  const { status, centro_custo_id, categoria_id, desde, ate } = ctx.body as any;
+  let q = ctx.sb.from("lumied_contas_pagar")
+    .select("*, centro:centro_custo_id(id,nome,codigo), categoria:categoria_id(id,nome,parent_id)")
+    .order("data_vencimento", { ascending: true }).limit(500);
+  if (status) q = q.eq("status", status);
+  if (centro_custo_id) q = q.eq("centro_custo_id", centro_custo_id);
+  if (categoria_id) q = q.eq("categoria_id", categoria_id);
+  if (desde) q = q.gte("data_vencimento", desde);
+  if (ate) q = q.lte("data_vencimento", ate);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("cp_upsert", authStaff, async (ctx) => {
+  const { id, fornecedor, documento, descricao, valor, data_emissao, data_vencimento, centro_custo_id, categoria_id, forma_pagamento, anexo_url, observacao } = ctx.body as any;
+  await requirePerm(ctx, 'financeiro_lumied', id ? 'editar_cp' : 'criar_cp');
+  if (!fornecedor || !valor || !data_vencimento) throw new AppError("VALIDATION_FAILED", "Fornecedor, valor e vencimento obrigatórios.");
+  const payload: any = {
+    fornecedor, documento: documento || null, descricao: descricao || null,
+    valor: Number(valor), data_emissao: data_emissao || null,
+    data_vencimento, centro_custo_id: centro_custo_id || null,
+    categoria_id: categoria_id || null, forma_pagamento: forma_pagamento || null,
+    anexo_url: anexo_url || null, observacao: observacao || null,
+  };
+  if (id) {
+    const { error } = await ctx.sb.from("lumied_contas_pagar").update(payload).eq("id", id);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  } else {
+    payload.criado_por_staff_id = ctx.user!.id;
+    payload.status = 'aberto';
+    const { error } = await ctx.sb.from("lumied_contas_pagar").insert(payload);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  }
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'contas_pagar', recurso_id: id, acao: id ? 'editar' : 'criar', depois: { fornecedor, valor } });
+  return successResponse({ success: true });
+});
+
+router.on("cp_pagar", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'pagar_cp');
+  const { id, data_pagamento, valor_pago, forma_pagamento, observacao } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const { data: c } = await ctx.sb.from("lumied_contas_pagar").select("valor").eq("id", id).single();
+  if (!c) throw new AppError("NOT_FOUND", "Conta não encontrada.");
+  await ctx.sb.from("lumied_contas_pagar").update({
+    status: 'pago',
+    data_pagamento: data_pagamento || new Date().toISOString().slice(0, 10),
+    valor_pago: Number(valor_pago) || Number((c as any).valor),
+    forma_pagamento: forma_pagamento || null,
+    observacao: observacao || null,
+    pago_por_staff_id: ctx.user!.id,
+  }).eq("id", id);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'contas_pagar', recurso_id: id, acao: 'pagar', depois: { valor_pago } });
+  return successResponse({ success: true });
+});
+
+router.on("cp_delete", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'editar_cp');
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  await ctx.sb.from("lumied_contas_pagar").delete().eq("id", id);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'contas_pagar', recurso_id: id, acao: 'deletar' });
+  return successResponse({ success: true });
+});
+
+// Contas a Receber
+router.on("cr_list", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'ver_cr');
+  const { status, desde, ate } = ctx.body as any;
+  let q = ctx.sb.from("lumied_contas_receber")
+    .select("*, escola:escola_id(id,nome,subdominio)")
+    .order("data_vencimento", { ascending: true }).limit(500);
+  if (status) q = q.eq("status", status);
+  if (desde) q = q.gte("data_vencimento", desde);
+  if (ate) q = q.lte("data_vencimento", ate);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("cr_upsert", authStaff, async (ctx) => {
+  const { id, origem, escola_id, descricao, valor, data_emissao, data_vencimento, forma_pagamento, observacao } = ctx.body as any;
+  await requirePerm(ctx, 'financeiro_lumied', id ? 'editar_cr' : 'criar_cr');
+  if (!origem || !valor || !data_vencimento) throw new AppError("VALIDATION_FAILED", "Origem, valor e vencimento obrigatórios.");
+  const payload: any = {
+    origem, escola_id: escola_id || null, descricao: descricao || null,
+    valor: Number(valor), data_emissao: data_emissao || null, data_vencimento,
+    forma_pagamento: forma_pagamento || null, observacao: observacao || null,
+  };
+  if (id) {
+    const { error } = await ctx.sb.from("lumied_contas_receber").update(payload).eq("id", id);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  } else {
+    payload.criado_por_staff_id = ctx.user!.id;
+    payload.status = 'aberto';
+    const { error } = await ctx.sb.from("lumied_contas_receber").insert(payload);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+  }
+  return successResponse({ success: true });
+});
+
+router.on("cr_receber", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'editar_cr');
+  const { id, data_recebimento, valor_recebido, forma_pagamento, observacao } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const { data: c } = await ctx.sb.from("lumied_contas_receber").select("valor").eq("id", id).single();
+  if (!c) throw new AppError("NOT_FOUND", "Conta não encontrada.");
+  await ctx.sb.from("lumied_contas_receber").update({
+    status: 'recebido',
+    data_recebimento: data_recebimento || new Date().toISOString().slice(0, 10),
+    valor_recebido: Number(valor_recebido) || Number((c as any).valor),
+    forma_pagamento: forma_pagamento || null,
+    observacao: observacao || null,
+  }).eq("id", id);
+  return successResponse({ success: true });
+});
+
+router.on("cr_delete", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'editar_cr');
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  await ctx.sb.from("lumied_contas_receber").delete().eq("id", id);
+  return successResponse({ success: true });
+});
+
+// Fluxo de caixa consolidado + por centro de custo
+router.on("financeiro_resumo", authStaff, async (ctx) => {
+  await requirePerm(ctx, 'financeiro_lumied', 'ver_cp');
+  const hoje = new Date().toISOString().slice(0, 10);
+  const ini = new Date(); ini.setDate(1); const inicioMes = ini.toISOString().slice(0, 10);
+  const [cpAb, cpPg, crAb, crRec, porCentro] = await Promise.all([
+    ctx.sb.from("lumied_contas_pagar").select("valor, data_vencimento").eq("status","aberto"),
+    ctx.sb.from("lumied_contas_pagar").select("valor_pago, data_pagamento").eq("status","pago").gte("data_pagamento", inicioMes),
+    ctx.sb.from("lumied_contas_receber").select("valor, data_vencimento").eq("status","aberto"),
+    ctx.sb.from("lumied_contas_receber").select("valor_recebido, data_recebimento").eq("status","recebido").gte("data_recebimento", inicioMes),
+    ctx.sb.from("v_cp_por_centro_mes").select("*"),
+  ]);
+  // deno-lint-ignore no-explicit-any
+  const cpAberto: any[] = cpAb.data || [];
+  const cpVencido = cpAberto.filter(c => c.data_vencimento < hoje).reduce((s, c) => s + Number(c.valor || 0), 0);
+  const cpAbTotal = cpAberto.reduce((s, c) => s + Number(c.valor || 0), 0);
+  // deno-lint-ignore no-explicit-any
+  const cpPgMes = (cpPg.data || []).reduce((s, c: any) => s + Number(c.valor_pago || 0), 0);
+  // deno-lint-ignore no-explicit-any
+  const crAberto: any[] = crAb.data || [];
+  const crVencido = crAberto.filter(c => c.data_vencimento < hoje).reduce((s, c) => s + Number(c.valor || 0), 0);
+  const crAbTotal = crAberto.reduce((s, c) => s + Number(c.valor || 0), 0);
+  // deno-lint-ignore no-explicit-any
+  const crRecMes = (crRec.data || []).reduce((s, c: any) => s + Number(c.valor_recebido || 0), 0);
+
+  return successResponse({
+    cp: { aberto_total: cpAbTotal, vencido: cpVencido, pago_mes: cpPgMes },
+    cr: { aberto_total: crAbTotal, vencido: crVencido, recebido_mes: crRecMes },
+    saldo_mes: crRecMes - cpPgMes,
+    por_centro_mes: porCentro.data || [],
   });
 });
 

@@ -231,12 +231,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" onclick="showPanel('escolas',this)"><span class="ic">🏫</span> Escolas</a>
       <div class="sb-label">Gestao</div>
       <a class="nav-item" onclick="showPanel('staff',this)"><span class="ic">👥</span> Staff Lumied</a>
+      <a class="nav-item" onclick="showPanel('papeis',this)"><span class="ic">🔐</span> Papéis & Permissões</a>
       <a class="nav-item" onclick="showPanel('audit',this)"><span class="ic">📋</span> Audit Log</a>
       <a class="nav-item" onclick="showPanel('tickets',this)"><span class="ic">🎫</span> Tickets <span class="nav-badge" id="ticketsBadge" style="display:none;">0</span></a>
       <div class="sb-label">Governance</div>
       <a class="nav-item" onclick="showPanel('governance',this)"><span class="ic">🛡️</span> Governance</a>
       <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
-      <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💰</span> Financeiro</a>
+      <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💰</span> Cobrança SaaS</a>
+      <a class="nav-item" onclick="showPanel('finlumied',this)"><span class="ic">📒</span> Financeiro Interno</a>
       <div class="sb-label">GTM</div>
       <a class="nav-item" onclick="showPanel('crm',this)"><span class="ic">🎯</span> CRM Lumied</a>
       <a class="nav-item" onclick="showPanel('funil',this)"><span class="ic">📉</span> Funil</a>
@@ -268,6 +270,34 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-value" id="kpiStaff">-</div><div class="kpi-label">Staff Ativo</div></div>
           <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-value" id="kpiArr">-</div><div class="kpi-label">ARR</div></div>
         </div>
+
+        <!-- ALERTAS: Saúde CS + Contas a Receber vencidas -->
+        <div id="dashAlertas" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <h4 style="font-family:'Lora',serif;font-size:15px;font-weight:600;">❤️‍🩹 Saúde CS — alertas</h4>
+              <a class="link-btn" onclick="showPanel('saude',document.querySelector('[onclick*=saude]'))">ver tudo →</a>
+            </div>
+            <div id="dashSaudeResumo" style="display:flex;gap:12px;margin-bottom:12px;font-size:12px;">
+              <span style="color:#DC2626;font-weight:700;">🔴 <span id="dashSaudeVermelho">0</span></span>
+              <span style="color:#CA8A04;font-weight:700;">🟡 <span id="dashSaudeAmarelo">0</span></span>
+              <span style="color:var(--muted);">de <span id="dashSaudeTotal">0</span> total</span>
+            </div>
+            <div id="dashSaudeList" style="font-size:13px;max-height:280px;overflow-y:auto;">Carregando…</div>
+          </div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <h4 style="font-family:'Lora',serif;font-size:15px;font-weight:600;">⚠️ Contas a Receber vencidas</h4>
+              <a class="link-btn" onclick="showPanel('billing',document.querySelector('[onclick*=billing]'))">cobrança →</a>
+            </div>
+            <div id="dashCrResumo" style="display:flex;gap:12px;margin-bottom:12px;font-size:12px;">
+              <span style="color:#DC2626;font-weight:700;">Total vencido: <span id="dashCrTotal">R$ 0</span></span>
+              <span style="color:var(--muted);"><span id="dashCrQtd">0</span> fatura(s)</span>
+            </div>
+            <div id="dashCrList" style="font-size:13px;max-height:280px;overflow-y:auto;">Carregando…</div>
+          </div>
+        </div>
+
         <div class="sec-title">Escolas <span class="count-badge" id="dashEscolasCount">0</span></div>
         <div class="table-wrap">
           <table>
@@ -361,14 +391,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </div>
           <div class="ff-row">
             <div class="ff"><label>Senha</label><input id="newStaffSenha" type="password" placeholder="Minimo 6 caracteres"></div>
-            <div class="ff"><label>Cargo</label>
-              <select id="newStaffCargo">
-                <option value="fundador">Fundador</option>
-                <option value="cto">CTO</option>
-                <option value="suporte">Suporte</option>
-                <option value="comercial">Comercial</option>
-                <option value="cs">Customer Success</option>
-              </select>
+            <div class="ff"><label>Papel</label>
+              <select id="newStaffPapel"><option value="">— carregando —</option></select>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">As permissões vêm do papel. Gerencie em <a href="#" onclick="showPanel('papeis',document.querySelector('[onclick*=papeis]'));return false" style="color:var(--purple);">Papéis & Permissões</a>.</div>
             </div>
           </div>
           <div class="btn-bar">
@@ -485,7 +510,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <div id="finTabAssinaturas" class="fin-tab" style="display:none;margin-top:14px;">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Escola</th><th>Valor</th><th>Ciclo</th><th>Próx. vencimento</th><th>Status Asaas</th><th>Status escola</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Escola</th><th>Valor</th><th>Ciclo</th><th>Próx. vencimento</th><th>Status Inter</th><th>Status escola</th><th>Ações</th></tr></thead>
               <tbody id="finAssinBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody>
             </table>
           </div>
@@ -502,7 +527,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
 
         <p style="font-size:11px;color:var(--muted);margin-top:16px;">
-          Webhook Asaas: <code>https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/saas-billing?action=webhook</code> · atualiza faturas automaticamente.
+          Cobrança via Banco Inter (relay mTLS). Webhook: <code>https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/saas-billing?action=webhook</code> — atualiza faturas automaticamente quando o Inter confirma pagamento.
         </p>
       </div>
 
@@ -572,8 +597,48 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <!-- PAINEL: CRM LUMIED (funil comercial) -->
       <div id="panelCrm" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-          <div class="sec-title" style="margin-bottom:0;">Leads <span class="count-badge" id="crmCount">0</span></div>
-          <div style="display:flex;gap:8px;">
+          <div class="sec-title" style="margin-bottom:0;">Funil de Leads <span class="count-badge" id="crmCount">0</span></div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="filter-tab active" data-crm-view="kanban" onclick="switchCrmView(this,'kanban')">🗂️ Kanban</button>
+            <button class="filter-tab" data-crm-view="tabela" onclick="switchCrmView(this,'tabela')">📋 Tabela</button>
+            <button class="action-btn" onclick="loadCRM()">🔄</button>
+          </div>
+        </div>
+
+        <!-- Kanban view -->
+        <div id="crmKanbanView">
+          <div id="crmKanban" style="display:grid;grid-template-columns:repeat(6,minmax(220px,1fr));gap:12px;overflow-x:auto;padding-bottom:12px;">
+            <div class="kb-col" data-status="novo"           style="background:#f8f4ff;border:1px solid #e5d9ff;border-radius:12px;padding:12px;min-height:400px;">
+              <div class="kb-col-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B3FA0;margin-bottom:10px;display:flex;justify-content:space-between;">🆕 Novo <span class="kb-count">0</span></div>
+              <div class="kb-cards"></div>
+            </div>
+            <div class="kb-col" data-status="contatado"      style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px;min-height:400px;">
+              <div class="kb-col-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9A3412;margin-bottom:10px;display:flex;justify-content:space-between;">📞 Contatado <span class="kb-count">0</span></div>
+              <div class="kb-cards"></div>
+            </div>
+            <div class="kb-col" data-status="demo_agendada"  style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;min-height:400px;">
+              <div class="kb-col-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#1E40AF;margin-bottom:10px;display:flex;justify-content:space-between;">🎬 Demo <span class="kb-count">0</span></div>
+              <div class="kb-cards"></div>
+            </div>
+            <div class="kb-col" data-status="proposta"       style="background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:12px;min-height:400px;">
+              <div class="kb-col-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#854D0E;margin-bottom:10px;display:flex;justify-content:space-between;">📄 Proposta <span class="kb-count">0</span></div>
+              <div class="kb-cards"></div>
+            </div>
+            <div class="kb-col" data-status="fechado"        style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px;min-height:400px;">
+              <div class="kb-col-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:10px;display:flex;justify-content:space-between;">✅ Fechado <span class="kb-count">0</span></div>
+              <div class="kb-cards"></div>
+            </div>
+            <div class="kb-col" data-status="perdido"        style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:12px;min-height:400px;">
+              <div class="kb-col-header" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#991B1B;margin-bottom:10px;display:flex;justify-content:space-between;">❌ Perdido <span class="kb-count">0</span></div>
+              <div class="kb-cards"></div>
+            </div>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin-top:8px;">Arraste um cartão entre colunas para mudar o status. Toda mudança fica registrada no histórico do lead.</p>
+        </div>
+
+        <!-- Tabela view (legacy — mantida via toggle) -->
+        <div id="crmTabelaView" style="display:none;">
+          <div style="margin-bottom:10px;">
             <select id="crmStatusFilter" onchange="loadCRM()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
               <option value="">Todos</option>
               <option value="novo">Novo</option>
@@ -584,14 +649,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               <option value="fechado">Fechado</option>
               <option value="perdido">Perdido</option>
             </select>
-            <button class="action-btn" onclick="loadCRM()">🔄</button>
           </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Escola</th><th>Contato</th><th>Origem</th><th>Alunos</th><th>Tier</th><th>Status</th><th>Toque</th><th>Próx passo</th><th>Ações</th></tr></thead>
-            <tbody id="crmBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody>
-          </table>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Escola</th><th>Contato</th><th>Origem</th><th>Alunos</th><th>Tier</th><th>Status</th><th>Toque</th><th>Próx passo</th><th>Ações</th></tr></thead>
+              <tbody id="crmBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
         </div>
 
         <!-- Modal detalhes do lead -->
@@ -713,6 +777,203 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <!-- Área de render do markdown -->
         <div id="pbDocArea" style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:900px;margin:0 auto;">
           <div id="pbDocRender" style="font-size:14px;line-height:1.65;color:#2a241e;">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- PAINEL: PAPÉIS & PERMISSÕES -->
+      <div id="panelPapeis" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <div class="sec-title" style="margin-bottom:0;">Papéis & Permissões <span class="count-badge" id="papeisCount">0</span></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-primary" onclick="novoPapel()">+ Novo papel</button>
+            <button class="action-btn" onclick="loadPapeis()">🔄</button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+          Cada membro do Staff recebe um papel. O papel determina o que ele pode fazer (ver, editar, criar, etc.) em cada recurso do sistema. Papéis do sistema (TI, CS Pedagógico, Comercial, etc.) são pré-definidos e podem ser customizados.
+        </p>
+        <div id="papeisLista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">
+          <div class="empty-state">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- MODAL: Editar Papel (matriz) -->
+      <div id="papelEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:16px;max-width:860px;margin:0 auto;padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="papelEditorTitle" style="font-size:17px;font-weight:700;">Editar Papel</h3>
+            <button onclick="document.getElementById('papelEditorModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Nome *</label><input id="pePapelNome" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Slug *</label><input id="pePapelSlug" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;" placeholder="ex: financeiro_jr"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Staff com esse papel</label><div id="pePapelStaffCount" style="padding:9px;font-size:13px;color:var(--muted);">—</div></div>
+          </div>
+          <div style="margin-bottom:14px;"><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Descrição</label><input id="pePapelDesc" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+          <div id="pePapelMatriz" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;"></div>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:space-between;align-items:center;">
+            <button id="pePapelDelBtn" onclick="deletarPapelAtual()" style="padding:10px 18px;background:#fef2f2;color:#991B1B;border:1px solid #fecaca;border-radius:8px;cursor:pointer;font-size:13px;">🗑️ Excluir papel</button>
+            <div style="display:flex;gap:10px;">
+              <button onclick="document.getElementById('papelEditorModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;">Cancelar</button>
+              <button class="btn-primary" onclick="salvarPapel()">Salvar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Atribuir Papel a Staff -->
+      <div id="atribuirPapelModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:16px;max-width:480px;margin:0 auto;padding:28px;">
+          <h3 style="font-size:17px;font-weight:700;margin-bottom:10px;">Alterar papel</h3>
+          <p id="apInfo" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></p>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;">Papel</label>
+          <select id="apSelect" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:16px;"></select>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="document.getElementById('atribuirPapelModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;">Cancelar</button>
+            <button class="btn-primary" onclick="confirmarAtribuirPapel()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL: FINANCEIRO INTERNO (Lumied) -->
+      <div id="panelFinlumied" class="panel">
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-left:4px solid #DC2626;"><div class="kpi-icon">🧾</div><div class="kpi-value" id="flCpVencido">R$ 0</div><div class="kpi-label">A Pagar vencido</div></div>
+          <div class="kpi-card" style="border-left:4px solid #CA8A04;"><div class="kpi-icon">⏳</div><div class="kpi-value" id="flCpAberto">R$ 0</div><div class="kpi-label">A Pagar aberto</div></div>
+          <div class="kpi-card"><div class="kpi-icon">💸</div><div class="kpi-value" id="flCpMes">R$ 0</div><div class="kpi-label">Pago no mês</div></div>
+          <div class="kpi-card" style="border-left:4px solid #DC2626;"><div class="kpi-icon">📥</div><div class="kpi-value" id="flCrVencido">R$ 0</div><div class="kpi-label">A Receber vencido</div></div>
+          <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value" id="flCrMes">R$ 0</div><div class="kpi-label">Recebido no mês</div></div>
+          <div class="kpi-card" style="border-left:4px solid #16A34A;"><div class="kpi-icon">📊</div><div class="kpi-value" id="flSaldoMes">R$ 0</div><div class="kpi-label">Saldo do mês</div></div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <button class="filter-tab active" data-fl="cp" onclick="switchFlTab(this,'cp')">💸 Contas a Pagar</button>
+          <button class="filter-tab" data-fl="cr" onclick="switchFlTab(this,'cr')">💰 Contas a Receber</button>
+          <button class="filter-tab" data-fl="centros" onclick="switchFlTab(this,'centros')">🏢 Por Centro de Custo</button>
+          <button class="filter-tab" data-fl="config" onclick="switchFlTab(this,'config')">⚙️ Configurações</button>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="btn-primary" onclick="novaCp()">+ Conta a pagar</button>
+            <button class="btn-secondary" onclick="novaCr()">+ Conta a receber</button>
+            <button class="action-btn" onclick="loadFinlumied()">🔄</button>
+          </div>
+        </div>
+
+        <!-- Tab: Contas a Pagar -->
+        <div id="flTabCp" class="fl-tab" style="margin-top:14px;">
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <select id="cpFiltroStatus" onchange="loadCp()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="">Todos status</option><option value="aberto">Aberto</option><option value="pago">Pago</option><option value="vencido">Vencido</option><option value="cancelado">Cancelado</option>
+            </select>
+            <select id="cpFiltroCentro" onchange="loadCp()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;"><option value="">Todos centros</option></select>
+            <select id="cpFiltroCategoria" onchange="loadCp()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;"><option value="">Todas categorias</option></select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fornecedor</th><th>Descrição</th><th>Centro</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="cpBody"><tr><td colspan="8" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Contas a Receber -->
+        <div id="flTabCr" class="fl-tab" style="display:none;margin-top:14px;">
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <select id="crFiltroStatus" onchange="loadCr()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="">Todos status</option><option value="aberto">Aberto</option><option value="recebido">Recebido</option><option value="vencido">Vencido</option><option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Origem</th><th>Descrição</th><th>Escola</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="crBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Por Centro de Custo -->
+        <div id="flTabCentros" class="fl-tab" style="display:none;margin-top:14px;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Centro</th><th>Aberto (qtd)</th><th>Aberto (R$)</th><th>Pago no mês (R$)</th></tr></thead>
+              <tbody id="flCentrosBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Config (centros + categorias) -->
+        <div id="flTabConfig" class="fl-tab" style="display:none;margin-top:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h4 style="font-family:'Lora',serif;font-size:14px;">Centros de Custo</h4>
+                <button class="btn-primary" style="padding:6px 12px;font-size:12px;" onclick="novoCentro()">+ Novo</button>
+              </div>
+              <div id="centrosLista" style="font-size:13px;">Carregando…</div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h4 style="font-family:'Lora',serif;font-size:14px;">Categorias de Despesa</h4>
+                <button class="btn-primary" style="padding:6px 12px;font-size:12px;" onclick="novaCategoria()">+ Nova</button>
+              </div>
+              <div id="categoriasLista" style="font-size:13px;">Carregando…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Nova/Editar Conta a Pagar -->
+      <div id="cpEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:16px;max-width:640px;margin:0 auto;padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="cpEditorTitle" style="font-size:17px;font-weight:700;">Nova Conta a Pagar</h3>
+            <button onclick="document.getElementById('cpEditorModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+          </div>
+          <input id="cpId" type="hidden">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Fornecedor *</label><input id="cpFornecedor" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Documento (NF/Contrato)</label><input id="cpDoc" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div style="grid-column:1/-1;"><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Descrição</label><input id="cpDesc" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Valor (R$) *</label><input id="cpValor" type="number" step="0.01" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Vencimento *</label><input id="cpVenc" type="date" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Centro de Custo</label><select id="cpCentro" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></select></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Categoria</label><select id="cpCategoria" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></select></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Forma pagamento</label><select id="cpForma" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"><option value="">—</option><option value="pix">PIX</option><option value="boleto">Boleto</option><option value="ted">TED</option><option value="cartao">Cartão</option><option value="dinheiro">Dinheiro</option></select></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Anexo URL (NF/comprovante)</label><input id="cpAnexo" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div style="grid-column:1/-1;"><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Observação</label><textarea id="cpObs" rows="2" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></textarea></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+            <button onclick="document.getElementById('cpEditorModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;">Cancelar</button>
+            <button class="btn-primary" onclick="salvarCp()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Nova/Editar Conta a Receber -->
+      <div id="crEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:16px;max-width:560px;margin:0 auto;padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="crEditorTitle" style="font-size:17px;font-weight:700;">Nova Conta a Receber</h3>
+            <button onclick="document.getElementById('crEditorModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+          </div>
+          <input id="crId" type="hidden">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Origem *</label>
+              <select id="crOrigem" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"><option value="consultoria">Consultoria</option><option value="implantacao">Implantação</option><option value="outros">Outros</option></select>
+            </div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Escola (opcional)</label>
+              <select id="crEscola" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"><option value="">—</option></select>
+            </div>
+            <div style="grid-column:1/-1;"><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Descrição</label><input id="crDesc" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Valor (R$) *</label><input id="crValor" type="number" step="0.01" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Vencimento *</label><input id="crVenc" type="date" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Forma pagamento</label><select id="crForma" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"><option value="">—</option><option value="pix">PIX</option><option value="boleto">Boleto</option><option value="ted">TED</option><option value="cartao">Cartão</option></select></div>
+            <div style="grid-column:1/-1;"><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Observação</label><textarea id="crObs" rows="2" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;"></textarea></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+            <button onclick="document.getElementById('crEditorModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;">Cancelar</button>
+            <button class="btn-primary" onclick="salvarCr()">Salvar</button>
+          </div>
         </div>
       </div>
 
@@ -896,7 +1157,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Financeiro Lumied', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', papeis:'Papéis & Permissões', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Cobrança SaaS', finlumied:'Financeiro Interno (Lumied)', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -909,11 +1170,13 @@ function showPanel(id, el) {
   if (id === 'dashboard') loadDashboard();
   if (id === 'escolas') loadEscolas();
   if (id === 'staff') loadStaff();
+  if (id === 'papeis') loadPapeis();
   if (id === 'audit') loadAudit();
   if (id === 'tickets') loadTickets();
   if (id === 'governance') loadGovernance();
   if (id === 'backups') loadBackupsCentral();
   if (id === 'billing') loadBillingCentral();
+  if (id === 'finlumied') loadFinlumied();
   if (id === 'saude') loadSaudeCS();
   if (id === 'playbooks') loadPlaybooks();
   if (id === 'crm') loadCRM();
@@ -1306,6 +1569,9 @@ async function loadDashboard() {
   if (d.tickets_abertos > 0) { badge.textContent = d.tickets_abertos; badge.style.display = ''; }
   else { badge.style.display = 'none'; }
 
+  // Alertas (CS + CR vencidas) — carrega em paralelo, sem bloquear o resto
+  loadDashboardAlertas();
+
   // Escolas table
   const escolas = Array.isArray(d.escolas) ? d.escolas : [];
   document.getElementById('dashEscolasCount').textContent = escolas.length;
@@ -1496,10 +1762,23 @@ async function criarNovaEscola() {
 //  STAFF
 // ═══════════════════════════════════════════════════════════
 let _staffList = [];
+let _papeisCache = [];  // cache global de papéis p/ lookup no staff list
 
 async function loadStaff() {
-  const d = await api({ action: 'staff_list' });
-  _staffList = Array.isArray(d) ? d : (Array.isArray(d.staff) ? d.staff : []);
+  // Carrega papéis em paralelo para popular select + lookup
+  const [staffRes, papeisRes] = await Promise.all([
+    api({ action: 'staff_list' }),
+    api({ action: 'staff_papeis_list' }),
+  ]);
+  _staffList = Array.isArray(staffRes) ? staffRes : (Array.isArray(staffRes.staff) ? staffRes.staff : []);
+  _papeisCache = (papeisRes && papeisRes.papeis) || [];
+  const papelById = {};
+  _papeisCache.forEach(p => { papelById[p.id] = p; });
+
+  // Popular select newStaffPapel
+  const sel = document.getElementById('newStaffPapel');
+  if (sel) sel.innerHTML = '<option value="">— sem papel —</option>' + _papeisCache.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+
   document.getElementById('staffCount').textContent = _staffList.length;
   const tbody = document.getElementById('staffBody');
   if (_staffList.length === 0) {
@@ -1509,10 +1788,16 @@ async function loadStaff() {
   tbody.innerHTML = _staffList.map(s => {
     const statusCls = s.ativo !== false ? 'ativo' : 'inativo';
     const statusTxt = s.ativo !== false ? 'Ativo' : 'Inativo';
+    const papel = s.papel_id ? (papelById[s.papel_id]?.nome || '—') : (s.cargo || '—');
+    const fundador = s.cargo === 'fundador';
     return `<tr>
       <td><strong>${esc(s.nome)}</strong></td>
       <td>${esc(s.email)}</td>
-      <td><span style="font-size:12px;text-transform:capitalize;">${esc(s.cargo || '-')}</span></td>
+      <td>
+        <span style="font-size:12px;text-transform:capitalize;">${esc(papel)}</span>
+        ${fundador ? ' <span style="background:#fef3c7;color:#854D0E;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:700;">FUNDADOR</span>' : ''}
+        ${!fundador ? `<button class="action-btn" style="margin-left:6px;padding:3px 8px;font-size:11px;" onclick="abrirAtribuirPapel('${s.id}','${esc(s.nome)}','${s.papel_id || ''}')">Alterar</button>` : ''}
+      </td>
       <td><span class="status-pill ${statusCls}">${statusTxt}</span></td>
       <td style="font-size:12px;">${fmtDate(s.criado_em)}</td>
       <td>${s.ativo !== false ? `<button class="action-btn del" onclick="desativarStaff('${s.id}')">Desativar</button>` : '<span style="font-size:11px;color:var(--muted);">Desativado</span>'}</td>
@@ -1524,15 +1809,42 @@ async function criarStaff() {
   const nome = document.getElementById('newStaffNome').value.trim();
   const email = document.getElementById('newStaffEmail').value.trim();
   const senha = document.getElementById('newStaffSenha').value;
-  const cargo = document.getElementById('newStaffCargo').value;
+  const papel_id = document.getElementById('newStaffPapel').value || null;
   if (!nome || !email || !senha) return showToast('Preencha todos os campos.', 'error');
   if (senha.length < 6) return showToast('Senha deve ter no minimo 6 caracteres.', 'error');
-  const d = await api({ action: 'staff_criar', nome, email, senha, cargo });
+  // cargo é deprecated mas ainda existe na tabela — default 'suporte' p/ não quebrar CHECK removido
+  const d = await api({ action: 'staff_criar', nome, email, senha, cargo: 'suporte' });
   if (d.error) return showToast(d.error, 'error');
+  // Atribui papel depois (staff_criar ainda não suporta papel_id direto; buscamos o id criado)
+  if (papel_id) {
+    // Busca o ID do novo staff pelo email
+    const lista = await api({ action: 'staff_list' });
+    const novo = (Array.isArray(lista) ? lista : []).find(s => s.email === email);
+    if (novo) await api({ action: 'staff_set_papel', staff_id: novo.id, papel_id });
+  }
   showToast('Staff criado com sucesso!');
   document.getElementById('newStaffNome').value = '';
   document.getElementById('newStaffEmail').value = '';
   document.getElementById('newStaffSenha').value = '';
+  loadStaff();
+}
+
+// ── Modal: atribuir papel ──
+let _atribuirPapelCtx = null;
+function abrirAtribuirPapel(staffId, nome, papelAtual) {
+  _atribuirPapelCtx = { staffId };
+  document.getElementById('apInfo').textContent = 'Qual papel para: ' + nome + '?';
+  const sel = document.getElementById('apSelect');
+  sel.innerHTML = '<option value="">— sem papel —</option>' + _papeisCache.map(p => `<option value="${p.id}" ${p.id === papelAtual ? 'selected' : ''}>${esc(p.nome)}</option>`).join('');
+  document.getElementById('atribuirPapelModal').style.display = 'block';
+}
+async function confirmarAtribuirPapel() {
+  if (!_atribuirPapelCtx) return;
+  const papel_id = document.getElementById('apSelect').value || null;
+  const d = await api({ action: 'staff_set_papel', staff_id: _atribuirPapelCtx.staffId, papel_id });
+  if (d.error) return showToast(d.error, 'error');
+  document.getElementById('atribuirPapelModal').style.display = 'none';
+  showToast('Papel atualizado.');
   loadStaff();
 }
 
@@ -1770,8 +2082,20 @@ let _crmCurrentLead = null;
 const STATUS_LABEL = { novo:'Novo', contatado:'Contatado', qualificado:'Qualificado', demo_agendada:'Demo', proposta:'Proposta', fechado:'Fechado', perdido:'Perdido' };
 const STATUS_COLOR = { novo:'#64748B', contatado:'#0EA5E9', qualificado:'#6B3FA0', demo_agendada:'#8E54B6', proposta:'#CA8A04', fechado:'#16A34A', perdido:'#DC2626' };
 
+let _crmView = 'kanban';
+function switchCrmView(btn, view) {
+  _crmView = view;
+  document.querySelectorAll('[data-crm-view]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('crmKanbanView').style.display = view === 'kanban' ? 'block' : 'none';
+  document.getElementById('crmTabelaView').style.display = view === 'tabela' ? 'block' : 'none';
+  loadCRM();
+}
+
 async function loadCRM() {
-  const status = document.getElementById('crmStatusFilter').value;
+  if (_crmView === 'kanban') return loadCRMKanban();
+  const sel = document.getElementById('crmStatusFilter');
+  const status = sel ? sel.value : '';
   const tbody = document.getElementById('crmBody');
   tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Carregando...</td></tr>';
   const d = await callGtm({ action: 'leads_list', status: status || null });
@@ -2036,6 +2360,540 @@ async function pbLumiAsk(pergunta) {
   } catch (e) {
     out.innerHTML = '<span style="color:#b00020;">Falha: ' + _escHtml(e.message) + '</span>';
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD — Alertas (CS + CR vencidas)
+// ═══════════════════════════════════════════════════════════
+async function loadDashboardAlertas() {
+  const d = await api({ action: 'staff_dashboard_alertas' });
+  if (d.error) return;
+  const saude = d.saude_cs || {};
+  const cr = d.contas_receber_vencidas || {};
+  document.getElementById('dashSaudeTotal').textContent = saude.total || 0;
+  document.getElementById('dashSaudeVermelho').textContent = saude.vermelho || 0;
+  document.getElementById('dashSaudeAmarelo').textContent = saude.amarelo || 0;
+  const sList = document.getElementById('dashSaudeList');
+  const top = saude.top10 || [];
+  sList.innerHTML = top.length
+    ? top.map(a => '<div style="padding:8px 0;border-bottom:1px dashed var(--border);">' +
+        '<span style="margin-right:6px;">' + (a.cor === 'vermelho' ? '🔴' : '🟡') + '</span>' +
+        '<strong>' + esc(a.escola_nome) + '</strong>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + (a.sinais || []).map(s => esc(s.texto)).join(' · ') + '</div>' +
+      '</div>').join('')
+    : '<em style="color:#16A34A;">Nenhum alerta 🎉</em>';
+
+  document.getElementById('dashCrTotal').textContent = fmtCurrency(cr.total_valor || 0);
+  document.getElementById('dashCrQtd').textContent = cr.total || 0;
+  const crList = document.getElementById('dashCrList');
+  const itens = cr.itens || [];
+  crList.innerHTML = itens.length
+    ? itens.map(c => '<div style="padding:8px 0;border-bottom:1px dashed var(--border);">' +
+        '<strong>' + esc(c.escola_nome || c.origem || '—') + '</strong>' +
+        '<div style="font-size:11px;color:#DC2626;margin-top:2px;">' + fmtCurrency(c.valor) + ' · ' + c.dias_atraso + ' dia(s) em atraso</div>' +
+      '</div>').join('')
+    : '<em style="color:#16A34A;">Nenhuma vencida 🎉</em>';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CRM — Kanban
+// ═══════════════════════════════════════════════════════════
+async function loadCRMKanban() {
+  const d = await callGtm({ action: 'leads_list' });
+  if (d.error) { showToast(d.error.message || d.error, 'error'); return; }
+  const leads = d.leads || [];
+  document.getElementById('crmCount').textContent = leads.length;
+
+  // Agrupa por status
+  const byStatus = {};
+  leads.forEach(l => {
+    const s = l.status || 'novo';
+    // 'qualificado' não tem coluna própria — cai em 'contatado'
+    const col = s === 'qualificado' ? 'contatado' : s;
+    if (!byStatus[col]) byStatus[col] = [];
+    byStatus[col].push(l);
+  });
+
+  document.querySelectorAll('.kb-col').forEach(col => {
+    const status = col.dataset.status;
+    const arr = byStatus[status] || [];
+    col.querySelector('.kb-count').textContent = arr.length;
+    const cards = col.querySelector('.kb-cards');
+    cards.innerHTML = arr.map(l => {
+      const tier = l.tier_sugerido ? '<span style="background:#f0e6ff;color:#6B3FA0;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;margin-right:4px;">' + esc(l.tier_sugerido) + '</span>' : '';
+      const alunos = l.alunos_estimados ? l.alunos_estimados + ' alunos' : '';
+      const mrr = l.valor_mrr ? ' · ' + fmtCurrency(l.valor_mrr) + '/mês' : '';
+      const diasParado = l.proximo_passo_em
+        ? Math.floor((Date.now() - new Date(l.proximo_passo_em).getTime()) / 86400000)
+        : null;
+      const parado = diasParado != null && diasParado > 5
+        ? '<div style="font-size:10px;color:#DC2626;margin-top:4px;">⏰ ' + diasParado + 'd parado</div>'
+        : '';
+      const toque = l.toque_atual > 0 ? '<span style="background:#fff;border:1px solid var(--border);padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;">T' + l.toque_atual + '</span>' : '';
+      return '<div class="kb-card" draggable="true" data-lead-id="' + l.id + '" data-status="' + (l.status || 'novo') + '" onclick="abrirLead(\'' + l.id + '\')" ' +
+        'style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;cursor:grab;box-shadow:0 1px 3px rgba(0,0,0,.04);">' +
+        '<div style="font-weight:700;font-size:13px;margin-bottom:4px;">' + esc(l.nome_escola) + '</div>' +
+        (l.cidade ? '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">' + esc(l.cidade) + '/' + esc(l.uf || '') + '</div>' : '') +
+        '<div style="font-size:11px;margin-bottom:4px;">' + tier + toque + '</div>' +
+        (alunos || mrr ? '<div style="font-size:11px;color:var(--muted);">' + alunos + mrr + '</div>' : '') +
+        parado +
+      '</div>';
+    }).join('');
+  });
+
+  // Wire drag & drop
+  document.querySelectorAll('.kb-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', card.dataset.leadId);
+      e.dataTransfer.setData('application/x-status', card.dataset.status);
+      card.style.opacity = '0.5';
+    });
+    card.addEventListener('dragend', () => { card.style.opacity = '1'; });
+  });
+  document.querySelectorAll('.kb-col').forEach(col => {
+    col.addEventListener('dragover', e => { e.preventDefault(); col.style.background = 'rgba(107,63,160,.08)'; });
+    col.addEventListener('dragleave', () => { col.style.background = ''; });
+    col.addEventListener('drop', async e => {
+      e.preventDefault();
+      col.style.background = '';
+      const leadId = e.dataTransfer.getData('text/plain');
+      const statusAnterior = e.dataTransfer.getData('application/x-status');
+      const novoStatus = col.dataset.status;
+      if (!leadId || statusAnterior === novoStatus) return;
+      const r = await callGtm({ action: 'lead_update', id: leadId, status: novoStatus });
+      if (r.error) { showToast(r.error.message || r.error, 'error'); return; }
+      showToast('Status: ' + (STATUS_LABEL[statusAnterior] || statusAnterior) + ' → ' + (STATUS_LABEL[novoStatus] || novoStatus));
+      loadCRMKanban();
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PAPÉIS & PERMISSÕES
+// ═══════════════════════════════════════════════════════════
+let _recursosCatalogo = null;
+let _papelEditorAtual = null;
+
+async function loadPapeis() {
+  const [recursosRes, papeisRes] = await Promise.all([
+    _recursosCatalogo ? Promise.resolve({ recursos: _recursosCatalogo }) : api({ action: 'staff_recursos_catalogo' }),
+    api({ action: 'staff_papeis_list' }),
+  ]);
+  _recursosCatalogo = recursosRes.recursos || _recursosCatalogo || [];
+  _papeisCache = (papeisRes && papeisRes.papeis) || [];
+  document.getElementById('papeisCount').textContent = _papeisCache.length;
+
+  const lista = document.getElementById('papeisLista');
+  if (!_papeisCache.length) {
+    lista.innerHTML = '<div class="empty-state">Nenhum papel cadastrado.</div>';
+    return;
+  }
+  lista.innerHTML = _papeisCache.map(p => {
+    const permByRec = {};
+    (p.permissoes || []).forEach(pm => {
+      if (!permByRec[pm.recurso]) permByRec[pm.recurso] = 0;
+      permByRec[pm.recurso]++;
+    });
+    const resumoPerms = _recursosCatalogo.map(r => {
+      const qtd = permByRec[r.recurso] || 0;
+      const total = r.acoes.length;
+      if (qtd === 0) return '';
+      const cor = qtd === total ? '#16A34A' : '#CA8A04';
+      return '<span style="font-size:10px;background:' + cor + ';color:#fff;padding:1px 6px;border-radius:6px;margin:2px 2px 2px 0;display:inline-block;">' + esc(r.nome) + ' ' + qtd + '/' + total + '</span>';
+    }).filter(Boolean).join('');
+    const sistemaPill = p.sistema ? '<span style="background:#e0f2fe;color:#075985;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;margin-left:6px;">SISTEMA</span>' : '';
+    return '<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);cursor:pointer;" onclick="abrirPapelEditor(\'' + p.id + '\')">' +
+      '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px;">' +
+        '<div>' +
+          '<div style="font-family:Lora,serif;font-size:15px;font-weight:600;">' + esc(p.nome) + sistemaPill + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px;">' + esc(p.slug) + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--muted);text-align:right;">' + (p.staff_count || 0) + ' staff</div>' +
+      '</div>' +
+      (p.descricao ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">' + esc(p.descricao) + '</div>' : '') +
+      '<div>' + (resumoPerms || '<em style="font-size:11px;color:var(--muted);">sem permissões</em>') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function novoPapel() { abrirPapelEditor(null); }
+
+function abrirPapelEditor(papelId) {
+  const papel = papelId ? _papeisCache.find(p => p.id === papelId) : { nome: '', slug: '', descricao: '', permissoes: [], sistema: false, staff_count: 0 };
+  _papelEditorAtual = papel;
+  document.getElementById('papelEditorTitle').textContent = papelId ? 'Editar: ' + papel.nome : 'Novo papel';
+  document.getElementById('pePapelNome').value = papel.nome || '';
+  document.getElementById('pePapelSlug').value = papel.slug || '';
+  document.getElementById('pePapelDesc').value = papel.descricao || '';
+  document.getElementById('pePapelStaffCount').textContent = (papel.staff_count || 0) + ' membro(s)';
+  document.getElementById('pePapelSlug').disabled = !!papel.sistema;
+  document.getElementById('pePapelDelBtn').style.display = papel.sistema || !papelId ? 'none' : 'block';
+
+  // Render matriz
+  const permSet = new Set((papel.permissoes || []).map(pm => pm.recurso + '::' + pm.acao));
+  const matriz = document.getElementById('pePapelMatriz');
+  matriz.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+    '<thead><tr style="background:#faf8f5;"><th style="text-align:left;padding:10px 12px;">Recurso</th><th style="text-align:left;padding:10px 12px;">Ações permitidas</th></tr></thead>' +
+    '<tbody>' + _recursosCatalogo.map(r => {
+      const cells = r.acoes.map(a => {
+        const key = r.recurso + '::' + a;
+        const checked = permSet.has(key);
+        return '<label style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;margin-bottom:4px;font-size:11px;cursor:pointer;">' +
+          '<input type="checkbox" data-perm="' + key + '" ' + (checked ? 'checked' : '') + '> ' + esc(a) +
+        '</label>';
+      }).join('');
+      return '<tr style="border-top:1px solid var(--border);"><td style="padding:10px 12px;font-weight:600;vertical-align:top;">' + esc(r.nome) + '<br><span style="font-size:10px;color:var(--muted);font-family:monospace;">' + esc(r.recurso) + '</span></td><td style="padding:10px 12px;">' + cells + '</td></tr>';
+    }).join('') +
+    '</tbody></table>';
+
+  document.getElementById('papelEditorModal').style.display = 'block';
+}
+
+async function salvarPapel() {
+  const p = _papelEditorAtual;
+  const nome = document.getElementById('pePapelNome').value.trim();
+  const slug = document.getElementById('pePapelSlug').value.trim();
+  const descricao = document.getElementById('pePapelDesc').value.trim();
+  if (!nome) return showToast('Nome obrigatório.', 'error');
+  if (!p.id && !slug) return showToast('Slug obrigatório para papel novo.', 'error');
+  const permissoes = [];
+  document.querySelectorAll('[data-perm]:checked').forEach(cb => {
+    const [recurso, acao] = cb.dataset.perm.split('::');
+    permissoes.push({ recurso, acao });
+  });
+  const body = { action: 'staff_papel_upsert', nome, slug, descricao, permissoes };
+  if (p.id) body.id = p.id;
+  const d = await api(body);
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Papel salvo.');
+  document.getElementById('papelEditorModal').style.display = 'none';
+  loadPapeis();
+}
+
+async function deletarPapelAtual() {
+  const p = _papelEditorAtual;
+  if (!p || !p.id) return;
+  if (!confirm('Excluir o papel "' + p.nome + '"? Staff com esse papel ficarão sem acesso até receber outro.')) return;
+  const d = await api({ action: 'staff_papel_delete', id: p.id });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Papel excluído.');
+  document.getElementById('papelEditorModal').style.display = 'none';
+  loadPapeis();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FINANCEIRO INTERNO LUMIED — CP / CR / Centros / Categorias
+// ═══════════════════════════════════════════════════════════
+let _flCentros = [];
+let _flCategorias = [];
+let _flEscolas = [];
+
+function switchFlTab(btn, tab) {
+  document.querySelectorAll('[data-fl]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.fl-tab').forEach(el => el.style.display = 'none');
+  const target = document.getElementById('flTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (target) target.style.display = 'block';
+  if (tab === 'cp') loadCp();
+  if (tab === 'cr') loadCr();
+  if (tab === 'centros') loadCentrosReport();
+  if (tab === 'config') { loadCentrosConfig(); loadCategoriasConfig(); }
+}
+
+async function loadFinlumied() {
+  // Carrega centros + categorias + escolas + resumo em paralelo
+  const [centros, categorias, escolasRes, resumo] = await Promise.all([
+    api({ action: 'cc_list' }),
+    api({ action: 'categoria_list' }),
+    api({ action: 'staff_dashboard' }),
+    api({ action: 'financeiro_resumo' }),
+  ]);
+  _flCentros = Array.isArray(centros) ? centros : [];
+  _flCategorias = Array.isArray(categorias) ? categorias : [];
+  _flEscolas = (escolasRes && escolasRes.escolas) || [];
+
+  // Popula filtros CP
+  const fCen = document.getElementById('cpFiltroCentro');
+  if (fCen) fCen.innerHTML = '<option value="">Todos centros</option>' + _flCentros.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  const fCat = document.getElementById('cpFiltroCategoria');
+  if (fCat) fCat.innerHTML = '<option value="">Todas categorias</option>' + _flCategorias.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+
+  // KPIs
+  if (!resumo.error) {
+    document.getElementById('flCpVencido').textContent = fmtCurrency(resumo.cp?.vencido || 0);
+    document.getElementById('flCpAberto').textContent = fmtCurrency(resumo.cp?.aberto_total || 0);
+    document.getElementById('flCpMes').textContent = fmtCurrency(resumo.cp?.pago_mes || 0);
+    document.getElementById('flCrVencido').textContent = fmtCurrency(resumo.cr?.vencido || 0);
+    document.getElementById('flCrMes').textContent = fmtCurrency(resumo.cr?.recebido_mes || 0);
+    document.getElementById('flSaldoMes').textContent = fmtCurrency(resumo.saldo_mes || 0);
+  }
+
+  loadCp();
+}
+
+async function loadCp() {
+  const status = document.getElementById('cpFiltroStatus')?.value || '';
+  const centro_custo_id = document.getElementById('cpFiltroCentro')?.value || null;
+  const categoria_id = document.getElementById('cpFiltroCategoria')?.value || null;
+  const tb = document.getElementById('cpBody');
+  tb.innerHTML = '<tr><td colspan="8" class="empty-state">Carregando...</td></tr>';
+  const d = await api({ action: 'cp_list', status: status || null, centro_custo_id, categoria_id });
+  if (d.error) { tb.innerHTML = '<tr><td colspan="8" class="empty-state" style="color:#b00020;">' + esc(d.error) + '</td></tr>'; return; }
+  const rows = Array.isArray(d) ? d : [];
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma conta.</td></tr>'; return; }
+  const hoje = new Date().toISOString().slice(0, 10);
+  tb.innerHTML = rows.map(c => {
+    const venc = hoje > c.data_vencimento && c.status === 'aberto';
+    const statusCls = c.status === 'pago' ? 'ativo' : (venc || c.status === 'vencido') ? 'inativo' : 'aberto';
+    const statusTxt = venc && c.status === 'aberto' ? 'Vencido' : (c.status || '—');
+    const acoes = c.status === 'aberto' || c.status === 'vencido'
+      ? `<button class="action-btn purple" onclick='pagarCp("${c.id}",${Number(c.valor)})'>💵 Pagar</button>
+         <button class="action-btn" onclick='editarCp(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏️</button>
+         <button class="action-btn del" onclick="deletarCp('${c.id}')">🗑️</button>`
+      : `<button class="action-btn" onclick='editarCp(${JSON.stringify(c).replace(/'/g,"&#39;")})'>👁️</button>`;
+    return `<tr>
+      <td><strong>${esc(c.fornecedor)}</strong>${c.documento ? `<br><span style="font-size:11px;color:var(--muted);">${esc(c.documento)}</span>` : ''}</td>
+      <td style="font-size:12px;">${esc(c.descricao || '—')}</td>
+      <td style="font-size:12px;">${esc(c.centro?.nome || '—')}</td>
+      <td style="font-size:12px;">${esc(c.categoria?.nome || '—')}</td>
+      <td>${fmtDate(c.data_vencimento)}</td>
+      <td><strong>${fmtCurrency(c.valor)}</strong></td>
+      <td><span class="status-pill ${statusCls}">${statusTxt}</span></td>
+      <td>${acoes}</td>
+    </tr>`;
+  }).join('');
+}
+
+function novaCp() {
+  document.getElementById('cpEditorTitle').textContent = 'Nova Conta a Pagar';
+  document.getElementById('cpId').value = '';
+  ['cpFornecedor','cpDoc','cpDesc','cpValor','cpVenc','cpForma','cpAnexo','cpObs'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const selC = document.getElementById('cpCentro');
+  selC.innerHTML = '<option value="">—</option>' + _flCentros.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  const selCat = document.getElementById('cpCategoria');
+  selCat.innerHTML = '<option value="">—</option>' + _flCategorias.map(c => {
+    const indent = c.parent_id ? '&nbsp;&nbsp;↳ ' : '';
+    return `<option value="${c.id}">${indent}${esc(c.nome)}</option>`;
+  }).join('');
+  document.getElementById('cpEditorModal').style.display = 'block';
+}
+
+function editarCp(c) {
+  novaCp();
+  document.getElementById('cpEditorTitle').textContent = 'Editar conta: ' + c.fornecedor;
+  document.getElementById('cpId').value = c.id;
+  document.getElementById('cpFornecedor').value = c.fornecedor || '';
+  document.getElementById('cpDoc').value = c.documento || '';
+  document.getElementById('cpDesc').value = c.descricao || '';
+  document.getElementById('cpValor').value = c.valor || '';
+  document.getElementById('cpVenc').value = c.data_vencimento || '';
+  document.getElementById('cpCentro').value = c.centro_custo_id || '';
+  document.getElementById('cpCategoria').value = c.categoria_id || '';
+  document.getElementById('cpForma').value = c.forma_pagamento || '';
+  document.getElementById('cpAnexo').value = c.anexo_url || '';
+  document.getElementById('cpObs').value = c.observacao || '';
+}
+
+async function salvarCp() {
+  const body = {
+    action: 'cp_upsert',
+    id: document.getElementById('cpId').value || null,
+    fornecedor: document.getElementById('cpFornecedor').value.trim(),
+    documento: document.getElementById('cpDoc').value.trim(),
+    descricao: document.getElementById('cpDesc').value.trim(),
+    valor: Number(document.getElementById('cpValor').value),
+    data_vencimento: document.getElementById('cpVenc').value,
+    centro_custo_id: document.getElementById('cpCentro').value || null,
+    categoria_id: document.getElementById('cpCategoria').value || null,
+    forma_pagamento: document.getElementById('cpForma').value || null,
+    anexo_url: document.getElementById('cpAnexo').value.trim() || null,
+    observacao: document.getElementById('cpObs').value.trim() || null,
+  };
+  if (!body.fornecedor || !body.valor || !body.data_vencimento) return showToast('Fornecedor, valor e vencimento obrigatórios.', 'error');
+  const d = await api(body);
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Conta a pagar salva.');
+  document.getElementById('cpEditorModal').style.display = 'none';
+  loadFinlumied();
+}
+
+async function pagarCp(id, valor) {
+  const data = prompt('Data do pagamento (AAAA-MM-DD):', new Date().toISOString().slice(0, 10));
+  if (!data) return;
+  const d = await api({ action: 'cp_pagar', id, data_pagamento: data, valor_pago: valor });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Pagamento registrado.');
+  loadFinlumied();
+}
+
+async function deletarCp(id) {
+  if (!confirm('Excluir esta conta a pagar?')) return;
+  const d = await api({ action: 'cp_delete', id });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Conta excluída.');
+  loadCp();
+}
+
+async function loadCr() {
+  const status = document.getElementById('crFiltroStatus')?.value || '';
+  const tb = document.getElementById('crBody');
+  tb.innerHTML = '<tr><td colspan="7" class="empty-state">Carregando...</td></tr>';
+  const d = await api({ action: 'cr_list', status: status || null });
+  if (d.error) { tb.innerHTML = '<tr><td colspan="7" class="empty-state" style="color:#b00020;">' + esc(d.error) + '</td></tr>'; return; }
+  const rows = Array.isArray(d) ? d : [];
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhuma conta.</td></tr>'; return; }
+  const hoje = new Date().toISOString().slice(0, 10);
+  tb.innerHTML = rows.map(c => {
+    const venc = hoje > c.data_vencimento && c.status === 'aberto';
+    const statusCls = c.status === 'recebido' ? 'ativo' : (venc || c.status === 'vencido') ? 'inativo' : 'aberto';
+    const statusTxt = venc && c.status === 'aberto' ? 'Vencido' : (c.status || '—');
+    const acoes = c.status === 'aberto' || c.status === 'vencido'
+      ? `<button class="action-btn purple" onclick='receberCr("${c.id}",${Number(c.valor)})'>💰 Receber</button>
+         <button class="action-btn" onclick='editarCr(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏️</button>
+         <button class="action-btn del" onclick="deletarCr('${c.id}')">🗑️</button>`
+      : `<button class="action-btn" onclick='editarCr(${JSON.stringify(c).replace(/'/g,"&#39;")})'>👁️</button>`;
+    return `<tr>
+      <td><strong style="text-transform:capitalize;">${esc(c.origem)}</strong></td>
+      <td style="font-size:12px;">${esc(c.descricao || '—')}</td>
+      <td style="font-size:12px;">${esc(c.escola?.nome || '—')}</td>
+      <td>${fmtDate(c.data_vencimento)}</td>
+      <td><strong>${fmtCurrency(c.valor)}</strong></td>
+      <td><span class="status-pill ${statusCls}">${statusTxt}</span></td>
+      <td>${acoes}</td>
+    </tr>`;
+  }).join('');
+}
+
+function novaCr() {
+  document.getElementById('crEditorTitle').textContent = 'Nova Conta a Receber';
+  document.getElementById('crId').value = '';
+  ['crDesc','crValor','crVenc','crForma','crObs'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('crOrigem').value = 'consultoria';
+  const selE = document.getElementById('crEscola');
+  selE.innerHTML = '<option value="">— nenhuma —</option>' + _flEscolas.map(e => `<option value="${e.id}">${esc(e.nome)}</option>`).join('');
+  document.getElementById('crEditorModal').style.display = 'block';
+}
+
+function editarCr(c) {
+  novaCr();
+  document.getElementById('crEditorTitle').textContent = 'Editar: ' + (c.descricao || c.origem);
+  document.getElementById('crId').value = c.id;
+  document.getElementById('crOrigem').value = c.origem || 'consultoria';
+  document.getElementById('crEscola').value = c.escola_id || '';
+  document.getElementById('crDesc').value = c.descricao || '';
+  document.getElementById('crValor').value = c.valor || '';
+  document.getElementById('crVenc').value = c.data_vencimento || '';
+  document.getElementById('crForma').value = c.forma_pagamento || '';
+  document.getElementById('crObs').value = c.observacao || '';
+}
+
+async function salvarCr() {
+  const body = {
+    action: 'cr_upsert',
+    id: document.getElementById('crId').value || null,
+    origem: document.getElementById('crOrigem').value,
+    escola_id: document.getElementById('crEscola').value || null,
+    descricao: document.getElementById('crDesc').value.trim(),
+    valor: Number(document.getElementById('crValor').value),
+    data_vencimento: document.getElementById('crVenc').value,
+    forma_pagamento: document.getElementById('crForma').value || null,
+    observacao: document.getElementById('crObs').value.trim() || null,
+  };
+  if (!body.origem || !body.valor || !body.data_vencimento) return showToast('Origem, valor e vencimento obrigatórios.', 'error');
+  const d = await api(body);
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Conta a receber salva.');
+  document.getElementById('crEditorModal').style.display = 'none';
+  loadFinlumied();
+}
+
+async function receberCr(id, valor) {
+  const data = prompt('Data do recebimento (AAAA-MM-DD):', new Date().toISOString().slice(0, 10));
+  if (!data) return;
+  const d = await api({ action: 'cr_receber', id, data_recebimento: data, valor_recebido: valor });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Recebimento registrado.');
+  loadFinlumied();
+}
+
+async function deletarCr(id) {
+  if (!confirm('Excluir esta conta a receber?')) return;
+  const d = await api({ action: 'cr_delete', id });
+  if (d.error) return showToast(d.error, 'error');
+  showToast('Conta excluída.');
+  loadCr();
+}
+
+async function loadCentrosReport() {
+  const tb = document.getElementById('flCentrosBody');
+  const d = await api({ action: 'financeiro_resumo' });
+  if (d.error || !d.por_centro_mes) { tb.innerHTML = '<tr><td colspan="4" class="empty-state">Sem dados.</td></tr>'; return; }
+  const rows = d.por_centro_mes || [];
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum centro configurado.</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => `<tr>
+    <td><strong>${esc(r.centro_nome)}</strong>${r.codigo ? ` <span style="font-size:11px;color:var(--muted);">(${esc(r.codigo)})</span>` : ''}</td>
+    <td>${r.qtd_aberto || 0}</td>
+    <td>${fmtCurrency(r.total_aberto || 0)}</td>
+    <td>${fmtCurrency(r.total_pago_mes || 0)}</td>
+  </tr>`).join('');
+}
+
+async function loadCentrosConfig() {
+  const cont = document.getElementById('centrosLista');
+  const d = await api({ action: 'cc_list' });
+  const rows = Array.isArray(d) ? d : [];
+  if (!rows.length) { cont.innerHTML = '<em>Nenhum centro cadastrado.</em>'; return; }
+  cont.innerHTML = rows.map(c => `<div style="padding:8px 0;border-bottom:1px dashed var(--border);display:flex;justify-content:space-between;align-items:center;">
+    <div><strong>${esc(c.nome)}</strong>${c.codigo ? ` <span style="font-size:11px;color:var(--muted);">(${esc(c.codigo)})</span>` : ''}${c.descricao ? `<br><span style="font-size:11px;color:var(--muted);">${esc(c.descricao)}</span>` : ''}</div>
+    <button class="action-btn" onclick='editarCentro(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏️</button>
+  </div>`).join('');
+}
+
+function novoCentro() { editarCentro({ id: null, nome: '', codigo: '', descricao: '', ativo: true }); }
+
+function editarCentro(c) {
+  const nome = prompt('Nome do centro de custo:', c.nome || '');
+  if (!nome) return;
+  const codigo = prompt('Código curto (ex: TI):', c.codigo || '') || null;
+  const descricao = prompt('Descrição (opcional):', c.descricao || '') || null;
+  api({ action: 'cc_upsert', id: c.id || null, nome, codigo, descricao, ativo: true }).then(d => {
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Centro salvo.');
+    loadCentrosConfig();
+  });
+}
+
+async function loadCategoriasConfig() {
+  const cont = document.getElementById('categoriasLista');
+  const d = await api({ action: 'categoria_list' });
+  const rows = Array.isArray(d) ? d : [];
+  if (!rows.length) { cont.innerHTML = '<em>Nenhuma categoria.</em>'; return; }
+  // Agrupa por parent
+  const raiz = rows.filter(r => !r.parent_id);
+  const filhos = {};
+  rows.filter(r => r.parent_id).forEach(r => { if (!filhos[r.parent_id]) filhos[r.parent_id] = []; filhos[r.parent_id].push(r); });
+  cont.innerHTML = raiz.map(r => {
+    const subs = (filhos[r.id] || []).map(f => `<div style="padding:4px 0 4px 24px;font-size:12px;color:var(--muted);">↳ ${esc(f.nome)} <span style="font-size:10px;background:${f.tipo==='receita'?'#dcfce7':'#fee2e2'};color:${f.tipo==='receita'?'#166534':'#991B1B'};padding:0 6px;border-radius:6px;">${esc(f.tipo)}</span></div>`).join('');
+    return `<div style="padding:8px 0;border-bottom:1px dashed var(--border);">
+      <div style="display:flex;justify-content:space-between;"><strong>${esc(r.nome)}</strong> <span style="font-size:10px;background:${r.tipo==='receita'?'#dcfce7':'#fee2e2'};color:${r.tipo==='receita'?'#166534':'#991B1B'};padding:0 6px;border-radius:6px;">${esc(r.tipo)}</span></div>
+      ${subs}
+    </div>`;
+  }).join('');
+}
+
+function novaCategoria() {
+  const nome = prompt('Nome da categoria:');
+  if (!nome) return;
+  const tipo = confirm('É receita? (Cancelar = despesa)') ? 'receita' : 'despesa';
+  const parentsLabel = _flCategorias.filter(c => !c.parent_id).map(c => `${c.id}: ${c.nome}`).join('\n');
+  const parent_id = prompt('Categoria pai (cole o UUID, ou deixe vazio para raiz):\n\n' + parentsLabel) || null;
+  api({ action: 'categoria_upsert', nome, parent_id, tipo, ativo: true }).then(d => {
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Categoria criada.');
+    loadCategoriasConfig();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
