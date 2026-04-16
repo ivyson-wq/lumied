@@ -1,11 +1,21 @@
 User-agent: *
-Allow: /site/
+Allow: /
+Allow: /blog/
+Allow: /sobre/
+Allow: /clientes/
+Allow: /privacidade/
+Allow: /termos/
+Allow: /dpa/
+Allow: /sla/
+Allow: /vs/
+Allow: /status/
 Allow: /ajuda/
-Allow: /site/blog/
-Allow: /site/certificacao.html
-Allow: /assinar.html
+Allow: /certificacao
 Allow: /verificar.html
+Allow: /assinar.html
 
+Disallow: /site/
+Disallow: /index.html
 Disallow: /admin.html
 Disallow: /admin-central.html
 Disallow: /gerente.html
@@ -28,17 +38,35 @@ Crawl-delay: 1
 
 User-agent: Googlebot
 Allow: /
+Disallow: /site/
+Disallow: /index.html
+Disallow: /admin.html
+Disallow: /admin-central.html
+Disallow: /gerente.html
+Disallow: /professora.html
+Disallow: /secretaria.html
+Disallow: /aluno.html
+Disallow: /area-restrita.html
 
 User-agent: GPTBot
-Allow: /site/
+Allow: /
+Allow: /blog/
+Allow: /sobre/
 Allow: /ajuda/
+Disallow: /site/
 
 User-agent: ClaudeBot
-Allow: /site/
+Allow: /
+Allow: /blog/
+Allow: /sobre/
 Allow: /ajuda/
+Disallow: /site/
 
 User-agent: PerplexityBot
-Allow: /site/
+Allow: /
+Allow: /blog/
+Allow: /sobre/
 Allow: /ajuda/
+Disallow: /site/
 
 Sitemap: https://lumied.com.br/sitemap.xml

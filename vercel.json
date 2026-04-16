@@ -13,18 +13,131 @@
       "has": [{ "type": "host", "value": "www.lumied.com.br" }],
       "destination": "https://lumied.com.br/",
       "permanent": true
+    },
+    {
+      "source": "/site",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/site/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/",
+      "permanent": true
+    },
+    {
+      "source": "/site/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "https://lumied.com.br/:path*",
+      "permanent": true
     }
   ],
   "rewrites": [
     {
       "source": "/",
       "has": [{ "type": "host", "value": "lumied.com.br" }],
-      "destination": "/site/"
+      "destination": "/site/index.html"
     },
     {
-      "source": "/site/:path*",
+      "source": "/blog",
       "has": [{ "type": "host", "value": "lumied.com.br" }],
-      "destination": "/site/:path*"
+      "destination": "/site/blog/index.html"
+    },
+    {
+      "source": "/blog/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/blog/index.html"
+    },
+    {
+      "source": "/blog/:slug",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/blog/:slug/index.html"
+    },
+    {
+      "source": "/blog/:slug/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/blog/:slug/index.html"
+    },
+    {
+      "source": "/sobre",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/sobre/index.html"
+    },
+    {
+      "source": "/sobre/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/sobre/index.html"
+    },
+    {
+      "source": "/clientes/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/clientes/:path*"
+    },
+    {
+      "source": "/dpa/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/dpa/:path*"
+    },
+    {
+      "source": "/privacidade/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/privacidade/:path*"
+    },
+    {
+      "source": "/sla/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/sla/:path*"
+    },
+    {
+      "source": "/status/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/status/:path*"
+    },
+    {
+      "source": "/termos/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/termos/:path*"
+    },
+    {
+      "source": "/vs/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/vs/:path*"
+    },
+    {
+      "source": "/videos/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/videos/:path*"
+    },
+    {
+      "source": "/screenshots/:path*",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/screenshots/:path*"
+    },
+    {
+      "source": "/certificacao",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/certificacao.html"
+    },
+    {
+      "source": "/certificacao.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/certificacao.html"
+    },
+    {
+      "source": "/instagram-templates",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/instagram-templates.html"
+    },
+    {
+      "source": "/instagram-templates.html",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/instagram-templates.html"
+    },
+    {
+      "source": "/whatsapp-float.js",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/whatsapp-float.js"
     }
   ],
   "headers": [

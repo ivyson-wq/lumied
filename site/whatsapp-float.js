@@ -1,5 +1,5 @@
 // Lumied — Botão flutuante WhatsApp (site comercial)
-// Inclua <script src="/site/whatsapp-float.js"></script> antes do </body>
+// Inclua <script src="/whatsapp-float.js"></script> antes do </body>
 (function(){
   var WA_NUMBER = '5500000000000'; // Substituir pelo número real
   var WA_MSG = encodeURIComponent('Olá! Gostaria de saber mais sobre o Lumied.');
