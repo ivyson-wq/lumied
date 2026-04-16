@@ -20,7 +20,7 @@ Plataforma SaaS de gestão escolar — 23 módulos, multi-tenancy, feature gatin
 | Pais | `index.html` | Famílias | Magic Link/biometria. Pickup, boletim, agenda, boletos, controle de acesso (face, presença, autorizados retirada) |
 | Gerente | `gerente.html` | Direção | ~55 painéis: analytics, financeiro, CRM, almoxarifado, acadêmico, comunicação, controle de acesso (6 painéis) |
 | Professora | `professora.html` | Docentes | Dashboard + alertas acesso real-time (polling 10s). Chamada, notas, agenda, diplomas, PDI, materiais, diário. Feature-gated, 14 páginas |
-| Equipe | `secretaria.html` | Sec+Com+Fin+Man | Feature-gated sidebar. 7 grupos: Secretaria, Comercial, Financeiro, Infraestrutura, Compliance |
+| Equipe | `secretaria.html` | Sec+Com+Fin+Man+Nutri+Almox | Feature-gated sidebar. 8 grupos: Secretaria, Comercial, Financeiro, Almoxarifado, Infraestrutura, Cozinha, Compliance, Ponto CLT |
 | Admin Escola | `admin.html` | Staff+Admin | Dashboard, plano, módulos, tickets, LGPD, config, API |
 | Admin Central | `admin-central.html` | Staff Lumied | Dashboard SaaS, escolas, staff, audit log, tickets, onboarding |
 | Aluno | `aluno.html` | Alunos | Notas, frequência, provas, calendário |
@@ -145,7 +145,11 @@ Templates HTML com variáveis → contrato preenchido → envio família → ver
 
 ## Permissões (RBAC)
 
-7 papéis × 25 módulos. `permissoes_papel` (defaults) + `permissoes_usuario` (overrides). Gerente configura via modal checkboxes (ver/editar).
+11 papéis × 25 módulos. `permissoes_papel` (defaults) + `permissoes_usuario` (overrides). Gerente configura via modal checkboxes (ver/editar).
+
+**Papéis:** gerente, diretor, financeiro, professora, professora_assistente, secretaria, comercial, manutencao, impressao, nutricionista (mig 228), almoxarifado (mig 249).
+
+**Almoxarifado** (mig 249) — feature `almoxarifado`, atua via portal Equipe. Pode aprovar/rejeitar requisições, ver catálogo/orçamentos (read-only), encaminhar/marcar compras. BLOQUEADO (403) para: `alm_orcamento_set`, `alm_insumo_save/del/set_referencia/atualizar_auto`, `alm_entrada_estoque`, `alm_turma_save/del`, `alm_atualizar_precos`, `alm_prof_set_turma`, `alm_criar_req_gerente`. Enforcement em `diplomas/index.ts::isAlmEditOnlyAction`.
 
 ---
 
@@ -187,6 +191,17 @@ WhatsApp travas: 80% alerta, 95% urgente, 100% bloqueio. Resp financeiro imutáv
 RLS 20+ tabelas | Rate limiting DB-backed (migration 218) | Input validation + sanitização XSS recursiva | CORS whitelist dinâmico `*.lumied.com.br` | PBKDF2 100-120k iterations | WebAuthn/Face ID | CSP + SRI + HSTS + X-Frame DENY | LGPD (consentimento, export, anonimização) | Meta HMAC-SHA256 fail-closed | Sentry padronizado | PIX CRC16-CCITT
 
 4 rodadas hardening (2026-04-10/11): ~90 bugs fixados, 7 migrations, 100% edge functions + workers auditados. Ver `git log` para detalhes.
+
+### Tenant Isolation (migrations 243-245, incidente 16/04/2026)
+
+- **217 tabelas tenant com trigger `enforce_tenant_escola_id`** — rejeita INSERT sem `escola_id` válido. View `tenant_isolation_audit` para monitoramento contínuo.
+- **`getEscolaPadrao`** (`_shared/modulos.ts`): retorna `null` em multi-tenant (>1 escola ativa). Elimina fallback cego "primeira escola = Maple" que causou vazamento demo→Maple.
+- **`resolveEscolaId`** (`_shared/tenant.ts`): chain session → **token de sessão (body/Authorization)** → Origin (`*.lumied.com.br` → `escolas.slug`) → single-tenant fallback. Passa `body` ao chamar: `resolveEscolaId(req, sb, null, body)`.
+- **Auth flows** (login/webauthn/professora/secretaria): derivam escola via Origin; multi-match por email vira 401 genérico.
+- **Pais-portal** (minha_agenda, ausencia_submit, public_submit, manutencao_*): resolvem escola via Origin + filtram queries por escola.
+- **SELECTs críticos**: todos `_list`/`_dashboard` em api/diplomas/financeiro-ext/cobranca/acesso/loja/ponto/compliance filtram por `escola_id`.
+- **Cache**: `modulos_habilitados` usa `private, max-age=30 + Vary: Authorization` (nunca `public`).
+- **Ao adicionar nova tabela tenant:** SEMPRE `escola_id uuid NOT NULL REFERENCES escolas(id) ON DELETE CASCADE` + index + trigger. Helper: `SELECT add_tenant_isolation('nova_tabela')`.
 
 ---
 
@@ -268,9 +283,9 @@ cd whatsapp-gateway && CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACC
 
 ## Banco de Dados
 
-222 migrations (009-222). Consultar via `supabase migrations list` ou `SELECT * FROM supabase_migrations.schema_migrations`.
+249 migrations (009-249). Consultar via `supabase migrations list` ou `SELECT * FROM supabase_migrations.schema_migrations`.
 
-**Migrations-chave:** 048 (planos/modulos), 075 (multitenancy), 078 (LGPD), 081-082 (tickets), 084 (multi_papeis), 085-088 (compliance), 091 (ponto AFD), 093 (5 tiers comerciais), 099-100 (IA+ROI), 103 (RBAC), 104-105 (staff+seed), 109-110 (unificação), 111-114 (ponto CLT + acesso), 215-222 (hardening + escola_id + rate limits)
+**Migrations-chave:** 048 (planos/modulos), 075 (multitenancy), 078 (LGPD), 081-082 (tickets), 084 (multi_papeis), 085-088 (compliance), 091 (ponto AFD), 093 (5 tiers comerciais), 099-100 (IA+ROI), 103 (RBAC), 104-105 (staff+seed), 109-110 (unificação), 111-114 (ponto CLT + acesso), 215-222 (hardening + escola_id + rate limits), 228 (papel nutricionista), 240-241 (billing SaaS + demo reset), 242 (GTM funnel), **243-245 (tenant isolation: backfill + trigger + 217 tabelas)**, 246-248 (staff permissões + financeiro Lumied + Inter billing), **249 (papel almoxarifado)**
 
 ---
 
