@@ -378,7 +378,7 @@ Deno.serve(async (req) => {
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
     // Deriva escola via Origin para evitar colisão de email cross-tenant
-    const escolaIdProf = await resolveEscolaId(req, sb)
+    const escolaIdProf = await resolveEscolaId(req, sb, null, body)
     let q = sb.from('professoras').select('id, nome, email, senha_hash, escola_id').eq('email', email)
     if (escolaIdProf) q = q.eq('escola_id', escolaIdProf)
     const { data: matches } = await q.limit(2)
@@ -416,7 +416,7 @@ Deno.serve(async (req) => {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
-    const escolaIdSec = await resolveEscolaId(req, sb)
+    const escolaIdSec = await resolveEscolaId(req, sb, null, body)
     let qs = sb.from('secretarias').select('id, nome, email, senha_hash, escola_id').eq('email', email)
     if (escolaIdSec) qs = qs.eq('escola_id', escolaIdSec)
     const { data: secMatches } = await qs.limit(2)

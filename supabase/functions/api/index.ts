@@ -117,7 +117,7 @@ serve(async (req: Request) => {
     if (authErr || !user) return err("Sessão inválida.", 401)
     const userEmail = (user.email || "").toLowerCase().trim()
     // Busca email do superusuário no banco (config da escola atual)
-    const escolaIdAdmin = await resolveEscolaId(req, admin)
+    const escolaIdAdmin = await resolveEscolaId(req, admin, null, body)
     const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").eq("escola_id", escolaIdAdmin).maybeSingle()
     const superEmail = cfgRow?.valor?.toLowerCase().trim() || ''
     if (!superEmail || userEmail !== superEmail) return err("Acesso negado. Apenas o superusuário pode acessar esta página.", 403)
@@ -131,7 +131,7 @@ serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await admin.auth.getUser(userToken)
     if (authErr || !user) return err("Sessão inválida.", 401)
     const userEmail = (user.email || "").toLowerCase().trim()
-    const escolaIdAdmin = await resolveEscolaId(req, admin)
+    const escolaIdAdmin = await resolveEscolaId(req, admin, null, body)
     if (!escolaIdAdmin) return err("Escola não resolvida.", 400)
     const { data: cfgRow } = await admin.from("escola_config").select("valor").eq("chave", "superusuario_email").eq("escola_id", escolaIdAdmin).maybeSingle()
     const superEmail = cfgRow?.valor?.toLowerCase().trim() || ''
@@ -187,7 +187,7 @@ serve(async (req: Request) => {
     if (!rlMagic.allowed) return err(`Tente novamente em ${rlMagic.retryAfterSeconds}s.`, 429);
 
     // Busca config da escola atual
-    const escolaIdCfg = await resolveEscolaId(req, admin);
+    const escolaIdCfg = await resolveEscolaId(req, admin, null, body);
     const { data: cfgRows } = await admin.from("escola_config").select("chave, valor").eq("escola_id", escolaIdCfg);
     const cfg: Record<string, string> = {};
     for (const r of cfgRows ?? []) cfg[r.chave] = typeof r.valor === "string" ? r.valor.replace(/^"|"$/g, "") : (r.valor ?? "");
@@ -259,7 +259,7 @@ serve(async (req: Request) => {
   // ── Bootstrap do hub (área-restrita): config + módulos + whoami em 1 request ──
   if (action === "hub_bootstrap") {
     const tokens: string[] = Array.isArray(body._tokens) ? (body._tokens as string[]).filter(Boolean) : [];
-    const escolaIdHub = await resolveEscolaId(req, admin);
+    const escolaIdHub = await resolveEscolaId(req, admin, null, body);
     const [cfgRes, escolaIdRes, ...sessionProbes] = await Promise.all([
       admin.from("escola_config").select("chave, valor, categoria").eq("escola_id", escolaIdHub),
       Promise.resolve(escolaIdHub),
@@ -414,7 +414,7 @@ serve(async (req: Request) => {
   }
 
   if (action === "config_publica") {
-    const escolaIdPub = await resolveEscolaId(req, admin)
+    const escolaIdPub = await resolveEscolaId(req, admin, null, body)
     const { data: rows } = await admin.from("escola_config").select("chave, valor, categoria").eq("escola_id", escolaIdPub)
     const cfg: Record<string, unknown> = {}
     for (const r of rows ?? []) {
@@ -504,7 +504,7 @@ serve(async (req: Request) => {
   if (action === "login") {
     const { email, senha } = body as { email: string; senha: string };
     if (!email || !senha) return err("E-mail e senha são obrigatórios.", 400, "VALIDATION_FAILED");
-    const escolaIdLogin = await resolveEscolaId(req, admin);
+    const escolaIdLogin = await resolveEscolaId(req, admin, null, body);
     // Busca gerente no escopo da escola (Origin) se disponível; senão busca globalmente
     // (permite login em domínio customizado/dev). Single-tenant legado preservado via null.
     let q = admin.from("gerentes").select("id, nome, email, senha_hash, escola_id").eq("email", email);
@@ -539,7 +539,7 @@ serve(async (req: Request) => {
   if (action === "webauthn_login_challenge") {
     const { email, rp_id } = body as { email: string; rp_id: string };
     if (!email || !rp_id) return err("email e rp_id obrigatórios.", 400);
-    const escolaIdWA = await resolveEscolaId(req, admin);
+    const escolaIdWA = await resolveEscolaId(req, admin, null, body);
     let q = admin.from("gerentes").select("id").eq("email", email);
     if (escolaIdWA) q = q.eq("escola_id", escolaIdWA);
     const { data: g } = await q.maybeSingle();
@@ -634,7 +634,7 @@ serve(async (req: Request) => {
     const EMAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
     if (!EMAIL_RE.test(email)) return err("E-mail inválido.");
     // Deriva escola via Origin para escopar o pais-portal corretamente
-    const escolaIdPais = await resolveEscolaId(req, admin);
+    const escolaIdPais = await resolveEscolaId(req, admin, null, body);
     if (!escolaIdPais) return err("Escola não identificada (Origin).", 400);
     // Run two separate queries (email match + familia_email match) and merge in code
     const alunoCols = "id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em";
@@ -682,7 +682,7 @@ serve(async (req: Request) => {
   if (action === "ausencia_delete") {
     const { id, email_resp } = body as { id: string; email_resp: string };
     if (!id || !email_resp) return err("ID e email_resp obrigatórios.");
-    const escolaIdPais = await resolveEscolaId(req, admin);
+    const escolaIdPais = await resolveEscolaId(req, admin, null, body);
     if (!escolaIdPais) return err("Escola não identificada.", 400);
     const { data: ausencia } = await admin.from("ausencias").select("id").eq("id", id).eq("escola_id", escolaIdPais).eq("email_resp", email_resp).maybeSingle();
     if (!ausencia) return err("Ausência não encontrada ou não pertence a este responsável.", 404);
@@ -693,7 +693,7 @@ serve(async (req: Request) => {
   // Leitura pública de configurações (escopada por Origin para evitar cross-tenant)
   if (action === "config_get") {
     const { chave } = body as { chave: string };
-    const escolaIdCfg = await resolveEscolaId(req, admin);
+    const escolaIdCfg = await resolveEscolaId(req, admin, null, body);
     if (!escolaIdCfg) {
       // Multi-tenant: tabela global `configuracoes` é descontinuada; retornar null em vez de leak
       return ok({ valor: null });
@@ -709,7 +709,7 @@ serve(async (req: Request) => {
   if (action === "public_submit") {
     const { email, nome_resp, nome_crianca, serie, turno, dias_semana } = body as Record<string, unknown>;
     if (!email || !nome_resp || !nome_crianca || !turno) return err("Campos obrigatórios ausentes.");
-    const escolaIdSub = await resolveEscolaId(req, admin);
+    const escolaIdSub = await resolveEscolaId(req, admin, null, body);
     if (!escolaIdSub) return err("Escola não identificada.", 400);
     const { error } = await admin.from("solicitacoes").insert({ email, nome_resp, nome_crianca, serie, turno, dias_semana: dias_semana ?? null, escola_id: escolaIdSub });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
@@ -766,7 +766,7 @@ serve(async (req: Request) => {
       const { data: { publicUrl } } = admin.storage.from("manutencoes").getPublicUrl(path);
       foto_url = publicUrl;
     }
-    const escolaIdMan = await resolveEscolaId(req, admin);
+    const escolaIdMan = await resolveEscolaId(req, admin, null, body);
     if (!escolaIdMan) return err("Escola não identificada.", 400);
     const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, escola_id: escolaIdMan };
     if (usuario_id) insert.usuario_id = usuario_id;
@@ -783,7 +783,7 @@ serve(async (req: Request) => {
   if (action === "manutencao_minhas") {
     const email = ((body._email as string) || "").toLowerCase().trim();
     if (!email) return err("E-mail obrigatório.");
-    const escolaIdMin = await resolveEscolaId(req, admin);
+    const escolaIdMin = await resolveEscolaId(req, admin, null, body);
     if (!escolaIdMin) return err("Escola não identificada.", 400);
     const { data: user } = await admin.from("usuarios").select("id").eq("escola_id", escolaIdMin).eq("email", email).maybeSingle();
     if (!user) return ok([]);

@@ -114,7 +114,7 @@ serve(async (req: Request) => {
   // Resolve enabled modules via Origin (multi-tenant safe) + fallback single-tenant
   let enabledModules: Set<string>;
   try {
-    const escolaId = await resolveEscolaId(req, sb) || await getEscolaPadrao(sb);
+    const escolaId = await resolveEscolaId(req, sb, null, body) || await getEscolaPadrao(sb);
     enabledModules = escolaId ? await getModulosHabilitados(sb, escolaId) : new Set();
   } catch { enabledModules = new Set(); }
 
