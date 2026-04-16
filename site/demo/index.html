@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agende uma Demo da Lumied — 20 minutos, sem compromisso</title>
+<meta name="description" content="Veja o Lumied em ação: 20 minutos de tour guiado pelos módulos que fazem sentido para a sua escola. Agende direto no calendário do fundador.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://lumied.com.br/demo/">
+<meta property="og:title" content="Agende uma Demo da Lumied — 20 minutos">
+<meta property="og:description" content="Tour pelo painel da direção, portal da professora, CRM e IA Lumi. Direto com o fundador.">
+<meta property="og:url" content="https://lumied.com.br/demo/">
+<meta property="og:type" content="website">
+<script src="/config.js"></script>
+<script src="/analytics.js" defer></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0F172A;background:#F8FAFC;line-height:1.6;}
+.container{max-width:1200px;margin:0 auto;padding:0 24px;}
+header{background:linear-gradient(135deg,#6B3FA0,#8E54B6);color:#fff;padding:72px 0 48px;text-align:center;}
+header h1{font-size:clamp(28px,4.5vw,44px);font-weight:800;margin-bottom:16px;line-height:1.1;}
+header p{font-size:clamp(15px,2vw,18px);opacity:.95;max-width:720px;margin:0 auto;}
+.breadcrumb{font-size:13px;opacity:.8;margin-bottom:24px;}
+.breadcrumb a{color:#fff;text-decoration:underline;}
+section{padding:56px 0;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;}
+@media (max-width:880px){.two-col{grid-template-columns:1fr;}}
+.video-wrap{background:#0F172A;border-radius:16px;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.15);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;position:relative;}
+.video-wrap iframe,.video-wrap video{width:100%;height:100%;border:0;}
+.video-placeholder{color:#CBD5E1;text-align:center;padding:40px;}
+.video-placeholder .play{font-size:64px;margin-bottom:14px;opacity:.6;}
+.video-placeholder p{font-size:14px;opacity:.8;}
+.calendly-wrap{background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:6px;min-height:700px;overflow:hidden;}
+.calendly-inline-widget{min-width:320px;height:700px;}
+.fallback-form{background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:28px;}
+.fallback-form h3{font-size:18px;margin-bottom:6px;color:#4c2a7a;}
+.fallback-form p{color:#475569;font-size:14px;margin-bottom:18px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;}
+.field input,.field select,.field textarea{width:100%;padding:11px 14px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:inherit;}
+.field textarea{resize:vertical;min-height:80px;}
+.btn-main{width:100%;padding:14px;background:linear-gradient(135deg,#6B3FA0,#8E54B6);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;}
+.btn-main:hover{transform:translateY(-1px);}
+.btn-main:disabled{opacity:.5;cursor:not-allowed;}
+.what-to-expect{background:#fff;padding:44px;border-radius:16px;margin-top:48px;box-shadow:0 4px 16px rgba(0,0,0,.06);}
+.what-to-expect h2{font-size:24px;margin-bottom:20px;color:#0F172A;}
+.timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;}
+.time-item{padding:18px;background:#F8FAFC;border-left:4px solid #6B3FA0;border-radius:8px;}
+.time-item b{display:block;color:#6B3FA0;font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.time-item h4{font-size:15px;margin-bottom:6px;}
+.time-item p{font-size:13px;color:#64748B;}
+.proof{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:28px;}
+.proof-card{background:#fff;padding:22px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.06);font-size:14px;}
+.proof-card .quote{font-style:italic;color:#334155;margin-bottom:12px;}
+.proof-card .who{font-size:12px;color:#6B3FA0;font-weight:700;}
+footer{background:#0F172A;color:#94A3B8;padding:40px 24px;text-align:center;font-size:13px;}
+footer a{color:#CBD5E1;margin:0 10px;}
+.error{color:#DC2626;font-size:13px;margin-top:8px;}
+.success{color:#16A34A;font-size:13px;margin-top:8px;font-weight:600;}
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="breadcrumb"><a href="/">Lumied</a> / Agende sua demo</div>
+    <h1>20 minutos. Zero compromisso. Direto com o fundador.</h1>
+    <p>Tour guiado pelos módulos que fazem sentido para a sua escola — dashboard da direção, portal da professora, CRM, cobrança, IA Lumi. Você escolhe o horário.</p>
+  </div>
+</header>
+
+<div class="container">
+  <section>
+    <div class="two-col">
+      <div>
+        <div class="video-wrap">
+          <!-- SUBSTITUIR src abaixo por URL do vídeo demo quando gravado (Loom/YouTube/Vimeo). Enquanto não tem, exibe placeholder. -->
+          <div class="video-placeholder" id="videoPh">
+            <div class="play">▶️</div>
+            <p><b>Tour em 8min</b> — vídeo sendo finalizado</p>
+            <p style="margin-top:6px;font-size:12px;">Agende a demo ao lado e eu te mostro ao vivo.</p>
+          </div>
+          <!-- Exemplo quando tiver vídeo Loom:
+          <iframe src="https://www.loom.com/embed/ID_DO_VIDEO" frameborder="0" allowfullscreen></iframe>
+          -->
+        </div>
+        <div class="what-to-expect">
+          <h2>O que você vai ver em 20min</h2>
+          <div class="timeline">
+            <div class="time-item"><b>0-5min</b><h4>Morning Briefing</h4><p>O painel que o diretor abre todo dia de manhã. Tudo em 30 segundos.</p></div>
+            <div class="time-item"><b>5-9min</b><h4>CRM + Matrícula</h4><p>Pipeline de leads, cálculo idade→série automático, contrato digital.</p></div>
+            <div class="time-item"><b>9-13min</b><h4>Portal da Professora</h4><p>Chamada, notas, agenda digital — no celular, em 3 toques.</p></div>
+            <div class="time-item"><b>13-16min</b><h4>Financeiro</h4><p>DRE ao vivo, boleto Inter + PIX, régua de cobrança automática.</p></div>
+            <div class="time-item"><b>16-18min</b><h4>IA Lumi</h4><p>"Quais alunos vão evadir?" "Quanto recuperamos em atrasos?"</p></div>
+            <div class="time-item"><b>18-20min</b><h4>Próximos passos</h4><p>Proposta sob medida pra sua escola + tirar suas dúvidas.</p></div>
+          </div>
+        </div>
+        <div class="proof">
+          <div class="proof-card">
+            <div class="quote">"Em 4 meses recuperamos R$ 47.200 só com a régua de cobrança. Pagou o Lumied e sobrou."</div>
+            <div class="who">— Denise Magnus, Maple Bear Caxias</div>
+          </div>
+          <div class="proof-card">
+            <div class="quote">"As professoras adotaram em 2 semanas. A chamada digital virou hábito antes do treinamento terminar."</div>
+            <div class="who">— Larissa Rama, Maple Bear Bento Gonçalves</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="calendly-wrap">
+          <!-- Substituir URL quando Calendly estiver configurado -->
+          <!-- Ex: https://calendly.com/ivyson-lumied/demo-20min -->
+          <div class="calendly-inline-widget" data-url="https://calendly.com/lumied/demo?hide_event_type_details=1" id="calendlyInline"></div>
+          <script async src="https://assets.calendly.com/assets/external/widget.js"></script>
+        </div>
+        <div class="fallback-form" style="margin-top:18px;">
+          <h3>Prefere ser chamado?</h3>
+          <p>Deixe seus dados e eu te chamo em até 24h úteis com 2 horários.</p>
+          <form onsubmit="enviarLead(event)">
+            <div class="field"><label>Nome da escola *</label><input id="fNome" type="text" required></div>
+            <div class="field"><label>Seu e-mail *</label><input id="fEmail" type="email" required></div>
+            <div class="field"><label>WhatsApp</label><input id="fTelefone" type="tel" placeholder="(00) 00000-0000"></div>
+            <div class="field"><label>Alunos matriculados</label><input id="fAlunos" type="number" min="10" max="5000"></div>
+            <div class="field">
+              <label>Sistema atual</label>
+              <select id="fSistema">
+                <option value="">Nenhum / planilhas</option>
+                <option value="escolaweb">Escolaweb</option>
+                <option value="sponte">Sponte</option>
+                <option value="classapp">ClassApp</option>
+                <option value="diario_escola">Diário Escola</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div class="field"><label>Cidade / UF</label><input id="fCidade" type="text" placeholder="Caxias do Sul / RS"></div>
+            <div class="field"><label>Qual sua maior dor hoje?</label><textarea id="fMensagem" placeholder="Ex: muita inadimplência, perdi controle de matrículas..."></textarea></div>
+            <button type="submit" class="btn-main" id="btnEnv">Me chama em 24h</button>
+            <div class="error" id="fErro" style="display:none;"></div>
+            <div class="success" id="fOk" style="display:none;"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div>&copy; 2026 Lumied · Plataforma de gestão escolar SaaS</div>
+  <div style="margin-top:10px;">
+    <a href="/">Início</a> ·
+    <a href="/roi/">Calculadora ROI</a> ·
+    <a href="/vs/escolaweb/">vs Escolaweb</a> ·
+    <a href="/blog/">Blog</a> ·
+    <a href="/privacidade/">Privacidade</a>
+  </div>
+</footer>
+
+<script>
+const API_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/gtm';
+const API_KEY = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON_KEY : '');
+
+function getUTM() {
+  const u = new URLSearchParams(location.search);
+  return {
+    utm_source: u.get('utm_source') || '',
+    utm_medium: u.get('utm_medium') || '',
+    utm_campaign: u.get('utm_campaign') || '',
+    codigo_indicacao: u.get('ind') || '',
+  };
+}
+
+async function enviarLead(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnEnv');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  document.getElementById('fErro').style.display = 'none';
+  document.getElementById('fOk').style.display = 'none';
+
+  const cidadeUf = document.getElementById('fCidade').value.split('/');
+  const body = {
+    action: 'lead_capture',
+    nome_escola: document.getElementById('fNome').value.trim(),
+    email: document.getElementById('fEmail').value.trim(),
+    telefone: document.getElementById('fTelefone').value.trim(),
+    alunos_estimados: Number(document.getElementById('fAlunos').value) || null,
+    sistema_atual: document.getElementById('fSistema').value,
+    cidade: (cidadeUf[0] || '').trim(),
+    uf: (cidadeUf[1] || '').trim().toUpperCase().slice(0,2),
+    mensagem: document.getElementById('fMensagem').value.trim(),
+    origem: 'demo_landing',
+    ...getUTM(),
+  };
+  try {
+    const r = await fetch(API_URL, {
+      method:'POST',
+      headers: { 'Content-Type':'application/json', 'apikey': API_KEY, 'Authorization':'Bearer '+API_KEY },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message || 'Falha');
+    document.getElementById('fOk').textContent = '✓ Recebido! Te chamo nas próximas 24h úteis.';
+    document.getElementById('fOk').style.display = 'block';
+    document.querySelectorAll('.fallback-form input, .fallback-form textarea, .fallback-form select').forEach(el => el.value = '');
+    if (typeof gtag !== 'undefined') gtag('event', 'demo_lead_form');
+  } catch (err) {
+    const e = document.getElementById('fErro');
+    e.textContent = 'Erro: ' + err.message;
+    e.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Me chama em 24h';
+  }
+}
+
+// Track GA quando abre a página
+if (typeof gtag !== 'undefined') gtag('event', 'demo_page_view', { utm: getUTM().utm_source });
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/sentry-init.js"></script>
 <script src="/analytics.js" defer></script>
+<script src="/referral-widget.js" defer></script>
 <script src="/config.js"></script>
 <title>Lumied — Painel Central</title>
 <meta name="theme-color" content="#1c1712">
@@ -237,6 +238,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
       <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💳</span> Billing SaaS</a>
       <div class="sb-label">GTM</div>
+      <a class="nav-item" onclick="showPanel('crm',this)"><span class="ic">🎯</span> CRM Lumied</a>
+      <a class="nav-item" onclick="showPanel('funil',this)"><span class="ic">📉</span> Funil</a>
       <a class="nav-item" onclick="showPanel('saude',this)"><span class="ic">❤️‍🩹</span> Saúde CS</a>
       <a class="nav-item" onclick="showPanel('playbooks',this)"><span class="ic">📚</span> Playbooks</a>
     </div>
@@ -477,6 +480,97 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- PAINEL: CRM LUMIED (funil comercial) -->
+      <div id="panelCrm" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <div class="sec-title" style="margin-bottom:0;">Leads <span class="count-badge" id="crmCount">0</span></div>
+          <div style="display:flex;gap:8px;">
+            <select id="crmStatusFilter" onchange="loadCRM()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="">Todos</option>
+              <option value="novo">Novo</option>
+              <option value="contatado">Contatado</option>
+              <option value="qualificado">Qualificado</option>
+              <option value="demo_agendada">Demo agendada</option>
+              <option value="proposta">Proposta</option>
+              <option value="fechado">Fechado</option>
+              <option value="perdido">Perdido</option>
+            </select>
+            <button class="action-btn" onclick="loadCRM()">🔄</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Escola</th><th>Contato</th><th>Origem</th><th>Alunos</th><th>Tier</th><th>Status</th><th>Toque</th><th>Próx passo</th><th>Ações</th></tr></thead>
+            <tbody id="crmBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- Modal detalhes do lead -->
+        <div id="leadModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;overflow-y:auto;padding:24px;">
+          <div style="background:#fff;border-radius:16px;max-width:780px;margin:0 auto;padding:28px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+              <h3 style="font-size:17px;font-weight:700;" id="lmTitle">Lead</h3>
+              <button onclick="document.getElementById('leadModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+            </div>
+            <div id="lmInfo" style="display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:13px;margin-bottom:18px;"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Status</label><select id="lmStatus" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;"><option value="novo">Novo</option><option value="contatado">Contatado</option><option value="qualificado">Qualificado</option><option value="demo_agendada">Demo agendada</option><option value="proposta">Proposta</option><option value="fechado">Fechado</option><option value="perdido">Perdido</option></select></div>
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Tier sugerido</label><select id="lmTier" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;"><option value="">—</option><option value="starter">Starter</option><option value="start">Start</option><option value="evolucao">Evolução</option><option value="prestige">Prestige</option></select></div>
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Próximo passo</label><input id="lmProxPasso" type="text" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;"></div>
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Data próx. passo</label><input id="lmProxPassoEm" type="date" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;"></div>
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">MRR se fechar (R$)</label><input id="lmMrr" type="number" step="10" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;"></div>
+              <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;">Opt-out nurture</label><select id="lmOptout" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;"><option value="false">Ativo</option><option value="true">Opt-out</option></select></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+              <button class="action-btn" onclick="lmRegistrarToque(1)">T1 Follow</button>
+              <button class="action-btn" onclick="lmRegistrarToque(2)">T2 DM</button>
+              <button class="action-btn" onclick="lmRegistrarToque(3)">T3 Email#1</button>
+              <button class="action-btn" onclick="lmRegistrarToque(4)">T4 WhatsApp</button>
+              <button class="action-btn" onclick="lmRegistrarToque(5)">T5 Case ROI</button>
+              <button class="action-btn" onclick="lmRegistrarToque(6)">T6 Ligação</button>
+              <button class="action-btn" onclick="lmRegistrarToque(7)">T7 Break-up</button>
+            </div>
+            <div style="margin-bottom:14px;">
+              <label style="font-size:11px;font-weight:700;text-transform:uppercase;">Adicionar nota</label>
+              <textarea id="lmNota" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;" placeholder="Notas internas sobre este lead..."></textarea>
+              <button class="action-btn" onclick="lmSalvarNota()" style="margin-top:6px;">+ Salvar nota</button>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:14px;">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Histórico</div>
+              <div id="lmHistorico" style="max-height:260px;overflow-y:auto;font-size:12px;"></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <button class="btn-primary" onclick="lmSalvar()">Salvar alterações</button>
+              <button onclick="document.getElementById('leadModal').style.display='none'" style="padding:10px 20px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL: FUNIL -->
+      <div id="panelFunil" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="sec-title" style="margin-bottom:0;">Funil comercial — últimos <select id="funilPeriodo" onchange="loadFunil()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;"><option value="7">7</option><option value="30" selected>30</option><option value="90">90</option><option value="180">180</option></select> dias</div>
+          <button class="action-btn" onclick="loadFunil()">🔄 Atualizar</button>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value" id="funilMrr">R$ 0</div><div class="kpi-label">MRR fechado</div></div>
+          <div class="kpi-card"><div class="kpi-icon">📈</div><div class="kpi-value" id="funilArr">R$ 0</div><div class="kpi-label">ARR fechado</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🧮</div><div class="kpi-value" id="funilRoiCalcs">0</div><div class="kpi-label">ROI calcs no período</div></div>
+          <div class="kpi-card"><div class="kpi-icon">🎯</div><div class="kpi-value" id="funilRoiMedio">R$ 0</div><div class="kpi-label">ROI médio projetado</div></div>
+        </div>
+        <div style="margin-top:18px;" class="table-wrap">
+          <table>
+            <thead><tr><th>Estágio</th><th>Total</th><th>Últ. 30d</th><th>Últ. 7d</th><th>MRR se fechou</th></tr></thead>
+            <tbody id="funilBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+        <div style="margin-top:18px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Distribuição de toques outbound (período)</div>
+          <div id="funilToques" style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;">—</div>
+        </div>
+      </div>
+
       <!-- PAINEL: SAÚDE CS -->
       <div id="panelSaude" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
@@ -713,7 +807,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Billing SaaS', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Billing SaaS', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -733,6 +827,8 @@ function showPanel(id, el) {
   if (id === 'billing') loadBillingCentral();
   if (id === 'saude') loadSaudeCS();
   if (id === 'playbooks') loadPlaybooks();
+  if (id === 'crm') loadCRM();
+  if (id === 'funil') loadFunil();
 }
 
 // ═══ BILLING SAAS (staff) ═══
@@ -1414,6 +1510,141 @@ async function resetarSenha() {
   if (d.error) return showError(d.error);
   showToast('Senha redefinida! Faça login.');
   voltarLogin();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CRM LUMIED + FUNIL
+// ═══════════════════════════════════════════════════════════
+const GTM_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/gtm';
+async function callGtm(body) {
+  const r = await fetch(GTM_URL, {
+    method:'POST',
+    headers: { 'Content-Type':'application/json', 'apikey': ANON_KEY, 'Authorization':'Bearer ' + ANON_KEY },
+    body: JSON.stringify({ ...body, _token: getToken() }),
+  });
+  return r.json();
+}
+
+let _crmCurrentLead = null;
+const STATUS_LABEL = { novo:'Novo', contatado:'Contatado', qualificado:'Qualificado', demo_agendada:'Demo', proposta:'Proposta', fechado:'Fechado', perdido:'Perdido' };
+const STATUS_COLOR = { novo:'#64748B', contatado:'#0EA5E9', qualificado:'#6B3FA0', demo_agendada:'#8E54B6', proposta:'#CA8A04', fechado:'#16A34A', perdido:'#DC2626' };
+
+async function loadCRM() {
+  const status = document.getElementById('crmStatusFilter').value;
+  const tbody = document.getElementById('crmBody');
+  tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Carregando...</td></tr>';
+  const d = await callGtm({ action: 'leads_list', status: status || null });
+  if (d.error) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="color:#b00020;">' + esc(d.error.message || d.error) + '</td></tr>'; return; }
+  const leads = d.leads || [];
+  document.getElementById('crmCount').textContent = leads.length;
+  if (!leads.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum lead.</td></tr>'; return; }
+  tbody.innerHTML = leads.map(l => {
+    const pill = '<span style="background:' + STATUS_COLOR[l.status] + ';color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;">' + (STATUS_LABEL[l.status] || l.status) + '</span>';
+    const tierBadge = l.tier_sugerido ? '<span style="background:#f0e6ff;color:#6B3FA0;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;text-transform:uppercase;">' + l.tier_sugerido + '</span>' : '—';
+    const prox = l.proximo_passo ? ('<div style="font-size:12px;">' + esc(l.proximo_passo) + (l.proximo_passo_em ? '<br><span style="color:var(--muted);font-size:11px;">' + new Date(l.proximo_passo_em).toLocaleDateString('pt-BR') + '</span>' : '') + '</div>') : '—';
+    return '<tr>' +
+      '<td><strong>' + esc(l.nome_escola) + '</strong>' + (l.cidade ? '<br><span style="font-size:11px;color:var(--muted);">' + esc(l.cidade) + '/' + esc(l.uf || '') + '</span>' : '') + '</td>' +
+      '<td style="font-size:12px;">' + esc(l.email) + (l.telefone ? '<br>' + esc(l.telefone) : '') + '</td>' +
+      '<td style="font-size:12px;">' + esc(l.origem || '—') + '</td>' +
+      '<td>' + (l.alunos_estimados || '—') + '</td>' +
+      '<td>' + tierBadge + '</td>' +
+      '<td>' + pill + '</td>' +
+      '<td style="text-align:center;font-weight:700;">' + (l.toque_atual > 0 ? 'T' + l.toque_atual : '—') + '</td>' +
+      '<td>' + prox + '</td>' +
+      '<td><button class="action-btn" onclick="abrirLead(\'' + l.id + '\')">Abrir</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function abrirLead(id) {
+  const d = await callGtm({ action:'lead_get', id });
+  if (d.error) return alert(d.error.message || 'Erro');
+  _crmCurrentLead = d.lead;
+  document.getElementById('lmTitle').textContent = '🎯 ' + (d.lead.nome_escola || 'Lead');
+  const info = [
+    ['E-mail', d.lead.email],
+    ['WhatsApp', d.lead.telefone || '—'],
+    ['Origem', d.lead.origem || '—'],
+    ['UTM', [d.lead.utm_source, d.lead.utm_medium, d.lead.utm_campaign].filter(Boolean).join(' / ') || '—'],
+    ['Cidade', (d.lead.cidade || '—') + ' / ' + (d.lead.uf || '—')],
+    ['Alunos', d.lead.alunos_estimados || '—'],
+    ['Sistema atual', d.lead.sistema_atual || '—'],
+    ['MQL?', d.lead.qualificado_mql ? '✓ Sim' : 'Não'],
+    ['Criado em', new Date(d.lead.criado_em).toLocaleString('pt-BR')],
+    ['Mensagem', d.lead.mensagem || '—'],
+  ];
+  document.getElementById('lmInfo').innerHTML = info.map(([k,v]) => '<strong>' + k + ':</strong><span>' + esc(String(v)) + '</span>').join('');
+  document.getElementById('lmStatus').value = d.lead.status || 'novo';
+  document.getElementById('lmTier').value = d.lead.tier_sugerido || '';
+  document.getElementById('lmProxPasso').value = d.lead.proximo_passo || '';
+  document.getElementById('lmProxPassoEm').value = d.lead.proximo_passo_em ? d.lead.proximo_passo_em.split('T')[0] : '';
+  document.getElementById('lmMrr').value = d.lead.valor_mrr || '';
+  document.getElementById('lmOptout').value = d.lead.nurture_optout ? 'true' : 'false';
+  document.getElementById('lmNota').value = '';
+  // Histórico
+  const events = (d.events || []).map(e => {
+    const tipo = { toque:'📞', status_change:'🔀', nurture_sent:'✉️', roi_calc:'🧮', calendly_booked:'📅', nota:'📝' }[e.tipo] || '•';
+    return '<div style="padding:6px 0;border-bottom:1px dashed var(--border);">' + tipo + ' <strong>' + esc(e.descricao || e.tipo) + '</strong><br><span style="color:var(--muted);font-size:11px;">' + new Date(e.criado_em).toLocaleString('pt-BR') + '</span></div>';
+  }).join('');
+  const nurt = (d.nurture || []).map(n => '<div style="font-size:11px;color:#16A34A;padding:2px 0;">✓ Drip #' + n.passo + ': ' + esc(n.email_subject || '') + '</div>').join('');
+  document.getElementById('lmHistorico').innerHTML = (nurt ? '<div style="margin-bottom:8px;">' + nurt + '</div>' : '') + (events || '<em>Sem eventos</em>');
+  document.getElementById('leadModal').style.display = 'block';
+}
+
+async function lmSalvar() {
+  if (!_crmCurrentLead) return;
+  const upd = {
+    action:'lead_update', id: _crmCurrentLead.id,
+    status: document.getElementById('lmStatus').value,
+    tier_sugerido: document.getElementById('lmTier').value || null,
+    proximo_passo: document.getElementById('lmProxPasso').value || null,
+    proximo_passo_em: document.getElementById('lmProxPassoEm').value || null,
+    valor_mrr: Number(document.getElementById('lmMrr').value) || null,
+    nurture_optout: document.getElementById('lmOptout').value === 'true',
+  };
+  const d = await callGtm(upd);
+  if (d.error) return alert(d.error.message || 'Erro');
+  showToast('Lead atualizado');
+  document.getElementById('leadModal').style.display = 'none';
+  loadCRM();
+}
+
+async function lmRegistrarToque(n) {
+  if (!_crmCurrentLead) return;
+  const desc = prompt('Descrição do toque T' + n + ' (opcional):', '');
+  const d = await callGtm({ action:'lead_registrar_toque', id: _crmCurrentLead.id, toque: n, descricao: desc || '' });
+  if (d.error) return alert(d.error.message || 'Erro');
+  showToast('Toque T' + n + ' registrado');
+  abrirLead(_crmCurrentLead.id);
+}
+
+async function lmSalvarNota() {
+  if (!_crmCurrentLead) return;
+  const nota = document.getElementById('lmNota').value.trim();
+  if (!nota) return;
+  const d = await callGtm({ action:'lead_nota', id: _crmCurrentLead.id, nota });
+  if (d.error) return alert(d.error.message || 'Erro');
+  document.getElementById('lmNota').value = '';
+  abrirLead(_crmCurrentLead.id);
+}
+
+async function loadFunil() {
+  const dias = Number(document.getElementById('funilPeriodo').value) || 30;
+  const d = await callGtm({ action:'funil_stats', dias });
+  if (d.error) { document.getElementById('funilBody').innerHTML = '<tr><td colspan="5" class="empty-state" style="color:#b00020;">' + esc(d.error.message || d.error) + '</td></tr>'; return; }
+  document.getElementById('funilMrr').textContent = 'R$ ' + Number(d.mrr_fechado || 0).toLocaleString('pt-BR');
+  document.getElementById('funilArr').textContent = 'R$ ' + Number(d.arr_fechado || 0).toLocaleString('pt-BR');
+  document.getElementById('funilRoiCalcs').textContent = d.roi_calcs_periodo || 0;
+  document.getElementById('funilRoiMedio').textContent = 'R$ ' + Number(d.roi_medio_anual || 0).toLocaleString('pt-BR');
+  const funil = d.funil || [];
+  document.getElementById('funilBody').innerHTML = funil.map(f => {
+    return '<tr><td><span style="background:' + (STATUS_COLOR[f.status] || '#64748B') + ';color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;">' + (STATUS_LABEL[f.status] || f.status) + '</span></td><td>' + f.total + '</td><td>' + f.ultimo_30d + '</td><td>' + f.ultimo_7d + '</td><td>' + (f.mrr > 0 ? 'R$ ' + Number(f.mrr).toLocaleString('pt-BR') : '—') + '</td></tr>';
+  }).join('');
+  const toques = d.toques_distribuicao || {};
+  const tkeys = Object.keys(toques).sort();
+  document.getElementById('funilToques').innerHTML = tkeys.length
+    ? tkeys.map(t => '<div style="background:#f0e6ff;color:#6B3FA0;padding:6px 14px;border-radius:18px;font-weight:700;">' + t + ': ' + toques[t] + '</div>').join('')
+    : '<em style="color:var(--muted);">Nenhum toque registrado no período.</em>';
 }
 
 // ═══════════════════════════════════════════════════════════
