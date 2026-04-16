@@ -558,19 +558,37 @@ serve(async (req: Request) => {
     } catch (e) { return err("Verificação falhou: " + (e as Error).message, 400); }
   }
 
-  // Leitura pública de séries (para o formulário)
+  // Leitura pública de séries (para o formulário) — resolve escola via Origin
   if (action === "series_list") {
-    const { data } = await admin.from("series").select("*").eq("ativo", true).order("ordem");
+    const origin = req.headers.get("origin") || req.headers.get("referer") || "";
+    const m = origin.match(/https?:\/\/([a-z0-9-]+)\.lumied\.com\.br/i);
+    const subdominio = m?.[1];
+    let escolaIdPub: string | null = null;
+    if (subdominio && subdominio !== 'www') {
+      const { data: esc } = await admin.from("escolas").select("id").eq("slug", subdominio).eq("ativo", true).maybeSingle();
+      escolaIdPub = (esc as any)?.id || null;
+    }
+    if (!escolaIdPub) return err("Escola não identificada.", 400);
+    const { data } = await admin.from("series").select("*").eq("escola_id", escolaIdPub).eq("ativo", true).order("ordem");
     return ok(data ?? []);
   }
 
-  // Leitura pública de atividades (para o formulário) — com contagem de inscritos por turma
+  // Leitura pública de atividades (para o formulário) — escopado via Origin
   if (action === "atividades_list") {
-    const { data: atividades } = await admin.from("atividades").select("*").eq("ativo", true).order("ordem");
+    const origin = req.headers.get("origin") || req.headers.get("referer") || "";
+    const m = origin.match(/https?:\/\/([a-z0-9-]+)\.lumied\.com\.br/i);
+    const subdominio = m?.[1];
+    let escolaIdPub: string | null = null;
+    if (subdominio && subdominio !== 'www') {
+      const { data: esc } = await admin.from("escolas").select("id").eq("slug", subdominio).eq("ativo", true).maybeSingle();
+      escolaIdPub = (esc as any)?.id || null;
+    }
+    if (!escolaIdPub) return err("Escola não identificada.", 400);
+    const { data: atividades } = await admin.from("atividades").select("*").eq("escola_id", escolaIdPub).eq("ativo", true).order("ordem");
     if (!atividades?.length) return ok([]);
 
-    // Busca turmas_selecionadas dos alunos para contar por atividade+turma
-    const { data: alunosAtiv } = await admin.from("alunos").select("turmas_selecionadas").not("turmas_selecionadas", "is", null);
+    // Busca turmas_selecionadas dos alunos para contar por atividade+turma (da mesma escola)
+    const { data: alunosAtiv } = await admin.from("alunos").select("turmas_selecionadas").eq("escola_id", escolaIdPub).not("turmas_selecionadas", "is", null);
 
     // Monta mapa: "atividade_id|turma_nome" → contagem
     const ocupacao: Record<string, number> = {};
@@ -1413,7 +1431,8 @@ serve(async (req: Request) => {
   if (action === "alunos_list") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
-    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, turno, dias_semana, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").order("nome");
+    if (!gerente.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, turno, dias_semana, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").eq("escola_id", gerente.escola_id).order("nome");
     return ok(data ?? []);
   }
 
@@ -1795,14 +1814,16 @@ serve(async (req: Request) => {
 
   // ── Professoras (autenticado) ─────────────────────────────────
   if (action === "professoras_list") {
-    const { data } = await admin.from("professoras").select("*").order("nome");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("professoras").select("*").eq("escola_id", gerente.escola_id).order("nome");
     return ok(data ?? []);
   }
   if (action === "professoras_create") {
     const { nome, email, senha, tipo } = body as { nome: string; email: string; senha: string; tipo?: string };
     if (!nome || !email) return err("Nome e e-mail são obrigatórios.");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const tiposValidos = ["professora", "professora_assistente", "manutencao"];
-    const insertData: Record<string, unknown> = { nome, email, tipo: tiposValidos.includes(tipo ?? "") ? tipo : "professora" };
+    const insertData: Record<string, unknown> = { nome, email, tipo: tiposValidos.includes(tipo ?? "") ? tipo : "professora", escola_id: gerente.escola_id };
     if (senha) {
       if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
       insertData.senha_hash = await hashSenhaProf(senha as string);
@@ -1891,7 +1912,8 @@ serve(async (req: Request) => {
 
   // ── Famílias (CRUD) ─────────────────────────────────────
   if (action === "familias_list") {
-    const { data } = await admin.from("familias").select("cpf, nome_responsavel, nome_aluno, email, serie, turno, escola_id, atualizado_em").order("nome_aluno");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("familias").select("cpf, nome_responsavel, nome_aluno, email, serie, turno, escola_id, atualizado_em").eq("escola_id", gerente.escola_id).order("nome_aluno");
     return ok(data ?? []);
   }
   if (action === "familias_update") {
@@ -1999,8 +2021,9 @@ serve(async (req: Request) => {
 
   // ── Calendario Escolar ─────────────────────────────────
   if (action === "calendario_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const { mes, ano } = body as { mes?: string; ano?: string };
-    let query = admin.from("calendario_eventos").select("*").order("data_inicio");
+    let query = admin.from("calendario_eventos").select("*").eq("escola_id", gerente.escola_id).order("data_inicio");
     if (mes) {
       const [y, m] = mes.split("-");
       const inicio = `${y}-${m}-01`;
@@ -2126,9 +2149,11 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
   if (action === "fin_lancamentos_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
     const tipo = (body as any).tipo;
     let query = admin.from("fin_lancamentos").select("*, fin_plano_contas(nome, codigo)")
+      .eq("escola_id", gerente.escola_id)
       .gte("data_lancamento", mes + "-01").lte("data_lancamento", mes + "-31").order("data_lancamento", { ascending: false });
     if (tipo) query = query.eq("tipo", tipo);
     const { data } = await query;
@@ -2146,8 +2171,10 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
   if (action === "fin_dashboard") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const ano = (body as any).ano || new Date().getFullYear().toString();
     const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor, status, data_lancamento")
+      .eq("escola_id", gerente.escola_id)
       .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
     const receitasMes = Array(12).fill(0), despesasMes = Array(12).fill(0);
     let totalReceitas = 0, totalDespesas = 0, pendente = 0;
@@ -2193,21 +2220,25 @@ serve(async (req: Request) => {
     return ok({ success: true, geradas });
   }
   if (action === "fin_mensalidades_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
-    const { data } = await admin.from("fin_mensalidades").select("*").eq("mes", mes).order("familia_nome");
+    const { data } = await admin.from("fin_mensalidades").select("*").eq("escola_id", gerente.escola_id).eq("mes", mes).order("familia_nome");
     return ok(data ?? []);
   }
   if (action === "fin_mensalidade_pagar") {
     const { id } = body as { id: string };
-    await admin.from("fin_mensalidades").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id);
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    await admin.from("fin_mensalidades").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id).eq("escola_id", gerente.escola_id);
     return ok({ success: true });
   }
 
   // ── DRE ────────────────────────────────────────────────
   if (action === "fin_dre") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const ano = (body as any).ano || new Date().getFullYear().toString();
-    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").in("tipo", ["receita", "despesa"]).order("codigo");
+    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["receita", "despesa"]).order("codigo");
     const { data: lancs } = await admin.from("fin_lancamentos").select("conta_id, valor, tipo, status, data_lancamento")
+      .eq("escola_id", gerente.escola_id)
       .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
     // Agrupa por conta e mes
     const contaMap: Record<string, { nome: string; codigo: string; tipo: string; meses: number[]; total: number }> = {};
@@ -2232,14 +2263,16 @@ serve(async (req: Request) => {
 
   // ── Balanco Patrimonial ───────────────────────────────
   if (action === "fin_balanco") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
-    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
-    const { data: saldos } = await admin.from("fin_saldos_patrimoniais").select("conta_id, saldo").eq("mes", mes);
+    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
+    const { data: saldos } = await admin.from("fin_saldos_patrimoniais").select("conta_id, saldo").eq("escola_id", gerente.escola_id).eq("mes", mes);
     const saldoMap: Record<string, number> = {};
     for (const s of saldos ?? []) saldoMap[s.conta_id] = s.saldo;
     // Calcula receitas - despesas acumulado ate o mes para lucro/prejuizo
     const [y, m] = mes.split("-");
     const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor")
+      .eq("escola_id", gerente.escola_id)
       .gte("data_lancamento", y + "-01-01").lte("data_lancamento", mes + "-31");
     let lucro = 0;
     for (const l of lancs ?? []) { lucro += l.tipo === "receita" ? l.valor : -l.valor; }
@@ -2273,8 +2306,10 @@ serve(async (req: Request) => {
     return ok({ importados: ok2 });
   }
   if (action === "fin_extrato_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
     const { data } = await admin.from("fin_extrato_bancario").select("*, fin_lancamentos(descricao, valor)")
+      .eq("escola_id", gerente.escola_id)
       .gte("data_transacao", mes + "-01").lte("data_transacao", mes + "-31").order("data_transacao");
     return ok(data ?? []);
   }
@@ -2391,19 +2426,22 @@ serve(async (req: Request) => {
 
   // ── CRM ────────────────────────────────────────────────
   if (action === "crm_estagios_list") {
-    const { data } = await admin.from("crm_estagios").select("*").eq("ativo", true).order("ordem");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("crm_estagios").select("*").eq("escola_id", gerente.escola_id).eq("ativo", true).order("ordem");
     return ok(data ?? []);
   }
   if (action === "crm_leads_list") {
-    const { data } = await admin.from("crm_leads").select("*, crm_estagios(nome, cor, ordem)").order("atualizado_em", { ascending: false });
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("crm_leads").select("*, crm_estagios(nome, cor, ordem)").eq("escola_id", gerente.escola_id).order("atualizado_em", { ascending: false });
     return ok(data ?? []);
   }
   if (action === "crm_lead_save") {
     const { id, nome_responsavel, email, telefone, nome_crianca, data_nascimento, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, responsavel_interno, data_proximo_contato, data_visita } = body as any;
     if (!nome_responsavel) return err("Nome obrigatorio.");
-    const data = { nome_responsavel, email, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString() };
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const data = { nome_responsavel, email, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString(), escola_id: gerente.escola_id };
     if (id) {
-      await admin.from("crm_leads").update(data).eq("id", id);
+      await admin.from("crm_leads").update(data).eq("id", id).eq("escola_id", gerente.escola_id);
     } else {
       await admin.from("crm_leads").insert(data);
     }
@@ -2434,7 +2472,8 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
   if (action === "crm_templates_list") {
-    const { data } = await admin.from("crm_templates").select("*").eq("ativo", true).order("categoria");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("crm_templates").select("*").eq("escola_id", gerente.escola_id).eq("ativo", true).order("categoria");
     return ok(data ?? []);
   }
   if (action === "crm_template_save") {
@@ -3124,16 +3163,18 @@ serve(async (req: Request) => {
   }
 
   if (action === "financeiro_wa_consumo") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const mes = new Date().getMonth() + 1;
     const ano = new Date().getFullYear();
-    const { data } = await admin.from("wa_consumo_mensal").select("*").eq("mes", mes).eq("ano", ano).limit(1).single();
-    const { data: alertas } = await admin.from("wa_consumo_alertas").select("*").order("criado_em", { ascending: false }).limit(10);
+    const { data } = await admin.from("wa_consumo_mensal").select("*").eq("escola_id", gerente.escola_id).eq("mes", mes).eq("ano", ano).limit(1).maybeSingle();
+    const { data: alertas } = await admin.from("wa_consumo_alertas").select("*").eq("escola_id", gerente.escola_id).order("criado_em", { ascending: false }).limit(10);
     return ok({ consumo: data, alertas: alertas ?? [] });
   }
 
   // ── Contratos Digitais ──────────────────────────────────────
   if (action === "contrato_templates_list") {
-    const { data } = await admin.from("contrato_templates").select("*").eq("ativo", true).order("nome");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("contrato_templates").select("*").eq("escola_id", gerente.escola_id).eq("ativo", true).order("nome");
     return ok(data ?? []);
   }
 

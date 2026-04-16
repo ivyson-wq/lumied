@@ -524,11 +524,13 @@ async function safeQuery(promise: Promise<any>): Promise<any> {
 }
 
 async function coletarContexto(sb: any, _portal: string, escolaId?: string) {
+  // SEGURANÇA: sem escolaId, retorna contexto vazio (evita leak cross-tenant)
+  if (!escolaId) return { total_alunos: 0, total_em_aberto: "0.00", boletos_pendentes: 0, inadimplencia_pct: 0, leads_parados: 0, alunos_frequencia_baixa: 0, prazos_proximos: 0 };
   const hoje = new Date().toISOString().split("T")[0];
   const semanaAtras = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
 
-  // Scope every query by escola when an escola id is available.
-  const scope = <T>(q: any): T => (escolaId ? q.eq("escola_id", escolaId) : q);
+  // Scope obrigatório por escola.
+  const scope = <T>(q: any): T => q.eq("escola_id", escolaId);
 
   const [alunos, boletos, leads, compliance, frequencia] = await Promise.all([
     safeQuery(scope(sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true))),
@@ -595,20 +597,15 @@ router.on("roi_dashboard", authGerente, async (ctx) => {
   const { data: snapshot } = await snapQ.maybeSingle();
 
   // Helper — scope table by escola when possível
-  const scopeAlunos = () => {
-    const q = ctx.sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true);
-    return escolaId ? q.eq("escola_id", escolaId) : q;
-  };
-  const scopeLeads = () => {
-    const q = ctx.sb.from("crm_leads").select("*", { count: "exact", head: true });
-    return escolaId ? q.eq("escola_id", escolaId) : q;
-  };
+  if (!escolaId) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const scopeAlunos = () => ctx.sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true).eq("escola_id", escolaId);
+  const scopeLeads = () => ctx.sb.from("crm_leads").select("*", { count: "exact", head: true }).eq("escola_id", escolaId);
 
-  // Dados reais do banco
+  // Dados reais do banco (todos scoped por escolaId)
   const [alunos, boletos, msgs, leads] = await Promise.all([
     scopeAlunos(),
-    ctx.sb.from("boletos").select("valor, status").eq("status", "pago").gte("criado_em", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()).limit(5000),
-    ctx.sb.from("wa_consumo_mensal").select("templates_enviados, textos_livres_enviados").eq("mes", new Date().getMonth() + 1).eq("ano", new Date().getFullYear()).maybeSingle(),
+    ctx.sb.from("boletos").select("valor, status").eq("escola_id", escolaId).eq("status", "pago").gte("criado_em", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()).limit(5000),
+    ctx.sb.from("wa_consumo_mensal").select("templates_enviados, textos_livres_enviados").eq("escola_id", escolaId).eq("mes", new Date().getMonth() + 1).eq("ano", new Date().getFullYear()).maybeSingle(),
     scopeLeads(),
   ]);
 

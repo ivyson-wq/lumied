@@ -265,16 +265,18 @@ function nextMonth(): { year: number; month: number; label: string } {
 //  PIX
 // ═══════════════════════════════════════════════════════════════
 router.on("pix_config_get", authGerente, requireFeature("pix"), async (ctx) => {
-  const { data } = await ctx.sb.from("pix_config").select("*").eq("ativo", true).limit(1).single();
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("pix_config").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true).limit(1).maybeSingle();
   return successResponse(data || {});
 });
 
 router.on("pix_config_set", authGerente, requireFeature("pix"), async (ctx) => {
   const { chave_pix, tipo_chave, nome_beneficiario, cidade } = ctx.body as any;
   if (!chave_pix) throw new AppError("VALIDATION_FAILED", "Chave PIX obrigatória.");
-  const { data: existing } = await ctx.sb.from("pix_config").select("id").limit(1).single();
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data: existing } = await ctx.sb.from("pix_config").select("id").eq("escola_id", ctx.escola_id).limit(1).maybeSingle();
   if (existing) await ctx.sb.from("pix_config").update({ chave_pix, tipo_chave, nome_beneficiario, cidade }).eq("id", existing.id);
-  else await ctx.sb.from("pix_config").insert({ chave_pix, tipo_chave, nome_beneficiario, cidade });
+  else await ctx.sb.from("pix_config").insert({ chave_pix, tipo_chave, nome_beneficiario, cidade, escola_id: ctx.escola_id });
   log.info("PIX config atualizado");
   return successResponse({ success: true });
 });
@@ -282,11 +284,12 @@ router.on("pix_config_set", authGerente, requireFeature("pix"), async (ctx) => {
 router.on("pix_gerar_cobranca", authGerente, requireFeature("pix"), async (ctx) => {
   const { valor, descricao, familia_email, boleto_id, mensalidade_id } = ctx.body as any;
   if (!valor) throw new AppError("VALIDATION_FAILED", "Valor obrigatório.");
-  const { data: config } = await ctx.sb.from("pix_config").select("*").eq("ativo", true).limit(1).single();
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data: config } = await ctx.sb.from("pix_config").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true).limit(1).maybeSingle();
   if (!config) throw new AppError("BAD_REQUEST", "PIX não configurado.");
   const txid = "MB" + Date.now().toString(36).toUpperCase() + Array.from(crypto.getRandomValues(new Uint8Array(4))).map(b => b.toString(36)).join('').toUpperCase();
-  const payload = gerarPayloadPix(config.chave_pix, config.nome_beneficiario || "MAPLE BEAR", config.cidade || "CAXIAS DO SUL", valor, txid);
-  const { data, error } = await ctx.sb.from("pix_cobrancas").insert({ boleto_id, mensalidade_id, txid, qr_code_payload: payload, valor, descricao, familia_email, expira_em: new Date(Date.now() + 24 * 3600000).toISOString() }).select().single();
+  const payload = gerarPayloadPix(config.chave_pix, config.nome_beneficiario || "LUMIED", config.cidade || "CAXIAS DO SUL", valor, txid);
+  const { data, error } = await ctx.sb.from("pix_cobrancas").insert({ boleto_id, mensalidade_id, txid, qr_code_payload: payload, valor, descricao, familia_email, expira_em: new Date(Date.now() + 24 * 3600000).toISOString(), escola_id: ctx.escola_id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   log.info("PIX cobrança gerada", { metadata: { txid, valor } });
   return successResponse(data);
@@ -294,7 +297,8 @@ router.on("pix_gerar_cobranca", authGerente, requireFeature("pix"), async (ctx) 
 
 router.on("pix_cobrancas_list", authGerente, requireFeature("pix"), async (ctx) => {
   const { status, familia_email } = ctx.body as any;
-  let q = ctx.sb.from("pix_cobrancas").select("*").order("criado_em", { ascending: false });
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  let q = ctx.sb.from("pix_cobrancas").select("*").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false });
   if (status) q = q.eq("status", status);
   if (familia_email) q = q.eq("familia_email", familia_email);
   const { data } = await q.limit(100);
@@ -305,14 +309,16 @@ router.on("pix_cobrancas_list", authGerente, requireFeature("pix"), async (ctx) 
 //  CONTÁBIL
 // ═══════════════════════════════════════════════════════════════
 router.on("contabil_config_get", authGerente, requireFeature("contabil"), async (ctx) => {
-  const { data } = await ctx.sb.from("contabil_config").select("*").eq("ativo", true);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("contabil_config").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
   return successResponse(data ?? []);
 });
 
 router.on("contabil_config_set", authGerente, requireFeature("contabil"), async (ctx) => {
   const { sistema, formato_exportacao, config: cfg } = ctx.body as any;
   if (!sistema) throw new AppError("VALIDATION_FAILED", "Sistema obrigatório.");
-  const { error } = await ctx.sb.from("contabil_config").upsert({ sistema, formato_exportacao, config: cfg || {} } as any);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { error } = await ctx.sb.from("contabil_config").upsert({ sistema, formato_exportacao, config: cfg || {}, escola_id: ctx.escola_id } as any);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -320,15 +326,17 @@ router.on("contabil_config_set", authGerente, requireFeature("contabil"), async 
 router.on("contabil_exportar", authGerente, requireFeature("contabil"), async (ctx) => {
   const { sistema, periodo_inicio, periodo_fim, tipo } = ctx.body as any;
   if (!sistema || !periodo_inicio || !periodo_fim) throw new AppError("VALIDATION_FAILED", "sistema, periodo_inicio e periodo_fim obrigatórios.");
-  const { data: lancamentos } = await ctx.sb.from("fin_lancamentos").select("*").gte("data_lancamento", periodo_inicio).lte("data_lancamento", periodo_fim).order("data_lancamento");
-  const { data: exp, error } = await ctx.sb.from("contabil_exportacoes").insert({ sistema, periodo_inicio, periodo_fim, tipo: tipo || "lancamentos", registros: lancamentos?.length || 0, gerado_por: ctx.user?.nome }).select().single();
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data: lancamentos } = await ctx.sb.from("fin_lancamentos").select("*").eq("escola_id", ctx.escola_id).gte("data_lancamento", periodo_inicio).lte("data_lancamento", periodo_fim).order("data_lancamento");
+  const { data: exp, error } = await ctx.sb.from("contabil_exportacoes").insert({ sistema, periodo_inicio, periodo_fim, tipo: tipo || "lancamentos", registros: lancamentos?.length || 0, gerado_por: ctx.user?.nome, escola_id: ctx.escola_id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   log.info("Exportação contábil", { metadata: { sistema, registros: lancamentos?.length } });
   return successResponse({ ...exp, lancamentos: lancamentos ?? [] });
 });
 
 router.on("contabil_exportacoes_list", authGerente, requireFeature("contabil"), async (ctx) => {
-  const { data } = await ctx.sb.from("contabil_exportacoes").select("*").order("gerado_em", { ascending: false }).limit(50);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("contabil_exportacoes").select("*").eq("escola_id", ctx.escola_id).order("gerado_em", { ascending: false }).limit(50);
   return successResponse(data ?? []);
 });
 

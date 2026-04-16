@@ -45,7 +45,8 @@ const authGerenteOuFinanceiro: import("../_shared/router.ts").Middleware = async
 };
 
 router.on("regua_config_list", authGerente, requireFeature("regua_cobranca"), async (ctx) => {
-  const { data } = await ctx.sb.from("regua_config").select("*").order("ordem");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("regua_config").select("*").eq("escola_id", ctx.escola_id).order("ordem");
   return successResponse(data ?? []);
 });
 
@@ -62,6 +63,7 @@ router.on("regua_config_update", authGerente, requireFeature("regua_cobranca"), 
   const body = ctx.body as any;
   const { id } = body;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const ALLOWED = [
     "evento", "canal", "dias_offset", "dias_atraso",
     "template_assunto", "template_corpo", "template_id",
@@ -69,7 +71,7 @@ router.on("regua_config_update", authGerente, requireFeature("regua_cobranca"), 
   ];
   const update: Record<string, unknown> = {};
   for (const k of ALLOWED) if (k in body) update[k] = body[k];
-  const { error } = await ctx.sb.from("regua_config").update(update).eq("id", id);
+  const { error } = await ctx.sb.from("regua_config").update(update).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -98,11 +100,12 @@ async function sendEmailResend(to: string, subject: string, html: string, from?:
 }
 
 router.on("regua_executar", authGerenteOuFinanceiro, requireFeature("regua_cobranca"), async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const hoje = new Date();
   const hojeStr = hoje.toISOString().split("T")[0];
-  const { data: configs } = await ctx.sb.from("regua_config").select("*").eq("ativo", true).order("ordem");
+  const { data: configs } = await ctx.sb.from("regua_config").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true).order("ordem");
   if (!configs?.length) return successResponse({ executados: 0 });
-  const { data: mensalidades } = await ctx.sb.from("fin_mensalidades").select("*").eq("status", "pendente");
+  const { data: mensalidades } = await ctx.sb.from("fin_mensalidades").select("*").eq("escola_id", ctx.escola_id).eq("status", "pendente");
   let executados = 0;
   let erros = 0;
   const disparadoPor = (ctx.user as any)?.id || null;

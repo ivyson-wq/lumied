@@ -57,7 +57,7 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
     .eq('token', token).maybeSingle()
   if (sessao && new Date(sessao.expira_em) >= new Date()) {
     const { data } = await sb
-      .from('professoras').select('id, nome, email')
+      .from('professoras').select('id, nome, email, escola_id')
       .eq('id', sessao.professora_id).maybeSingle()
     if (data) return data
   }
@@ -68,18 +68,19 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
   if (roles.includes('professora') || roles.includes('professora_assistente')) {
     // Busca dados da professora pelo mesmo ID ou email
     const { data: prof } = await sb
-      .from('professoras').select('id, nome, email')
+      .from('professoras').select('id, nome, email, escola_id')
       .eq('id', user.id).maybeSingle()
     if (prof) return prof
     // Fallback por email
     const { data: profByEmail } = await sb
-      .from('professoras').select('id, nome, email')
+      .from('professoras').select('id, nome, email, escola_id')
       .eq('email', user.email).maybeSingle()
     if (profByEmail) return profByEmail
-    // Cria registro na tabela professoras se não existe (auto-provision)
+    // Cria registro na tabela professoras se não existe (auto-provision escopado por escola)
+    if (!(user as any).escola_id) return null
     const { data: novaProfessora } = await sb
-      .from('professoras').insert({ nome: user.nome, email: user.email })
-      .select('id, nome, email').single()
+      .from('professoras').insert({ nome: user.nome, email: user.email, escola_id: (user as any).escola_id })
+      .select('id, nome, email, escola_id').single()
     if (novaProfessora) return novaProfessora
     return null
   }
@@ -94,7 +95,7 @@ async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
     .eq('token', token).maybeSingle()
   if (sessao && new Date(sessao.expira_em) >= new Date()) {
     const { data } = await sb
-      .from('gerentes').select('id, nome, email')
+      .from('gerentes').select('id, nome, email, escola_id')
       .eq('id', sessao.gerente_id).maybeSingle()
     if (data) return data
   }
@@ -104,7 +105,7 @@ async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
   const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
   if (roles.includes('gerente') || roles.includes('diretor') || roles.includes('financeiro')) {
     const { data: ger } = await sb
-      .from('gerentes').select('id, nome, email')
+      .from('gerentes').select('id, nome, email, escola_id')
       .eq('email', user.email).maybeSingle()
     if (ger) return ger
     return { id: user.id, nome: user.nome, email: user.email }
@@ -120,7 +121,7 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
     .eq('token', token).maybeSingle()
   if (sessao && new Date(sessao.expira_em) >= new Date()) {
     const { data } = await sb
-      .from('secretarias').select('id, nome, email, features')
+      .from('secretarias').select('id, nome, email, features, escola_id')
       .eq('id', sessao.secretaria_id).maybeSingle()
     if (data) return { ...data, features: data.features || ['atestados'] }
   }
@@ -131,7 +132,7 @@ async function getSecretaria(sb: ReturnType<typeof createClient>, token: string)
   const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao', 'nutricionista']
   if (roles.some((r: string) => secRoles.includes(r))) {
     const { data: sec } = await sb
-      .from('secretarias').select('id, nome, email, features')
+      .from('secretarias').select('id, nome, email, features, escola_id')
       .eq('email', user.email).maybeSingle()
     if (sec) {
       // Garante que nutricionista tenha feature cozinha mesmo em registros antigos
@@ -160,7 +161,7 @@ async function getUsuario(sb: ReturnType<typeof createClient>, token: string) {
     .eq('token', token).maybeSingle()
   if (!sessao || new Date(sessao.expira_em) < new Date()) return null
   const { data } = await sb
-    .from('usuarios').select('id, nome, email, papel, papeis')
+    .from('usuarios').select('id, nome, email, papel, papeis, escola_id')
     .eq('id', sessao.usuario_id).maybeSingle()
   return data ?? null
 }
@@ -316,10 +317,16 @@ Deno.serve(async (req) => {
   // ━━ PUBLIC ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   if (action === 'ranking') {
-    const { data: professoras } = await sb.from('professoras').select('id, nome').order('nome')
+    // Tenant-scope: requer sessão válida (professora ou gerente) para derivar escola_id
+    const prof = await getProfessora(sb, token)
+    const gerente = !prof ? await getGerente(sb, token) : null
+    const rankingEscolaId = (prof as any)?.escola_id || (gerente as any)?.escola_id
+    if (!rankingEscolaId) return json({ error: 'Sessão sem escola associada.' }, 401)
+    const { data: professoras } = await sb.from('professoras').select('id, nome').eq('escola_id', rankingEscolaId).order('nome')
     if (!professoras) return json({ data: [] })
+    const profIds = professoras.map(p => p.id)
     const { data: diplomas } = await sb
-      .from('diplomas_professoras').select('professora_id, pontuacao').eq('status', 'aprovado')
+      .from('diplomas_professoras').select('professora_id, pontuacao').eq('status', 'aprovado').in('professora_id', profIds)
     const map: Record<string, number> = {}
     for (const d of diplomas ?? []) map[d.professora_id] = (map[d.professora_id] || 0) + d.pontuacao
     const ranking = professoras
@@ -451,13 +458,15 @@ Deno.serve(async (req) => {
       if (!base64) return json({ error: 'Selecione o arquivo do diploma.' }, 400)
       const up = await uploadArquivo(sb, 'diplomas', prof.id, base64, mime)
       if ('error' in up) return json({ error: 'Erro ao fazer upload: ' + up.error }, 400)
+      if (!(prof as any).escola_id) return json({ error: 'Professora sem escola associada.' }, 403)
       const { error } = await sb.from('diplomas_professoras').insert({
         professora_id: prof.id, nome_curso, carga_horaria,
         arquivo_url: up.url, status: 'pendente', pontuacao: 0,
+        escola_id: (prof as any).escola_id,
       })
       if (error) return json({ error: error.message }, 400)
-      // Notifica todos os gerentes
-      const { data: gerentes } = await sb.from('gerentes').select('email')
+      // Notifica APENAS gerentes da mesma escola
+      const { data: gerentes } = await sb.from('gerentes').select('email').eq('escola_id', (prof as any).escola_id)
       for (const g of gerentes ?? []) {
         await criarNotif(sb, 'gerente', g.email, 'Novo diploma', `${prof.nome} enviou o diploma "${nome_curso}" (${carga_horaria}h) para validação.`, 'info')
       }
@@ -482,13 +491,15 @@ Deno.serve(async (req) => {
       if (!base64) return json({ error: 'Selecione o arquivo do atestado.' }, 400)
       const up = await uploadArquivo(sb, 'atestados', prof.id, base64, mime)
       if ('error' in up) return json({ error: 'Erro ao fazer upload: ' + up.error }, 400)
+      if (!(prof as any).escola_id) return json({ error: 'Professora sem escola associada.' }, 403)
       const { error } = await sb.from('atestados_professoras').insert({
         professora_id: prof.id, data_inicio, data_fim,
         motivo: motivo || null, arquivo_url: up.url, status: 'pendente',
+        escola_id: (prof as any).escola_id,
       })
       if (error) return json({ error: error.message }, 400)
-      // Notifica todas as secretárias
-      const { data: secs } = await sb.from('secretarias').select('email')
+      // Notifica APENAS secretárias da mesma escola
+      const { data: secs } = await sb.from('secretarias').select('email').eq('escola_id', (prof as any).escola_id)
       for (const s of secs ?? []) {
         await criarNotif(sb, 'secretaria', s.email, 'Novo atestado', `${prof.nome} enviou um atestado (${data_inicio} a ${data_fim}) para validação.`, 'info')
       }
@@ -900,7 +911,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'secretarias_list') {
-      const { data } = await sb.from('secretarias').select('id, nome, email, telefone, features, ativo, criado_em').order('nome')
+      if (!(ger as any)?.escola_id) return json({ error: 'Gerente sem escola.' }, 403)
+      const { data } = await sb.from('secretarias').select('id, nome, email, telefone, features, ativo, criado_em').eq('escola_id', (ger as any).escola_id).order('nome')
       return json({ data: data ?? [] })
     }
 
@@ -912,7 +924,8 @@ Deno.serve(async (req) => {
       const features: string[] = Array.isArray(body.features) ? body.features : ['atestados']
       if (!nome || !email || !senha) return json({ error: 'Preencha todos os campos.' }, 400)
       if (senha.length < 6) return json({ error: 'Senha mínima de 6 caracteres.' }, 400)
-      const { error } = await sb.from('secretarias').insert({ nome, email, senha_hash: await hashSenha(senha), telefone: telefone || null, features })
+      if (!(ger as any)?.escola_id) return json({ error: 'Gerente sem escola.' }, 403)
+      const { error } = await sb.from('secretarias').insert({ nome, email, senha_hash: await hashSenha(senha), telefone: telefone || null, features, escola_id: (ger as any).escola_id })
       if (error) return json({ error: error.code === '23505' ? 'E-mail já cadastrado.' : error.message }, 400)
       return json({ ok: true })
     }
@@ -992,7 +1005,8 @@ Deno.serve(async (req) => {
         cicloId = ciclo.id
       }
       const { data: ciclo } = await sb.from('pdi_ciclos').select('*').eq('id', cicloId).maybeSingle()
-      const { data: professoras } = await sb.from('professoras').select('id, nome, email').order('nome')
+      if (!(ger as any)?.escola_id) return json({ error: 'Gerente sem escola.' }, 403)
+      const { data: professoras } = await sb.from('professoras').select('id, nome, email').eq('escola_id', (ger as any).escola_id).order('nome')
       const { data: pdis } = await sb
         .from('pdis').select('id, professora_id, status, submetido_em, aprovado_em, nota_final')
         .eq('ciclo_id', cicloId)
