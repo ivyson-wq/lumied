@@ -1665,11 +1665,13 @@ Deno.serve(async (req) => {
     const turma_id = (profData as any)?.serie_id ?? null
     const total = (itens as any[]).reduce((s: number, it: any) =>
       s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
+    if (!(gerente as any)?.escola_id) return json({ error: 'Sessão sem escola associada.' }, 403)
     const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
       professora_id, turma_id, mes,
       itens,
       total,
       observacao: observacao || `Criada pela gerente ${gerente.nome}`,
+      escola_id: (gerente as any).escola_id,
     }).select('id').single()
     if (err) return json({ error: err.message }, 400)
     return json({ ok: true, id: nova.id })

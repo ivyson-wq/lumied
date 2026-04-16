@@ -134,12 +134,16 @@ Deno.serve(async (req) => {
         }
       } catch (e) { console.warn('PDF falhou:', nossoNumero, e) }
 
+      // Resolve escola via família (Banco Inter é single-tenant Maple por enquanto)
+      const { data: fam } = await sb.from('familias').select('escola_id').eq('cpf', cpfFmt).maybeSingle()
+      if (!(fam as any)?.escola_id) { console.warn('skip sync:', nossoNumero, 'CPF sem familia/escola'); continue }
       const { error: dbErr } = await sb.from('boletos').insert({
         cpf: cpfFmt, nosso_numero: nossoNumero,
         valor: bol.valorNominal ?? bol.valor ?? 0,
         vencimento: bol.dataVencimento ?? null,
         linha_digitavel: bol.linhaDigitavel ?? '',
         situacao, pdf_url: pdfUrl,
+        escola_id: (fam as any).escola_id,
       })
       if (!dbErr) sincronizados++
       else console.error('Insert falhou:', dbErr.message)

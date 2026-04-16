@@ -52,7 +52,8 @@ router.on("regua_config_list", authGerente, requireFeature("regua_cobranca"), as
 router.on("regua_config_create", authGerente, requireFeature("regua_cobranca"), async (ctx) => {
   const { evento, canal, dias_offset, template_assunto, template_corpo } = ctx.body as any;
   if (!evento || !canal || dias_offset === undefined) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
-  const { data, error } = await ctx.sb.from("regua_config").insert({ evento, canal, dias_offset, template_assunto, template_corpo }).select().single();
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data, error } = await ctx.sb.from("regua_config").insert({ evento, canal, dias_offset, template_assunto, template_corpo, escola_id: ctx.escola_id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });

@@ -233,6 +233,12 @@ Deno.serve(async (req) => {
             if (updErr) insertErrors.push(`update ${nossoNumero}: ${updErr.message}`)
           }
         } else {
+          // Resolve escola via familia.cpf (Banco Inter integration hoje é single-tenant Maple)
+          const { data: fam } = await supabase.from('familias').select('escola_id').eq('cpf', cpfFormatado).maybeSingle()
+          if (!fam?.escola_id) {
+            insertErrors.push(`skip ${nossoNumero}: CPF ${cpfFormatado} sem família/escola cadastrada`)
+            continue
+          }
           const { error: insErr } = await supabase.from('boletos').insert({
             cpf: cpfFormatado,
             nosso_numero: nossoNumero,
@@ -241,6 +247,7 @@ Deno.serve(async (req) => {
             linha_digitavel: linhaDigitavel,
             situacao,
             pdf_url: pdfUrl,
+            escola_id: fam.escola_id,
           })
           if (insErr) insertErrors.push(`insert ${nossoNumero}: ${insErr.message}`)
         }

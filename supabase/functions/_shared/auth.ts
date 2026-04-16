@@ -73,14 +73,15 @@ export async function criarSessao(
 }
 
 // ── Validate session from a table ──
+// Retorna usuário com escola_id para permitir que callers escopem writes por tenant.
 export async function validarSessao(
   sb: SupabaseClient,
   table: string,
   userTable: string,
   userIdField: string,
   token: string | null,
-  userFields = "id, nome, email"
-): Promise<{ id: string; nome: string; email: string } | null> {
+  userFields = "id, nome, email, escola_id"
+): Promise<{ id: string; nome: string; email: string; escola_id?: string } | null> {
   if (!token) return null;
   const { data: raw } = await sb
     .from(table)
@@ -91,7 +92,7 @@ export async function validarSessao(
   const data = raw as any;
   if (!data) return null;
   if (new Date(data.expira_em) < new Date()) return null;
-  return data[userTable] as { id: string; nome: string; email: string };
+  return data[userTable] as { id: string; nome: string; email: string; escola_id?: string };
 }
 
 // ── Upload file to Supabase Storage ──

@@ -34,7 +34,7 @@ async function validarSessaoGerente(sb: ReturnType<typeof createClient>, token: 
 
 // ── Validar sessão de professora (via shared auth) ──
 async function validarSessaoProf(sb: ReturnType<typeof createClient>, token: string | null) {
-  return validarSessao(sb, "professora_sessoes", "professoras", "professora_id", token, "id, nome, email, serie_id");
+  return validarSessao(sb, "professora_sessoes", "professoras", "professora_id", token, "id, nome, email, serie_id, escola_id");
 }
 
 // ── Validar sessão de aluno ──
@@ -499,11 +499,14 @@ serve(async (req: Request) => {
     const prof = await validarSessaoProf(sb, profToken);
     const gerente = !prof ? await validarSessaoGerente(sb, token) : null;
     if (!prof && !gerente) return err("Sessão inválida.", 401);
+    const escola_id = (prof as any)?.escola_id || (gerente as any)?.escola_id;
+    if (!escola_id) return err("Sessão sem escola associada.", 403);
     const { serie_id, disciplina_id, data: dataStr, horario } = body as any;
     if (!serie_id || !dataStr) return err("serie_id e data obrigatórios.");
     const { data, error } = await sb.from("frequencia_chamadas").insert({
       serie_id, disciplina_id: disciplina_id || null, data: dataStr,
-      horario: horario || null, professora_id: prof?.id || null
+      horario: horario || null, professora_id: prof?.id || null,
+      escola_id,
     }).select().single();
     if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
@@ -599,6 +602,8 @@ serve(async (req: Request) => {
     const prof = await validarSessaoProf(sb, profToken);
     const gerente = !prof ? await validarSessaoGerente(sb, token) : null;
     if (!prof && !gerente) return err("Sessão inválida.", 401);
+    const escola_id = (prof as any)?.escola_id || (gerente as any)?.escola_id;
+    if (!escola_id) return err("Sessão sem escola associada.", 403);
     const { serie_id, disciplina_id, data: dataStr, conteudo_planejado, conteudo_executado, observacoes, habilidades_bncc } = body as any;
     if (!serie_id || !dataStr) return err("serie_id e data obrigatórios.");
     const { data, error } = await sb.from("diario_registros").insert({
@@ -607,7 +612,8 @@ serve(async (req: Request) => {
       conteudo_planejado: conteudo_planejado || null,
       conteudo_executado: conteudo_executado || null,
       observacoes: observacoes || null,
-      habilidades_bncc: habilidades_bncc || []
+      habilidades_bncc: habilidades_bncc || [],
+      escola_id,
     }).select().single();
     if (error) { console.error("[academico db error]", error); return err(sanitizePgError(error)); }
     return ok(data);

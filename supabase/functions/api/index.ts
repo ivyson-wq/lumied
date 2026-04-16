@@ -51,11 +51,11 @@ async function validarSessao(admin: ReturnType<typeof createClient>, token: stri
   if (!token) return null;
   const { data: sessao } = await admin.from("sessoes").select("usuario_id, expira_em").eq("token", token).maybeSingle();
   if (sessao && new Date(sessao.expira_em) >= new Date()) {
-    const { data: user } = await admin.from("usuarios").select("id, nome, email, papeis, papel").eq("id", sessao.usuario_id).maybeSingle();
+    const { data: user } = await admin.from("usuarios").select("id, nome, email, papeis, papel, escola_id").eq("id", sessao.usuario_id).maybeSingle();
     if (user) {
       const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []);
       const allowedRoles = ["gerente", "diretor", "financeiro", "secretaria", "comercial", "professora", "professora_assistente", "impressao"];
-      if (roles.some((r: string) => allowedRoles.includes(r))) return { id: user.id, nome: user.nome, email: user.email };
+      if (roles.some((r: string) => allowedRoles.includes(r))) return { id: user.id, nome: user.nome, email: user.email, escola_id: (user as any).escola_id };
     }
   }
   // Fallback: professora_sessoes (legado — professoras que logaram via professora_login)
@@ -632,11 +632,14 @@ serve(async (req: Request) => {
   if (action === "ausencia_submit") {
     const { email_resp, nome_crianca, data_ausencia, tipo, observacao } = body as Record<string, unknown>;
     if (!email_resp || !nome_crianca || !data_ausencia) return err("Campos obrigatórios ausentes.");
-    // Verifica se já existe ausência para esse dia e criança
+    // Deriva escola_id via familia do responsável
+    const { data: fam } = await admin.from("familias").select("escola_id").eq("email", email_resp).maybeSingle();
+    if (!fam?.escola_id) return err("Responsável não encontrado.", 404);
+    // Verifica se já existe ausência para esse dia e criança (escopada por escola)
     const { data: exist } = await admin.from("ausencias")
-      .select("id").eq("email_resp", email_resp).eq("nome_crianca", nome_crianca as string).eq("data_ausencia", data_ausencia as string).single();
+      .select("id").eq("email_resp", email_resp).eq("nome_crianca", nome_crianca as string).eq("data_ausencia", data_ausencia as string).eq("escola_id", fam.escola_id).maybeSingle();
     if (exist) return ok({ success: true, already: true });
-    const { error } = await admin.from("ausencias").insert({ email_resp, nome_crianca, data_ausencia, tipo: tipo ?? "turno", observacao: observacao ?? null });
+    const { error } = await admin.from("ausencias").insert({ email_resp, nome_crianca, data_ausencia, tipo: tipo ?? "turno", observacao: observacao ?? null, escola_id: fam.escola_id });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -671,8 +674,11 @@ serve(async (req: Request) => {
   if (action === "inscricao_atividade_submit") {
     const { email, nome_resp, nome_crianca, serie, atividades_ids, atividades_detalhe, turmas_selecionadas } = body as Record<string, unknown>;
     if (!email || !nome_resp || !nome_crianca || !atividades_ids) return err("Campos obrigatórios ausentes.");
-    // Busca aluno pelo nome (ilike)
-    const { data: found } = await admin.from("alunos").select("id").ilike("nome", nome_crianca as string).limit(1).single();
+    // Deriva escola_id via familia do responsável (necessário para escopar write)
+    const { data: fam } = await admin.from("familias").select("escola_id").eq("email", email as string).maybeSingle();
+    if (!fam?.escola_id) return err("Responsável não cadastrado — contate a secretaria.", 404);
+    // Busca aluno pelo nome ESCOPADO por escola
+    const { data: found } = await admin.from("alunos").select("id").ilike("nome", nome_crianca as string).eq("escola_id", fam.escola_id).limit(1).maybeSingle();
     if (found) {
       const { error } = await admin.from("alunos").update({
         atividades_ids: atividades_ids as string[],
@@ -680,13 +686,14 @@ serve(async (req: Request) => {
       }).eq("id", found.id);
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
-      // Aluno não cadastrado — cria na tabela alunos
+      // Aluno não cadastrado — cria na tabela alunos escopado
       const { error } = await admin.from("alunos").insert({
         nome: nome_crianca, email: email || null, serie: serie || null,
         responsavel_nome: nome_resp,
         atividades_ids: atividades_ids as string[],
         turmas_selecionadas: turmas_selecionadas ?? [],
         ativo: true,
+        escola_id: fam.escola_id,
       });
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     }
@@ -1133,7 +1140,8 @@ serve(async (req: Request) => {
   if (action === "series_create") {
     const { nome, ordem } = body as { nome: string; ordem: number };
     if (!nome) return err("Nome é obrigatório.");
-    const { error } = await admin.from("series").insert({ nome, ordem: ordem ?? 99 });
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { error } = await admin.from("series").insert({ nome, ordem: ordem ?? 99, escola_id: gerente.escola_id });
     if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "Já existe uma série com este nome." : sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1158,8 +1166,9 @@ serve(async (req: Request) => {
     const { nome, email, senha } = body as { nome: string; email: string; senha: string };
     if (!nome || !email || !senha) return err("Nome, e-mail e senha são obrigatórios.");
     if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const senha_hash = await hashSenha(senha as string);
-    const { error } = await admin.from("gerentes").insert({ nome, email, senha_hash });
+    const { error } = await admin.from("gerentes").insert({ nome, email, senha_hash, escola_id: gerente.escola_id });
     if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1212,17 +1221,19 @@ serve(async (req: Request) => {
     const invalidos = papeis.filter((p: string) => !papeisValidos.includes(p));
     if (invalidos.length) return err("Papel inválido: " + invalidos.join(", "));
     if ((senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const escola_id = gerente.escola_id;
     const senha_hash = await hashSenhaProf(senha as string);
     const primaryPapel = papeis[0]; // para compatibilidade com coluna legada
-    const { error } = await admin.from("usuarios").insert({ nome, email, senha_hash, papel: primaryPapel, papeis });
+    const { error } = await admin.from("usuarios").insert({ nome, email, senha_hash, papel: primaryPapel, papeis, escola_id });
     if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     // Sincroniza com tabelas legadas para cada papel
     if (papeis.includes("gerente") || papeis.includes("diretor") || papeis.includes("financeiro")) {
-      await admin.from("gerentes").insert({ nome, email, senha_hash: await hashSenha(senha as string) }).catch(() => {});
+      await admin.from("gerentes").insert({ nome, email, senha_hash: await hashSenha(senha as string), escola_id }).catch(() => {});
     }
     if (papeis.some((p: string) => ["professora", "professora_assistente", "manutencao"].includes(p))) {
       const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
-      await admin.from("professoras").insert({ nome, email, senha_hash, tipo }).catch(() => {});
+      await admin.from("professoras").insert({ nome, email, senha_hash, tipo, escola_id }).catch(() => {});
     }
     const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao"];
     if (papeis.some((p: string) => secRoles.includes(p))) {
@@ -1234,7 +1245,7 @@ serve(async (req: Request) => {
         if (papeis.includes("manutencao")) secFeatures.push("manutencao");
         if (papeis.includes("impressao")) secFeatures.push("impressao");
       }
-      await admin.from("secretarias").upsert({ nome, email, senha_hash, features: secFeatures, ativo: true }, { onConflict: "email" }).catch(() => {});
+      await admin.from("secretarias").upsert({ nome, email, senha_hash, features: secFeatures, ativo: true, escola_id }, { onConflict: "email" }).catch(() => {});
     }
     return ok({ success: true });
   }
@@ -1430,6 +1441,7 @@ serve(async (req: Request) => {
   if (action === "aluno_criar") {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
+    if (!gerente.escola_id) return err("Sessão sem escola associada.", 403);
     const { nome, email, serie, data_nascimento, responsavel_nome } = body as any;
     if (!nome) return err("Nome obrigatório.");
     const { data, error } = await admin.from("alunos").insert({
@@ -1437,6 +1449,7 @@ serve(async (req: Request) => {
       data_nascimento: data_nascimento || null,
       responsavel_nome: responsavel_nome || null,
       ativo: true,
+      escola_id: gerente.escola_id,
     }).select("id").single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     logAudit(admin, {
@@ -1658,7 +1671,8 @@ serve(async (req: Request) => {
   if (action === "atividades_create") {
     const { nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno } = body as Record<string, unknown>;
     if (!nome) return err("Nome é obrigatório.");
-    const { error } = await admin.from("atividades").insert({ nome, preco: preco ?? 0, descricao: descricao ?? "", cor: cor ?? "#C8102E", horarios: horarios ?? [], ordem: ordem ?? 99, valor_repasse_aluno: valor_repasse_aluno ?? 0 });
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { error } = await admin.from("atividades").insert({ nome, preco: preco ?? 0, descricao: descricao ?? "", cor: cor ?? "#C8102E", horarios: horarios ?? [], ordem: ordem ?? 99, valor_repasse_aluno: valor_repasse_aluno ?? 0, escola_id: gerente.escola_id });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -2017,9 +2031,10 @@ serve(async (req: Request) => {
   if (action === "calendario_save") {
     const { id, titulo, descricao, data_inicio, data_fim, tipo, cor, visivel_pais, visivel_professoras } = body as any;
     if (!titulo || !data_inicio) return err("Titulo e data obrigatorios.");
-    const data = { titulo, descricao: descricao || null, data_inicio, data_fim: data_fim || data_inicio, tipo: tipo || "evento", cor: cor || "#C8102E", visivel_pais: visivel_pais ?? true, visivel_professoras: visivel_professoras ?? true, criado_por: gerente?.nome };
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const data = { titulo, descricao: descricao || null, data_inicio, data_fim: data_fim || data_inicio, tipo: tipo || "evento", cor: cor || "#C8102E", visivel_pais: visivel_pais ?? true, visivel_professoras: visivel_professoras ?? true, criado_por: gerente?.nome, escola_id: gerente.escola_id };
     if (id) {
-      await admin.from("calendario_eventos").update(data).eq("id", id);
+      await admin.from("calendario_eventos").update(data).eq("id", id).eq("escola_id", gerente.escola_id);
     } else {
       await admin.from("calendario_eventos").insert(data);
     }
@@ -2514,6 +2529,7 @@ serve(async (req: Request) => {
   if (action === "crm_matricula_criar") {
     const { lead_id, nome_responsavel, nome_crianca, serie, ano, status, email, telefone, data_nascimento, turma } = body as any;
     if (!nome_crianca || !serie || !ano) return err("Crianca, serie e ano obrigatorios.");
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const st = status || "reserva";
     const { error } = await admin.from("crm_matriculas").insert({
       lead_id, nome_responsavel, nome_crianca, serie, ano: parseInt(ano), status: st,
@@ -2521,6 +2537,7 @@ serve(async (req: Request) => {
       turma: turma || "A",
       data_reserva: st === "reserva" ? new Date().toISOString().split("T")[0] : null,
       data_matricula: st === "matriculado" ? new Date().toISOString().split("T")[0] : null,
+      escola_id: gerente.escola_id,
     });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Mover lead para estagio correto
@@ -2797,8 +2814,20 @@ serve(async (req: Request) => {
   }
 
   if (action === "matricula_submit") {
-    const { ano, dados, documentos_base64 } = body as any;
+    const { ano, dados, documentos_base64, escola_id: bodyEscolaId } = body as any;
     if (!dados || !dados.nome_crianca || !dados.email) return err("Dados incompletos.");
+    // Deriva escola_id: prefere body, senão resolve via subdomínio do Origin
+    let escola_id = bodyEscolaId as string | undefined;
+    if (!escola_id) {
+      const origin = req.headers.get("origin") || req.headers.get("referer") || "";
+      const m = origin.match(/https?:\/\/([a-z0-9-]+)\.lumied\.com\.br/i);
+      const subdominio = m?.[1];
+      if (subdominio && subdominio !== 'www') {
+        const { data: esc } = await admin.from("escolas").select("id").eq("slug", subdominio).eq("ativo", true).maybeSingle();
+        if (esc?.id) escola_id = esc.id;
+      }
+    }
+    if (!escola_id) return err("Não foi possível identificar a escola.", 400);
     // Criar matrícula no CRM
     const { data: mat, error } = await admin.from("crm_matriculas").insert({
       nome_crianca: dados.nome_crianca,
@@ -2809,7 +2838,8 @@ serve(async (req: Request) => {
       email: dados.email,
       telefone: dados.telefone || null,
       data_nascimento: dados.data_nascimento || null,
-      observacoes: dados.observacoes || null
+      observacoes: dados.observacoes || null,
+      escola_id,
     }).select().single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(mat);
@@ -3147,10 +3177,12 @@ serve(async (req: Request) => {
       html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(val));
     }
 
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const { data: contrato, error } = await admin.from("contratos").insert({
       template_id, familia_email: familia_email.toLowerCase().trim(),
       familia_nome: familia_nome || '', matricula_id: matricula_id || null,
       dados_preenchidos: vars, html_renderizado: html, status: 'rascunho',
+      escola_id: gerente.escola_id,
     }).select().single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(contrato);
