@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Portal dos Pais · Lumied</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="/sentry-init.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --mb-red:#b3142a;--mb-red-700:#8a0f20;--mb-red-50:#fbecef;
+  --mb-cream:#f6f1e8;--ink:#1a1413;--ink-2:#3d3431;--ink-3:#6b605c;--ink-4:#9c928e;
+  --line:#e6ddd0;--line-2:#d9cfc0;--surface:#ffffff;--surface-2:#fafaf7;
+  --ok:#1f7a4d;--warn:#b8730a;--info:#2563eb;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+html{-webkit-text-size-adjust:100%;font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--mb-cream)}
+body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Instrument Serif',Georgia,serif}
+
+/* ── Screens ── */
+#loginScreen,#appScreen{display:none;min-height:100dvh}
+#loginScreen.active,#appScreen.active{display:flex}
+
+/* ── Login ── */
+#loginScreen{flex-direction:column;align-items:center;justify-content:center;padding:24px;background:var(--mb-cream)}
+.login-card{background:var(--surface);border-radius:20px;padding:32px 24px;width:100%;max-width:380px;box-shadow:0 2px 24px rgba(26,20,19,.06);text-align:center}
+.login-logo{width:48px;height:48px;background:var(--mb-red);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.login-logo svg{color:#fff}
+.login-card h1{font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;margin-bottom:4px;color:var(--ink)}
+.login-card p.sub{font-size:13px;color:var(--ink-3);margin-bottom:24px}
+.login-input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px;font-family:inherit;outline:none;transition:border-color .2s}
+.login-input:focus{border-color:var(--mb-red)}
+.login-btn{width:100%;margin-top:14px;padding:14px;border:none;border-radius:12px;background:var(--mb-red);color:#fff;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s}
+.login-btn:active{background:var(--mb-red-700)}
+.login-btn:disabled{opacity:.55;cursor:default}
+.login-sent{display:none;flex-direction:column;align-items:center;gap:8px;padding:12px 0}
+.login-sent.show{display:flex}
+.login-form.hide{display:none}
+.login-sent .check-circle{width:48px;height:48px;border-radius:50%;background:#e8f5ee;display:flex;align-items:center;justify-content:center}
+.login-sent .check-circle svg{color:var(--ok)}
+.login-sent h2{font-size:17px;font-weight:600}
+.login-sent p{font-size:13px;color:var(--ink-3);max-width:260px}
+
+/* ── App Shell ── */
+#appScreen{flex-direction:column;padding-bottom:calc(72px + var(--safe-b))}
+.app-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 24px}
+
+/* ── Header ── */
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 20px 12px}
+.header-left h1{font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;line-height:1.15}
+.header-left .date{font-size:12px;color:var(--ink-3);margin-top:2px}
+.avatar-sm{width:36px;height:36px;border-radius:50%;background:var(--mb-red);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;flex-shrink:0}
+
+/* ── Hero Card ── */
+.hero-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.hero-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.hero-photo{width:44px;height:44px;border-radius:50%;background:var(--mb-cream);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-size:16px;font-weight:600;color:var(--ink-3)}
+.hero-photo img{width:100%;height:100%;object-fit:cover}
+.hero-info{flex:1;min-width:0}
+.hero-info .name{font-size:15px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-info .turma{font-size:11px;color:var(--ink-3);margin-top:1px}
+.trocar-chip{display:none;align-items:center;gap:3px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);font-size:11px;font-weight:500;color:var(--ink-3);cursor:pointer;background:transparent;font-family:inherit;flex-shrink:0;transition:background .15s}
+.trocar-chip:active{background:var(--surface-2)}
+.trocar-chip.show{display:flex}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);padding-top:14px}
+.hero-stat{text-align:center;position:relative}
+.hero-stat:not(:last-child)::after{content:'';position:absolute;right:0;top:4px;bottom:4px;width:1px;background:var(--line)}
+.hero-stat .val{font-family:'Instrument Serif',serif;font-size:22px;line-height:1}
+.hero-stat .lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);margin-top:4px}
+.stat-ok{color:var(--ok)}.stat-warn{color:var(--warn)}.stat-red{color:var(--mb-red)}
+
+/* ── Alert Card ── */
+.alert-card{background:var(--mb-red-50);border:1px solid rgba(179,20,42,.12);border-radius:14px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s}
+.alert-card:active{transform:scale(.985)}
+.alert-card .alert-icon{width:32px;height:32px;border-radius:50%;background:var(--mb-red);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alert-card .alert-icon svg{color:#fff;width:16px;height:16px}
+.alert-body{flex:1;min-width:0}
+.alert-body .alert-title{font-size:13px;font-weight:600;color:var(--mb-red-700);line-height:1.3}
+.alert-body .alert-sub{font-size:11px;color:var(--ink-3);margin-top:2px}
+.alert-cta{padding:6px 14px;border-radius:8px;background:var(--mb-red);color:#fff;font-size:11px;font-weight:600;border:none;font-family:inherit;cursor:pointer;flex-shrink:0}
+
+/* ── Section Title ── */
+.section-title{font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:10px;padding-left:2px}
+
+/* ── Quick Access ── */
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.quick-tile{background:var(--surface);border-radius:12px;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid var(--line);cursor:pointer;transition:transform .12s,box-shadow .15s}
+.quick-tile:active{transform:scale(.96);box-shadow:0 1px 8px rgba(26,20,19,.06)}
+.quick-tile .tile-icon{width:36px;height:36px;border-radius:10px;background:var(--mb-cream);display:flex;align-items:center;justify-content:center}
+.quick-tile .tile-icon svg{width:18px;height:18px;color:var(--ink-2)}
+.quick-tile .tile-label{font-size:10px;font-weight:500;color:var(--ink-3);text-align:center;line-height:1.2}
+
+/* ── Agenda ── */
+.agenda-card{background:var(--surface);border-radius:14px;padding:14px;border:1px solid var(--line);margin-bottom:16px}
+.agenda-item{display:grid;grid-template-columns:40px 1fr 20px;gap:10px;align-items:center;padding:10px 0}
+.agenda-item:not(:last-child){border-bottom:1px solid var(--line)}
+.agenda-date{text-align:center}
+.agenda-date .day{font-family:'Instrument Serif',serif;font-size:22px;line-height:1;color:var(--ink)}
+.agenda-date .month{font-size:9px;font-weight:600;text-transform:uppercase;color:var(--ink-4);letter-spacing:.3px}
+.agenda-text .ag-title{font-size:13px;font-weight:500;color:var(--ink);line-height:1.25}
+.agenda-text .ag-sub{font-size:11px;color:var(--ink-3);margin-top:2px}
+.agenda-chevron svg{width:16px;height:16px;color:var(--ink-4)}
+
+/* ── Tab Bar ── */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 56px 1fr 1fr;align-items:end;padding:6px 0 calc(6px + var(--safe-b));z-index:100;box-shadow:0 -2px 16px rgba(26,20,19,.04)}
+.tab-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;background:none;border:none;font-family:inherit}
+.tab-item svg{width:20px;height:20px;color:var(--ink-4);transition:color .15s}
+.tab-item span{font-size:10px;color:var(--ink-4);transition:color .15s}
+.tab-item.active svg{color:var(--mb-red)}
+.tab-item.active span{color:var(--mb-red);font-weight:600}
+.lumi-fab{width:48px;height:48px;border-radius:50%;background:var(--mb-red);display:flex;align-items:center;justify-content:center;margin:-18px auto 0;cursor:pointer;box-shadow:0 4px 16px rgba(179,20,42,.3);border:none;transition:transform .15s,box-shadow .15s;position:relative;z-index:2}
+.lumi-fab:active{transform:scale(.92);box-shadow:0 2px 8px rgba(179,20,42,.2)}
+.lumi-fab svg{color:#fff;width:22px;height:22px}
+.fab-label{font-size:10px;color:var(--mb-red);font-weight:600;text-align:center;margin-top:2px}
+
+/* ── Bottom Sheet ── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(26,20,19,.35);z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
+.sheet-overlay.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:12px 20px calc(24px + var(--safe-b));z-index:201;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1)}
+.sheet-overlay.open .sheet{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--line-2);margin:0 auto 16px}
+.sheet h3{font-size:15px;font-weight:600;margin-bottom:14px}
+.sheet-child{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;cursor:pointer;transition:background .12s}
+.sheet-child:active,.sheet-child.selected{background:var(--mb-red-50)}
+.sheet-child .sc-photo{width:40px;height:40px;border-radius:50%;background:var(--mb-cream);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--ink-3);overflow:hidden}
+.sheet-child .sc-photo img{width:100%;height:100%;object-fit:cover}
+.sheet-child .sc-name{font-size:14px;font-weight:500}
+.sheet-child .sc-turma{font-size:12px;color:var(--ink-3)}
+.sheet-child .sc-check{margin-left:auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.sheet-child.selected .sc-check{background:var(--mb-red);border-color:var(--mb-red)}
+.sheet-child.selected .sc-check svg{color:#fff}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:calc(84px + var(--safe-b));left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:300;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Sandbox Badge ── */
+.sandbox-badge{position:fixed;top:8px;right:8px;background:rgba(26,20,19,.06);color:var(--ink-4);font-size:9px;font-weight:600;letter-spacing:.8px;padding:3px 8px;border-radius:6px;z-index:50;pointer-events:none}
+
+/* ── Loading Skeleton ── */
+.skel{background:linear-gradient(90deg,var(--line) 25%,var(--line-2) 50%,var(--line) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-text{height:14px;width:60%;margin-bottom:6px}
+.skel-block{height:120px;width:100%;margin-bottom:12px;border-radius:16px}
+
+/* ── Pull to Refresh ── */
+.ptr-indicator{text-align:center;padding:0;height:0;overflow:hidden;transition:height .2s,padding .2s;color:var(--ink-4);font-size:12px;display:flex;align-items:center;justify-content:center}
+.ptr-indicator.pulling{height:40px;padding:8px 0}
+.ptr-indicator svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Fade-in ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .4s ease both}
+.fade-up-d1{animation-delay:.05s}
+.fade-up-d2{animation-delay:.1s}
+.fade-up-d3{animation-delay:.15s}
+.fade-up-d4{animation-delay:.2s}
+</style>
+</head>
+<body>
+
+<div class="sandbox-badge">SANDBOX v2</div>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="loginScreen" class="active">
+  <div class="login-card">
+    <div class="login-logo"><i data-lucide="graduation-cap" style="width:24px;height:24px"></i></div>
+    <h1 class="serif">Portal dos Pais</h1>
+    <p class="sub">Entre com seu e-mail para receber o link de acesso</p>
+    <div class="login-form" id="loginForm">
+      <input class="login-input" id="loginEmail" type="email" placeholder="seu@email.com" autocomplete="email" inputmode="email">
+      <button class="login-btn" id="loginBtn" onclick="sendMagicLink()">Enviar link</button>
+    </div>
+    <div class="login-sent" id="loginSent">
+      <div class="check-circle"><i data-lucide="check" style="width:24px;height:24px"></i></div>
+      <h2>Link enviado!</h2>
+      <p>Verifique sua caixa de entrada e clique no link para entrar.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SCREEN ============ -->
+<div id="appScreen">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1 class="serif" id="greetName">Olá</h1>
+      <div class="date" id="headerDate"></div>
+    </div>
+    <div class="avatar-sm" id="headerAvatar"></div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="app-scroll" id="appScroll">
+    <div class="ptr-indicator" id="ptrIndicator">
+      <i data-lucide="loader-2" style="width:18px;height:18px"></i>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div id="loadingSkel">
+      <div class="skel skel-block"></div>
+      <div class="skel skel-text" style="width:40%"></div>
+      <div class="skel skel-block" style="height:56px"></div>
+    </div>
+
+    <!-- Loaded content (hidden until ready) -->
+    <div id="loadedContent" style="display:none">
+
+      <!-- Hero Card -->
+      <div class="hero-card fade-up" id="heroCard">
+        <div class="hero-top">
+          <div class="hero-photo" id="heroPhoto"></div>
+          <div class="hero-info">
+            <div class="name" id="heroName"></div>
+            <div class="turma" id="heroTurma"></div>
+          </div>
+          <button class="trocar-chip" id="trocarBtn" onclick="openSheet()">Trocar <i data-lucide="chevron-down" style="width:12px;height:12px"></i></button>
+        </div>
+        <div class="hero-stats" id="heroStats">
+          <div class="hero-stat">
+            <div class="val serif" id="statFreq">—</div>
+            <div class="lbl">Frequência</div>
+          </div>
+          <div class="hero-stat">
+            <div class="val serif" id="statStatus">—</div>
+            <div class="lbl" id="statStatusLbl">Hoje</div>
+          </div>
+          <div class="hero-stat">
+            <div class="val serif" id="statPend">—</div>
+            <div class="lbl">Pendências</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts (conditional) -->
+      <div id="alertsContainer"></div>
+
+      <!-- Quick Access -->
+      <div class="section-title fade-up fade-up-d1">Acesso rápido</div>
+      <div class="quick-grid fade-up fade-up-d2">
+        <div class="quick-tile" onclick="showToast('Boletos — em breve')">
+          <div class="tile-icon"><i data-lucide="receipt"></i></div>
+          <div class="tile-label">Boletos</div>
+        </div>
+        <div class="quick-tile" onclick="showToast('Dia a Dia — em breve')">
+          <div class="tile-icon"><i data-lucide="camera"></i></div>
+          <div class="tile-label">Dia a Dia</div>
+        </div>
+        <div class="quick-tile" onclick="showToast('Boletim — em breve')">
+          <div class="tile-icon"><i data-lucide="file-text"></i></div>
+          <div class="tile-label">Boletim</div>
+        </div>
+        <div class="quick-tile" onclick="showToast('Recados — em breve')">
+          <div class="tile-icon"><i data-lucide="message-circle"></i></div>
+          <div class="tile-label">Recados</div>
+        </div>
+      </div>
+
+      <!-- Agenda -->
+      <div class="section-title fade-up fade-up-d3">Agenda — próximos dias</div>
+      <div class="agenda-card fade-up fade-up-d4" id="agendaCard"></div>
+
+    </div><!-- /loadedContent -->
+  </div><!-- /app-scroll -->
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar">
+    <button class="tab-item active" onclick="activateTab(this)">
+      <i data-lucide="home"></i><span>Início</span>
+    </button>
+    <button class="tab-item" onclick="activateTab(this);showToast('Agenda — em breve')">
+      <i data-lucide="calendar"></i><span>Agenda</span>
+    </button>
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <button class="lumi-fab" onclick="showToast('Lumi em breve')">
+        <i data-lucide="sparkles"></i>
+      </button>
+      <span class="fab-label">Lumi</span>
+    </div>
+    <button class="tab-item" onclick="activateTab(this);showToast('Financeiro — em breve')">
+      <i data-lucide="wallet"></i><span>Financeiro</span>
+    </button>
+    <button class="tab-item" onclick="activateTab(this);showToast('Boletim — em breve')">
+      <i data-lucide="award"></i><span>Boletim</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Bottom Sheet -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <h3>Trocar aluno</h3>
+    <div id="sheetList"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──
+var SUPABASE_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+var API = SUPABASE_URL + '/functions/v1/api';
+var DIPLOMAS_API = SUPABASE_URL + '/functions/v1/diplomas';
+
+function getToken() { return localStorage.getItem('mb_pais_token'); }
+
+async function api(body, endpoint) {
+  var token = getToken();
+  var url = endpoint || API;
+  var headers = {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON};
+  var r = await fetch(url, { method:'POST', headers, body: JSON.stringify(Object.assign({}, body, { _token: token })) });
+  return r.json();
+}
+
+// ── Mock Data ──
+var MOCK = {
+  user: { nome: 'Maria Silva' },
+  filhos: [{ id: '1', nome: 'Joana Silva', turma: 'Group 3', serie: 'G3', foto_url: null }],
+  presenca: { presenca_mes_pct: 96, status_hoje: 'na_aula', pendencias: 1 },
+  alertas: [{ type: 'boleto', title: 'Boleto de abril vence em 3 dias', subtitle: 'R$ 2.480,00 · vencimento 20/04', cta: 'Pagar', priority: 1 }],
+  eventos: [
+    { data: '2026-04-18', titulo: 'Reunião de pais', horario: '19:00', tipo: 'Reunião' },
+    { data: '2026-04-21', titulo: 'Dia do Índio — atividade', horario: '09:00', tipo: 'Evento' },
+    { data: '2026-04-23', titulo: 'Passeio ao parque', horario: '08:30', tipo: 'Passeio' }
+  ]
+};
+
+// ── State ──
+var state = { user: null, filhos: [], selected: 0, presenca: null, alertas: [], eventos: [] };
+
+// ── Helpers ──
+function initials(name) {
+  if (!name) return '?';
+  var parts = name.trim().split(/\s+/);
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
+var MONTHS_SHORT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+var DAYS_LONG = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+function formatHeaderDate() {
+  var d = new Date();
+  var day = DAYS_LONG[d.getDay()];
+  return day.charAt(0).toUpperCase() + day.slice(1) + ', ' + d.getDate() + ' de ' + MONTHS_SHORT[d.getMonth()];
+}
+
+function parseDate(str) {
+  var p = str.split('-');
+  return { day: parseInt(p[2], 10), month: MONTHS_SHORT[parseInt(p[1], 10) - 1] };
+}
+
+// ── Toast ──
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2200);
+}
+
+// ── Login Flow ──
+async function sendMagicLink() {
+  var email = document.getElementById('loginEmail').value.trim();
+  if (!email) return;
+  var btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  try {
+    await api({ action: 'public_magic_link', email: email });
+  } catch(e) { /* ignore */ }
+  document.getElementById('loginForm').classList.add('hide');
+  document.getElementById('loginSent').classList.add('show');
+}
+
+function checkHashToken() {
+  var hash = window.location.hash;
+  if (hash && hash.indexOf('token=') > -1) {
+    var token = hash.split('token=')[1].split('&')[0];
+    if (token) {
+      localStorage.setItem('mb_pais_token', token);
+      history.replaceState(null, '', window.location.pathname);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ── Screens ──
+function showLogin() {
+  document.getElementById('loginScreen').classList.add('active');
+  document.getElementById('appScreen').classList.remove('active');
+}
+
+function showApp() {
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById('appScreen').classList.add('active');
+}
+
+// ── Data Fetching (with fallback) ──
+async function fetchSession() {
+  try {
+    var res = await api({ action: 'public_verify_session' });
+    if (res && res.nome && res.filhos) return res;
+    if (res && res.user) return res;
+    throw new Error('bad session');
+  } catch(e) {
+    return null;
+  }
+}
+
+async function fetchPresenca(alunoId) {
+  try {
+    var res = await api({ action: 'public_presenca_resumo', aluno_id: alunoId });
+    if (res && typeof res.presenca_mes_pct !== 'undefined') return res;
+    throw new Error('no data');
+  } catch(e) {
+    return MOCK.presenca;
+  }
+}
+
+async function fetchAlertas(alunoId) {
+  try {
+    var res = await api({ action: 'public_alertas', aluno_id: alunoId });
+    if (res && res.alertas) return res.alertas;
+    throw new Error('no data');
+  } catch(e) {
+    return MOCK.alertas;
+  }
+}
+
+async function fetchAgenda(alunoId) {
+  try {
+    var res = await api({ action: 'public_agenda_proximos', aluno_id: alunoId });
+    if (res && res.eventos) return res.eventos;
+    throw new Error('no data');
+  } catch(e) {
+    return MOCK.eventos;
+  }
+}
+
+// ── Render ──
+function renderHeader() {
+  var name = state.user ? state.user.nome : MOCK.user.nome;
+  var first = name.split(' ')[0];
+  document.getElementById('greetName').textContent = 'Olá, ' + first;
+  document.getElementById('headerDate').textContent = formatHeaderDate();
+  document.getElementById('headerAvatar').textContent = initials(name);
+}
+
+function renderHero() {
+  var child = state.filhos[state.selected] || MOCK.filhos[0];
+  var photoEl = document.getElementById('heroPhoto');
+  if (child.foto_url) {
+    photoEl.innerHTML = '<img src="' + child.foto_url + '" alt="">';
+  } else {
+    photoEl.textContent = initials(child.nome);
+  }
+  document.getElementById('heroName').textContent = child.nome;
+  document.getElementById('heroTurma').textContent = child.turma + ' · Maple Bear';
+  document.getElementById('trocarBtn').classList.toggle('show', state.filhos.length > 1);
+
+  // Stats
+  var p = state.presenca || MOCK.presenca;
+  var freqEl = document.getElementById('statFreq');
+  freqEl.textContent = p.presenca_mes_pct + '%';
+  freqEl.className = 'val serif ' + (p.presenca_mes_pct >= 90 ? 'stat-ok' : p.presenca_mes_pct >= 75 ? 'stat-warn' : 'stat-red');
+
+  var statusEl = document.getElementById('statStatus');
+  var statusMap = {
+    'na_aula': { text: '✓ Na aula', cls: 'stat-ok' },
+    'ausente': { text: '✕ Ausente', cls: 'stat-red' },
+    'em_casa': { text: '— Em casa', cls: 'stat-warn' }
+  };
+  var st = statusMap[p.status_hoje] || statusMap['em_casa'];
+  statusEl.textContent = st.text;
+  statusEl.className = 'val serif ' + st.cls;
+  statusEl.style.fontSize = '16px';
+
+  var pendEl = document.getElementById('statPend');
+  pendEl.textContent = p.pendencias;
+  pendEl.className = 'val serif ' + (p.pendencias === 0 ? 'stat-ok' : 'stat-red');
+}
+
+function renderAlerts() {
+  var container = document.getElementById('alertsContainer');
+  container.innerHTML = '';
+  if (!state.alertas || state.alertas.length === 0) return;
+  var iconMap = { boleto: 'alert-circle', comunicado: 'mail', saude: 'heart', default: 'bell' };
+  state.alertas.forEach(function(a) {
+    var icon = iconMap[a.type] || iconMap['default'];
+    var html = '<div class="alert-card fade-up fade-up-d1" onclick="showToast(\'' + (a.cta || 'Ver') + ' — em breve\')">' +
+      '<div class="alert-icon"><i data-lucide="' + icon + '"></i></div>' +
+      '<div class="alert-body"><div class="alert-title">' + a.title + '</div>' +
+      '<div class="alert-sub">' + (a.subtitle || '') + '</div></div>' +
+      '<button class="alert-cta">' + (a.cta || 'Ver') + '</button></div>';
+    container.innerHTML += html;
+  });
+  var sTitle = document.createElement('div');
+  sTitle.className = 'section-title fade-up';
+  sTitle.textContent = 'Precisa da sua atenção';
+  container.insertBefore(sTitle, container.firstChild);
+  lucide.createIcons({ nodes: container.querySelectorAll('[data-lucide]') });
+}
+
+function renderAgenda() {
+  var card = document.getElementById('agendaCard');
+  card.innerHTML = '';
+  var eventos = state.eventos && state.eventos.length ? state.eventos : MOCK.eventos;
+  eventos.slice(0, 3).forEach(function(ev) {
+    var d = parseDate(ev.data);
+    var html = '<div class="agenda-item">' +
+      '<div class="agenda-date"><div class="day">' + d.day + '</div><div class="month">' + d.month + '</div></div>' +
+      '<div class="agenda-text"><div class="ag-title">' + ev.titulo + '</div>' +
+      '<div class="ag-sub">' + ev.horario + (ev.tipo ? ' · ' + ev.tipo : '') + '</div></div>' +
+      '<div class="agenda-chevron"><i data-lucide="chevron-right"></i></div></div>';
+    card.innerHTML += html;
+  });
+  lucide.createIcons({ nodes: card.querySelectorAll('[data-lucide]') });
+}
+
+function renderAll() {
+  renderHeader();
+  renderHero();
+  renderAlerts();
+  renderAgenda();
+  document.getElementById('loadingSkel').style.display = 'none';
+  document.getElementById('loadedContent').style.display = 'block';
+}
+
+// ── Sheet ──
+function openSheet() {
+  var list = document.getElementById('sheetList');
+  list.innerHTML = '';
+  state.filhos.forEach(function(child, i) {
+    var sel = i === state.selected ? ' selected' : '';
+    var photo = child.foto_url
+      ? '<img src="' + child.foto_url + '" alt="">'
+      : initials(child.nome);
+    var html = '<div class="sheet-child' + sel + '" data-idx="' + i + '" onclick="selectChild(' + i + ')">' +
+      '<div class="sc-photo">' + photo + '</div>' +
+      '<div><div class="sc-name">' + child.nome + '</div><div class="sc-turma">' + child.turma + '</div></div>' +
+      '<div class="sc-check">' + (sel ? '<i data-lucide="check" style="width:12px;height:12px"></i>' : '') + '</div></div>';
+    list.innerHTML += html;
+  });
+  lucide.createIcons({ nodes: list.querySelectorAll('[data-lucide]') });
+  document.getElementById('sheetOverlay').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('sheetOverlay').classList.remove('open');
+}
+
+async function selectChild(idx) {
+  if (idx === state.selected) { closeSheet(); return; }
+  state.selected = idx;
+  closeSheet();
+  document.getElementById('loadingSkel').style.display = 'block';
+  document.getElementById('loadedContent').style.display = 'none';
+  var child = state.filhos[idx];
+  var results = await Promise.all([
+    fetchPresenca(child.id),
+    fetchAlertas(child.id),
+    fetchAgenda(child.id)
+  ]);
+  state.presenca = results[0];
+  state.alertas = results[1];
+  state.eventos = results[2];
+  renderAll();
+}
+
+// ── Tab bar ──
+function activateTab(el) {
+  document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+// ── Pull to Refresh ──
+(function() {
+  var scroll, indicator, startY, pulling = false;
+  function init() {
+    scroll = document.getElementById('appScroll');
+    indicator = document.getElementById('ptrIndicator');
+    if (!scroll) return;
+    scroll.addEventListener('touchstart', function(e) {
+      if (scroll.scrollTop <= 0) { startY = e.touches[0].clientY; pulling = true; }
+    }, { passive: true });
+    scroll.addEventListener('touchmove', function(e) {
+      if (!pulling) return;
+      var diff = e.touches[0].clientY - startY;
+      if (diff > 40 && scroll.scrollTop <= 0) {
+        indicator.classList.add('pulling');
+      }
+    }, { passive: true });
+    scroll.addEventListener('touchend', function() {
+      if (indicator.classList.contains('pulling')) {
+        refreshData().then(function() {
+          indicator.classList.remove('pulling');
+        });
+      }
+      pulling = false;
+    });
+  }
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+async function refreshData() {
+  var child = state.filhos[state.selected];
+  if (!child) return;
+  var results = await Promise.all([
+    fetchPresenca(child.id),
+    fetchAlertas(child.id),
+    fetchAgenda(child.id)
+  ]);
+  state.presenca = results[0];
+  state.alertas = results[1];
+  state.eventos = results[2];
+  renderAll();
+}
+
+// ── Boot ──
+async function boot() {
+  lucide.createIcons();
+  checkHashToken();
+
+  if (!getToken()) { showLogin(); return; }
+
+  showApp();
+  var session = await fetchSession();
+
+  if (session && (session.filhos || session.nome)) {
+    state.user = session.user || session;
+    state.filhos = session.filhos || MOCK.filhos;
+  } else {
+    // Fallback to mock if session fails or no token works
+    state.user = MOCK.user;
+    state.filhos = MOCK.filhos;
+  }
+
+  if (state.filhos.length === 0) {
+    state.filhos = MOCK.filhos;
+  }
+
+  var child = state.filhos[state.selected];
+  var results = await Promise.all([
+    fetchPresenca(child.id),
+    fetchAlertas(child.id),
+    fetchAgenda(child.id)
+  ]);
+  state.presenca = results[0];
+  state.alertas = results[1];
+  state.eventos = results[2];
+  renderAll();
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
