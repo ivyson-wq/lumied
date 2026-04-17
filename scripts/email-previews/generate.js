@@ -1,36 +1,54 @@
 const fs = require('fs');
 const path = require('path');
 
-const LOGO = 'https://lumied.com.br/lumied-logo.png';
+const LOGO = 'https://lumied.com.br/lumied-logo-branco.png';
+const LOGO_DARK = 'https://lumied.com.br/lumied-logo.png';
 const GRAD = 'linear-gradient(135deg,#6C63FF,#3B82F6)';
 const CLR = '#6C63FF';
+const PURPLE = '#2D1B4E';
+const GOLD = '#C4963C';
 
-function layout(body, pre) {
-  const ph = pre ? `<div style="display:none;max-height:0;overflow:hidden;">${pre}</div>` : '';
+function layout(body) {
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Email Preview</title></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-${ph}
 <table role="presentation" width="100%" style="background:#F3F4F6;"><tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="600" style="max-width:600px;width:100%;">
-  <tr><td style="background:${GRAD};padding:24px 32px;border-radius:16px 16px 0 0;text-align:center;">
-    <img src="${LOGO}" alt="Lumied" width="120" style="display:inline-block;height:auto;max-width:120px;" />
+  <!-- HEADER -->
+  <tr><td style="background:${PURPLE};padding:0;border-radius:16px 16px 0 0;overflow:hidden;">
+    <table role="presentation" width="100%" style="border-collapse:collapse;">
+      <tr><td style="padding:40px 32px 12px;text-align:center;background:linear-gradient(180deg,rgba(108,99,255,0.15) 0%,transparent 100%);">
+        <img src="${LOGO}" alt="Lumied" width="200" style="display:inline-block;height:auto;max-width:200px;" />
+      </td></tr>
+      <tr><td style="text-align:center;padding:0 32px 28px;">
+        <p style="font-size:14px;color:rgba(255,255,255,.55);margin:0;letter-spacing:0.5px;">Gest&atilde;o escolar inteligente com IA</p>
+      </td></tr>
+      <tr><td style="height:4px;background:linear-gradient(90deg,${GOLD},#D4A84E,${GOLD});font-size:0;line-height:0;">&nbsp;</td></tr>
+    </table>
   </td></tr>
-  <tr><td style="background:#FFFFFF;padding:32px;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
+  <!-- BODY -->
+  <tr><td style="background:#FFFFFF;padding:36px 32px;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
     ${body}
   </td></tr>
-  <tr><td style="background:#0F172A;padding:24px 32px;border-radius:0 0 16px 16px;text-align:center;">
-    <img src="${LOGO}" alt="Lumied" width="80" style="display:inline-block;height:auto;max-width:80px;margin-bottom:12px;opacity:.8;" /><br>
-    <p style="font-size:13px;color:#94A3B8;margin:0 0 8px;line-height:1.6;">
-      <a href="https://lumied.com.br" style="color:#38BDF8;text-decoration:none;">lumied.com.br</a> &middot;
-      <a href="https://lumied.com.br/blog/" style="color:#38BDF8;text-decoration:none;">Blog</a> &middot;
-      <a href="https://www.instagram.com/lumi.ed/" style="color:#38BDF8;text-decoration:none;">Instagram</a> &middot;
-      <a href="https://www.linkedin.com/company/lumied/" style="color:#38BDF8;text-decoration:none;">LinkedIn</a>
-    </p>
-    <p style="font-size:11px;color:#64748B;margin:0;line-height:1.5;">
-      contato@lumied.com.br<br>
-      Lumied Tecnologia &middot; Caxias do Sul, RS &middot; Brasil<br>
-      <a href="https://lumied.com.br/privacidade/" style="color:#64748B;text-decoration:underline;">Pol&iacute;tica de Privacidade</a>
-    </p>
+  <!-- FOOTER -->
+  <tr><td style="background:${PURPLE};padding:28px 32px;border-radius:0 0 16px 16px;">
+    <table role="presentation" width="100%" style="border-collapse:collapse;">
+      <tr><td style="border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:20px;text-align:center;">
+        <img src="${LOGO}" alt="Lumied" width="100" style="display:inline-block;height:auto;max-width:100px;opacity:.7;" />
+      </td></tr>
+      <tr><td style="padding-top:16px;text-align:center;">
+        <p style="font-size:13px;color:rgba(255,255,255,.5);margin:0 0 10px;line-height:1.6;">
+          <a href="https://lumied.com.br" style="color:${GOLD};text-decoration:none;font-weight:600;">lumied.com.br</a> &nbsp;&middot;&nbsp;
+          <a href="https://lumied.com.br/blog/" style="color:rgba(255,255,255,.6);text-decoration:none;">Blog</a> &nbsp;&middot;&nbsp;
+          <a href="https://www.instagram.com/lumi.ed/" style="color:rgba(255,255,255,.6);text-decoration:none;">Instagram</a> &nbsp;&middot;&nbsp;
+          <a href="https://www.linkedin.com/company/lumied/" style="color:rgba(255,255,255,.6);text-decoration:none;">LinkedIn</a>
+        </p>
+        <p style="font-size:11px;color:rgba(255,255,255,.35);margin:0;line-height:1.6;">
+          contato@lumied.com.br<br>
+          Lumied Tecnologia &middot; Caxias do Sul, RS &middot; Brasil<br>
+          <a href="https://lumied.com.br/privacidade/" style="color:rgba(255,255,255,.35);text-decoration:underline;">Pol&iacute;tica de Privacidade</a>
+        </p>
+      </td></tr>
+    </table>
   </td></tr>
 </table>
 </td></tr></table>
@@ -167,7 +185,7 @@ const emails = [
 ];
 
 for (const e of emails) {
-  const html = `<p style="text-align:center;color:#999;font-size:12px;margin:8px 0;">${e.label}</p>\n` + layout(e.body, '');
+  const html = `<p style="text-align:center;color:#999;font-size:12px;margin:8px 0;">${e.label}</p>\n` + layout(e.body);
   fs.writeFileSync(path.join(dir, e.file), html, 'utf8');
 }
-console.log('7 previews regenerados com identidade visual Lumied');
+console.log('7 previews regenerados com header redesenhado');

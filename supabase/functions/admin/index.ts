@@ -53,9 +53,11 @@ const idSchema: Schema = { id: { required: true, type: 'uuid' } };
 const escolaIdSchema: Schema = { escola_id: { required: true, type: 'uuid' } };
 
 // ═══ EMAIL LAYOUT ═══
-const LOGO_URL = "https://lumied.com.br/lumied-logo.png";
+const LOGO_URL = "https://lumied.com.br/lumied-logo-branco.png";
+const LOGO_DARK_URL = "https://lumied.com.br/lumied-logo.png";
 const BRAND_COLOR = "#6C63FF";
 const BRAND_GRADIENT = "linear-gradient(135deg,#6C63FF,#3B82F6)";
+const BRAND_PURPLE = "#2D1B4E";
 
 function emailLayout(body: string, options?: { preheader?: string }): string {
   const preheader = options?.preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${options.preheader}</div>` : "";
@@ -65,27 +67,41 @@ ${preheader}
 <table role="presentation" width="100%" style="background:#F3F4F6;"><tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="600" style="max-width:600px;width:100%;">
   <!-- HEADER -->
-  <tr><td style="background:${BRAND_GRADIENT};padding:24px 32px;border-radius:16px 16px 0 0;text-align:center;">
-    <img src="${LOGO_URL}" alt="Lumied" width="120" style="display:inline-block;height:auto;max-width:120px;" />
+  <tr><td style="background:${BRAND_PURPLE};padding:0;border-radius:16px 16px 0 0;overflow:hidden;">
+    <table role="presentation" width="100%" style="border-collapse:collapse;">
+      <tr><td style="padding:40px 32px 12px;text-align:center;background:linear-gradient(180deg,rgba(108,99,255,0.15) 0%,transparent 100%);">
+        <img src="${LOGO_URL}" alt="Lumied" width="200" style="display:inline-block;height:auto;max-width:200px;" />
+      </td></tr>
+      <tr><td style="text-align:center;padding:0 32px 28px;">
+        <p style="font-size:14px;color:rgba(255,255,255,.55);margin:0;letter-spacing:0.5px;">Gest\u00e3o escolar inteligente com IA</p>
+      </td></tr>
+      <tr><td style="height:4px;background:linear-gradient(90deg,#C4963C,#D4A84E,#C4963C);font-size:0;line-height:0;">&nbsp;</td></tr>
+    </table>
   </td></tr>
   <!-- BODY -->
-  <tr><td style="background:#FFFFFF;padding:32px;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
+  <tr><td style="background:#FFFFFF;padding:36px 32px;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
     ${body}
   </td></tr>
   <!-- FOOTER -->
-  <tr><td style="background:#0F172A;padding:24px 32px;border-radius:0 0 16px 16px;text-align:center;">
-    <img src="${LOGO_URL}" alt="Lumied" width="80" style="display:inline-block;height:auto;max-width:80px;margin-bottom:12px;opacity:.8;" /><br>
-    <p style="font-size:13px;color:#94A3B8;margin:0 0 8px;line-height:1.6;">
-      <a href="https://lumied.com.br" style="color:#38BDF8;text-decoration:none;">lumied.com.br</a> &middot;
-      <a href="https://lumied.com.br/blog/" style="color:#38BDF8;text-decoration:none;">Blog</a> &middot;
-      <a href="https://www.instagram.com/lumi.ed/" style="color:#38BDF8;text-decoration:none;">Instagram</a> &middot;
-      <a href="https://www.linkedin.com/company/lumied/" style="color:#38BDF8;text-decoration:none;">LinkedIn</a>
-    </p>
-    <p style="font-size:11px;color:#64748B;margin:0;line-height:1.5;">
-      contato@lumied.com.br<br>
-      Lumied Tecnologia &middot; Caxias do Sul, RS &middot; Brasil<br>
-      <a href="https://lumied.com.br/privacidade/" style="color:#64748B;text-decoration:underline;">Pol\u00edtica de Privacidade</a>
-    </p>
+  <tr><td style="background:${BRAND_PURPLE};padding:28px 32px;border-radius:0 0 16px 16px;">
+    <table role="presentation" width="100%" style="border-collapse:collapse;">
+      <tr><td style="border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:20px;margin-bottom:16px;text-align:center;">
+        <img src="${LOGO_URL}" alt="Lumied" width="100" style="display:inline-block;height:auto;max-width:100px;opacity:.7;" />
+      </td></tr>
+      <tr><td style="padding-top:16px;text-align:center;">
+        <p style="font-size:13px;color:rgba(255,255,255,.5);margin:0 0 10px;line-height:1.6;">
+          <a href="https://lumied.com.br" style="color:#C4963C;text-decoration:none;font-weight:600;">lumied.com.br</a> &nbsp;\u00b7&nbsp;
+          <a href="https://lumied.com.br/blog/" style="color:rgba(255,255,255,.6);text-decoration:none;">Blog</a> &nbsp;\u00b7&nbsp;
+          <a href="https://www.instagram.com/lumi.ed/" style="color:rgba(255,255,255,.6);text-decoration:none;">Instagram</a> &nbsp;\u00b7&nbsp;
+          <a href="https://www.linkedin.com/company/lumied/" style="color:rgba(255,255,255,.6);text-decoration:none;">LinkedIn</a>
+        </p>
+        <p style="font-size:11px;color:rgba(255,255,255,.35);margin:0;line-height:1.6;">
+          contato@lumied.com.br<br>
+          Lumied Tecnologia \u00b7 Caxias do Sul, RS \u00b7 Brasil<br>
+          <a href="https://lumied.com.br/privacidade/" style="color:rgba(255,255,255,.35);text-decoration:underline;">Pol\u00edtica de Privacidade</a>
+        </p>
+      </td></tr>
+    </table>
   </td></tr>
 </table>
 </td></tr></table>
