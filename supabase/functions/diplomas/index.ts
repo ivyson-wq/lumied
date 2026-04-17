@@ -3116,7 +3116,7 @@ Deno.serve(async (req) => {
   // ── Módulos habilitados (feature gating) ──
   if (action === 'modulos_habilitados') {
     try {
-      const escolaId = await getEscolaPadrao(sb)
+      const escolaId = await resolveEscolaId(req, sb, null, body)
       if (!escolaId) return json({ modulos: [] })
       const modulos = await getModulosHabilitados(sb, escolaId)
       return json({ modulos: [...modulos] })
@@ -3127,7 +3127,7 @@ Deno.serve(async (req) => {
   if (action === 'escola_modulos_get_all') {
     const gerente = await getGerente(sb, token)
     if (!gerente) return json({ error: 'Acesso restrito a gerentes.' }, 403)
-    const escolaId = await getEscolaPadrao(sb)
+    const escolaId = (gerente as any).escola_id || await resolveEscolaId(req, sb, null, body)
     if (!escolaId) return json({ error: 'Escola não encontrada.' }, 404)
     const resolvidos = await getModulosResolvidos(sb, escolaId)
     return json(resolvidos)
@@ -3138,7 +3138,7 @@ Deno.serve(async (req) => {
     if (!gerente) return json({ error: 'Acesso restrito a gerentes.' }, 403)
     const { modulos: moduloToggles } = body as { modulos: Record<string, boolean> }
     if (!moduloToggles) return json({ error: 'modulos obrigatório.' }, 400)
-    const escolaId = await getEscolaPadrao(sb)
+    const escolaId = (gerente as any).escola_id || await resolveEscolaId(req, sb, null, body)
     if (!escolaId) return json({ error: 'Escola não encontrada.' }, 404)
     const slugs = Object.keys(moduloToggles)
     const { data: modulosDb } = await sb.from('modulos').select('id, slug').in('slug', slugs)
@@ -3167,7 +3167,7 @@ Deno.serve(async (req) => {
   if (action === 'escola_modulos_reset') {
     const gerente = await getGerente(sb, token)
     if (!gerente) return json({ error: 'Acesso restrito a gerentes.' }, 403)
-    const escolaId = await getEscolaPadrao(sb)
+    const escolaId = (gerente as any).escola_id || await resolveEscolaId(req, sb, null, body)
     if (!escolaId) return json({ error: 'Escola não encontrada.' }, 404)
     await sb.from('escola_modulos').delete().eq('escola_id', escolaId)
     return json({ success: true })
