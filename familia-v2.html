@@ -533,7 +533,9 @@ function showApp() {
 // ── Data Fetching (with fallback) ──
 async function fetchSession() {
   try {
-    var res = await api({ action: 'public_verify_session' });
+    var fetchPromise = api({ action: 'public_verify_session' });
+    var timeout = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 5000); });
+    var res = await Promise.race([fetchPromise, timeout]);
     if (res && res.nome && res.filhos) return res;
     if (res && res.user) return res;
     throw new Error('bad session');
@@ -780,25 +782,37 @@ async function boot() {
   lucide.createIcons();
   checkHashToken();
 
-  // Check Supabase Auth session first
+  // Quick check: if no token and no Supabase session likely, show login fast
+  var token = getToken();
+
+  // Try Supabase Auth session with 3s timeout
   if (sb) {
     try {
-      var result = await sb.auth.getSession();
-      if (result.data && result.data.session) {
+      var sessionPromise = sb.auth.getSession();
+      var timeoutPromise = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 3000); });
+      var result = await Promise.race([sessionPromise, timeoutPromise]);
+      if (result && result.data && result.data.session) {
         localStorage.setItem('mb_pais_token', result.data.session.access_token);
         state.user = result.data.session.user || {};
         showApp();
         await loadChildData();
         return;
       }
-    } catch(e) { /* fallback below */ }
+    } catch(e) { /* timeout or error — fallback below */ }
   }
 
   // Fallback: check token in localStorage
-  if (!getToken()) { showLogin(); return; }
+  if (!token) { showLogin(); return; }
 
+  // Has token, try to use it
   showApp();
-  await loadChildData();
+  try {
+    await loadChildData();
+  } catch(e) {
+    // Token invalid, go back to login
+    localStorage.removeItem('mb_pais_token');
+    showLogin();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', boot);
