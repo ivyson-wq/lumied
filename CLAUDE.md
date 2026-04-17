@@ -164,10 +164,10 @@ Templates HTML com variáveis → contrato preenchido → envio família → ver
 
 | Tier | Preço/mês (anual) | Alunos | Módulos | WhatsApp | Posicionamento |
 |------|-------------------|--------|---------|----------|----------------|
-| **Starter** | R$ 790 (632) | 200 | 12 básicos | — | Substituto Sponte/Escolaweb |
-| Start | R$ 1.200 (960) | 300 | 15 | — | Gestão completa |
-| Evolução | R$ 1.800 (1.440) | 800 | 23 | 500 msgs/mês | IA + WhatsApp + Compliance |
-| Prestige | R$ 3.300 (2.640) | Ilimitado | Todos | 2.000 msgs/mês | Rede + RH + Face ID |
+| **Starter** | R$ 497 (397) | 200 | 12 básicos | — | Substituto Sponte/Escolaweb |
+| Start | R$ 897 (697) | 300 | 15 | — | Gestão completa |
+| Evolução | R$ 1.297 (997) | 800 | 23 | 500 msgs/mês | IA + WhatsApp + Compliance |
+| Prestige | R$ 2.497 (1.997) | Ilimitado | Todos | 2.000 msgs/mês | Rede + RH + Face ID |
 
 Landing comparativo: `/vs/escolaweb/` — competir head-to-head contra Escolaweb.
 

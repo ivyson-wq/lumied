@@ -2019,7 +2019,7 @@ router.on("cron_followup_demo", async (ctx) => {
           <h2 style="font-size:20px;margin:0 0 16px;">Pronto para dar o pr\u00f3ximo passo?</h2>
           <p style="font-size:14px;color:#475569;line-height:1.7;">Com base na nossa conversa, o <strong>plano Evolu\u00e7\u00e3o</strong> parece ideal para ${lead.nome_escola || "sua escola"}:</p>
           <div style="background:#F0EDFF;border-radius:12px;padding:20px;margin:20px 0;">
-            <p style="font-size:24px;font-weight:800;color:#6C63FF;margin:0;">R$ 1.440<span style="font-size:14px;font-weight:400;color:#475569;">/m\u00eas (anual)</span></p>
+            <p style="font-size:24px;font-weight:800;color:#6C63FF;margin:0;">R$ 997<span style="font-size:14px;font-weight:400;color:#475569;">/m\u00eas (anual)</span></p>
             <p style="font-size:13px;color:#475569;margin:8px 0 0;">23 m\u00f3dulos \u00b7 at\u00e9 800 alunos \u00b7 WhatsApp 500 msgs/m\u00eas \u00b7 IA inclusa</p>
           </div>
           <p style="font-size:14px;color:#475569;">Implanta\u00e7\u00e3o em 7-15 dias \u00fateis, com migra\u00e7\u00e3o de dados e treinamento inclu\u00eddo.</p>
