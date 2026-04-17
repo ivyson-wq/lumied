@@ -3031,7 +3031,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       const itens = r.itens || [];
       const statusLbl = {pendente:'⏳ Pendente', aprovado:'✅ Aprovado', rejeitado:'❌ Rejeitado'}[r.status] || r.status;
       const data = new Date(r.criado_em).toLocaleDateString('pt-BR');
-      const turma = esc(r.alm_turmas?.nome || '—');
+      const turma = esc(r.series?.nome || '—');
       const nota = r.nota_gerente ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">💬 ${esc(r.nota_gerente)}</div>` : '';
       const cancelBtn = r.status === 'pendente'
         ? `<button onclick="almCancelarReq('${r.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>` : '';

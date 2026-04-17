@@ -26,21 +26,21 @@ async function criarNotif(sb: any, portal: string, destinatario: string, titulo:
 // ── Verificação de horário de acesso ────────────────────────
 async function verificarHorarioAcesso(sb: ReturnType<typeof createClient>, professoraId: string): Promise<{ permitido: boolean; mensagem?: string }> {
   const now = new Date()
-  // Usa horário de Brasília (UTC-3)
   const brNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
-  const diaSemana = brNow.getDay() // 0=domingo
+  const diaSemana = brNow.getDay()
   const { data: regras } = await sb
     .from('professora_horario_acesso').select('dia_semana, hora_inicio, hora_fim, ativo')
     .eq('professora_id', professoraId).eq('ativo', true)
-  // Se não há regras configuradas, acesso é livre
   if (!regras || regras.length === 0) return { permitido: true }
   const regraHoje = regras.find((r: any) => r.dia_semana === diaSemana)
   if (!regraHoje) {
     return { permitido: false, mensagem: 'Acesso não permitido neste dia da semana.' }
   }
+  if (!regraHoje.hora_inicio || !regraHoje.hora_fim) return { permitido: true }
   const horaAtual = brNow.getHours() * 60 + brNow.getMinutes()
   const [hi, mi] = regraHoje.hora_inicio.split(':').map(Number)
   const [hf, mf] = regraHoje.hora_fim.split(':').map(Number)
+  if (isNaN(hi) || isNaN(mi) || isNaN(hf) || isNaN(mf)) return { permitido: true }
   const inicio = hi * 60 + mi
   const fim = hf * 60 + mf
   if (horaAtual < inicio || horaAtual > fim) {
@@ -52,13 +52,14 @@ async function verificarHorarioAcesso(sb: ReturnType<typeof createClient>, profe
 // ── Session validators ──────────────────────────────────────
 async function getProfessora(sb: ReturnType<typeof createClient>, token: string) {
   if (!token) return null
+  const PROF_FIELDS = 'id, nome, email, escola_id'
   // Tenta sessão legada (professora_sessoes)
   const { data: sessao } = await sb
     .from('professora_sessoes').select('professora_id, expira_em')
     .eq('token', token).maybeSingle()
   if (sessao && new Date(sessao.expira_em) >= new Date()) {
     const { data } = await sb
-      .from('professoras').select('id, nome, email, escola_id')
+      .from('professoras').select(PROF_FIELDS)
       .eq('id', sessao.professora_id).maybeSingle()
     if (data) return data
   }
@@ -69,12 +70,12 @@ async function getProfessora(sb: ReturnType<typeof createClient>, token: string)
   if (roles.includes('professora') || roles.includes('professora_assistente')) {
     // Busca dados da professora pelo mesmo ID ou email
     const { data: prof } = await sb
-      .from('professoras').select('id, nome, email, escola_id')
+      .from('professoras').select(PROF_FIELDS)
       .eq('id', user.id).maybeSingle()
     if (prof) return prof
     // Fallback por email
     const { data: profByEmail } = await sb
-      .from('professoras').select('id, nome, email, escola_id')
+      .from('professoras').select(PROF_FIELDS)
       .eq('email', user.email).maybeSingle()
     if (profByEmail) return profByEmail
     // Cria registro na tabela professoras se não existe (auto-provision escopado por escola)
@@ -274,6 +275,8 @@ async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string |
 Deno.serve(async (req) => {
   CORS = getCorsHeaders(req)
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+
+  try {
 
   // Rate limiting
   const clientIp = getClientIP(req)
@@ -1812,9 +1815,9 @@ Deno.serve(async (req) => {
     if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
 
     if (action === 'alm_catalogo') {
-      const { data } = await sb
-        .from('alm_insumos').select('*')
-        .eq('ativo', true).order('categoria').order('nome')
+      let q = sb.from('alm_insumos').select('*').eq('ativo', true)
+      if ((prof as any).escola_id) q = q.eq('escola_id', (prof as any).escola_id)
+      const { data } = await q.order('categoria').order('nome')
       return json({ data: data ?? [] })
     }
 
@@ -1869,7 +1872,7 @@ Deno.serve(async (req) => {
       const total = itens.reduce((s: number, it: any) =>
         s + (parseFloat(it.qty_solicitado) * parseFloat(it.preco_unit || 0)), 0)
       const { data: nova, error: err } = await sb.from('alm_requisicoes').insert({
-        professora_id: prof.id, turma_id, mes, itens, total, observacao,
+        professora_id: prof.id, turma_id, mes, itens, total, observacao, escola_id: (prof as any).escola_id,
       }).select('id').single()
       if (err) return json({ error: err.message }, 400)
       return json({ ok: true, id: nova.id })
@@ -3171,4 +3174,9 @@ Deno.serve(async (req) => {
   }
 
   return json({ error: 'Ação desconhecida' }, 400)
+
+  } catch (e) {
+    console.error('[diplomas] Unhandled error:', (e as Error).message, (e as Error).stack)
+    return json({ error: 'Erro interno do servidor. Tente novamente.', code: 'INTERNAL_ERROR' }, 500)
+  }
 })
