@@ -978,9 +978,11 @@ function renderDayInfo() {
 
 // ── Navigation to legacy portal ──
 function goLegacy(tab) {
-  // Store desired tab so the legacy portal can open it after login
   sessionStorage.setItem('pais_goto_tab', tab);
-  window.location.href = 'familia-legacy.html';
+  // If we're on familia-v2.html (sandbox), go to familia.html (original)
+  // If we're on familia.html (post-rollout, v2 is default), go to familia-legacy.html
+  var onV2Page = location.pathname.indexOf('v2') > -1;
+  window.location.href = onV2Page ? 'familia.html' : 'familia-legacy.html';
 }
 
 // ── Tab bar ──
