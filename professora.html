@@ -1734,8 +1734,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
           }
           label.style.display = hasVisible ? '' : 'none';
         });
+        // Preenche barra inferior: promove itens do menu "Mais" para slots vazios
+        rebuildBottomNav();
       }
     } catch(e) { console.warn('Feature gating não disponível:', e); }
+  }
+
+  function rebuildBottomNav() {
+    var nav = document.getElementById('profBottomNav');
+    var moreMenu = document.getElementById('profMoreMenu');
+    if (!nav || !moreMenu) return;
+    // Coleta slots da barra (exclui Dashboard e ☰ Mais)
+    var slots = Array.from(nav.querySelectorAll('.pbnav-item[data-modulo]'));
+    var hiddenSlots = slots.filter(function(s) { return s.style.display === 'none'; });
+    if (!hiddenSlots.length) return;
+    // Coleta itens habilitados do menu Mais (ordem do grid)
+    var moreItems = Array.from(moreMenu.querySelectorAll('.pbnav-more-item[data-modulo]'));
+    var enabledMore = moreItems.filter(function(m) { return m.style.display !== 'none'; });
+    // Promove os primeiros habilitados do "Mais" para os slots vazios
+    hiddenSlots.forEach(function(slot) {
+      var candidate = enabledMore.shift();
+      if (!candidate) return;
+      var page = candidate.getAttribute('onclick').match(/switchProfPage\('([^']+)'/);
+      if (!page) return;
+      var icon = candidate.querySelector('span');
+      slot.setAttribute('onclick', "switchProfPage('" + page[1] + "',this)");
+      slot.setAttribute('data-page', page[1]);
+      slot.setAttribute('data-modulo', candidate.dataset.modulo);
+      slot.querySelector('.pbnav-icon').textContent = icon ? icon.textContent : '📋';
+      slot.querySelector('.pbnav-label').textContent = candidate.textContent.trim();
+      slot.style.display = '';
+      candidate.style.display = 'none';
+    });
   }
 
   // ── Módulos config (gerente only) ──
