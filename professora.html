@@ -2100,17 +2100,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   // ── DATA ──────────────────────────────────────────────────
   async function loadAll() {
     const m = window._enabledModules || new Set();
-    // Só carrega dados de módulos habilitados
+    // Só carrega dados de módulos habilitados — cada task com catch para não bloquear
+    const safe = (fn) => Promise.resolve().then(fn).catch(e => console.warn('[loadAll]', e));
     const tasks = [];
-    if (m.has('diplomas')) tasks.push(loadRanking(), loadMeusDiplomas());
-    if (m.has('atestados')) tasks.push(loadMeusAtestados());
-    if (m.has('pdi')) tasks.push(loadMeuPdi());
-    if (m.has('pickup')) tasks.push(Promise.resolve().then(() => initPickupPanel()));
-    if (m.has('almoxarifado')) tasks.push(Promise.resolve().then(() => almLoadAll()));
-    if (m.has('manutencao')) tasks.push(Promise.resolve().then(() => loadMeusManut()));
-    if (m.has('achados')) tasks.push(Promise.resolve().then(() => loadAchados()));
-    if (m.has('impressoes')) tasks.push(Promise.resolve().then(() => loadImpressoes()));
-    tasks.push(loadNotificacoes());
+    if (m.has('diplomas')) { tasks.push(safe(loadRanking)); tasks.push(safe(loadMeusDiplomas)); }
+    if (m.has('atestados')) tasks.push(safe(loadMeusAtestados));
+    if (m.has('pdi')) tasks.push(safe(loadMeuPdi));
+    if (m.has('pickup')) tasks.push(safe(initPickupPanel));
+    if (m.has('almoxarifado')) tasks.push(safe(almLoadAll));
+    if (m.has('manutencao')) tasks.push(safe(loadMeusManut));
+    if (m.has('achados')) tasks.push(safe(loadAchados));
+    if (m.has('impressoes')) tasks.push(safe(loadImpressoes));
+    tasks.push(safe(loadNotificacoes));
     await Promise.all(tasks);
     loadDashboardProf();
   }
