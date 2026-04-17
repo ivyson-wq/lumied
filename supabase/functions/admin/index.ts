@@ -52,6 +52,46 @@ const setupSchema: Schema = { nome: { required: true, type: 'string', minLength:
 const idSchema: Schema = { id: { required: true, type: 'uuid' } };
 const escolaIdSchema: Schema = { escola_id: { required: true, type: 'uuid' } };
 
+// ═══ EMAIL LAYOUT ═══
+const LOGO_URL = "https://lumied.com.br/lumied-logo.png";
+const BRAND_COLOR = "#6C63FF";
+const BRAND_GRADIENT = "linear-gradient(135deg,#6C63FF,#3B82F6)";
+
+function emailLayout(body: string, options?: { preheader?: string }): string {
+  const preheader = options?.preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${options.preheader}</div>` : "";
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+${preheader}
+<table role="presentation" width="100%" style="background:#F3F4F6;"><tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="600" style="max-width:600px;width:100%;">
+  <!-- HEADER -->
+  <tr><td style="background:${BRAND_GRADIENT};padding:24px 32px;border-radius:16px 16px 0 0;text-align:center;">
+    <img src="${LOGO_URL}" alt="Lumied" width="120" style="display:inline-block;height:auto;max-width:120px;" />
+  </td></tr>
+  <!-- BODY -->
+  <tr><td style="background:#FFFFFF;padding:32px;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
+    ${body}
+  </td></tr>
+  <!-- FOOTER -->
+  <tr><td style="background:#0F172A;padding:24px 32px;border-radius:0 0 16px 16px;text-align:center;">
+    <img src="${LOGO_URL}" alt="Lumied" width="80" style="display:inline-block;height:auto;max-width:80px;margin-bottom:12px;opacity:.8;" /><br>
+    <p style="font-size:13px;color:#94A3B8;margin:0 0 8px;line-height:1.6;">
+      <a href="https://lumied.com.br" style="color:#38BDF8;text-decoration:none;">lumied.com.br</a> &middot;
+      <a href="https://lumied.com.br/blog/" style="color:#38BDF8;text-decoration:none;">Blog</a> &middot;
+      <a href="https://www.instagram.com/lumi.ed/" style="color:#38BDF8;text-decoration:none;">Instagram</a> &middot;
+      <a href="https://www.linkedin.com/company/lumied/" style="color:#38BDF8;text-decoration:none;">LinkedIn</a>
+    </p>
+    <p style="font-size:11px;color:#64748B;margin:0;line-height:1.5;">
+      contato@lumied.com.br<br>
+      Lumied Tecnologia &middot; Caxias do Sul, RS &middot; Brasil<br>
+      <a href="https://lumied.com.br/privacidade/" style="color:#64748B;text-decoration:underline;">Pol\u00edtica de Privacidade</a>
+    </p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
 // ═══ ROUTER ═══
 const router = new Router("admin");
 router.useGlobal(rateLimit());
@@ -83,18 +123,20 @@ router.on("lead_submit", rateLimit({ windowMs: 60000, maxRequests: 5 }), async (
         body: JSON.stringify({
           from: "Lumied Leads <noreply@lumied.com.br>",
           to: ["ivyson@gmail.com"],
-          subject: `🔔 Novo Lead: ${nome_escola}`,
-          html: `<div style="font-family:sans-serif;max-width:600px;">
-            <h2 style="color:#6C63FF;">Novo Lead Comercial</h2>
-            <table style="width:100%;border-collapse:collapse;">
-              <tr><td style="padding:8px;font-weight:bold;">Escola:</td><td style="padding:8px;">${nome_escola}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Email:</td><td style="padding:8px;">${email}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">WhatsApp:</td><td style="padding:8px;">${telefone || '—'}</td></tr>
-              ${mensagem ? `<tr><td style="padding:8px;font-weight:bold;">Mensagem:</td><td style="padding:8px;">${mensagem}</td></tr>` : ''}
-              <tr><td style="padding:8px;font-weight:bold;">Origem:</td><td style="padding:8px;">${utm_source || 'site'}</td></tr>
+          subject: `Novo Lead: ${nome_escola}`,
+          html: emailLayout(`
+            <h2 style="font-size:20px;color:#1E1B4B;margin:0 0 20px;">Novo Lead Comercial</h2>
+            <table style="width:100%;border-collapse:collapse;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;">
+              <tr><td style="padding:12px 16px;font-weight:bold;background:#F9FAFB;width:140px;">Escola:</td><td style="padding:12px 16px;">${nome_escola}</td></tr>
+              <tr><td style="padding:12px 16px;font-weight:bold;background:#F9FAFB;">Email:</td><td style="padding:12px 16px;">${email}</td></tr>
+              <tr><td style="padding:12px 16px;font-weight:bold;background:#F9FAFB;">WhatsApp:</td><td style="padding:12px 16px;">${telefone || '\u2014'}</td></tr>
+              ${mensagem ? `<tr><td style="padding:12px 16px;font-weight:bold;background:#F9FAFB;">Mensagem:</td><td style="padding:12px 16px;">${mensagem}</td></tr>` : ''}
+              <tr><td style="padding:12px 16px;font-weight:bold;background:#F9FAFB;">Origem:</td><td style="padding:12px 16px;">${utm_source || 'site'}</td></tr>
             </table>
-            <p style="margin-top:16px;"><a href="https://admin.lumied.com.br" style="background:#6C63FF;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Abrir Painel Central</a></p>
-          </div>`,
+            <div style="text-align:center;margin-top:24px;">
+              <a href="https://admin.lumied.com.br" style="display:inline-block;background:${BRAND_GRADIENT};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Abrir Painel Central \u2192</a>
+            </div>
+          `, { preheader: `Novo lead: ${nome_escola} - ${email}` }),
         }),
         signal: AbortSignal.timeout(8000),
       });
@@ -157,41 +199,31 @@ router.on("newsletter_subscribe", rateLimit({ windowMs: 60000, maxRequests: 5 })
             from: "Lumied Blog <blog@lumied.com.br>",
             to: [cleanEmail],
             subject: "Bem-vindo ao blog Lumied + Checklist Compliance 2026",
-            html: `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
-              <div style="background:linear-gradient(135deg,#6C63FF,#3B82F6);padding:32px;border-radius:16px 16px 0 0;text-align:center;">
-                <h1 style="color:#fff;font-size:24px;margin:0;">Bem-vindo ao Blog Lumied!</h1>
+            html: emailLayout(`
+              <h2 style="font-size:22px;color:#1E1B4B;margin:0 0 16px;text-align:center;">Bem-vindo ao Blog Lumied!</h2>
+              <p style="font-size:15px;line-height:1.7;color:#475569;">Obrigado por se inscrever! A partir de agora voc\u00ea receber\u00e1 conte\u00fados pr\u00e1ticos sobre gest\u00e3o escolar, compliance e EdTech.</p>
+              <div style="background:#F0EDFF;border:1px solid #D4CAFE;border-radius:12px;padding:24px;margin:24px 0;">
+                <h3 style="font-size:18px;margin:0 0 12px;color:#1E1B4B;">\u{1F4CB} Checklist Compliance Escolar 2026</h3>
+                <p style="font-size:14px;color:#475569;margin:0 0 16px;">Os 6 itens obrigat\u00f3rios que toda escola precisa cumprir:</p>
+                <ol style="font-size:14px;color:#1E1B4B;line-height:2.2;padding-left:20px;margin:0;">
+                  <li><strong>Ponto CLT</strong> \u2014 Registro eletr\u00f4nico, hora extra 50%/100%, intervalo intrajornada</li>
+                  <li><strong>LGPD</strong> \u2014 Consentimento, tratamento de dados de menores, DPO</li>
+                  <li><strong>eSocial</strong> \u2014 Folha eletr\u00f4nica, eventos trabalhistas em tempo real</li>
+                  <li><strong>AVCB</strong> \u2014 Corpo de Bombeiros, Vigil\u00e2ncia Sanit\u00e1ria, inspe\u00e7\u00f5es</li>
+                  <li><strong>MEC</strong> \u2014 Censo Escolar, autoriza\u00e7\u00e3o de funcionamento, PPP</li>
+                  <li><strong>Contratos</strong> \u2014 Assinatura eletr\u00f4nica v\u00e1lida (Lei 14.063/2020)</li>
+                </ol>
               </div>
-              <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
-                <p style="font-size:15px;line-height:1.7;color:#475569;">Obrigado por se inscrever! A partir de agora voc\u00ea receber\u00e1 conte\u00fados pr\u00e1ticos sobre gest\u00e3o escolar, compliance e EdTech.</p>
-
-                <div style="background:#F0EDFF;border:1px solid #D4CAFE;border-radius:12px;padding:24px;margin:24px 0;">
-                  <h2 style="font-size:18px;margin:0 0 12px;color:#1E1B4B;">\u{1F4CB} Checklist Compliance Escolar 2026</h2>
-                  <p style="font-size:14px;color:#475569;margin:0 0 16px;">Os 6 itens obrigat\u00f3rios que toda escola precisa cumprir:</p>
-                  <ol style="font-size:14px;color:#1E1B4B;line-height:2.2;padding-left:20px;margin:0;">
-                    <li><strong>Ponto CLT</strong> \u2014 Registro eletr\u00f4nico, hora extra 50%/100%, intervalo intrajornada</li>
-                    <li><strong>LGPD</strong> \u2014 Consentimento, tratamento de dados de menores, DPO</li>
-                    <li><strong>eSocial</strong> \u2014 Folha eletr\u00f4nica, eventos trabalhistas em tempo real</li>
-                    <li><strong>AVCB</strong> \u2014 Corpo de Bombeiros, Vigil\u00e2ncia Sanit\u00e1ria, inspe\u00e7\u00f5es</li>
-                    <li><strong>MEC</strong> \u2014 Censo Escolar, autoriza\u00e7\u00e3o de funcionamento, PPP</li>
-                    <li><strong>Contratos</strong> \u2014 Assinatura eletr\u00f4nica v\u00e1lida (Lei 14.063/2020)</li>
-                  </ol>
-                </div>
-
-                <h3 style="font-size:16px;color:#1E1B4B;margin:24px 0 12px;">Artigos mais lidos:</h3>
-                <ul style="list-style:none;padding:0;margin:0;">
-                  <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/compliance-escolar/" style="color:#6C63FF;font-weight:600;text-decoration:none;">Compliance Escolar 2026: Guia Completo \u2192</a></li>
-                  <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/inadimplencia-escolar/" style="color:#6C63FF;font-weight:600;text-decoration:none;">Inadimpl\u00eancia Escolar: Como Reduzir 40% em 90 Dias \u2192</a></li>
-                  <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/lgpd-escola-guia-definitivo/" style="color:#6C63FF;font-weight:600;text-decoration:none;">LGPD na Escola: Guia Definitivo \u2192</a></li>
-                </ul>
-
-                <div style="text-align:center;margin-top:28px;">
-                  <a href="https://lumied.com.br/blog/" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Ver todos os artigos \u2192</a>
-                </div>
-
-                <p style="font-size:12px;color:#94A3B8;margin-top:28px;text-align:center;">Voc\u00ea recebeu este email porque se inscreveu no blog do Lumied.<br>
-                <a href="https://lumied.com.br" style="color:#6C63FF;">lumied.com.br</a></p>
+              <h3 style="font-size:16px;color:#1E1B4B;margin:24px 0 12px;">Artigos mais lidos:</h3>
+              <ul style="list-style:none;padding:0;margin:0;">
+                <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/compliance-escolar/" style="color:${BRAND_COLOR};font-weight:600;text-decoration:none;">Compliance Escolar 2026: Guia Completo \u2192</a></li>
+                <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/inadimplencia-escolar/" style="color:${BRAND_COLOR};font-weight:600;text-decoration:none;">Inadimpl\u00eancia Escolar: Como Reduzir 40% em 90 Dias \u2192</a></li>
+                <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/lgpd-escola-guia-definitivo/" style="color:${BRAND_COLOR};font-weight:600;text-decoration:none;">LGPD na Escola: Guia Definitivo \u2192</a></li>
+              </ul>
+              <div style="text-align:center;margin-top:28px;">
+                <a href="https://lumied.com.br/blog/" style="display:inline-block;padding:12px 28px;background:${BRAND_GRADIENT};color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Ver todos os artigos \u2192</a>
               </div>
-            </div>`,
+            `, { preheader: "Checklist Compliance 2026 + artigos mais lidos" }),
           }),
           signal: AbortSignal.timeout(8000),
         });
@@ -1824,31 +1856,24 @@ router.on("cron_reativar_leads", async (ctx) => {
         body: JSON.stringify({
           from: "Lumied <contato@lumied.com.br>",
           to: [lead.email],
-          subject: `${lead.nome_escola || "Sua escola"} — veja o que mudou para a Maple Bear em 90 dias`,
-          html: `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
-            <div style="background:linear-gradient(135deg,#6C63FF,#3B82F6);padding:32px;border-radius:16px 16px 0 0;text-align:center;">
-              <h1 style="color:#fff;font-size:22px;margin:0;">Ainda pensando?</h1>
-              <p style="color:rgba(255,255,255,.85);font-size:14px;margin:8px 0 0;">Veja o que aconteceu com uma escola que deu o passo.</p>
+          subject: `${lead.nome_escola || "Sua escola"} \u2014 veja o que mudou para a Maple Bear em 90 dias`,
+          html: emailLayout(`
+            <h2 style="font-size:22px;color:#1E1B4B;margin:0 0 8px;text-align:center;">Ainda pensando?</h2>
+            <p style="font-size:14px;color:#475569;text-align:center;margin:0 0 24px;">Veja o que aconteceu com uma escola que deu o passo.</p>
+            <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:20px;margin-bottom:24px;">
+              <h3 style="font-size:16px;color:#166534;margin:0 0 12px;">Maple Bear Caxias do Sul \u2014 90 dias com Lumied</h3>
+              <ul style="list-style:none;padding:0;margin:0;font-size:14px;color:#1E1B4B;line-height:2;">
+                <li>\u2705 Inadimpl\u00eancia: <strong>14% \u2192 8,3%</strong> (-40%)</li>
+                <li>\u2705 Tempo economizado: <strong>12h/semana</strong></li>
+                <li>\u2705 Receita recuperada: <strong>R$ 31k/m\u00eas</strong></li>
+                <li>\u2705 Tempo de resposta: <strong>4h \u2192 8min</strong></li>
+              </ul>
             </div>
-            <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
-              <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:20px;margin-bottom:24px;">
-                <h3 style="font-size:16px;color:#166534;margin:0 0 12px;">Maple Bear Caxias do Sul — 90 dias com Lumied</h3>
-                <ul style="list-style:none;padding:0;margin:0;font-size:14px;color:#1E1B4B;line-height:2;">
-                  <li>\u2705 Inadimpl\u00eancia: <strong>14% \u2192 8,3%</strong> (-40%)</li>
-                  <li>\u2705 Tempo economizado: <strong>12h/semana</strong></li>
-                  <li>\u2705 Receita recuperada: <strong>R$ 31k/m\u00eas</strong></li>
-                  <li>\u2705 Tempo de resposta: <strong>4h \u2192 8min</strong></li>
-                </ul>
-              </div>
-              <p style="font-size:14px;color:#475569;line-height:1.7;">Se ${lead.nome_escola || "sua escola"} est\u00e1 enfrentando desafios semelhantes, podemos mostrar exatamente como o Lumied resolve \u2014 em uma demo de 20 minutos, sem compromisso.</p>
-              <div style="text-align:center;margin-top:24px;">
-                <a href="https://lumied.com.br/demo/?utm_source=reativacao&utm_medium=email&utm_campaign=lead_frio" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;">Agendar Demo Gratuita \u2192</a>
-              </div>
-              <p style="font-size:12px;color:#94A3B8;margin-top:24px;text-align:center;">
-                <a href="https://lumied.com.br" style="color:#6C63FF;">lumied.com.br</a>
-              </p>
+            <p style="font-size:14px;color:#475569;line-height:1.7;">Se ${lead.nome_escola || "sua escola"} est\u00e1 enfrentando desafios semelhantes, podemos mostrar exatamente como o Lumied resolve \u2014 em uma demo de 20 minutos, sem compromisso.</p>
+            <div style="text-align:center;margin-top:24px;">
+              <a href="https://lumied.com.br/demo/?utm_source=reativacao&utm_medium=email&utm_campaign=lead_frio" style="display:inline-block;padding:14px 32px;background:${BRAND_GRADIENT};color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;">Agendar Demo Gratuita \u2192</a>
             </div>
-          </div>`,
+          `, { preheader: "Maple Bear reduziu inadimpl\u00eancia em 40% em 90 dias. Sua escola pode ser a pr\u00f3xima." }),
         }),
         signal: AbortSignal.timeout(8000),
       });
@@ -1893,20 +1918,14 @@ router.on("cron_newsletter_artigo", async (ctx) => {
           from: "Lumied Blog <blog@lumied.com.br>",
           to: email,
           subject: `Novo artigo: ${titulo}`,
-          html: `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
-            <div style="background:linear-gradient(135deg,#6C63FF,#3B82F6);padding:24px 32px;border-radius:16px 16px 0 0;">
-              <p style="color:rgba(255,255,255,.7);font-size:12px;margin:0;text-transform:uppercase;letter-spacing:1px;">Novo no blog \u00b7 ${categoria || "Gest\u00e3o Escolar"}</p>
+          html: emailLayout(`
+            <p style="font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:${BRAND_COLOR};font-weight:700;margin:0 0 8px;">Novo no blog \u00b7 ${categoria || "Gest\u00e3o Escolar"}</p>
+            <h1 style="font-size:22px;line-height:1.3;margin:0 0 12px;color:#1E1B4B;">${titulo}</h1>
+            <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 24px;">${excerpt || "Leia o artigo completo no blog do Lumied."}</p>
+            <div style="text-align:center;">
+              <a href="${url}?utm_source=newsletter&utm_medium=email&utm_campaign=novo_artigo" style="display:inline-block;padding:12px 28px;background:${BRAND_GRADIENT};color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Ler artigo completo \u2192</a>
             </div>
-            <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
-              <h1 style="font-size:22px;line-height:1.3;margin:0 0 12px;">${titulo}</h1>
-              <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 24px;">${excerpt || "Leia o artigo completo no blog do Lumied."}</p>
-              <a href="${url}?utm_source=newsletter&utm_medium=email&utm_campaign=novo_artigo" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Ler artigo completo \u2192</a>
-              <p style="font-size:12px;color:#94A3B8;margin-top:28px;text-align:center;">
-                Voc\u00ea recebeu este email por estar inscrito no blog do Lumied.<br>
-                <a href="https://lumied.com.br/blog/" style="color:#6C63FF;">lumied.com.br/blog</a>
-              </p>
-            </div>
-          </div>`,
+          `, { preheader: titulo }),
         }))),
         signal: AbortSignal.timeout(15000),
       });
@@ -1995,58 +2014,52 @@ router.on("cron_followup_demo", async (ctx) => {
     if (daysSince >= 1 && passo < 1) {
       nextPasso = 1;
       subject = `Obrigado pela demo, ${lead.nome_escola || "equipe"}!`;
-      html = `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
-        <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-radius:16px;">
-          <h2 style="font-size:20px;margin:0 0 16px;">Obrigado por assistir a demo!</h2>
-          <p style="font-size:14px;color:#475569;line-height:1.7;">Foi \u00f3timo conversar sobre as necessidades de ${lead.nome_escola || "sua escola"}. Aqui est\u00e1 um resumo do que vimos:</p>
-          <ul style="font-size:14px;color:#1E1B4B;line-height:2;">
-            <li>23 m\u00f3dulos integrados em uma \u00fanica plataforma</li>
-            <li>IA que analisa os dados da escola e sugere a\u00e7\u00f5es</li>
-            <li>WhatsApp oficial integrado</li>
-            <li>Compliance CLT e LGPD automatizado</li>
-          </ul>
-          <p style="font-size:14px;color:#475569;">Alguma d\u00favida? Responda este email ou fale conosco no WhatsApp.</p>
-          <div style="text-align:center;margin-top:24px;">
-            <a href="https://lumied.com.br/#pricing" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;">Ver planos e pre\u00e7os \u2192</a>
-          </div>
+      html = emailLayout(`
+        <h2 style="font-size:20px;color:#1E1B4B;margin:0 0 16px;">Obrigado por assistir a demo!</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.7;">Foi \u00f3timo conversar sobre as necessidades de ${lead.nome_escola || "sua escola"}. Aqui est\u00e1 um resumo do que vimos:</p>
+        <ul style="font-size:14px;color:#1E1B4B;line-height:2;padding-left:20px;">
+          <li>23 m\u00f3dulos integrados em uma \u00fanica plataforma</li>
+          <li>IA que analisa os dados da escola e sugere a\u00e7\u00f5es</li>
+          <li>WhatsApp oficial integrado</li>
+          <li>Compliance CLT e LGPD automatizado</li>
+        </ul>
+        <p style="font-size:14px;color:#475569;">Alguma d\u00favida? Responda este email ou fale conosco no WhatsApp.</p>
+        <div style="text-align:center;margin-top:24px;">
+          <a href="https://lumied.com.br/#pricing" style="display:inline-block;padding:12px 28px;background:${BRAND_GRADIENT};color:#fff;border-radius:8px;font-weight:700;text-decoration:none;">Ver planos e pre\u00e7os \u2192</a>
         </div>
-      </div>`;
+      `, { preheader: "Resumo da demo + pr\u00f3ximos passos" });
     } else if (daysSince >= 3 && passo < 2) {
       nextPasso = 2;
       subject = `Proposta comercial para ${lead.nome_escola || "sua escola"}`;
-      html = `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
-        <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-radius:16px;">
-          <h2 style="font-size:20px;margin:0 0 16px;">Pronto para dar o pr\u00f3ximo passo?</h2>
-          <p style="font-size:14px;color:#475569;line-height:1.7;">Com base na nossa conversa, o <strong>plano Evolu\u00e7\u00e3o</strong> parece ideal para ${lead.nome_escola || "sua escola"}:</p>
-          <div style="background:#F0EDFF;border-radius:12px;padding:20px;margin:20px 0;">
-            <p style="font-size:24px;font-weight:800;color:#6C63FF;margin:0;">R$ 997<span style="font-size:14px;font-weight:400;color:#475569;">/m\u00eas (anual)</span></p>
-            <p style="font-size:13px;color:#475569;margin:8px 0 0;">23 m\u00f3dulos \u00b7 at\u00e9 800 alunos \u00b7 WhatsApp 500 msgs/m\u00eas \u00b7 IA inclusa</p>
-          </div>
-          <p style="font-size:14px;color:#475569;">Implanta\u00e7\u00e3o em 7-15 dias \u00fateis, com migra\u00e7\u00e3o de dados e treinamento inclu\u00eddo.</p>
-          <div style="text-align:center;margin-top:24px;">
-            <a href="https://lumied.com.br/#contact" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;">Come\u00e7ar agora \u2192</a>
-          </div>
+      html = emailLayout(`
+        <h2 style="font-size:20px;color:#1E1B4B;margin:0 0 16px;">Pronto para dar o pr\u00f3ximo passo?</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.7;">Com base na nossa conversa, o <strong>plano Evolu\u00e7\u00e3o</strong> parece ideal para ${lead.nome_escola || "sua escola"}:</p>
+        <div style="background:#F0EDFF;border-radius:12px;padding:20px;margin:20px 0;text-align:center;">
+          <p style="font-size:28px;font-weight:800;color:${BRAND_COLOR};margin:0;">R$ 997<span style="font-size:14px;font-weight:400;color:#475569;">/m\u00eas (anual)</span></p>
+          <p style="font-size:13px;color:#475569;margin:8px 0 0;">23 m\u00f3dulos \u00b7 at\u00e9 800 alunos \u00b7 WhatsApp 500 msgs/m\u00eas \u00b7 IA inclusa</p>
         </div>
-      </div>`;
+        <p style="font-size:14px;color:#475569;">Implanta\u00e7\u00e3o em 7-15 dias \u00fateis, com migra\u00e7\u00e3o de dados e treinamento inclu\u00eddo.</p>
+        <div style="text-align:center;margin-top:24px;">
+          <a href="https://lumied.com.br/#contact" style="display:inline-block;padding:12px 28px;background:${BRAND_GRADIENT};color:#fff;border-radius:8px;font-weight:700;text-decoration:none;">Come\u00e7ar agora \u2192</a>
+        </div>
+      `, { preheader: "Plano Evolu\u00e7\u00e3o: R$ 997/m\u00eas com IA + WhatsApp + Compliance" });
     } else if (daysSince >= 7 && passo < 3) {
       nextPasso = 3;
-      subject = `\u00daltima chance: condição especial para ${lead.nome_escola || "sua escola"}`;
-      html = `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
-        <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-radius:16px;">
-          <h2 style="font-size:20px;margin:0 0 16px;">Condi\u00e7\u00e3o especial expira em breve</h2>
-          <p style="font-size:14px;color:#475569;line-height:1.7;">Para escolas que agendam a implanta\u00e7\u00e3o esta semana, estamos oferecendo:</p>
-          <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:12px;padding:20px;margin:20px 0;">
-            <ul style="list-style:none;padding:0;margin:0;font-size:14px;color:#92400E;line-height:2;">
-              <li>\u2B50 <strong>1 m\u00eas gr\u00e1tis</strong> no plano escolhido</li>
-              <li>\u2B50 <strong>Migra\u00e7\u00e3o express</strong> (7 dias \u00fateis)</li>
-              <li>\u2B50 <strong>Treinamento extra</strong> (+1 sess\u00e3o individual)</li>
-            </ul>
-          </div>
-          <div style="text-align:center;margin-top:24px;">
-            <a href="https://lumied.com.br/demo/?utm_source=followup&utm_campaign=oferta_especial" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;">Garantir condi\u00e7\u00e3o especial \u2192</a>
-          </div>
+      subject = `\u00daltima chance: condi\u00e7\u00e3o especial para ${lead.nome_escola || "sua escola"}`;
+      html = emailLayout(`
+        <h2 style="font-size:20px;color:#1E1B4B;margin:0 0 16px;">Condi\u00e7\u00e3o especial expira em breve</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.7;">Para escolas que agendam a implanta\u00e7\u00e3o esta semana, estamos oferecendo:</p>
+        <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:12px;padding:20px;margin:20px 0;">
+          <ul style="list-style:none;padding:0;margin:0;font-size:14px;color:#92400E;line-height:2;">
+            <li>\u2B50 <strong>1 m\u00eas gr\u00e1tis</strong> no plano escolhido</li>
+            <li>\u2B50 <strong>Migra\u00e7\u00e3o express</strong> (7 dias \u00fateis)</li>
+            <li>\u2B50 <strong>Treinamento extra</strong> (+1 sess\u00e3o individual)</li>
+          </ul>
         </div>
-      </div>`;
+        <div style="text-align:center;margin-top:24px;">
+          <a href="https://lumied.com.br/demo/?utm_source=followup&utm_campaign=oferta_especial" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;">Garantir condi\u00e7\u00e3o especial \u2192</a>
+        </div>
+      `, { preheader: "1 m\u00eas gr\u00e1tis + migra\u00e7\u00e3o express \u2014 s\u00f3 esta semana" });
     } else {
       continue;
     }
