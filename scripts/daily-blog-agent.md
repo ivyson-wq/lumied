@@ -42,7 +42,7 @@ Crie `site/blog/<slug>/index.html` seguindo **exatamente** a estrutura dos artig
 - `article:published_time`, `article:modified_time`, `article:section`, `article:tag` x 3
 - Fontes Inter + Playfair Display via Google Fonts
 - **3 blocos JSON-LD**: `Article`, `BreadcrumbList`, `FAQPage` (com `faq_count` perguntas)
-- GA4: `<script async src="https://www.googletagmanager.com/gtag/js?id=G-QDFKQEVV4P"></script>` + config com `page_title` e `content_group: "Blog - <Categoria>"`
+- GA4: `<script src="/analytics.js" defer></script>` (detecta content_group automaticamente via `<meta property="article:section">`)
 
 **Body obrigatório:**
 - Header fixo no topo (copiar dos artigos existentes)
