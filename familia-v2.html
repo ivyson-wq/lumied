@@ -58,12 +58,14 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 
 /* ── Desktop: centralizar como app mobile ── */
 @media(min-width:600px){
-  #appScreen{max-width:430px;margin:0 auto;position:relative;box-shadow:0 0 60px rgba(26,20,19,.08);min-height:100dvh;border-left:1px solid var(--line);border-right:1px solid var(--line)}
-  body{background:linear-gradient(160deg,#f3ede5 0%,#fef9f3 50%,#f8f0ea 100%)}
-  .tab-bar{max-width:430px;left:50%;transform:translateX(-50%)}
+  body{background:#ece5dc !important}
+  #loginScreen{background:linear-gradient(160deg,#f3ede5 0%,#fef9f3 50%,#f8f0ea 100%) !important}
+  #appScreen{max-width:430px;margin-left:auto !important;margin-right:auto !important;box-shadow:-1px 0 40px rgba(26,20,19,.07),1px 0 40px rgba(26,20,19,.07);border-left:1px solid var(--line);border-right:1px solid var(--line);position:relative}
+  .tab-bar{max-width:430px;left:50% !important;right:auto !important;transform:translateX(-50%)}
   .toast{max-width:380px}
-  .sheet{max-width:430px;left:50%;transform:translateX(-50%) translateY(100%)}
-  .sheet-overlay.open .sheet{transform:translateX(-50%) translateY(0)}
+  .sheet-overlay{z-index:200}
+  .sheet{max-width:430px;margin:0 auto;left:0;right:0}
+  .sandbox-badge{right:calc(50% - 215px + 8px)}
 }
 
 /* ── Header ── */
@@ -729,8 +731,19 @@ function buildAgendaFromRaw(raw) {
 // ── Render ──
 function renderHeader() {
   var name = state.user ? state.user.nome : MOCK.user.nome;
-  var first = name.split(' ')[0];
-  document.getElementById('greetName').textContent = 'Olá, ' + first;
+  // If name looks like an email, try to get responsavel name from filhos
+  if (name && name.indexOf('@') > -1) {
+    var child = state.filhos && state.filhos[state.selected];
+    if (child && child.responsavel) {
+      name = child.responsavel;
+      state.user.nome = name;
+    } else {
+      // Extract name from email (before @, capitalize)
+      name = name.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    }
+  }
+  var first = name ? name.split(' ')[0] : '';
+  document.getElementById('greetName').textContent = 'Olá, ' + first + ' 👋';
   document.getElementById('headerDate').textContent = formatHeaderDate();
   document.getElementById('headerAvatar').textContent = initials(name);
 }
