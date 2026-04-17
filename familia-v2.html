@@ -422,9 +422,11 @@ async function loginEmailSenha() {
     if (result.data && result.data.session) {
       localStorage.setItem('mb_pais_token', result.data.session.access_token);
     }
-    state.user = result.data.user || { nome: email };
+    var u = result.data.user || {};
+    var meta = u.user_metadata || {};
+    state.user = { nome: meta.full_name || meta.name || email, email: u.email || email };
     showApp();
-    await loadChildData();
+    try { await loadChildData(); } catch(e) { renderAll(); }
   } catch(e) {
     errEl.textContent = 'Erro de conexão. Tente novamente.';
     errEl.style.display = 'block';
@@ -531,17 +533,19 @@ function showApp() {
 }
 
 // ── Data Fetching (with fallback) ──
-async function fetchSession() {
+async function fetchFilhos(email) {
   try {
-    var fetchPromise = api({ action: 'public_verify_session' });
-    var timeout = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 5000); });
-    var res = await Promise.race([fetchPromise, timeout]);
-    if (res && res.nome && res.filhos) return res;
-    if (res && res.user) return res;
-    throw new Error('bad session');
-  } catch(e) {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/familias?select=id,nome_responsavel,nome_aluno,serie,email&email=ilike.' + encodeURIComponent(email), {
+      headers: { 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }
+    });
+    var fams = await r.json();
+    if (fams && fams.length) {
+      return fams.map(function(f) {
+        return { id: f.id, nome: f.nome_aluno, turma: f.serie || 'Turma', serie: f.serie, foto_url: null, responsavel: f.nome_responsavel };
+      });
+    }
     return null;
-  }
+  } catch(e) { return null; }
 }
 
 async function fetchPresenca(alunoId) {
@@ -755,15 +759,29 @@ async function refreshData() {
 
 // ── Load child data (after login) ──
 async function loadChildData() {
-  var session = await fetchSession();
-  if (session && (session.filhos || session.nome)) {
-    state.user = session.user || session;
-    state.filhos = session.filhos || MOCK.filhos;
+  var email = '';
+  if (state.user && state.user.email) email = state.user.email;
+  if (!email && sb) {
+    try {
+      var s = await sb.auth.getUser();
+      if (s.data && s.data.user) {
+        email = s.data.user.email;
+        var meta = s.data.user.user_metadata || {};
+        state.user = { nome: meta.full_name || meta.name || email, email: email };
+      }
+    } catch(e) {}
+  }
+
+  // Fetch children from familias table
+  var filhos = email ? await fetchFilhos(email) : null;
+  if (filhos && filhos.length) {
+    state.filhos = filhos;
+    if (!state.user.nome || state.user.nome === email) {
+      state.user.nome = filhos[0].responsavel || email;
+    }
   } else {
-    state.user = state.user || MOCK.user;
     state.filhos = MOCK.filhos;
   }
-  if (state.filhos.length === 0) state.filhos = MOCK.filhos;
 
   var child = state.filhos[state.selected];
   var results = await Promise.all([
