@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="/sentry-init.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -172,11 +173,37 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
   <div class="login-card">
     <div class="login-logo"><i data-lucide="graduation-cap" style="width:24px;height:24px"></i></div>
     <h1 class="serif">Portal dos Pais</h1>
-    <p class="sub">Entre com seu e-mail para receber o link de acesso</p>
+    <p class="sub">Acesse com seu e-mail e senha</p>
+    <div id="loginErr" style="display:none;font-size:13px;color:#a00d24;padding:10px 12px;background:#fdf0f2;border-radius:10px;border:1px solid rgba(200,16,46,.15);margin-bottom:10px;"></div>
     <div class="login-form" id="loginForm">
       <input class="login-input" id="loginEmail" type="email" placeholder="seu@email.com" autocomplete="email" inputmode="email">
-      <button class="login-btn" id="loginBtn" onclick="sendMagicLink()">Enviar link</button>
+      <input class="login-input" id="loginSenha" type="password" placeholder="Sua senha" autocomplete="current-password" style="margin-top:10px">
+      <button class="login-btn" id="loginBtn" onclick="loginEmailSenha()">Entrar</button>
+      <div style="display:flex;justify-content:space-between;margin-top:10px">
+        <a href="#" onclick="toggleCadastro();return false" style="font-size:12px;color:var(--ink-3);text-decoration:none">Criar conta</a>
+        <a href="#" onclick="toggleMagicLink();return false" style="font-size:12px;color:var(--ink-3);text-decoration:none">Esqueci minha senha</a>
+      </div>
     </div>
+    <!-- Cadastro -->
+    <div id="cadastroWrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px">Criar Conta</div>
+      <input class="login-input" id="cadNome" type="text" placeholder="Nome completo" autocomplete="name">
+      <input class="login-input" id="cadEmail" type="email" placeholder="E-mail" autocomplete="email" style="margin-top:8px">
+      <input class="login-input" id="cadSenha" type="password" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" style="margin-top:8px">
+      <input class="login-input" id="cadSenhaConf" type="password" placeholder="Confirmar senha" style="margin-top:8px">
+      <div id="cadErr" style="display:none;font-size:12px;color:#a00d24;padding:8px;background:#fdf0f2;border-radius:8px;margin-top:8px"></div>
+      <button class="login-btn" id="btnCadastrar" onclick="cadastrarConta()" style="margin-top:10px">Criar Conta</button>
+      <button onclick="toggleCadastro()" style="width:100%;margin-top:6px;padding:10px;background:none;border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--ink-3);cursor:pointer;font-family:inherit">Voltar</button>
+    </div>
+    <!-- Magic Link -->
+    <div id="magicLinkWrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">Recuperar acesso</div>
+      <p style="font-size:12px;color:var(--ink-3);margin-bottom:10px">Enviaremos um link de acesso para seu e-mail.</p>
+      <input class="login-input" id="magicEmail" type="email" placeholder="seu@email.com" inputmode="email">
+      <button class="login-btn" id="magicBtn" onclick="sendMagicLink()" style="margin-top:10px">Enviar link</button>
+      <button onclick="toggleMagicLink()" style="width:100%;margin-top:6px;padding:10px;background:none;border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--ink-3);cursor:pointer;font-family:inherit">Voltar</button>
+    </div>
+    <!-- Sent state -->
     <div class="login-sent" id="loginSent">
       <div class="check-circle"><i data-lucide="check" style="width:24px;height:24px"></i></div>
       <h2>Link enviado!</h2>
@@ -368,17 +395,114 @@ function showToast(msg) {
   toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2200);
 }
 
-// ── Login Flow ──
-async function sendMagicLink() {
+// ── Supabase Auth Client ──
+var sb = (typeof supabase !== 'undefined' && supabase.createClient)
+  ? supabase.createClient(SUPABASE_URL, ANON)
+  : null;
+
+// ── Login with Email + Password ──
+async function loginEmailSenha() {
   var email = document.getElementById('loginEmail').value.trim();
-  if (!email) return;
+  var senha = document.getElementById('loginSenha').value;
+  var errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+  if (!email || !senha) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display = 'block'; return; }
   var btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  try {
+    if (!sb) throw new Error('Supabase not loaded');
+    var result = await sb.auth.signInWithPassword({ email: email, password: senha });
+    if (result.error) {
+      errEl.textContent = result.error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : result.error.message;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Entrar';
+      return;
+    }
+    // Store session token for API calls
+    if (result.data && result.data.session) {
+      localStorage.setItem('mb_pais_token', result.data.session.access_token);
+    }
+    state.user = result.data.user || { nome: email };
+    showApp();
+    await loadChildData();
+  } catch(e) {
+    errEl.textContent = 'Erro de conexão. Tente novamente.';
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = 'Entrar';
+}
+
+// Enter key on password field
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.activeElement && document.activeElement.id === 'loginSenha') loginEmailSenha();
+});
+
+// ── Cadastro ──
+async function cadastrarConta() {
+  var nome = document.getElementById('cadNome').value.trim();
+  var email = document.getElementById('cadEmail').value.trim();
+  var senha = document.getElementById('cadSenha').value;
+  var conf = document.getElementById('cadSenhaConf').value;
+  var errEl = document.getElementById('cadErr');
+  errEl.style.display = 'none';
+  if (!nome || !email || !senha) { errEl.textContent = 'Preencha todos os campos.'; errEl.style.display = 'block'; return; }
+  if (senha.length < 6) { errEl.textContent = 'Senha deve ter no mínimo 6 caracteres.'; errEl.style.display = 'block'; return; }
+  if (senha !== conf) { errEl.textContent = 'As senhas não coincidem.'; errEl.style.display = 'block'; return; }
+  var btn = document.getElementById('btnCadastrar');
+  btn.disabled = true; btn.textContent = 'Criando conta…';
+  try {
+    if (!sb) throw new Error('Supabase not loaded');
+    var result = await sb.auth.signUp({ email: email, password: senha, options: { data: { full_name: nome } } });
+    btn.disabled = false; btn.textContent = 'Criar Conta';
+    if (result.error) { errEl.textContent = result.error.message; errEl.style.display = 'block'; return; }
+    if (result.data.user && !result.data.user.email_confirmed_at) {
+      showToast('Conta criada! Verifique seu e-mail.');
+      toggleCadastro();
+    } else if (result.data.user) {
+      state.user = result.data.user;
+      showApp();
+      await loadChildData();
+    }
+  } catch(e) {
+    errEl.textContent = 'Erro ao criar conta.'; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Criar Conta';
+  }
+}
+
+function toggleCadastro() {
+  var wrap = document.getElementById('cadastroWrap');
+  var form = document.getElementById('loginForm');
+  var ml = document.getElementById('magicLinkWrap');
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block'; form.style.display = 'none'; ml.style.display = 'none';
+  } else {
+    wrap.style.display = 'none'; form.style.display = 'block';
+  }
+}
+
+function toggleMagicLink() {
+  var wrap = document.getElementById('magicLinkWrap');
+  var form = document.getElementById('loginForm');
+  var cad = document.getElementById('cadastroWrap');
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block'; form.style.display = 'none'; cad.style.display = 'none';
+  } else {
+    wrap.style.display = 'none'; form.style.display = 'block';
+  }
+}
+
+// ── Magic Link (forgot password) ──
+async function sendMagicLink() {
+  var email = document.getElementById('magicEmail').value.trim();
+  if (!email) return;
+  var btn = document.getElementById('magicBtn');
   btn.disabled = true;
   btn.textContent = 'Enviando…';
   try {
     await api({ action: 'public_magic_link', email: email });
   } catch(e) { /* ignore */ }
-  document.getElementById('loginForm').classList.add('hide');
+  document.getElementById('magicLinkWrap').style.display = 'none';
+  document.getElementById('loginForm').style.display = 'none';
   document.getElementById('loginSent').classList.add('show');
 }
 
@@ -627,28 +751,17 @@ async function refreshData() {
   renderAll();
 }
 
-// ── Boot ──
-async function boot() {
-  lucide.createIcons();
-  checkHashToken();
-
-  if (!getToken()) { showLogin(); return; }
-
-  showApp();
+// ── Load child data (after login) ──
+async function loadChildData() {
   var session = await fetchSession();
-
   if (session && (session.filhos || session.nome)) {
     state.user = session.user || session;
     state.filhos = session.filhos || MOCK.filhos;
   } else {
-    // Fallback to mock if session fails or no token works
-    state.user = MOCK.user;
+    state.user = state.user || MOCK.user;
     state.filhos = MOCK.filhos;
   }
-
-  if (state.filhos.length === 0) {
-    state.filhos = MOCK.filhos;
-  }
+  if (state.filhos.length === 0) state.filhos = MOCK.filhos;
 
   var child = state.filhos[state.selected];
   var results = await Promise.all([
@@ -660,6 +773,32 @@ async function boot() {
   state.alertas = results[1];
   state.eventos = results[2];
   renderAll();
+}
+
+// ── Boot ──
+async function boot() {
+  lucide.createIcons();
+  checkHashToken();
+
+  // Check Supabase Auth session first
+  if (sb) {
+    try {
+      var result = await sb.auth.getSession();
+      if (result.data && result.data.session) {
+        localStorage.setItem('mb_pais_token', result.data.session.access_token);
+        state.user = result.data.session.user || {};
+        showApp();
+        await loadChildData();
+        return;
+      }
+    } catch(e) { /* fallback below */ }
+  }
+
+  // Fallback: check token in localStorage
+  if (!getToken()) { showLogin(); return; }
+
+  showApp();
+  await loadChildData();
 }
 
 document.addEventListener('DOMContentLoaded', boot);
