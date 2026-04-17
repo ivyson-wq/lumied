@@ -52,6 +52,45 @@
   gtag('config', GA_ID, config);
   gtag('set', 'user_properties', { portal: portal });
 
+  // ── Scroll Depth Tracking ──
+  var scrollMarks = { 25: false, 50: false, 75: false, 100: false };
+  window.addEventListener('scroll', function() {
+    var scrollPercent = Math.round(
+      (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
+    );
+    [25, 50, 75, 100].forEach(function(mark) {
+      if (scrollPercent >= mark && !scrollMarks[mark]) {
+        scrollMarks[mark] = true;
+        gtag('event', 'scroll_depth', {
+          event_category: 'engagement',
+          event_label: mark + '%',
+          value: mark,
+          non_interaction: true
+        });
+      }
+    });
+  });
+
+  // ── CTA Click Tracking ──
+  function initClickTracking() {
+    document.querySelectorAll('a[href*="#contact"], a[href*="/demo"], [data-track]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var label = el.getAttribute('data-track') || el.textContent.trim().substring(0, 50);
+        gtag('event', 'cta_click', {
+          event_category: 'engagement',
+          event_label: label,
+          page_location: location.pathname
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initClickTracking);
+  } else {
+    initClickTracking();
+  }
+
   // ── Consent Banner ──
   if (consent) return; // já escolheu
 
