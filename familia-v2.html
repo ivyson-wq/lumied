@@ -68,11 +68,34 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 .trocar-chip{display:none;align-items:center;gap:3px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);font-size:11px;font-weight:500;color:var(--ink-3);cursor:pointer;background:transparent;font-family:inherit;flex-shrink:0;transition:background .15s}
 .trocar-chip:active{background:var(--surface-2)}
 .trocar-chip.show{display:flex}
-.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);padding-top:14px}
+.hero-day{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.hero-day-row{display:flex;align-items:center;gap:10px}
+.hero-day-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hero-day-icon.confirmed{background:#e8f5ee;color:var(--ok)}
+.hero-day-icon.pending{background:#fff7ed;color:var(--warn)}
+.hero-day-icon.absent{background:var(--mb-red-50);color:var(--mb-red)}
+.hero-day-text{flex:1;min-width:0}
+.hero-day-text .dt{font-size:13px;font-weight:600;line-height:1.2}
+.hero-day-text .ds{font-size:11px;color:var(--ink-3);margin-top:1px}
+.hero-day-toggle{padding:6px 14px;border-radius:8px;border:1px solid var(--line);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--surface);color:var(--ink-3);transition:all .15s;flex-shrink:0}
+.hero-day-toggle:active{transform:scale(.96)}
+.hero-day-toggle.yes{background:var(--ok);color:#fff;border-color:var(--ok)}
+.hero-day-toggle.no{background:var(--mb-red-50);color:var(--mb-red);border-color:rgba(179,20,42,.2)}
+
+/* ── Estou a caminho ── */
+.btn-caminho{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border-radius:14px;border:none;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;margin-bottom:12px}
+.btn-caminho:active{transform:scale(.98)}
+.btn-caminho.idle{background:var(--mb-red);color:#fff;box-shadow:0 4px 16px rgba(179,20,42,.25)}
+.btn-caminho.active{background:#e8f5ee;color:var(--ok);border:1.5px solid rgba(31,122,77,.2);box-shadow:none}
+.btn-caminho .btn-caminho-icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(31,122,77,.35)}70%{box-shadow:0 0 0 10px rgba(31,122,77,0)}100%{box-shadow:0 0 0 0 rgba(31,122,77,0)}}
+.btn-caminho.active{animation:pulse-ring 2s infinite}
+
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .hero-stat{text-align:center;position:relative}
 .hero-stat:not(:last-child)::after{content:'';position:absolute;right:0;top:4px;bottom:4px;width:1px;background:var(--line)}
-.hero-stat .val{font-family:'Instrument Serif',serif;font-size:22px;line-height:1}
-.hero-stat .lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);margin-top:4px}
+.hero-stat .val{font-family:'Instrument Serif',serif;font-size:18px;line-height:1}
+.hero-stat .lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-4);margin-top:3px}
 .stat-ok{color:var(--ok)}.stat-warn{color:var(--warn)}.stat-red{color:var(--mb-red)}
 
 /* ── Alert Card ── */
@@ -249,7 +272,29 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
           </div>
           <button class="trocar-chip" id="trocarBtn" onclick="openSheet()">Trocar <i data-lucide="chevron-down" style="width:12px;height:12px"></i></button>
         </div>
-        <div class="hero-stats" id="heroStats">
+
+        <!-- Presença do dia -->
+        <div class="hero-day" id="heroDay">
+          <div class="hero-day-row">
+            <div class="hero-day-icon confirmed" id="dayIcon"><i data-lucide="backpack" style="width:16px;height:16px"></i></div>
+            <div class="hero-day-text">
+              <div class="dt" id="dayTitle">Aula hoje</div>
+              <div class="ds" id="daySub">Sexta-feira, 17 de abril</div>
+            </div>
+            <button class="hero-day-toggle yes" id="dayToggle" onclick="togglePresencaDia()">Vai</button>
+          </div>
+          <div class="hero-day-row" id="atividadeRow" style="display:none">
+            <div class="hero-day-icon pending" id="ativIcon"><i data-lucide="trophy" style="width:16px;height:16px"></i></div>
+            <div class="hero-day-text">
+              <div class="dt" id="ativTitle">Atividade extra</div>
+              <div class="ds" id="ativSub">Natação · 15:00</div>
+            </div>
+            <button class="hero-day-toggle yes" id="ativToggle" onclick="toggleAtivExtra()">Vai</button>
+          </div>
+        </div>
+
+        <!-- Stats secundários -->
+        <div class="hero-stats">
           <div class="hero-stat">
             <div class="val serif" id="statFreq">—</div>
             <div class="lbl">Frequência</div>
@@ -264,6 +309,12 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
           </div>
         </div>
       </div>
+
+      <!-- Estou a caminho -->
+      <button class="btn-caminho idle fade-up" id="btnCaminho" onclick="toggleCaminho()">
+        <span class="btn-caminho-icon"><i data-lucide="navigation" style="width:20px;height:20px"></i></span>
+        Estou a caminho
+      </button>
 
       <!-- Alerts (conditional) -->
       <div id="alertsContainer"></div>
@@ -661,10 +712,12 @@ function renderAgenda() {
 function renderAll() {
   renderHeader();
   renderHero();
+  renderDayInfo();
   renderAlerts();
   renderAgenda();
   document.getElementById('loadingSkel').style.display = 'none';
   document.getElementById('loadedContent').style.display = 'block';
+  lucide.createIcons();
 }
 
 // ── Sheet ──
@@ -706,6 +759,82 @@ async function selectChild(idx) {
   state.alertas = results[1];
   state.eventos = results[2];
   renderAll();
+}
+
+// ── Presença do dia ──
+var dayState = { vai: true, atividade: true, caminho: false };
+
+function togglePresencaDia() {
+  dayState.vai = !dayState.vai;
+  var btn = document.getElementById('dayToggle');
+  var icon = document.getElementById('dayIcon');
+  if (dayState.vai) {
+    btn.textContent = 'Vai'; btn.className = 'hero-day-toggle yes';
+    icon.className = 'hero-day-icon confirmed';
+  } else {
+    btn.textContent = 'Não vai'; btn.className = 'hero-day-toggle no';
+    icon.className = 'hero-day-icon absent';
+  }
+  // Notify school
+  var child = state.filhos[state.selected];
+  if (child) {
+    api({ action: 'public_confirmar_presenca', aluno_id: child.id, presente: dayState.vai }).catch(function(){});
+  }
+  showToast(dayState.vai ? 'Presença confirmada' : 'Ausência registrada');
+}
+
+function toggleAtivExtra() {
+  dayState.atividade = !dayState.atividade;
+  var btn = document.getElementById('ativToggle');
+  var icon = document.getElementById('ativIcon');
+  if (dayState.atividade) {
+    btn.textContent = 'Vai'; btn.className = 'hero-day-toggle yes';
+    icon.className = 'hero-day-icon confirmed';
+  } else {
+    btn.textContent = 'Não vai'; btn.className = 'hero-day-toggle no';
+    icon.className = 'hero-day-icon absent';
+  }
+  var child = state.filhos[state.selected];
+  if (child) {
+    api({ action: 'public_confirmar_atividade', aluno_id: child.id, presente: dayState.atividade }).catch(function(){});
+  }
+  showToast(dayState.atividade ? 'Atividade confirmada' : 'Não irá à atividade');
+}
+
+function toggleCaminho() {
+  dayState.caminho = !dayState.caminho;
+  var btn = document.getElementById('btnCaminho');
+  if (dayState.caminho) {
+    btn.className = 'btn-caminho active fade-up';
+    btn.innerHTML = '<span class="btn-caminho-icon"><i data-lucide="check-circle" style="width:20px;height:20px"></i></span> A caminho da escola';
+    showToast('Escola notificada — você está a caminho!');
+    var child = state.filhos[state.selected];
+    if (child) {
+      api({ action: 'public_estou_a_caminho', aluno_id: child.id }).catch(function(){});
+    }
+  } else {
+    btn.className = 'btn-caminho idle fade-up';
+    btn.innerHTML = '<span class="btn-caminho-icon"><i data-lucide="navigation" style="width:20px;height:20px"></i></span> Estou a caminho';
+  }
+  lucide.createIcons({ nodes: btn.querySelectorAll('[data-lucide]') });
+}
+
+function renderDayInfo() {
+  var d = new Date();
+  var days = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  var months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  document.getElementById('daySub').textContent = days[d.getDay()] + ', ' + d.getDate() + ' de ' + months[d.getMonth()];
+
+  // Weekend check
+  if (d.getDay() === 0 || d.getDay() === 6) {
+    document.getElementById('dayTitle').textContent = 'Sem aula hoje';
+    document.getElementById('dayIcon').className = 'hero-day-icon pending';
+    document.getElementById('dayToggle').style.display = 'none';
+    document.getElementById('btnCaminho').style.display = 'none';
+  }
+
+  // Reset caminho state
+  dayState.caminho = false;
 }
 
 // ── Tab bar ──
