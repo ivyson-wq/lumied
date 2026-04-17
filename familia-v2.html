@@ -58,7 +58,7 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 
 /* ── Desktop: conter largura ── */
 @media(min-width:768px){
-  #appScreen.active{display:flex;max-width:75%;margin:0 auto}
+  #appScreen.active{display:flex;max-width:65%;margin:0 auto}
   .quick-grid{gap:14px}
   .section-title{padding-left:4px}
 }
@@ -80,7 +80,7 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 .trocar-chip{display:none;align-items:center;gap:3px;padding:6px 12px;border-radius:10px;border:1px solid var(--line);font-size:11px;font-weight:600;color:var(--ink-3);cursor:pointer;background:var(--surface-2);font-family:inherit;flex-shrink:0;transition:all .15s}
 .trocar-chip:active{background:var(--line);transform:scale(.96)}
 .trocar-chip.show{display:flex}
-.hero-day{background:#ebe5dc;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.hero-day{background:#f3efe9;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .hero-day-row{display:flex;align-items:center;gap:10px}
 .hero-day-icon{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .hero-day-icon.confirmed{background:var(--ok-soft);color:var(--ok)}
@@ -148,14 +148,14 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 .agenda-chevron svg{width:16px;height:16px;color:var(--ink-4)}
 
 /* ── Tab Bar ── */
-.tab-bar{position:fixed;bottom:0;left:0;right:0;background:#e4ded6;border-top:1px solid #d5cdc3;display:grid;grid-template-columns:1fr 1fr 64px 1fr 1fr;align-items:end;padding:8px 0 calc(8px + var(--safe-b));z-index:100}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;background:#f0ebe5;border-top:1px solid #e6dfd7;display:grid;grid-template-columns:1fr 1fr 64px 1fr 1fr;align-items:end;padding:8px 0 calc(8px + var(--safe-b));z-index:100}
 .tab-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;background:none;border:none;font-family:inherit;transition:transform .12s}
 .tab-item:active{transform:scale(.9)}
 .tab-item svg{width:22px;height:22px;color:var(--ink-4);transition:color .15s}
 .tab-item span{font-size:10px;color:var(--ink-4);transition:color .15s;font-weight:500}
 .tab-item.active svg{color:var(--mb-red)}
 .tab-item.active span{color:var(--mb-red);font-weight:700}
-.lumi-fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--mb-red),#e8365a);display:flex;align-items:center;justify-content:center;margin:-22px auto 0;cursor:pointer;box-shadow:0 6px 24px rgba(200,16,46,.3);border:3px solid #e4ded6;transition:transform .15s,box-shadow .15s;position:relative;z-index:2}
+.lumi-fab{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--mb-red),#e8365a);display:flex;align-items:center;justify-content:center;margin:-22px auto 0;cursor:pointer;box-shadow:0 6px 24px rgba(200,16,46,.3);border:3px solid #f0ebe5;transition:transform .15s,box-shadow .15s;position:relative;z-index:2}
 .lumi-fab:active{transform:scale(.88);box-shadow:0 2px 8px rgba(200,16,46,.2)}
 .lumi-fab svg{color:#fff;width:22px;height:22px}
 .fab-label{font-size:10px;color:var(--mb-red);font-weight:700;text-align:center;margin-top:2px}
