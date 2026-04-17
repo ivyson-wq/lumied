@@ -341,21 +341,21 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
       <!-- Quick Access -->
       <div class="section-title fade-up fade-up-d1">Acesso rápido</div>
       <div class="quick-grid fade-up fade-up-d2">
-        <div class="quick-tile" onclick="showToast('Boletos — em breve')">
+        <div class="quick-tile" onclick="goLegacy('boletos')">
           <div class="tile-icon"><i data-lucide="receipt"></i></div>
           <div class="tile-label">Boletos</div>
         </div>
-        <div class="quick-tile" onclick="showToast('Dia a Dia — em breve')">
+        <div class="quick-tile" onclick="goLegacy('diaadia')">
           <div class="tile-icon"><i data-lucide="camera"></i></div>
           <div class="tile-label">Dia a Dia</div>
         </div>
-        <div class="quick-tile" onclick="showToast('Boletim — em breve')">
+        <div class="quick-tile" onclick="goLegacy('boletim')">
           <div class="tile-icon"><i data-lucide="file-text"></i></div>
           <div class="tile-label">Boletim</div>
         </div>
-        <div class="quick-tile" onclick="showToast('Recados — em breve')">
+        <div class="quick-tile" onclick="goLegacy('solicitar')">
           <div class="tile-icon"><i data-lucide="message-circle"></i></div>
-          <div class="tile-label">Recados</div>
+          <div class="tile-label">Turnos</div>
         </div>
       </div>
 
@@ -371,8 +371,8 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
     <button class="tab-item active" onclick="activateTab(this)">
       <i data-lucide="home"></i><span>Início</span>
     </button>
-    <button class="tab-item" onclick="activateTab(this);showToast('Agenda — em breve')">
-      <i data-lucide="calendar"></i><span>Agenda</span>
+    <button class="tab-item" onclick="goLegacy('diaadia')">
+      <i data-lucide="calendar"></i><span>Dia a Dia</span>
     </button>
     <div style="display:flex;flex-direction:column;align-items:center">
       <button class="lumi-fab" onclick="showToast('Lumi em breve')">
@@ -380,10 +380,10 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
       </button>
       <span class="fab-label">Lumi</span>
     </div>
-    <button class="tab-item" onclick="activateTab(this);showToast('Financeiro — em breve')">
-      <i data-lucide="wallet"></i><span>Financeiro</span>
+    <button class="tab-item" onclick="goLegacy('boletos')">
+      <i data-lucide="wallet"></i><span>Boletos</span>
     </button>
-    <button class="tab-item" onclick="activateTab(this);showToast('Boletim — em breve')">
+    <button class="tab-item" onclick="goLegacy('boletim')">
       <i data-lucide="award"></i><span>Boletim</span>
     </button>
   </nav>
@@ -974,6 +974,13 @@ function renderDayInfo() {
 
   // Reset caminho state
   dayState.caminho = false;
+}
+
+// ── Navigation to legacy portal ──
+function goLegacy(tab) {
+  // Store desired tab so the legacy portal can open it after login
+  sessionStorage.setItem('pais_goto_tab', tab);
+  window.location.href = 'familia-legacy.html';
 }
 
 // ── Tab bar ──

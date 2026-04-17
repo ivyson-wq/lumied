@@ -1656,7 +1656,14 @@ body.has-bottomnav{padding-bottom:56px;}
     // Bottom nav
     document.getElementById('bottomNav').classList.add('visible');
     document.body.classList.add('has-bottomnav');
-    switchTab('inicio');
+    // Check if redirected from v2 portal with a specific tab
+    var _gotoTab = sessionStorage.getItem('pais_goto_tab');
+    if (_gotoTab) {
+      sessionStorage.removeItem('pais_goto_tab');
+      switchTab(_gotoTab);
+    } else {
+      switchTab('inicio');
+    }
 
     loadPickupCard();
     carregarAgenda();
