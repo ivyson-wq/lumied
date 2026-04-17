@@ -58,8 +58,7 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 
 /* ── Desktop: conter largura ── */
 @media(min-width:768px){
-  .app-scroll{max-width:75%;margin:0 auto;padding:0 24px 24px}
-  .header{max-width:75%;margin:0 auto;padding:24px 24px 10px}
+  #appScreen.active{display:flex;max-width:75%;margin:0 auto}
   .quick-grid{gap:14px}
   .section-title{padding-left:4px}
 }
@@ -81,7 +80,7 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 .trocar-chip{display:none;align-items:center;gap:3px;padding:6px 12px;border-radius:10px;border:1px solid var(--line);font-size:11px;font-weight:600;color:var(--ink-3);cursor:pointer;background:var(--surface-2);font-family:inherit;flex-shrink:0;transition:all .15s}
 .trocar-chip:active{background:var(--line);transform:scale(.96)}
 .trocar-chip.show{display:flex}
-.hero-day{background:#f0ebe4;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.hero-day{background:#ebe5dc;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .hero-day-row{display:flex;align-items:center;gap:10px}
 .hero-day-icon{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .hero-day-icon.confirmed{background:var(--ok-soft);color:var(--ok)}
