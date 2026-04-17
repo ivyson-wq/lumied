@@ -119,7 +119,17 @@ curl -s -X POST "https://api.indexnow.org/IndexNow" \
   -d '{"host":"lumied.com.br","key":"507a0a2834397332e34d6e9c94480acd","keyLocation":"https://lumied.com.br/507a0a2834397332e34d6e9c94480acd.txt","urlList":["https://lumied.com.br/site/blog/<slug>/","https://lumied.com.br/site/blog/","https://lumied.com.br/sitemap.xml"]}'
 ```
 
-### 10. Log final
+### 10. Notifique os subscribers da newsletter
+Após o push, envie o artigo para todos os inscritos via a edge function admin:
+```bash
+curl -s -X POST "https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/admin" \
+  -H "Content-Type: application/json" \
+  -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE" \
+  -d '{"action":"cron_newsletter_artigo","_cron_key":"'$CRON_INTERNAL_KEY'","titulo":"<title>","url":"https://lumied.com.br/blog/<slug>/","excerpt":"<primeiras 160 chars do lead paragraph>","categoria":"<category>"}'
+```
+Se a variável `CRON_INTERNAL_KEY` não estiver disponível, pule este passo — o cron diário enviará automaticamente.
+
+### 11. Log final
 Imprima um resumo:
 ```
 ✓ Artigo publicado: <title>

@@ -101,6 +101,31 @@ router.on("lead_submit", rateLimit({ windowMs: 60000, maxRequests: 5 }), async (
     } catch (e) { console.error("[LEAD] Email error:", e); }
   }
 
+  // Auto-resposta WhatsApp (requer WHATSAPP_TOKEN permanente + template aprovado)
+  const waToken = Deno.env.get("WHATSAPP_TOKEN");
+  const waPhoneId = Deno.env.get("META_PHONE_NUMBER_ID");
+  if (waToken && waPhoneId && telefone) {
+    try {
+      const cleanPhone = telefone.replace(/\D/g, "").replace(/^0+/, "");
+      const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+      await fetch(`https://graph.facebook.com/v21.0/${waPhoneId}/messages`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${waToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: fullPhone,
+          type: "template",
+          template: {
+            name: "lead_boas_vindas",
+            language: { code: "pt_BR" },
+            components: [{ type: "body", parameters: [{ type: "text", text: nome_escola || "sua escola" }] }],
+          },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (e) { console.error("[LEAD] WhatsApp auto-reply error:", e); }
+  }
+
   return successResponse({ success: true, lead_id: lead?.id, message: "Obrigado! Entraremos em contato em até 24h." });
 });
 
@@ -109,11 +134,70 @@ router.on("newsletter_subscribe", rateLimit({ windowMs: 60000, maxRequests: 5 })
   const { email, origem, utm_source, utm_medium, utm_campaign } = ctx.body as any;
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new AppError("VALIDATION_FAILED", "Email inválido.");
 
+  const cleanEmail = email.toLowerCase().trim();
+
+  // Check if already subscribed (don't re-send welcome)
+  const { data: existing } = await ctx.sb.from("newsletter_subscribers").select("id").eq("email", cleanEmail).maybeSingle();
+
   const { error } = await ctx.sb.from("newsletter_subscribers").upsert(
-    { email: email.toLowerCase().trim(), origem: origem || "blog", utm_source, utm_medium, utm_campaign, confirmado: true },
+    { email: cleanEmail, origem: origem || "blog", utm_source, utm_medium, utm_campaign, confirmado: true },
     { onConflict: "email" }
   );
   if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  // Welcome email (only for new subscribers)
+  if (!existing) {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (resendKey) {
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "Lumied Blog <blog@lumied.com.br>",
+            to: [cleanEmail],
+            subject: "Bem-vindo ao blog Lumied + Checklist Compliance 2026",
+            html: `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
+              <div style="background:linear-gradient(135deg,#6C63FF,#3B82F6);padding:32px;border-radius:16px 16px 0 0;text-align:center;">
+                <h1 style="color:#fff;font-size:24px;margin:0;">Bem-vindo ao Blog Lumied!</h1>
+              </div>
+              <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
+                <p style="font-size:15px;line-height:1.7;color:#475569;">Obrigado por se inscrever! A partir de agora voc\u00ea receber\u00e1 conte\u00fados pr\u00e1ticos sobre gest\u00e3o escolar, compliance e EdTech.</p>
+
+                <div style="background:#F0EDFF;border:1px solid #D4CAFE;border-radius:12px;padding:24px;margin:24px 0;">
+                  <h2 style="font-size:18px;margin:0 0 12px;color:#1E1B4B;">\u{1F4CB} Checklist Compliance Escolar 2026</h2>
+                  <p style="font-size:14px;color:#475569;margin:0 0 16px;">Os 6 itens obrigat\u00f3rios que toda escola precisa cumprir:</p>
+                  <ol style="font-size:14px;color:#1E1B4B;line-height:2.2;padding-left:20px;margin:0;">
+                    <li><strong>Ponto CLT</strong> \u2014 Registro eletr\u00f4nico, hora extra 50%/100%, intervalo intrajornada</li>
+                    <li><strong>LGPD</strong> \u2014 Consentimento, tratamento de dados de menores, DPO</li>
+                    <li><strong>eSocial</strong> \u2014 Folha eletr\u00f4nica, eventos trabalhistas em tempo real</li>
+                    <li><strong>AVCB</strong> \u2014 Corpo de Bombeiros, Vigil\u00e2ncia Sanit\u00e1ria, inspe\u00e7\u00f5es</li>
+                    <li><strong>MEC</strong> \u2014 Censo Escolar, autoriza\u00e7\u00e3o de funcionamento, PPP</li>
+                    <li><strong>Contratos</strong> \u2014 Assinatura eletr\u00f4nica v\u00e1lida (Lei 14.063/2020)</li>
+                  </ol>
+                </div>
+
+                <h3 style="font-size:16px;color:#1E1B4B;margin:24px 0 12px;">Artigos mais lidos:</h3>
+                <ul style="list-style:none;padding:0;margin:0;">
+                  <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/compliance-escolar/" style="color:#6C63FF;font-weight:600;text-decoration:none;">Compliance Escolar 2026: Guia Completo \u2192</a></li>
+                  <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/inadimplencia-escolar/" style="color:#6C63FF;font-weight:600;text-decoration:none;">Inadimpl\u00eancia Escolar: Como Reduzir 40% em 90 Dias \u2192</a></li>
+                  <li style="margin-bottom:12px;"><a href="https://lumied.com.br/blog/lgpd-escola-guia-definitivo/" style="color:#6C63FF;font-weight:600;text-decoration:none;">LGPD na Escola: Guia Definitivo \u2192</a></li>
+                </ul>
+
+                <div style="text-align:center;margin-top:28px;">
+                  <a href="https://lumied.com.br/blog/" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Ver todos os artigos \u2192</a>
+                </div>
+
+                <p style="font-size:12px;color:#94A3B8;margin-top:28px;text-align:center;">Voc\u00ea recebeu este email porque se inscreveu no blog do Lumied.<br>
+                <a href="https://lumied.com.br" style="color:#6C63FF;">lumied.com.br</a></p>
+              </div>
+            </div>`,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+      } catch (e) { console.error("[NEWSLETTER] Welcome email error:", e); }
+    }
+  }
 
   return successResponse({ success: true, message: "Inscrito com sucesso!" });
 });
@@ -1709,6 +1793,277 @@ router.on("financeiro_resumo", authStaff, async (ctx) => {
     saldo_mes: crRecMes - cpPgMes,
     por_centro_mes: porCentro.data || [],
   });
+});
+
+// ── Cron: Reativação de leads frios (7+ dias sem contato) ──
+router.on("cron_reativar_leads", async (ctx) => {
+  const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+  const token = (ctx.body._cron_key as string) || "";
+  if (!cronKey || token !== cronKey) throw new AppError("AUTH_INVALID", "Chave de cron inválida.");
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) return successResponse({ skipped: true, reason: "RESEND_API_KEY not set" });
+
+  // Leads com status 'novo' criados há 7-14 dias que ainda não receberam reativação
+  const { data: leads } = await ctx.sb.from("leads_comerciais")
+    .select("id, email, nome_escola")
+    .eq("status", "novo")
+    .is("reativado_em", null)
+    .lt("criado_em", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .gt("criado_em", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
+    .limit(20);
+
+  if (!leads?.length) return successResponse({ enviados: 0 });
+
+  let enviados = 0;
+  for (const lead of leads) {
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Lumied <contato@lumied.com.br>",
+          to: [lead.email],
+          subject: `${lead.nome_escola || "Sua escola"} — veja o que mudou para a Maple Bear em 90 dias`,
+          html: `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
+            <div style="background:linear-gradient(135deg,#6C63FF,#3B82F6);padding:32px;border-radius:16px 16px 0 0;text-align:center;">
+              <h1 style="color:#fff;font-size:22px;margin:0;">Ainda pensando?</h1>
+              <p style="color:rgba(255,255,255,.85);font-size:14px;margin:8px 0 0;">Veja o que aconteceu com uma escola que deu o passo.</p>
+            </div>
+            <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
+              <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:20px;margin-bottom:24px;">
+                <h3 style="font-size:16px;color:#166534;margin:0 0 12px;">Maple Bear Caxias do Sul — 90 dias com Lumied</h3>
+                <ul style="list-style:none;padding:0;margin:0;font-size:14px;color:#1E1B4B;line-height:2;">
+                  <li>\u2705 Inadimpl\u00eancia: <strong>14% \u2192 8,3%</strong> (-40%)</li>
+                  <li>\u2705 Tempo economizado: <strong>12h/semana</strong></li>
+                  <li>\u2705 Receita recuperada: <strong>R$ 31k/m\u00eas</strong></li>
+                  <li>\u2705 Tempo de resposta: <strong>4h \u2192 8min</strong></li>
+                </ul>
+              </div>
+              <p style="font-size:14px;color:#475569;line-height:1.7;">Se ${lead.nome_escola || "sua escola"} est\u00e1 enfrentando desafios semelhantes, podemos mostrar exatamente como o Lumied resolve \u2014 em uma demo de 20 minutos, sem compromisso.</p>
+              <div style="text-align:center;margin-top:24px;">
+                <a href="https://lumied.com.br/demo/?utm_source=reativacao&utm_medium=email&utm_campaign=lead_frio" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;">Agendar Demo Gratuita \u2192</a>
+              </div>
+              <p style="font-size:12px;color:#94A3B8;margin-top:24px;text-align:center;">
+                <a href="https://lumied.com.br" style="color:#6C63FF;">lumied.com.br</a>
+              </p>
+            </div>
+          </div>`,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      await ctx.sb.from("leads_comerciais").update({ reativado_em: new Date().toISOString() }).eq("id", lead.id);
+      enviados++;
+    } catch (e) { console.error(`[REATIVACAO] Error for ${lead.id}:`, e); }
+  }
+
+  return successResponse({ enviados, total: leads.length });
+});
+
+// ── Cron: Distribuir novo artigo do blog para newsletter ──
+router.on("cron_newsletter_artigo", async (ctx) => {
+  const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+  const token = (ctx.body._cron_key as string) || "";
+  if (!cronKey || token !== cronKey) throw new AppError("AUTH_INVALID", "Chave de cron inválida.");
+
+  const { titulo, url, excerpt, categoria } = ctx.body as any;
+  if (!titulo || !url) throw new AppError("VALIDATION_FAILED", "titulo e url obrigatórios.");
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) return successResponse({ skipped: true, reason: "RESEND_API_KEY not set" });
+
+  const { data: subs } = await ctx.sb.from("newsletter_subscribers")
+    .select("email")
+    .eq("confirmado", true)
+    .limit(500);
+
+  if (!subs?.length) return successResponse({ enviados: 0 });
+
+  const emails = subs.map((s: any) => s.email);
+
+  // Resend batch (max 100 per call)
+  let enviados = 0;
+  for (let i = 0; i < emails.length; i += 50) {
+    const batch = emails.slice(i, i + 50);
+    try {
+      await fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(batch.map((email: string) => ({
+          from: "Lumied Blog <blog@lumied.com.br>",
+          to: email,
+          subject: `Novo artigo: ${titulo}`,
+          html: `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
+            <div style="background:linear-gradient(135deg,#6C63FF,#3B82F6);padding:24px 32px;border-radius:16px 16px 0 0;">
+              <p style="color:rgba(255,255,255,.7);font-size:12px;margin:0;text-transform:uppercase;letter-spacing:1px;">Novo no blog \u00b7 ${categoria || "Gest\u00e3o Escolar"}</p>
+            </div>
+            <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 16px 16px;">
+              <h1 style="font-size:22px;line-height:1.3;margin:0 0 12px;">${titulo}</h1>
+              <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 24px;">${excerpt || "Leia o artigo completo no blog do Lumied."}</p>
+              <a href="${url}?utm_source=newsletter&utm_medium=email&utm_campaign=novo_artigo" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px;">Ler artigo completo \u2192</a>
+              <p style="font-size:12px;color:#94A3B8;margin-top:28px;text-align:center;">
+                Voc\u00ea recebeu este email por estar inscrito no blog do Lumied.<br>
+                <a href="https://lumied.com.br/blog/" style="color:#6C63FF;">lumied.com.br/blog</a>
+              </p>
+            </div>
+          </div>`,
+        }))),
+        signal: AbortSignal.timeout(15000),
+      });
+      enviados += batch.length;
+    } catch (e) { console.error("[NEWSLETTER_ARTIGO] Batch error:", e); }
+  }
+
+  return successResponse({ enviados, total: subs.length });
+});
+
+// ── Cron: Lead scoring automático ──
+router.on("cron_lead_scoring", async (ctx) => {
+  const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+  const token = (ctx.body._cron_key as string) || "";
+  if (!cronKey || token !== cronKey) throw new AppError("AUTH_INVALID", "Chave de cron inválida.");
+
+  // Score leads based on available data
+  const { data: leads } = await ctx.sb.from("leads_comerciais")
+    .select("id, nome_escola, email, telefone, mensagem, utm_source, utm_campaign, status")
+    .is("score", null)
+    .limit(50);
+
+  if (!leads?.length) return successResponse({ scored: 0 });
+
+  let scored = 0;
+  for (const lead of leads) {
+    let score = 10; // base score
+    // Has phone → more serious
+    if (lead.telefone) score += 15;
+    // Has message → engaged
+    if (lead.mensagem && lead.mensagem.length > 20) score += 10;
+    // From comparison page → high intent
+    if (lead.utm_source === "vs_page" || lead.utm_campaign?.includes("vs_")) score += 20;
+    // From exit intent → lower intent
+    if (lead.utm_source === "exit_intent") score -= 5;
+    // From ROI calculator → high intent
+    if (lead.utm_source === "roi_calc") score += 20;
+    // School name suggests real school
+    if (lead.nome_escola && !lead.nome_escola.includes("test") && lead.nome_escola.length > 5) score += 10;
+    // Email domain (not gmail/hotmail = school email = higher intent)
+    const domain = lead.email?.split("@")[1] || "";
+    if (domain && !["gmail.com","hotmail.com","outlook.com","yahoo.com","icloud.com"].includes(domain)) score += 15;
+    // Already progressed in funnel
+    if (lead.status === "demo_agendada") score += 30;
+    else if (lead.status === "qualificado") score += 20;
+    else if (lead.status === "contatado") score += 10;
+
+    score = Math.max(0, Math.min(100, score));
+
+    await ctx.sb.from("leads_comerciais").update({ score }).eq("id", lead.id);
+    scored++;
+  }
+
+  return successResponse({ scored, total: leads.length });
+});
+
+// ── Cron: Follow-up pós-demo ──
+router.on("cron_followup_demo", async (ctx) => {
+  const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+  const token = (ctx.body._cron_key as string) || "";
+  if (!cronKey || token !== cronKey) throw new AppError("AUTH_INVALID", "Chave de cron inválida.");
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) return successResponse({ skipped: true, reason: "RESEND_API_KEY not set" });
+
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+
+  // Find leads with demo_agendada that need follow-up
+  const { data: leads } = await ctx.sb.from("leads_comerciais")
+    .select("id, email, nome_escola, status, demo_em, followup_passo")
+    .eq("status", "demo_agendada")
+    .not("demo_em", "is", null)
+    .limit(20);
+
+  if (!leads?.length) return successResponse({ enviados: 0 });
+
+  let enviados = 0;
+  for (const lead of leads) {
+    const demoDate = new Date(lead.demo_em).getTime();
+    const daysSince = Math.floor((now - demoDate) / day);
+    const passo = lead.followup_passo || 0;
+
+    let subject = "", html = "", nextPasso = passo;
+
+    if (daysSince >= 1 && passo < 1) {
+      nextPasso = 1;
+      subject = `Obrigado pela demo, ${lead.nome_escola || "equipe"}!`;
+      html = `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
+        <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-radius:16px;">
+          <h2 style="font-size:20px;margin:0 0 16px;">Obrigado por assistir a demo!</h2>
+          <p style="font-size:14px;color:#475569;line-height:1.7;">Foi \u00f3timo conversar sobre as necessidades de ${lead.nome_escola || "sua escola"}. Aqui est\u00e1 um resumo do que vimos:</p>
+          <ul style="font-size:14px;color:#1E1B4B;line-height:2;">
+            <li>23 m\u00f3dulos integrados em uma \u00fanica plataforma</li>
+            <li>IA que analisa os dados da escola e sugere a\u00e7\u00f5es</li>
+            <li>WhatsApp oficial integrado</li>
+            <li>Compliance CLT e LGPD automatizado</li>
+          </ul>
+          <p style="font-size:14px;color:#475569;">Alguma d\u00favida? Responda este email ou fale conosco no WhatsApp.</p>
+          <div style="text-align:center;margin-top:24px;">
+            <a href="https://lumied.com.br/#pricing" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;">Ver planos e pre\u00e7os \u2192</a>
+          </div>
+        </div>
+      </div>`;
+    } else if (daysSince >= 3 && passo < 2) {
+      nextPasso = 2;
+      subject = `Proposta comercial para ${lead.nome_escola || "sua escola"}`;
+      html = `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
+        <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-radius:16px;">
+          <h2 style="font-size:20px;margin:0 0 16px;">Pronto para dar o pr\u00f3ximo passo?</h2>
+          <p style="font-size:14px;color:#475569;line-height:1.7;">Com base na nossa conversa, o <strong>plano Evolu\u00e7\u00e3o</strong> parece ideal para ${lead.nome_escola || "sua escola"}:</p>
+          <div style="background:#F0EDFF;border-radius:12px;padding:20px;margin:20px 0;">
+            <p style="font-size:24px;font-weight:800;color:#6C63FF;margin:0;">R$ 1.440<span style="font-size:14px;font-weight:400;color:#475569;">/m\u00eas (anual)</span></p>
+            <p style="font-size:13px;color:#475569;margin:8px 0 0;">23 m\u00f3dulos \u00b7 at\u00e9 800 alunos \u00b7 WhatsApp 500 msgs/m\u00eas \u00b7 IA inclusa</p>
+          </div>
+          <p style="font-size:14px;color:#475569;">Implanta\u00e7\u00e3o em 7-15 dias \u00fateis, com migra\u00e7\u00e3o de dados e treinamento inclu\u00eddo.</p>
+          <div style="text-align:center;margin-top:24px;">
+            <a href="https://lumied.com.br/#contact" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6C63FF,#3B82F6);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;">Come\u00e7ar agora \u2192</a>
+          </div>
+        </div>
+      </div>`;
+    } else if (daysSince >= 7 && passo < 3) {
+      nextPasso = 3;
+      subject = `\u00daltima chance: condição especial para ${lead.nome_escola || "sua escola"}`;
+      html = `<div style="font-family:'Inter',sans-serif;max-width:600px;margin:0 auto;color:#1E1B4B;">
+        <div style="background:#fff;padding:32px;border:1px solid #E5E7EB;border-radius:16px;">
+          <h2 style="font-size:20px;margin:0 0 16px;">Condi\u00e7\u00e3o especial expira em breve</h2>
+          <p style="font-size:14px;color:#475569;line-height:1.7;">Para escolas que agendam a implanta\u00e7\u00e3o esta semana, estamos oferecendo:</p>
+          <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:12px;padding:20px;margin:20px 0;">
+            <ul style="list-style:none;padding:0;margin:0;font-size:14px;color:#92400E;line-height:2;">
+              <li>\u2B50 <strong>1 m\u00eas gr\u00e1tis</strong> no plano escolhido</li>
+              <li>\u2B50 <strong>Migra\u00e7\u00e3o express</strong> (7 dias \u00fateis)</li>
+              <li>\u2B50 <strong>Treinamento extra</strong> (+1 sess\u00e3o individual)</li>
+            </ul>
+          </div>
+          <div style="text-align:center;margin-top:24px;">
+            <a href="https://lumied.com.br/demo/?utm_source=followup&utm_campaign=oferta_especial" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff;border-radius:8px;font-weight:700;text-decoration:none;font-size:15px;">Garantir condi\u00e7\u00e3o especial \u2192</a>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      continue;
+    }
+
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: "Lumied <contato@lumied.com.br>", to: [lead.email], subject, html }),
+        signal: AbortSignal.timeout(8000),
+      });
+      await ctx.sb.from("leads_comerciais").update({ followup_passo: nextPasso }).eq("id", lead.id);
+      enviados++;
+    } catch (e) { console.error(`[FOLLOWUP] Error for ${lead.id}:`, e); }
+  }
+
+  return successResponse({ enviados, total: leads.length });
 });
 
 // ═══ SERVE ═══

@@ -2162,6 +2162,46 @@ const counterObserver = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.stat-number[data-count]').forEach(el => counterObserver.observe(el));
 
+// ── UTM DYNAMIC HERO PERSONALIZATION ──
+(function() {
+  var params = new URLSearchParams(location.search);
+  var ref = params.get('ref') || params.get('utm_campaign') || '';
+  var badge = document.querySelector('.hero-badge');
+  var heroP = document.querySelector('.hero p');
+
+  var variants = {
+    'escolaweb': {
+      badge: '🔄 Migrando do Escolaweb?',
+      text: 'Escolas que trocaram o Escolaweb pelo Lumied economizam <strong style="color:#fff;">12h/semana</strong> e reduzem inadimplência em <strong style="color:#fff;">40%</strong>. Migração assistida em 7 dias, sem perder dados.'
+    },
+    'sponte': {
+      badge: '🔄 Saindo do Sponte?',
+      text: 'O Lumied é <strong style="color:#fff;">35% mais barato</strong> que o Sponte, com IA nativa, WhatsApp oficial e compliance CLT. Migração completa em 15 dias.'
+    },
+    'classapp': {
+      badge: '💬 Usando ClassApp + outro sistema?',
+      text: 'Pare de pagar por 3-4 ferramentas. O Lumied entrega comunicação + gestão completa num só lugar, por <strong style="color:#fff;">preço similar ao ClassApp sozinho</strong>.'
+    },
+    'google': {
+      badge: '🔍 Buscando sistema escolar?',
+      text: 'Você encontrou. A <strong style="color:#fff;">primeira plataforma que analisa seus dados e diz o que fazer</strong>. 23 módulos, WhatsApp oficial, compliance automatizado — a partir de R$ 632/mês.'
+    },
+    'indicacao': {
+      badge: '🎁 Indicação especial',
+      text: 'Você foi indicado por uma escola parceira! Agende uma demo e ganhe <strong style="color:#fff;">condições exclusivas</strong> de implantação — desconto no primeiro mês + migração express.'
+    }
+  };
+
+  // Match against utm_campaign or ref
+  for (var key in variants) {
+    if (ref.toLowerCase().includes(key)) {
+      if (badge) badge.innerHTML = variants[key].badge;
+      if (heroP) heroP.innerHTML = variants[key].text;
+      break;
+    }
+  }
+})();
+
 // ── WHATSAPP CHAT BUBBLE (appears after 8s) ──
 setTimeout(() => {
   const bubble = document.getElementById('waChatBubble');
