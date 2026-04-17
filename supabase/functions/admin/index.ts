@@ -104,6 +104,20 @@ router.on("lead_submit", rateLimit({ windowMs: 60000, maxRequests: 5 }), async (
   return successResponse({ success: true, lead_id: lead?.id, message: "Obrigado! Entraremos em contato em até 24h." });
 });
 
+// ── Public: Newsletter subscribe ──
+router.on("newsletter_subscribe", rateLimit({ windowMs: 60000, maxRequests: 5 }), async (ctx) => {
+  const { email, origem, utm_source, utm_medium, utm_campaign } = ctx.body as any;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new AppError("VALIDATION_FAILED", "Email inválido.");
+
+  const { error } = await ctx.sb.from("newsletter_subscribers").upsert(
+    { email: email.toLowerCase().trim(), origem: origem || "blog", utm_source, utm_medium, utm_campaign, confirmado: true },
+    { onConflict: "email" }
+  );
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  return successResponse({ success: true, message: "Inscrito com sucesso!" });
+});
+
 // ── Staff: listar leads ──
 router.on("leads_list", async (ctx) => {
   const token = (ctx.body._staff_token as string) || null;

@@ -88,6 +88,10 @@
       "destination": "/site/index.html"
     },
     {
+      "source": "/blog/blog-cta.js",
+      "destination": "/site/blog/blog-cta.js"
+    },
+    {
       "source": "/blog",
       "has": [{ "type": "host", "value": "lumied.com.br" }],
       "destination": "/site/blog/index.html"

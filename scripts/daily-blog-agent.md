@@ -43,6 +43,7 @@ Crie `site/blog/<slug>/index.html` seguindo **exatamente** a estrutura dos artig
 - Fontes Inter + Playfair Display via Google Fonts
 - **3 blocos JSON-LD**: `Article`, `BreadcrumbList`, `FAQPage` (com `faq_count` perguntas)
 - GA4: `<script src="/analytics.js" defer></script>` (detecta content_group automaticamente via `<meta property="article:section">`)
+- Blog CTA: `<script src="/blog/blog-cta.js" defer></script>` (insere inline CTA de newsletter automaticamente após o 2º H2)
 
 **Body obrigatório:**
 - Header fixo no topo (copiar dos artigos existentes)

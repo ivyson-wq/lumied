@@ -15,4 +15,8 @@
   <url><loc>https://lumied.com.br/blog/dashboard-analytics-escola/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://lumied.com.br/blog/controle-frequencia-chamada-digital/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://lumied.com.br/verificar.html</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://lumied.com.br/vs/</loc><lastmod>2026-04-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://lumied.com.br/vs/escolaweb/</loc><lastmod>2026-04-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://lumied.com.br/vs/sponte/</loc><lastmod>2026-04-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://lumied.com.br/vs/classapp/</loc><lastmod>2026-04-17</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>
