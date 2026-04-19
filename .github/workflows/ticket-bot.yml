@@ -1,0 +1,45 @@
+name: Ticket Bot (temp)
+
+on:
+  push:
+    branches: [ticket-bot-temp]
+
+jobs:
+  query-tickets:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Query open tickets and post as issue
+        uses: actions/github-script@v7
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        with:
+          script: |
+            const token = process.env.SUPABASE_ACCESS_TOKEN;
+            const projectRef = 'brgorknbrjlfwvrrlwxj';
+            const query = `
+              SELECT id, numero, email, nome, portal, tipo, descricao, url_pagina, user_agent, criado_em
+              FROM tickets
+              WHERE status = 'aberto'
+              ORDER BY criado_em ASC
+              LIMIT 10
+            `;
+            const resp = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ query })
+            });
+            const data = await resp.json();
+            const body = `## Tickets Abertos\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n_Gerado em: ${new Date().toISOString()}_`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[ticket-bot] Tickets abertos — ' + new Date().toISOString().slice(0,19),
+              body,
+              labels: ['ticket-bot']
+            });
+            console.log('Issue criada com', Array.isArray(data) ? data.length : 'N/A', 'tickets');
