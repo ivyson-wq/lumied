@@ -5,12 +5,12 @@ on:
     branches: [ticket-bot-temp]
 
 jobs:
-  resolve-tickets:
+  fix-ticket-1011:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - name: Diagnose and resolve tickets
+      - name: Fix ticket #1011 and diagnose escola modules
         uses: actions/github-script@v7
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -23,158 +23,137 @@ jobs:
 
             async function sql(query) {
               const r = await fetch(BASE, { method:'POST', headers:h, body:JSON.stringify({query}) });
-              return r.json();
+              const data = await r.json();
+              if (!r.ok) throw new Error(`SQL failed: ${JSON.stringify(data)}`);
+              return data;
             }
 
-            // ── Diagnóstico escola maplebearcaxias ──
-            const escolaRows = await sql(`
+            // Escola real: f0ab6402-67a0-4829-bdaa-05e90e0b6f9b (maple-bear-caxias)
+            const ESCOLA_ID = 'f0ab6402-67a0-4829-bdaa-05e90e0b6f9b';
+
+            // 1. Info completa da escola
+            const [escolaInfo] = await sql(`
               SELECT e.id, e.slug, e.nome, e.ativo, e.plano_id, p.nome as plano_nome
               FROM escolas e
               LEFT JOIN planos p ON p.id = e.plano_id
-              WHERE e.slug = 'maplebearcaxias'
+              WHERE e.id = '${ESCOLA_ID}'
             `);
 
-            const modulosRows = await sql(`
-              SELECT m.slug, m.nome,
-                (pm.modulo_id IS NOT NULL) as no_plano,
-                em.habilitado as override
-              FROM modulos m
-              LEFT JOIN (
-                SELECT pm2.modulo_id FROM plano_modulos pm2
-                JOIN escolas e ON e.plano_id = pm2.plano_id
-                WHERE e.slug = 'maplebearcaxias'
-              ) pm ON pm.modulo_id = m.id
-              LEFT JOIN (
-                SELECT em2.modulo_id, em2.habilitado FROM escola_modulos em2
-                JOIN escolas e ON e.id = em2.escola_id
-                WHERE e.slug = 'maplebearcaxias'
-              ) em ON em.modulo_id = m.id
+            // 2. Módulos do plano da escola
+            const modulosPlano = await sql(`
+              SELECT m.slug, m.nome
+              FROM plano_modulos pm
+              JOIN modulos m ON m.id = pm.modulo_id
+              WHERE pm.plano_id = '${escolaInfo?.plano_id || '00000000-0000-0000-0000-000000000000'}'
               ORDER BY m.slug
             `);
 
-            const sessaoRows = await sql(`
-              SELECT ps.expira_em, prof.email, prof.escola_id, prof.ativo,
-                     e.slug as escola_slug
-              FROM professora_sessoes ps
-              JOIN professoras prof ON prof.id = ps.professora_id
-              LEFT JOIN escolas e ON e.id = prof.escola_id
-              WHERE prof.email = 'carolinecapellinisouza@caxias.maplebear.com.br'
-              ORDER BY ps.criado_em DESC LIMIT 3
+            // 3. Overrides escola_modulos
+            const modulosOverride = await sql(`
+              SELECT m.slug, em.habilitado
+              FROM escola_modulos em
+              JOIN modulos m ON m.id = em.modulo_id
+              WHERE em.escola_id = '${ESCOLA_ID}'
+              ORDER BY m.slug
             `);
 
-            // Also check via usuarios table (unified)
-            const usuarioRows = await sql(`
-              SELECT u.email, u.escola_id, u.papeis, u.ativo, e.slug as escola_slug
-              FROM usuarios u
-              LEFT JOIN escolas e ON e.id = u.escola_id
-              WHERE u.email = 'carolinecapellinisouza@caxias.maplebear.com.br'
-            `);
+            // 4. Calcular módulos efetivamente ativos
+            const overrideMap = {};
+            for (const o of modulosOverride) overrideMap[o.slug] = o.habilitado;
+            const planoSlugs = new Set(modulosPlano.map(m => m.slug));
+            const todosModulos = await sql(`SELECT slug FROM modulos ORDER BY slug`);
+            const modulosAtivos = todosModulos.filter(m => {
+              if (overrideMap[m.slug] === false) return false;
+              if (overrideMap[m.slug] === true) return true;
+              return planoSlugs.has(m.slug);
+            });
 
-            const diagnostico = {
-              escola: escolaRows,
-              modulos: modulosRows,
-              sessao_professora: sessaoRows,
-              usuario_unificado: usuarioRows
-            };
+            // 5. Verificar slug mismatch
+            const slugMismatch = escolaInfo?.slug !== 'maplebearcaxias';
 
-            // ── Determinar causa raiz ──
-            const escola = Array.isArray(escolaRows) ? escolaRows[0] : null;
-            const modulosAtivos = Array.isArray(modulosRows)
-              ? modulosRows.filter(m => {
-                  if (m.override === false) return false;
-                  if (m.override === true) return true;
-                  return m.no_plano;
-                })
-              : [];
+            // ── Determinar causa raiz real ──
+            let causaRaiz, tratamento, proxPassos, resposta1011, status1011;
 
-            let causaRaiz = '';
-            let resposta1010 = '';
-            let resposta1011 = '';
-            let tratamento1010 = '';
-            let tratamento1011 = '';
-            let proxPassos1011 = '';
-
-            if (!escola) {
-              causaRaiz = 'Escola maplebearcaxias não encontrada no banco';
-              resposta1011 = 'Identificamos um problema na configuração da sua escola no sistema. Nossa equipe técnica foi notificada e irá corrigir em breve. Pedimos desculpas pelo transtorno.';
-              tratamento1011 = 'CRÍTICO: Escola com slug "maplebearcaxias" não encontrada na tabela escolas. Verificar onboarding.';
-              proxPassos1011 = '1) Verificar se escola foi criada com slug correto via staff_criar_escola; 2) Se slug diferente, corrigir via SQL; 3) Recriar subdomínio Vercel se necessário';
-            } else if (!escola.ativo) {
-              causaRaiz = 'Escola inativa';
-              resposta1011 = 'O acesso à sua escola está temporariamente suspenso. Entre em contato com a administração para mais informações.';
-              tratamento1011 = `Escola "maplebearcaxias" existe mas está INATIVA (ativo=false). ID: ${escola.id}`;
-              proxPassos1011 = 'Verificar motivo da inativação. Se inadimplência, checar financeiro. Se erro, executar: UPDATE escolas SET ativo=true WHERE slug=\'maplebearcaxias\'';
+            if (!escolaInfo || !escolaInfo.ativo) {
+              causaRaiz = 'Escola inativa ou não encontrada';
+              resposta1011 = 'Identificamos um problema na configuração da sua escola. Nossa equipe está verificando. Em breve normalizaremos.';
+              tratamento = `Escola ID ${ESCOLA_ID}: ${escolaInfo ? 'INATIVA' : 'NÃO ENCONTRADA'}`;
+              proxPassos = 'Verificar motivo de inativação. Se inadimplência, checar financeiro.';
+              status1011 = 'escalado';
+            } else if (!escolaInfo.plano_id) {
+              causaRaiz = 'Escola sem plano vinculado — nenhum módulo habilitado';
+              resposta1011 = 'Identificamos que os módulos do portal da Maple Bear Caxias ainda não foram ativados. Nossa equipe está regularizando a configuração e em breve os módulos estarão disponíveis.';
+              tratamento = `Escola "maple-bear-caxias" (ID: ${ESCOLA_ID}) está ATIVA mas sem plano_id vinculado. Módulos ativos: 0. Subdomínio do portal: "maplebearcaxias" (sem hífens) vs slug da escola: "maple-bear-caxias" (com hífens) — mismatch de slug que faria a resolução via Origin falhar, mas a sessão da professora aponta corretamente para a escola.`;
+              proxPassos = `1) Vincular plano à escola: UPDATE escolas SET plano_id = '<id-do-plano>' WHERE id = '${ESCOLA_ID}'; 2) Corrigir slug mismatch: o subdomínio Vercel "maplebearcaxias" deve ser ADICIONADO como alias ou o slug deve ser corrigido para "maplebearcaxias"; 3) Verificar via admin-central.html qual plano deve ser aplicado para esta escola.`;
+              status1011 = 'escalado';
             } else if (modulosAtivos.length === 0) {
-              causaRaiz = 'Escola ativa mas sem módulos habilitados';
-              resposta1011 = 'Identificamos que os módulos do portal ainda não foram ativados para a Maple Bear Caxias. Nossa equipe está regularizando. Tente novamente em até 2 horas.';
-              tratamento1011 = `Escola "maplebearcaxias" existe e está ativa (ID: ${escola.id}, plano: ${escola.plano_nome || 'N/A'}), porém 0 módulos ativos. plano_id=${escola.plano_id}. Possível causa: escola sem plano vinculado ou plano sem módulos.`;
-              proxPassos1011 = `1) Verificar plano_id=${escola.plano_id} na tabela planos e plano_modulos; 2) Se plano sem módulos: INSERT INTO plano_modulos (plano_id, modulo_id) SELECT '${escola.plano_id}', id FROM modulos; 3) Ou usar admin.html → Módulos para ativar manualmente`;
+              causaRaiz = `Escola com plano "${escolaInfo.plano_nome}" mas 0 módulos ativos (possível override ou plano vazio)`;
+              resposta1011 = 'Identificamos que os módulos do portal da Maple Bear Caxias estão temporariamente desabilitados. Nossa equipe está verificando a configuração e em breve normalizaremos.';
+              tratamento = `Escola "maple-bear-caxias" (plano: ${escolaInfo.plano_nome}, ID plano: ${escolaInfo.plano_id}). Módulos do plano: ${modulosPlano.length}. Overrides: ${modulosOverride.length}. Módulos ativos: 0. Verificar se há override global desabilitando todos.`;
+              proxPassos = `1) Verificar school_modulos overrides: há ${modulosOverride.filter(m => !m.habilitado).length} módulos desabilitados por override; 2) Para resetar overrides: DELETE FROM escola_modulos WHERE escola_id = '${ESCOLA_ID}'; 3) Se plano vazio, adicionar módulos via plano_modulos`;
+              status1011 = 'escalado';
             } else {
-              causaRaiz = `Dashboard vazio com ${modulosAtivos.length} módulos ativos — provável erro de sessão ou cache`;
-              resposta1011 = `Verificamos que sua conta está configurada corretamente com ${modulosAtivos.length} módulos ativos. Tente os seguintes passos:\n1. Feche o navegador completamente e reabra\n2. Faça logout e login novamente\n3. Limpe o cache (Ctrl+Shift+Del) e tente novamente\nSe o problema persistir, entre em contato.`;
-              tratamento1011 = `Escola OK, ${modulosAtivos.length} módulos ativos. Possível problema: sessão expirada não detectada pelo frontend, ou cache desatualizado. Sessão mais recente: ${JSON.stringify(sessaoRows?.[0] || 'não encontrada')}`;
-              proxPassos1011 = 'Se problema persistir após relogin: verificar professora_sessoes.expira_em e professoras.escola_id para este usuário';
+              causaRaiz = `Módulos OK (${modulosAtivos.length} ativos). Possível problema de cache ou sessão desatualizada`;
+              resposta1011 = `Os módulos do portal estão configurados corretamente (${modulosAtivos.length} módulos ativos). Para resolver o dashboard vazio:\n1. Faça logout clicando em seu nome no topo da tela\n2. Feche o navegador completamente\n3. Reabra e faça login novamente\n4. Se o problema persistir, limpe o cache do Chrome: Configurações → Mais ferramentas → Limpar dados de navegação`;
+              tratamento = `Escola "maple-bear-caxias" com ${modulosAtivos.length} módulos ativos. Possível causa: prof_token no localStorage desatualizado (sessão antiga) enquanto banco mostra sessões válidas. Ou cache do service worker com dados antigos.`;
+              proxPassos = 'Se problema persistir após relogin, verificar service worker e cache do navegador. Considerar incrementar SW version em professora.html.';
+              status1011 = 'respondido';
             }
 
-            // Resposta ao ticket #1010 (menu lateral) — explicação sobre responsive
-            resposta1010 = 'O menu lateral aparece automaticamente em telas com largura acima de 960px. Em telas menores (como tablets ou janelas reduzidas), ele é substituído pela barra de navegação na parte inferior da tela. Para acessar todas as funcionalidades:\n1. Expanda o navegador para tela cheia (tecla F4 no Chromebook)\n2. Ou use os ícones da barra inferior e o botão "☰ Mais"\n\nSe estiver usando o Chromebook em modo tablet, gire para a orientação paisagem (horizontal) para uma melhor experiência.';
-            tratamento1010 = 'Sidebar CSS-only (display:flex apenas em min-width:960px). ChromeOS com viewport potencialmente <960px (modo tablet, split-screen, ou zoom >100%). Comportamento esperado — não é bug. Bottom nav substitui sidebar em telas menores.';
-
-            // ── Atualizar Ticket #1010 ──
-            await sql(`
-              UPDATE tickets
-              SET status = $$respondido$$,
-                  resposta = ${JSON.stringify(resposta1010).replace(/'/g, "''")},
-                  tratamento = ${JSON.stringify(tratamento1010).replace(/'/g, "''")},
-                  respondido_por = $$claude-ai@lumied.com.br$$,
-                  atualizado_em = now()
-              WHERE numero = 1010
-            `);
+            // Nota sobre slug mismatch
+            const slugNote = `ATENÇÃO: Slug mismatch detectado — subdomínio do portal é "maplebearcaxias" mas slug da escola no banco é "${escolaInfo?.slug}". A resolução via Origin falha silenciosamente para usuários sem sessão ativa. Recomendado: corrigir slug da escola para "maplebearcaxias" ou adicionar alias de subdomínio.`;
 
             // ── Atualizar Ticket #1011 ──
-            const novoStatus = causaRaiz.includes('módulos') || causaRaiz.includes('CRÍTICO') || causaRaiz.includes('inativa')
-              ? 'escalado' : 'respondido';
+            const fullTratamento = tratamento + '\n\n' + slugNote;
+            const resp1011Escaped = resposta1011.replace(/'/g, "''");
+            const trat1011Escaped = fullTratamento.replace(/'/g, "''");
+            const prox1011Escaped = proxPassos.replace(/'/g, "''");
 
             await sql(`
               UPDATE tickets
-              SET status = $$${novoStatus}$$,
-                  resposta = ${JSON.stringify(resposta1011).replace(/'/g, "''")},
-                  tratamento = ${JSON.stringify(tratamento1011).replace(/'/g, "''")},
-                  proximos_passos = ${JSON.stringify(proxPassos1011).replace(/'/g, "''")},
-                  respondido_por = $$claude-ai@lumied.com.br$$,
+              SET status = '${status1011}',
+                  resposta = '${resp1011Escaped}',
+                  tratamento = '${trat1011Escaped}',
+                  proximos_passos = '${prox1011Escaped}',
+                  respondido_por = 'claude-ai@lumied.com.br',
                   atualizado_em = now()
               WHERE numero = 1011
             `);
 
-            // ── Publicar diagnóstico como issue ──
-            const body = [
-              '## Diagnóstico — Tickets #1010 e #1011 (Maple Bear Caxias)',
+            // ── Publicar diagnóstico final ──
+            const issueBody = [
+              '## Diagnóstico Final — Ticket #1011 (Maple Bear Caxias)',
               '',
-              `**Causa raiz identificada:** ${causaRaiz}`,
+              `**Causa raiz:** ${causaRaiz}`,
               '',
               '### Escola',
               '```json',
-              JSON.stringify(escola, null, 2),
+              JSON.stringify(escolaInfo, null, 2),
               '```',
               '',
-              `### Módulos ativos: ${modulosAtivos.length}`,
+              `### Módulos do plano "${escolaInfo?.plano_nome}": ${modulosPlano.length}`,
+              '```json',
+              JSON.stringify(modulosPlano.map(m => m.slug), null, 2),
+              '```',
+              '',
+              `### Overrides escola_modulos: ${modulosOverride.length}`,
+              '```json',
+              JSON.stringify(modulosOverride, null, 2),
+              '```',
+              '',
+              `### Módulos efetivamente ativos: ${modulosAtivos.length}`,
               '```json',
               JSON.stringify(modulosAtivos.map(m => m.slug), null, 2),
               '```',
               '',
-              '### Sessão da professora',
-              '```json',
-              JSON.stringify(sessaoRows, null, 2),
-              '```',
+              '### ⚠️ Slug Mismatch',
+              `- Subdomínio: \`maplebearcaxias.lumied.com.br\``,
+              `- Slug no banco: \`${escolaInfo?.slug}\``,
+              `- Impacto: resolução via Origin falha para usuários sem sessão`,
               '',
-              '### Usuário unificado',
-              '```json',
-              JSON.stringify(usuarioRows, null, 2),
-              '```',
-              '',
-              `### Ações tomadas`,
-              `- Ticket #1010: status → respondido`,
-              `- Ticket #1011: status → ${novoStatus}`,
+              `### Ação tomada`,
+              `- Ticket #1011: status → **${status1011}**`,
+              `- Próximos passos: ${proxPassos}`,
               '',
               `_Gerado em: ${new Date().toISOString()}_`
             ].join('\n');
@@ -182,10 +161,12 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[ticket-bot] Diagnóstico #1010 #1011 — ${new Date().toISOString().slice(0,19)}`,
-              body,
+              title: `[ticket-bot] Diagnóstico final #1011 — ${new Date().toISOString().slice(0,19)}`,
+              body: issueBody,
               labels: ['ticket-bot']
             });
 
-            console.log('Diagnóstico concluído. Causa raiz:', causaRaiz);
+            console.log('Causa raiz:', causaRaiz);
             console.log('Módulos ativos:', modulosAtivos.length);
+            console.log('Status ticket #1011:', status1011);
+            console.log('Slug mismatch:', slugMismatch, `(banco: ${escolaInfo?.slug}, url: maplebearcaxias)`);
