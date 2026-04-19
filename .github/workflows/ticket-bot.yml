@@ -5,41 +5,187 @@ on:
     branches: [ticket-bot-temp]
 
 jobs:
-  query-tickets:
+  resolve-tickets:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - name: Query open tickets and post as issue
+      - name: Diagnose and resolve tickets
         uses: actions/github-script@v7
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         with:
           script: |
             const token = process.env.SUPABASE_ACCESS_TOKEN;
-            const projectRef = 'brgorknbrjlfwvrrlwxj';
-            const query = `
-              SELECT id, numero, email, nome, portal, tipo, descricao, url_pagina, user_agent, criado_em
-              FROM tickets
-              WHERE status = 'aberto'
-              ORDER BY criado_em ASC
-              LIMIT 10
-            `;
-            const resp = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/database/query`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ query })
-            });
-            const data = await resp.json();
-            const body = `## Tickets Abertos\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n\n_Gerado em: ${new Date().toISOString()}_`;
+            const ref = 'brgorknbrjlfwvrrlwxj';
+            const BASE = `https://api.supabase.com/v1/projects/${ref}/database/query`;
+            const h = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+            async function sql(query) {
+              const r = await fetch(BASE, { method:'POST', headers:h, body:JSON.stringify({query}) });
+              return r.json();
+            }
+
+            // ── Diagnóstico escola maplebearcaxias ──
+            const escolaRows = await sql(`
+              SELECT e.id, e.slug, e.nome, e.ativo, e.plano_id, p.nome as plano_nome
+              FROM escolas e
+              LEFT JOIN planos p ON p.id = e.plano_id
+              WHERE e.slug = 'maplebearcaxias'
+            `);
+
+            const modulosRows = await sql(`
+              SELECT m.slug, m.nome,
+                (pm.modulo_id IS NOT NULL) as no_plano,
+                em.habilitado as override
+              FROM modulos m
+              LEFT JOIN (
+                SELECT pm2.modulo_id FROM plano_modulos pm2
+                JOIN escolas e ON e.plano_id = pm2.plano_id
+                WHERE e.slug = 'maplebearcaxias'
+              ) pm ON pm.modulo_id = m.id
+              LEFT JOIN (
+                SELECT em2.modulo_id, em2.habilitado FROM escola_modulos em2
+                JOIN escolas e ON e.id = em2.escola_id
+                WHERE e.slug = 'maplebearcaxias'
+              ) em ON em.modulo_id = m.id
+              ORDER BY m.slug
+            `);
+
+            const sessaoRows = await sql(`
+              SELECT ps.expira_em, prof.email, prof.escola_id, prof.ativo,
+                     e.slug as escola_slug
+              FROM professora_sessoes ps
+              JOIN professoras prof ON prof.id = ps.professora_id
+              LEFT JOIN escolas e ON e.id = prof.escola_id
+              WHERE prof.email = 'carolinecapellinisouza@caxias.maplebear.com.br'
+              ORDER BY ps.criado_em DESC LIMIT 3
+            `);
+
+            // Also check via usuarios table (unified)
+            const usuarioRows = await sql(`
+              SELECT u.email, u.escola_id, u.papeis, u.ativo, e.slug as escola_slug
+              FROM usuarios u
+              LEFT JOIN escolas e ON e.id = u.escola_id
+              WHERE u.email = 'carolinecapellinisouza@caxias.maplebear.com.br'
+            `);
+
+            const diagnostico = {
+              escola: escolaRows,
+              modulos: modulosRows,
+              sessao_professora: sessaoRows,
+              usuario_unificado: usuarioRows
+            };
+
+            // ── Determinar causa raiz ──
+            const escola = Array.isArray(escolaRows) ? escolaRows[0] : null;
+            const modulosAtivos = Array.isArray(modulosRows)
+              ? modulosRows.filter(m => {
+                  if (m.override === false) return false;
+                  if (m.override === true) return true;
+                  return m.no_plano;
+                })
+              : [];
+
+            let causaRaiz = '';
+            let resposta1010 = '';
+            let resposta1011 = '';
+            let tratamento1010 = '';
+            let tratamento1011 = '';
+            let proxPassos1011 = '';
+
+            if (!escola) {
+              causaRaiz = 'Escola maplebearcaxias não encontrada no banco';
+              resposta1011 = 'Identificamos um problema na configuração da sua escola no sistema. Nossa equipe técnica foi notificada e irá corrigir em breve. Pedimos desculpas pelo transtorno.';
+              tratamento1011 = 'CRÍTICO: Escola com slug "maplebearcaxias" não encontrada na tabela escolas. Verificar onboarding.';
+              proxPassos1011 = '1) Verificar se escola foi criada com slug correto via staff_criar_escola; 2) Se slug diferente, corrigir via SQL; 3) Recriar subdomínio Vercel se necessário';
+            } else if (!escola.ativo) {
+              causaRaiz = 'Escola inativa';
+              resposta1011 = 'O acesso à sua escola está temporariamente suspenso. Entre em contato com a administração para mais informações.';
+              tratamento1011 = `Escola "maplebearcaxias" existe mas está INATIVA (ativo=false). ID: ${escola.id}`;
+              proxPassos1011 = 'Verificar motivo da inativação. Se inadimplência, checar financeiro. Se erro, executar: UPDATE escolas SET ativo=true WHERE slug=\'maplebearcaxias\'';
+            } else if (modulosAtivos.length === 0) {
+              causaRaiz = 'Escola ativa mas sem módulos habilitados';
+              resposta1011 = 'Identificamos que os módulos do portal ainda não foram ativados para a Maple Bear Caxias. Nossa equipe está regularizando. Tente novamente em até 2 horas.';
+              tratamento1011 = `Escola "maplebearcaxias" existe e está ativa (ID: ${escola.id}, plano: ${escola.plano_nome || 'N/A'}), porém 0 módulos ativos. plano_id=${escola.plano_id}. Possível causa: escola sem plano vinculado ou plano sem módulos.`;
+              proxPassos1011 = `1) Verificar plano_id=${escola.plano_id} na tabela planos e plano_modulos; 2) Se plano sem módulos: INSERT INTO plano_modulos (plano_id, modulo_id) SELECT '${escola.plano_id}', id FROM modulos; 3) Ou usar admin.html → Módulos para ativar manualmente`;
+            } else {
+              causaRaiz = `Dashboard vazio com ${modulosAtivos.length} módulos ativos — provável erro de sessão ou cache`;
+              resposta1011 = `Verificamos que sua conta está configurada corretamente com ${modulosAtivos.length} módulos ativos. Tente os seguintes passos:\n1. Feche o navegador completamente e reabra\n2. Faça logout e login novamente\n3. Limpe o cache (Ctrl+Shift+Del) e tente novamente\nSe o problema persistir, entre em contato.`;
+              tratamento1011 = `Escola OK, ${modulosAtivos.length} módulos ativos. Possível problema: sessão expirada não detectada pelo frontend, ou cache desatualizado. Sessão mais recente: ${JSON.stringify(sessaoRows?.[0] || 'não encontrada')}`;
+              proxPassos1011 = 'Se problema persistir após relogin: verificar professora_sessoes.expira_em e professoras.escola_id para este usuário';
+            }
+
+            // Resposta ao ticket #1010 (menu lateral) — explicação sobre responsive
+            resposta1010 = 'O menu lateral aparece automaticamente em telas com largura acima de 960px. Em telas menores (como tablets ou janelas reduzidas), ele é substituído pela barra de navegação na parte inferior da tela. Para acessar todas as funcionalidades:\n1. Expanda o navegador para tela cheia (tecla F4 no Chromebook)\n2. Ou use os ícones da barra inferior e o botão "☰ Mais"\n\nSe estiver usando o Chromebook em modo tablet, gire para a orientação paisagem (horizontal) para uma melhor experiência.';
+            tratamento1010 = 'Sidebar CSS-only (display:flex apenas em min-width:960px). ChromeOS com viewport potencialmente <960px (modo tablet, split-screen, ou zoom >100%). Comportamento esperado — não é bug. Bottom nav substitui sidebar em telas menores.';
+
+            // ── Atualizar Ticket #1010 ──
+            await sql(`
+              UPDATE tickets
+              SET status = $$respondido$$,
+                  resposta = ${JSON.stringify(resposta1010).replace(/'/g, "''")},
+                  tratamento = ${JSON.stringify(tratamento1010).replace(/'/g, "''")},
+                  respondido_por = $$claude-ai@lumied.com.br$$,
+                  atualizado_em = now()
+              WHERE numero = 1010
+            `);
+
+            // ── Atualizar Ticket #1011 ──
+            const novoStatus = causaRaiz.includes('módulos') || causaRaiz.includes('CRÍTICO') || causaRaiz.includes('inativa')
+              ? 'escalado' : 'respondido';
+
+            await sql(`
+              UPDATE tickets
+              SET status = $$${novoStatus}$$,
+                  resposta = ${JSON.stringify(resposta1011).replace(/'/g, "''")},
+                  tratamento = ${JSON.stringify(tratamento1011).replace(/'/g, "''")},
+                  proximos_passos = ${JSON.stringify(proxPassos1011).replace(/'/g, "''")},
+                  respondido_por = $$claude-ai@lumied.com.br$$,
+                  atualizado_em = now()
+              WHERE numero = 1011
+            `);
+
+            // ── Publicar diagnóstico como issue ──
+            const body = [
+              '## Diagnóstico — Tickets #1010 e #1011 (Maple Bear Caxias)',
+              '',
+              `**Causa raiz identificada:** ${causaRaiz}`,
+              '',
+              '### Escola',
+              '```json',
+              JSON.stringify(escola, null, 2),
+              '```',
+              '',
+              `### Módulos ativos: ${modulosAtivos.length}`,
+              '```json',
+              JSON.stringify(modulosAtivos.map(m => m.slug), null, 2),
+              '```',
+              '',
+              '### Sessão da professora',
+              '```json',
+              JSON.stringify(sessaoRows, null, 2),
+              '```',
+              '',
+              '### Usuário unificado',
+              '```json',
+              JSON.stringify(usuarioRows, null, 2),
+              '```',
+              '',
+              `### Ações tomadas`,
+              `- Ticket #1010: status → respondido`,
+              `- Ticket #1011: status → ${novoStatus}`,
+              '',
+              `_Gerado em: ${new Date().toISOString()}_`
+            ].join('\n');
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '[ticket-bot] Tickets abertos — ' + new Date().toISOString().slice(0,19),
+              title: `[ticket-bot] Diagnóstico #1010 #1011 — ${new Date().toISOString().slice(0,19)}`,
               body,
               labels: ['ticket-bot']
             });
-            console.log('Issue criada com', Array.isArray(data) ? data.length : 'N/A', 'tickets');
+
+            console.log('Diagnóstico concluído. Causa raiz:', causaRaiz);
+            console.log('Módulos ativos:', modulosAtivos.length);
