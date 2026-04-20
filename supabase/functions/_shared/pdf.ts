@@ -87,26 +87,35 @@ export async function generatePdf(input: PdfReportInput): Promise<Uint8Array> {
       y -= LINE_H + 4;
     }
     const drawRow = (cells: string[], f: PDFFont, size: number, fill?: [number, number, number]) => {
-      ensure(LINE_H + 4);
+      // Pre-compute wrapped lines for all cells to determine row height
+      const cellLines: string[][] = t.columns.map((col, i) => {
+        const cell = String(cells[i] ?? "");
+        return wrap(cell, f, size, col.width - 8);
+      });
+      const maxLines = Math.max(...cellLines.map(l => l.length));
+      const rowH = maxLines * (LINE_H) + 4;
+      ensure(rowH);
       if (fill) {
         page.drawRectangle({
-          x: MARGIN, y: y - 3, width: MAX_W, height: LINE_H + 2,
+          x: MARGIN, y: y - rowH + LINE_H + 1, width: MAX_W, height: rowH,
           color: rgb(fill[0], fill[1], fill[2]),
         });
       }
       let x = MARGIN + 4;
       for (let i = 0; i < t.columns.length; i++) {
         const col = t.columns[i];
-        const cell = String(cells[i] ?? "");
-        const lines = wrap(cell, f, size, col.width - 8);
-        const line = lines[0] + (lines.length > 1 ? "…" : "");
-        let drawX = x;
-        if (col.align === "right") drawX = x + col.width - 8 - f.widthOfTextAtSize(line, size);
-        else if (col.align === "center") drawX = x + (col.width - f.widthOfTextAtSize(line, size)) / 2;
-        page.drawText(line, { x: drawX, y: y + 1, size, font: f });
+        const lines = cellLines[i];
+        for (let li = 0; li < lines.length; li++) {
+          const line = lines[li];
+          const lineY = y - li * LINE_H;
+          let drawX = x;
+          if (col.align === "right") drawX = x + col.width - 8 - f.widthOfTextAtSize(line, size);
+          else if (col.align === "center") drawX = x + (col.width - f.widthOfTextAtSize(line, size)) / 2;
+          page.drawText(line, { x: drawX, y: lineY + 1, size, font: f });
+        }
         x += col.width;
       }
-      y -= LINE_H + 2;
+      y -= rowH;
     };
     drawRow(t.columns.map(c => c.label), bold, 9, [0.92, 0.94, 0.98]);
     for (const row of t.rows) drawRow(row, font, 9);

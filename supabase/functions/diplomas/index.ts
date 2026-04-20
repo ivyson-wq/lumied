@@ -2136,7 +2136,7 @@ Deno.serve(async (req) => {
             `${qty} ${it.unidade || ''}`,
             status,
             `R$ ${tot.toFixed(2)}`,
-            nota ? (nota.length > 140 ? nota.slice(0, 137) + '…' : nota) : '',
+            nota || '',
           ])
         }
       }
