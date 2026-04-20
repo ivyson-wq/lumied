@@ -89,22 +89,52 @@ Adicione a nova URL:
 ### 7. Marque o tópico como publicado
 No `scripts/seo-topics.json`, mude o status do tópico escolhido para `"published"` e adicione um campo `"published_at": "YYYY-MM-DD"`.
 
-### 8. Commit e push
+### 8. Commit e push via GitHub API
+
+**NÃO use git push.** Use a GitHub Contents API para criar/atualizar cada arquivo diretamente. Isso é mais confiável que git push em ambientes remotos.
+
+Para CADA arquivo alterado (artigo, blog index, sitemap, seo-topics.json), faça:
+
 ```bash
-git add site/blog/<slug>/ site/blog/index.html sitemap.xml scripts/seo-topics.json
-git commit -m "$(cat <<'EOF'
-feat(blog): <title> [auto-gerado pelo agente diário]
+# Helper: commit a single file via GitHub API
+github_commit_file() {
+  local FILE_PATH="$1"
+  local COMMIT_MSG="$2"
+  local CONTENT_B64=$(base64 -w 0 "$FILE_PATH")
 
-Categoria: <category>
-Keyword primária: <primary_keyword>
-Palavras: ~<target_words>
-Links internos: <internal_links count>
+  # Get current file SHA (needed for updates, skip for new files)
+  local SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+    "https://api.github.com/repos/ivyson-wq/maple-bear-rs/contents/$FILE_PATH?ref=main" \
+    | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
 
-Agent: daily-blog-agent (scheduled trigger)
-EOF
-)"
-git push origin main
+  local BODY="{\"message\":\"$COMMIT_MSG\",\"content\":\"$CONTENT_B64\",\"branch\":\"main\""
+  if [ -n "$SHA" ]; then
+    BODY="$BODY,\"sha\":\"$SHA\""
+  fi
+  BODY="$BODY}"
+
+  curl -s -X PUT "https://api.github.com/repos/ivyson-wq/maple-bear-rs/contents/$FILE_PATH" \
+    -H "Authorization: token $GITHUB_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$BODY"
+}
+
+# 1. Upload the new article
+github_commit_file "site/blog/<slug>/index.html" "feat(blog): <title> [auto-gerado]"
+
+# 2. Update blog index
+github_commit_file "site/blog/index.html" "chore(blog): add <slug> to blog index"
+
+# 3. Update sitemap
+github_commit_file "sitemap.xml" "chore(seo): add <slug> to sitemap"
+
+# 4. Update topics queue
+github_commit_file "scripts/seo-topics.json" "chore(blog): mark <slug> as published"
 ```
+
+O `GITHUB_TOKEN` é uma variável de ambiente disponível no ambiente do agente. Se não estiver disponível, tente ler de `.env` ou use o token do `gh auth`.
+
+**Importante:** Cada chamada cria um commit separado. O Vercel vai re-deploy a cada commit (o último é o que importa).
 
 ### 9. Submeta ao IndexNow
 Depois do push, rode o helper que já existe:
