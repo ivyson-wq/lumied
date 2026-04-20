@@ -69,6 +69,11 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 .header-left .date{font-size:12px;color:var(--ink-3);margin-top:3px}
 .avatar-sm{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--mb-red),#e8365a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:600;flex-shrink:0;box-shadow:0 3px 12px rgba(200,16,46,.15)}
 
+/* ── Back button in header ── */
+.header-back{display:none;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:var(--mb-red);padding:4px 0;-webkit-tap-highlight-color:transparent}
+.header-back svg{width:18px;height:18px}
+.header-back:active{opacity:.6}
+
 /* ── Hero Card ── */
 .hero-card{background:var(--surface);border:none;border-radius:var(--radius-card);padding:18px;margin-bottom:14px;box-shadow:0 2px 16px rgba(26,20,19,.04),0 0 0 1px var(--line)}
 .hero-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
@@ -181,9 +186,6 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 .toast{position:fixed;bottom:calc(90px + var(--safe-b));left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 24px;border-radius:16px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1);z-index:300;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.18)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ── Sandbox Badge ── */
-.sandbox-badge{position:fixed;top:8px;right:8px;background:rgba(26,20,19,.06);color:var(--ink-4);font-size:9px;font-weight:600;letter-spacing:.8px;padding:3px 8px;border-radius:6px;z-index:50;pointer-events:none}
-
 /* ── Loading Skeleton ── */
 .skel{background:linear-gradient(90deg,var(--line) 25%,var(--line-2) 50%,var(--line) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -197,18 +199,95 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── Fade-in ── */
-
 .fade-up{animation:fadeUp .5s cubic-bezier(.2,.8,.2,1) both}
 .fade-up-d1{animation-delay:.08s}
 .fade-up-d2{animation-delay:.16s}
 .fade-up-d3{animation-delay:.24s}
 .fade-up-d4{animation-delay:.32s}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Tab Pages ── */
+.tab-page{display:none}
+.tab-page.active{display:block}
+
+/* ── Boletos Tab ── */
+.boleto-card{background:var(--surface);border-radius:var(--radius-card);padding:16px;margin-bottom:12px;box-shadow:0 2px 12px rgba(26,20,19,.03),0 0 0 1px var(--line)}
+.boleto-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.boleto-valor{font-family:'Instrument Serif',serif;font-size:22px;color:var(--ink)}
+.boleto-badge{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.3px}
+.boleto-badge.pago{background:var(--ok-soft);color:var(--ok)}
+.boleto-badge.vencido{background:var(--mb-red-50);color:var(--mb-red)}
+.boleto-badge.aberto{background:var(--warn-soft);color:var(--warn)}
+.boleto-venc{font-size:12px;color:var(--ink-3);margin-bottom:12px}
+.boleto-actions{display:flex;gap:8px}
+.boleto-action-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:var(--radius-btn);border:1.5px solid var(--line);background:var(--surface-2);font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;font-family:inherit;transition:all .15s}
+.boleto-action-btn:active{transform:scale(.96);background:var(--line)}
+.boleto-action-btn.primary{background:linear-gradient(135deg,var(--mb-red),#d4263e);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(200,16,46,.15)}
+.boleto-action-btn svg{width:16px;height:16px}
+
+/* ── CPF search ── */
+.cpf-search-card{background:var(--surface);border-radius:var(--radius-card);padding:20px;box-shadow:0 2px 12px rgba(26,20,19,.03),0 0 0 1px var(--line);text-align:center}
+.cpf-search-card p{font-size:13px;color:var(--ink-3);margin-bottom:14px;line-height:1.5}
+
+/* ── Dia a Dia Tab ── */
+.timeline-date-header{font-family:'Instrument Serif',serif;font-size:18px;color:var(--ink);margin-bottom:4px;margin-top:16px}
+.timeline-date-header:first-child{margin-top:0}
+.timeline-teacher{font-size:12px;color:var(--ink-3);margin-bottom:10px}
+.timeline-item{background:var(--surface);border-radius:var(--radius-card);padding:14px;margin-bottom:10px;box-shadow:0 2px 12px rgba(26,20,19,.03),0 0 0 1px var(--line)}
+.timeline-item-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.timeline-item-emoji{font-size:20px;width:36px;height:36px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.timeline-item-title{font-size:14px;font-weight:600;color:var(--ink)}
+.timeline-item-desc{font-size:13px;color:var(--ink-2);line-height:1.5;margin-left:46px}
+.timeline-item-valor{font-size:12px;color:var(--ink-3);margin-left:46px;margin-top:4px}
+.timeline-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;margin-left:46px}
+.timeline-photos img{width:80px;height:80px;object-fit:cover;border-radius:12px;cursor:pointer;transition:transform .15s}
+.timeline-photos img:active{transform:scale(.95)}
+
+/* ── Boletim Tab ── */
+.boletim-period{background:var(--surface);border-radius:var(--radius-card);padding:16px;margin-bottom:14px;box-shadow:0 2px 12px rgba(26,20,19,.03),0 0 0 1px var(--line)}
+.boletim-period-title{font-family:'Instrument Serif',serif;font-size:18px;color:var(--ink);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.boletim-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0}
+.boletim-row:not(:last-child){border-bottom:1px solid var(--line)}
+.boletim-disciplina{font-size:14px;color:var(--ink);font-weight:500}
+.boletim-media{font-family:'Instrument Serif',serif;font-size:18px;font-weight:400;min-width:40px;text-align:right}
+.boletim-media.ok{color:var(--ok)}
+.boletim-media.low{color:var(--mb-red)}
+.boletim-media.na{color:var(--ink-4)}
+.boletim-geral{display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px;border-top:2px solid var(--line);margin-top:4px}
+.boletim-geral-label{font-size:14px;font-weight:700;color:var(--ink)}
+.boletim-geral-val{font-family:'Instrument Serif',serif;font-size:22px}
+
+/* ── Solicitar Turno Tab ── */
+.form-group{margin-bottom:16px}
+.form-label{font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:6px;display:block}
+.form-select{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;font-size:15px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s;background:var(--surface-2);color:var(--ink);appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237a706a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center}
+.form-select:focus{border-color:var(--mb-red);box-shadow:0 0 0 3px rgba(200,16,46,.08);background-color:#fff}
+.weekday-checks{display:flex;gap:8px;flex-wrap:wrap}
+.weekday-check{display:flex;align-items:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.weekday-check input{display:none}
+.weekday-check .wk-box{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ink-3);background:var(--surface-2);transition:all .15s}
+.weekday-check input:checked+.wk-box{background:var(--mb-red);color:#fff;border-color:var(--mb-red);box-shadow:0 2px 8px rgba(200,16,46,.2)}
+.form-card{background:var(--surface);border-radius:var(--radius-card);padding:20px;box-shadow:0 2px 12px rgba(26,20,19,.03),0 0 0 1px var(--line)}
+
+/* ── Success animation ── */
+.success-state{display:none;flex-direction:column;align-items:center;gap:12px;padding:32px 20px;text-align:center}
+.success-state.show{display:flex}
+.success-check{width:64px;height:64px;border-radius:50%;background:var(--ok-soft);display:flex;align-items:center;justify-content:center;animation:popIn .4s cubic-bezier(.2,.8,.2,1)}
+.success-check svg{color:var(--ok);width:28px;height:28px}
+@keyframes popIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.success-state h2{font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;color:var(--ink)}
+.success-state p{font-size:13px;color:var(--ink-3);max-width:280px;line-height:1.5}
+
+/* ── Tab page title ── */
+.tab-page-title{font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;color:var(--ink);margin-bottom:16px}
+
+/* ── Empty state ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--ink-3)}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:14px;line-height:1.5}
 </style>
 </head>
 <body>
-
-<div class="sandbox-badge">SANDBOX v2</div>
 
 <!-- ============ LOGIN SCREEN ============ -->
 <div id="loginScreen" class="active">
@@ -231,7 +310,7 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
       <div style="font-size:14px;font-weight:600;margin-bottom:10px">Criar Conta</div>
       <input class="login-input" id="cadNome" type="text" placeholder="Nome completo" autocomplete="name">
       <input class="login-input" id="cadEmail" type="email" placeholder="E-mail" autocomplete="email" style="margin-top:8px">
-      <input class="login-input" id="cadSenha" type="password" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" style="margin-top:8px">
+      <input class="login-input" id="cadSenha" type="password" placeholder="Senha (min. 6 caracteres)" autocomplete="new-password" style="margin-top:8px">
       <input class="login-input" id="cadSenhaConf" type="password" placeholder="Confirmar senha" style="margin-top:8px">
       <div id="cadErr" style="display:none;font-size:12px;color:#a00d24;padding:8px;background:#fdf0f2;border-radius:8px;margin-top:8px"></div>
       <button class="login-btn" id="btnCadastrar" onclick="cadastrarConta()" style="margin-top:10px">Criar Conta</button>
@@ -259,7 +338,10 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
   <!-- Header -->
   <div class="header">
     <div class="header-left">
-      <h1 class="serif" id="greetName">Olá</h1>
+      <button class="header-back" id="headerBack" onclick="switchTab('inicio')">
+        <i data-lucide="arrow-left"></i> Inicio
+      </button>
+      <h1 class="serif" id="greetName">Ola</h1>
       <div class="date" id="headerDate"></div>
     </div>
     <div class="avatar-sm" id="headerAvatar"></div>
@@ -278,100 +360,195 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
       <div class="skel skel-block" style="height:56px"></div>
     </div>
 
-    <!-- Loaded content (hidden until ready) -->
-    <div id="loadedContent" style="display:none">
+    <!-- ===== TAB: INICIO ===== -->
+    <div class="tab-page active" id="tabInicio">
+      <div id="loadedContent" style="display:none">
 
-      <!-- Hero Card -->
-      <div class="hero-card fade-up" id="heroCard">
-        <div class="hero-top">
-          <div class="hero-photo" id="heroPhoto"></div>
-          <div class="hero-info">
-            <div class="name" id="heroName"></div>
-            <div class="turma" id="heroTurma"></div>
-          </div>
-          <button class="trocar-chip" id="trocarBtn" onclick="openSheet()">Trocar <i data-lucide="chevron-down" style="width:12px;height:12px"></i></button>
-        </div>
-
-        <!-- Presença do dia -->
-        <div class="hero-day" id="heroDay">
-          <div class="hero-day-row">
-            <div class="hero-day-icon confirmed" id="dayIcon"><i data-lucide="backpack" style="width:16px;height:16px"></i></div>
-            <div class="hero-day-text">
-              <div class="dt" id="dayTitle">Aula hoje</div>
-              <div class="ds" id="daySub">Sexta-feira, 17 de abril</div>
+        <!-- Hero Card -->
+        <div class="hero-card fade-up" id="heroCard">
+          <div class="hero-top">
+            <div class="hero-photo" id="heroPhoto"></div>
+            <div class="hero-info">
+              <div class="name" id="heroName"></div>
+              <div class="turma" id="heroTurma"></div>
             </div>
-            <button class="hero-day-toggle yes" id="dayToggle" onclick="togglePresencaDia()">Vai</button>
+            <button class="trocar-chip" id="trocarBtn" onclick="openSheet()">Trocar <i data-lucide="chevron-down" style="width:12px;height:12px"></i></button>
           </div>
-          <div class="hero-day-row" id="atividadeRow" style="display:none">
-            <div class="hero-day-icon pending" id="ativIcon"><i data-lucide="trophy" style="width:16px;height:16px"></i></div>
-            <div class="hero-day-text">
-              <div class="dt" id="ativTitle">Atividade extra</div>
-              <div class="ds" id="ativSub">Natação · 15:00</div>
+
+          <!-- Presenca do dia -->
+          <div class="hero-day" id="heroDay">
+            <div class="hero-day-row">
+              <div class="hero-day-icon confirmed" id="dayIcon"><i data-lucide="backpack" style="width:16px;height:16px"></i></div>
+              <div class="hero-day-text">
+                <div class="dt" id="dayTitle">Aula hoje</div>
+                <div class="ds" id="daySub">Sexta-feira, 17 de abril</div>
+              </div>
+              <button class="hero-day-toggle yes" id="dayToggle" onclick="togglePresencaDia()">Vai</button>
             </div>
-            <button class="hero-day-toggle yes" id="ativToggle" onclick="toggleAtivExtra()">Vai</button>
+            <div class="hero-day-row" id="atividadeRow" style="display:none">
+              <div class="hero-day-icon pending" id="ativIcon"><i data-lucide="trophy" style="width:16px;height:16px"></i></div>
+              <div class="hero-day-text">
+                <div class="dt" id="ativTitle">Atividade extra</div>
+                <div class="ds" id="ativSub">Natacao . 15:00</div>
+              </div>
+              <button class="hero-day-toggle yes" id="ativToggle" onclick="toggleAtivExtra()">Vai</button>
+            </div>
+          </div>
+
+          <!-- Stats secundarios -->
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <div class="val serif" id="statFreq">--</div>
+              <div class="lbl">Frequencia</div>
+            </div>
+            <div class="hero-stat">
+              <div class="val serif" id="statStatus">--</div>
+              <div class="lbl" id="statStatusLbl">Hoje</div>
+            </div>
+            <div class="hero-stat">
+              <div class="val serif" id="statPend">--</div>
+              <div class="lbl">Pendencias</div>
+            </div>
           </div>
         </div>
 
-        <!-- Stats secundários -->
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <div class="val serif" id="statFreq">—</div>
-            <div class="lbl">Frequência</div>
+        <!-- Estou a caminho -->
+        <button class="btn-caminho idle fade-up" id="btnCaminho" onclick="toggleCaminho()">
+          <span class="btn-caminho-icon"><i data-lucide="navigation" style="width:20px;height:20px"></i></span>
+          Estou a caminho
+        </button>
+
+        <!-- Alerts (conditional) -->
+        <div id="alertsContainer"></div>
+
+        <!-- Quick Access -->
+        <div class="section-title fade-up fade-up-d1">Acesso rapido</div>
+        <div class="quick-grid fade-up fade-up-d2">
+          <div class="quick-tile" onclick="switchTab('boletos')">
+            <div class="tile-icon"><i data-lucide="receipt"></i></div>
+            <div class="tile-label">Boletos</div>
           </div>
-          <div class="hero-stat">
-            <div class="val serif" id="statStatus">—</div>
-            <div class="lbl" id="statStatusLbl">Hoje</div>
+          <div class="quick-tile" onclick="switchTab('diaadia')">
+            <div class="tile-icon"><i data-lucide="camera"></i></div>
+            <div class="tile-label">Dia a Dia</div>
           </div>
-          <div class="hero-stat">
-            <div class="val serif" id="statPend">—</div>
-            <div class="lbl">Pendências</div>
+          <div class="quick-tile" onclick="switchTab('boletim')">
+            <div class="tile-icon"><i data-lucide="file-text"></i></div>
+            <div class="tile-label">Boletim</div>
+          </div>
+          <div class="quick-tile" onclick="switchTab('solicitar')">
+            <div class="tile-icon"><i data-lucide="message-circle"></i></div>
+            <div class="tile-label">Turnos</div>
           </div>
         </div>
+
+        <!-- Agenda -->
+        <div class="section-title fade-up fade-up-d3">Proximos dias <span style="font-size:10px;font-weight:400;color:var(--ink-4);text-transform:none;letter-spacing:0">aulas, atividades e eventos</span></div>
+        <div class="agenda-card fade-up fade-up-d4" id="agendaCard"></div>
+
+      </div><!-- /loadedContent -->
+    </div><!-- /tabInicio -->
+
+    <!-- ===== TAB: BOLETOS ===== -->
+    <div class="tab-page" id="tabBoletos">
+      <div class="tab-page-title">Boletos</div>
+      <div id="boletosLoading">
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block" style="height:90px"></div>
+        <div class="skel skel-block" style="height:90px"></div>
       </div>
+      <div id="boletosContent" style="display:none"></div>
+    </div>
 
-      <!-- Estou a caminho -->
-      <button class="btn-caminho idle fade-up" id="btnCaminho" onclick="toggleCaminho()">
-        <span class="btn-caminho-icon"><i data-lucide="navigation" style="width:20px;height:20px"></i></span>
-        Estou a caminho
-      </button>
-
-      <!-- Alerts (conditional) -->
-      <div id="alertsContainer"></div>
-
-      <!-- Quick Access -->
-      <div class="section-title fade-up fade-up-d1">Acesso rápido</div>
-      <div class="quick-grid fade-up fade-up-d2">
-        <div class="quick-tile" onclick="goLegacy('boletos')">
-          <div class="tile-icon"><i data-lucide="receipt"></i></div>
-          <div class="tile-label">Boletos</div>
-        </div>
-        <div class="quick-tile" onclick="goLegacy('diaadia')">
-          <div class="tile-icon"><i data-lucide="camera"></i></div>
-          <div class="tile-label">Dia a Dia</div>
-        </div>
-        <div class="quick-tile" onclick="goLegacy('boletim')">
-          <div class="tile-icon"><i data-lucide="file-text"></i></div>
-          <div class="tile-label">Boletim</div>
-        </div>
-        <div class="quick-tile" onclick="goLegacy('solicitar')">
-          <div class="tile-icon"><i data-lucide="message-circle"></i></div>
-          <div class="tile-label">Turnos</div>
-        </div>
+    <!-- ===== TAB: DIA A DIA ===== -->
+    <div class="tab-page" id="tabDiaadia">
+      <div class="tab-page-title">Dia a Dia</div>
+      <div id="diaadiaLoading">
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block" style="height:80px"></div>
+        <div class="skel skel-block" style="height:80px"></div>
       </div>
+      <div id="diaadiaContent" style="display:none"></div>
+    </div>
 
-      <!-- Agenda -->
-      <div class="section-title fade-up fade-up-d3">Próximos dias <span style="font-size:10px;font-weight:400;color:var(--ink-4);text-transform:none;letter-spacing:0">aulas, atividades e eventos</span></div>
-      <div class="agenda-card fade-up fade-up-d4" id="agendaCard"></div>
+    <!-- ===== TAB: BOLETIM ===== -->
+    <div class="tab-page" id="tabBoletim">
+      <div class="tab-page-title">Boletim</div>
+      <div id="boletimLoading">
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block" style="height:100px"></div>
+      </div>
+      <div id="boletimContent" style="display:none"></div>
+    </div>
 
-    </div><!-- /loadedContent -->
+    <!-- ===== TAB: SOLICITAR TURNO ===== -->
+    <div class="tab-page" id="tabSolicitar">
+      <div class="tab-page-title">Solicitar Turno</div>
+      <div id="solicitarForm" class="form-card">
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input class="login-input" id="solEmail" type="email" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nome do responsavel</label>
+          <input class="login-input" id="solNomeResp" type="text" placeholder="Nome completo" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nome da crianca</label>
+          <div id="solCriancaWrap"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Serie</label>
+          <select class="form-select" id="solSerie">
+            <option value="">Carregando...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Turno</label>
+          <select class="form-select" id="solTurno" onchange="onTurnoChange()">
+            <option value="">Selecione o turno</option>
+            <option value="integral_5x">Integral . 5x/sem -- R$ 4.395</option>
+            <option value="integral_4x">Integral . 4x/sem -- R$ 4.304</option>
+            <option value="integral_3x">Integral . 3x/sem -- R$ 4.072</option>
+            <option value="integral_2x">Integral . 2x/sem -- R$ 3.761</option>
+            <option value="integral_1x">Integral . 1x/sem -- R$ 3.300</option>
+            <option value="semi_5x">Semi-Integral . 5x/sem -- R$ 4.030</option>
+            <option value="semi_4x">Semi-Integral . 4x/sem -- R$ 3.992</option>
+            <option value="semi_3x">Semi-Integral . 3x/sem -- R$ 3.773</option>
+            <option value="semi_2x">Semi-Integral . 2x/sem -- R$ 3.535</option>
+            <option value="semi_1x">Semi-Integral . 1x/sem -- R$ 3.196</option>
+            <option value="tarde">Apenas a Tarde</option>
+            <option value="diaria">Diaria -- R$ 150/dia</option>
+          </select>
+        </div>
+        <div class="form-group" id="solDiasWrap" style="display:none">
+          <label class="form-label">Dias da semana</label>
+          <div class="weekday-checks">
+            <label class="weekday-check"><input type="checkbox" name="sol_dia" value="Segunda"><span class="wk-box">Seg</span></label>
+            <label class="weekday-check"><input type="checkbox" name="sol_dia" value="Terca"><span class="wk-box">Ter</span></label>
+            <label class="weekday-check"><input type="checkbox" name="sol_dia" value="Quarta"><span class="wk-box">Qua</span></label>
+            <label class="weekday-check"><input type="checkbox" name="sol_dia" value="Quinta"><span class="wk-box">Qui</span></label>
+            <label class="weekday-check"><input type="checkbox" name="sol_dia" value="Sexta"><span class="wk-box">Sex</span></label>
+          </div>
+        </div>
+        <button class="login-btn" id="solSubmitBtn" onclick="submitSolicitacao()" style="margin-top:4px">Enviar Solicitacao</button>
+      </div>
+      <div class="success-state" id="solicitarSuccess">
+        <div class="success-check"><i data-lucide="check" style="width:28px;height:28px"></i></div>
+        <h2>Solicitacao enviada!</h2>
+        <p>Sua solicitacao de turno foi registrada. A escola entrara em contato em breve.</p>
+        <button class="login-btn" onclick="resetSolicitacao()" style="max-width:200px;margin-top:8px">Nova solicitacao</button>
+      </div>
+    </div>
+
   </div><!-- /app-scroll -->
 
   <!-- Tab Bar -->
   <nav class="tab-bar">
-    <button class="tab-item active" onclick="activateTab(this)">
-      <i data-lucide="home"></i><span>Início</span>
+    <button class="tab-item active" data-tab="inicio" onclick="switchTab('inicio')">
+      <i data-lucide="home"></i><span>Inicio</span>
     </button>
-    <button class="tab-item" onclick="goLegacy('diaadia')">
+    <button class="tab-item" data-tab="diaadia" onclick="switchTab('diaadia')">
       <i data-lucide="calendar"></i><span>Dia a Dia</span>
     </button>
     <div style="display:flex;flex-direction:column;align-items:center">
@@ -380,10 +557,10 @@ body{background:var(--mb-cream);min-height:100dvh;overflow-x:hidden;-webkit-font
       </button>
       <span class="fab-label">Lumi</span>
     </div>
-    <button class="tab-item" onclick="goLegacy('boletos')">
+    <button class="tab-item" data-tab="boletos" onclick="switchTab('boletos')">
       <i data-lucide="wallet"></i><span>Boletos</span>
     </button>
-    <button class="tab-item" onclick="goLegacy('boletim')">
+    <button class="tab-item" data-tab="boletim" onclick="switchTab('boletim')">
       <i data-lucide="award"></i><span>Boletim</span>
     </button>
   </nav>
@@ -423,19 +600,21 @@ var MOCK = {
   user: { nome: 'Maria Silva' },
   filhos: [{ id: '1', nome: 'Joana Silva', turma: 'Group 3', serie: 'G3', foto_url: null }],
   presenca: { presenca_mes_pct: 96, status_hoje: 'na_aula', pendencias: 1 },
-  alertas: [{ type: 'boleto', title: 'Boleto de abril vence em 3 dias', subtitle: 'R$ 2.480,00 · vencimento 20/04', cta: 'Pagar', priority: 1 }],
+  alertas: [{ type: 'boleto', title: 'Boleto de abril vence em 3 dias', subtitle: 'R$ 2.480,00 . vencimento 20/04', cta: 'Pagar', priority: 1 }],
   eventos: [
-    { data: '2026-04-21', titulo: 'Joana — Semi-integral 3× semana', horario: '', tipo: 'Aula', cor: 'red' },
-    { data: '2026-04-21', titulo: 'Natação — Joana', horario: '15:00', tipo: 'Extra', cor: 'green' },
-    { data: '2026-04-22', titulo: 'Joana — Semi-integral 3× semana', horario: '', tipo: 'Aula', cor: 'red' },
-    { data: '2026-04-23', titulo: 'Joana — Semi-integral 3× semana', horario: '', tipo: 'Aula', cor: 'red' },
-    { data: '2026-04-23', titulo: 'Ballet — Joana', horario: '14:00', tipo: 'Extra', cor: 'green' },
-    { data: '2026-04-24', titulo: 'Reunião de pais', horario: '19:00', tipo: 'Evento', cor: '' }
+    { data: '2026-04-21', titulo: 'Joana -- Semi-integral 3x semana', horario: '', tipo: 'Aula', cor: 'red' },
+    { data: '2026-04-21', titulo: 'Natacao -- Joana', horario: '15:00', tipo: 'Extra', cor: 'green' },
+    { data: '2026-04-22', titulo: 'Joana -- Semi-integral 3x semana', horario: '', tipo: 'Aula', cor: 'red' },
+    { data: '2026-04-23', titulo: 'Joana -- Semi-integral 3x semana', horario: '', tipo: 'Aula', cor: 'red' },
+    { data: '2026-04-23', titulo: 'Ballet -- Joana', horario: '14:00', tipo: 'Extra', cor: 'green' },
+    { data: '2026-04-24', titulo: 'Reuniao de pais', horario: '19:00', tipo: 'Evento', cor: '' }
   ]
 };
 
 // ── State ──
 var state = { user: null, filhos: [], selected: 0, presenca: null, alertas: [], eventos: [] };
+var currentTab = 'inicio';
+var tabDataLoaded = { boletos: false, diaadia: false, boletim: false, solicitar: false };
 
 // ── Helpers ──
 function initials(name) {
@@ -445,7 +624,7 @@ function initials(name) {
 }
 
 var MONTHS_SHORT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-var DAYS_LONG = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+var DAYS_LONG = ['domingo','segunda-feira','terca-feira','quarta-feira','quinta-feira','sexta-feira','sabado'];
 
 function formatHeaderDate() {
   var d = new Date();
@@ -456,6 +635,22 @@ function formatHeaderDate() {
 function parseDate(str) {
   var p = str.split('-');
   return { day: parseInt(p[2], 10), month: MONTHS_SHORT[parseInt(p[1], 10) - 1] };
+}
+
+function formatBRL(val) {
+  if (val == null) return 'R$ 0,00';
+  var n = typeof val === 'string' ? parseFloat(val) : val;
+  return 'R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function formatDateBR(str) {
+  if (!str) return '';
+  var parts = str.split('-');
+  if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+  // Try parsing as date
+  var d = new Date(str);
+  if (isNaN(d)) return str;
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
 }
 
 // ── Toast ──
@@ -473,7 +668,465 @@ var sb = (typeof supabase !== 'undefined' && supabase.createClient)
   ? supabase.createClient(SUPABASE_URL, ANON)
   : null;
 
+// ══════════════════════════════════════════════
+// ── TAB SWITCHING ──
+// ══════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+
+  // Hide all tab pages, show target
+  document.querySelectorAll('.tab-page').forEach(function(p) { p.classList.remove('active'); });
+  var targetId = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+  var targetEl = document.getElementById(targetId);
+  if (targetEl) targetEl.classList.add('active');
+
+  // Update tab bar active state
+  document.querySelectorAll('.tab-item').forEach(function(t) {
+    t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+  });
+
+  // Header: show back button on sub-tabs, hide greeting
+  var backBtn = document.getElementById('headerBack');
+  var greetEl = document.getElementById('greetName');
+  var dateEl = document.getElementById('headerDate');
+  if (tab === 'inicio') {
+    backBtn.style.display = 'none';
+    greetEl.style.display = 'block';
+    dateEl.style.display = 'block';
+  } else {
+    backBtn.style.display = 'flex';
+    greetEl.style.display = 'none';
+    dateEl.style.display = 'none';
+  }
+
+  // Scroll to top
+  document.getElementById('appScroll').scrollTop = 0;
+
+  // Load tab data if not loaded yet
+  if (tab === 'boletos' && !tabDataLoaded.boletos) loadBoletos();
+  if (tab === 'diaadia' && !tabDataLoaded.diaadia) loadDiaADia();
+  if (tab === 'boletim' && !tabDataLoaded.boletim) loadBoletim();
+  if (tab === 'solicitar' && !tabDataLoaded.solicitar) loadSolicitar();
+}
+
+// ══════════════════════════════════════════════
+// ── TAB: BOLETOS ──
+// ══════════════════════════════════════════════
+async function loadBoletos() {
+  var loading = document.getElementById('boletosLoading');
+  var content = document.getElementById('boletosContent');
+  loading.style.display = 'block';
+  content.style.display = 'none';
+
+  try {
+    var email = state.user ? state.user.email : '';
+    if (!email) throw new Error('No email');
+    var token = getToken();
+    var r = await fetch(SUPABASE_URL + '/functions/v1/boletos-list', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+      body: JSON.stringify({ email: email, _token: token })
+    });
+    var data = await r.json();
+    tabDataLoaded.boletos = true;
+    renderBoletos(Array.isArray(data) ? data : (data.boletos || []));
+  } catch(e) {
+    tabDataLoaded.boletos = true;
+    renderBoletos([]);
+  }
+
+  loading.style.display = 'none';
+  content.style.display = 'block';
+}
+
+function renderBoletos(boletos) {
+  var content = document.getElementById('boletosContent');
+  content.innerHTML = '';
+
+  if (!boletos || boletos.length === 0) {
+    content.innerHTML =
+      '<div class="empty-state fade-up"><div class="empty-icon">📄</div><p>Nenhum boleto encontrado</p></div>' +
+      '<div class="cpf-search-card fade-up fade-up-d1">' +
+      '<p>Caso seus boletos estejam vinculados a um CPF diferente, busque abaixo:</p>' +
+      '<input class="login-input" id="cpfSearch" type="text" placeholder="Digite seu CPF" inputmode="numeric" style="margin-bottom:10px">' +
+      '<button class="login-btn" onclick="searchByCpf()">Buscar por CPF</button>' +
+      '</div>';
+    return;
+  }
+
+  var hoje = new Date();
+  hoje.setHours(0,0,0,0);
+
+  boletos.forEach(function(b, i) {
+    var situacao = (b.situacao || '').toUpperCase();
+    var isPago = situacao === 'PAGO' || situacao === 'RECEBIDO';
+    var vencDate = b.vencimento ? new Date(b.vencimento + 'T12:00:00') : null;
+    var isVencido = !isPago && vencDate && vencDate < hoje;
+
+    var badgeClass = isPago ? 'pago' : isVencido ? 'vencido' : 'aberto';
+    var badgeText = isPago ? 'Pago' : isVencido ? 'Vencido' : 'Em aberto';
+
+    var actions = '';
+    if (b.linha_digitavel) {
+      actions += '<button class="boleto-action-btn" onclick="copyLinhaDigitavel(\'' + escapeHtml(b.linha_digitavel) + '\')"><i data-lucide="copy"></i> Copiar codigo</button>';
+    }
+    if (b.pdf_url) {
+      actions += '<a class="boleto-action-btn primary" href="' + escapeHtml(b.pdf_url) + '" target="_blank" rel="noopener" style="text-decoration:none"><i data-lucide="download"></i> Baixar PDF</a>';
+    }
+
+    var delay = Math.min(i, 4);
+    var html = '<div class="boleto-card fade-up' + (delay > 0 ? ' fade-up-d' + delay : '') + '">' +
+      '<div class="boleto-header">' +
+      '<div class="boleto-valor">' + formatBRL(b.valor) + '</div>' +
+      '<span class="boleto-badge ' + badgeClass + '">' + badgeText + '</span>' +
+      '</div>' +
+      '<div class="boleto-venc">Vencimento: ' + formatDateBR(b.vencimento) + '</div>' +
+      (actions ? '<div class="boleto-actions">' + actions + '</div>' : '') +
+      '</div>';
+    content.innerHTML += html;
+  });
+
+  lucide.createIcons({ nodes: content.querySelectorAll('[data-lucide]') });
+}
+
+function copyLinhaDigitavel(linha) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(linha).then(function() {
+      showToast('Codigo copiado!');
+    }).catch(function() {
+      fallbackCopy(linha);
+    });
+  } else {
+    fallbackCopy(linha);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showToast('Codigo copiado!'); }
+  catch(e) { showToast('Erro ao copiar'); }
+  document.body.removeChild(ta);
+}
+
+async function searchByCpf() {
+  var cpf = (document.getElementById('cpfSearch') || {}).value;
+  if (!cpf || cpf.trim().length < 11) { showToast('Digite um CPF valido'); return; }
+  try {
+    var token = getToken();
+    var r = await fetch(SUPABASE_URL + '/functions/v1/boletos-list', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+      body: JSON.stringify({ cpf: cpf.replace(/\D/g,''), _token: token })
+    });
+    var data = await r.json();
+    renderBoletos(Array.isArray(data) ? data : (data.boletos || []));
+  } catch(e) {
+    showToast('Erro ao buscar boletos');
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ══════════════════════════════════════════════
+// ── TAB: DIA A DIA ──
+// ══════════════════════════════════════════════
+async function loadDiaADia() {
+  var loading = document.getElementById('diaadiaLoading');
+  var content = document.getElementById('diaadiaContent');
+  loading.style.display = 'block';
+  content.style.display = 'none';
+
+  try {
+    var email = state.user ? state.user.email : '';
+    if (!email) throw new Error('No email');
+    var data = await api(
+      { action: 'agenda_pais_get', aluno_email: email },
+      SUPABASE_URL + '/functions/v1/comunicacao'
+    );
+    tabDataLoaded.diaadia = true;
+    renderDiaADia(Array.isArray(data) ? data : (data.registros || data.agenda || []));
+  } catch(e) {
+    tabDataLoaded.diaadia = true;
+    renderDiaADia([]);
+  }
+
+  loading.style.display = 'none';
+  content.style.display = 'block';
+}
+
+function renderDiaADia(registros) {
+  var content = document.getElementById('diaadiaContent');
+  content.innerHTML = '';
+
+  if (!registros || registros.length === 0) {
+    content.innerHTML = '<div class="empty-state fade-up"><div class="empty-icon">📒</div><p>Nenhum registro no Dia a Dia</p></div>';
+    return;
+  }
+
+  var emojiMap = {
+    atividade: '📚', refeicao: '🍽️', sono: '😴', humor: '😊',
+    foto: '📷', observacao: '📝', higiene: '🧼', saude: '💊'
+  };
+
+  var DAYS_PT = ['Domingo','Segunda-feira','Terca-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sabado'];
+
+  registros.forEach(function(reg, idx) {
+    var dataStr = reg.data || '';
+    var d = dataStr ? new Date(dataStr + 'T12:00:00') : null;
+    var dateLabel = d ? DAYS_PT[d.getDay()] + ', ' + d.getDate() + ' de ' + MONTHS_SHORT[d.getMonth()] : dataStr;
+    var teacher = reg.professoras ? reg.professoras.nome : '';
+
+    var delay = Math.min(idx, 4);
+    var header = '<div class="timeline-date-header fade-up' + (delay > 0 ? ' fade-up-d' + delay : '') + '">' + dateLabel + '</div>';
+    if (teacher) header += '<div class="timeline-teacher fade-up">Prof. ' + escapeHtml(teacher) + '</div>';
+    content.innerHTML += header;
+
+    var itens = reg.agenda_itens || [];
+    if (itens.length === 0) {
+      content.innerHTML += '<div class="timeline-item fade-up"><div style="text-align:center;padding:8px;color:var(--ink-3);font-size:13px">Sem registros neste dia</div></div>';
+      return;
+    }
+
+    itens.forEach(function(item) {
+      var tipo = (item.tipo || '').toLowerCase();
+      var emoji = emojiMap[tipo] || '📋';
+      var photos = item.agenda_fotos || [];
+
+      var photosHtml = '';
+      if (photos.length > 0) {
+        photosHtml = '<div class="timeline-photos">';
+        photos.forEach(function(f) {
+          photosHtml += '<img src="' + escapeHtml(f.url) + '" alt="Foto" loading="lazy" onclick="window.open(\'' + escapeHtml(f.url) + '\',\'_blank\')">';
+        });
+        photosHtml += '</div>';
+      }
+
+      var valorHtml = item.valor ? '<div class="timeline-item-valor">' + escapeHtml(item.valor) + '</div>' : '';
+
+      var html = '<div class="timeline-item fade-up">' +
+        '<div class="timeline-item-header">' +
+        '<div class="timeline-item-emoji">' + emoji + '</div>' +
+        '<div class="timeline-item-title">' + escapeHtml(item.titulo || tipo) + '</div>' +
+        '</div>' +
+        (item.descricao ? '<div class="timeline-item-desc">' + escapeHtml(item.descricao) + '</div>' : '') +
+        valorHtml +
+        photosHtml +
+        '</div>';
+      content.innerHTML += html;
+    });
+  });
+}
+
+// ══════════════════════════════════════════════
+// ── TAB: BOLETIM ──
+// ══════════════════════════════════════════════
+async function loadBoletim() {
+  var loading = document.getElementById('boletimLoading');
+  var content = document.getElementById('boletimContent');
+  loading.style.display = 'block';
+  content.style.display = 'none';
+
+  try {
+    var email = state.user ? state.user.email : '';
+    if (!email) throw new Error('No email');
+    var data = await api(
+      { action: 'boletim_get', aluno_email: email, ano: new Date().getFullYear() },
+      SUPABASE_URL + '/functions/v1/academico'
+    );
+    tabDataLoaded.boletim = true;
+    var periodos = Array.isArray(data) ? data : (data.periodos || data.notas || []);
+    renderBoletim(periodos);
+  } catch(e) {
+    tabDataLoaded.boletim = true;
+    renderBoletim([]);
+  }
+
+  loading.style.display = 'none';
+  content.style.display = 'block';
+}
+
+function renderBoletim(periodos) {
+  var content = document.getElementById('boletimContent');
+  content.innerHTML = '';
+
+  if (!periodos || periodos.length === 0) {
+    content.innerHTML = '<div class="empty-state fade-up"><div class="empty-icon">📊</div><p>Nenhum boletim disponivel</p></div>';
+    return;
+  }
+
+  periodos.forEach(function(per, idx) {
+    var periodName = (per.notas_periodos && per.notas_periodos.nome) || per.nome || ('Periodo ' + (idx + 1));
+    var disciplinas = (per.dados && per.dados.disciplinas) || per.disciplinas || [];
+    var mediaGeral = per.media_geral;
+
+    var delay = Math.min(idx, 4);
+    var html = '<div class="boletim-period fade-up' + (delay > 0 ? ' fade-up-d' + delay : '') + '">' +
+      '<div class="boletim-period-title">' + escapeHtml(periodName) + '</div>';
+
+    disciplinas.forEach(function(disc) {
+      var media = disc.media;
+      var mediaStr = media != null ? parseFloat(media).toFixed(1) : '--';
+      var mediaCls = media == null ? 'na' : (parseFloat(media) >= 7.0 ? 'ok' : 'low');
+      html += '<div class="boletim-row">' +
+        '<div class="boletim-disciplina">' + escapeHtml(disc.nome) + '</div>' +
+        '<div class="boletim-media ' + mediaCls + '">' + mediaStr + '</div>' +
+        '</div>';
+    });
+
+    if (mediaGeral != null) {
+      var geralCls = parseFloat(mediaGeral) >= 7.0 ? 'ok' : 'low';
+      html += '<div class="boletim-geral">' +
+        '<div class="boletim-geral-label">Media Geral</div>' +
+        '<div class="boletim-geral-val boletim-media ' + geralCls + '">' + parseFloat(mediaGeral).toFixed(1) + '</div>' +
+        '</div>';
+    }
+
+    html += '</div>';
+    content.innerHTML += html;
+  });
+}
+
+// ══════════════════════════════════════════════
+// ── TAB: SOLICITAR TURNO ──
+// ══════════════════════════════════════════════
+async function loadSolicitar() {
+  tabDataLoaded.solicitar = true;
+
+  // Pre-fill email
+  var email = state.user ? state.user.email : '';
+  document.getElementById('solEmail').value = email;
+
+  // Pre-fill responsavel name
+  var nomeResp = '';
+  if (state.filhos.length > 0 && state.filhos[0].responsavel) {
+    nomeResp = state.filhos[0].responsavel;
+  } else if (state.user && state.user.nome && state.user.nome.indexOf('@') === -1) {
+    nomeResp = state.user.nome;
+  }
+  document.getElementById('solNomeResp').value = nomeResp;
+
+  // Child field
+  var criancaWrap = document.getElementById('solCriancaWrap');
+  if (state.filhos.length > 1) {
+    var sel = '<select class="form-select" id="solCrianca">';
+    state.filhos.forEach(function(f) {
+      sel += '<option value="' + escapeHtml(f.nome) + '">' + escapeHtml(f.nome) + '</option>';
+    });
+    sel += '</select>';
+    criancaWrap.innerHTML = sel;
+  } else {
+    var childName = state.filhos.length === 1 ? state.filhos[0].nome : '';
+    criancaWrap.innerHTML = '<input class="login-input" id="solCrianca" type="text" placeholder="Nome da crianca" value="' + escapeHtml(childName) + '">';
+  }
+
+  // Load series
+  loadSeries();
+}
+
+async function loadSeries() {
+  var select = document.getElementById('solSerie');
+  try {
+    var data = await api({ action: 'series_list' });
+    var series = Array.isArray(data) ? data : (data.series || []);
+    select.innerHTML = '<option value="">Selecione a serie</option>';
+    if (series.length === 0) {
+      // Fallback common series
+      var fallback = ['Berçario','Maternal 1','Maternal 2','Group 1','Group 2','Group 3','Group 4','Group 5','Year 1','Year 2','Year 3','Year 4','Year 5'];
+      fallback.forEach(function(s) {
+        select.innerHTML += '<option value="' + s + '">' + s + '</option>';
+      });
+    } else {
+      series.forEach(function(s) {
+        var nome = typeof s === 'string' ? s : (s.nome || s.serie || s.name);
+        select.innerHTML += '<option value="' + escapeHtml(nome) + '">' + escapeHtml(nome) + '</option>';
+      });
+    }
+  } catch(e) {
+    select.innerHTML = '<option value="">Selecione a serie</option>';
+    var fallback = ['Berçario','Maternal 1','Maternal 2','Group 1','Group 2','Group 3','Group 4','Group 5','Year 1','Year 2','Year 3','Year 4','Year 5'];
+    fallback.forEach(function(s) {
+      select.innerHTML += '<option value="' + s + '">' + s + '</option>';
+    });
+  }
+}
+
+function onTurnoChange() {
+  var turno = document.getElementById('solTurno').value;
+  var diasWrap = document.getElementById('solDiasWrap');
+  // Show weekday checkboxes if frequency < 5 (i.e., has 1x-4x in the value)
+  var needsDias = turno && (turno.indexOf('1x') > -1 || turno.indexOf('2x') > -1 || turno.indexOf('3x') > -1 || turno.indexOf('4x') > -1);
+  diasWrap.style.display = needsDias ? 'block' : 'none';
+}
+
+async function submitSolicitacao() {
+  var email = document.getElementById('solEmail').value;
+  var nomeResp = document.getElementById('solNomeResp').value.trim();
+  var criancaEl = document.getElementById('solCrianca');
+  var nomeCrianca = criancaEl ? (criancaEl.value || '').trim() : '';
+  var serie = document.getElementById('solSerie').value;
+  var turno = document.getElementById('solTurno').value;
+
+  if (!nomeResp) { showToast('Preencha o nome do responsavel'); return; }
+  if (!nomeCrianca) { showToast('Preencha o nome da crianca'); return; }
+  if (!serie) { showToast('Selecione a serie'); return; }
+  if (!turno) { showToast('Selecione o turno'); return; }
+
+  // Collect weekday checkboxes
+  var diasSemana = [];
+  var checks = document.querySelectorAll('input[name="sol_dia"]:checked');
+  checks.forEach(function(c) { diasSemana.push(c.value); });
+
+  var needsDias = turno.indexOf('1x') > -1 || turno.indexOf('2x') > -1 || turno.indexOf('3x') > -1 || turno.indexOf('4x') > -1;
+  if (needsDias && diasSemana.length === 0) { showToast('Selecione os dias da semana'); return; }
+
+  var btn = document.getElementById('solSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    await api({
+      action: 'public_submit',
+      email: email,
+      nome_resp: nomeResp,
+      nome_crianca: nomeCrianca,
+      serie: serie,
+      turno: turno,
+      dias_semana: diasSemana
+    });
+    document.getElementById('solicitarForm').style.display = 'none';
+    var success = document.getElementById('solicitarSuccess');
+    success.classList.add('show');
+    lucide.createIcons({ nodes: success.querySelectorAll('[data-lucide]') });
+    showToast('Solicitacao enviada com sucesso!');
+  } catch(e) {
+    showToast('Erro ao enviar solicitacao. Tente novamente.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar Solicitacao';
+}
+
+function resetSolicitacao() {
+  document.getElementById('solicitarForm').style.display = 'block';
+  document.getElementById('solicitarSuccess').classList.remove('show');
+  document.getElementById('solTurno').value = '';
+  document.getElementById('solSerie').value = '';
+  document.getElementById('solDiasWrap').style.display = 'none';
+  var checks = document.querySelectorAll('input[name="sol_dia"]');
+  checks.forEach(function(c) { c.checked = false; });
+}
+
+// ══════════════════════════════════════════════
 // ── Login with Email + Password ──
+// ══════════════════════════════════════════════
 async function loginEmailSenha() {
   var email = document.getElementById('loginEmail').value.trim();
   var senha = document.getElementById('loginSenha').value;
@@ -481,7 +1134,7 @@ async function loginEmailSenha() {
   errEl.style.display = 'none';
   if (!email || !senha) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display = 'block'; return; }
   var btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'Entrando…';
+  btn.disabled = true; btn.textContent = 'Entrando...';
   try {
     if (!sb) throw new Error('Supabase not loaded');
     var result = await sb.auth.signInWithPassword({ email: email, password: senha });
@@ -501,7 +1154,7 @@ async function loginEmailSenha() {
     showApp();
     try { await loadChildData(); } catch(e) { renderAll(); }
   } catch(e) {
-    errEl.textContent = 'Erro de conexão. Tente novamente.';
+    errEl.textContent = 'Erro de conexao. Tente novamente.';
     errEl.style.display = 'block';
   }
   btn.disabled = false; btn.textContent = 'Entrar';
@@ -521,10 +1174,10 @@ async function cadastrarConta() {
   var errEl = document.getElementById('cadErr');
   errEl.style.display = 'none';
   if (!nome || !email || !senha) { errEl.textContent = 'Preencha todos os campos.'; errEl.style.display = 'block'; return; }
-  if (senha.length < 6) { errEl.textContent = 'Senha deve ter no mínimo 6 caracteres.'; errEl.style.display = 'block'; return; }
-  if (senha !== conf) { errEl.textContent = 'As senhas não coincidem.'; errEl.style.display = 'block'; return; }
+  if (senha.length < 6) { errEl.textContent = 'Senha deve ter no minimo 6 caracteres.'; errEl.style.display = 'block'; return; }
+  if (senha !== conf) { errEl.textContent = 'As senhas nao coincidem.'; errEl.style.display = 'block'; return; }
   var btn = document.getElementById('btnCadastrar');
-  btn.disabled = true; btn.textContent = 'Criando conta…';
+  btn.disabled = true; btn.textContent = 'Criando conta...';
   try {
     if (!sb) throw new Error('Supabase not loaded');
     var result = await sb.auth.signUp({ email: email, password: senha, options: { data: { full_name: nome } } });
@@ -572,7 +1225,7 @@ async function sendMagicLink() {
   if (!email) return;
   var btn = document.getElementById('magicBtn');
   btn.disabled = true;
-  btn.textContent = 'Enviando…';
+  btn.textContent = 'Enviando...';
   try {
     await api({ action: 'public_magic_link', email: email });
   } catch(e) { /* ignore */ }
@@ -657,7 +1310,7 @@ async function fetchAgenda() {
 }
 
 function buildAgendaFromRaw(raw) {
-  var DIAS_PT = ['','Segunda','Terça','Quarta','Quinta','Sexta'];
+  var DIAS_PT = ['','Segunda','Terca','Quarta','Quinta','Sexta'];
   var solicitacoes = raw.solicitacoes || [];
   var inscricoes = raw.inscricoes || [];
   var ausencias = raw.ausencias || [];
@@ -682,8 +1335,8 @@ function buildAgendaFromRaw(raw) {
       var freq = s.turno ? (s.turno.indexOf('5x') > -1 ? 5 : s.turno.indexOf('4x') > -1 ? 4 : s.turno.indexOf('3x') > -1 ? 3 : s.turno.indexOf('2x') > -1 ? 2 : s.turno.indexOf('1x') > -1 ? 1 : null) : null;
       var todos = freq === 5 || freq === null;
       if (todos || diasTurno.indexOf(weekday) > -1) {
-        var label = s.turno ? s.turno.replace(/_/g, ' ').replace(/(\d)x/, '$1× semana') : 'Aula';
-        dayEvents.push({ tipo: 'turno', titulo: s.nome_crianca + ' — ' + label, horario: '', tag: 'Aula', cor: 'red' });
+        var label = s.turno ? s.turno.replace(/_/g, ' ').replace(/(\d)x/, '$1x semana') : 'Aula';
+        dayEvents.push({ tipo: 'turno', titulo: s.nome_crianca + ' -- ' + label, horario: '', tag: 'Aula', cor: 'red' });
       }
     });
 
@@ -692,7 +1345,7 @@ function buildAgendaFromRaw(raw) {
       (ins.turmas_selecionadas || []).forEach(function(ts) {
         (ts.slots || []).forEach(function(sl) {
           if (sl.dia === weekday) {
-            dayEvents.push({ tipo: 'atividade', titulo: (ts.turma || 'Atividade') + ' — ' + (ins.nome_crianca || ''), horario: sl.horario || '', tag: 'Extra', cor: 'green' });
+            dayEvents.push({ tipo: 'atividade', titulo: (ts.turma || 'Atividade') + ' -- ' + (ins.nome_crianca || ''), horario: sl.horario || '', tag: 'Extra', cor: 'green' });
           }
         });
       });
@@ -738,7 +1391,7 @@ function renderHeader() {
     }
   }
   var first = name ? name.split(' ')[0] : '';
-  document.getElementById('greetName').textContent = 'Olá, ' + first + ' 👋';
+  document.getElementById('greetName').textContent = 'Ola, ' + first;
   document.getElementById('headerDate').textContent = formatHeaderDate();
   document.getElementById('headerAvatar').textContent = initials(name);
 }
@@ -752,7 +1405,7 @@ function renderHero() {
     photoEl.textContent = initials(child.nome);
   }
   document.getElementById('heroName').textContent = child.nome;
-  document.getElementById('heroTurma').textContent = child.turma + ' · Maple Bear';
+  document.getElementById('heroTurma').textContent = child.turma + ' . Maple Bear';
   document.getElementById('trocarBtn').classList.toggle('show', state.filhos.length > 1);
 
   // Stats
@@ -763,9 +1416,9 @@ function renderHero() {
 
   var statusEl = document.getElementById('statStatus');
   var statusMap = {
-    'na_aula': { text: '✓ Na aula', cls: 'stat-ok' },
-    'ausente': { text: '✕ Ausente', cls: 'stat-red' },
-    'em_casa': { text: '— Em casa', cls: 'stat-warn' }
+    'na_aula': { text: 'Na aula', cls: 'stat-ok' },
+    'ausente': { text: 'Ausente', cls: 'stat-red' },
+    'em_casa': { text: 'Em casa', cls: 'stat-warn' }
   };
   var st = statusMap[p.status_hoje] || statusMap['em_casa'];
   statusEl.textContent = st.text;
@@ -784,7 +1437,7 @@ function renderAlerts() {
   var iconMap = { boleto: 'alert-circle', comunicado: 'mail', saude: 'heart', default: 'bell' };
   state.alertas.forEach(function(a) {
     var icon = iconMap[a.type] || iconMap['default'];
-    var html = '<div class="alert-card fade-up fade-up-d1" onclick="showToast(\'' + (a.cta || 'Ver') + ' — em breve\')">' +
+    var html = '<div class="alert-card fade-up fade-up-d1" onclick="showToast(\'' + (a.cta || 'Ver') + ' -- em breve\')">' +
       '<div class="alert-icon"><i data-lucide="' + icon + '"></i></div>' +
       '<div class="alert-body"><div class="alert-title">' + a.title + '</div>' +
       '<div class="alert-sub">' + (a.subtitle || '') + '</div></div>' +
@@ -793,7 +1446,7 @@ function renderAlerts() {
   });
   var sTitle = document.createElement('div');
   sTitle.className = 'section-title fade-up';
-  sTitle.textContent = 'Precisa da sua atenção';
+  sTitle.textContent = 'Precisa da sua atencao';
   container.insertBefore(sTitle, container.firstChild);
   lucide.createIcons({ nodes: container.querySelectorAll('[data-lucide]') });
 }
@@ -812,7 +1465,7 @@ function renderAgenda() {
   var dates = Object.keys(byDate).sort().slice(0, 7);
 
   if (dates.length === 0) {
-    card.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ink-3);font-size:12px">Sem eventos nos próximos dias</div>';
+    card.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ink-3);font-size:12px">Sem eventos nos proximos dias</div>';
     return;
   }
 
@@ -841,7 +1494,7 @@ function renderAgenda() {
   // Update hero atividade row if there's an activity today
   if (state.todayAtividade) {
     document.getElementById('atividadeRow').style.display = 'flex';
-    document.getElementById('ativTitle').textContent = state.todayAtividade.titulo.split(' — ')[0];
+    document.getElementById('ativTitle').textContent = state.todayAtividade.titulo.split(' -- ')[0];
     document.getElementById('ativSub').textContent = state.todayAtividade.horario || 'Hoje';
   }
 
@@ -886,6 +1539,10 @@ async function selectChild(idx) {
   if (idx === state.selected) { closeSheet(); return; }
   state.selected = idx;
   closeSheet();
+
+  // Reset tab data caches so they reload for the new child
+  tabDataLoaded = { boletos: false, diaadia: false, boletim: false, solicitar: false };
+
   document.getElementById('loadingSkel').style.display = 'block';
   document.getElementById('loadedContent').style.display = 'none';
   var child = state.filhos[idx];
@@ -898,9 +1555,17 @@ async function selectChild(idx) {
   state.alertas = results[1];
   state.eventos = results[2];
   renderAll();
+
+  // If currently on a sub-tab, reload its data
+  if (currentTab !== 'inicio') {
+    if (currentTab === 'boletos') loadBoletos();
+    if (currentTab === 'diaadia') loadDiaADia();
+    if (currentTab === 'boletim') loadBoletim();
+    if (currentTab === 'solicitar') loadSolicitar();
+  }
 }
 
-// ── Presença do dia ──
+// ── Presenca do dia ──
 var dayState = { vai: true, atividade: true, caminho: false };
 
 function togglePresencaDia() {
@@ -911,7 +1576,7 @@ function togglePresencaDia() {
     btn.textContent = 'Vai'; btn.className = 'hero-day-toggle yes';
     icon.className = 'hero-day-icon confirmed';
   } else {
-    btn.textContent = 'Não vai'; btn.className = 'hero-day-toggle no';
+    btn.textContent = 'Nao vai'; btn.className = 'hero-day-toggle no';
     icon.className = 'hero-day-icon absent';
   }
   // Notify school
@@ -919,7 +1584,7 @@ function togglePresencaDia() {
   if (child) {
     api({ action: 'public_confirmar_presenca', aluno_id: child.id, presente: dayState.vai }).catch(function(){});
   }
-  showToast(dayState.vai ? 'Presença confirmada' : 'Ausência registrada');
+  showToast(dayState.vai ? 'Presenca confirmada' : 'Ausencia registrada');
 }
 
 function toggleAtivExtra() {
@@ -930,14 +1595,14 @@ function toggleAtivExtra() {
     btn.textContent = 'Vai'; btn.className = 'hero-day-toggle yes';
     icon.className = 'hero-day-icon confirmed';
   } else {
-    btn.textContent = 'Não vai'; btn.className = 'hero-day-toggle no';
+    btn.textContent = 'Nao vai'; btn.className = 'hero-day-toggle no';
     icon.className = 'hero-day-icon absent';
   }
   var child = state.filhos[state.selected];
   if (child) {
     api({ action: 'public_confirmar_atividade', aluno_id: child.id, presente: dayState.atividade }).catch(function(){});
   }
-  showToast(dayState.atividade ? 'Atividade confirmada' : 'Não irá à atividade');
+  showToast(dayState.atividade ? 'Atividade confirmada' : 'Nao ira a atividade');
 }
 
 function toggleCaminho() {
@@ -946,7 +1611,7 @@ function toggleCaminho() {
   if (dayState.caminho) {
     btn.className = 'btn-caminho active fade-up';
     btn.innerHTML = '<span class="btn-caminho-icon"><i data-lucide="check-circle" style="width:20px;height:20px"></i></span> A caminho da escola';
-    showToast('Escola notificada — você está a caminho!');
+    showToast('Escola notificada -- voce esta a caminho!');
     var child = state.filhos[state.selected];
     if (child) {
       api({ action: 'public_estou_a_caminho', aluno_id: child.id }).catch(function(){});
@@ -960,8 +1625,8 @@ function toggleCaminho() {
 
 function renderDayInfo() {
   var d = new Date();
-  var days = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-  var months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var days = ['Domingo','Segunda-feira','Terca-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sabado'];
+  var months = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   document.getElementById('daySub').textContent = days[d.getDay()] + ', ' + d.getDate() + ' de ' + months[d.getMonth()];
 
   // Weekend check
@@ -974,15 +1639,6 @@ function renderDayInfo() {
 
   // Reset caminho state
   dayState.caminho = false;
-}
-
-// ── Navigation to legacy portal ──
-function goLegacy(tab) {
-  sessionStorage.setItem('pais_goto_tab', tab);
-  // If we're on familia-v2.html (sandbox), go to familia.html (original)
-  // If we're on familia.html (post-rollout, v2 is default), go to familia-legacy.html
-  var onV2Page = location.pathname.indexOf('v2') > -1;
-  window.location.href = onV2Page ? 'familia.html' : 'familia-legacy.html';
 }
 
 // ── Tab bar ──
@@ -1023,6 +1679,10 @@ function activateTab(el) {
 async function refreshData() {
   var child = state.filhos[state.selected];
   if (!child) return;
+
+  // Reset tab caches on pull-to-refresh
+  tabDataLoaded = { boletos: false, diaadia: false, boletim: false, solicitar: false };
+
   var results = await Promise.all([
     fetchPresenca(child.id),
     fetchAlertas(child.id),
@@ -1032,6 +1692,11 @@ async function refreshData() {
   state.alertas = results[1];
   state.eventos = results[2];
   renderAll();
+
+  // Reload current tab if not inicio
+  if (currentTab === 'boletos') loadBoletos();
+  if (currentTab === 'diaadia') loadDiaADia();
+  if (currentTab === 'boletim') loadBoletim();
 }
 
 // ── Load child data (after login) ──
@@ -1093,7 +1758,7 @@ async function boot() {
         await loadChildData();
         return;
       }
-    } catch(e) { /* timeout or error — fallback below */ }
+    } catch(e) { /* timeout or error -- fallback below */ }
   }
 
   // Fallback: check token in localStorage
