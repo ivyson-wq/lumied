@@ -8,7 +8,7 @@ import { sanitizeBody } from '../_shared/validation.ts'
 import { createLogger } from '../_shared/logger.ts'
 import { hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken } from '../_shared/auth.ts'
 import { logAudit } from '../_shared/audit.ts'
-import { generatePdf, pdfResponse } from '../_shared/pdf.ts'
+import { generatePdf, pdfResponse, generateXlsx, xlsxResponse } from '../_shared/pdf.ts'
 
 const log = createLogger('diplomas')
 
@@ -2103,8 +2103,9 @@ Deno.serve(async (req) => {
       return pdfResponse(bytes, `ordem-compra-${new Date().toISOString().slice(0,10)}.pdf`)
     }
 
-    if (action === 'alm_pdf_observacoes') {
+    if (action === 'alm_pdf_observacoes' || action === 'alm_excel_observacoes') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const landscape = body.landscape === true
       const { data: reqs } = await sb.from('alm_requisicoes')
         .select('*, professoras(nome), series(nome)')
         .eq('mes', mes)
@@ -2140,20 +2141,43 @@ Deno.serve(async (req) => {
           ])
         }
       }
-      const bytes = await generatePdf({
-        title: 'Relatório Completo de Requisições — com Observações',
-        subtitle: `Mês: ${mes}  ·  ${rows.length} item(ns)  ·  ${comObs} com obs.  ·  ${naoCatalogados} não catalogado(s)  ·  Total: R$ ${totalGeral.toFixed(2)}`,
-        tables: [{
-          columns: [
+
+      if (action === 'alm_excel_observacoes') {
+        const headers = ['Turma', 'Professora', 'Item', 'Catalogado?', 'Qtd', 'Status', 'Valor', 'Observação / Descrição / Link']
+        const xlsxRows = rows.length ? rows : [['(nenhuma requisição neste mês)', '', '', '', '', '', '', '']]
+        xlsxRows.push(['', '', '', '', '', '', `R$ ${totalGeral.toFixed(2)}`, ''])
+        const bytes = generateXlsx(headers, xlsxRows)
+        return xlsxResponse(bytes, `relatorio-completo-${mes}.xlsx`)
+      }
+
+      const colWidths = landscape
+        ? [
+            { label: 'Turma',    width: 70 },
+            { label: 'Prof.',    width: 80 },
+            { label: 'Item',     width: 120 },
+            { label: 'Cat.?',   width: 35, align: 'center' as const },
+            { label: 'Qtd',      width: 50, align: 'right' as const },
+            { label: 'Status',   width: 55 },
+            { label: 'Valor',    width: 60, align: 'right' as const },
+            { label: 'Observação / Descrição / Link', width: 292 },
+          ]
+        : [
             { label: 'Turma',    width: 60 },
             { label: 'Prof.',    width: 65 },
             { label: 'Item',     width: 100 },
-            { label: 'Cat.?',   width: 30, align: 'center' },
-            { label: 'Qtd',      width: 45, align: 'right' },
+            { label: 'Cat.?',   width: 30, align: 'center' as const },
+            { label: 'Qtd',      width: 45, align: 'right' as const },
             { label: 'Status',   width: 45 },
-            { label: 'Valor',    width: 50, align: 'right' },
+            { label: 'Valor',    width: 50, align: 'right' as const },
             { label: 'Observação / Descrição / Link', width: 120 },
-          ],
+          ]
+
+      const bytes = await generatePdf({
+        title: 'Relatório Completo de Requisições — com Observações',
+        subtitle: `Mês: ${mes}  ·  ${rows.length} item(ns)  ·  ${comObs} com obs.  ·  ${naoCatalogados} não catalogado(s)  ·  Total: R$ ${totalGeral.toFixed(2)}`,
+        landscape,
+        tables: [{
+          columns: colWidths,
           rows: rows.length ? rows : [['(nenhuma requisição neste mês)', '', '', '', '', '', '', '']],
           footer: ['', '', '', '', '', '', `R$ ${totalGeral.toFixed(2)}`, ''],
         }],
