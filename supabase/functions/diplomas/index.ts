@@ -1948,8 +1948,8 @@ Deno.serve(async (req) => {
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
-    'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_entregues',
-    'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
+    'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_observacoes',
+    'alm_pdf_entregues', 'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
   ].includes(action)
 
   if (isAlmGerenteAction) {
@@ -2101,6 +2101,64 @@ Deno.serve(async (req) => {
         tables,
       })
       return pdfResponse(bytes, `ordem-compra-${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    if (action === 'alm_pdf_observacoes') {
+      const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const { data: reqs } = await sb.from('alm_requisicoes')
+        .select('*, professoras(nome), series(nome)')
+        .eq('mes', mes)
+        .order('criado_em', { ascending: true })
+      const rows: string[][] = []
+      let totalGeral = 0
+      let comObs = 0
+      let naoCatalogados = 0
+      for (const r of (reqs ?? []) as any[]) {
+        const prof = r.professoras?.nome || '—'
+        const turma = r.series?.nome || '—'
+        const obs = (r.observacao || '').trim()
+        const status = r.status === 'aprovado' ? 'Aprovado' : r.status === 'rejeitado' ? 'Rejeitado' : 'Pendente'
+        for (const it of (r.itens || [])) {
+          const desc = (it.descricao || '').trim()
+          const nota = [obs, desc].filter(Boolean).join(' | ')
+          if (nota) comObs++
+          if (!it.insumo_id) naoCatalogados++
+          const catalogado = it.insumo_id ? 'Sim' : 'Novo'
+          const qty = Number(it.qty_solicitado || 0)
+          const pu = Number(it.preco_unit || 0)
+          const tot = qty * pu
+          totalGeral += tot
+          rows.push([
+            turma,
+            prof,
+            it.nome || '—',
+            catalogado,
+            `${qty} ${it.unidade || ''}`,
+            status,
+            `R$ ${tot.toFixed(2)}`,
+            nota ? (nota.length > 140 ? nota.slice(0, 137) + '…' : nota) : '',
+          ])
+        }
+      }
+      const bytes = await generatePdf({
+        title: 'Relatório Completo de Requisições — com Observações',
+        subtitle: `Mês: ${mes}  ·  ${rows.length} item(ns)  ·  ${comObs} com obs.  ·  ${naoCatalogados} não catalogado(s)  ·  Total: R$ ${totalGeral.toFixed(2)}`,
+        tables: [{
+          columns: [
+            { label: 'Turma',    width: 60 },
+            { label: 'Prof.',    width: 65 },
+            { label: 'Item',     width: 100 },
+            { label: 'Cat.?',   width: 30, align: 'center' },
+            { label: 'Qtd',      width: 45, align: 'right' },
+            { label: 'Status',   width: 45 },
+            { label: 'Valor',    width: 50, align: 'right' },
+            { label: 'Observação / Descrição / Link', width: 120 },
+          ],
+          rows: rows.length ? rows : [['(nenhuma requisição neste mês)', '', '', '', '', '', '', '']],
+          footer: ['', '', '', '', '', '', `R$ ${totalGeral.toFixed(2)}`, ''],
+        }],
+      })
+      return pdfResponse(bytes, `relatorio-completo-${mes}.pdf`)
     }
 
     if (action === 'alm_pdf_entregues') {

@@ -1593,7 +1593,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <button onclick="almBaixarPdf('alm_pdf_guia_recebimento')" class="btn-create" style="padding:7px 16px;background:#b5591a;" title="Leve este PDF na mão ao abrir caixas dos correios">📦 Guia Recebimento</button>
             <button onclick="almBaixarPdf('alm_pdf_romaneio_turma')" class="btn-create" style="padding:7px 16px;background:#6b46c1;">🚚 Romaneio Turmas</button>
             <button onclick="almBaixarPdf('alm_pdf_entregues','mes='+(document.getElementById('almTodasMes')?.value||new Date().toISOString().slice(0,7)))" class="btn-create" style="padding:7px 16px;background:#334155;">📄 Recibo Entregas</button>
-            <button onclick="almBaixarPdf('alm_pdf_observacoes','mes='+(document.getElementById('almTodasMes')?.value||new Date().toISOString().slice(0,7)))" class="btn-create" style="padding:7px 16px;background:#d97706;" title="Itens com observações, links e materiais não cadastrados">📝 Obs. Professoras</button>
+            <button onclick="almBaixarPdf('alm_pdf_observacoes','mes='+(document.getElementById('almTodasMes')?.value||new Date().toISOString().slice(0,7)))" class="btn-create" style="padding:7px 16px;background:#d97706;" title="Todos os itens do mês com observações, links e status">📋 Relatório Completo</button>
             <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
           </div>
           <div id="almComprasLoading" class="empty-state">⏳ Carregando…</div>
