@@ -5,7 +5,7 @@
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(reg){reg.update()})});navigator.serviceWorker.addEventListener('controllerchange',function(){if(!window._swr){window._swr=1;location.reload()}})}</script>
 <script src="/sentry-init.js"></script>
 <script src="/analytics.js" defer></script>
-<title>Maple Bear — Portal das Professoras</title>
+<title>Lumied — Portal das Professoras</title>
 <meta name="theme-color" content="#1c1712">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4148,6 +4148,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   window.addEventListener('beforeunload', () => { if (pickupPollInt) clearInterval(pickupPollInt); });
 </script>
 <script src="/lumied-ux.js" defer></script>
+<script src="/lumied-a11y.js" defer></script>
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
 </body>

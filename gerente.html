@@ -25,6 +25,8 @@
 <script src="/webauthn-client.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
+<script src="/lumied-charts.js" defer></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -9998,7 +10000,24 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>`).join('') : '<div style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</div>'}
         </div>
       </div>
+
+      <!-- Chart.js Enhanced Visualizations -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Tendencia de Solicitacoes</div>
+          <div style="height:200px;"><canvas id="chartSolicitacoes"></canvas></div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Gastos Almoxarifado</div>
+          <div style="height:200px;"><canvas id="chartAlmox"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Chamados de Manutencao (Tendencia)</div>
+        <div style="height:200px;"><canvas id="chartManutencao"></canvas></div>
+      </div>
     `;
+    if (typeof _renderAnalyticsCharts === 'function') _renderAnalyticsCharts(d);
     } catch(e) { el.innerHTML = '<div class="empty-state">Erro ao renderizar analytics: ' + e.message + '</div>'; }
   }
 
@@ -10050,7 +10069,18 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <span style="color:#2d7a3a;">Pago: <strong>${fmtR(d.mensalidades.pago)}</strong></span>
           <span style="color:#b07d00;">Pendente: <strong>${fmtR(d.mensalidades.pendente)}</strong></span>
         </div>
-      </div>` : ''}`;
+      </div>` : ''}
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px;">
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Receitas vs Despesas (Grafico)</div>
+          <div style="height:220px;"><canvas id="chartFinRecDesp"></canvas></div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Composicao</div>
+          <div style="height:220px;"><canvas id="chartFinDonut"></canvas></div>
+        </div>
+      </div>`;
+    if (typeof _renderFinCharts === 'function') _renderFinCharts(d);
   }
 
   async function loadFinLancamentos() {
@@ -12411,6 +12441,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 </script>
 <script src="/lumied-ux.js" defer></script>
+<script src="/lumied-a11y.js" defer></script>
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
 </body>
