@@ -1,25 +1,46 @@
 /**
- * Data Table Component — reusable sortable/filterable table
+ * Data Table Component — reusable sortable/filterable table with pagination
  * Usage:
  *   renderTable(container, {
  *     columns: [{ key: 'nome', label: 'Nome', sortable: true }, ...],
  *     data: [...],
  *     onRowClick: (row) => {},
  *     emptyMessage: 'Nenhum dado',
+ *     pageSize: 25,        // items per page (0 = no pagination)
+ *     emptyIcon: '📭',     // emoji for empty state
+ *     emptyCta: { label: 'Cadastrar', onClick: () => {} },
  *   });
  */
 
-export function renderTable(container, { columns, data, onRowClick, emptyMessage = 'Nenhum dado encontrado.', actions }) {
+export function renderTable(container, { columns, data, onRowClick, emptyMessage = 'Nenhum dado encontrado.', emptyIcon = '📭', emptyCta, actions, pageSize = 0 }) {
   if (!data || data.length === 0) {
-    container.innerHTML = `<div class="empty-state" style="text-align:center;padding:40px;color:var(--muted,#888);">${emptyMessage}</div>`;
+    let html = `<div class="empty-state" style="text-align:center;padding:48px 24px;">
+      <div style="font-size:48px;margin-bottom:12px;opacity:.8;">${emptyIcon}</div>
+      <div style="color:var(--muted,#888);font-size:14px;line-height:1.6;">${emptyMessage}</div>`;
+    if (emptyCta) {
+      html += `<button class="empty-cta" style="margin-top:16px;padding:10px 22px;background:var(--red,#C8102E);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">${emptyCta.label}</button>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    if (emptyCta) {
+      container.querySelector('.empty-cta')?.addEventListener('click', emptyCta.onClick);
+    }
     return;
   }
 
   let sortKey = null;
   let sortAsc = true;
   let currentData = [...data];
+  let currentPage = 0;
+  const perPage = pageSize > 0 ? pageSize : data.length;
+
+  function getPageData() {
+    const start = currentPage * perPage;
+    return currentData.slice(start, start + perPage);
+  }
 
   function render() {
+    const pageData = getPageData();
     let html = '<div class="table-wrap"><table><thead><tr>';
     for (const col of columns) {
       const sortIcon = sortKey === col.key ? (sortAsc ? ' ↑' : ' ↓') : '';
@@ -29,7 +50,7 @@ export function renderTable(container, { columns, data, onRowClick, emptyMessage
     if (actions) html += '<th>Ações</th>';
     html += '</tr></thead><tbody>';
 
-    for (const row of currentData) {
+    for (const row of pageData) {
       const clickAttr = onRowClick ? 'style="cursor:pointer;"' : '';
       html += `<tr ${clickAttr}>`;
       for (const col of columns) {
@@ -46,6 +67,22 @@ export function renderTable(container, { columns, data, onRowClick, emptyMessage
       html += '</tr>';
     }
     html += '</tbody></table></div>';
+
+    // Pagination
+    if (pageSize > 0 && currentData.length > perPage) {
+      const totalPages = Math.ceil(currentData.length / perPage);
+      const start = currentPage * perPage + 1;
+      const end = Math.min((currentPage + 1) * perPage, currentData.length);
+      html += `<div class="lm-pagination">
+        <span>${start}–${end} de ${currentData.length}</span>
+        <div style="display:flex;gap:6px;">
+          <button class="pg-prev" ${currentPage === 0 ? 'disabled' : ''}>← Anterior</button>
+          <span style="padding:6px 10px;font-size:12px;">${currentPage + 1} / ${totalPages}</span>
+          <button class="pg-next" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Próximo →</button>
+        </div>
+      </div>`;
+    }
+
     container.innerHTML = html;
 
     // Sort click handlers
@@ -61,6 +98,7 @@ export function renderTable(container, { columns, data, onRowClick, emptyMessage
             const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb));
             return sortAsc ? cmp : -cmp;
           });
+          currentPage = 0;
           render();
         });
       }
@@ -71,7 +109,8 @@ export function renderTable(container, { columns, data, onRowClick, emptyMessage
       container.querySelectorAll('tbody tr').forEach((tr, i) => {
         tr.addEventListener('click', (e) => {
           if (e.target.closest('.action-btn')) return;
-          onRowClick(currentData[i], i);
+          const dataIdx = currentPage * perPage + i;
+          onRowClick(currentData[dataIdx], dataIdx);
         });
       });
     }
@@ -81,20 +120,39 @@ export function renderTable(container, { columns, data, onRowClick, emptyMessage
       container.querySelectorAll('.action-btn[data-action]').forEach(btn => {
         btn.addEventListener('click', () => {
           const tr = btn.closest('tr');
-          const idx = Array.from(tr.parentNode.children).indexOf(tr);
+          const trIdx = Array.from(tr.parentNode.children).indexOf(tr);
+          const dataIdx = currentPage * perPage + trIdx;
           const action = actions.find(a => a.key === btn.dataset.action);
-          if (action?.onClick) action.onClick(currentData[idx], idx);
+          if (action?.onClick) action.onClick(currentData[dataIdx], dataIdx);
         });
       });
     }
+
+    // Pagination handlers
+    container.querySelector('.pg-prev')?.addEventListener('click', () => { currentPage--; render(); });
+    container.querySelector('.pg-next')?.addEventListener('click', () => { currentPage++; render(); });
   }
 
   render();
 
   return {
-    update(newData) { currentData = [...newData]; render(); },
-    sort(key, asc = true) { sortKey = key; sortAsc = asc; currentData.sort((a,b) => { const cmp = String(a[key]||'').localeCompare(String(b[key]||'')); return asc ? cmp : -cmp; }); render(); },
+    update(newData) { currentData = [...newData]; currentPage = 0; render(); },
+    sort(key, asc = true) { sortKey = key; sortAsc = asc; currentData.sort((a,b) => { const cmp = String(a[key]||'').localeCompare(String(b[key]||'')); return asc ? cmp : -cmp; }); currentPage = 0; render(); },
+    goToPage(page) { currentPage = Math.max(0, Math.min(page, Math.ceil(currentData.length / perPage) - 1)); render(); },
   };
+}
+
+/**
+ * Show skeleton loader in a table container
+ */
+export function showSkeleton(container, rows = 5, cols = 4) {
+  if (typeof container === 'string') container = document.getElementById(container);
+  if (!container) return;
+  if (typeof window._showSkeleton === 'function') {
+    window._showSkeleton(container, rows, cols);
+  } else {
+    container.innerHTML = '<div class="empty-state" style="text-align:center;padding:24px;"><div class="spinner-sm"></div> Carregando...</div>';
+  }
 }
 
 /**

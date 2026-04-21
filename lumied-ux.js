@@ -340,10 +340,315 @@
       @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
       @keyframes popIn { from { opacity:0; transform:scale(.92) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
       @keyframes spin { to { transform:rotate(360deg); } }
+      @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+      @keyframes panelIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
       .lumied-validation { transition: opacity .2s; }
       input:focus, select:focus, textarea:focus { outline: none; }
+
+      /* ── Skeleton loaders ── */
+      .skel-row { display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border,#e2dbd1); }
+      .skel-cell { height:14px; border-radius:6px; background:linear-gradient(90deg,#ede8e1 25%,#f5f1ec 50%,#ede8e1 75%); background-size:800px 100%; animation:shimmer 1.5s infinite linear; }
+      .skel-cell:nth-child(1) { width:30%; }
+      .skel-cell:nth-child(2) { width:20%; }
+      .skel-cell:nth-child(3) { width:25%; }
+      .skel-cell:nth-child(4) { width:15%; }
+      .skel-cell:nth-child(5) { width:10%; }
+      .skel-header { height:12px; opacity:.5; margin-bottom:4px; }
+
+      /* ── Panel transitions ── */
+      .panel.entering { animation: panelIn .25s ease both; }
+
+      /* ── Command palette (Ctrl+K) ── */
+      .cmd-overlay { position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding-top:min(20vh,120px);backdrop-filter:blur(4px);font-family:'DM Sans',system-ui,sans-serif; }
+      .cmd-box { background:#fff;border-radius:16px;width:100%;max-width:520px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;animation:popIn .2s ease; }
+      .cmd-input { width:100%;padding:16px 20px;border:none;font-size:15px;font-family:inherit;outline:none;background:transparent;border-bottom:1px solid var(--border,#e2dbd1); }
+      .cmd-results { max-height:360px;overflow-y:auto;padding:6px; }
+      .cmd-item { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--text,#1a1a1a);transition:background .1s; }
+      .cmd-item:hover,.cmd-item.active { background:var(--red-light,rgba(200,16,46,.08)); }
+      .cmd-item .cmd-ic { width:24px;text-align:center;font-size:16px;flex-shrink:0; }
+      .cmd-item .cmd-label { flex:1; }
+      .cmd-item .cmd-hint { font-size:11px;color:var(--muted,#5a5249);flex-shrink:0; }
+      .cmd-empty { padding:24px;text-align:center;color:var(--muted,#888);font-size:13px; }
+      .cmd-footer { padding:8px 14px;border-top:1px solid var(--border,#e2dbd1);display:flex;gap:12px;font-size:11px;color:var(--muted,#888); }
+      .cmd-footer kbd { background:#f0ece6;padding:2px 6px;border-radius:4px;font-family:inherit;font-size:10px;border:1px solid #ddd; }
+
+      /* ── Pagination ── */
+      .lm-pagination { display:flex;align-items:center;justify-content:space-between;padding:12px 0;font-size:12px;color:var(--muted,#888);font-family:'DM Sans',system-ui,sans-serif; }
+      .lm-pagination button { padding:6px 14px;border:1px solid var(--border,#e2dbd1);border-radius:8px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s; }
+      .lm-pagination button:hover:not(:disabled) { border-color:var(--red,#C8102E);color:var(--red,#C8102E); }
+      .lm-pagination button:disabled { opacity:.4;cursor:not-allowed; }
+
+      /* ── Dark mode ── */
+      body.theme-dark { --bg:#1a1714;--white:#252220;--text:#e8e2da;--muted:#a09889;--border:#3a3530;--red:#e85566;--red-dark:#c7394a;--red-light:rgba(232,85,102,.1);--green:#5cb85c;--blue:#5bc0de; }
+      body.theme-dark .sidebar { background:linear-gradient(180deg,#141210 0%,#1e1b18 100%); }
+      body.theme-dark .topbar { background:rgba(37,34,32,.92);border-color:var(--border); }
+      body.theme-dark .login-card { background:var(--white);box-shadow:0 24px 60px rgba(0,0,0,.5); }
+      body.theme-dark table th { background:rgba(255,255,255,.04); }
+      body.theme-dark .stats-card,.dark-card { background:var(--white);border-color:var(--border); }
+      body.theme-dark input,body.theme-dark select,body.theme-dark textarea { background:rgba(255,255,255,.04);border-color:var(--border);color:var(--text); }
+      body.theme-dark .modal { background:var(--white);color:var(--text); }
+      body.theme-dark .skel-cell { background:linear-gradient(90deg,#2a2520 25%,#353028 50%,#2a2520 75%);background-size:800px 100%; }
+      body.theme-dark .cmd-box { background:#252220; }
+      body.theme-dark .cmd-input { color:#e8e2da;border-color:#3a3530; }
+
+      /* ── Dark mode toggle ── */
+      .dark-toggle { background:none;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:16px;line-height:1;transition:all .2s; }
+      .dark-toggle:hover { background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2); }
+
+      /* ── Breadcrumb ── */
+      .lm-breadcrumb { display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted,#888); }
+      .lm-breadcrumb a { color:var(--blue,#1a6bb5);text-decoration:none;cursor:pointer; }
+      .lm-breadcrumb a:hover { text-decoration:underline; }
+      .lm-breadcrumb .sep { opacity:.4; }
     `;
     document.head.appendChild(style);
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 10. SKELETON LOADERS — show shimmer while loading
+  // ═══════════════════════════════════════════════════
+  window._showSkeleton = function (container, rows = 5, cols = 4) {
+    let html = '<div class="skel-header skel-row">';
+    for (let c = 0; c < cols; c++) html += '<div class="skel-cell" style="height:10px;"></div>';
+    html += '</div>';
+    for (let r = 0; r < rows; r++) {
+      html += '<div class="skel-row">';
+      for (let c = 0; c < cols; c++) html += '<div class="skel-cell"></div>';
+      html += '</div>';
+    }
+    if (typeof container === 'string') container = document.getElementById(container);
+    if (container) container.innerHTML = html;
+  };
+
+  // ═══════════════════════════════════════════════════
+  // 11. COMMAND PALETTE (Ctrl+K)
+  // ═══════════════════════════════════════════════════
+  function setupCommandPalette() {
+    if (portal !== 'gerente') return;
+
+    function getNavItems() {
+      const items = [];
+      document.querySelectorAll('.nav-item').forEach(el => {
+        const onclick = el.getAttribute('onclick') || '';
+        const match = onclick.match(/showPanel\('([^']+)'/);
+        if (!match) return;
+        const panel = match[1];
+        const icon = el.querySelector('.ic')?.textContent || '📄';
+        const label = el.textContent.trim().replace(icon, '').trim();
+        // Find section name
+        let section = '';
+        const sectionEl = el.closest('.sb-section');
+        if (sectionEl) {
+          const labelEl = sectionEl.previousElementSibling;
+          if (labelEl?.classList?.contains('sb-label')) section = labelEl.textContent.replace('▼', '').trim();
+        }
+        items.push({ panel, icon, label, section, element: el });
+      });
+      return items;
+    }
+
+    function openPalette() {
+      if (document.getElementById('cmdPalette')) return;
+      const allItems = getNavItems();
+      let activeIdx = 0;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'cmdPalette';
+      overlay.className = 'cmd-overlay';
+      overlay.innerHTML = `
+        <div class="cmd-box">
+          <input class="cmd-input" placeholder="Buscar painel... (ex: alunos, financeiro, CRM)" autofocus>
+          <div class="cmd-results"></div>
+          <div class="cmd-footer"><span><kbd>↑↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Esc</kbd> fechar</span></div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      const input = overlay.querySelector('.cmd-input');
+      const results = overlay.querySelector('.cmd-results');
+
+      function normalize(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+      function render(query) {
+        const q = normalize(query);
+        const filtered = q ? allItems.filter(i => normalize(i.label).includes(q) || normalize(i.section).includes(q)) : allItems;
+        activeIdx = 0;
+        if (filtered.length === 0) {
+          results.innerHTML = '<div class="cmd-empty">Nenhum painel encontrado.</div>';
+          return;
+        }
+        results.innerHTML = filtered.map((item, i) =>
+          `<div class="cmd-item${i === 0 ? ' active' : ''}" data-panel="${item.panel}" data-idx="${i}">
+            <span class="cmd-ic">${item.icon}</span>
+            <span class="cmd-label">${item.label}</span>
+            <span class="cmd-hint">${item.section}</span>
+          </div>`
+        ).join('');
+
+        results.querySelectorAll('.cmd-item').forEach(el => {
+          el.addEventListener('click', () => { go(el.dataset.panel); });
+          el.addEventListener('mouseenter', () => {
+            results.querySelector('.cmd-item.active')?.classList.remove('active');
+            el.classList.add('active');
+            activeIdx = parseInt(el.dataset.idx);
+          });
+        });
+      }
+
+      function go(panel) {
+        closePalette();
+        const navItem = document.querySelector(`.nav-item[onclick*="showPanel('${panel}'"]`);
+        if (navItem) navItem.click();
+        else if (typeof window.showPanel === 'function') window.showPanel(panel);
+      }
+
+      function closePalette() { overlay.remove(); }
+
+      input.addEventListener('input', () => render(input.value));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closePalette(); });
+      input.addEventListener('keydown', (e) => {
+        const items = results.querySelectorAll('.cmd-item');
+        if (e.key === 'Escape') { closePalette(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, items.length - 1); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); }
+        if (e.key === 'Enter') { const active = results.querySelector('.cmd-item.active'); if (active) go(active.dataset.panel); return; }
+        items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+        items[activeIdx]?.scrollIntoView({ block: 'nearest' });
+      });
+
+      render('');
+      input.focus();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openPalette();
+      }
+    });
+
+    // Also expose globally
+    window._openCommandPalette = openPalette;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 12. PANEL TRANSITIONS — smooth fade on switch
+  // ═══════════════════════════════════════════════════
+  function setupPanelTransitions() {
+    const origShowPanel = window.showPanel;
+    if (typeof origShowPanel !== 'function') return;
+
+    window.showPanel = function (panelId, navItem) {
+      // Hide current active panel
+      const current = document.querySelector('.panel.active');
+      if (current && current.id !== panelId) {
+        current.classList.remove('active', 'entering');
+      }
+      // Call original showPanel
+      origShowPanel(panelId, navItem);
+      // Animate new panel
+      const next = document.getElementById(panelId);
+      if (next) {
+        next.classList.remove('entering');
+        void next.offsetWidth; // force reflow
+        next.classList.add('entering');
+      }
+    };
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 13. DARK MODE TOGGLE
+  // ═══════════════════════════════════════════════════
+  function setupDarkMode() {
+    const DARK_KEY = 'lumied_dark_mode';
+    const saved = localStorage.getItem(DARK_KEY);
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+    let isDark = saved === '1' || (saved === null && prefersDark);
+
+    function apply() {
+      document.body.classList.toggle('theme-dark', isDark);
+      const toggle = document.getElementById('darkToggle');
+      if (toggle) toggle.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    window._toggleDarkMode = function () {
+      isDark = !isDark;
+      localStorage.setItem(DARK_KEY, isDark ? '1' : '0');
+      apply();
+    };
+
+    // Inject toggle button into sidebar footer
+    setTimeout(() => {
+      const footer = document.querySelector('.sb-footer');
+      if (footer) {
+        const btn = document.createElement('button');
+        btn.id = 'darkToggle';
+        btn.className = 'dark-toggle';
+        btn.title = 'Modo escuro';
+        btn.onclick = window._toggleDarkMode;
+        footer.insertBefore(btn, footer.firstChild);
+      }
+      apply();
+    }, 500);
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 14. BREADCRUMBS
+  // ═══════════════════════════════════════════════════
+  function setupBreadcrumbs() {
+    if (portal !== 'gerente') return;
+    const origShowPanel = window.showPanel;
+    if (typeof origShowPanel !== 'function') return;
+
+    const panelHistory = [{ id: 'analytics', label: 'Dashboard' }];
+
+    const _prevShowPanel = window.showPanel;
+    window.showPanel = function (panelId, navItem) {
+      _prevShowPanel(panelId, navItem);
+      // Find label
+      let label = panelId;
+      if (navItem) {
+        const text = navItem.textContent?.trim();
+        const ic = navItem.querySelector('.ic')?.textContent || '';
+        label = text.replace(ic, '').trim();
+      }
+      // Update breadcrumb trail
+      const existing = panelHistory.findIndex(h => h.id === panelId);
+      if (existing >= 0) panelHistory.length = existing + 1;
+      else panelHistory.push({ id: panelId, label });
+      if (panelHistory.length > 4) panelHistory.splice(1, panelHistory.length - 4);
+      renderBreadcrumb();
+    };
+
+    function renderBreadcrumb() {
+      const el = document.getElementById('breadcrumb');
+      if (!el) return;
+      el.innerHTML = panelHistory.map((h, i) => {
+        if (i === panelHistory.length - 1) return `<span>${h.label}</span>`;
+        return `<a onclick="showPanel('${h.id}')">${h.label}</a><span class="sep">›</span>`;
+      }).join(' ');
+      el.className = 'lm-breadcrumb';
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 15. KEYBOARD SHORTCUTS — Enter to submit modals
+  // ═══════════════════════════════════════════════════
+  function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Enter → confirm modal (if no textarea focused)
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+        if (document.activeElement?.tagName === 'TEXTAREA') return;
+        const modal = document.querySelector('.modal-overlay[style*="flex"]');
+        if (modal) {
+          const confirmBtn = modal.querySelector('.modal-confirm, .lumiedConfirmOkBtn');
+          if (confirmBtn && document.activeElement?.tagName !== 'INPUT') {
+            e.preventDefault();
+            confirmBtn.click();
+          }
+        }
+      }
+    });
   }
 
   // ═══════════════════════════════════════════════════
@@ -356,6 +661,14 @@
     improveEmptyStates();
     addSidebarSearch();
     setupUsageTracking();
+    setupCommandPalette();
+    setupDarkMode();
+    setupKeyboardShortcuts();
+    // Panel transitions and breadcrumbs need showPanel to exist first
+    setTimeout(() => {
+      setupPanelTransitions();
+      setupBreadcrumbs();
+    }, 100);
     // Onboarding after app loads
     const appShell = document.getElementById('appShell') || document.getElementById('appWrap');
     if (appShell) {
@@ -377,6 +690,62 @@
     init();
   }
 })();
+
+// ═══════════════════════════════════════════════════════
+//  Error sanitizer — hide technical messages from users
+// ═══════════════════════════════════════════════════════
+window.sanitizeErrorMessage = function (msg) {
+  if (typeof msg !== 'string') msg = String(msg || '');
+  // Technical patterns that should never reach users
+  const technicalPatterns = [
+    /tenant isolation/i,
+    /escola_id/i,
+    /\b(INSERT|UPDATE|DELETE|SELECT)\b.*\b(INTO|FROM|SET|WHERE)\b/i,
+    /\bconstraint\b/i,
+    /\bviolation\b/i,
+    /\bduplicate key\b/i,
+    /\bforeign key\b/i,
+    /\bnull value in column\b/i,
+    /\brelation ".*" does not exist/i,
+    /\bfunction .* does not exist/i,
+    /\bpermission denied for\b/i,
+    /\bsyntax error at or near\b/i,
+    /\bROW LEVEL SECURITY\b/i,
+    /pg_catalog/i,
+    /supabase/i,
+    /PGRST\d+/i,
+  ];
+  for (const pat of technicalPatterns) {
+    if (pat.test(msg)) return 'Erro interno. Tente novamente.';
+  }
+  // Generic SQL / DB error fallback
+  if (/\b(SQL|postgres|database|db error|internal server error)\b/i.test(msg)) {
+    return 'Erro no servidor. Tente novamente.';
+  }
+  // User-facing messages pass through as-is
+  return msg;
+};
+
+// ═══════════════════════════════════════════════════════
+//  Double-submit prevention — withLoading(btn, asyncFn)
+// ═══════════════════════════════════════════════════════
+window.withLoading = async function (btn, asyncFn) {
+  if (!btn || btn.disabled) return;
+  const originalHtml = btn.innerHTML;
+  const originalWidth = btn.offsetWidth;
+  btn.disabled = true;
+  btn.style.opacity = '0.7';
+  btn.style.minWidth = originalWidth + 'px';
+  btn.innerHTML = '<span class="spinner-sm" style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:middle;"></span> Salvando...';
+  try {
+    return await asyncFn();
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.minWidth = '';
+    btn.innerHTML = originalHtml;
+  }
+};
 
 // ═══════════════════════════════════════════════════════
 //  Focus trap for modals
