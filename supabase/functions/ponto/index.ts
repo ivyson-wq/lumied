@@ -4,8 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, requireFeature } from "../_shared/router.ts";
-import { successResponse, AppError } from "../_shared/errors.ts";
+import { Router, rateLimit, authGerente, requireFeature, successResponse, AppError } from "../_shared/mod.ts";
 
 const router = new Router("ponto");
 router.useGlobal(rateLimit());
@@ -135,20 +134,22 @@ router.on("ponto_employees_list", authGerente, feat, async (ctx) => {
 });
 
 router.on("ponto_employee_create", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { nome, pis, cargo, departamento, rh_funcionario_id, work_schedule, daily_hours } = ctx.body as any;
   if (!nome || !pis) throw new AppError("VALIDATION_FAILED", "nome e pis obrigatórios.");
   const { data, error } = await ctx.sb.from("ponto_employees").insert({
-    nome, pis: pis.padStart(12, "0"), cargo, departamento, rh_funcionario_id, work_schedule, daily_hours,
+    escola_id: ctx.escola_id, nome, pis: pis.padStart(12, "0"), cargo, departamento, rh_funcionario_id, work_schedule, daily_hours,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
 router.on("ponto_employee_update", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id, ...fields } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   delete fields.action; delete fields._token;
-  const { error } = await ctx.sb.from("ponto_employees").update(fields).eq("id", id);
+  const { error } = await ctx.sb.from("ponto_employees").update(fields).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -158,6 +159,7 @@ router.on("ponto_employee_update", authGerente, feat, async (ctx) => {
 // ═══════════════════════════════════════════════════════
 
 router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { conteudo_afd, nome_arquivo } = ctx.body as any;
   if (!conteudo_afd) throw new AppError("VALIDATION_FAILED", "conteudo_afd obrigatório (texto do arquivo AFD).");
 
@@ -165,6 +167,7 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
 
   // 1. Criar registro de importação
   const { data: importRec, error: impErr } = await ctx.sb.from("afd_imports").insert({
+    escola_id: ctx.escola_id,
     importado_por: ctx.user?.nome ?? "sistema",
     nome_arquivo: nome_arquivo || "afd_upload.txt",
     periodo_inicio: parsed.header?.periodStart,
@@ -183,7 +186,7 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
   }
 
   // 2. Buscar employees para de-para PIS → employee_id
-  const { data: emps } = await ctx.sb.from("ponto_employees").select("id, pis").eq("ativo", true);
+  const { data: emps } = await ctx.sb.from("ponto_employees").select("id, pis").eq("escola_id", ctx.escola_id).eq("ativo", true);
   const pisMap = new Map((emps ?? []).map((e: any) => [e.pis, e.id]));
 
   // 3. Inserir eventos em chunks
@@ -191,7 +194,7 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
   const eventRows = parsed.events.map(ev => {
     const empId = pisMap.get(ev.pis) ?? null;
     if (!empId) unmatchedPis++;
-    return { import_id: importRec.id, employee_id: empId, pis: ev.pis, data_evento: ev.date, hora_evento: ev.time, nsr: ev.nsr };
+    return { escola_id: ctx.escola_id, import_id: importRec.id, employee_id: empId, pis: ev.pis, data_evento: ev.date, hora_evento: ev.time, nsr: ev.nsr };
   });
 
   const chunkSize = 500;
@@ -216,6 +219,7 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
     const expectedMinutes = 480; // 8h default
     const worked = summary.workedMinutes ?? 0;
     summaryRows.push({
+      escola_id: ctx.escola_id,
       employee_id: empId,
       data_resumo: summary.date,
       total_marcacoes: dayEvents.length,
@@ -240,7 +244,7 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
   await ctx.sb.from("afd_imports").update({
     status: "concluido",
     pis_nao_encontrados: unmatchedPis,
-  }).eq("id", importRec.id);
+  }).eq("id", importRec.id).eq("escola_id", ctx.escola_id);
 
   return successResponse({
     import_id: importRec.id,
@@ -279,8 +283,9 @@ router.on("ponto_events_list", authGerente, feat, async (ctx) => {
 // ═══════════════════════════════════════════════════════
 
 router.on("ponto_summary_list", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { employee_id, data_inicio, data_fim, status } = ctx.body as any;
-  let q = ctx.sb.from("ponto_daily_summary").select("*, ponto_employees(nome, pis, cargo)").order("data_resumo", { ascending: false });
+  let q = ctx.sb.from("ponto_daily_summary").select("*, ponto_employees(nome, pis, cargo)").eq("escola_id", ctx.escola_id).order("data_resumo", { ascending: false });
   if (employee_id) q = q.eq("employee_id", employee_id);
   if (data_inicio) q = q.gte("data_resumo", data_inicio);
   if (data_fim) q = q.lte("data_resumo", data_fim);
@@ -290,6 +295,7 @@ router.on("ponto_summary_list", authGerente, feat, async (ctx) => {
 });
 
 router.on("ponto_mirror", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { employee_id, mes, ano } = ctx.body as any;
   if (!employee_id || !mes || !ano) throw new AppError("VALIDATION_FAILED", "employee_id, mes e ano obrigatórios.");
 
@@ -298,7 +304,7 @@ router.on("ponto_mirror", authGerente, feat, async (ctx) => {
   const dataFim = `${ano}-${String(mes).padStart(2, "0")}-${lastDay}`;
 
   // Dados do funcionário
-  const { data: emp } = await ctx.sb.from("ponto_employees").select("*").eq("id", employee_id).single();
+  const { data: emp } = await ctx.sb.from("ponto_employees").select("*").eq("id", employee_id).eq("escola_id", ctx.escola_id).single();
   if (!emp) throw new AppError("NOT_FOUND", "Funcionário não encontrado.");
 
   // Resumos do mês
@@ -381,36 +387,39 @@ router.on("ponto_mirror", authGerente, feat, async (ctx) => {
 // ═══════════════════════════════════════════════════════
 
 router.on("ponto_justificativa_criar", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { employee_id, summary_id, data_justificativa, motivo, descricao } = ctx.body as any;
   if (!employee_id || !data_justificativa || !motivo) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
   const { data, error } = await ctx.sb.from("ponto_justificativas").insert({
-    employee_id, summary_id, data_justificativa, motivo, descricao,
+    escola_id: ctx.escola_id, employee_id, summary_id, data_justificativa, motivo, descricao,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
 router.on("ponto_justificativa_aprovar", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id, status } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   const novoStatus = status === "rejeitado" ? "rejeitado" : "aprovado";
   const { error } = await ctx.sb.from("ponto_justificativas").update({
     status: novoStatus, aprovado_por: ctx.user?.nome, aprovado_em: new Date().toISOString(),
-  }).eq("id", id);
+  }).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   // Se aprovado, atualizar summary para justificado
   if (novoStatus === "aprovado") {
-    const { data: just } = await ctx.sb.from("ponto_justificativas").select("employee_id, data_justificativa").eq("id", id).single();
+    const { data: just } = await ctx.sb.from("ponto_justificativas").select("employee_id, data_justificativa").eq("id", id).eq("escola_id", ctx.escola_id).single();
     if (just) {
-      await ctx.sb.from("ponto_daily_summary").update({ status: "justificado" }).eq("employee_id", just.employee_id).eq("data_resumo", just.data_justificativa);
+      await ctx.sb.from("ponto_daily_summary").update({ status: "justificado" }).eq("employee_id", just.employee_id).eq("data_resumo", just.data_justificativa).eq("escola_id", ctx.escola_id);
     }
   }
   return successResponse({ success: true });
 });
 
 router.on("ponto_justificativas_list", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { employee_id, status } = ctx.body as any;
-  let q = ctx.sb.from("ponto_justificativas").select("*, ponto_employees(nome)").order("criado_em", { ascending: false });
+  let q = ctx.sb.from("ponto_justificativas").select("*, ponto_employees(nome)").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false });
   if (employee_id) q = q.eq("employee_id", employee_id);
   if (status) q = q.eq("status", status);
   const { data } = await q.limit(200);
@@ -422,6 +431,7 @@ router.on("ponto_justificativas_list", authGerente, feat, async (ctx) => {
 // ═══════════════════════════════════════════════════════
 
 router.on("ponto_dashboard", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { mes, ano } = ctx.body as any;
   const m = mes || new Date().getMonth() + 1;
   const a = ano || new Date().getFullYear();
@@ -429,9 +439,9 @@ router.on("ponto_dashboard", authGerente, feat, async (ctx) => {
   const dataFim = `${a}-${String(m).padStart(2, "0")}-31`;
 
   const [totalEmps, totalImports, summaries] = await Promise.all([
-    ctx.sb.from("ponto_employees").select("*", { count: "exact", head: true }).eq("ativo", true),
-    ctx.sb.from("afd_imports").select("*", { count: "exact", head: true }),
-    ctx.sb.from("ponto_daily_summary").select("status, marcacao_impar, saldo_minutos").gte("data_resumo", dataInicio).lte("data_resumo", dataFim),
+    ctx.sb.from("ponto_employees").select("*", { count: "exact", head: true }).eq("escola_id", ctx.escola_id).eq("ativo", true),
+    ctx.sb.from("afd_imports").select("*", { count: "exact", head: true }).eq("escola_id", ctx.escola_id),
+    ctx.sb.from("ponto_daily_summary").select("status, marcacao_impar, saldo_minutos").eq("escola_id", ctx.escola_id).gte("data_resumo", dataInicio).lte("data_resumo", dataFim),
   ]);
 
   const stats = { presentes: 0, ausentes: 0, impares: 0, extras: 0, debitos: 0 };

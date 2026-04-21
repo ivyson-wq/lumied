@@ -1,14 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode, b64urlDecode } from '../_shared/webauthn.ts'
-import { getModulosHabilitados, getModulosResolvidos, getEscolaPadrao } from '../_shared/modulos.ts'
-import { resolveEscolaId } from '../_shared/tenant.ts'
-import { getCorsHeaders } from '../_shared/cors.ts'
-import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
-import { sanitizeBody } from '../_shared/validation.ts'
-import { createLogger } from '../_shared/logger.ts'
-import { hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken } from '../_shared/auth.ts'
-import { logAudit } from '../_shared/audit.ts'
-import { generatePdf, pdfResponse, generateXlsx, xlsxResponse } from '../_shared/pdf.ts'
+import {
+  generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode,
+  getModulosHabilitados, getModulosResolvidos, getEscolaPadrao,
+  resolveEscolaId,
+  getCorsHeaders,
+  checkRateLimit, getClientIP,
+  sanitizeBody,
+  createLogger,
+  hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken, uploadArquivo,
+  resolveUsuario,
+  logAudit,
+  generatePdf, pdfResponse, generateXlsx, xlsxResponse,
+  b64urlDecode,
+} from '../_shared/mod.ts'
 
 const log = createLogger('diplomas')
 
@@ -51,133 +55,21 @@ async function verificarHorarioAcesso(sb: ReturnType<typeof createClient>, profe
   return { permitido: true }
 }
 
-// ── Session validators ──────────────────────────────────────
-async function getProfessora(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  const PROF_FIELDS = 'id, nome, email, escola_id'
-  // Tenta sessão legada (professora_sessoes)
-  const { data: sessao } = await sb
-    .from('professora_sessoes').select('professora_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (sessao && new Date(sessao.expira_em) >= new Date()) {
-    const { data } = await sb
-      .from('professoras').select(PROF_FIELDS)
-      .eq('id', sessao.professora_id).maybeSingle()
-    if (data) return data
-  }
-  // Fallback: sessão unificada (tabela sessoes/usuarios)
-  const user = await getUsuario(sb, token)
-  if (!user) return null
-  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  if (roles.includes('professora') || roles.includes('professora_assistente')) {
-    // Busca dados da professora pelo mesmo ID ou email
-    const { data: prof } = await sb
-      .from('professoras').select(PROF_FIELDS)
-      .eq('id', user.id).maybeSingle()
-    if (prof) return prof
-    // Fallback por email
-    const { data: profByEmail } = await sb
-      .from('professoras').select(PROF_FIELDS)
-      .eq('email', user.email).maybeSingle()
-    if (profByEmail) return profByEmail
-    // Cria registro na tabela professoras se não existe (auto-provision escopado por escola)
-    if (!(user as any).escola_id) return null
-    const { data: novaProfessora } = await sb
-      .from('professoras').insert({ nome: user.nome, email: user.email, escola_id: (user as any).escola_id })
-      .select('id, nome, email, escola_id').single()
-    if (novaProfessora) return novaProfessora
-    return null
-  }
-  return null
-}
+// ── Session validators (delegated to _shared/auth.ts) ──────
+// These are thin wrappers that maintain the same call signature for
+// backward compatibility with the 100+ call sites in this file.
+import {
+  resolveProfessora,
+  resolveGerente,
+  resolveSecretaria,
+  resolveAlmoxarifado,
+} from '../_shared/mod.ts'
 
-async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  // Tenta sessão legada (gerente_sessoes)
-  const { data: sessao } = await sb
-    .from('gerente_sessoes').select('gerente_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (sessao && new Date(sessao.expira_em) >= new Date()) {
-    const { data } = await sb
-      .from('gerentes').select('id, nome, email, escola_id')
-      .eq('id', sessao.gerente_id).maybeSingle()
-    if (data) return data
-  }
-  // Fallback: sessão unificada
-  const user = await getUsuario(sb, token)
-  if (!user) return null
-  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  if (roles.includes('gerente') || roles.includes('diretor') || roles.includes('financeiro')) {
-    const { data: ger } = await sb
-      .from('gerentes').select('id, nome, email, escola_id')
-      .eq('email', user.email).maybeSingle()
-    if (ger) return ger
-    return { id: user.id, nome: user.nome, email: user.email }
-  }
-  return null
-}
-
-async function getSecretaria(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  // Tenta sessão legada (secretaria_sessoes)
-  const { data: sessao } = await sb
-    .from('secretaria_sessoes').select('secretaria_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (sessao && new Date(sessao.expira_em) >= new Date()) {
-    const { data } = await sb
-      .from('secretarias').select('id, nome, email, features, escola_id')
-      .eq('id', sessao.secretaria_id).maybeSingle()
-    if (data) return { ...data, features: data.features || ['atestados'] }
-  }
-  // Fallback: sessão unificada
-  const user = await getUsuario(sb, token)
-  if (!user) return null
-  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao', 'nutricionista', 'almoxarifado']
-  if (roles.some((r: string) => secRoles.includes(r))) {
-    const { data: sec } = await sb
-      .from('secretarias').select('id, nome, email, features, escola_id')
-      .eq('email', user.email).maybeSingle()
-    if (sec) {
-      // Garante que papéis tenham features correspondentes mesmo em registros antigos
-      const feats = new Set<string>(sec.features || ['atestados'])
-      if (roles.includes('nutricionista')) feats.add('cozinha')
-      if (roles.includes('almoxarifado')) feats.add('almoxarifado')
-      return { ...sec, features: Array.from(feats) }
-    }
-    // Constrói features baseado nos papéis
-    const features: string[] = []
-    if (roles.includes('secretaria')) features.push('atestados')
-    if (roles.includes('comercial')) features.push('crm', 'templates', 'metas')
-    if (roles.includes('financeiro') || roles.includes('diretor')) features.push('financeiro')
-    if (roles.includes('manutencao')) features.push('manutencao')
-    if (roles.includes('impressao')) features.push('impressao')
-    if (roles.includes('nutricionista')) features.push('cozinha')
-    if (roles.includes('almoxarifado')) features.push('almoxarifado')
-    return { id: user.id, nome: user.nome, email: user.email, escola_id: (user as any).escola_id, features: features.length ? features : ['atestados'] }
-  }
-  return null
-}
-
-// ── Almoxarifado: acesso secretaria com feature/papel 'almoxarifado' ──────
-async function getAlmoxarifado(sb: ReturnType<typeof createClient>, token: string) {
-  const sec = await getSecretaria(sb, token)
-  if (sec && ((sec as any).features || []).includes('almoxarifado')) return sec
-  return null
-}
-
-// ── Unified session validator (new) ──────────────────────────
-async function getUsuario(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  const { data: sessao } = await sb
-    .from('sessoes').select('usuario_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (!sessao || new Date(sessao.expira_em) < new Date()) return null
-  const { data } = await sb
-    .from('usuarios').select('id, nome, email, papel, papeis, escola_id')
-    .eq('id', sessao.usuario_id).maybeSingle()
-  return data ?? null
-}
+const getProfessora = (sb: ReturnType<typeof createClient>, token: string) => resolveProfessora(sb, token)
+const getGerente = (sb: ReturnType<typeof createClient>, token: string) => resolveGerente(sb, token)
+const getSecretaria = (sb: ReturnType<typeof createClient>, token: string) => resolveSecretaria(sb, token)
+const getAlmoxarifado = (sb: ReturnType<typeof createClient>, token: string) => resolveAlmoxarifado(sb, token)
+const getUsuario = (sb: ReturnType<typeof createClient>, token: string) => resolveUsuario(sb, token)
 
 // ── Parent (Supabase Auth JWT) validator ────────────────────
 async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string, fallbackEmail?: string): Promise<string | null> {
@@ -225,22 +117,7 @@ function calcEtaLocal(latPai: number, lonPai: number): number {
   return Math.max(1, Math.ceil(dist / 40 * 60)) // 40 km/h average urban speed
 }
 
-// ── Upload helper ───────────────────────────────────────────
-async function uploadArquivo(
-  sb: ReturnType<typeof createClient>,
-  bucket: string,
-  ownerId: string,
-  base64: string,
-  mime: string
-): Promise<{ url: string } | { error: string }> {
-  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
-  const ext = mime === 'application/pdf' ? 'pdf' : mime.split('/')[1] || 'jpg'
-  const fileName = `${ownerId}/${Date.now()}.${ext}`
-  const { error } = await sb.storage.from(bucket).upload(fileName, bytes, { contentType: mime, upsert: false })
-  if (error) return { error: error.message }
-  const { data: { publicUrl } } = sb.storage.from(bucket).getPublicUrl(fileName)
-  return { url: publicUrl }
-}
+// uploadArquivo imported from _shared/auth.ts (includes 10MB size check)
 
 const ML_CLIENT_ID = Deno.env.get('ML_CLIENT_ID') || ''
 const ML_CLIENT_SECRET = Deno.env.get('ML_CLIENT_SECRET') || ''

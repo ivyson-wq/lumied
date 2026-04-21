@@ -10,8 +10,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerenteOrSecretaria, requireFeature, requireEscola, type Middleware } from "../_shared/router.ts";
-import { successResponse, AppError } from "../_shared/errors.ts";
+import { Router, rateLimit, authGerenteOrSecretaria, requireFeature, requireEscola, type Middleware, successResponse, AppError } from "../_shared/mod.ts";
 
 const router = new Router("rh");
 router.useGlobal(rateLimit());

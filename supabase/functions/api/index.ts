@@ -4,16 +4,19 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode } from "../_shared/webauthn.ts";
-import { getModulosHabilitados, getEscolaPadrao } from "../_shared/modulos.ts";
-import { resolveEscolaId } from "../_shared/tenant.ts";
-import { checkRateLimit, getClientIP } from "../_shared/ratelimit.ts";
-import { sanitizeBody } from "../_shared/validation.ts";
-import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
-import { createLogger } from "../_shared/logger.ts";
-import { hashSenhaV1 as hashSenha, hashSenha as hashSenhaProf, verificarSenhaAuto, gerarToken, validarSessao as _validarSessao } from "../_shared/auth.ts";
-import { sanitizePgError } from "../_shared/errors.ts";
-import { logAudit } from "../_shared/audit.ts";
+import {
+  generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode,
+  getModulosHabilitados, getEscolaPadrao,
+  resolveEscolaId,
+  checkRateLimit, getClientIP,
+  sanitizeBody,
+  getCorsHeaders,
+  createLogger,
+  hashSenhaV1 as hashSenha, hashSenha as hashSenhaProf, verificarSenhaAuto, gerarToken, validarSessao as _validarSessao,
+  resolveUsuario,
+  sanitizePgError,
+  logAudit,
+} from "../_shared/mod.ts";
 
 const log = createLogger("api");
 
@@ -247,6 +250,7 @@ serve(async (req: Request) => {
         subject: `Seu acesso ao ${escolaNomeHeader}`,
         html,
       }),
+      signal: AbortSignal.timeout(8000),
     });
     if (!resp.ok) {
       const errBody = await resp.text();
@@ -504,6 +508,8 @@ serve(async (req: Request) => {
   if (action === "login") {
     const { email, senha } = body as { email: string; senha: string };
     if (!email || !senha) return err("E-mail e senha são obrigatórios.", 400, "VALIDATION_FAILED");
+    const rlLogin = checkRateLimit(email || ip, "login");
+    if (!rlLogin.allowed) return err(`Muitas tentativas de login. Tente em ${rlLogin.retryAfterSeconds}s.`, 429, "RATE_LIMITED");
     const escolaIdLogin = await resolveEscolaId(req, admin, null, body);
     // Busca gerente no escopo da escola (Origin) se disponível; senão busca globalmente
     // (permite login em domínio customizado/dev). Single-tenant legado preservado via null.
@@ -729,7 +735,7 @@ serve(async (req: Request) => {
       const { error } = await admin.from("alunos").update({
         atividades_ids: atividades_ids as string[],
         turmas_selecionadas: turmas_selecionadas ?? [],
-      }).eq("id", found.id);
+      }).eq("id", found.id).eq("escola_id", fam.escola_id);
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
       // Aluno não cadastrado — cria na tabela alunos escopado
@@ -944,7 +950,7 @@ serve(async (req: Request) => {
     if (!contrato_id || !nome_signatario || !assinatura_base64) return err("contrato_id, nome_signatario e assinatura_base64 obrigatórios.");
     if (!codigo_email) return err("Código de verificação por e-mail obrigatório.");
 
-    const { data: contrato } = await admin.from("contratos").select("status, html_renderizado, dados_preenchidos").eq("id", contrato_id).single();
+    const { data: contrato } = await admin.from("contratos").select("status, html_renderizado, dados_preenchidos, escola_id").eq("id", contrato_id).single();
     if (!contrato) return err("Contrato não encontrado.", 404);
     if (contrato.status === 'assinado') return err("Contrato já foi assinado.");
     if (contrato.status === 'cancelado') return err("Contrato foi cancelado.");
@@ -996,6 +1002,7 @@ serve(async (req: Request) => {
       assinatura_base64, ip, user_agent: ua,
       documento_hash: docHash, aceite_termos: true,
       geolocation: geolocation || null,
+      escola_id: (contrato as any).escola_id,
     });
 
     // Verificar se todos assinaram (contratante + contratado + 2 testemunhas = 4)
@@ -1134,10 +1141,11 @@ serve(async (req: Request) => {
               </table>
               <p style="margin-top:16px;font-size:12px;color:#999;">Acesse o painel admin para responder.</p>
             </div>`
-          })
+          }),
+          signal: AbortSignal.timeout(8000),
         });
       }
-    } catch {}
+    } catch (e) { console.warn('[api] Ticket email notification failed:', (e as Error).message) }
     // Disparar Claude AI trigger imediatamente via poke (fire-and-forget)
     // Token no header (não em query) pra não aparecer em logs/metrics
     try {
@@ -1145,7 +1153,7 @@ serve(async (req: Request) => {
         method: "POST",
         headers: { "X-Trigger-Token": Deno.env.get("CLAUDE_TRIGGER_TOKEN") || "lumied-ticket-poke-2026" },
       }).catch(() => {});
-    } catch {}
+    } catch (e) { console.warn('[api] Claude trigger poke failed:', (e as Error).message) }
     return ok({ success: true, numero: ticketNumero });
   }
 
@@ -1184,13 +1192,13 @@ serve(async (req: Request) => {
   }
   if (action === "solicitacoes_update_turno") {
     const { id, turno } = body as { id: string; turno: string };
-    const { error } = await admin.from("solicitacoes").update({ turno }).eq("id", id);
+    const { error } = await admin.from("solicitacoes").update({ turno }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "solicitacoes_delete") {
     const { id } = body as { id: string };
-    await admin.from("solicitacoes").delete().eq("id", id);
+    await admin.from("solicitacoes").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -1209,19 +1217,19 @@ serve(async (req: Request) => {
   }
   if (action === "series_update") {
     const { id, nome, ordem, ativo } = body as { id: string; nome: string; ordem: number; ativo: boolean };
-    const { error } = await admin.from("series").update({ nome, ordem, ativo }).eq("id", id);
+    const { error } = await admin.from("series").update({ nome, ordem, ativo }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "series_delete") {
     const { id } = body as { id: string };
-    await admin.from("series").delete().eq("id", id);
+    await admin.from("series").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
   // ── Gerentes ──────────────────────────────────────────────────
   if (action === "gerentes_list") {
-    const { data } = await admin.from("gerentes").select("id, nome, email, criado_em").order("criado_em");
+    const { data } = await admin.from("gerentes").select("id, nome, email, criado_em").eq("escola_id", sessionEscolaId).order("criado_em");
     return ok(data ?? []);
   }
   if (action === "gerentes_create") {
@@ -1253,18 +1261,18 @@ serve(async (req: Request) => {
     const { data: g } = await admin.from("gerentes").select("senha_hash").eq("id", gerente.id).single();
     if (!g || !(await verificarSenhaAuto(senhaAtual, g.senha_hash))) return err("Senha atual incorreta.");
     const hash = await hashSenha(novaSenha);
-    await admin.from("gerentes").update({ senha_hash: hash }).eq("id", gerente.id);
+    await admin.from("gerentes").update({ senha_hash: hash }).eq("id", gerente.id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
   // ── Usuários Unificados ──────────────────────────────────────
   if (action === "usuarios_list") {
-    const { data } = await admin.from("usuarios").select("id, nome, email, papel, papeis, ativo, criado_em").order("papel").order("nome");
+    const { data } = await admin.from("usuarios").select("id, nome, email, papel, papeis, ativo, criado_em").eq("escola_id", sessionEscolaId).order("papel").order("nome");
     const users = (data ?? []).map((u: any) => ({ ...u, papeis: u.papeis?.length ? u.papeis : (u.papel ? [u.papel] : []) }));
     // Enriquece professoras com serie_id
     const profEmails = users.filter(u => u.papeis.includes('professora') || u.papeis.includes('professora_assistente')).map(u => u.email);
     if (profEmails.length) {
-      const { data: profs } = await admin.from("professoras").select("email, serie_id, series(id, nome)").in("email", profEmails);
+      const { data: profs } = await admin.from("professoras").select("email, serie_id, series(id, nome)").eq("escola_id", sessionEscolaId).in("email", profEmails);
       const profMap = new Map((profs ?? []).map((p: any) => [p.email, { serie_id: p.serie_id, serie_nome: p.series?.nome }]));
       for (const u of users) {
         const p = profMap.get(u.email);
@@ -1317,7 +1325,7 @@ serve(async (req: Request) => {
     const { id, nome, email, papel, papeis: rawPapeis, features } = body as any;
     if (!id) return err("ID obrigatório.");
     // Busca estado atual
-    const { data: current } = await admin.from("usuarios").select("nome, email, senha_hash, papeis, papel").eq("id", id).single();
+    const { data: current } = await admin.from("usuarios").select("nome, email, senha_hash, papeis, papel").eq("id", id).eq("escola_id", sessionEscolaId).single();
     if (!current) return err("Usuário não encontrado.");
     const update: Record<string, unknown> = {};
     if (nome) update.nome = nome;
@@ -1327,7 +1335,7 @@ serve(async (req: Request) => {
       update.papeis = papeis;
       update.papel = papeis[0];
     }
-    const { error } = await admin.from("usuarios").update(update).eq("id", id);
+    const { error } = await admin.from("usuarios").update(update).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "E-mail já cadastrado." : sanitizePgError(error)); }
     // Sincroniza tabelas legadas se papéis mudaram
     if (papeis) {
@@ -1340,18 +1348,18 @@ serve(async (req: Request) => {
         const needsGerente = papeis.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
         const hadGerente = oldRoles.some((p: string) => ["gerente","diretor","financeiro"].includes(p));
         if (needsGerente && !hadGerente) {
-          await admin.from("gerentes").upsert({ nome: uNome, email: uEmail, senha_hash: uHash }, { onConflict: "email" }).catch(() => {});
+          await admin.from("gerentes").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, escola_id: sessionEscolaId }, { onConflict: "email" }).catch(() => {});
         } else if (!needsGerente && hadGerente) {
-          await admin.from("gerentes").delete().eq("email", uEmail).catch(() => {});
+          await admin.from("gerentes").delete().eq("email", uEmail).eq("escola_id", sessionEscolaId).catch(() => {});
         }
         // Professora
         const needsProf = papeis.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
         const hadProf = oldRoles.some((p: string) => ["professora","professora_assistente","manutencao"].includes(p));
         if (needsProf && !hadProf) {
           const tipo = papeis.includes("professora_assistente") ? "professora_assistente" : papeis.includes("manutencao") ? "manutencao" : "professora";
-          await admin.from("professoras").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, tipo }, { onConflict: "email" }).catch(() => {});
+          await admin.from("professoras").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, tipo, escola_id: sessionEscolaId }, { onConflict: "email" }).catch(() => {});
         } else if (!needsProf && hadProf) {
-          await admin.from("professoras").delete().eq("email", uEmail).catch(() => {});
+          await admin.from("professoras").delete().eq("email", uEmail).eq("escola_id", sessionEscolaId).catch(() => {});
         }
         // Secretaria/Comercial
         const secRoles = ["secretaria","comercial","financeiro","diretor","manutencao","impressao","nutricionista","almoxarifado"];
@@ -1369,9 +1377,9 @@ serve(async (req: Request) => {
             if (papeis.includes("almoxarifado")) secFeatures.push("almoxarifado");
           }
           // Upsert: cria se não existe, atualiza features se existe
-          await admin.from("secretarias").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, features: secFeatures, ativo: true }, { onConflict: "email" }).catch(() => {});
+          await admin.from("secretarias").upsert({ nome: uNome, email: uEmail, senha_hash: uHash, features: secFeatures, ativo: true, escola_id: sessionEscolaId }, { onConflict: "email" }).catch(() => {});
         } else if (!needsSec && hadSec) {
-          await admin.from("secretarias").update({ ativo: false }).eq("email", uEmail).catch(() => {});
+          await admin.from("secretarias").update({ ativo: false }).eq("email", uEmail).eq("escola_id", sessionEscolaId).catch(() => {});
         }
       } catch (_syncErr) {
         // Sync com tabelas legadas é best-effort, não falha a operação principal
@@ -1382,7 +1390,7 @@ serve(async (req: Request) => {
   if (action === "usuarios_delete") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatório.");
-    const { data: u } = await admin.from("usuarios").select("email, papel, papeis").eq("id", id).single();
+    const { data: u } = await admin.from("usuarios").select("email, papel, papeis").eq("id", id).eq("escola_id", sessionEscolaId).single();
     if (!u) return err("Usuário não encontrado.");
     if (u.email === gerente.email) return err("Você não pode remover sua própria conta.");
     const roles = u.papeis?.length ? u.papeis : [u.papel];
@@ -1390,15 +1398,16 @@ serve(async (req: Request) => {
       // Conta gerentes em papeis (array) OR papel (singular legado)
       const { count } = await admin.from("usuarios")
         .select("*", { count: "exact", head: true })
+        .eq("escola_id", sessionEscolaId)
         .or("papeis.cs.{gerente},papel.eq.gerente")
         .eq("ativo", true);
       if ((count ?? 0) <= 1) return err("É necessário manter pelo menos um gerente.");
     }
-    await admin.from("usuarios").delete().eq("id", id);
+    await admin.from("usuarios").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     // Remove de todas as tabelas legadas
-    await admin.from("gerentes").delete().eq("email", u.email).catch(() => {});
-    await admin.from("professoras").delete().eq("email", u.email).catch(() => {});
-    await admin.from("secretarias").delete().eq("email", u.email).catch(() => {});
+    await admin.from("gerentes").delete().eq("email", u.email).eq("escola_id", sessionEscolaId).catch(() => {});
+    await admin.from("professoras").delete().eq("email", u.email).eq("escola_id", sessionEscolaId).catch(() => {});
+    await admin.from("secretarias").delete().eq("email", u.email).eq("escola_id", sessionEscolaId).catch(() => {});
     return ok({ success: true });
   }
   if (action === "usuarios_reset_senha") {
@@ -1406,7 +1415,7 @@ serve(async (req: Request) => {
     if (!id || !nova_senha) return err("ID e nova senha são obrigatórios.");
     if ((nova_senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
     const senha_hash = await hashSenhaProf(nova_senha as string);
-    const { error } = await admin.from("usuarios").update({ senha_hash }).eq("id", id);
+    const { error } = await admin.from("usuarios").update({ senha_hash }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1417,7 +1426,7 @@ serve(async (req: Request) => {
     if (!usuario_id) return err("usuario_id obrigatório.");
 
     // Get user's papeis (array) com fallback ao singular
-    const { data: user } = await admin.from("usuarios").select("papel, papeis").eq("id", usuario_id).single();
+    const { data: user } = await admin.from("usuarios").select("papel, papeis").eq("id", usuario_id).eq("escola_id", sessionEscolaId).single();
     if (!user) return err("Usuário não encontrado.", 404);
     const userRoles: string[] = (user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])) as string[];
 
@@ -1452,11 +1461,9 @@ serve(async (req: Request) => {
     const { usuario_id, permissoes } = body as { usuario_id: string; permissoes: Array<{modulo: string; pode_ver: boolean; pode_editar: boolean}> };
     if (!usuario_id || !Array.isArray(permissoes)) return err("usuario_id e permissoes obrigatórios.");
 
-    const escolaId = await getEscolaPadrao(admin);
-
     for (const p of permissoes) {
       await admin.from("permissoes_usuario").upsert({
-        escola_id: escolaId,
+        escola_id: sessionEscolaId,
         usuario_id,
         modulo: p.modulo,
         pode_ver: p.pode_ver,
@@ -1531,7 +1538,7 @@ serve(async (req: Request) => {
     if (!id || !turno) return err("id e turno obrigatórios.");
     const updateData: any = { turno };
     if (dias_semana !== undefined) updateData.dias_semana = dias_semana;
-    const { error } = await admin.from("alunos").update(updateData).eq("id", id);
+    const { error } = await admin.from("alunos").update(updateData).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1542,7 +1549,7 @@ serve(async (req: Request) => {
     const { registros } = body as { registros: { nome: string; turno: string; dias_semana?: string[] }[] };
     if (!Array.isArray(registros) || !registros.length) return err("registros obrigatório (array).");
     // Busca todos os alunos para matching flexível
-    const { data: todosAlunos } = await admin.from("alunos").select("id, nome");
+    const { data: todosAlunos } = await admin.from("alunos").select("id, nome").eq("escola_id", sessionEscolaId);
     const alunosList = todosAlunos ?? [];
     function findAlunoTurno(nomeBusca: string) {
       const limpo = nomeBusca.replace(/\s*-\s*G\d+$/i, "").trim().toLowerCase();
@@ -1560,7 +1567,7 @@ serve(async (req: Request) => {
       if (r.dias_semana) updateData.dias_semana = r.dias_semana;
       const found = findAlunoTurno(r.nome);
       if (!found) { erros.push(r.nome + ": aluno não encontrado"); continue; }
-      const { error } = await admin.from("alunos").update(updateData).eq("id", found.id);
+      const { error } = await admin.from("alunos").update(updateData).eq("id", found.id).eq("escola_id", sessionEscolaId);
       if (error) { erros.push(r.nome + ": " + error.message); continue; }
       sucesso++;
     }
@@ -1574,14 +1581,14 @@ serve(async (req: Request) => {
     if (!Array.isArray(registros) || !registros.length) return err("registros obrigatório (array).");
 
     // Busca todas as atividades cadastradas para resolver nomes → IDs
-    const { data: atividades } = await admin.from("atividades").select("id, nome, horarios");
+    const { data: atividades } = await admin.from("atividades").select("id, nome, horarios").eq("escola_id", sessionEscolaId);
     const ativMap: Record<string, { id: string; horarios: any[] }> = {};
     for (const a of atividades ?? []) {
       ativMap[a.nome.toLowerCase()] = { id: a.id, horarios: a.horarios ?? [] };
     }
 
     // Busca todos os alunos para matching flexível
-    const { data: todosAlunos } = await admin.from("alunos").select("id, nome");
+    const { data: todosAlunos } = await admin.from("alunos").select("id, nome").eq("escola_id", sessionEscolaId);
     const alunosList = todosAlunos ?? [];
 
     // Função de matching: limpa sufixos (- G1, - G2), normaliza acentos, busca parcial
@@ -1629,7 +1636,7 @@ serve(async (req: Request) => {
       const { error } = await admin.from("alunos").update({
         atividades_ids: dados.atividades_ids,
         turmas_selecionadas: dados.turmas_selecionadas,
-      }).eq("id", dados.alunoId);
+      }).eq("id", dados.alunoId).eq("escola_id", sessionEscolaId);
       if (error) { erros.push(dados.alunoId + ": " + error.message); continue; }
       sucesso++;
     }
@@ -1641,9 +1648,8 @@ serve(async (req: Request) => {
     if (!gerente) return err("Sessão inválida.", 401);
     const { aluno_nome, aluno_email, turma, tipo, titulo, descricao } = body as any;
     if (!aluno_nome || !titulo || !tipo) return err("aluno_nome, titulo e tipo obrigatórios.");
-    const escolaId = await getEscolaPadrao(admin);
     const { error } = await admin.from("aluno_historico").insert({
-      escola_id: escolaId, aluno_nome, aluno_email: aluno_email || null,
+      escola_id: sessionEscolaId, aluno_nome, aluno_email: aluno_email || null,
       turma: turma || null, tipo, titulo, descricao: descricao || null,
       registrado_por: gerente.nome, registrado_por_papel: 'coordenacao',
     });
@@ -1711,7 +1717,7 @@ serve(async (req: Request) => {
     const { data: atividades } = await admin.from("atividades").select("*").eq("escola_id", sessionEscolaId).order("ordem");
     if (!atividades?.length) return ok([]);
 
-    const { data: alunosAtiv } = await admin.from("alunos").select("turmas_selecionadas").not("turmas_selecionadas", "is", null);
+    const { data: alunosAtiv } = await admin.from("alunos").select("turmas_selecionadas").eq("escola_id", sessionEscolaId).not("turmas_selecionadas", "is", null);
     const ocupacao: Record<string, number> = {};
     for (const al of alunosAtiv ?? []) {
       for (const ts of (al.turmas_selecionadas ?? [])) {
@@ -1742,7 +1748,7 @@ serve(async (req: Request) => {
   if (action === "atividades_update") {
     const { id, nome, preco, descricao, cor, horarios, ordem, ativo } = body as Record<string, unknown>;
     if (!id) return err("ID obrigatório.");
-    const { error } = await admin.from("atividades").update({ nome, preco, descricao, cor, horarios, ordem, ativo }).eq("id", id);
+    const { error } = await admin.from("atividades").update({ nome, preco, descricao, cor, horarios, ordem, ativo }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1753,13 +1759,13 @@ serve(async (req: Request) => {
     if (!id || !nome) return err("ID e nome são obrigatórios.");
     const updateData: Record<string, unknown> = { nome, preco, descricao, cor, horarios, ordem };
     if (valor_repasse_aluno != null) updateData.valor_repasse_aluno = valor_repasse_aluno;
-    const { error } = await admin.from("atividades").update(updateData).eq("id", id);
+    const { error } = await admin.from("atividades").update(updateData).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "atividades_delete") {
     const { id } = body as { id: string };
-    await admin.from("atividades").delete().eq("id", id);
+    await admin.from("atividades").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -1808,13 +1814,13 @@ serve(async (req: Request) => {
   if (action === "atividades_conta_pagar") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatório.");
-    await admin.from("atividades_contas_receber").update({ status: "pago", data_pagamento: new Date().toISOString().slice(0, 10) }).eq("id", id);
+    await admin.from("atividades_contas_receber").update({ status: "pago", data_pagamento: new Date().toISOString().slice(0, 10) }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "atividades_conta_cancelar") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatório.");
-    await admin.from("atividades_contas_receber").update({ status: "cancelado" }).eq("id", id);
+    await admin.from("atividades_contas_receber").update({ status: "cancelado" }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -1838,7 +1844,7 @@ serve(async (req: Request) => {
   if (action === "inscricoes_atividades_delete") {
     const { id } = body as { id: string };
     // Clear atividades from aluno instead of deleting
-    const { error } = await admin.from("alunos").update({ atividades_ids: null, turmas_selecionadas: null, almoco_dias: null }).eq("id", id);
+    const { error } = await admin.from("alunos").update({ atividades_ids: null, turmas_selecionadas: null, almoco_dias: null }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1851,7 +1857,7 @@ serve(async (req: Request) => {
     if (atividades_ids !== undefined) updateData.atividades_ids = atividades_ids;
     if (turmas_selecionadas !== undefined) updateData.turmas_selecionadas = turmas_selecionadas;
     if (almoco_dias !== undefined) updateData.almoco_dias = almoco_dias;
-    const { error } = await admin.from("alunos").update(updateData).eq("id", id);
+    const { error } = await admin.from("alunos").update(updateData).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1881,13 +1887,13 @@ serve(async (req: Request) => {
     if (!id || !nova_senha) return err("ID e nova senha são obrigatórios.");
     if ((nova_senha as string).length < 6) return err("Senha mínima de 6 caracteres.");
     const senha_hash = await hashSenhaProf(nova_senha as string);
-    const { error } = await admin.from("professoras").update({ senha_hash }).eq("id", id);
+    const { error } = await admin.from("professoras").update({ senha_hash }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "professoras_delete") {
     const { id } = body as { id: string };
-    await admin.from("professoras").delete().eq("id", id);
+    await admin.from("professoras").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -1928,7 +1934,7 @@ serve(async (req: Request) => {
       const { data: { publicUrl } } = admin.storage.from("manutencoes").getPublicUrl(path);
       foto_url = publicUrl;
     }
-    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url };
+    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, escola_id: sessionEscolaId };
     if (usuario_id) insert.usuario_id = usuario_id;
     else if (gerente?.id) insert.usuario_id = gerente.id;
     const { error } = await admin.from("manutencoes").insert(insert);
@@ -1944,14 +1950,14 @@ serve(async (req: Request) => {
     if (equipe_responsavel !== undefined) update.equipe_responsavel = equipe_responsavel;
     if (observacao_gerente !== undefined) update.observacao_gerente = observacao_gerente;
     if (status === "concluida") update.data_conclusao = new Date().toISOString().split("T")[0];
-    const { error } = await admin.from("manutencoes").update(update).eq("id", id);
+    const { error } = await admin.from("manutencoes").update(update).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
   if (action === "manutencao_delete") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatório.");
-    await admin.from("manutencoes").delete().eq("id", id);
+    await admin.from("manutencoes").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -1974,7 +1980,7 @@ serve(async (req: Request) => {
     if (serie !== undefined) updates.serie = serie;
     if (turno !== undefined) updates.turno = turno;
     if (!Object.keys(updates).length) return err("Nenhum campo para atualizar.");
-    const { error } = await admin.from("familias").update(updates).eq("cpf", cpf);
+    const { error } = await admin.from("familias").update(updates).eq("cpf", cpf).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -2001,9 +2007,9 @@ serve(async (req: Request) => {
     const { cpf, email } = body as { cpf?: string; email?: string };
     if (!cpf && !email) return err("CPF ou email obrigatório.");
     if (cpf) {
-      await admin.from("familias").delete().eq("cpf", cpf);
+      await admin.from("familias").delete().eq("cpf", cpf).eq("escola_id", sessionEscolaId);
     } else {
-      await admin.from("familias").delete().eq("email", email);
+      await admin.from("familias").delete().eq("email", email!).eq("escola_id", sessionEscolaId);
     }
     return ok({ success: true });
   }
@@ -2021,10 +2027,10 @@ serve(async (req: Request) => {
     const { id, nome } = body as { id?: string; nome: string };
     if (!nome) return err("Nome obrigatório.");
     if (id) {
-      const { error } = await admin.from("manut_equipes").update({ nome }).eq("id", id);
+      const { error } = await admin.from("manut_equipes").update({ nome }).eq("id", id).eq("escola_id", sessionEscolaId);
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
-      const { error } = await admin.from("manut_equipes").insert({ nome });
+      const { error } = await admin.from("manut_equipes").insert({ nome, escola_id: sessionEscolaId });
       if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "Já existe uma equipe com este nome." : sanitizePgError(error)); }
     }
     return ok({ success: true });
@@ -2032,7 +2038,7 @@ serve(async (req: Request) => {
   if (action === "manut_equipe_toggle") {
     const { id, ativo } = body as { id: string; ativo: boolean };
     if (!id) return err("ID obrigatório.");
-    await admin.from("manut_equipes").update({ ativo }).eq("id", id);
+    await admin.from("manut_equipes").update({ ativo }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -2049,10 +2055,10 @@ serve(async (req: Request) => {
     const { id, nome } = body as { id?: string; nome: string };
     if (!nome) return err("Nome obrigatório.");
     if (id) {
-      const { error } = await admin.from("alm_categorias").update({ nome }).eq("id", id);
+      const { error } = await admin.from("alm_categorias").update({ nome }).eq("id", id).eq("escola_id", sessionEscolaId);
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     } else {
-      const { error } = await admin.from("alm_categorias").insert({ nome });
+      const { error } = await admin.from("alm_categorias").insert({ nome, escola_id: sessionEscolaId });
       if (error) { console.error("[api db error]", error); return err(error.message.includes("unique") ? "Já existe uma categoria com este nome." : sanitizePgError(error)); }
     }
     return ok({ success: true });
@@ -2060,7 +2066,7 @@ serve(async (req: Request) => {
   if (action === "alm_categoria_toggle") {
     const { id, ativo } = body as { id: string; ativo: boolean };
     if (!id) return err("ID obrigatório.");
-    await admin.from("alm_categorias").update({ ativo }).eq("id", id);
+    await admin.from("alm_categorias").update({ ativo }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -2111,7 +2117,7 @@ serve(async (req: Request) => {
   if (action === "calendario_delete") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatorio.");
-    await admin.from("calendario_eventos").delete().eq("id", id);
+    await admin.from("calendario_eventos").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -2119,12 +2125,12 @@ serve(async (req: Request) => {
   if (action === "analytics_dashboard") {
     const ano = (body as any).ano || new Date().getFullYear().toString();
     // Solicitacoes por mes
-    const { data: sols } = await admin.from("solicitacoes").select("criado_em, turno").gte("criado_em", `${ano}-01-01`).lte("criado_em", `${ano}-12-31T23:59:59`);
+    const { data: sols } = await admin.from("solicitacoes").select("criado_em, turno").eq("escola_id", sessionEscolaId).gte("criado_em", `${ano}-01-01`).lte("criado_em", `${ano}-12-31T23:59:59`);
     const solsPorMes = Array(12).fill(0);
     for (const s of sols ?? []) { const m = new Date(s.criado_em).getMonth(); solsPorMes[m]++; }
 
     // Almoxarifado gastos por mes
-    const { data: reqs } = await admin.from("alm_requisicoes").select("mes, total, status").like("mes", `${ano}-%`);
+    const { data: reqs } = await admin.from("alm_requisicoes").select("mes, total, status").eq("escola_id", sessionEscolaId).like("mes", `${ano}-%`);
     const gastosPorMes = Array(12).fill(0);
     for (const r of reqs ?? []) {
       if (r.status === "aprovado") {
@@ -2176,9 +2182,9 @@ serve(async (req: Request) => {
     const { id, codigo, nome, tipo } = body as any;
     if (!nome || !tipo) return err("Nome e tipo obrigatorios.");
     if (id) {
-      await admin.from("fin_plano_contas").update({ codigo, nome, tipo }).eq("id", id);
+      await admin.from("fin_plano_contas").update({ codigo, nome, tipo }).eq("id", id).eq("escola_id", sessionEscolaId);
     } else {
-      await admin.from("fin_plano_contas").insert({ codigo, nome, tipo });
+      await admin.from("fin_plano_contas").insert({ codigo, nome, tipo, escola_id: sessionEscolaId });
     }
     return ok({ success: true });
   }
@@ -2187,9 +2193,9 @@ serve(async (req: Request) => {
     if (!descricao || !valor || !data_lancamento) return err("Descricao, valor e data obrigatorios.");
     const data = { tipo, conta_id, descricao, valor: parseFloat(valor), data_lancamento, data_vencimento: data_vencimento || null, status: status || 'pendente', fornecedor: fornecedor || null, familia_email: familia_email || null, familia_nome: familia_nome || null, observacao: observacao || null, criado_por: gerente?.nome };
     if (id) {
-      await admin.from("fin_lancamentos").update(data).eq("id", id);
+      await admin.from("fin_lancamentos").update(data).eq("id", id).eq("escola_id", sessionEscolaId);
     } else {
-      await admin.from("fin_lancamentos").insert(data);
+      await admin.from("fin_lancamentos").insert({ ...data, escola_id: sessionEscolaId });
     }
     return ok({ success: true });
   }
@@ -2207,12 +2213,12 @@ serve(async (req: Request) => {
   if (action === "fin_lancamento_pagar") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatorio.");
-    await admin.from("fin_lancamentos").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id);
+    await admin.from("fin_lancamentos").update({ status: "pago", data_pagamento: new Date().toISOString().split("T")[0] }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "fin_lancamento_delete") {
     const { id } = body as { id: string };
-    await admin.from("fin_lancamentos").delete().eq("id", id);
+    await admin.from("fin_lancamentos").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "fin_dashboard") {
@@ -2231,7 +2237,7 @@ serve(async (req: Request) => {
     }
     // Mensalidades
     const { data: mens } = await admin.from("fin_mensalidades").select("status, valor_total")
-      .like("mes", ano + "-%");
+      .eq("escola_id", sessionEscolaId).like("mes", ano + "-%");
     let mensPago = 0, mensPendente = 0, mensTotal = 0;
     for (const m of mens ?? []) {
       mensTotal += m.valor_total;
@@ -2244,7 +2250,7 @@ serve(async (req: Request) => {
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
     const vencimento = (body as any).vencimento || 10;
     // Busca todas as solicitacoes ativas
-    const { data: sols } = await admin.from("solicitacoes").select("email, nome_resp, nome_crianca, serie, turno");
+    const { data: sols } = await admin.from("solicitacoes").select("email, nome_resp, nome_crianca, serie, turno").eq("escola_id", sessionEscolaId);
     const TURNO_PRECOS: Record<string, number> = {
       integral_5x: 4395, integral_4x: 4303.57, integral_3x: 4072.13, integral_2x: 3760.70, integral_1x: 3300,
       semi_5x: 4030, semi_4x: 3991.57, semi_3x: 3773.13, semi_2x: 3534.70, semi_1x: 3196.27, tarde: 0, diaria: 150,
@@ -2259,6 +2265,7 @@ serve(async (req: Request) => {
         familia_email: s.email, familia_nome: s.nome_resp, crianca_nome: s.nome_crianca,
         serie: s.serie, turno: s.turno, valor_turno: valorTurno, valor_atividades: 0,
         valor_total: valorTurno, mes, data_vencimento: dtVenc,
+        escola_id: sessionEscolaId,
       }, { onConflict: "familia_email,crianca_nome,mes" });
       if (!error) geradas++;
     }
@@ -2332,7 +2339,7 @@ serve(async (req: Request) => {
   if (action === "fin_saldo_patrimonial_set") {
     const { conta_id, mes, saldo } = body as any;
     if (!conta_id || !mes) return err("conta_id e mes obrigatorios.");
-    await admin.from("fin_saldos_patrimoniais").upsert({ conta_id, mes, saldo: parseFloat(saldo) || 0 }, { onConflict: "conta_id,mes" });
+    await admin.from("fin_saldos_patrimoniais").upsert({ conta_id, mes, saldo: parseFloat(saldo) || 0, escola_id: sessionEscolaId }, { onConflict: "conta_id,mes" });
     return ok({ success: true });
   }
 
@@ -2345,6 +2352,7 @@ serve(async (req: Request) => {
       const { error } = await admin.from("fin_extrato_bancario").insert({
         data_transacao: it.data, descricao: it.descricao, valor: Math.abs(parseFloat(it.valor)),
         tipo: parseFloat(it.valor) >= 0 ? "credito" : "debito", saldo: it.saldo || null, banco: it.banco || null,
+        escola_id: sessionEscolaId,
       });
       if (!error) ok2++;
     }
@@ -2361,20 +2369,20 @@ serve(async (req: Request) => {
   if (action === "fin_extrato_conciliar") {
     const { extrato_id, lancamento_id } = body as any;
     if (!extrato_id) return err("extrato_id obrigatorio.");
-    await admin.from("fin_extrato_bancario").update({ lancamento_id: lancamento_id || null, conciliado: !!lancamento_id }).eq("id", extrato_id);
+    await admin.from("fin_extrato_bancario").update({ lancamento_id: lancamento_id || null, conciliado: !!lancamento_id }).eq("id", extrato_id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "fin_extrato_auto_conciliar") {
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
-    const { data: extratos } = await admin.from("fin_extrato_bancario").select("*").eq("conciliado", false)
+    const { data: extratos } = await admin.from("fin_extrato_bancario").select("*").eq("escola_id", sessionEscolaId).eq("conciliado", false)
       .gte("data_transacao", mes + "-01").lte("data_transacao", mes + "-31");
     const { data: lancs } = await admin.from("fin_lancamentos").select("id, descricao, valor, data_lancamento")
-      .gte("data_lancamento", mes + "-01").lte("data_lancamento", mes + "-31");
+      .eq("escola_id", sessionEscolaId).gte("data_lancamento", mes + "-01").lte("data_lancamento", mes + "-31");
     let conciliados = 0;
     for (const ext of extratos ?? []) {
       const match = (lancs ?? []).find(l => Math.abs(l.valor - ext.valor) < 0.01 && l.data_lancamento === ext.data_transacao);
       if (match) {
-        await admin.from("fin_extrato_bancario").update({ lancamento_id: match.id, conciliado: true }).eq("id", ext.id);
+        await admin.from("fin_extrato_bancario").update({ lancamento_id: match.id, conciliado: true }).eq("id", ext.id).eq("escola_id", sessionEscolaId);
         conciliados++;
       }
     }
@@ -2405,6 +2413,7 @@ serve(async (req: Request) => {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` },
         body: JSON.stringify({ path: "/cobranca/v3/cobrancas", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cobrancaBody) }),
+        signal: AbortSignal.timeout(15000),
       });
       const relayResp = await res.json() as any;
       const interData = typeof relayResp.body === "string" ? JSON.parse(relayResp.body) : relayResp.body;
@@ -2415,6 +2424,7 @@ serve(async (req: Request) => {
         familia_nome: nome_pagador || null,
         crianca_nome: (body as any).crianca_nome || null,
         cpf_pagador, valor: parseFloat(valor), vencimento, descricao,
+        escola_id: sessionEscolaId,
         nosso_numero: interData?.cobranca?.nossoNumero || interData?.nossoNumero || null,
         codigo_barras: interData?.boleto?.codigoBarras || null,
         linha_digitavel: interData?.boleto?.linhaDigitavel || null,
@@ -2424,7 +2434,7 @@ serve(async (req: Request) => {
       if (insErr) return err("Boleto criado no Inter mas erro ao salvar: " + insErr.message);
       // Atualizar mensalidade se vinculada
       if (mensalidade_id) {
-        await admin.from("fin_mensalidades").update({ status: "pendente" }).eq("id", mensalidade_id);
+        await admin.from("fin_mensalidades").update({ status: "pendente" }).eq("id", mensalidade_id).eq("escola_id", sessionEscolaId);
       }
       return ok({ success: true, nosso_numero: interData?.cobranca?.nossoNumero, pix: interData?.pix?.pixCopiaECola });
     } catch (e) { return err("Erro ao emitir boleto: " + (e as Error).message); }
@@ -2438,7 +2448,7 @@ serve(async (req: Request) => {
   }
   if (action === "fin_boleto_cancelar") {
     const { id } = body as { id: string };
-    await admin.from("fin_boletos_emitidos").update({ status: "cancelado" }).eq("id", id);
+    await admin.from("fin_boletos_emitidos").update({ status: "cancelado" }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -2452,6 +2462,7 @@ serve(async (req: Request) => {
       familia_email, familia_nome, cpf_cnpj_tomador: cpf_cnpj_tomador || null,
       valor: parseFloat(valor), descricao_servico,
       status: "pendente",
+      escola_id: sessionEscolaId,
     }).select("id").single();
     if (insErr) return err(insErr.message);
     return ok({ success: true, nf_id: nf.id });
@@ -2465,7 +2476,7 @@ serve(async (req: Request) => {
   }
   if (action === "fin_nf_marcar_emitida") {
     const { id, numero_nf, codigo_verificacao } = body as any;
-    await admin.from("fin_notas_fiscais").update({ status: "emitida", numero_nf, codigo_verificacao }).eq("id", id);
+    await admin.from("fin_notas_fiscais").update({ status: "emitida", numero_nf, codigo_verificacao }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -2495,12 +2506,12 @@ serve(async (req: Request) => {
   if (action === "crm_lead_mover") {
     const { id, estagio_id } = body as any;
     if (!id || !estagio_id) return err("id e estagio_id obrigatorios.");
-    await admin.from("crm_leads").update({ estagio_id, atualizado_em: new Date().toISOString() }).eq("id", id);
+    await admin.from("crm_leads").update({ estagio_id, atualizado_em: new Date().toISOString() }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "crm_lead_delete") {
     const { id } = body as { id: string };
-    await admin.from("crm_leads").delete().eq("id", id);
+    await admin.from("crm_leads").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "crm_interacoes_list") {
@@ -2515,8 +2526,8 @@ serve(async (req: Request) => {
   if (action === "crm_interacao_save") {
     const { lead_id, tipo, descricao } = body as any;
     if (!lead_id || !descricao) return err("lead_id e descricao obrigatorios.");
-    await admin.from("crm_interacoes").insert({ lead_id, tipo: tipo || "nota", descricao, criado_por: gerente?.nome });
-    await admin.from("crm_leads").update({ atualizado_em: new Date().toISOString() }).eq("id", lead_id);
+    await admin.from("crm_interacoes").insert({ lead_id, tipo: tipo || "nota", descricao, criado_por: gerente?.nome, escola_id: sessionEscolaId });
+    await admin.from("crm_leads").update({ atualizado_em: new Date().toISOString() }).eq("id", lead_id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "crm_templates_list") {
@@ -2527,18 +2538,18 @@ serve(async (req: Request) => {
   if (action === "crm_template_save") {
     const { id, nome, categoria, conteudo, variaveis } = body as any;
     if (!nome || !conteudo) return err("Nome e conteudo obrigatorios.");
-    if (id) { await admin.from("crm_templates").update({ nome, categoria, conteudo, variaveis }).eq("id", id); }
-    else { await admin.from("crm_templates").insert({ nome, categoria: categoria || "geral", conteudo, variaveis: variaveis || [] }); }
+    if (id) { await admin.from("crm_templates").update({ nome, categoria, conteudo, variaveis }).eq("id", id).eq("escola_id", sessionEscolaId); }
+    else { await admin.from("crm_templates").insert({ nome, categoria: categoria || "geral", conteudo, variaveis: variaveis || [], escola_id: sessionEscolaId }); }
     return ok({ success: true });
   }
   if (action === "crm_reuniao_save") {
     const { lead_id, titulo, data_hora, duracao_min, local, descricao } = body as any;
     if (!titulo || !data_hora) return err("Titulo e data obrigatorios.");
-    const { data: r, error: e } = await admin.from("crm_reunioes").insert({ lead_id, titulo, data_hora, duracao_min: duracao_min || 30, local, descricao, criado_por: gerente?.nome }).select("id").single();
+    const { data: r, error: e } = await admin.from("crm_reunioes").insert({ lead_id, titulo, data_hora, duracao_min: duracao_min || 30, local, descricao, criado_por: gerente?.nome, escola_id: sessionEscolaId }).select("id").single();
     if (e) return err(e.message);
     // Registra interacao
     if (lead_id) {
-      await admin.from("crm_interacoes").insert({ lead_id, tipo: "reuniao", descricao: `Reunião agendada: ${titulo} em ${new Date(data_hora).toLocaleString("pt-BR")}`, criado_por: gerente?.nome });
+      await admin.from("crm_interacoes").insert({ lead_id, tipo: "reuniao", descricao: `Reunião agendada: ${titulo} em ${new Date(data_hora).toLocaleString("pt-BR")}`, criado_por: gerente?.nome, escola_id: sessionEscolaId });
     }
     return ok({ success: true, id: r.id });
   }
@@ -2608,8 +2619,8 @@ serve(async (req: Request) => {
     const { id, serie, ano, qtd_turmas, vagas_por_turma, ordem } = body as any;
     if (!serie || !ano) return err("Serie e ano obrigatorios.");
     const data = { serie, ano: parseInt(ano), qtd_turmas: parseInt(qtd_turmas) || 1, vagas_por_turma: parseInt(vagas_por_turma) || 18, ordem: parseInt(ordem) || 0 };
-    if (id) { await admin.from("crm_turmas_vagas").update(data).eq("id", id); }
-    else { await admin.from("crm_turmas_vagas").upsert(data, { onConflict: "serie,ano" }); }
+    if (id) { await admin.from("crm_turmas_vagas").update(data).eq("id", id).eq("escola_id", sessionEscolaId); }
+    else { await admin.from("crm_turmas_vagas").upsert({ ...data, escola_id: sessionEscolaId }, { onConflict: "serie,ano" }); }
     return ok({ success: true });
   }
   // Matriculas
@@ -2631,8 +2642,8 @@ serve(async (req: Request) => {
     if (lead_id) {
       const estagioNome = st === "matriculado" ? "Matrícula Fechada" : "Negociação";
       const { data: est } = await admin.from("crm_estagios").select("id").ilike("nome", `%${estagioNome}%`).maybeSingle();
-      if (est) await admin.from("crm_leads").update({ estagio_id: est.id, ano_matricula: parseInt(ano), atualizado_em: new Date().toISOString() }).eq("id", lead_id);
-      await admin.from("crm_interacoes").insert({ lead_id, tipo: "nota", descricao: `${st === "matriculado" ? "Matrícula" : "Reserva"} registrada para ${serie} ${ano}`, criado_por: gerente?.nome });
+      if (est) await admin.from("crm_leads").update({ estagio_id: est.id, ano_matricula: parseInt(ano), atualizado_em: new Date().toISOString() }).eq("id", lead_id).eq("escola_id", sessionEscolaId);
+      await admin.from("crm_interacoes").insert({ lead_id, tipo: "nota", descricao: `${st === "matriculado" ? "Matrícula" : "Reserva"} registrada para ${serie} ${ano}`, criado_por: gerente?.nome, escola_id: sessionEscolaId });
     }
     return ok({ success: true });
   }
@@ -2642,13 +2653,13 @@ serve(async (req: Request) => {
     const update: Record<string, any> = { status };
     if (status === "matriculado") update.data_matricula = new Date().toISOString().split("T")[0];
     if (status === "cancelado") update.data_cancelamento = new Date().toISOString().split("T")[0];
-    await admin.from("crm_matriculas").update(update).eq("id", id);
+    await admin.from("crm_matriculas").update(update).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "crm_matricula_atualizar_turma") {
     const { id, turma } = body as any;
     if (!id || !turma) return err("id e turma obrigatorios.");
-    await admin.from("crm_matriculas").update({ turma }).eq("id", id);
+    await admin.from("crm_matriculas").update({ turma }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "crm_matriculas_list") {
@@ -2674,13 +2685,13 @@ serve(async (req: Request) => {
   // ── Impressoes (gerente) ────────────────────────────────
   if (action === "impressoes_pendentes") {
     const { data } = await admin.from("impressoes").select("*")
-      .in("status", ["pendente", "aprovado", "impresso"]).order("criado_em", { ascending: true });
+      .eq("escola_id", sessionEscolaId).in("status", ["pendente", "aprovado", "impresso"]).order("criado_em", { ascending: true });
     return ok(data ?? []);
   }
   if (action === "impressoes_todas") {
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
     const { data } = await admin.from("impressoes").select("*")
-      .gte("criado_em", mes + "-01").order("criado_em", { ascending: false });
+      .eq("escola_id", sessionEscolaId).gte("criado_em", mes + "-01").order("criado_em", { ascending: false });
     return ok(data ?? []);
   }
   if (action === "impressao_aprovar") {
@@ -2689,11 +2700,11 @@ serve(async (req: Request) => {
     await admin.from("impressoes").update({
       status: "aprovado", aprovado_por: gerente?.nome, aprovado_em: new Date().toISOString(),
       nota_gerente: nota || null,
-    }).eq("id", id);
-    const { data: imp } = await admin.from("impressoes").select("professora_id, professoras(email)").eq("id", id).maybeSingle();
+    }).eq("id", id).eq("escola_id", sessionEscolaId);
+    const { data: imp } = await admin.from("impressoes").select("professora_id, professoras(email)").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
     const profEmail = (imp as any)?.professoras?.email;
     if (profEmail) {
-      await admin.from("notificacoes").insert({ portal: "professora", destinatario: profEmail, titulo: "Impressao aprovada", mensagem: "Sua solicitacao de impressao foi aprovada.", tipo: "success" });
+      await admin.from("notificacoes").insert({ portal: "professora", destinatario: profEmail, titulo: "Impressao aprovada", mensagem: "Sua solicitacao de impressao foi aprovada.", tipo: "success", escola_id: sessionEscolaId });
     }
     return ok({ success: true });
   }
@@ -2703,24 +2714,24 @@ serve(async (req: Request) => {
     await admin.from("impressoes").update({
       status: "rejeitado", aprovado_por: gerente?.nome, aprovado_em: new Date().toISOString(),
       nota_gerente: nota || null,
-    }).eq("id", id);
-    const { data: imp } = await admin.from("impressoes").select("professora_id, professoras(email)").eq("id", id).maybeSingle();
+    }).eq("id", id).eq("escola_id", sessionEscolaId);
+    const { data: imp } = await admin.from("impressoes").select("professora_id, professoras(email)").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
     const profEmail = (imp as any)?.professoras?.email;
     if (profEmail) {
-      await admin.from("notificacoes").insert({ portal: "professora", destinatario: profEmail, titulo: "Impressao rejeitada", mensagem: nota ? "Motivo: " + nota : "Sua solicitacao foi rejeitada.", tipo: "error" });
+      await admin.from("notificacoes").insert({ portal: "professora", destinatario: profEmail, titulo: "Impressao rejeitada", mensagem: nota ? "Motivo: " + nota : "Sua solicitacao foi rejeitada.", tipo: "error", escola_id: sessionEscolaId });
     }
     return ok({ success: true });
   }
   if (action === "impressao_marcar_impresso") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatorio.");
-    await admin.from("impressoes").update({ status: "impresso", impresso_em: new Date().toISOString() }).eq("id", id);
+    await admin.from("impressoes").update({ status: "impresso", impresso_em: new Date().toISOString() }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "impressao_marcar_entregue") {
     const { id } = body as { id: string };
     if (!id) return err("ID obrigatorio.");
-    await admin.from("impressoes").update({ status: "entregue", entregue_em: new Date().toISOString(), entregue_por: gerente?.nome }).eq("id", id);
+    await admin.from("impressoes").update({ status: "entregue", entregue_em: new Date().toISOString(), entregue_por: gerente?.nome }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "impressoes_orcamento_list") {
@@ -2738,7 +2749,7 @@ serve(async (req: Request) => {
   if (action === "impressoes_orcamento_set") {
     const { turma_id, mes, limite } = body as any;
     if (!turma_id || !mes) return err("turma_id e mes obrigatorios.");
-    await admin.from("impressoes_orcamento").upsert({ turma_id, mes, limite: parseInt(limite) || 50 }, { onConflict: "turma_id,mes" });
+    await admin.from("impressoes_orcamento").upsert({ escola_id: sessionEscolaId, turma_id, mes, limite: parseInt(limite) || 50 }, { onConflict: "turma_id,mes" });
     return ok({ success: true });
   }
 
@@ -2752,7 +2763,7 @@ serve(async (req: Request) => {
     const { professora_id, horarios } = body as any;
     if (!professora_id || !Array.isArray(horarios)) return err("professora_id e horarios[] obrigatórios.");
     // Remove existentes e insere novos
-    await admin.from("professora_horario_acesso").delete().eq("professora_id", professora_id);
+    await admin.from("professora_horario_acesso").delete().eq("professora_id", professora_id).eq("escola_id", sessionEscolaId);
     if (horarios.length > 0) {
       const rows = horarios.map((h: any) => ({
         professora_id,
@@ -2760,6 +2771,7 @@ serve(async (req: Request) => {
         hora_inicio: h.hora_inicio || "07:00",
         hora_fim: h.hora_fim || "18:00",
         ativo: h.ativo !== false,
+        escola_id: sessionEscolaId,
       }));
       const { error } = await admin.from("professora_horario_acesso").insert(rows);
       if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
@@ -2769,7 +2781,7 @@ serve(async (req: Request) => {
   if (action === "prof_horario_acesso_remover") {
     const { professora_id } = body as any;
     if (!professora_id) return err("professora_id obrigatório.");
-    await admin.from("professora_horario_acesso").delete().eq("professora_id", professora_id);
+    await admin.from("professora_horario_acesso").delete().eq("professora_id", professora_id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -2781,10 +2793,11 @@ serve(async (req: Request) => {
       tipo, mensagem: mensagem || null,
       acionado_por: gerente?.nome || "Gerente",
       acionado_por_id: gerente?.id || null,
+      escola_id: sessionEscolaId,
     });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Notifica todos os portais
-    const { data: users } = await admin.from("usuarios").select("email, papel, papeis");
+    const { data: users } = await admin.from("usuarios").select("email, papel, papeis").eq("escola_id", sessionEscolaId);
     const tipos: Record<string, string> = { incendio: "INCENDIO", intruso: "INTRUSO", emergencia_medica: "EMERGENCIA MEDICA", evacuacao: "EVACUACAO", outro: "ALERTA" };
     const tipoLabel = tipos[tipo] || tipo.toUpperCase();
     for (const u of users ?? []) {
@@ -2798,6 +2811,7 @@ serve(async (req: Request) => {
         titulo: "EMERGENCIA: " + tipoLabel,
         mensagem: mensagem || "Alerta de emergencia acionado. Siga o protocolo de seguranca.",
         tipo: "error",
+        escola_id: sessionEscolaId,
       });
     }
     return ok({ success: true });
@@ -2808,17 +2822,17 @@ serve(async (req: Request) => {
     await admin.from("alertas_emergencia").update({
       ativo: false, resolvido_em: new Date().toISOString(),
       resolvido_por: gerente?.nome || "Gerente",
-    }).eq("id", id);
+    }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "emergencia_ativos") {
     const { data } = await admin.from("alertas_emergencia").select("*")
-      .eq("ativo", true).order("criado_em", { ascending: false });
+      .eq("escola_id", sessionEscolaId).eq("ativo", true).order("criado_em", { ascending: false });
     return ok(data ?? []);
   }
   if (action === "emergencia_historico") {
     const { data } = await admin.from("alertas_emergencia").select("*")
-      .order("criado_em", { ascending: false }).limit(50);
+      .eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false }).limit(50);
     return ok(data ?? []);
   }
 
@@ -2831,7 +2845,7 @@ serve(async (req: Request) => {
       const { data: s } = await admin.from("series").select("id").ilike("nome", serie_nome).limit(1).maybeSingle();
       resolvedId = s?.id || null;
     }
-    const { error } = await admin.from("professoras").update({ serie_id: resolvedId }).eq("email", email);
+    const { error } = await admin.from("professoras").update({ serie_id: resolvedId }).eq("email", email).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -2849,13 +2863,13 @@ serve(async (req: Request) => {
   if (action === "notif_marcar_lida") {
     const { ids } = body as { ids: string[] };
     if (!ids || !Array.isArray(ids)) return err("ids obrigatório (array).");
-    await admin.from("notificacoes").update({ lida: true }).in("id", ids);
+    await admin.from("notificacoes").update({ lida: true }).in("id", ids).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "notif_marcar_todas") {
     const { portal, email } = body as { portal: string; email: string };
     if (!portal || !email) return err("portal e email obrigatórios.");
-    await admin.from("notificacoes").update({ lida: true }).eq("portal", portal).eq("destinatario", email).eq("lida", false);
+    await admin.from("notificacoes").update({ lida: true }).eq("portal", portal).eq("destinatario", email).eq("lida", false).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 
@@ -2887,7 +2901,7 @@ serve(async (req: Request) => {
 
   if (action === "matricula_formulario_get") {
     const { ano, tipo } = body as any;
-    const { data } = await admin.from("matricula_formularios").select("*").eq("ano", ano || new Date().getFullYear()).eq("tipo", tipo || "nova").eq("ativo", true).single();
+    const { data } = await admin.from("matricula_formularios").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano || new Date().getFullYear()).eq("tipo", tipo || "nova").eq("ativo", true).single();
     return ok(data || { campos: [] });
   }
 
@@ -2896,7 +2910,7 @@ serve(async (req: Request) => {
     if (!gerente) return err("Sessão inválida.", 401);
     const { ano, tipo, titulo, campos } = body as any;
     if (!ano || !tipo) return err("Ano e tipo obrigatórios.");
-    const { data, error } = await admin.from("matricula_formularios").upsert({ ano, tipo, titulo, campos: campos || [] }, { onConflict: "ano,tipo" }).select().single();
+    const { data, error } = await admin.from("matricula_formularios").upsert({ ano, tipo, titulo, campos: campos || [], escola_id: sessionEscolaId }, { onConflict: "ano,tipo" }).select().single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
@@ -2942,7 +2956,7 @@ serve(async (req: Request) => {
     const { error: upErr } = await admin.storage.from("documentos").upload(fileName, bytes, { contentType: mime || "application/pdf", upsert: false });
     if (upErr) return err(upErr.message);
     const { data: { publicUrl } } = admin.storage.from("documentos").getPublicUrl(fileName);
-    const { data, error } = await admin.from("matricula_documentos").insert({ matricula_id, tipo, nome_arquivo, arquivo_url: publicUrl }).select().single();
+    const { data, error } = await admin.from("matricula_documentos").insert({ matricula_id, tipo, nome_arquivo, arquivo_url: publicUrl, escola_id: sessionEscolaId }).select().single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
@@ -2953,13 +2967,14 @@ serve(async (req: Request) => {
     const { ano } = body as any;
     const anoAlvo = ano || new Date().getFullYear() + 1;
     // Buscar famílias ativas
-    const { data: familias } = await admin.from("familias").select("email, nome_aluno, nome_responsavel, serie");
+    const { data: familias } = await admin.from("familias").select("email, nome_aluno, nome_responsavel, serie").eq("escola_id", sessionEscolaId);
     if (!familias || familias.length === 0) return ok({ count: 0 });
     let count = 0;
     for (const f of familias) {
       const { error } = await admin.from("crm_matriculas").upsert({
         nome_crianca: f.nome_aluno, serie: f.serie, ano: anoAlvo, status: "reserva",
-        nome_responsavel: f.nome_responsavel, email: f.email
+        nome_responsavel: f.nome_responsavel, email: f.email,
+        escola_id: sessionEscolaId,
       }, { onConflict: "email,ano" }).select();
       if (!error) count++;
     }
@@ -2981,12 +2996,12 @@ serve(async (req: Request) => {
   if (action === "indicacao_criar") {
     const { indicador_nome, indicador_email, indicador_telefone, lead_nome, lead_telefone, lead_email, lead_serie_interesse, lead_mensagem, codigo_indicacao } = body as any;
     if (!indicador_nome || !indicador_email || !lead_nome || !lead_telefone || !codigo_indicacao) return err("Campos obrigatórios ausentes.");
-    const { data: ind, error: insErr } = await admin.from("indicacoes").insert({ indicador_nome, indicador_email, indicador_telefone, lead_nome, lead_telefone, lead_email, lead_serie_interesse, lead_mensagem, codigo_indicacao, ip_origem: ip }).select().single();
+    const { data: ind, error: insErr } = await admin.from("indicacoes").insert({ indicador_nome, indicador_email, indicador_telefone, lead_nome, lead_telefone, lead_email, lead_serie_interesse, lead_mensagem, codigo_indicacao, ip_origem: ip, escola_id: sessionEscolaId }).select().single();
     if (insErr) return err(insErr.message);
     const { data: primeiroEstagio } = await admin.from("crm_estagios").select("id").order("ordem").limit(1).single();
     if (primeiroEstagio) {
-      const { data: crmLead } = await admin.from("crm_leads").insert({ nome_responsavel: lead_nome, email: lead_email, telefone: lead_telefone, serie_interesse: lead_serie_interesse, origem: "indicacao", observacoes: `Indicado por: ${indicador_nome} (${indicador_email}). ${lead_mensagem || ""}`.trim(), estagio_id: primeiroEstagio.id }).select("id").single();
-      if (crmLead) await admin.from("indicacoes").update({ crm_lead_id: crmLead.id }).eq("id", ind.id);
+      const { data: crmLead } = await admin.from("crm_leads").insert({ nome_responsavel: lead_nome, email: lead_email, telefone: lead_telefone, serie_interesse: lead_serie_interesse, origem: "indicacao", observacoes: `Indicado por: ${indicador_nome} (${indicador_email}). ${lead_mensagem || ""}`.trim(), estagio_id: primeiroEstagio.id, escola_id: sessionEscolaId }).select("id").single();
+      if (crmLead) await admin.from("indicacoes").update({ crm_lead_id: crmLead.id }).eq("id", ind.id).eq("escola_id", sessionEscolaId);
     }
     return ok({ data: ind, success: true });
   }
@@ -3010,7 +3025,7 @@ serve(async (req: Request) => {
   if (action === "indicacao_b2b_criar") {
     const { indicador_email: ie, indicador_nome: iname, escola_indicadora_id, escola_nome: en, escola_cidade, escola_estado, escola_tipo, contato_nome, contato_telefone, contato_email, contato_cargo, mensagem: msg2, codigo } = body as any;
     if (!ie || !en || !contato_nome || !contato_telefone || !codigo) return err("Campos obrigatórios ausentes.");
-    const { data: b2bData, error: b2bErr } = await admin.from("indicacoes_b2b").insert({ escola_indicadora_id, indicador_nome: iname, indicador_email: ie, escola_nome: en, escola_cidade, escola_estado, escola_tipo, contato_nome, contato_telefone, contato_email, contato_cargo, mensagem: msg2, codigo }).select().single();
+    const { data: b2bData, error: b2bErr } = await admin.from("indicacoes_b2b").insert({ escola_indicadora_id, indicador_nome: iname, indicador_email: ie, escola_nome: en, escola_cidade, escola_estado, escola_tipo, contato_nome, contato_telefone, contato_email, contato_cargo, mensagem: msg2, codigo, escola_id: sessionEscolaId }).select().single();
     if (b2bErr) return err(b2bErr.message);
     return ok({ data: b2bData, success: true });
   }
@@ -3230,7 +3245,7 @@ serve(async (req: Request) => {
   if (action === "contrato_template_create") {
     const { nome, tipo, html_template, variaveis } = body as any;
     if (!nome || !html_template) return err("nome e html_template obrigatórios.");
-    const { data, error } = await admin.from("contrato_templates").insert({ nome, tipo: tipo || 'matricula', html_template, variaveis: variaveis || [] }).select().single();
+    const { data, error } = await admin.from("contrato_templates").insert({ nome, tipo: tipo || 'matricula', html_template, variaveis: variaveis || [], escola_id: sessionEscolaId }).select().single();
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok(data);
   }
@@ -3243,7 +3258,7 @@ serve(async (req: Request) => {
     if (html_template !== undefined) fields.html_template = html_template;
     if (variaveis !== undefined) fields.variaveis = variaveis;
     if (ativo !== undefined) fields.ativo = ativo;
-    const { error } = await admin.from("contrato_templates").update(fields).eq("id", id);
+    const { error } = await admin.from("contrato_templates").update(fields).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -3281,7 +3296,7 @@ serve(async (req: Request) => {
   if (action === "contrato_enviar") {
     const { id } = body as any;
     if (!id) return err("id obrigatório.");
-    const { error } = await admin.from("contratos").update({ status: 'enviado', enviado_em: new Date().toISOString() }).eq("id", id);
+    const { error } = await admin.from("contratos").update({ status: 'enviado', enviado_em: new Date().toISOString() }).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // TODO: send email notification to familia
     return ok({ success: true });
@@ -3294,9 +3309,9 @@ serve(async (req: Request) => {
 
   if (action === "contrato_delete") {
     const { id } = body as any;
-    const { data: c } = await admin.from("contratos").select("status").eq("id", id).single();
+    const { data: c } = await admin.from("contratos").select("status").eq("id", id).eq("escola_id", sessionEscolaId).single();
     if (c?.status === 'assinado') return err("Contrato assinado não pode ser excluído.");
-    await admin.from("contratos").delete().eq("id", id);
+    await admin.from("contratos").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
 

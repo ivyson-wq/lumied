@@ -95,6 +95,210 @@ export async function validarSessao(
   return data[userTable] as { id: string; nome: string; email: string; escola_id?: string };
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  Consolidated Session Resolvers
+//  Eliminam duplicação que existia em api/, diplomas/, academico/
+// ═══════════════════════════════════════════════════════════════
+
+/** Resolve sessão unificada (tabela sessoes → usuarios) */
+export async function resolveUsuario(
+  sb: SupabaseClient,
+  token: string | null,
+): Promise<{ id: string; nome: string; email: string; papel?: string; papeis?: string[]; escola_id?: string } | null> {
+  if (!token) return null;
+  const { data: sessao } = await sb
+    .from("sessoes").select("usuario_id, expira_em")
+    .eq("token", token).maybeSingle();
+  // deno-lint-ignore no-explicit-any
+  const s = sessao as any;
+  if (!s || new Date(s.expira_em) < new Date()) return null;
+  const { data } = await sb
+    .from("usuarios").select("id, nome, email, papel, papeis, escola_id")
+    .eq("id", s.usuario_id).maybeSingle();
+  return data ?? null;
+}
+
+/**
+ * Resolve sessão de qualquer tipo: legacy tables + unificada.
+ * Probes em paralelo para performance. Usado pelo hub_whoami e resolveEscolaId.
+ */
+export async function resolveAnySession(
+  sb: SupabaseClient,
+  token: string | null,
+): Promise<{ id: string; nome: string; email: string; tipo: string; escola_id?: string } | null> {
+  if (!token) return null;
+  const now = new Date();
+  const isValid = (s: { expira_em: string } | null) => s && new Date(s.expira_em) >= now;
+
+  const [gs, ps, ss, us] = await Promise.all([
+    sb.from("gerente_sessoes").select("expira_em, gerentes(id, nome, email, escola_id)").eq("token", token).maybeSingle(),
+    sb.from("professora_sessoes").select("expira_em, professoras(id, nome, email, escola_id)").eq("token", token).maybeSingle(),
+    sb.from("secretaria_sessoes").select("expira_em, secretarias(id, nome, email, escola_id)").eq("token", token).maybeSingle(),
+    sb.from("sessoes").select("usuario_id, expira_em").eq("token", token).maybeSingle(),
+  ]);
+
+  // deno-lint-ignore no-explicit-any
+  const g = gs.data as any;
+  if (isValid(g) && g?.gerentes) return { ...g.gerentes, tipo: "gerente" };
+
+  // deno-lint-ignore no-explicit-any
+  const p = ps.data as any;
+  if (isValid(p) && p?.professoras) return { ...p.professoras, tipo: "professora" };
+
+  // deno-lint-ignore no-explicit-any
+  const s = ss.data as any;
+  if (isValid(s) && s?.secretarias) return { ...s.secretarias, tipo: "secretaria" };
+
+  // deno-lint-ignore no-explicit-any
+  const u = us.data as any;
+  if (isValid(u)) {
+    const { data: user } = await sb.from("usuarios").select("id, nome, email, papeis, papel, escola_id").eq("id", u.usuario_id).maybeSingle();
+    if (user) {
+      // deno-lint-ignore no-explicit-any
+      const papeis: string[] = (user as any).papeis?.length ? (user as any).papeis : ((user as any).papel ? [(user as any).papel] : []);
+      return { id: user.id, nome: user.nome, email: user.email, tipo: papeis[0] || "usuario", escola_id: (user as any).escola_id };
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve sessão de professora: legacy professora_sessoes + fallback unificada.
+ * Usado por diplomas e academico. Auto-provision se necessário.
+ */
+export async function resolveProfessora(
+  sb: SupabaseClient,
+  token: string | null,
+): Promise<{ id: string; nome: string; email: string; escola_id?: string; serie_id?: string } | null> {
+  if (!token) return null;
+  const FIELDS = "id, nome, email, escola_id, serie_id";
+
+  // 1. Legacy professora_sessoes
+  const { data: sessao } = await sb
+    .from("professora_sessoes").select("professora_id, expira_em")
+    .eq("token", token).maybeSingle();
+  // deno-lint-ignore no-explicit-any
+  const s = sessao as any;
+  if (s && new Date(s.expira_em) >= new Date()) {
+    const { data } = await sb.from("professoras").select(FIELDS).eq("id", s.professora_id).maybeSingle();
+    if (data) return data as { id: string; nome: string; email: string; escola_id?: string; serie_id?: string };
+  }
+
+  // 2. Sessão unificada
+  const user = await resolveUsuario(sb, token);
+  if (!user) return null;
+  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []);
+  if (!roles.includes("professora") && !roles.includes("professora_assistente")) return null;
+
+  // Busca por ID, depois por email
+  const { data: prof } = await sb.from("professoras").select(FIELDS).eq("id", user.id).maybeSingle();
+  if (prof) return prof as { id: string; nome: string; email: string; escola_id?: string; serie_id?: string };
+
+  const { data: profByEmail } = await sb.from("professoras").select(FIELDS).eq("email", user.email).maybeSingle();
+  if (profByEmail) return profByEmail as { id: string; nome: string; email: string; escola_id?: string; serie_id?: string };
+
+  // Auto-provision (escopado por escola)
+  if (!user.escola_id) return null;
+  const { data: nova } = await sb.from("professoras")
+    .insert({ nome: user.nome, email: user.email, escola_id: user.escola_id })
+    .select(FIELDS).single();
+  return nova as { id: string; nome: string; email: string; escola_id?: string; serie_id?: string } | null;
+}
+
+/**
+ * Resolve sessão de gerente: legacy gerente_sessoes + fallback unificada.
+ */
+export async function resolveGerente(
+  sb: SupabaseClient,
+  token: string | null,
+): Promise<{ id: string; nome: string; email: string; escola_id?: string } | null> {
+  if (!token) return null;
+
+  // 1. Legacy gerente_sessoes
+  const { data: sessao } = await sb
+    .from("gerente_sessoes").select("gerente_id, expira_em")
+    .eq("token", token).maybeSingle();
+  // deno-lint-ignore no-explicit-any
+  const s = sessao as any;
+  if (s && new Date(s.expira_em) >= new Date()) {
+    const { data } = await sb.from("gerentes").select("id, nome, email, escola_id").eq("id", s.gerente_id).maybeSingle();
+    if (data) return data as { id: string; nome: string; email: string; escola_id?: string };
+  }
+
+  // 2. Sessão unificada
+  const user = await resolveUsuario(sb, token);
+  if (!user) return null;
+  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []);
+  if (!roles.includes("gerente") && !roles.includes("diretor") && !roles.includes("financeiro")) return null;
+
+  const { data: ger } = await sb.from("gerentes").select("id, nome, email, escola_id").eq("email", user.email).maybeSingle();
+  if (ger) return ger as { id: string; nome: string; email: string; escola_id?: string };
+  return { id: user.id, nome: user.nome, email: user.email, escola_id: user.escola_id };
+}
+
+/**
+ * Resolve sessão de secretaria/equipe: legacy + fallback unificada.
+ * Inclui features baseadas nos papéis do usuário.
+ */
+export async function resolveSecretaria(
+  sb: SupabaseClient,
+  token: string | null,
+): Promise<{ id: string; nome: string; email: string; escola_id?: string; features: string[] } | null> {
+  if (!token) return null;
+
+  // 1. Legacy secretaria_sessoes
+  const { data: sessao } = await sb
+    .from("secretaria_sessoes").select("secretaria_id, expira_em")
+    .eq("token", token).maybeSingle();
+  // deno-lint-ignore no-explicit-any
+  const s = sessao as any;
+  if (s && new Date(s.expira_em) >= new Date()) {
+    const { data } = await sb.from("secretarias").select("id, nome, email, features, escola_id").eq("id", s.secretaria_id).maybeSingle();
+    // deno-lint-ignore no-explicit-any
+    if (data) return { ...data, features: (data as any).features || ["atestados"] } as any;
+  }
+
+  // 2. Sessão unificada
+  const user = await resolveUsuario(sb, token);
+  if (!user) return null;
+  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : []);
+  const secRoles = ["secretaria", "comercial", "financeiro", "diretor", "manutencao", "impressao", "nutricionista", "almoxarifado"];
+  if (!roles.some(r => secRoles.includes(r))) return null;
+
+  // Tenta registro legado
+  const { data: sec } = await sb.from("secretarias").select("id, nome, email, features, escola_id").eq("email", user.email).maybeSingle();
+  if (sec) {
+    // deno-lint-ignore no-explicit-any
+    const feats = new Set<string>((sec as any).features || ["atestados"]);
+    if (roles.includes("nutricionista")) feats.add("cozinha");
+    if (roles.includes("almoxarifado")) feats.add("almoxarifado");
+    return { ...sec, features: Array.from(feats) } as { id: string; nome: string; email: string; escola_id?: string; features: string[] };
+  }
+
+  // Constrói features a partir dos papéis
+  const features: string[] = [];
+  if (roles.includes("secretaria")) features.push("atestados");
+  if (roles.includes("comercial")) features.push("crm", "templates", "metas");
+  if (roles.includes("financeiro") || roles.includes("diretor")) features.push("financeiro");
+  if (roles.includes("manutencao")) features.push("manutencao");
+  if (roles.includes("impressao")) features.push("impressao");
+  if (roles.includes("nutricionista")) features.push("cozinha");
+  if (roles.includes("almoxarifado")) features.push("almoxarifado");
+  return { id: user.id, nome: user.nome, email: user.email, escola_id: user.escola_id, features: features.length ? features : ["atestados"] };
+}
+
+/**
+ * Resolve almoxarifado (secretaria com feature 'almoxarifado').
+ */
+export async function resolveAlmoxarifado(
+  sb: SupabaseClient,
+  token: string | null,
+): Promise<{ id: string; nome: string; email: string; escola_id?: string; features: string[] } | null> {
+  const sec = await resolveSecretaria(sb, token);
+  if (sec && sec.features.includes("almoxarifado")) return sec;
+  return null;
+}
+
 // ── Upload file to Supabase Storage ──
 export async function uploadArquivo(
   sb: SupabaseClient,
@@ -103,6 +307,11 @@ export async function uploadArquivo(
   base64: string,
   mime: string
 ): Promise<{ url: string } | { error: string }> {
+  // Validate file size before decoding (max 10MB)
+  const estimatedBytes = (base64.length * 3) / 4;
+  if (estimatedBytes > 10 * 1024 * 1024) {
+    return { error: 'Arquivo muito grande (máx 10MB)' };
+  }
   const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
   const ext = mime === "application/pdf" ? "pdf" : mime.split("/")[1] || "jpg";
   const fileName = `${ownerId}/${Date.now()}.${ext}`;

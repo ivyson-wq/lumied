@@ -22,8 +22,9 @@ import {
   authProfessora,
   requireFeature,
   authGerenteOrSecretaria as sharedAuthGerenteOrSecretaria,
-} from "../_shared/router.ts";
-import { successResponse, AppError } from "../_shared/errors.ts";
+  successResponse,
+  AppError,
+} from "../_shared/mod.ts";
 
 const router = new Router("compliance");
 router.useGlobal(rateLimit());
@@ -254,6 +255,7 @@ router.on("compliance_confirmar_ocorrencia", authGerenteOrSecretaria, feat, asyn
   // Criar ciência pendente para a professora (bloqueará o app até confirmação com selfie)
   const dataFmt = String(ocorrencia.data_ocorrencia).split("-").reverse().join("/");
   await ctx.sb.from("compliance_ciencias").insert({
+    escola_id: ctx.escola_id,
     professora_id: ocorrencia.professora_id,
     ocorrencia_id: id,
     tipo: "hora_extra",
@@ -391,7 +393,7 @@ router.on("compliance_incidente_criar", authGerenteOrSecretaria, feat, async (ct
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   await ctx.sb.from("compliance_incidentes_historico").insert({
-    incidente_id: data.id, acao: "criado", descricao: "Incidente registrado", realizado_por: ctx.user?.nome ?? "sistema",
+    escola_id: ctx.escola_id, incidente_id: data.id, acao: "criado", descricao: "Incidente registrado", realizado_por: ctx.user?.nome ?? "sistema",
   });
   return successResponse(data);
 });
@@ -410,7 +412,7 @@ router.on("compliance_incidente_atualizar", authGerenteOrSecretaria, feat, async
   if (error) throw new AppError("BAD_REQUEST", error.message);
   if (status) {
     await ctx.sb.from("compliance_incidentes_historico").insert({
-      incidente_id: id, acao: status, descricao: medidas_tomadas || parecer_final || `Status alterado para ${status}`, realizado_por: ctx.user?.nome ?? "sistema",
+      escola_id: ctx.escola_id, incidente_id: id, acao: status, descricao: medidas_tomadas || parecer_final || `Status alterado para ${status}`, realizado_por: ctx.user?.nome ?? "sistema",
     });
   }
   return successResponse({ success: true });
@@ -465,7 +467,7 @@ router.on("compliance_cert_criar", authGerenteOrSecretaria, feat, async (ctx) =>
 
 router.on("compliance_treinamentos_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { status } = ctx.body as any;
-  let q = ctx.sb.from("compliance_treinamentos").select("*, compliance_certificacoes_tipos(nome)").order("data_prevista", { ascending: false });
+  let q = ctx.sb.from("compliance_treinamentos").select("*, compliance_certificacoes_tipos(nome)").eq("escola_id", ctx.escola_id!).order("data_prevista", { ascending: false });
   if (status) q = q.eq("status", status);
   const { data } = await q.limit(100);
   return successResponse(data ?? []);
@@ -475,7 +477,7 @@ router.on("compliance_treinamento_criar", authGerenteOrSecretaria, feat, async (
   const { tipo_id, titulo, descricao, data_prevista, hora_inicio, hora_fim, local, instrutor, max_participantes } = ctx.body as any;
   if (!tipo_id || !titulo || !data_prevista) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_treinamentos").insert({
-    tipo_id, titulo, descricao, data_prevista, hora_inicio, hora_fim, local, instrutor, max_participantes,
+    escola_id: ctx.escola_id, tipo_id, titulo, descricao, data_prevista, hora_inicio, hora_fim, local, instrutor, max_participantes,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
@@ -1087,6 +1089,7 @@ async function enviarAlertaHoraExtra(
         subject: assunto,
         html: corpoHtml,
       }),
+      signal: AbortSignal.timeout(8000),
     });
 
     const enviado = resp.ok;
@@ -1172,7 +1175,7 @@ router.on("compliance_ciencia_confirmar", authProfessora, async (ctx) => {
     ressalva: ressalva || null,
     ip_confirmacao: ctx.ip,
     user_agent: ctx.req.headers.get("user-agent"),
-  }).eq("id", ciencia_id);
+  }).eq("id", ciencia_id).eq("professora_id", profId);
   if (updateErr) throw new AppError("BAD_REQUEST", updateErr.message);
 
   return successResponse({ success: true, status, selfie_hash: hashHex });
@@ -1183,7 +1186,7 @@ router.on("compliance_ciencia_criar", authGerenteOrSecretaria, feat, async (ctx)
   const { professora_id, ocorrencia_id, tipo, titulo, descricao, data_referencia } = ctx.body as any;
   if (!professora_id || !titulo || !descricao) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
   const { data, error } = await ctx.sb.from("compliance_ciencias").insert({
-    professora_id, ocorrencia_id, tipo: tipo || "hora_extra", titulo, descricao, data_referencia,
+    escola_id: ctx.escola_id, professora_id, ocorrencia_id, tipo: tipo || "hora_extra", titulo, descricao, data_referencia,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
@@ -1226,7 +1229,7 @@ router.on("compliance_quiz_criar", authGerenteOrSecretaria, feat, async (ctx) =>
 
   // Criar quiz
   const { data: quiz, error } = await ctx.sb.from("compliance_quizzes").insert({
-    titulo, descricao, politica_id, tema,
+    escola_id: ctx.escola_id, titulo, descricao, politica_id, tema,
     total_perguntas: total_perguntas || 5,
     nota_minima: nota_minima || 70,
     tempo_limite_minutos: tempo_limite_minutos || 15,
@@ -1267,6 +1270,7 @@ Onde resposta_correta é o índice (0-3) da opção correta. Varie a dificuldade
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, messages: [{ role: "user", content: promptIA }] }),
+        signal: AbortSignal.timeout(30000),
       });
 
       if (res.ok) {
@@ -1278,6 +1282,7 @@ Onde resposta_correta é o índice (0-3) da opção correta. Varie a dificuldade
           const perguntas = JSON.parse(jsonMatch[0]) as Array<{ pergunta: string; opcoes: string[]; resposta_correta: number; explicacao: string; dificuldade: string }>;
           for (let i = 0; i < perguntas.length; i++) {
             await ctx.sb.from("compliance_quiz_perguntas").insert({
+              escola_id: ctx.escola_id,
               quiz_id: quiz.id,
               ordem: i + 1,
               pergunta: perguntas[i].pergunta,
@@ -1309,7 +1314,7 @@ router.on("compliance_quiz_atribuir", authGerenteOrSecretaria, feat, async (ctx)
     const { data: prof } = await ctx.sb.from("professoras").select("id, nome, email").eq("id", profId).single();
     if (!prof) continue;
     await ctx.sb.from("compliance_quiz_atribuicoes").insert({
-      quiz_id, professora_id: profId, nome: prof.nome, email: prof.email, cargo: "professora", prazo: prazoStr,
+      escola_id: ctx.escola_id, quiz_id, professora_id: profId, nome: prof.nome, email: prof.email, cargo: "professora", prazo: prazoStr,
     });
     atribuidos++;
   }
@@ -1395,7 +1400,7 @@ router.on("compliance_quiz_responder", authProfessora, async (ctx) => {
     if (correta) corretas++;
 
     await ctx.sb.from("compliance_quiz_respostas").insert({
-      atribuicao_id, pergunta_id: resp.pergunta_id, tentativa,
+      escola_id: ctx.escola_id || atrib.escola_id, atribuicao_id, pergunta_id: resp.pergunta_id, tentativa,
       resposta_selecionada: resp.resposta_selecionada,
       correta, tempo_segundos: resp.tempo_segundos || 0,
     });
