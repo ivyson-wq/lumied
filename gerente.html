@@ -3899,18 +3899,17 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function loadWorkflows() {
     document.getElementById('wfList').innerHTML = '<div class="empty-state">Carregando...</div>';
     const d = await wfApi({ action: 'workflow_list' });
-    if (d.error || !d.workflows) {
+    const wfs = Array.isArray(d) ? d : (d.workflows || []);
+    if (d.error) {
       document.getElementById('wfStatAtivas').textContent = '0';
       document.getElementById('wfStatExecucoes').textContent = '0';
       document.getElementById('wfStatFalhas').textContent = '0';
       document.getElementById('wfList').innerHTML = wfEmptyState();
       return;
     }
-    const wfs = d.workflows || [];
-    const stats = d.stats || {};
     document.getElementById('wfStatAtivas').textContent = wfs.filter(function(w){ return w.ativo; }).length;
-    document.getElementById('wfStatExecucoes').textContent = stats.execucoes_hoje || 0;
-    document.getElementById('wfStatFalhas').textContent = stats.falhas || 0;
+    document.getElementById('wfStatExecucoes').textContent = wfs.reduce(function(s,w){ return s + (w.execucoes_total||0); }, 0);
+    document.getElementById('wfStatFalhas').textContent = '—';
     document.getElementById('wfList').innerHTML = wfs.length ? wfs.map(wfCard).join('') : wfEmptyState();
   }
 
@@ -3931,7 +3930,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     var triggerLabels = { evento:'⚡ Evento', cron:'🕐 Agendamento', manual:'👆 Manual' };
     var triggerColors = { evento:'#1a6bb5', cron:'#6b3a9e', manual:'#5a5249' };
     var tipo = wf.trigger_tipo || 'manual';
-    var lastRun = wf.last_run_at ? new Date(wf.last_run_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : 'Nunca executado';
+    var lastRun = (wf.ultima_execucao||wf.last_run_at) ? new Date(wf.ultima_execucao||wf.last_run_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : 'Nunca executado';
     return '<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;align-items:flex-start;gap:16px;margin-bottom:10px;flex-wrap:wrap;">' +
       '<div style="flex:1;min-width:180px;">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">' +
@@ -3941,7 +3940,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         (wf.descricao ? '<p style="color:var(--muted);font-size:12px;margin-bottom:8px;">' + wfEsc(wf.descricao) + '</p>' : '') +
         '<div style="display:flex;gap:16px;font-size:11px;color:var(--muted);">' +
           '<span>🕐 ' + wfEsc(lastRun) + '</span>' +
-          '<span>▶ ' + (wf.execucao_count || 0) + ' execuções</span>' +
+          '<span>▶ ' + (wf.execucoes_total||wf.execucao_count||0) + ' execuções</span>' +
         '</div>' +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
@@ -3982,8 +3981,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function wfCarregarWorkflow(id) {
     var d = await wfApi({ action: 'workflow_get', id: id });
-    if (d.error || !d.workflow) return;
-    var wf = d.workflow;
+    if (d.error) return;
+    var wf = d.workflow || d;
     document.getElementById('wfNome').value = wf.nome || '';
     document.getElementById('wfDesc').value = wf.descricao || '';
     document.getElementById('wfTriggerTipo').value = wf.trigger_tipo || 'evento';
@@ -4183,7 +4182,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function executarWorkflow(id) {
     showToast('Executando automação...', 'info');
-    var d = await wfApi({ action: 'workflow_execute', id: id });
+    var d = await wfApi({ action: 'workflow_executar', id: id });
     if (d.error) { showToast('Erro ao executar: ' + d.error, 'error'); return; }
     showToast('Automação executada!', 'success');
     loadWorkflows();
@@ -4193,14 +4192,15 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('wfHistTitle').textContent = '📋 Histórico — ' + nome;
     document.getElementById('wfHistContent').innerHTML = '<div class="empty-state">Carregando...</div>';
     document.getElementById('modalWorkflowHistorico').style.display = 'flex';
-    var d = await wfApi({ action: 'workflow_historico', id: id });
-    if (d.error || !d.execucoes || !d.execucoes.length) {
+    var d = await wfApi({ action: 'workflow_execucoes_list', workflow_id: id });
+    var execucoes = Array.isArray(d) ? d : (d.execucoes || []);
+    if (d.error || !execucoes.length) {
       document.getElementById('wfHistContent').innerHTML = '<div class="empty-state">Nenhuma execução registrada ainda.</div>';
       return;
     }
     var statusColors = { sucesso:'var(--green)', falha:'var(--red)', parcial:'#d4830a' };
-    document.getElementById('wfHistContent').innerHTML = d.execucoes.map(function(ex) {
-      var ts = new Date(ex.created_at).toLocaleString('pt-BR');
+    document.getElementById('wfHistContent').innerHTML = execucoes.map(function(ex) {
+      var ts = new Date(ex.iniciado_em || ex.created_at).toLocaleString('pt-BR');
       var color = statusColors[ex.status] || 'var(--muted)';
       return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
