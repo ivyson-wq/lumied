@@ -567,6 +567,15 @@
 
         const filtered = q ? allItems.filter(i => normalize(i.label).includes(q) || normalize(i.section).includes(q)) : allItems;
         activeIdx = 0;
+        if (filtered.length === 0 && rawQuery) {
+          if (aiDebounce) clearTimeout(aiDebounce);
+          box.classList.add('cmd-ai-mode');
+          input.classList.add('ai-active');
+          results.innerHTML = '<div class="cmd-ai-thinking">🧠 Lumi está pensando...</div>';
+          aiQueryPending = rawQuery;
+          aiDebounce = setTimeout(() => { if (aiQueryPending === rawQuery) askLumi(rawQuery); }, 500);
+          return;
+        }
         if (filtered.length === 0) {
           results.innerHTML = '<div class="cmd-empty">Nenhum painel encontrado.</div>';
           return;
