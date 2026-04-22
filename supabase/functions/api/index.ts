@@ -320,7 +320,8 @@ serve(async (req: Request) => {
   // ── Config pública da escola (carregada por todos os portais) ──
   // ── Consumo IA da própria escola (gerente) ──
   if (action === "ia_uso_self") {
-    const gerente = await validarSessao(admin, token);
+    const selfToken = (body._token as string) || req.headers.get("authorization")?.replace("Bearer ", "") || null;
+    const gerente = await validarSessao(admin, selfToken);
     if (!gerente) return err("Sessão inválida.", 401);
     const escolaId = (gerente as any).escola_id;
     if (!escolaId) return err("Sessão sem escola associada.", 403);
