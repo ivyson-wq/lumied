@@ -17,8 +17,10 @@ import {
   sanitizePgError,
   logAudit,
   isFlagOn,
+  cacheGet,
+  cacheSet,
 } from "../_shared/mod.ts";
-import { askClaudeWithTools, SYSTEM_PROMPTS } from "../_shared/ai.ts";
+import { askClaude, askClaudeWithTools, SYSTEM_PROMPTS } from "../_shared/ai.ts";
 
 const log = createLogger("api");
 
@@ -1998,6 +2000,95 @@ serve(async (req: Request) => {
     const { error } = await admin.from("alunos").update(updateData).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
+  }
+
+  // ── IA: Resumo pedagógico do aluno (Lumi IA pervasiva) ────────
+  if (action === "aluno_resumo_ia") {
+    const { aluno_email } = body as { aluno_email: string };
+    if (!aluno_email || typeof aluno_email !== 'string') return err("aluno_email obrigatório.");
+
+    const iaAtiva = await isFlagOn(admin, 'ia_ativa', sessionEscolaId);
+    if (!iaAtiva) return ok({ resumo: null });
+
+    const email = (aluno_email as string).toLowerCase().trim();
+    const cacheKey = `aluno_resumo_ia:${sessionEscolaId}:${email}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) return ok(cached);
+
+    // Get last 30 days chamada IDs (escola-scoped)
+    const trinta_dias_atras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const { data: chamadas } = await admin.from("frequencia_chamadas")
+      .select("id")
+      .eq("escola_id", sessionEscolaId)
+      .gte("data", trinta_dias_atras);
+    const chamadaIds = (chamadas || []).map((c: any) => c.id);
+
+    // Gather data in parallel
+    const [alunoRes, frequenciaRes, notasRes, engajRes] = await Promise.all([
+      admin.from("alunos").select("nome, serie, turma").eq("escola_id", sessionEscolaId).ilike("email", email).maybeSingle(),
+      chamadaIds.length > 0
+        ? admin.from("frequencia_registros").select("status").eq("aluno_email", email).in("chamada_id", chamadaIds)
+        : Promise.resolve({ data: [] as { status: string }[] }),
+      admin.from("notas_lancamentos").select("valor").eq("aluno_email", email).order("lancado_em", { ascending: false }).limit(5),
+      admin.from("familia_engagement").select("score_app_usage, trend, detalhes").eq("escola_id", sessionEscolaId).eq("familia_email", email).maybeSingle(),
+    ]);
+
+    const aluno = alunoRes.data;
+    const registros = frequenciaRes.data || [];
+    const notas = notasRes.data || [];
+    const engaj = engajRes.data;
+
+    // Attendance counts
+    const presencas = registros.filter((r: any) => r.status === 'P').length;
+    const faltas = registros.filter((r: any) => ['A', 'F'].includes(r.status)).length;
+    const justificados = registros.filter((r: any) => r.status === 'J').length;
+    const pctPresenca = chamadaIds.length > 0 ? Math.round((presencas / chamadaIds.length) * 100) : null;
+
+    // Average grade
+    const notaVals = (notas as any[]).map(n => Number(n.valor)).filter(v => !isNaN(v));
+    const mediaNotas = notaVals.length
+      ? (notaVals.reduce((s: number, v: number) => s + v, 0) / notaVals.length).toFixed(1)
+      : null;
+
+    // Parent engagement
+    const detalhes = ((engaj as any)?.detalhes) || {};
+    const sessoesApp = detalhes.sessoes ?? null;
+
+    const dados = {
+      faltas,
+      presencas,
+      justificados,
+      total_chamadas: chamadaIds.length,
+      pct_presenca: pctPresenca,
+      media_notas: mediaNotas,
+      ultimo_acesso_pai: null,
+      sessoes_pais_30d: sessoesApp,
+      alertas: 0,
+    };
+
+    const nomeAluno = (aluno as any)?.nome || email;
+    const serieInfo = [(aluno as any)?.serie, (aluno as any)?.turma].filter(Boolean).join(' / ') || '?';
+
+    const prompt = `Aluno: ${nomeAluno}
+Série/Turma: ${serieInfo}
+Frequência (últimos 30 dias): ${presencas} presenças, ${faltas} faltas${justificados > 0 ? `, ${justificados} justificados` : ''} de ${chamadaIds.length} chamadas${pctPresenca !== null ? ` (${pctPresenca}% de presença)` : ''}
+Notas recentes (últimas ${notaVals.length}): ${notaVals.length ? notaVals.join(', ') : 'sem registros'}
+Média recente: ${mediaNotas ?? 'N/A'}
+Engajamento dos pais no app: ${sessoesApp !== null ? `${sessoesApp} sessões nos últimos 30 dias` : 'sem dados'}
+Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
+
+    const aiRes = await askClaude(prompt, {
+      system: `Você é a Lumi, assistente pedagógica da escola. Analise os dados deste aluno e gere um resumo conciso (máx 150 palavras) com: 1) Situação geral (emoji de status), 2) Pontos de atenção, 3) Sugestão de ação para o educador. Seja direto e útil.`,
+      model: 'claude-haiku-4-5-20251001',
+      maxTokens: 300,
+      budget: { sb: admin, escolaId: sessionEscolaId },
+    });
+
+    if (!aiRes || aiRes.blocked || !aiRes.text) return ok({ resumo: null });
+
+    const result = { resumo: aiRes.text, dados, gerado_em: new Date().toISOString() };
+    cacheSet(cacheKey, result, 30 * 60 * 1000);
+    return ok(result);
   }
 
   // ── Professoras (autenticado) ─────────────────────────────────

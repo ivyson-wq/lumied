@@ -1030,6 +1030,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
         <!-- Tab: Dados -->
         <div class="aluno-tab-panel active" id="alunoTabInfo">
+          <div id="alunoIaResumo" style="display:none;background:linear-gradient(135deg,#f8f5ff,#fff);border:1px solid #e0d8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:18px;">🧠</span>
+              <strong style="font-size:13px;">Resumo Lumi IA</strong>
+              <span style="font-size:10px;color:var(--muted);margin-left:auto;" id="iaResumoTime"></span>
+            </div>
+            <div id="iaResumoText" style="font-size:13px;line-height:1.6;color:var(--text);"></div>
+          </div>
           <div id="alunoDetInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div style="padding:16px;background:var(--bg);border-radius:10px;">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">E-mail</div>
@@ -5701,6 +5709,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAlunoFreq(a);
     loadAlunoDocs(a);
     loadAlunoAtas(a);
+    loadAlunoIaResumo(a.email);
   }
 
   function switchAlunoTab(tab, btn) {
@@ -5779,6 +5788,22 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">Por: ${esc(at.registrado_por || '—')} ${at.arquivo_url ? `· <a href="${esc(at.arquivo_url)}" target="_blank" style="color:var(--blue);">📎 Anexo</a>` : ''}</div>
       </div>`).join('');
     } catch { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar atas.</div>'; }
+  }
+
+  async function loadAlunoIaResumo(email) {
+    const card = document.getElementById('alunoIaResumo');
+    card.style.display = 'block';
+    document.getElementById('iaResumoText').innerHTML = '<span class="spinner-sm"></span> Analisando...';
+    document.getElementById('iaResumoTime').textContent = '';
+    try {
+      const d = await api({ action: 'aluno_resumo_ia', aluno_email: email });
+      if (d.resumo) {
+        document.getElementById('iaResumoText').textContent = d.resumo;
+        document.getElementById('iaResumoTime').textContent = 'Gerado: ' + new Date(d.gerado_em).toLocaleString('pt-BR');
+      } else {
+        card.style.display = 'none';
+      }
+    } catch { card.style.display = 'none'; }
   }
 
   async function alunoNovaAta() {
