@@ -560,7 +560,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- ESTOU A CAMINHO -->
   <div class="card" id="pickupCard" data-modulo="pickup" style="display:none;">
     <div class="card-title" style="margin-bottom:12px;">
-      🚗 Estou a Caminho
+      🚗 <span data-i18n="pais.cards.estamoACaminho">Estou a Caminho</span>
       <button onclick="loadPickupCard()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Avise a escola quando você estiver a caminho para buscar seu filho. A professora será notificada e preparará a criança.</p>
@@ -615,7 +615,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- AGENDA PERMANENTE -->
   <div class="card" id="agendaCard" style="display:none;">
     <div class="card-title" style="margin-bottom:12px;">
-      📅 Agenda da Criança
+      📅 <span data-i18n="pais.cards.agendaCrianca">Agenda da Criança</span>
       <button onclick="carregarAgenda()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Próximos dias com presença prevista. Clique em <strong>Registrar ausência</strong> se a criança não comparecer.</p>
@@ -633,7 +633,7 @@ body.has-bottomnav{padding-bottom:56px;}
 
     <!-- DADOS COMUNS -->
     <div class="card" id="cardDados">
-      <div class="card-title">👤 Seus Dados</div>
+      <div class="card-title">👤 <span data-i18n="pais.perfil.seusDados">Seus Dados</span></div>
       <div class="field">
         <label for="email">E-mail</label>
         <input type="email" id="email" readonly>
@@ -657,7 +657,7 @@ body.has-bottomnav{padding-bottom:56px;}
 
     <!-- SÉRIE (comum) -->
     <div class="card" id="cardSerie">
-      <div class="card-title">🎒 Série</div>
+      <div class="card-title">🎒 <span data-i18n="pais.perfil.serieLabel">Série</span></div>
       <div class="field">
         <label for="serieSelect">Série da criança <span class="req">*</span></label>
         <select id="serieSelect"><option value="">Carregando…</option></select>
@@ -668,7 +668,7 @@ body.has-bottomnav{padding-bottom:56px;}
     <!-- SEÇÃO: TURNO -->
     <div id="secaoTurno">
       <div class="card">
-        <div class="card-title">🕐 Turno Desejado</div>
+        <div class="card-title">🕐 <span data-i18n="pais.perfil.turnoDesejado">Turno Desejado</span></div>
         <div class="field">
           <label for="turnoSelect">Selecione o turno <span class="req">*</span></label>
           <select id="turnoSelect" onchange="onTurnoChange()">
@@ -702,7 +702,7 @@ body.has-bottomnav{padding-bottom:56px;}
     <!-- SEÇÃO: ATIVIDADES (usada no tabAtividades) -->
     <div id="secaoAtividades" style="display:none;">
       <div class="card">
-        <div class="card-title">🎯 Atividades Extracurriculares</div>
+        <div class="card-title">🎯 <span data-i18n="pais.perfil.atividadesExtras">Atividades Extracurriculares</span></div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Selecione uma ou mais atividades. Os horários não podem ser conflitantes.</p>
         <div id="atividadesLista">
           <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando atividades…</div>
@@ -721,7 +721,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- TAB: ATIVIDADES -->
   <div class="tab-panel" id="tabAtividades">
     <div class="card">
-      <div class="card-title">👤 Seus Dados</div>
+      <div class="card-title">👤 <span data-i18n="pais.perfil.seusDados">Seus Dados</span></div>
       <div class="field">
         <label>E-mail</label>
         <input type="email" id="emailAtiv" readonly>
@@ -743,7 +743,7 @@ body.has-bottomnav{padding-bottom:56px;}
       </div>
     </div>
     <div class="card">
-      <div class="card-title">🎒 Série</div>
+      <div class="card-title">🎒 <span data-i18n="pais.perfil.serieLabel">Série</span></div>
       <div class="field">
         <label for="serieSelectAtiv">Série da criança <span class="req">*</span></label>
         <select id="serieSelectAtiv"><option value="">Carregando…</option></select>
@@ -751,7 +751,7 @@ body.has-bottomnav{padding-bottom:56px;}
       </div>
     </div>
     <div class="card">
-      <div class="card-title">🎯 Atividades Extracurriculares</div>
+      <div class="card-title">🎯 <span data-i18n="pais.perfil.atividadesExtras">Atividades Extracurriculares</span></div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Selecione uma ou mais atividades. Os horários não podem ser conflitantes.</p>
       <div id="atividadesListaAtiv">
         <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando atividades…</div>
@@ -815,19 +815,19 @@ body.has-bottomnav{padding-bottom:56px;}
 
     <!-- Minha Face -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:12px;">👤 Meu Cadastro Facial</div>
+      <div class="card-title" style="margin-bottom:12px;">👤 <span data-i18n="pais.cards.cadastroFacial">Meu Cadastro Facial</span></div>
       <div id="minhaFaceContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
     </div>
 
     <!-- Filhos na escola -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:12px;">👶 Meus Filhos — Presença Hoje</div>
+      <div class="card-title" style="margin-bottom:12px;">👶 <span data-i18n="pais.cards.meusFilhosPresenca">Meus Filhos — Presença Hoje</span></div>
       <div id="meusFilhosPresenca"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
     </div>
 
     <!-- Pessoas autorizadas -->
     <div class="card">
-      <div class="card-title" style="margin-bottom:4px;">🔐 Pessoas Autorizadas para Retirada</div>
+      <div class="card-title" style="margin-bottom:4px;">🔐 <span data-i18n="pais.cards.pessoasAutorizadas">Pessoas Autorizadas para Retirada</span></div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Gerencie quem pode retirar seus filhos da escola. Cada pessoa autorizada precisa ter uma foto cadastrada para reconhecimento facial.</p>
       <div id="autorizadosLista" style="margin-bottom:16px;"></div>
 
@@ -878,7 +878,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- TAB: MEU PERFIL -->
   <div class="tab-panel" id="tabPerfil">
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:16px;">👤 Meus Dados</div>
+      <div class="card-title" style="margin-bottom:16px;">👤 <span data-i18n="pais.perfil.meusDados">Meus Dados</span></div>
       <div class="ml-field">
         <label>Nome completo</label>
         <input type="text" id="perfilNome" placeholder="Seu nome">
@@ -896,7 +896,7 @@ body.has-bottomnav{padding-bottom:56px;}
     </div>
 
     <div class="card">
-      <div class="card-title" style="margin-bottom:16px;">🔑 Alterar Senha</div>
+      <div class="card-title" style="margin-bottom:16px;">🔑 <span data-i18n="pais.perfil.alterarSenha">Alterar Senha</span></div>
       <div class="ml-field">
         <label>Nova senha (mínimo 6 caracteres)</label>
         <input type="password" id="perfilSenhaNova" placeholder="Digite a nova senha" autocomplete="new-password">
