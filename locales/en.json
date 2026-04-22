@@ -879,7 +879,26 @@
       "desativar": "Deactivate",
       "moduleAtivo": "Active",
       "moduleInativo": "Inactive",
-      "modificarModulos": "Manage Modules"
+      "modificarModulos": "Manage Modules",
+      "salvarAlteracoes": "Save Changes",
+      "restaurarPadrao": "Restore Plan Defaults"
+    },
+    "tickets": {
+      "assunto": "Subject",
+      "status": "Status",
+      "acoes": "Actions",
+      "resposta": "Reply",
+      "respostaPlaceholder": "Type your reply...",
+      "responder": "Reply",
+      "fecharTicket": "Close Ticket"
+    },
+    "admins": {
+      "novoAdministrador": "New Administrator",
+      "adicionarDesc": "Add a new administrator to this school.",
+      "nomeLabel": "Name",
+      "nomePlaceholder": "Name",
+      "senhaPlaceholder": "Minimum 6 characters",
+      "criar": "Create"
     },
     "config": {
       "nomeDaEscola": "School name",

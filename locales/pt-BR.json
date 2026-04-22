@@ -879,7 +879,26 @@
       "desativar": "Desativar",
       "moduleAtivo": "Ativo",
       "moduleInativo": "Inativo",
-      "modificarModulos": "Modificar Módulos"
+      "modificarModulos": "Modificar Módulos",
+      "salvarAlteracoes": "Salvar Alterações",
+      "restaurarPadrao": "Restaurar Padrão do Plano"
+    },
+    "tickets": {
+      "assunto": "Assunto",
+      "status": "Status",
+      "acoes": "Ações",
+      "resposta": "Resposta",
+      "respostaPlaceholder": "Digite sua resposta...",
+      "responder": "Responder",
+      "fecharTicket": "Fechar Ticket"
+    },
+    "admins": {
+      "novoAdministrador": "Novo Administrador",
+      "adicionarDesc": "Adicione um novo admin a esta escola.",
+      "nomeLabel": "Nome",
+      "nomePlaceholder": "Nome",
+      "senhaPlaceholder": "Mínimo 6 caracteres",
+      "criar": "Criar"
     },
     "config": {
       "nomeDaEscola": "Nome da escola",

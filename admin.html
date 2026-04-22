@@ -241,13 +241,13 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div id="panelModulos" class="panel">
         <div class="sec-title"><span data-i18n="admin.panels.modulosAtivos">Modulos Ativos</span> <span class="count-badge" id="modulosCount">0</span></div>
         <div class="modulos-actions">
-          <button class="action-btn" onclick="saveModulos()">Salvar Alteracoes</button>
-          <button class="action-btn" style="background:var(--bg);color:var(--text);" onclick="resetModulos()">Restaurar Padrao do Plano</button>
+          <button class="action-btn" onclick="saveModulos()" data-i18n="admin.modulos.salvarAlteracoes">Salvar Alteracoes</button>
+          <button class="action-btn" style="background:var(--bg);color:var(--text);" onclick="resetModulos()" data-i18n="admin.modulos.restaurarPadrao">Restaurar Padrao do Plano</button>
         </div>
         <div id="modulosGrid"></div>
         <div class="modulos-actions" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-          <button class="action-btn" onclick="saveModulos()">Salvar Alteracoes</button>
-          <button class="action-btn" style="background:var(--bg);color:var(--text);" onclick="resetModulos()">Restaurar Padrao do Plano</button>
+          <button class="action-btn" onclick="saveModulos()" data-i18n="admin.modulos.salvarAlteracoes">Salvar Alteracoes</button>
+          <button class="action-btn" style="background:var(--bg);color:var(--text);" onclick="resetModulos()" data-i18n="admin.modulos.restaurarPadrao">Restaurar Padrao do Plano</button>
         </div>
       </div>
 
@@ -255,7 +255,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div id="panelTickets" class="panel">
         <div class="sec-title"><span data-i18n="admin.panels.ticketsSuporte">Tickets de Suporte</span> <span class="count-badge" id="ticketsCount">0</span></div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Assunto</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
+          <thead><tr><th data-i18n="admin.tickets.assunto">Assunto</th><th data-i18n="admin.tickets.status">Status</th><th data-i18n="common.date">Data</th><th data-i18n="admin.tickets.acoes">Acoes</th></tr></thead>
           <tbody id="ticketsBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody>
         </table></div>
       </div>
@@ -348,11 +348,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   <div class="modal">
     <h3 id="mtTitle">Ticket</h3>
     <p class="msub" id="mtDesc"></p>
-    <div class="ff"><label>Resposta</label><textarea id="mtResposta" rows="4" placeholder="Digite sua resposta..."></textarea></div>
+    <div class="ff"><label data-i18n="admin.tickets.resposta">Resposta</label><textarea id="mtResposta" rows="4" placeholder="Digite sua resposta..." data-i18n-placeholder="admin.tickets.respostaPlaceholder"></textarea></div>
     <div class="btn-bar">
-      <button class="btn-primary" onclick="responderTicket()">Responder</button>
-      <button class="btn-secondary" onclick="fecharTicket()">Fechar Ticket</button>
-      <button class="btn-secondary" onclick="fecharModal('modalTicket')">Cancelar</button>
+      <button class="btn-primary" onclick="responderTicket()" data-i18n="admin.tickets.responder">Responder</button>
+      <button class="btn-secondary" onclick="fecharTicket()" data-i18n="admin.tickets.fecharTicket">Fechar Ticket</button>
+      <button class="btn-secondary" onclick="fecharModal('modalTicket')" data-i18n="actions.cancel">Cancelar</button>
     </div>
   </div>
 </div>
@@ -360,14 +360,14 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 <!-- MODAL: NOVO ADMIN -->
 <div class="modal-overlay" id="modalNovoAdmin" role="dialog" aria-modal="true">
   <div class="modal">
-    <h3>Novo Administrador</h3>
-    <p class="msub">Adicione um novo admin a esta escola.</p>
-    <div class="ff"><label>Nome</label><input id="newAdminNome" placeholder="Nome"></div>
-    <div class="ff"><label>Email</label><input id="newAdminEmail" type="email" placeholder="email@exemplo.com"></div>
-    <div class="ff"><label>Senha</label><input id="newAdminSenha" type="password" placeholder="Minimo 6 caracteres"></div>
+    <h3 data-i18n="admin.admins.novoAdministrador">Novo Administrador</h3>
+    <p class="msub" data-i18n="admin.admins.adicionarDesc">Adicione um novo admin a esta escola.</p>
+    <div class="ff"><label data-i18n="admin.admins.nomeLabel">Nome</label><input id="newAdminNome" placeholder="Nome" data-i18n-placeholder="admin.admins.nomePlaceholder"></div>
+    <div class="ff"><label data-i18n="auth.email">Email</label><input id="newAdminEmail" type="email" placeholder="email@exemplo.com" data-i18n-placeholder="auth.emailPlaceholder"></div>
+    <div class="ff"><label data-i18n="auth.password">Senha</label><input id="newAdminSenha" type="password" placeholder="Minimo 6 caracteres" data-i18n-placeholder="admin.admins.senhaPlaceholder"></div>
     <div class="btn-bar">
-      <button class="btn-primary" onclick="criarAdmin()">Criar</button>
-      <button class="btn-secondary" onclick="fecharModal('modalNovoAdmin')">Cancelar</button>
+      <button class="btn-primary" onclick="criarAdmin()" data-i18n="admin.admins.criar">Criar</button>
+      <button class="btn-secondary" onclick="fecharModal('modalNovoAdmin')" data-i18n="actions.cancel">Cancelar</button>
     </div>
   </div>
 </div>
