@@ -5742,7 +5742,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const el = document.getElementById('alunoDetFreq');
     el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
     try {
-      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'frequencia_aluno', aluno_email: a.email, _token: getToken() }) }).then(r => r.json());
+      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'frequencia_relatorio_aluno', aluno_email: a.email, _token: getToken() }) }).then(r => r.json());
       const pct = d.percent_presenca ?? d.pct ?? null;
       const total = d.total_aulas ?? 0;
       const faltas = d.total_faltas ?? 0;
