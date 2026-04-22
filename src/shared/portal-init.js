@@ -12,6 +12,7 @@ import { showToast } from './components/toast.js';
 import { initSentry, setSentryUser } from './sentry.js';
 import { translatePage } from './i18n.js';
 import { createLangSwitcher } from './components/lang-switcher.js';
+import { initPWAInstall } from './pwa-install.js';
 
 /**
  * Bootstrap a portal: Sentry, API client, state, global bindings.
@@ -54,6 +55,8 @@ export function initPortal({ tokenKey, onAuthError }) {
   // i18n — translate page and add language switcher
   translatePage();
   _injectLangSwitcher();
+
+  initPWAInstall();
 
   return { api };
 }

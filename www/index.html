@@ -1,1 +1,316 @@
-<\!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Lumied</title></head><body><p>Loading...</p><script>window.location.href="https://app.maplebearcaxiasdosul.com.br";</script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Lumied</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #C8102E;
+      --red-dark: #a00d24;
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 32px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus {
+      border-color: var(--red);
+      background: #fff;
+    }
+
+    input.error {
+      border-color: #ef4444;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s, transform 0.1s;
+      position: relative;
+    }
+
+    .btn:hover { background: var(--red-dark); }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .btn.loading .btn-spinner { display: block; }
+
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+    .error-msg {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-top: 12px;
+      text-align: left;
+    }
+
+    .error-msg.show { display: block; }
+
+    .change-school {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .change-school button {
+      background: none;
+      border: none;
+      color: var(--red);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0;
+      text-decoration: underline;
+    }
+
+    .footer-brand {
+      margin-top: 32px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <svg class="logo" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Lumied">
+      <rect width="40" height="40" rx="8" fill="#C8102E" y="10"/>
+      <text x="10" y="38" font-family="DM Sans, sans-serif" font-size="28" font-weight="700" fill="white">L</text>
+      <text x="52" y="42" font-family="DM Sans, sans-serif" font-size="26" font-weight="700" fill="#1a1a2e">Lumied</text>
+    </svg>
+
+    <h1>Qual é a sua escola?</h1>
+    <p class="subtitle">Digite o identificador da sua escola para acessar o portal.</p>
+
+    <div class="form-group">
+      <label for="slug-input">Identificador da escola</label>
+      <input
+        id="slug-input"
+        type="text"
+        placeholder="ex: maplebearcaxias"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+      >
+      <p class="hint">Fornecido pela Lumied no cadastro da escola.</p>
+    </div>
+
+    <button class="btn" id="btn-entrar" onclick="handleEntrar()">
+      Entrar
+      <span class="btn-spinner"></span>
+    </button>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <div class="footer-brand">Lumied · Gestão Escolar</div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+    const STORAGE_KEY = 'lumied_school_slug';
+
+    function setLoading(on) {
+      const btn = document.getElementById('btn-entrar');
+      btn.disabled = on;
+      btn.classList.toggle('loading', on);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.classList.add('show');
+      document.getElementById('slug-input').classList.add('error');
+    }
+
+    function clearError() {
+      document.getElementById('error-msg').classList.remove('show');
+      document.getElementById('slug-input').classList.remove('error');
+    }
+
+    async function validateAndRedirect(slug) {
+      setLoading(true);
+      clearError();
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/escolas?slug=eq.${encodeURIComponent(slug)}&ativo=eq.true&select=id,nome,slug`,
+          { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }
+        );
+        if (!res.ok) throw new Error('Erro de rede');
+        const data = await res.json();
+        if (!data || data.length === 0) {
+          showError('Escola não encontrada. Verifique o identificador e tente novamente.');
+          setLoading(false);
+          return;
+        }
+        localStorage.setItem(STORAGE_KEY, slug);
+        window.location.href = `https://${slug}.lumied.com.br`;
+      } catch (e) {
+        showError('Não foi possível verificar a escola. Verifique sua conexão e tente novamente.');
+        setLoading(false);
+      }
+    }
+
+    async function handleEntrar() {
+      const slug = document.getElementById('slug-input').value.trim().toLowerCase();
+      if (!slug) {
+        showError('Digite o identificador da escola.');
+        document.getElementById('slug-input').classList.add('error');
+        return;
+      }
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        showError('Identificador inválido. Use apenas letras, números e hífens.');
+        document.getElementById('slug-input').classList.add('error');
+        return;
+      }
+      await validateAndRedirect(slug);
+    }
+
+    function showChangeSchool(currentSlug) {
+      const div = document.createElement('div');
+      div.className = 'change-school';
+      div.innerHTML = `Conectado como <strong>${currentSlug}</strong> · <button onclick="trocarEscola()">Trocar escola</button>`;
+      document.querySelector('.card').appendChild(div);
+    }
+
+    window.trocarEscola = function() {
+      localStorage.removeItem(STORAGE_KEY);
+      window.location.reload();
+    };
+
+    // Auto-redirect if school already saved
+    (function init() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setLoading(true);
+        document.getElementById('slug-input').value = saved;
+        // Show change-school option while redirecting
+        showChangeSchool(saved);
+        setTimeout(() => {
+          window.location.href = `https://${saved}.lumied.com.br`;
+        }, 300);
+        return;
+      }
+
+      // Enter key support
+      document.getElementById('slug-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleEntrar();
+      });
+      document.getElementById('slug-input').addEventListener('input', clearError);
+    })();
+  </script>
+</body>
+</html>
