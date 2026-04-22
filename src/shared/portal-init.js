@@ -13,6 +13,7 @@ import { initSentry, setSentryUser } from './sentry.js';
 import { translatePage } from './i18n.js';
 import { createLangSwitcher } from './components/lang-switcher.js';
 import { initPWAInstall } from './pwa-install.js';
+import { initWebVitals } from './web-vitals.js';
 
 /**
  * Bootstrap a portal: Sentry, API client, state, global bindings.
@@ -57,6 +58,9 @@ export function initPortal({ tokenKey, onAuthError }) {
   _injectLangSwitcher();
 
   initPWAInstall();
+
+  // Web Vitals — non-blocking, runs after load
+  initWebVitals();
 
   return { api };
 }

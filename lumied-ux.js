@@ -745,6 +745,74 @@
   }
 
   // ═══════════════════════════════════════════════════
+  // 17. MIC BUTTON — floating toggle for voice commands (professora)
+  // ═══════════════════════════════════════════════════
+  function setupMicButton() {
+    if (portal !== 'professora') return;
+    // Hidden on desktop — teachers use mobile/tablet
+    if (window.innerWidth > 1024) return;
+    if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) return;
+
+    const PREF_KEY = 'lumied_voice_enabled';
+
+    const btn = document.createElement('button');
+    btn.id = 'lumiMicBtn';
+    btn.setAttribute('aria-label', 'Ativar comandos de voz Lumi');
+    btn.style.cssText = [
+      'position:fixed',
+      'bottom:16px',
+      'left:16px',
+      'z-index:99989',
+      'width:56px',
+      'height:56px',
+      'border-radius:50%',
+      'border:none',
+      'background:#1a1a1a',
+      'color:#fff',
+      'font-size:22px',
+      'cursor:pointer',
+      'box-shadow:0 4px 20px rgba(0,0,0,.35)',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'transition:background .25s,transform .2s',
+      'font-family:inherit',
+    ].join(';');
+    btn.textContent = '🎤';
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes micPulse {
+        0%,100% { box-shadow:0 4px 20px rgba(0,0,0,.35),0 0 0 0 rgba(200,16,46,.4); }
+        70%      { box-shadow:0 4px 20px rgba(0,0,0,.35),0 0 0 12px rgba(200,16,46,0); }
+      }
+      #lumiMicBtn.active { background:#C8102E !important; animation:micPulse 1.4s ease infinite; }
+      #lumiMicBtn:hover { transform:scale(1.08); }
+    `;
+    document.head.appendChild(style);
+
+    function syncState() {
+      const isOn = window.__voice?.isListening?.() || localStorage.getItem(PREF_KEY) === '1';
+      btn.classList.toggle('active', isOn);
+      btn.setAttribute('aria-pressed', String(isOn));
+      btn.title = isOn ? 'Desativar voz Lumi' : 'Ativar voz Lumi';
+    }
+
+    btn.addEventListener('click', () => {
+      if (window.__voice) {
+        window.__voice.toggle();
+        syncState();
+      }
+    });
+
+    // Keep button state in sync when voice module updates it
+    window.__voiceOnChange = syncState;
+
+    document.body.appendChild(btn);
+    syncState();
+  }
+
+  // ═══════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════
   function init() {
@@ -763,6 +831,8 @@
       setupPanelTransitions();
       setupBreadcrumbs();
     }, 100);
+    // Mic button for voice commands (professora portal, mobile only)
+    setTimeout(setupMicButton, 600);
     // Onboarding after app loads
     const appShell = document.getElementById('appShell') || document.getElementById('appWrap');
     if (appShell) {

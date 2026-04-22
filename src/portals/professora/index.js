@@ -4,6 +4,7 @@
 import { initPortal, loadModulos } from '../../shared/portal-init.js';
 import { initRealtime, subscribeAccess } from '../../shared/realtime.js';
 import { showToast } from '../../shared/components/toast.js';
+import { initVoice } from '../../shared/voice.js';
 
 const { api } = initPortal({ tokenKey: 'prof_token' });
 
@@ -36,5 +37,8 @@ if (anonKey) {
     });
   }
 }
+
+// Voice commands — optional, degrades gracefully on unsupported browsers
+initVoice();
 
 console.log('[Lumied] Professora module loaded.');
