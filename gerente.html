@@ -3563,7 +3563,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const headers = {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON};
     const r = await fetch(API, { method:'POST', headers, body: JSON.stringify({...body, _token: token}) });
     const d = await r.json();
-    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login' && body.action !== 'unified_login' && body.action !== 'setup_check') { doLogout(); return d; }
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login' && body.action !== 'unified_login' && body.action !== 'setup_check' && body.action !== 'logout' && body.action !== 'config_publica') { doLogout(); return d; }
     return d;
   }
 
@@ -3608,7 +3608,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const headers = {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON};
     const r = await fetch(FIN_EXT_API, { method:'POST', headers, body: JSON.stringify({...body, _token: token}) });
     const d = await r.json();
-    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login') { doLogout(); return d; }
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login' && body.action !== 'logout') { doLogout(); return d; }
     return d;
   }
 
@@ -3649,6 +3649,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         }
       }
       return;
+    }
+    // Validar sessão no servidor antes de mostrar o app
+    const check = await api({ action: 'config_publica' }).catch(() => null);
+    if (check && check.error && check.error.includes('Sessão inválida')) {
+      localStorage.removeItem('mb_token');
+      localStorage.removeItem('mb_nome');
+      localStorage.removeItem('mb_email');
+      return; // mostra tela de login
     }
     const nome  = localStorage.getItem('mb_nome');
     const email = localStorage.getItem('mb_email');
