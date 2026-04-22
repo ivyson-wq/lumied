@@ -5053,7 +5053,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function loadBibAcervo() {
-    const d = await opApi({ action:'biblioteca_acervo_list' });
+    const d = await opApi({ action:'acervo_list' });
     bibAcervo = Array.isArray(d) ? d : (d.data || []);
     renderBibAcervo(bibAcervo);
   }
@@ -5078,19 +5078,19 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const autor = prompt('Autor:') || '';
     const categoria = prompt('Categoria (ficção, didático, infantil, referência):') || 'didático';
     const qtd = parseInt(prompt('Quantidade:') || '1') || 1;
-    const d = await opApi({ action:'biblioteca_acervo_create', titulo, autor, categoria, quantidade:qtd });
+    const d = await opApi({ action:'acervo_create', titulo, autor, categoria, quantidade:qtd });
     if (d.error) return showToast(d.error,'error');
     showToast('Livro adicionado!','success');
     loadBibAcervo();
   }
   async function deletarLivro(id) {
     if (!await _lumiedConfirm('Remover este livro do acervo?')) return;
-    await opApi({ action:'biblioteca_acervo_update', id, ativo:false });
+    await opApi({ action:'acervo_update', id, ativo:false });
     loadBibAcervo();
   }
 
   async function loadBibEmprestimos() {
-    const d = await opApi({ action:'biblioteca_emprestimos_list' });
+    const d = await opApi({ action:'biblioteca_emprestimos' });
     const lista = Array.isArray(d) ? d : (d.data || []);
     const body = document.getElementById('bibEmprestimosBody');
     if (!lista.length) { body.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Nenhum empréstimo registrado.</td></tr>'; return; }
@@ -5117,13 +5117,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (!livro) return;
     const acervoId = disponiveis.find(b => b.id.startsWith(livro) || b.titulo.toLowerCase().includes(livro.toLowerCase()))?.id;
     if (!acervoId) return showToast('Livro não encontrado','error');
-    const d = await opApi({ action:'biblioteca_emprestar', acervo_id:acervoId, aluno_nome:aluno, aluno_email:email });
+    const d = await opApi({ action:'data_emprestimo', acervo_id:acervoId, aluno_nome:aluno, aluno_email:email });
     if (d.error) return showToast(d.error,'error');
     showToast('Empréstimo registrado!','success');
     loadBibEmprestimos();
   }
   async function devolverLivro(id) {
-    const d = await opApi({ action:'biblioteca_devolver', id });
+    const d = await opApi({ action:'devolvido', id });
     if (d.error) return showToast(d.error,'error');
     showToast('Livro devolvido!','success');
     loadBibEmprestimos();
@@ -5154,7 +5154,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   var cantCreditos = [];
   async function loadCantCreditos() {
-    const d = await opApi({ action:'cantina_creditos_list' });
+    const d = await opApi({ action:'cantina_creditos' });
     cantCreditos = Array.isArray(d) ? d : (d.data || []);
     renderCantCreditos(cantCreditos);
   }
@@ -5725,7 +5725,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const el = document.getElementById('alunoDetNotas');
     el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
     try {
-      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'boletim_aluno', aluno_email: a.email, ano: new Date().getFullYear(), _token: getToken() }) }).then(r => r.json());
+      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'boletim_get', aluno_email: a.email, ano: new Date().getFullYear(), _token: getToken() }) }).then(r => r.json());
       const discs = Array.isArray(d) ? d : (d.disciplinas || []);
       if (!discs.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Nenhuma nota registrada.</div>'; return; }
       el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px;text-align:left;">Disciplina</th><th style="padding:8px;text-align:center;">Média</th><th style="padding:8px;text-align:center;">Status</th></tr></thead><tbody>' +
@@ -7936,7 +7936,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function salvarDispositivo() {
-    const body = { action: 'acesso_dispositivo_create', nome: document.getElementById('adNome').value, ip: document.getElementById('adIp').value, porta: document.getElementById('adPorta').value, tipo: document.getElementById('adTipo').value, localizacao: document.getElementById('adLocal').value };
+    const body = { action: 'acesso_dispositivo_save', nome: document.getElementById('adNome').value, ip: document.getElementById('adIp').value, porta: document.getElementById('adPorta').value, tipo: document.getElementById('adTipo').value, localizacao: document.getElementById('adLocal').value };
     const d = await api(body);
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Dispositivo adicionado!', 'success');
@@ -7954,7 +7954,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function syncFacesDispositivo(id) {
     showToast('Sincronizando faces...', 'info');
-    const d = await callAcesso({ action: 'acesso_dispositivo_sync_faces', id });
+    const d = await callAcesso({ action: 'acesso_dispositivo_sync', id });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Faces sincronizadas!', 'success');
   }
@@ -8009,7 +8009,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (!fileInput.files.length) { showToast('Selecione uma foto.', 'error'); return; }
     const reader = new FileReader();
     reader.onload = async function() {
-      const d = await callAcesso({ action: 'acesso_face_create', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
+      const d = await callAcesso({ action: 'acesso_face_cadastrar', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
       if (d.error) { showToast(d.error, 'error'); return; }
       showToast('Face cadastrada!', 'success');
       closeFaceModal();
@@ -8026,7 +8026,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function syncAllFaces() {
     showToast('Sincronizando todas as faces...', 'info');
-    const d = await callAcesso({ action: 'acesso_sync_all_faces' });
+    const d = await callAcesso({ action: 'acesso_face_sync_all' });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Sincronizacao iniciada!', 'success');
     loadAcessoFaces();
@@ -8070,7 +8070,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const tipo = document.getElementById('rfidTipo').value;
     if (!uid) { showToast('Informe o UID do cartao.', 'error'); return; }
     if (!pessoaId) { showToast('Selecione uma pessoa.', 'error'); return; }
-    const d = await callAcesso({ action: 'acesso_rfid_create', card_uid: uid, pessoa_id: pessoaId, pessoa_tipo: tipo });
+    const d = await callAcesso({ action: 'acesso_rfid_cadastrar', card_uid: uid, pessoa_id: pessoaId, pessoa_tipo: tipo });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Cartao adicionado!', 'success');
     document.getElementById('rfidUid').value = '';
@@ -8080,7 +8080,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function toggleRfid(id, ativo) {
-    await callAcesso({ action: 'acesso_rfid_update', id, ativo });
+    await callAcesso({ action: 'acesso_rfid_cadastrar', id, ativo });
     loadAcessoRfid();
   }
 
@@ -8134,7 +8134,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (fileInput.files.length) {
       foto_base64 = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(fileInput.files[0]); });
     }
-    const d = await callAcesso({ action: 'acesso_permissao_create', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
+    const d = await callAcesso({ action: 'acesso_permissao_save', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Pessoa autorizada adicionada!', 'success');
     closePermModal();

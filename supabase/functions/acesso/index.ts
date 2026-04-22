@@ -332,6 +332,28 @@ router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
   return successResponse({ face: faceRecord, sync: syncResults });
 });
 
+// Search for a person (aluno/professora/funcionario) by name — used for face/RFID registration
+router.on("acesso_buscar_pessoa", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { tipo, busca } = ctx.body as Any;
+  if (!busca || String(busca).length < 2) return successResponse([]);
+  const term = `%${String(busca).trim()}%`;
+  let data: Any[] = [];
+  if (tipo === 'aluno' || !tipo) {
+    const { data: alunos } = await ctx.sb.from("familias").select("id, nome_aluno, email").eq("escola_id", ctx.escola_id).ilike("nome_aluno", term).limit(10);
+    data = data.concat((alunos ?? []).map((a: Any) => ({ id: a.id, nome: a.nome_aluno, email: a.email, tipo: 'aluno' })));
+  }
+  if (tipo === 'professora' || !tipo) {
+    const { data: profs } = await ctx.sb.from("professoras").select("id, nome, email").eq("escola_id", ctx.escola_id).ilike("nome", term).limit(10);
+    data = data.concat((profs ?? []).map((p: Any) => ({ ...p, tipo: 'professora' })));
+  }
+  if (tipo === 'funcionario' || !tipo) {
+    const { data: funcs } = await ctx.sb.from("usuarios").select("id, nome, email").eq("escola_id", ctx.escola_id).ilike("nome", term).limit(10);
+    data = data.concat((funcs ?? []).map((f: Any) => ({ ...f, tipo: 'funcionario' })));
+  }
+  return successResponse(data);
+});
+
 router.on("acesso_faces_list", authGerenteOrSecretaria, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { pessoa_tipo } = ctx.body as Any;
