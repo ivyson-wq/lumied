@@ -3741,6 +3741,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const descendo = rows.filter((r: any) => r.trend === "descendo").length;
 
     return ok({ avg_score, total, alto, medio, baixo, subindo, estavel, descendo });
+  }
 
   // ── IA: Consulta rápida (Ctrl+K natural language search) ──────
   if (action === "ia_consulta_rapida") {
