@@ -10,6 +10,8 @@ import { createClient } from './api-client.js';
 import { appStore } from './state.js';
 import { showToast } from './components/toast.js';
 import { initSentry, setSentryUser } from './sentry.js';
+import { translatePage } from './i18n.js';
+import { createLangSwitcher } from './components/lang-switcher.js';
 
 /**
  * Bootstrap a portal: Sentry, API client, state, global bindings.
@@ -48,7 +50,19 @@ export function initPortal({ tokenKey, onAuthError }) {
   window.__store = appStore;
   window.__toast = showToast;
 
+  // i18n — translate page and add language switcher
+  translatePage();
+  _injectLangSwitcher();
+
   return { api };
+}
+
+function _injectLangSwitcher() {
+  const footer = document.querySelector('.sb-footer');
+  if (!footer) return;
+  const switcher = createLangSwitcher();
+  switcher.style.cssText = 'margin-bottom:10px;';
+  footer.insertBefore(switcher, footer.firstChild);
 }
 
 /**

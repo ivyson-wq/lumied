@@ -431,13 +431,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           }
         </script>
       </div>
-      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;">Bem-vindo de volta</h2>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;">Entre com suas credenciais para acessar o painel.</p>
-      <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"></div>
-      <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
-      <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
-      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;">Entrar com biometria</button>
-      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;">E-mail ou senha incorretos.</div>
+      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;" data-i18n="auth.welcome">Bem-vindo de volta</h2>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;" data-i18n="auth.enterCredentials">Entre com suas credenciais para acessar o painel.</p>
+      <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder"></div>
+      <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
+      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;" data-i18n="auth.loginWithBiometrics">Entrar com biometria</button>
+      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;" data-i18n="auth.emailOrPasswordIncorrect">E-mail ou senha incorretos.</div>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
         <img src="/lumied-logo.png" style="height:32px;object-fit:contain;" alt="Lumied">
       </div>
@@ -453,7 +453,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     <div class="sb-brand">
       <img class="sb-logo-img" id="sidebarLogo" alt="">
       <img src="/lumied-logo-branco.png" id="sidebarLeaf" class="sb-leaf" style="height:36px;object-fit:contain;" alt="Lumied">
-      <h1>Maple Bear</h1><span>Painel do Gerente</span>
+      <h1>Maple Bear</h1><span data-i18n="gerente.title">Painel do Gerente</span>
       <script>
         if (/^demo\./i.test(location.hostname)) {
           document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = 'Demo Lumied');
@@ -464,183 +464,183 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     <nav class="sb-nav" role="navigation" aria-label="Menu principal">
       <!-- Favoritos (populated by JS) -->
       <div class="fav-section" id="favSection"></div>
-      <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
+      <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> <span data-i18n="gerente.sidebar.dashboard">Dashboard</span></a>
 
       <!-- ═══ DIA A DIA ═══ -->
-      <div class="sb-label" onclick="toggleSbSection(this)" style="color:rgba(255,255,255,.45);">Dia a Dia <span class="sb-arrow">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)" style="color:rgba(255,255,255,.45);"><span data-i18n="gerente.sidebar.diaADia">Dia a Dia</span> <span class="sb-arrow">▼</span></div>
       <div class="sb-section">
-        <a class="nav-item" href="#" onclick="showPanel('alunos',this)"><span class="ic">🎓</span> Alunos</a>
+        <a class="nav-item" href="#" onclick="showPanel('alunos',this)"><span class="ic">🎓</span> <span data-i18n="gerente.nav.alunos">Alunos</span></a>
         <div data-modulo="notas">
-        <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> Notas & Boletim</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.notasBoletim">Notas & Boletim</span></a>
         </div>
         <div data-modulo="frequencia">
-        <a class="nav-item" href="#" onclick="showPanel('frequencia',this)"><span class="ic">✅</span> Frequência</a>
+        <a class="nav-item" href="#" onclick="showPanel('frequencia',this)"><span class="ic">✅</span> <span data-i18n="gerente.nav.frequencia">Frequência</span></a>
         </div>
         <div data-modulo="chat">
-        <a class="nav-item" href="#" onclick="showPanel('chatConversas',this)"><span class="ic">💬</span> Chat Famílias</a>
+        <a class="nav-item" href="#" onclick="showPanel('chatConversas',this)"><span class="ic">💬</span> <span data-i18n="gerente.nav.chatFamilias">Chat Famílias</span></a>
         </div>
         <div data-modulo="calendario">
-        <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário</a>
+        <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.calendario">Calendário</span></a>
         </div>
         <div data-modulo="turno">
-        <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries & Turmas</a>
+        <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> <span data-i18n="gerente.nav.seriesTurmas">Séries & Turmas</span></a>
         </div>
       </div>
 
       <!-- ═══ ALMOXARIFADO ═══ -->
       <div data-modulo="almoxarifado">
-      <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.almoxarifado">Almoxarifado</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
-        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
-        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
-        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
-        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Por Turma</a>
-        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
-        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
+        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> <span data-i18n="gerente.nav.almDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> <span data-i18n="gerente.nav.almPendentes">Pendentes</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.almRequisicoes">Requisições</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> <span data-i18n="gerente.nav.almCompras">Compras</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> <span data-i18n="gerente.nav.almInsumos">Insumos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> <span data-i18n="gerente.nav.almPorTurma">Por Turma</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> <span data-i18n="gerente.nav.almOrcamentos">Orçamentos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.almRelatorio">Relatório</span></a>
       </div>
       </div>
 
       <!-- ═══ INFRAESTRUTURA ═══ -->
       <div data-modulo="manutencao">
-      <div class="sb-label" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.infraestrutura">Infraestrutura</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
-        <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
-        <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Turnos & Horários</a>
-        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Atividades Extra</a>
-        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
+        <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> <span data-i18n="gerente.nav.manutencao">Manutenção</span></a>
+        <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> <span data-i18n="gerente.nav.achadosPerdidos">Achados & Perdidos</span></a>
+        <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.turnosHorarios">Turnos & Horários</span></a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.atividadesExtra">Atividades Extra</span></a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> <span data-i18n="gerente.nav.gerenciarAtividades">Gerenciar Atividades</span></a>
       </div>
       </div>
 
       <!-- ═══ PESSOAS (Equipe + Famílias) ═══ -->
-      <div class="sb-label" onclick="toggleSbSection(this)">Pessoas <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.pessoas">Pessoas</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
-        <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
-        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔑</span> Acesso de Famílias</a>
-        <a class="nav-item" href="#" data-modulo="diplomas" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
-        <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
-        <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
-        <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
-        <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> Horários de Acesso</a>
-        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
+        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> <span data-i18n="gerente.nav.equipe">Equipe</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> <span data-i18n="gerente.nav.familias">Famílias</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔑</span> <span data-i18n="gerente.nav.acessoFamilias">Acesso de Famílias</span></a>
+        <a class="nav-item" href="#" data-modulo="diplomas" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> <span data-i18n="gerente.nav.diplomas">Diplomas</span></a>
+        <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> <span data-i18n="gerente.nav.atestados">Atestados</span></a>
+        <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.growthPlan">Growth Plan</span></a>
+        <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> <span data-i18n="gerente.nav.impressoes">Impressões</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> <span data-i18n="gerente.nav.horariosAcesso">Horários de Acesso</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.reunioes">Reuniões</span></a>
       </div>
 
       <!-- ═══ ACADÊMICO ═══ -->
       <div data-modulo="notas">
-      <div class="sb-label" onclick="toggleSbSection(this)">Acadêmico <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.academico">Acadêmico</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('notasDisciplinas',this)"><span class="ic">📚</span> Disciplinas</a>
-        <a class="nav-item" href="#" onclick="showPanel('notasPeriodos',this)"><span class="ic">📅</span> Períodos</a>
-        <a class="nav-item" href="#" onclick="showPanel('notasConfig',this)"><span class="ic">⚙️</span> Config Notas</a>
-        <a class="nav-item" href="#" data-modulo="diario_classe" onclick="showPanel('diarioClasse',this)"><span class="ic">📖</span> Diário de Classe</a>
-        <a class="nav-item" href="#" data-modulo="pesquisas" onclick="showPanel('pesquisas',this)"><span class="ic">📊</span> Pesquisas</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasDisciplinas',this)"><span class="ic">📚</span> <span data-i18n="gerente.nav.disciplinas">Disciplinas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('notasPeriodos',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.periodos">Períodos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('notasConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.configNotas">Config Notas</span></a>
+        <a class="nav-item" href="#" data-modulo="diario_classe" onclick="showPanel('diarioClasse',this)"><span class="ic">📖</span> <span data-i18n="gerente.nav.diarioClasse">Diário de Classe</span></a>
+        <a class="nav-item" href="#" data-modulo="pesquisas" onclick="showPanel('pesquisas',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.pesquisas">Pesquisas</span></a>
       </div>
       </div>
 
       <!-- ═══ CRM & MATRÍCULAS ═══ -->
       <div data-modulo="crm">
-      <div class="sb-label" onclick="toggleSbSection(this)">CRM & Matrículas <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.crm">CRM & Matrículas</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> Matrículas</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> Vagas</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates WhatsApp</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries / Idade</a>
-        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> Formulários Online</a>
-        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> Status Matrículas</a>
-        <a class="nav-item" href="#" onclick="showPanel('contratos',this)"><span class="ic">📜</span> Contratos</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.pipeline">Pipeline</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> <span data-i18n="gerente.nav.leads">Leads</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.matriculas">Matrículas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> <span data-i18n="gerente.nav.vagas">Vagas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> <span data-i18n="gerente.nav.templatesWhatsapp">Templates WhatsApp</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.seriesIdade">Séries / Idade</span></a>
+        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.formulariosOnline">Formulários Online</span></a>
+        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.statusMatriculas">Status Matrículas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('contratos',this)"><span class="ic">📜</span> <span data-i18n="gerente.nav.contratos">Contratos</span></a>
       </div>
       </div>
 
       <!-- ═══ FINANCEIRO — OPERAÇÃO ═══ -->
       <div data-modulo="financeiro">
-      <div class="sb-label" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.financeiro">Financeiro</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBatchBoletos',this)"><span class="ic">📄</span> Boletos em Lote</a>
-        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
-        <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> Inadimplência</a>
-        <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> Folha de Pagamento</a>
+        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> <span data-i18n="gerente.nav.finDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> <span data-i18n="gerente.nav.mensalidades">Mensalidades</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> <span data-i18n="gerente.nav.boletos">Boletos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finBatchBoletos',this)"><span class="ic">📄</span> <span data-i18n="gerente.nav.boletosLote">Boletos em Lote</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.lancamentos">Lançamentos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.inadimplencia">Inadimplência</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> <span data-i18n="gerente.nav.folhaPagamento">Folha de Pagamento</span></a>
       </div>
       </div>
 
       <!-- ═══ FINANCEIRO — CONTÁBIL ═══ -->
       <div data-modulo="financeiro">
-      <div class="sb-label" onclick="toggleSbSection(this)">Contabilidade <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.contabilidade">Contabilidade</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> DRE</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço</a>
-        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> Conciliação</a>
-        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> Plano de Contas</a>
+        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.dre">DRE</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> <span data-i18n="gerente.nav.balanco">Balanço</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> <span data-i18n="gerente.nav.conciliacao">Conciliação</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.planoContas">Plano de Contas</span></a>
       </div>
       </div>
 
       <!-- ═══ BIBLIOTECA & CANTINA ═══ -->
-      <div class="sb-label" onclick="toggleSbSection(this)">Biblioteca & Cantina <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.bibliotecaCantina">Biblioteca & Cantina</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('biblioteca',this)"><span class="ic">📚</span> Acervo</a>
-        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('bibEmprestimos',this)"><span class="ic">📖</span> Empréstimos</a>
-        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantina',this)"><span class="ic">🍽️</span> Cardápio</a>
-        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantCreditos',this)"><span class="ic">💳</span> Créditos</a>
+        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('biblioteca',this)"><span class="ic">📚</span> <span data-i18n="gerente.nav.acervo">Acervo</span></a>
+        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('bibEmprestimos',this)"><span class="ic">📖</span> <span data-i18n="gerente.nav.emprestimos">Empréstimos</span></a>
+        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantina',this)"><span class="ic">🍽️</span> <span data-i18n="gerente.nav.cardapio">Cardápio</span></a>
+        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantCreditos',this)"><span class="ic">💳</span> <span data-i18n="gerente.nav.creditos">Créditos</span></a>
       </div>
 
       <!-- ═══ COZINHA (Merenda Escolar) ═══ -->
       <div data-modulo="cozinha">
-      <div class="sb-label" onclick="toggleSbSection(this)">Cozinha <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.cozinha">Cozinha</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('cozDash',this)"><span class="ic">🍳</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozCardapio',this)"><span class="ic">📅</span> Cardápio</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozReceitas',this)"><span class="ic">📖</span> Receitas</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozAlimentos',this)"><span class="ic">🥕</span> Alimentos & Estoque</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozCompras',this)"><span class="ic">🛒</span> Compras</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozSanitario',this)"><span class="ic">🌡️</span> Sanitário</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozDesperd',this)"><span class="ic">♻️</span> Desperdício</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozConfig',this)"><span class="ic">⚙️</span> Config</a>
+        <a class="nav-item" href="#" onclick="showPanel('cozDash',this)"><span class="ic">🍳</span> <span data-i18n="gerente.nav.cozDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozCardapio',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.cozCardapio">Cardápio</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozReceitas',this)"><span class="ic">📖</span> <span data-i18n="gerente.nav.cozReceitas">Receitas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozAlimentos',this)"><span class="ic">🥕</span> <span data-i18n="gerente.nav.cozAlimentosEstoque">Alimentos & Estoque</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozCompras',this)"><span class="ic">🛒</span> <span data-i18n="gerente.nav.cozCompras">Compras</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozSanitario',this)"><span class="ic">🌡️</span> <span data-i18n="gerente.nav.cozSanitario">Sanitário</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozDesperd',this)"><span class="ic">♻️</span> <span data-i18n="gerente.nav.cozDesperdicio">Desperdício</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.cozConfig">Config</span></a>
       </div>
       </div>
 
       <!-- ═══ CONTROLE DE ACESSO (Face/RFID) ═══ -->
       <div data-modulo="controle_acesso">
-      <div class="sb-label" onclick="toggleSbSection(this)">Controle de Acesso <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.controleAcesso">Controle de Acesso</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('acessoDash',this)"><span class="ic">🚪</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoDispositivos',this)"><span class="ic">📡</span> Dispositivos</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoFaces',this)"><span class="ic">👤</span> Faces Cadastradas</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoRfid',this)"><span class="ic">💳</span> Cartões RFID</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoPermissoes',this)"><span class="ic">🔐</span> Permissões de Retirada</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoEventos',this)"><span class="ic">📋</span> Log de Acessos</a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoDash',this)"><span class="ic">🚪</span> <span data-i18n="gerente.nav.acessoDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoDispositivos',this)"><span class="ic">📡</span> <span data-i18n="gerente.nav.dispositivos">Dispositivos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoFaces',this)"><span class="ic">👤</span> <span data-i18n="gerente.nav.facesCadastradas">Faces Cadastradas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoRfid',this)"><span class="ic">💳</span> <span data-i18n="gerente.nav.cartoesRfid">Cartões RFID</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoPermissoes',this)"><span class="ic">🔐</span> <span data-i18n="gerente.nav.permissoesRetirada">Permissões de Retirada</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoEventos',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.logAcessos">Log de Acessos</span></a>
       </div>
       </div>
 
       <!-- ═══ COMPLIANCE — REGULATÓRIO ═══ -->
       <div data-modulo="compliance">
-      <div class="sb-label" onclick="toggleSbSection(this)">Compliance <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.compliance">Compliance</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> Painel Geral</a>
-        <a class="nav-item" href="#" onclick="showPanel('compAlertas',this)"><span class="ic">📧</span> Alertas</a>
-        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> Incidentes</a>
-        <a class="nav-item" href="#" onclick="showPanel('compCertificacoes',this)"><span class="ic">🎓</span> Certificações</a>
-        <a class="nav-item" href="#" onclick="showPanel('compInspecoes',this)"><span class="ic">📋</span> Inspeções</a>
-        <a class="nav-item" href="#" onclick="showPanel('compPoliticas',this)"><span class="ic">📄</span> Políticas</a>
-        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> Calendário Regulatório</a>
+        <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> <span data-i18n="gerente.nav.compPainelGeral">Painel Geral</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compAlertas',this)"><span class="ic">📧</span> <span data-i18n="gerente.nav.compAlertas">Alertas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> <span data-i18n="gerente.nav.compIncidentes">Incidentes</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compCertificacoes',this)"><span class="ic">🎓</span> <span data-i18n="gerente.nav.compCertificacoes">Certificações</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compInspecoes',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.compInspecoes">Inspeções</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compPoliticas',this)"><span class="ic">📄</span> <span data-i18n="gerente.nav.compPoliticas">Políticas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.compCalendario">Calendário Regulatório</span></a>
       </div>
       </div>
 
       <!-- ═══ PONTO CLT ═══ -->
       <div data-modulo="compliance">
-      <div class="sb-label" onclick="toggleSbSection(this)">Ponto CLT <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.pontoClt">Ponto CLT</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> Horários de Profs</a>
-        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> Importar Ponto</a>
-        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> Hora Extra</a>
-        <a class="nav-item" href="#" onclick="showPanel('compFeriados',this)"><span class="ic">📅</span> Feriados</a>
-        <a class="nav-item" href="#" onclick="showPanel('compConfig',this)"><span class="ic">⚙️</span> Config. de Ponto</a>
+        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> <span data-i18n="gerente.nav.horarioProfs">Horários de Profs</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> <span data-i18n="gerente.nav.importarPonto">Importar Ponto</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.horaExtra">Hora Extra</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compFeriados',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.feriados">Feriados</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.configPonto">Config. de Ponto</span></a>
       </div>
       </div>
 
@@ -649,19 +649,19 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       <!-- ═══ PORTAIS ═══ -->
       <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
-        <a class="nav-item" href="familia.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👨‍👩‍👧</span> Portal Pais</a>
-        <a class="nav-item" href="professora.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👩‍🏫</span> Portal Professoras</a>
-        <a class="nav-item" href="secretaria.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">📋</span> Portal Secretaria</a>
+        <a class="nav-item" href="familia.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👨‍👩‍👧</span> <span data-i18n="gerente.nav.portalPais">Portal Pais</span></a>
+        <a class="nav-item" href="professora.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👩‍🏫</span> <span data-i18n="gerente.nav.portalProfessoras">Portal Professoras</span></a>
+        <a class="nav-item" href="secretaria.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">📋</span> <span data-i18n="gerente.nav.portalSecretaria">Portal Secretaria</span></a>
       </div>
 
       <!-- ═══ EMERGÊNCIA ═══ -->
       <div data-modulo="emergencias" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
-        <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
+        <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> <span data-i18n="gerente.nav.emergencia">Emergência</span></a>
       </div>
     </nav>
     <div class="sb-footer">
       <div class="user-info"><strong id="userNome">Gerente</strong><span id="userEmail"></span></div>
-      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+      <button class="logout-btn" onclick="doLogout()">↩ <span data-i18n="nav.logout">Sair</span></button>
     </div>
   </div>
 
