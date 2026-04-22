@@ -198,7 +198,18 @@
     "year": "Ano",
     "semester": "Semestre",
     "trimester": "Trimestre",
-    "bimester": "Bimestre"
+    "bimester": "Bimestre",
+    "responsible": "Responsável",
+    "guardian": "Responsável legal",
+    "document": "Documento",
+    "attachment": "Anexo",
+    "observation": "Observação",
+    "deadline": "Prazo",
+    "priority": "Prioridade",
+    "high": "Alta",
+    "medium": "Média",
+    "low": "Baixa",
+    "notApplicable": "Não se aplica"
   },
   "gerente": {
     "title": "Painel do Gerente",
@@ -365,6 +376,66 @@
       "dueDate": "Vencimento",
       "paidAt": "Pago em",
       "boletoNumber": "Número do boleto"
+    },
+    "crm": {
+      "newLead": "Novo Lead",
+      "source": "Origem",
+      "stage": "Etapa",
+      "responsible": "Responsável",
+      "nextContact": "Próximo contato",
+      "notes": "Observações",
+      "convertToEnrollment": "Converter em matrícula",
+      "lostReason": "Motivo da perda",
+      "wonAt": "Data de conversão",
+      "probability": "Probabilidade"
+    },
+    "equipe": {
+      "newMember": "Novo Membro",
+      "role": "Cargo",
+      "hireDate": "Data de admissão",
+      "department": "Departamento",
+      "statusActive": "Ativo",
+      "statusInactive": "Inativo",
+      "statusOnLeave": "Afastado",
+      "workSchedule": "Jornada de trabalho",
+      "contract": "Tipo de contrato"
+    },
+    "compliancePanel": {
+      "score": "Pontuação",
+      "lastAudit": "Última auditoria",
+      "nextDue": "Próximo vencimento",
+      "certificationStatus": "Status da certificação",
+      "incidentType": "Tipo de incidente",
+      "severity": "Gravidade",
+      "openIncidents": "Incidentes abertos",
+      "closedIncidents": "Incidentes encerrados"
+    },
+    "almoxarifadoPanel": {
+      "requestedBy": "Solicitado por",
+      "approvedBy": "Aprovado por",
+      "quantity": "Quantidade",
+      "unit": "Unidade",
+      "estimatedCost": "Custo estimado",
+      "totalCost": "Custo total",
+      "budgetBalance": "Saldo do orçamento",
+      "category": "Categoria",
+      "supplier": "Fornecedor",
+      "purchaseDate": "Data da compra"
+    },
+    "pontoCltPanel": {
+      "workHours": "Horas trabalhadas",
+      "overtime": "Hora extra",
+      "nightShift": "Hora noturna",
+      "absences": "Faltas",
+      "hourBank": "Banco de horas",
+      "period": "Competência",
+      "justified": "Justificado"
+    },
+    "controleAcessoPanel": {
+      "lastEntry": "Última entrada",
+      "lastExit": "Última saída",
+      "deviceStatus": "Status do dispositivo",
+      "syncPending": "Sincronização pendente"
     }
   },
   "prof": {
@@ -404,6 +475,23 @@
       "markAll": "Marcar todos",
       "confirmAttendance": "Confirmar chamada",
       "selectDate": "Selecionar data"
+    },
+    "notas": {
+      "selectClass": "Selecionar turma",
+      "selectSubject": "Selecionar disciplina",
+      "selectPeriod": "Selecionar período",
+      "enterGrade": "Lançar nota",
+      "gradeRange": "Nota de 0 a 10",
+      "saveGrades": "Salvar notas",
+      "published": "Publicado"
+    },
+    "materiais": {
+      "uploadMaterial": "Enviar material",
+      "fileType": "Tipo de arquivo",
+      "sharedWith": "Compartilhado com",
+      "allClasses": "Todas as turmas",
+      "selectClass": "Selecionar turma",
+      "description": "Descrição"
     }
   },
   "pais": {
@@ -440,6 +528,13 @@
       "period": "Período",
       "subject": "Disciplina",
       "average": "Média"
+    },
+    "mensagens": {
+      "newMessage": "Nova mensagem",
+      "to": "Para",
+      "subject": "Assunto",
+      "replyTo": "Responder",
+      "unread": "Não lida"
     }
   },
   "secretaria": {
@@ -474,6 +569,16 @@
       "frequencia": "Frequência",
       "provas": "Provas",
       "calendario": "Calendário"
+    },
+    "notas": {
+      "subject": "Disciplina",
+      "grade": "Nota",
+      "average": "Média",
+      "period": "Período",
+      "situation": "Situação",
+      "approved": "Aprovado",
+      "failed": "Reprovado",
+      "recovering": "Em recuperação"
     }
   }
 }

@@ -198,7 +198,18 @@
     "year": "Year",
     "semester": "Semester",
     "trimester": "Trimester",
-    "bimester": "Quarter"
+    "bimester": "Quarter",
+    "responsible": "Responsible party",
+    "guardian": "Legal guardian",
+    "document": "Document",
+    "attachment": "Attachment",
+    "observation": "Note",
+    "deadline": "Deadline",
+    "priority": "Priority",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "notApplicable": "Not applicable"
   },
   "gerente": {
     "title": "Manager Dashboard",
@@ -365,6 +376,66 @@
       "dueDate": "Due date",
       "paidAt": "Paid on",
       "boletoNumber": "Invoice number"
+    },
+    "crm": {
+      "newLead": "New Lead",
+      "source": "Source",
+      "stage": "Stage",
+      "responsible": "Owner",
+      "nextContact": "Next contact",
+      "notes": "Notes",
+      "convertToEnrollment": "Convert to enrollment",
+      "lostReason": "Loss reason",
+      "wonAt": "Conversion date",
+      "probability": "Probability"
+    },
+    "equipe": {
+      "newMember": "New Member",
+      "role": "Role",
+      "hireDate": "Hire date",
+      "department": "Department",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusOnLeave": "On leave",
+      "workSchedule": "Work schedule",
+      "contract": "Contract type"
+    },
+    "compliancePanel": {
+      "score": "Score",
+      "lastAudit": "Last audit",
+      "nextDue": "Next due date",
+      "certificationStatus": "Certification status",
+      "incidentType": "Incident type",
+      "severity": "Severity",
+      "openIncidents": "Open incidents",
+      "closedIncidents": "Closed incidents"
+    },
+    "almoxarifadoPanel": {
+      "requestedBy": "Requested by",
+      "approvedBy": "Approved by",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "estimatedCost": "Estimated cost",
+      "totalCost": "Total cost",
+      "budgetBalance": "Budget balance",
+      "category": "Category",
+      "supplier": "Supplier",
+      "purchaseDate": "Purchase date"
+    },
+    "pontoCltPanel": {
+      "workHours": "Hours worked",
+      "overtime": "Overtime",
+      "nightShift": "Night shift",
+      "absences": "Absences",
+      "hourBank": "Hour bank",
+      "period": "Pay period",
+      "justified": "Excused"
+    },
+    "controleAcessoPanel": {
+      "lastEntry": "Last entry",
+      "lastExit": "Last exit",
+      "deviceStatus": "Device status",
+      "syncPending": "Sync pending"
     }
   },
   "prof": {
@@ -404,6 +475,23 @@
       "markAll": "Mark all",
       "confirmAttendance": "Confirm attendance",
       "selectDate": "Select date"
+    },
+    "notas": {
+      "selectClass": "Select class",
+      "selectSubject": "Select subject",
+      "selectPeriod": "Select period",
+      "enterGrade": "Enter grade",
+      "gradeRange": "Grade from 0 to 10",
+      "saveGrades": "Save grades",
+      "published": "Published"
+    },
+    "materiais": {
+      "uploadMaterial": "Upload material",
+      "fileType": "File type",
+      "sharedWith": "Shared with",
+      "allClasses": "All classes",
+      "selectClass": "Select class",
+      "description": "Description"
     }
   },
   "pais": {
@@ -440,6 +528,13 @@
       "period": "Period",
       "subject": "Subject",
       "average": "Average"
+    },
+    "mensagens": {
+      "newMessage": "New message",
+      "to": "To",
+      "subject": "Subject",
+      "replyTo": "Reply",
+      "unread": "Unread"
     }
   },
   "secretaria": {
@@ -474,6 +569,16 @@
       "frequencia": "Attendance",
       "provas": "Exams",
       "calendario": "Calendar"
+    },
+    "notas": {
+      "subject": "Subject",
+      "grade": "Grade",
+      "average": "Average",
+      "period": "Period",
+      "situation": "Status",
+      "approved": "Passed",
+      "failed": "Failed",
+      "recovering": "Remedial"
     }
   }
 }
