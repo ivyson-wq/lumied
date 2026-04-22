@@ -2859,9 +2859,11 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
   if (action === "impressao_marcar_impresso") {
-    const { id } = body as { id: string };
+    const { id, turma_destino } = body as { id: string; turma_destino?: string };
     if (!id) return err("ID obrigatorio.");
-    await admin.from("impressoes").update({ status: "impresso", impresso_em: new Date().toISOString() }).eq("id", id).eq("escola_id", sessionEscolaId);
+    const updateFields: Record<string, unknown> = { status: "impresso", impresso_em: new Date().toISOString() };
+    if (turma_destino) updateFields.turma_destino = turma_destino;
+    await admin.from("impressoes").update(updateFields).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "impressao_marcar_entregue") {

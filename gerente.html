@@ -11246,8 +11246,39 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadImpressoesGerente();
   }
   async function impMarcarImpresso(id) {
-    await api({ action: 'impressao_marcar_impresso', id });
-    showToast('Marcado como impresso!', 'success');
+    // Buscar turmas
+    let turmas = window._impTurmasCache || [];
+    if (!turmas.length) {
+      try {
+        const d = await api({ action: 'series_list' });
+        turmas = Array.isArray(d) ? d : (d?.data || []);
+        window._impTurmasCache = turmas;
+      } catch { turmas = []; }
+    }
+    const turmaDestino = await new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;';
+      overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:380px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2);">
+        <h3 style="font-family:'Lora',serif;font-size:16px;margin-bottom:12px;">🖨️ Turma de destino</h3>
+        <select id="impTurmaSelGer" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;margin-bottom:16px;">
+          <option value="">— Selecione —</option>
+          ${turmas.map(t => '<option value="' + esc(t.nome) + '">' + esc(t.nome) + '</option>').join('')}
+        </select>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button onclick="this.closest('div[style]').parentElement.remove()" style="padding:8px 18px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button id="impConfirmGer" style="padding:8px 18px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Confirmar</button>
+        </div></div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (e) => { if(e.target===overlay) { overlay.remove(); resolve(null); }});
+      document.getElementById('impConfirmGer').onclick = () => {
+        const v = document.getElementById('impTurmaSelGer').value;
+        overlay.remove();
+        resolve(v || null);
+      };
+    });
+    if (!turmaDestino) return;
+    await api({ action: 'impressao_marcar_impresso', id, turma_destino: turmaDestino });
+    showToast('Marcado como impresso! Entregar para: ' + turmaDestino, 'success');
     loadImpressoesGerente();
   }
   async function impMarcarEntregue(id) {

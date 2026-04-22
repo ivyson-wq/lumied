@@ -1825,7 +1825,7 @@ Deno.serve(async (req) => {
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
-    'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_observacoes',
+    'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_observacoes', 'alm_excel_observacoes',
     'alm_pdf_entregues', 'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
   ].includes(action)
 
