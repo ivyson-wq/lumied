@@ -49,6 +49,7 @@ export function initPortal({ tokenKey, onAuthError }) {
   window.__api = api;
   window.__store = appStore;
   window.__toast = showToast;
+  window.__translatePage = translatePage;
 
   // i18n — translate page and add language switcher
   translatePage();
@@ -58,11 +59,29 @@ export function initPortal({ tokenKey, onAuthError }) {
 }
 
 function _injectLangSwitcher() {
-  const footer = document.querySelector('.sb-footer');
-  if (!footer) return;
   const switcher = createLangSwitcher();
-  switcher.style.cssText = 'margin-bottom:10px;';
-  footer.insertBefore(switcher, footer.firstChild);
+
+  // Try sidebar footer first (gerente, secretaria, admin)
+  const footer = document.querySelector('.sb-footer');
+  if (footer) {
+    switcher.style.cssText = 'margin-bottom:10px;';
+    footer.insertBefore(switcher, footer.firstChild);
+    return;
+  }
+
+  // Try topbar user area (professora, aluno)
+  const topbarUser = document.querySelector('.topbar-user');
+  if (topbarUser) {
+    topbarUser.prepend(switcher);
+    return;
+  }
+
+  // Pais portal: inject into site-header
+  const headerInner = document.querySelector('.header-inner');
+  if (headerInner) {
+    switcher.style.cssText = 'margin-top:12px;justify-content:center;';
+    headerInner.appendChild(switcher);
+  }
 }
 
 /**

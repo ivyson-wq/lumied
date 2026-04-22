@@ -652,6 +652,99 @@
   }
 
   // ═══════════════════════════════════════════════════
+  // 16. LANG SWITCHER — fallback injection for portals
+  //     without a portal-init.js bundle
+  // ═══════════════════════════════════════════════════
+  function setupLangSwitcher() {
+    // Skip if already injected by portal-init.js
+    if (document.querySelector('.lang-switcher')) return;
+
+    const STORAGE_KEY = 'lumied_lang';
+    const STYLES = `
+.lang-switcher{display:inline-flex;align-items:center;gap:2px;background:rgba(0,0,0,.2);border-radius:8px;padding:3px;flex-shrink:0;}
+.lang-btn{padding:4px 10px;border:none;background:transparent;color:rgba(255,255,255,.55);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .2s;white-space:nowrap;line-height:1.4;}
+.lang-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.9);}
+.lang-btn.active{background:rgba(255,255,255,.14);color:#fff;}
+`;
+
+    if (!document.getElementById('lang-switcher-styles')) {
+      const style = document.createElement('style');
+      style.id = 'lang-switcher-styles';
+      style.textContent = STYLES;
+      document.head.appendChild(style);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'lang-switcher';
+    wrapper.setAttribute('role', 'group');
+    wrapper.setAttribute('aria-label', 'Language / Idioma');
+
+    const ptBtn = document.createElement('button');
+    ptBtn.className = 'lang-btn';
+    ptBtn.setAttribute('data-lang', 'pt-BR');
+    ptBtn.setAttribute('aria-label', 'Português (Brasil)');
+    ptBtn.textContent = '🇧🇷 PT';
+
+    const enBtn = document.createElement('button');
+    enBtn.className = 'lang-btn';
+    enBtn.setAttribute('data-lang', 'en');
+    enBtn.setAttribute('aria-label', 'English');
+    enBtn.textContent = '🇺🇸 EN';
+
+    function getCurrentLocale() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'pt-BR'; } catch (_) { return 'pt-BR'; }
+    }
+
+    function syncButtons() {
+      const locale = getCurrentLocale();
+      ptBtn.classList.toggle('active', locale === 'pt-BR');
+      enBtn.classList.toggle('active', locale === 'en');
+    }
+
+    function switchLocale(lang) {
+      try { localStorage.setItem(STORAGE_KEY, lang); } catch (_) {}
+      syncButtons();
+      // Use bundle-exposed translatePage if available, otherwise reload
+      if (typeof window.__translatePage === 'function') {
+        window.__translatePage();
+      } else {
+        location.reload();
+      }
+    }
+
+    ptBtn.addEventListener('click', () => switchLocale('pt-BR'));
+    enBtn.addEventListener('click', () => switchLocale('en'));
+
+    wrapper.appendChild(ptBtn);
+    wrapper.appendChild(enBtn);
+    syncButtons();
+
+    // Inject into the right location based on portal type
+    if (['gerente', 'secretaria', 'admin'].includes(portal)) {
+      const footer = document.querySelector('.sb-footer');
+      if (footer) {
+        wrapper.style.marginBottom = '10px';
+        footer.insertBefore(wrapper, footer.firstChild);
+        return;
+      }
+    }
+
+    // Topbar portals (professora, aluno, pais)
+    const topbarUser = document.querySelector('.topbar-user');
+    if (topbarUser) {
+      topbarUser.prepend(wrapper);
+      return;
+    }
+
+    // Pais portal: inject into site-header
+    const headerInner = document.querySelector('.header-inner');
+    if (headerInner) {
+      wrapper.style.cssText = 'margin-top:12px;justify-content:center;';
+      headerInner.appendChild(wrapper);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════
   function init() {
@@ -663,6 +756,7 @@
     setupUsageTracking();
     setupCommandPalette();
     setupDarkMode();
+    setupLangSwitcher();
     setupKeyboardShortcuts();
     // Panel transitions and breadcrumbs need showPanel to exist first
     setTimeout(() => {

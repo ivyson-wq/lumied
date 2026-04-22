@@ -451,11 +451,46 @@
       "almoxarifado": "Almoxarifado",
       "comunicados": "Comunicados"
     },
+    "login": {
+      "greeting": "Bom dia, professora!",
+      "subtitle": "Chamada, notas, agenda digital e muito mais — tudo pronto para o seu dia.",
+      "formTitle": "Acesse seu portal",
+      "formSub": "Use o e-mail e senha fornecidos pela coordenação.",
+      "contactSupport": "Problemas para acessar? Fale com a coordenação."
+    },
+    "sidebar": {
+      "rotina": "Rotina",
+      "filaRetirada": "Fila de Retirada",
+      "turnos": "Turnos",
+      "secaoAcademico": "Acadêmico",
+      "diplomasRanking": "Diplomas & Ranking",
+      "atividadesExtras": "Atividades Extras",
+      "cozinha": "Cozinha",
+      "secaoOperacoes": "Operações",
+      "materiais": "Materiais",
+      "atestados": "Atestados",
+      "manutencao": "Manutenção",
+      "impressoes": "Impressões",
+      "achadosPerdidos": "Achados & Perdidos",
+      "modulos": "Módulos"
+    },
+    "bnav": {
+      "painel": "Painel",
+      "fila": "Fila",
+      "agenda": "Agenda",
+      "mais": "Mais",
+      "achados": "Achados",
+      "turnos": "Turnos",
+      "ativExtras": "Ativ. Extras"
+    },
     "dashboard": {
       "minhasTurmas": "Minhas Turmas",
       "proximasAulas": "Próximas Aulas",
       "alertasAcesso": "Alertas de Acesso",
-      "tarefasPendentes": "Tarefas Pendentes"
+      "tarefasPendentes": "Tarefas Pendentes",
+      "meuPainel": "Meu Painel",
+      "agendaHoje": "Agenda de Hoje",
+      "filaRetirada": "Fila de Retirada"
     },
     "alerts": {
       "studentArrived": "{{name}} chegou",
@@ -496,6 +531,20 @@
   },
   "pais": {
     "title": "Portal dos Pais",
+    "login": {
+      "portalTitle": "Portal dos Pais",
+      "heroSub": "Notas, agenda digital, boletos e pickup — tudo na palma da mão.",
+      "identifique": "Identifique-se para continuar",
+      "identifiqueSub": "Para garantir a autenticidade das solicitações, confirme sua identidade.",
+      "criarConta": "Criar conta",
+      "esqueciSenha": "Esqueci minha senha",
+      "acessoNegado": "Seu e-mail não está autorizado a acessar este formulário.",
+      "solicitarAcesso": "Solicitar Acesso",
+      "tentarOutroEmail": "← Tentar outro e-mail",
+      "solicitacaoEnviada": "Solicitação enviada!",
+      "escolaNotificada": "A escola foi notificada e analisará seus dados em breve.",
+      "voltarInicio": "Voltar ao início"
+    },
     "nav": {
       "inicio": "Início",
       "boletos": "Boletos",
@@ -504,6 +553,26 @@
       "perfil": "Perfil",
       "agenda": "Agenda",
       "pickup": "Buscar meu filho"
+    },
+    "bnav": {
+      "diaADia": "Dia a Dia",
+      "mais": "Mais",
+      "turno": "Turno",
+      "atividades": "Atividades",
+      "achados": "Achados"
+    },
+    "inicio": {
+      "benvindo": "Bem-vindo ao Portal dos Pais",
+      "acompanhe": "Acompanhe as informações do seu filho",
+      "proximosEventos": "Próximos Eventos",
+      "ultimasComunicacoes": "Últimas Comunicações"
+    },
+    "ausencia": {
+      "title": "Justificar Ausência",
+      "motivo": "Motivo",
+      "dataInicio": "Data início",
+      "dataFim": "Data fim",
+      "enviarJustificativa": "Enviar justificativa"
     },
     "actions": {
       "onMyWay": "Estou a caminho",
@@ -539,6 +608,11 @@
   },
   "secretaria": {
     "title": "Portal da Secretaria",
+    "login": {
+      "portalTitle": "Portal da Equipe",
+      "subtitle": "Secretaria & Comercial",
+      "staffPortal": "Entrar no portal da equipe"
+    },
     "nav": {
       "secretaria": "Secretaria",
       "comercial": "Comercial",
@@ -547,19 +621,130 @@
       "infraestrutura": "Infraestrutura",
       "cozinha": "Cozinha",
       "compliance": "Compliance",
-      "pontoClt": "Ponto CLT"
+      "pontoClt": "Ponto CLT",
+      "manutencao": "Manutenção"
+    },
+    "panels": {
+      "atestados": "Atestados",
+      "documentos": "Documentos",
+      "solicitacoes": "Solicitações",
+      "turmas": "Turmas",
+      "alunos": "Alunos",
+      "crm": "CRM & Matrículas",
+      "leads": "Leads",
+      "propostas": "Propostas",
+      "mensalidades": "Mensalidades",
+      "boletos": "Boletos",
+      "inadimplencia": "Inadimplência",
+      "manutencao": "Manutenção",
+      "cardapio": "Cardápio",
+      "compliance": "Compliance",
+      "pontoEspelho": "Espelho de Ponto",
+      "importarPonto": "Importar Ponto"
+    },
+    "atestados": {
+      "title": "Atestados e Documentos",
+      "pendentes": "Pendentes",
+      "aprovados": "Aprovados",
+      "rejeitados": "Rejeitados",
+      "todos": "Todos",
+      "tipo": "Tipo",
+      "professor": "Professor(a)",
+      "dataEntrega": "Data de entrega",
+      "dataAfastamento": "Data de afastamento",
+      "arquivo": "Arquivo",
+      "novoAtestado": "Novo Atestado",
+      "cid": "CID",
+      "observacoes": "Observações"
+    },
+    "crmPanel": {
+      "novosLeads": "Novos Leads",
+      "pipeline": "Pipeline de Leads",
+      "dataContato": "Data do contato",
+      "responsavel": "Responsável comercial",
+      "interesseSerie": "Série de interesse",
+      "statusLead": "Status"
+    },
+    "compliancePanel": {
+      "scoreGeral": "Score Geral",
+      "proximosVencimentos": "Próximos vencimentos",
+      "alertasAtivos": "Alertas ativos"
     }
   },
   "admin": {
     "title": "Admin da Escola",
+    "login": {
+      "title": "Acesso Admin",
+      "placeholder": "admin@escola.com"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "plano": "Plano",
+      "adicionais": "Adicionais",
       "modulos": "Módulos",
       "tickets": "Tickets",
       "lgpd": "LGPD",
+      "backups": "Backups",
+      "faturas": "Faturas Lumied",
+      "admins": "Administradores",
+      "logotipo": "Logotipo",
+      "roi": "ROI & Economia",
       "config": "Configurações",
-      "api": "API"
+      "api": "API & Integrações",
+      "visaoGeral": "Visão Geral",
+      "planoLabel": "Plano",
+      "governanca": "Governança",
+      "escolaLabel": "Escola",
+      "sistema": "Sistema"
+    },
+    "panels": {
+      "dashboardTitle": "Dashboard",
+      "usePlano": "Uso do Plano",
+      "planoAtual": "Plano Atual",
+      "usoLimites": "Uso vs Limites",
+      "alterarPlano": "Alterar Plano",
+      "adicionaisContratados": "Adicionais Contratados",
+      "adicionaisDisponiveis": "Adicionais Disponíveis",
+      "modulosAtivos": "Módulos Ativos",
+      "ticketsSuporte": "Tickets de Suporte",
+      "solicitacoesLGPD": "Solicitações LGPD",
+      "backupsDiarios": "Backups Diários",
+      "preferencias": "Preferências",
+      "faturasLumied": "Faturas Lumied",
+      "configuracoes": "Configurações da Escola",
+      "apiIntegracoes": "API & Integrações",
+      "administradores": "Administradores"
+    },
+    "dashboard": {
+      "planoAtual": "Plano atual",
+      "totalAlunos": "Total de alunos",
+      "modulosAtivos": "Módulos ativos",
+      "ticketsAbertos": "Tickets abertos",
+      "limiteAlunos": "Limite de alunos",
+      "proxVencimento": "Próximo vencimento"
+    },
+    "modulos": {
+      "ativar": "Ativar",
+      "desativar": "Desativar",
+      "moduleAtivo": "Ativo",
+      "moduleInativo": "Inativo",
+      "modificarModulos": "Modificar Módulos"
+    },
+    "config": {
+      "nomeDaEscola": "Nome da escola",
+      "subdominio": "Subdomínio",
+      "emailContato": "E-mail de contato",
+      "telefone": "Telefone",
+      "cnpj": "CNPJ",
+      "salvarConfiguracoes": "Salvar configurações"
+    },
+    "api": {
+      "chaveApi": "Chave de API",
+      "tokenAcesso": "Token de acesso",
+      "webhookUrl": "URL do webhook",
+      "integracoes": "Integrações",
+      "copiarChave": "Copiar chave",
+      "gerarNovaChave": "Gerar nova chave"
     }
   },
   "aluno": {
@@ -579,6 +764,77 @@
       "approved": "Aprovado",
       "failed": "Reprovado",
       "recovering": "Em recuperação"
+    },
+    "login": {
+      "heroTitle": "Seu portal, suas notas!",
+      "heroSub": "Acompanhe notas, frequência e provas em tempo real.",
+      "greeting": "Olá, estudante!",
+      "subtitle": "Use o e-mail e senha que recebeu da escola."
+    },
+    "tabs": {
+      "minhasNotas": "Minhas Notas",
+      "frequencia": "Frequência",
+      "provasDisponiveis": "Provas Disponíveis",
+      "calendario": "Calendário",
+      "emBreve": "Em breve"
+    },
+    "bnav": {
+      "notas": "Notas",
+      "frequencia": "Frequência",
+      "provas": "Provas"
+    },
+    "frequencia": {
+      "presenca": "Presença",
+      "totalAulas": "Aulas",
+      "totalFaltas": "Faltas",
+      "totalPresencas": "Presenças",
+      "percentual": "Percentual de presença"
+    },
+    "provas": {
+      "iniciar": "Iniciar",
+      "semLimite": "Sem limite",
+      "respondida": "Respondida",
+      "tempoLimite": "Tempo limite",
+      "pontuacao": "Pontuação",
+      "nenhumaProva": "Nenhuma prova disponível.",
+      "emBreve": "Em breve"
     }
+  },
+  "hub": {
+    "title": "Área Restrita",
+    "selectPortal": "Selecione seu portal",
+    "welcome": "Bem-vindo",
+    "noPortalAccess": "Sem acesso a portais",
+    "portalGerente": "Portal do Gerente",
+    "portalProfessora": "Portal das Professoras",
+    "portalSecretaria": "Portal da Equipe",
+    "portalPais": "Portal dos Pais",
+    "portalAluno": "Portal do Aluno",
+    "portalAdmin": "Admin da Escola"
+  },
+  "notifications": {
+    "title": "Notificações",
+    "markAllRead": "Marcar todas como lidas",
+    "noNotifications": "Nenhuma notificação.",
+    "newPickupRequest": "Nova solicitação de retirada",
+    "newMessage": "Nova mensagem",
+    "attendanceAlert": "Alerta de frequência",
+    "newLead": "Novo lead",
+    "paymentAlert": "Alerta de pagamento",
+    "systemAlert": "Alerta do sistema"
+  },
+  "form": {
+    "nomeCompleto": "Nome completo",
+    "cpf": "CPF",
+    "telefone": "Telefone",
+    "endereco": "Endereço",
+    "crianca": "Nome da criança",
+    "enviarSolicitacao": "Enviar Solicitação",
+    "criarConta": "Criar Conta",
+    "voltar": "← Voltar",
+    "obrigatorio": "* Campo obrigatório",
+    "placeholderNome": "Seu nome completo",
+    "placeholderCpf": "000.000.000-00",
+    "placeholderTelefone": "(00) 90000-0000"
   }
 }

@@ -163,12 +163,12 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-logo"><img src="/lumied-logo-branco.png" style="height:40px;object-fit:contain;" alt="Lumied"><h1 id="loginTitle">Admin Escola</h1></div>
+    <div class="login-logo"><img src="/lumied-logo-branco.png" style="height:40px;object-fit:contain;" alt="Lumied"><h1 id="loginTitle" data-i18n="admin.title">Admin Escola</h1></div>
     <div id="loginForm">
-      <h2>Acesso Admin</h2>
-      <div class="lf"><label>Email</label><input id="loginEmail" type="email" placeholder="admin@escola.com" autocomplete="email"></div>
-      <div class="lf"><label>Senha</label><input id="loginSenha" type="password" placeholder="Sua senha" autocomplete="current-password"></div>
-      <button class="login-btn" onclick="doLogin()">Entrar</button>
+      <h2 data-i18n="admin.login.title">Acesso Admin</h2>
+      <div class="lf"><label data-i18n="auth.email">Email</label><input id="loginEmail" type="email" placeholder="admin@escola.com" autocomplete="email" data-i18n-placeholder="admin.login.placeholder"></div>
+      <div class="lf"><label data-i18n="auth.password">Senha</label><input id="loginSenha" type="password" placeholder="Sua senha" autocomplete="current-password"></div>
+      <button class="login-btn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
     </div>
     <div id="loginError"></div>
   </div>
@@ -179,28 +179,28 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   <nav class="sidebar" role="navigation" aria-label="Menu principal">
     <div class="sb-brand"><img src="/lumied-logo-branco.png" class="sb-leaf" style="height:28px;object-fit:contain;" alt="Lumied"><h1 id="escolaNome">Escola</h1><span>Admin</span></div>
     <div class="sb-nav">
-      <div class="sb-label">Visao Geral</div>
-      <a class="nav-item active" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Dashboard</a>
-      <div class="sb-label">Plano</div>
-      <a class="nav-item" onclick="showPanel('plano',this)"><span class="ic">📋</span> Meu Plano</a>
-      <a class="nav-item" onclick="showPanel('adicionais',this)"><span class="ic">🛒</span> Adicionais</a>
-      <a class="nav-item" onclick="showPanel('modulos',this)"><span class="ic">🧩</span> Modulos</a>
-      <div class="sb-label">Governança</div>
-      <a class="nav-item" onclick="showPanel('tickets',this)" id="navTickets"><span class="ic">🎫</span> Tickets<span class="nav-badge" id="badgeTickets" style="display:none;"></span></a>
-      <a class="nav-item" onclick="showPanel('lgpd',this)"><span class="ic">🔒</span> LGPD</a>
-      <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
-      <a class="nav-item" onclick="showPanel('faturas',this)"><span class="ic">🧾</span> Faturas Lumied</a>
-      <a class="nav-item" onclick="showPanel('admins',this)"><span class="ic">👤</span> Admins</a>
-      <div class="sb-label">Escola</div>
-      <a class="nav-item" href="/gerente.html#logo" target="_blank" rel="noopener"><span class="ic">🖼️</span> Logotipo</a>
-      <a class="nav-item" href="/gerente.html#roi" target="_blank" rel="noopener"><span class="ic">📈</span> ROI & Economia</a>
-      <div class="sb-label">Sistema</div>
-      <a class="nav-item" onclick="showPanel('config',this)"><span class="ic">⚙️</span> Configurações</a>
-      <a class="nav-item" onclick="showPanel('api',this)"><span class="ic">🔗</span> API & Integrações</a>
+      <div class="sb-label" data-i18n="admin.nav.visaoGeral">Visao Geral</div>
+      <a class="nav-item active" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> <span data-i18n="admin.nav.dashboard">Dashboard</span></a>
+      <div class="sb-label" data-i18n="admin.nav.planoLabel">Plano</div>
+      <a class="nav-item" onclick="showPanel('plano',this)"><span class="ic">📋</span> <span data-i18n="admin.nav.plano">Meu Plano</span></a>
+      <a class="nav-item" onclick="showPanel('adicionais',this)"><span class="ic">🛒</span> <span data-i18n="admin.nav.adicionais">Adicionais</span></a>
+      <a class="nav-item" onclick="showPanel('modulos',this)"><span class="ic">🧩</span> <span data-i18n="admin.nav.modulos">Modulos</span></a>
+      <div class="sb-label" data-i18n="admin.nav.governanca">Governança</div>
+      <a class="nav-item" onclick="showPanel('tickets',this)" id="navTickets"><span class="ic">🎫</span> <span data-i18n="admin.nav.tickets">Tickets</span><span class="nav-badge" id="badgeTickets" style="display:none;"></span></a>
+      <a class="nav-item" onclick="showPanel('lgpd',this)"><span class="ic">🔒</span> <span data-i18n="admin.nav.lgpd">LGPD</span></a>
+      <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> <span data-i18n="admin.nav.backups">Backups</span></a>
+      <a class="nav-item" onclick="showPanel('faturas',this)"><span class="ic">🧾</span> <span data-i18n="admin.nav.faturas">Faturas Lumied</span></a>
+      <a class="nav-item" onclick="showPanel('admins',this)"><span class="ic">👤</span> <span data-i18n="admin.nav.admins">Admins</span></a>
+      <div class="sb-label" data-i18n="admin.nav.escolaLabel">Escola</div>
+      <a class="nav-item" href="/gerente.html#logo" target="_blank" rel="noopener"><span class="ic">🖼️</span> <span data-i18n="admin.nav.logotipo">Logotipo</span></a>
+      <a class="nav-item" href="/gerente.html#roi" target="_blank" rel="noopener"><span class="ic">📈</span> <span data-i18n="admin.nav.roi">ROI & Economia</span></a>
+      <div class="sb-label" data-i18n="admin.nav.sistema">Sistema</div>
+      <a class="nav-item" onclick="showPanel('config',this)"><span class="ic">⚙️</span> <span data-i18n="admin.nav.config">Configurações</span></a>
+      <a class="nav-item" onclick="showPanel('api',this)"><span class="ic">🔗</span> <span data-i18n="admin.nav.api">API & Integrações</span></a>
     </div>
     <div class="sb-footer">
       <div class="user-info"><strong id="adminNome">Admin</strong><span id="adminEmail">admin@escola.com</span></div>
-      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+      <button class="logout-btn" onclick="doLogout()" data-i18n="nav.logout">↩ Sair</button>
     </div>
   </nav>
 
@@ -213,33 +213,33 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div id="panelDashboard" class="panel active">
         <div class="kpi-grid" id="dashKpis"></div>
         <div id="dashAlerts"></div>
-        <div class="sec-title">Uso do Plano</div>
+        <div class="sec-title" data-i18n="admin.panels.usePlano">Uso do Plano</div>
         <div class="form-card" id="dashUsage"></div>
       </div>
 
       <!-- MEU PLANO -->
       <div id="panelPlano" class="panel">
         <div id="planoAlerts"></div>
-        <div class="sec-title">Plano Atual</div>
+        <div class="sec-title" data-i18n="admin.panels.planoAtual">Plano Atual</div>
         <div class="form-card" id="planoAtual"></div>
-        <div class="sec-title">Uso vs Limites</div>
+        <div class="sec-title" data-i18n="admin.panels.usoLimites">Uso vs Limites</div>
         <div class="form-card" id="planoUso"></div>
-        <div class="sec-title">Alterar Plano</div>
+        <div class="sec-title" data-i18n="admin.panels.alterarPlano">Alterar Plano</div>
         <div id="planosGrid" class="plans-grid"></div>
         <div id="planoPendentes"></div>
       </div>
 
       <!-- ADICIONAIS -->
       <div id="panelAdicionais" class="panel">
-        <div class="sec-title">Adicionais Contratados</div>
+        <div class="sec-title" data-i18n="admin.panels.adicionaisContratados">Adicionais Contratados</div>
         <div id="extrasContratados"></div>
-        <div class="sec-title">Adicionais Disponiveis</div>
+        <div class="sec-title" data-i18n="admin.panels.adicionaisDisponiveis">Adicionais Disponiveis</div>
         <div id="extrasDisponiveis" class="extras-grid"></div>
       </div>
 
       <!-- MODULOS -->
       <div id="panelModulos" class="panel">
-        <div class="sec-title">Modulos Ativos <span class="count-badge" id="modulosCount">0</span></div>
+        <div class="sec-title"><span data-i18n="admin.panels.modulosAtivos">Modulos Ativos</span> <span class="count-badge" id="modulosCount">0</span></div>
         <div class="modulos-actions">
           <button class="action-btn" onclick="saveModulos()">Salvar Alteracoes</button>
           <button class="action-btn" style="background:var(--bg);color:var(--text);" onclick="resetModulos()">Restaurar Padrao do Plano</button>
@@ -253,7 +253,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- TICKETS -->
       <div id="panelTickets" class="panel">
-        <div class="sec-title">Tickets de Suporte <span class="count-badge" id="ticketsCount">0</span></div>
+        <div class="sec-title"><span data-i18n="admin.panels.ticketsSuporte">Tickets de Suporte</span> <span class="count-badge" id="ticketsCount">0</span></div>
         <div class="table-wrap"><table>
           <thead><tr><th>Assunto</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
           <tbody id="ticketsBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody>
@@ -262,7 +262,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- LGPD -->
       <div id="panelLgpd" class="panel">
-        <div class="sec-title">Solicitacoes LGPD</div>
+        <div class="sec-title" data-i18n="admin.panels.solicitacoesLGPD">Solicitacoes LGPD</div>
         <div class="table-wrap"><table>
           <thead><tr><th>Tipo</th><th>Solicitante</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
           <tbody id="lgpdBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
@@ -271,7 +271,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- BACKUPS -->
       <div id="panelBackups" class="panel">
-        <div class="sec-title">Backups Diários</div>
+        <div class="sec-title" data-i18n="admin.panels.backupsDiarios">Backups Diários</div>
         <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
           Um backup completo da sua escola é gerado automaticamente todo dia às 03:00 BRT.
           Retenção conforme plano: <strong>Starter/Start</strong> 14 dias, <strong>Evolução</strong> 30 dias, <strong>Prestige</strong> 90 dias.
@@ -279,7 +279,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </p>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
-          <div class="sec-title" style="font-size:14px;margin-bottom:10px;">Preferências</div>
+          <div class="sec-title" style="font-size:14px;margin-bottom:10px;" data-i18n="admin.panels.preferencias">Preferências</div>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-bottom:10px;">
             <input type="checkbox" id="bkFaces" onchange="saveBackupPrefs()">
             <span>Incluir fotos de reconhecimento facial no backup (aumenta tamanho consideravelmente)</span>
@@ -303,7 +303,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- FATURAS LUMIED -->
       <div id="panelFaturas" class="panel">
-        <div class="sec-title">Faturas Lumied</div>
+        <div class="sec-title" data-i18n="admin.panels.faturasLumied">Faturas Lumied</div>
         <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
           Mensalidade da sua escola para a Lumied. Pague via boleto, PIX ou cartão. Se houver dúvidas:
           <strong>financeiro@lumied.com.br</strong>.
@@ -316,22 +316,22 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
       <!-- CONFIG -->
       <div id="panelConfig" class="panel">
-        <div class="sec-title">Configuracoes da Escola</div>
+        <div class="sec-title" data-i18n="admin.panels.configuracoes">Configuracoes da Escola</div>
         <div id="configGrid"></div>
-        <div class="btn-bar"><button class="btn-primary" onclick="salvarConfigs()">Salvar Configuracoes</button></div>
+        <div class="btn-bar"><button class="btn-primary" onclick="salvarConfigs()" data-i18n="admin.config.salvarConfiguracoes">Salvar Configuracoes</button></div>
       </div>
 
       <!-- API -->
       <div id="panelApi" class="panel">
-        <div class="sec-title">API & Integracoes</div>
+        <div class="sec-title" data-i18n="admin.panels.apiIntegracoes">API & Integracoes</div>
         <div id="apiInfo"></div>
       </div>
 
       <!-- ADMINS -->
       <div id="panelAdmins" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-          <div class="sec-title" style="margin-bottom:0;">Administradores</div>
-          <button class="btn-primary" onclick="showAdminModal()">+ Novo Admin</button>
+          <div class="sec-title" style="margin-bottom:0;" data-i18n="admin.panels.administradores">Administradores</div>
+          <button class="btn-primary" onclick="showAdminModal()">+ <span data-i18n="admin.nav.admins">Novo Admin</span></button>
         </div>
         <div class="table-wrap"><table>
           <thead><tr><th>Nome</th><th>Email</th><th>Status</th><th>Criado em</th></tr></thead>
@@ -853,6 +853,7 @@ async function criarAdmin() {
 // ═══ INIT ═══
 checkSession();
 </script>
+<script src="/dist/admin/index.js" defer></script>
 <script src="/lumied-ux.js" defer></script>
 <script src="/lumied-a11y.js" defer></script>
 <script src="/lumied-delight.js" defer></script>

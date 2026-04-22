@@ -62,27 +62,27 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
   <div style="flex:1;background:url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80') center/cover;position:relative;display:flex;align-items:flex-end;padding:40px;" class="login-photo-side">
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),transparent 60%);"></div>
     <div style="position:relative;color:#fff;max-width:360px;">
-      <div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:6px;">Seu portal, suas notas!</div>
-      <div style="font-size:13px;opacity:.8;line-height:1.5;">Acompanhe notas, frequência e provas em tempo real.</div>
+      <div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:6px;" data-i18n="aluno.login.heroTitle">Seu portal, suas notas!</div>
+      <div style="font-size:13px;opacity:.8;line-height:1.5;" data-i18n="aluno.login.heroSub">Acompanhe notas, frequência e provas em tempo real.</div>
     </div>
   </div>
   <div style="width:480px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px;">
     <div style="width:100%;max-width:340px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
         <div style="font-size:28px;">🍁</div>
-        <div><div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Portal do Aluno</div></div>
+        <div><div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;" data-i18n="aluno.title">Portal do Aluno</div></div>
       </div>
-      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;">Olá, estudante!</h2>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;">Use o e-mail e senha que recebeu da escola.</p>
+      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;" data-i18n="aluno.login.greeting">Olá, estudante!</h2>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;" data-i18n="aluno.login.subtitle">Use o e-mail e senha que recebeu da escola.</p>
       <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#7a7169;margin-bottom:5px;">E-mail</label>
-        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" style="width:100%;padding:11px 14px;border:1.5px solid #e2dbd1;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#faf8f5;transition:border-color .2s;">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#7a7169;margin-bottom:5px;" data-i18n="auth.email">E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" style="width:100%;padding:11px 14px;border:1.5px solid #e2dbd1;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#faf8f5;transition:border-color .2s;" data-i18n-placeholder="auth.emailPlaceholder">
       </div>
       <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#7a7169;margin-bottom:5px;">Senha</label>
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#7a7169;margin-bottom:5px;" data-i18n="auth.password">Senha</label>
         <input type="password" id="loginSenha" placeholder="••••••••" autocomplete="current-password" style="width:100%;padding:11px 14px;border:1.5px solid #e2dbd1;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#faf8f5;">
       </div>
-      <button onclick="doLogin()" id="loginBtn" style="width:100%;padding:13px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;">Entrar</button>
+      <button onclick="doLogin()" id="loginBtn" style="width:100%;padding:13px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;" data-i18n="auth.login">Entrar</button>
       <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;"></div>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
         <img src="/lumied-logo.png" style="height:32px;object-fit:contain;" alt="Lumied">
@@ -96,11 +96,11 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
   <div class="topbar" role="banner">
     <div class="topbar-brand">
       <img src="/lumied-logo-branco.png" class="leaf" style="height:36px;object-fit:contain;" alt="Lumied">
-      <div><h1>Maple Bear</h1><span>Portal do Aluno</span></div>
+      <div><h1>Maple Bear</h1><span data-i18n="aluno.title">Portal do Aluno</span></div>
     </div>
     <div class="topbar-user">
       <span class="user-name" id="alunoNome"></span>
-      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+      <button class="logout-btn" onclick="doLogout()" data-i18n="nav.logout">↩ Sair</button>
     </div>
   </div>
   <div class="greeting" id="greetingBar"></div>
@@ -108,39 +108,39 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
   <!-- TAB: NOTAS -->
   <div class="tab-panel active" id="tabNotas">
     <div class="card">
-      <div class="card-title">📝 Minhas Notas</div>
-      <div id="notasContent"><div class="empty">Carregando...</div></div>
+      <div class="card-title">📝 <span data-i18n="aluno.tabs.minhasNotas">Minhas Notas</span></div>
+      <div id="notasContent"><div class="empty" data-i18n="common.loading">Carregando...</div></div>
     </div>
   </div>
 
   <!-- TAB: FREQUÊNCIA -->
   <div class="tab-panel" id="tabFrequencia">
     <div class="card">
-      <div class="card-title">✅ Frequência</div>
-      <div id="freqContent"><div class="empty">Carregando...</div></div>
+      <div class="card-title">✅ <span data-i18n="aluno.tabs.frequencia">Frequência</span></div>
+      <div id="freqContent"><div class="empty" data-i18n="common.loading">Carregando...</div></div>
     </div>
   </div>
 
   <!-- TAB: PROVAS -->
   <div class="tab-panel" id="tabProvas">
     <div class="card">
-      <div class="card-title">📝 Provas Disponíveis</div>
-      <div id="provasContent"><div class="empty">Carregando...</div></div>
+      <div class="card-title">📝 <span data-i18n="aluno.tabs.provasDisponiveis">Provas Disponíveis</span></div>
+      <div id="provasContent"><div class="empty" data-i18n="common.loading">Carregando...</div></div>
     </div>
   </div>
 
   <!-- TAB: CALENDÁRIO -->
   <div class="tab-panel" id="tabCalendario">
     <div class="card">
-      <div class="card-title">📅 Calendário</div>
-      <div id="calContent"><div class="empty">Em breve</div></div>
+      <div class="card-title">📅 <span data-i18n="aluno.tabs.calendario">Calendário</span></div>
+      <div id="calContent"><div class="empty" data-i18n="aluno.tabs.emBreve">Em breve</div></div>
     </div>
   </div>
 
   <nav class="bnav" role="navigation" aria-label="Menu principal">
-    <button class="bnav-item active" onclick="switchTab('notas',this)"><span class="bnav-icon">📝</span>Notas</button>
-    <button class="bnav-item" onclick="switchTab('frequencia',this)"><span class="bnav-icon">✅</span>Frequência</button>
-    <button class="bnav-item" onclick="switchTab('provas',this)"><span class="bnav-icon">📋</span>Provas</button>
+    <button class="bnav-item active" onclick="switchTab('notas',this)"><span class="bnav-icon">📝</span><span data-i18n="aluno.bnav.notas">Notas</span></button>
+    <button class="bnav-item" onclick="switchTab('frequencia',this)"><span class="bnav-icon">✅</span><span data-i18n="aluno.bnav.frequencia">Frequência</span></button>
+    <button class="bnav-item" onclick="switchTab('provas',this)"><span class="bnav-icon">📋</span><span data-i18n="aluno.bnav.provas">Provas</span></button>
   </nav>
 </div>
 
@@ -268,6 +268,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('loginWall').style.display !== 'none') doLogin();
 });
 </script>
+<script src="/dist/aluno/index.js" defer></script>
 <script src="/lumied-ux.js" defer></script>
 <script src="/lumied-a11y.js" defer></script>
 <script src="/lumied-delight.js" defer></script>

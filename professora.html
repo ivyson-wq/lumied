@@ -402,8 +402,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   <div style="flex:1;background:url('https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&q=80') center/cover;position:relative;display:flex;align-items:flex-end;padding:40px;" class="login-photo-side">
     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),transparent 60%);"></div>
     <div style="position:relative;color:#fff;max-width:360px;">
-      <div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:6px;">Bom dia, professora!</div>
-      <div style="font-size:13px;opacity:.8;line-height:1.5;">Chamada, notas, agenda digital e muito mais — tudo pronto para o seu dia.</div>
+      <div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:6px;" data-i18n="prof.login.greeting">Bom dia, professora!</div>
+      <div style="font-size:13px;opacity:.8;line-height:1.5;" data-i18n="prof.login.subtitle">Chamada, notas, agenda digital e muito mais — tudo pronto para o seu dia.</div>
     </div>
   </div>
   <div style="width:480px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px;">
@@ -412,14 +412,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         <div style="font-size:28px;">🍁</div>
         <div><div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Maple Bear</div><div style="font-size:11px;color:#7a7169;">Portal das Professoras</div></div>
       </div>
-      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;">Acesse seu portal</h2>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;">Use o e-mail e senha fornecidos pela coordenacao.</p>
-      <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"></div>
-      <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
-      <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
-      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;">Entrar com biometria</button>
-      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;">E-mail ou senha incorretos.</div>
-      <p style="font-size:12px;color:#a89f95;text-align:center;margin-top:16px;">Problemas para acessar? Fale com a coordenacao.</p>
+      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;" data-i18n="prof.login.formTitle">Acesse seu portal</h2>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;" data-i18n="prof.login.formSub">Use o e-mail e senha fornecidos pela coordenacao.</p>
+      <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder"></div>
+      <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
+      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;" data-i18n="auth.loginWithBiometrics">Entrar com biometria</button>
+      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;" data-i18n="auth.emailOrPasswordIncorrect">E-mail ou senha incorretos.</div>
+      <p style="font-size:12px;color:#a89f95;text-align:center;margin-top:16px;" data-i18n="prof.login.contactSupport">Problemas para acessar? Fale com a coordenacao.</p>
       <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
         <img src="/lumied-logo.png" style="height:32px;object-fit:contain;" alt="Lumied">
       </div>
@@ -442,36 +442,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
     </div>
     <div class="notif-panel" id="notifPanel">
-      <div class="notif-header">Notificações <button onclick="marcarTodasLidas()">Marcar todas como lidas</button></div>
-      <div id="notifList"><div class="notif-empty">Nenhuma notificação.</div></div>
+      <div class="notif-header"><span data-i18n="notifications.title">Notificações</span> <button onclick="marcarTodasLidas()" data-i18n="notifications.markAllRead">Marcar todas como lidas</button></div>
+      <div id="notifList"><div class="notif-empty" data-i18n="notifications.noNotifications">Nenhuma notificação.</div></div>
     </div>
   </div>
 
   <div class="prof-sidebar" id="profSidebar">
-    <button class="ps-item active" onclick="switchProfPage('dashboard',this)" data-page="dashboard"><span class="ps-icon">🏠</span> Dashboard</button>
+    <button class="ps-item active" onclick="switchProfPage('dashboard',this)" data-page="dashboard"><span class="ps-icon">🏠</span> <span data-i18n="nav.dashboard">Dashboard</span></button>
 
-    <div class="ps-label">Rotina</div>
-    <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> Chamada</button>
-    <button class="ps-item" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup"><span class="ps-icon">🚗</span> Fila de Retirada</button>
-    <button class="ps-item" onclick="switchProfPage('agenda',this)" data-page="agenda" data-modulo="agenda_digital"><span class="ps-icon">📅</span> Agenda Digital</button>
-    <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> Notas</button>
-    <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> Diário</button>
-    <button class="ps-item" onclick="switchProfPage('turnos',this)" data-page="turnos" data-modulo="turno"><span class="ps-icon">📊</span> Turnos</button>
+    <div class="ps-label" data-i18n="prof.sidebar.rotina">Rotina</div>
+    <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> <span data-i18n="prof.nav.chamada">Chamada</span></button>
+    <button class="ps-item" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup"><span class="ps-icon">🚗</span> <span data-i18n="prof.sidebar.filaRetirada">Fila de Retirada</span></button>
+    <button class="ps-item" onclick="switchProfPage('agenda',this)" data-page="agenda" data-modulo="agenda_digital"><span class="ps-icon">📅</span> <span data-i18n="prof.nav.agendaDigital">Agenda Digital</span></button>
+    <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> <span data-i18n="prof.nav.notas">Notas</span></button>
+    <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> <span data-i18n="prof.nav.diario">Diário</span></button>
+    <button class="ps-item" onclick="switchProfPage('turnos',this)" data-page="turnos" data-modulo="turno"><span class="ps-icon">📊</span> <span data-i18n="prof.sidebar.turnos">Turnos</span></button>
 
-    <div class="ps-label">Acadêmico</div>
-    <button class="ps-item" onclick="switchProfPage('diplomas',this)" data-page="diplomas" data-modulo="diplomas"><span class="ps-icon">🏆</span> Diplomas & Ranking</button>
-    <button class="ps-item" onclick="switchProfPage('pdi',this)" data-page="pdi" data-modulo="pdi"><span class="ps-icon">📈</span> Growth Plan</button>
-    <button class="ps-item" onclick="switchProfPage('ativExtras',this)" data-page="ativExtras" data-modulo="atividades"><span class="ps-icon">🎯</span> Atividades Extras</button>
-    <button class="ps-item" onclick="switchProfPage('cozinha',this)" data-page="cozinha" data-modulo="cozinha"><span class="ps-icon">🍳</span> Cozinha</button>
+    <div class="ps-label" data-i18n="prof.sidebar.secaoAcademico">Acadêmico</div>
+    <button class="ps-item" onclick="switchProfPage('diplomas',this)" data-page="diplomas" data-modulo="diplomas"><span class="ps-icon">🏆</span> <span data-i18n="prof.sidebar.diplomasRanking">Diplomas & Ranking</span></button>
+    <button class="ps-item" onclick="switchProfPage('pdi',this)" data-page="pdi" data-modulo="pdi"><span class="ps-icon">📈</span> <span data-i18n="prof.nav.pdi">Growth Plan</span></button>
+    <button class="ps-item" onclick="switchProfPage('ativExtras',this)" data-page="ativExtras" data-modulo="atividades"><span class="ps-icon">🎯</span> <span data-i18n="prof.sidebar.atividadesExtras">Atividades Extras</span></button>
+    <button class="ps-item" onclick="switchProfPage('cozinha',this)" data-page="cozinha" data-modulo="cozinha"><span class="ps-icon">🍳</span> <span data-i18n="prof.sidebar.cozinha">Cozinha</span></button>
 
-    <div class="ps-label">Operações</div>
-    <button class="ps-item" onclick="switchProfPage('almox',this)" data-page="almox" data-modulo="almoxarifado"><span class="ps-icon">📦</span> Materiais</button>
-    <button class="ps-item" onclick="switchProfPage('atestados',this)" data-page="atestados" data-modulo="atestados"><span class="ps-icon">🏥</span> Atestados</button>
-    <button class="ps-item" onclick="switchProfPage('manut',this)" data-page="manut" data-modulo="manutencao"><span class="ps-icon">🔧</span> Manutenção</button>
-    <button class="ps-item" onclick="switchProfPage('impressoes',this)" data-page="impressoes" data-modulo="impressoes"><span class="ps-icon">🖨️</span> Impressões</button>
-    <button class="ps-item" onclick="switchProfPage('achados',this)" data-page="achados" data-modulo="achados"><span class="ps-icon">🔍</span> Achados & Perdidos</button>
+    <div class="ps-label" data-i18n="prof.sidebar.secaoOperacoes">Operações</div>
+    <button class="ps-item" onclick="switchProfPage('almox',this)" data-page="almox" data-modulo="almoxarifado"><span class="ps-icon">📦</span> <span data-i18n="prof.sidebar.materiais">Materiais</span></button>
+    <button class="ps-item" onclick="switchProfPage('atestados',this)" data-page="atestados" data-modulo="atestados"><span class="ps-icon">🏥</span> <span data-i18n="prof.sidebar.atestados">Atestados</span></button>
+    <button class="ps-item" onclick="switchProfPage('manut',this)" data-page="manut" data-modulo="manutencao"><span class="ps-icon">🔧</span> <span data-i18n="prof.sidebar.manutencao">Manutenção</span></button>
+    <button class="ps-item" onclick="switchProfPage('impressoes',this)" data-page="impressoes" data-modulo="impressoes"><span class="ps-icon">🖨️</span> <span data-i18n="prof.sidebar.impressoes">Impressões</span></button>
+    <button class="ps-item" onclick="switchProfPage('achados',this)" data-page="achados" data-modulo="achados"><span class="ps-icon">🔍</span> <span data-i18n="prof.sidebar.achadosPerdidos">Achados & Perdidos</span></button>
 
-    <button class="ps-item" onclick="switchProfPage('modulosConfig',this)" data-page="modulosConfig" id="sidebarModulosBtn" style="display:none;border-top:1px solid rgba(255,255,255,.1);margin-top:12px;"><span class="ps-icon">⚙️</span> Módulos</button>
+    <button class="ps-item" onclick="switchProfPage('modulosConfig',this)" data-page="modulosConfig" id="sidebarModulosBtn" style="display:none;border-top:1px solid rgba(255,255,255,.1);margin-top:12px;"><span class="ps-icon">⚙️</span> <span data-i18n="prof.sidebar.modulos">Módulos</span></button>
   </div>
 
   <div class="greeting-bar" id="greetingBar">
@@ -488,7 +488,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
     <!-- ═══ PAGE: DASHBOARD ═══ -->
     <div class="prof-page active" id="pageDashboard">
-      <div class="sec-title">🏠 Meu Painel</div>
+      <div class="sec-title">🏠 <span data-i18n="prof.dashboard.meuPainel">Meu Painel</span></div>
       <div id="profDashStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;"></div>
       <div id="profDashCards" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
         <div id="profDashAgenda" class="upload-card" style="cursor:pointer;" onclick="switchProfPage('agenda',document.querySelector('[data-page=agenda]'))">
@@ -1135,27 +1135,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 <nav class="prof-bnav" id="profBottomNav" role="navigation" aria-label="Menu principal">
   <button class="pbnav-item active" onclick="switchProfPage('dashboard',this)" data-page="dashboard">
     <span class="pbnav-icon">🏠</span>
-    <span class="pbnav-label">Painel</span>
+    <span class="pbnav-label" data-i18n="prof.bnav.painel">Painel</span>
   </button>
   <button class="pbnav-item" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup">
     <span class="pbnav-icon">🚗</span>
-    <span class="pbnav-label">Fila</span>
+    <span class="pbnav-label" data-i18n="prof.bnav.fila">Fila</span>
   </button>
   <button class="pbnav-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia">
     <span class="pbnav-icon">✅</span>
-    <span class="pbnav-label">Chamada</span>
+    <span class="pbnav-label" data-i18n="prof.nav.chamada">Chamada</span>
   </button>
   <button class="pbnav-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas">
     <span class="pbnav-icon">📝</span>
-    <span class="pbnav-label">Notas</span>
+    <span class="pbnav-label" data-i18n="prof.nav.notas">Notas</span>
   </button>
   <button class="pbnav-item" onclick="switchProfPage('agenda',this)" data-page="agenda" data-modulo="agenda_digital">
     <span class="pbnav-icon">📅</span>
-    <span class="pbnav-label">Agenda</span>
+    <span class="pbnav-label" data-i18n="prof.bnav.agenda">Agenda</span>
   </button>
   <button class="pbnav-item" onclick="toggleProfMore()" id="profMoreBtn" aria-label="Menu">
     <span class="pbnav-icon">☰</span>
-    <span class="pbnav-label">Mais</span>
+    <span class="pbnav-label" data-i18n="prof.bnav.mais">Mais</span>
   </button>
 </nav>
 
@@ -1165,18 +1165,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 <!-- Menu "Mais" expandido -->
 <div id="profMoreMenu" style="display:none;position:fixed;bottom:60px;left:0;right:0;background:#fff;border-top:1px solid var(--border);box-shadow:0 -8px 24px rgba(0,0,0,.12);z-index:60;padding:12px 16px;border-radius:16px 16px 0 0;">
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-    <button class="pbnav-more-item" onclick="switchProfPage('diplomas',this);closeProfMore()" data-modulo="diplomas"><span>🏆</span>Diplomas</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('pdi',this);closeProfMore()" data-modulo="pdi"><span>📈</span>Growth Plan</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('almox',this);closeProfMore()" data-modulo="almoxarifado"><span>📦</span>Materiais</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('atestados',this);closeProfMore()" data-modulo="atestados"><span>🏥</span>Atestados</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('manut',this);closeProfMore()" data-modulo="manutencao"><span>🔧</span>Manutenção</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('impressoes',this);closeProfMore()" data-modulo="impressoes"><span>🖨️</span>Impressões</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('achados',this);closeProfMore()" data-modulo="achados"><span>🔍</span>Achados</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('diario',this);closeProfMore()" data-modulo="diario_classe"><span>📖</span>Diário</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('turnos',this);closeProfMore()" data-modulo="turno"><span>📊</span>Turnos</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('ativExtras',this);closeProfMore()" data-modulo="atividades"><span>🎯</span>Ativ. Extras</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('cozinha',this);closeProfMore()" data-modulo="cozinha"><span>🍳</span>Cozinha</button>
-    <button class="pbnav-more-item" onclick="switchProfPage('modulosConfig',this);closeProfMore()" id="bnavModulosBtn" style="display:none;"><span>⚙️</span>Modulos</button>
+    <button class="pbnav-more-item" onclick="switchProfPage('diplomas',this);closeProfMore()" data-modulo="diplomas"><span>🏆</span><span data-i18n="prof.nav.diplomas">Diplomas</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('pdi',this);closeProfMore()" data-modulo="pdi"><span>📈</span><span data-i18n="prof.nav.pdi">Growth Plan</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('almox',this);closeProfMore()" data-modulo="almoxarifado"><span>📦</span><span data-i18n="prof.sidebar.materiais">Materiais</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('atestados',this);closeProfMore()" data-modulo="atestados"><span>🏥</span><span data-i18n="prof.sidebar.atestados">Atestados</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('manut',this);closeProfMore()" data-modulo="manutencao"><span>🔧</span><span data-i18n="prof.sidebar.manutencao">Manutenção</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('impressoes',this);closeProfMore()" data-modulo="impressoes"><span>🖨️</span><span data-i18n="prof.sidebar.impressoes">Impressões</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('achados',this);closeProfMore()" data-modulo="achados"><span>🔍</span><span data-i18n="prof.bnav.achados">Achados</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('diario',this);closeProfMore()" data-modulo="diario_classe"><span>📖</span><span data-i18n="prof.nav.diario">Diário</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('turnos',this);closeProfMore()" data-modulo="turno"><span>📊</span><span data-i18n="prof.bnav.turnos">Turnos</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('ativExtras',this);closeProfMore()" data-modulo="atividades"><span>🎯</span><span data-i18n="prof.bnav.ativExtras">Ativ. Extras</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('cozinha',this);closeProfMore()" data-modulo="cozinha"><span>🍳</span><span data-i18n="prof.sidebar.cozinha">Cozinha</span></button>
+    <button class="pbnav-more-item" onclick="switchProfPage('modulosConfig',this);closeProfMore()" id="bnavModulosBtn" style="display:none;"><span>⚙️</span><span data-i18n="prof.sidebar.modulos">Modulos</span></button>
   </div>
 </div>
 

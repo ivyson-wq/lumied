@@ -451,11 +451,46 @@
       "almoxarifado": "Supplies",
       "comunicados": "Announcements"
     },
+    "login": {
+      "greeting": "Good morning, teacher!",
+      "subtitle": "Attendance, grades, digital planner and more — all ready for your day.",
+      "formTitle": "Access your portal",
+      "formSub": "Use the email and password provided by the coordinator.",
+      "contactSupport": "Having trouble? Contact the coordinator."
+    },
+    "sidebar": {
+      "rotina": "Daily Routine",
+      "filaRetirada": "Dismissal Queue",
+      "turnos": "Shifts",
+      "secaoAcademico": "Academic",
+      "diplomasRanking": "Diplomas & Ranking",
+      "atividadesExtras": "Extracurriculars",
+      "cozinha": "Kitchen",
+      "secaoOperacoes": "Operations",
+      "materiais": "Supplies",
+      "atestados": "Medical Certificates",
+      "manutencao": "Maintenance",
+      "impressoes": "Printing",
+      "achadosPerdidos": "Lost & Found",
+      "modulos": "Modules"
+    },
+    "bnav": {
+      "painel": "Dashboard",
+      "fila": "Queue",
+      "agenda": "Planner",
+      "mais": "More",
+      "achados": "Lost & Found",
+      "turnos": "Shifts",
+      "ativExtras": "Extras"
+    },
     "dashboard": {
       "minhasTurmas": "My Classes",
       "proximasAulas": "Upcoming Lessons",
       "alertasAcesso": "Access Alerts",
-      "tarefasPendentes": "Pending Tasks"
+      "tarefasPendentes": "Pending Tasks",
+      "meuPainel": "My Dashboard",
+      "agendaHoje": "Today's Planner",
+      "filaRetirada": "Dismissal Queue"
     },
     "alerts": {
       "studentArrived": "{{name}} arrived",
@@ -496,6 +531,20 @@
   },
   "pais": {
     "title": "Parent Portal",
+    "login": {
+      "portalTitle": "Parent Portal",
+      "heroSub": "Grades, daily planner, invoices and pickup — all at your fingertips.",
+      "identifique": "Verify your identity to continue",
+      "identifiqueSub": "To ensure the authenticity of requests, please confirm your identity.",
+      "criarConta": "Create account",
+      "esqueciSenha": "Forgot my password",
+      "acessoNegado": "Your email is not authorized to access this form.",
+      "solicitarAcesso": "Request Access",
+      "tentarOutroEmail": "← Try another email",
+      "solicitacaoEnviada": "Request sent!",
+      "escolaNotificada": "The school has been notified and will review your information shortly.",
+      "voltarInicio": "Back to home"
+    },
     "nav": {
       "inicio": "Home",
       "boletos": "Invoices",
@@ -504,6 +553,26 @@
       "perfil": "Profile",
       "agenda": "Calendar",
       "pickup": "Pick up my child"
+    },
+    "bnav": {
+      "diaADia": "Daily",
+      "mais": "More",
+      "turno": "Shift",
+      "atividades": "Activities",
+      "achados": "Lost & Found"
+    },
+    "inicio": {
+      "benvindo": "Welcome to the Parent Portal",
+      "acompanhe": "Track your child's information",
+      "proximosEventos": "Upcoming Events",
+      "ultimasComunicacoes": "Latest Communications"
+    },
+    "ausencia": {
+      "title": "Report Absence",
+      "motivo": "Reason",
+      "dataInicio": "Start date",
+      "dataFim": "End date",
+      "enviarJustificativa": "Submit excuse"
     },
     "actions": {
       "onMyWay": "I'm on my way",
@@ -539,6 +608,11 @@
   },
   "secretaria": {
     "title": "Staff Portal",
+    "login": {
+      "portalTitle": "Staff Portal",
+      "subtitle": "Secretariat & Sales",
+      "staffPortal": "Sign in to the staff portal"
+    },
     "nav": {
       "secretaria": "Secretariat",
       "comercial": "Sales",
@@ -547,19 +621,130 @@
       "infraestrutura": "Infrastructure",
       "cozinha": "Kitchen",
       "compliance": "Compliance",
-      "pontoClt": "Time & Attendance"
+      "pontoClt": "Time & Attendance",
+      "manutencao": "Maintenance"
+    },
+    "panels": {
+      "atestados": "Medical Certificates",
+      "documentos": "Documents",
+      "solicitacoes": "Requests",
+      "turmas": "Classes",
+      "alunos": "Students",
+      "crm": "CRM & Enrollment",
+      "leads": "Leads",
+      "propostas": "Proposals",
+      "mensalidades": "Tuition",
+      "boletos": "Invoices",
+      "inadimplencia": "Overdue Accounts",
+      "manutencao": "Maintenance",
+      "cardapio": "Menu",
+      "compliance": "Compliance",
+      "pontoEspelho": "Timesheet",
+      "importarPonto": "Import Timesheets"
+    },
+    "atestados": {
+      "title": "Medical Certificates & Documents",
+      "pendentes": "Pending",
+      "aprovados": "Approved",
+      "rejeitados": "Rejected",
+      "todos": "All",
+      "tipo": "Type",
+      "professor": "Teacher",
+      "dataEntrega": "Submission date",
+      "dataAfastamento": "Absence date",
+      "arquivo": "File",
+      "novoAtestado": "New Certificate",
+      "cid": "CID",
+      "observacoes": "Notes"
+    },
+    "crmPanel": {
+      "novosLeads": "New Leads",
+      "pipeline": "Lead Pipeline",
+      "dataContato": "Contact date",
+      "responsavel": "Sales owner",
+      "interesseSerie": "Grade of interest",
+      "statusLead": "Status"
+    },
+    "compliancePanel": {
+      "scoreGeral": "Overall Score",
+      "proximosVencimentos": "Upcoming deadlines",
+      "alertasAtivos": "Active alerts"
     }
   },
   "admin": {
     "title": "School Admin",
+    "login": {
+      "title": "Admin Access",
+      "placeholder": "admin@school.com"
+    },
     "nav": {
       "dashboard": "Dashboard",
       "plano": "Plan",
+      "adicionais": "Add-ons",
       "modulos": "Modules",
       "tickets": "Tickets",
       "lgpd": "Privacy (LGPD)",
+      "backups": "Backups",
+      "faturas": "Lumied Invoices",
+      "admins": "Administrators",
+      "logotipo": "Logo",
+      "roi": "ROI & Savings",
       "config": "Settings",
-      "api": "API"
+      "api": "API & Integrations",
+      "visaoGeral": "Overview",
+      "planoLabel": "Plan",
+      "governanca": "Governance",
+      "escolaLabel": "School",
+      "sistema": "System"
+    },
+    "panels": {
+      "dashboardTitle": "Dashboard",
+      "usePlano": "Plan Usage",
+      "planoAtual": "Current Plan",
+      "usoLimites": "Usage vs Limits",
+      "alterarPlano": "Change Plan",
+      "adicionaisContratados": "Active Add-ons",
+      "adicionaisDisponiveis": "Available Add-ons",
+      "modulosAtivos": "Active Modules",
+      "ticketsSuporte": "Support Tickets",
+      "solicitacoesLGPD": "Privacy Requests",
+      "backupsDiarios": "Daily Backups",
+      "preferencias": "Preferences",
+      "faturasLumied": "Lumied Invoices",
+      "configuracoes": "School Settings",
+      "apiIntegracoes": "API & Integrations",
+      "administradores": "Administrators"
+    },
+    "dashboard": {
+      "planoAtual": "Current plan",
+      "totalAlunos": "Total students",
+      "modulosAtivos": "Active modules",
+      "ticketsAbertos": "Open tickets",
+      "limiteAlunos": "Student limit",
+      "proxVencimento": "Next billing date"
+    },
+    "modulos": {
+      "ativar": "Activate",
+      "desativar": "Deactivate",
+      "moduleAtivo": "Active",
+      "moduleInativo": "Inactive",
+      "modificarModulos": "Manage Modules"
+    },
+    "config": {
+      "nomeDaEscola": "School name",
+      "subdominio": "Subdomain",
+      "emailContato": "Contact email",
+      "telefone": "Phone",
+      "cnpj": "Tax ID (CNPJ)",
+      "salvarConfiguracoes": "Save settings"
+    },
+    "api": {
+      "chaveApi": "API key",
+      "tokenAcesso": "Access token",
+      "webhookUrl": "Webhook URL",
+      "integracoes": "Integrations",
+      "copiarChave": "Copy key",
+      "gerarNovaChave": "Generate new key"
     }
   },
   "aluno": {
@@ -579,6 +764,77 @@
       "approved": "Passed",
       "failed": "Failed",
       "recovering": "Remedial"
+    },
+    "login": {
+      "heroTitle": "Your portal, your grades!",
+      "heroSub": "Track grades, attendance and exams in real time.",
+      "greeting": "Hello, student!",
+      "subtitle": "Use the email and password provided by the school."
+    },
+    "tabs": {
+      "minhasNotas": "My Grades",
+      "frequencia": "Attendance",
+      "provasDisponiveis": "Available Exams",
+      "calendario": "Calendar",
+      "emBreve": "Coming soon"
+    },
+    "bnav": {
+      "notas": "Grades",
+      "frequencia": "Attendance",
+      "provas": "Exams"
+    },
+    "frequencia": {
+      "presenca": "Attendance",
+      "totalAulas": "Classes",
+      "totalFaltas": "Absences",
+      "totalPresencas": "Presences",
+      "percentual": "Attendance rate"
+    },
+    "provas": {
+      "iniciar": "Start",
+      "semLimite": "No time limit",
+      "respondida": "Completed",
+      "tempoLimite": "Time limit",
+      "pontuacao": "Score",
+      "nenhumaProva": "No exams available.",
+      "emBreve": "Coming soon"
     }
+  },
+  "hub": {
+    "title": "Restricted Area",
+    "selectPortal": "Select your portal",
+    "welcome": "Welcome",
+    "noPortalAccess": "No portal access",
+    "portalGerente": "Manager Portal",
+    "portalProfessora": "Teacher Portal",
+    "portalSecretaria": "Staff Portal",
+    "portalPais": "Parent Portal",
+    "portalAluno": "Student Portal",
+    "portalAdmin": "School Admin"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications.",
+    "newPickupRequest": "New pickup request",
+    "newMessage": "New message",
+    "attendanceAlert": "Attendance alert",
+    "newLead": "New lead",
+    "paymentAlert": "Payment alert",
+    "systemAlert": "System alert"
+  },
+  "form": {
+    "nomeCompleto": "Full name",
+    "cpf": "Tax ID (CPF)",
+    "telefone": "Phone",
+    "endereco": "Address",
+    "crianca": "Child's name",
+    "enviarSolicitacao": "Submit Request",
+    "criarConta": "Create Account",
+    "voltar": "← Back",
+    "obrigatorio": "* Required field",
+    "placeholderNome": "Your full name",
+    "placeholderCpf": "000.000.000-00",
+    "placeholderTelefone": "(00) 90000-0000"
   }
 }
