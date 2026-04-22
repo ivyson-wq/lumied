@@ -3884,5 +3884,137 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     }
   }
 
+  // ── Risk Scores: Calcular (cron/admin only) ──
+  if (action === 'calcular_risk_scores') {
+    const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+    const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "") || "";
+    if (!cronKey || authHeader !== cronKey) return err("Unauthorized", 401);
+
+    const anoAtual = new Date().getFullYear();
+    const limite30d = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const now = Date.now();
+
+    const { data: escolas } = await admin.from("escolas").select("id").eq("ativo", true);
+    if (!escolas?.length) return ok({ calculados: 0, alto_risco: 0 });
+
+    let totalCalculados = 0;
+    let totalAltoRisco = 0;
+
+    for (const escola of escolas) {
+      const eid = escola.id;
+
+      const { data: alunos } = await admin.from("familias")
+        .select("email, nome_aluno")
+        .eq("escola_id", eid);
+      if (!alunos?.length) continue;
+
+      // Attendance: chamadas in last 30 days
+      const { data: chamadas } = await admin.from("frequencia_chamadas")
+        .select("id")
+        .eq("escola_id", eid)
+        .gte("data", limite30d);
+      const chamadaIds = (chamadas || []).map((c: { id: string }) => c.id);
+      const totalAulas = chamadaIds.length;
+      const faltasMap: Record<string, number> = {};
+      if (chamadaIds.length > 0) {
+        const { data: registros } = await admin.from("frequencia_registros")
+          .select("aluno_email")
+          .in("chamada_id", chamadaIds)
+          .eq("status", "A");
+        for (const r of registros || []) faltasMap[(r as { aluno_email: string }).aluno_email] = (faltasMap[(r as { aluno_email: string }).aluno_email] || 0) + 1;
+      }
+
+      // Grades: boletins for current year
+      const { data: boletins } = await admin.from("boletins")
+        .select("aluno_email, media_geral, gerado_em")
+        .eq("escola_id", eid)
+        .eq("ano", anoAtual)
+        .order("gerado_em", { ascending: false });
+      const notasMap: Record<string, number[]> = {};
+      for (const b of boletins || []) {
+        const be = b as { aluno_email: string; media_geral: number | null; gerado_em: string };
+        if (!notasMap[be.aluno_email]) notasMap[be.aluno_email] = [];
+        if (notasMap[be.aluno_email].length < 5 && be.media_geral != null) notasMap[be.aluno_email].push(Number(be.media_geral));
+      }
+
+      // Family engagement: last chat message per family
+      const emails = alunos.map((a: { email: string }) => a.email);
+      const { data: chatMsgs } = await admin.from("chat_mensagens")
+        .select("remetente_id, criado_em")
+        .eq("remetente_tipo", "pais")
+        .in("remetente_id", emails)
+        .order("criado_em", { ascending: false });
+      const lastMsgMap: Record<string, number> = {};
+      for (const m of chatMsgs || []) {
+        const me = m as { remetente_id: string; criado_em: string };
+        if (!lastMsgMap[me.remetente_id]) lastMsgMap[me.remetente_id] = new Date(me.criado_em).getTime();
+      }
+
+      const upserts = [];
+      for (const aluno of alunos) {
+        const ae = aluno as { email: string; nome_aluno: string };
+        const email = ae.email;
+
+        const nFaltas = faltasMap[email] || 0;
+        const score_frequencia = totalAulas > 0 ? Math.max(0, Math.round(100 - (nFaltas / totalAulas * 100))) : 100;
+
+        const notasList = notasMap[email] || [];
+        const score_notas = notasList.length > 0
+          ? Math.round(Math.min(100, Math.max(0, (notasList.reduce((a: number, b: number) => a + b, 0) / notasList.length) * 10)))
+          : 50;
+
+        const lastMsgTs = lastMsgMap[email];
+        const daysSince = lastMsgTs ? (now - lastMsgTs) / 86400000 : 999;
+        const score_engajamento_pais = daysSince < 7 ? 80 : daysSince < 30 ? 50 : 20;
+
+        let score_tendencia = 50;
+        if (notasList.length >= 2) {
+          const diff = notasList[0] - notasList[notasList.length - 1];
+          if (diff > 0.5) score_tendencia = 80;
+          else if (diff < -0.5) score_tendencia = 20;
+        }
+
+        const componentScore = score_frequencia * 0.35 + score_notas * 0.30 + score_engajamento_pais * 0.20 + score_tendencia * 0.15;
+        const score = Math.round(Math.max(0, Math.min(100, 100 - componentScore)));
+
+        const fatores: { tipo: string; detalhe: string }[] = [];
+        if (score_frequencia < 60) fatores.push({ tipo: "frequencia", detalhe: `Frequência baixa (score ${score_frequencia})` });
+        if (score_notas < 50) fatores.push({ tipo: "notas", detalhe: `Média abaixo do esperado (score ${score_notas})` });
+        if (score_engajamento_pais < 30) fatores.push({ tipo: "engajamento", detalhe: "Família sem atividade recente" });
+        if (score_tendencia < 30) fatores.push({ tipo: "tendencia", detalhe: "Notas em queda" });
+
+        upserts.push({ escola_id: eid, aluno_email: email, aluno_nome: ae.nome_aluno, score, score_frequencia, score_notas, score_engajamento_pais, score_tendencia, fatores, calculado_em: new Date().toISOString() });
+        if (score >= 80) totalAltoRisco++;
+      }
+
+      if (upserts.length > 0) {
+        await admin.from("aluno_risk_scores").upsert(upserts, { onConflict: "escola_id,aluno_email" });
+        totalCalculados += upserts.length;
+      }
+    }
+
+    return ok({ calculados: totalCalculados, alto_risco: totalAltoRisco });
+  }
+
+  // ── Risk Scores: Listar (gerente) ──
+  if (action === 'risk_scores_list') {
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") || null;
+    const sessao = await validarSessao(admin, token);
+    if (!sessao) return err("Sessão inválida.", 401);
+    const escolaId = await resolveEscolaId(req, admin, sessao, body);
+    if (!escolaId) return err("Escola não resolvida.", 400);
+
+    const filtro = (body.filtro as string) || 'todos';
+    let q = admin.from("aluno_risk_scores")
+      .select("aluno_email, aluno_nome, score, score_frequencia, score_notas, score_engajamento_pais, score_tendencia, fatores, calculado_em")
+      .eq("escola_id", escolaId)
+      .order("score", { ascending: false })
+      .limit(200);
+    if (filtro === 'alto') q = q.gte("score", 80);
+    else if (filtro === 'medio') q = q.gte("score", 60).lt("score", 80);
+    const { data } = await q;
+    return ok(data || []);
+  }
+
   return err("Ação desconhecida.");
 });
