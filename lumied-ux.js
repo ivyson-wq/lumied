@@ -371,6 +371,17 @@
       .cmd-empty { padding:24px;text-align:center;color:var(--muted,#888);font-size:13px; }
       .cmd-footer { padding:8px 14px;border-top:1px solid var(--border,#e2dbd1);display:flex;gap:12px;font-size:11px;color:var(--muted,#888); }
       .cmd-footer kbd { background:#f0ece6;padding:2px 6px;border-radius:4px;font-family:inherit;font-size:10px;border:1px solid #ddd; }
+      .cmd-ai-thinking { padding:20px;text-align:center;color:#7c3aed;font-size:13px; }
+      .cmd-ai-result { padding:10px; }
+      .cmd-ai-bubble { background:linear-gradient(135deg,rgba(88,28,135,.07),rgba(139,92,246,.05));border:1px solid rgba(139,92,246,.2);border-radius:12px;padding:14px;font-size:13px;line-height:1.6;color:var(--text,#1a1a1a); }
+      .cmd-ai-bubble .lumi-label { font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;letter-spacing:.04em; }
+      .cmd-ai-bubble .lumi-text { white-space:pre-wrap; }
+      .cmd-ai-goto { display:inline-flex;align-items:center;gap:4px;margin-top:10px;padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit; }
+      .cmd-ai-goto:hover { background:#6d28d9; }
+      .cmd-ai-error { padding:14px;color:#dc2626;font-size:13px;text-align:center; }
+      .cmd-box.cmd-ai-mode { border-top:3px solid #7c3aed; }
+      .cmd-input.ai-active { border-bottom-color:#7c3aed; }
+      body.theme-dark .cmd-ai-bubble { background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(88,28,135,.08));border-color:rgba(139,92,246,.3); }
 
       /* ── Pagination ── */
       .lm-pagination { display:flex;align-items:center;justify-content:space-between;padding:12px 0;font-size:12px;color:var(--muted,#888);font-family:'DM Sans',system-ui,sans-serif; }
@@ -435,7 +446,6 @@
         const panel = match[1];
         const icon = el.querySelector('.ic')?.textContent || '📄';
         const label = el.textContent.trim().replace(icon, '').trim();
-        // Find section name
         let section = '';
         const sectionEl = el.closest('.sb-section');
         if (sectionEl) {
@@ -451,26 +461,110 @@
       if (document.getElementById('cmdPalette')) return;
       const allItems = getNavItems();
       let activeIdx = 0;
+      let aiDebounce = null;
+      let aiQueryPending = null;
 
       const overlay = document.createElement('div');
       overlay.id = 'cmdPalette';
       overlay.className = 'cmd-overlay';
       overlay.innerHTML = `
         <div class="cmd-box">
-          <input class="cmd-input" placeholder="Buscar painel... (ex: alunos, financeiro, CRM)" autofocus>
+          <input class="cmd-input" placeholder="Buscar painel ou ? perguntar para Lumi..." autofocus>
           <div class="cmd-results"></div>
-          <div class="cmd-footer"><span><kbd>↑↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Esc</kbd> fechar</span></div>
+          <div class="cmd-footer"><span><kbd>↑↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>?</kbd> modo IA</span><span><kbd>Esc</kbd> fechar</span></div>
         </div>
       `;
       document.body.appendChild(overlay);
 
+      const box = overlay.querySelector('.cmd-box');
       const input = overlay.querySelector('.cmd-input');
       const results = overlay.querySelector('.cmd-results');
 
-      function normalize(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+      function normalize(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+
+      function isAiQuery(q) {
+        if (!q) return false;
+        const l = q.toLowerCase().trim();
+        if (l.startsWith('?') || l.startsWith('/lumi')) return true;
+        const aiWords = ['quem ', 'quantos ', 'quais ', 'mostre ', 'liste ', 'qual é', 'como está', 'quando ', 'me diga', 'me mostre', 'me liste', 'analise ', 'busque ', 'buscar ', 'encontre '];
+        return aiWords.some(w => l.includes(w));
+      }
+
+      function showAiResult(resposta, _dados) {
+        const panelMap = {};
+        allItems.forEach(i => { panelMap[normalize(i.label)] = i.panel; });
+        let gotoPanel = null;
+        const normalResp = normalize(resposta);
+        for (const [label, panel] of Object.entries(panelMap)) {
+          if (label.length > 3 && normalResp.includes(label)) { gotoPanel = panel; break; }
+        }
+        const safe = resposta.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const gotoBtn = gotoPanel ? `<button class="cmd-ai-goto" data-panel="${gotoPanel}">Ir para painel →</button>` : '';
+        results.innerHTML = `
+          <div class="cmd-ai-result">
+            <div class="cmd-ai-bubble">
+              <div class="lumi-label">🧠 Lumi</div>
+              <div class="lumi-text">${safe}</div>
+              ${gotoBtn}
+            </div>
+          </div>`;
+        if (gotoPanel) {
+          results.querySelector('.cmd-ai-goto').addEventListener('click', () => go(gotoPanel));
+        }
+      }
+
+      async function askLumi(query) {
+        box.classList.add('cmd-ai-mode');
+        input.classList.add('ai-active');
+        results.innerHTML = '<div class="cmd-ai-thinking">🧠 Lumi está pensando...</div>';
+
+        const apiFn = typeof window.api === 'function' ? window.api : null;
+        if (!apiFn) {
+          results.innerHTML = '<div class="cmd-ai-error">Erro: API indisponível.</div>';
+          return;
+        }
+
+        // Client-side timeout display (edge fn has its own 10s timeout)
+        const timeoutId = setTimeout(() => {
+          results.innerHTML = '<div class="cmd-ai-error">Tempo esgotado. Tente uma pergunta mais simples.</div>';
+        }, 11000);
+
+        try {
+          const d = await apiFn({ action: 'ia_consulta_rapida', pergunta: query });
+          clearTimeout(timeoutId);
+          if (!d || d.error) {
+            const msg = (d?.error || 'Erro desconhecido').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            results.innerHTML = `<div class="cmd-ai-error">${msg}</div>`;
+            return;
+          }
+          showAiResult(d.resposta || 'Sem resposta.', d.dados);
+        } catch {
+          clearTimeout(timeoutId);
+          results.innerHTML = '<div class="cmd-ai-error">Erro ao conectar com Lumi. Tente novamente.</div>';
+        }
+      }
 
       function render(query) {
         const q = normalize(query);
+        const rawQuery = query.trim();
+
+        if (rawQuery && isAiQuery(rawQuery)) {
+          if (aiDebounce) clearTimeout(aiDebounce);
+          box.classList.add('cmd-ai-mode');
+          input.classList.add('ai-active');
+          results.innerHTML = '<div class="cmd-ai-thinking">🧠 Lumi está pensando...</div>';
+          aiQueryPending = rawQuery;
+          aiDebounce = setTimeout(() => {
+            if (aiQueryPending === rawQuery) askLumi(rawQuery);
+          }, 500);
+          return;
+        }
+
+        if (aiDebounce) { clearTimeout(aiDebounce); aiDebounce = null; }
+        aiQueryPending = null;
+        box.classList.remove('cmd-ai-mode');
+        input.classList.remove('ai-active');
+
         const filtered = q ? allItems.filter(i => normalize(i.label).includes(q) || normalize(i.section).includes(q)) : allItems;
         activeIdx = 0;
         if (filtered.length === 0) {
@@ -502,7 +596,10 @@
         else if (typeof window.showPanel === 'function') window.showPanel(panel);
       }
 
-      function closePalette() { overlay.remove(); }
+      function closePalette() {
+        if (aiDebounce) clearTimeout(aiDebounce);
+        overlay.remove();
+      }
 
       input.addEventListener('input', () => render(input.value));
       overlay.addEventListener('click', (e) => { if (e.target === overlay) closePalette(); });

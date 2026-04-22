@@ -8,7 +8,7 @@ import {
   generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode,
   getModulosHabilitados, getEscolaPadrao,
   resolveEscolaId,
-  checkRateLimit, getClientIP,
+  checkRateLimit, checkRateLimitDb, getClientIP,
   sanitizeBody,
   getCorsHeaders,
   createLogger,
@@ -16,7 +16,9 @@ import {
   resolveUsuario,
   sanitizePgError,
   logAudit,
+  isFlagOn,
 } from "../_shared/mod.ts";
+import { askClaudeWithTools, SYSTEM_PROMPTS } from "../_shared/ai.ts";
 
 const log = createLogger("api");
 
@@ -3648,6 +3650,146 @@ serve(async (req: Request) => {
     const descendo = rows.filter((r: any) => r.trend === "descendo").length;
 
     return ok({ avg_score, total, alto, medio, baixo, subindo, estavel, descendo });
+
+  // ── IA: Consulta rápida (Ctrl+K natural language search) ──────
+  if (action === "ia_consulta_rapida") {
+    const perguntaRaw = typeof body.pergunta === 'string' ? body.pergunta.trim().slice(0, 500) : '';
+    if (!perguntaRaw) return err("Pergunta obrigatória.");
+
+    // Rate limit: 10 queries per minute per user
+    const userId = (gerente as any).id || (gerente as any).email || ip;
+    const rlAi = await checkRateLimitDb(admin, String(userId), "ia_consulta_rapida", { windowMs: 60000, maxRequests: 10 });
+    if (!rlAi.allowed) return err(`Limite de consultas IA atingido. Tente novamente em ${rlAi.retryAfterSeconds}s.`, 429);
+
+    // Feature flag: ia_ativa
+    const iaAtiva = await isFlagOn(admin, 'ia_ativa', sessionEscolaId);
+    if (!iaAtiva) return err("IA não disponível neste plano.", 403);
+
+    // Sanitize prompt injection
+    const pergunta = perguntaRaw
+      .replace(/ /g, '')
+      .replace(/\r/g, '')
+      .replace(/^(system|assistant|ignore[^\n]*instructions)/gim, '[$1]');
+
+    // Claude tool definitions scoped to this action
+    const quickTools = [
+      {
+        name: "kpis_resumo_dia",
+        description: "Resumo do dia da escola: total alunos ativos, presentes hoje, boletos vencendo esta semana, leads no CRM, tickets abertos.",
+        input_schema: { type: "object", properties: {} },
+      },
+      {
+        name: "buscar_aluno",
+        description: "Busca ficha de um aluno por nome (busca parcial). Retorna dados pessoais, turma, responsável, frequência.",
+        input_schema: { type: "object", required: ["nome"], properties: { nome: { type: "string", description: "Nome ou parte do nome" } } },
+      },
+      {
+        name: "alunos_frequencia_critica",
+        description: "Lista alunos com frequência abaixo de um limiar (default 75%) no mês atual. Útil para identificar risco de evasão.",
+        input_schema: { type: "object", properties: { limiar_pct: { type: "integer", default: 75, minimum: 0, maximum: 100 } } },
+      },
+      {
+        name: "leads_parados",
+        description: "Lista leads do CRM sem follow-up há mais de N dias (default 7).",
+        input_schema: { type: "object", properties: { dias: { type: "integer", default: 7, minimum: 1 } } },
+      },
+    ];
+
+    // Tool executor with explicit escola_id scoping (bypasses RLS since service role)
+    // deno-lint-ignore no-explicit-any
+    const executor = async (name: string, args: Record<string, any>): Promise<unknown> => {
+      const eid = sessionEscolaId;
+      if (name === "kpis_resumo_dia") {
+        const hoje = new Date().toISOString().split("T")[0];
+        const semanaFrente = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+        const [alunos, presentes, boletos, leads, tickets] = await Promise.all([
+          admin.from("alunos").select("id", { count: "exact", head: true }).eq("ativo", true).eq("escola_id", eid),
+          admin.from("frequencia").select("presente").eq("data", hoje).eq("escola_id", eid).limit(2000),
+          admin.from("boletos").select("valor").eq("status", "pendente").lte("vencimento", semanaFrente).eq("escola_id", eid),
+          admin.from("crm_leads").select("id", { count: "exact", head: true }).eq("status", "novo").eq("escola_id", eid),
+          admin.from("tickets").select("id", { count: "exact", head: true }).in("status", ["aberto", "escalado"]).eq("escola_id", eid),
+        ]);
+        // deno-lint-ignore no-explicit-any
+        const presData = (presentes.data || []) as any[];
+        // deno-lint-ignore no-explicit-any
+        const boletosData = (boletos.data || []) as any[];
+        const totalBoletos = boletosData.reduce((s: number, b: { valor: unknown }) => s + (Number(b.valor) || 0), 0);
+        return {
+          data: hoje,
+          total_alunos_ativos: alunos.count || 0,
+          presentes_hoje: presData.filter((f) => f.presente).length,
+          ausentes_hoje: presData.filter((f) => !f.presente).length,
+          boletos_vencendo_7d: { quantidade: boletosData.length, total_valor: totalBoletos.toFixed(2) },
+          leads_novos: leads.count || 0,
+          tickets_abertos: tickets.count || 0,
+        };
+      }
+      if (name === "buscar_aluno") {
+        const nome = String(args.nome || '').slice(0, 100);
+        if (!nome) throw new Error("Nome obrigatório");
+        const { data } = await admin.from("alunos")
+          .select("id, nome, responsavel_nome, serie, data_nascimento, turno, ativo")
+          .ilike("nome", `%${nome}%`).eq("ativo", true).eq("escola_id", eid).limit(10);
+        return { encontrados: data?.length || 0, alunos: data || [] };
+      }
+      if (name === "alunos_frequencia_critica") {
+        const limiar = Math.min(100, Math.max(0, Number(args.limiar_pct ?? 75)));
+        const primeiroDia = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+        const { data } = await admin.from("frequencia")
+          .select("aluno_id, aluno_nome, presente").gte("data", primeiroDia).eq("escola_id", eid).limit(5000);
+        // deno-lint-ignore no-explicit-any
+        const porAluno = new Map<string, any>();
+        for (const r of data || []) {
+          // deno-lint-ignore no-explicit-any
+          const rr = r as any;
+          const cur = porAluno.get(rr.aluno_id) || { aluno_id: rr.aluno_id, nome: rr.aluno_nome, total: 0, presentes: 0 };
+          cur.total += 1;
+          if (rr.presente) cur.presentes += 1;
+          porAluno.set(rr.aluno_id, cur);
+        }
+        const criticos = [...porAluno.values()]
+          .map(a => ({ ...a, pct: a.total > 0 ? Math.round((a.presentes / a.total) * 100) : 0 }))
+          .filter(a => a.pct < limiar)
+          .sort((a, b) => a.pct - b.pct);
+        return { limiar_pct: limiar, total: criticos.length, alunos: criticos };
+      }
+      if (name === "leads_parados") {
+        const dias = Math.max(1, Number(args.dias ?? 7));
+        const limite = new Date(Date.now() - dias * 86400000).toISOString();
+        const { data } = await admin.from("crm_leads")
+          .select("id, nome, email, telefone, status, atualizado_em, origem")
+          .lt("atualizado_em", limite)
+          .not("status", "in", "(convertido,perdido)")
+          .eq("escola_id", eid)
+          .order("atualizado_em", { ascending: true })
+          .limit(50);
+        return { dias, total: data?.length || 0, leads: data || [] };
+      }
+      throw new Error(`Ferramenta desconhecida: ${name}`);
+    };
+
+    try {
+      const aiPromise = askClaudeWithTools(pergunta, quickTools, executor, {
+        system: SYSTEM_PROMPTS.gerente,
+        model: "claude-haiku-4-5-20251001",
+        maxTokens: 600,
+        maxTurns: 4,
+        budget: { sb: admin, escolaId: sessionEscolaId },
+      });
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 10000)
+      );
+      const result = await Promise.race([aiPromise, timeoutPromise]);
+      if (!result) return err("IA indisponível no momento. Tente novamente.");
+      return ok({
+        resposta: result.text,
+        dados: result.tool_calls.length > 0 ? result.tool_calls.map(t => t.output) : undefined,
+      });
+    } catch (e) {
+      if ((e as Error).message === 'timeout') return err("A consulta demorou muito. Tente uma pergunta mais simples.", 408);
+      console.error("[api] ia_consulta_rapida error:", e);
+      return err("Erro ao processar consulta IA.");
+    }
   }
 
   return err("Ação desconhecida.");
