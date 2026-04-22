@@ -127,7 +127,7 @@ export const staffTools: McpTool[] = [
             }),
             signal: AbortSignal.timeout(8000),
           });
-        } catch (_e) { /* non-fatal */ }
+        } catch (e) { console.warn('[mcp] Ticket response email failed:', (e as Error).message) }
       }
       return { success: true, ticket_id: id, numero: ticket.numero };
     },
@@ -258,7 +258,9 @@ export const staffTools: McpTool[] = [
       },
     },
     handler: async ({ sql }) => {
-      const normalized = String(sql).trim().toLowerCase();
+      // Strip SQL comments before validation to prevent bypass via hidden keywords
+      sql = String(sql).replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      const normalized = sql.trim().toLowerCase();
       const forbidden = [
         "insert",
         "update",

@@ -90,6 +90,7 @@ async function sendEmailResend(to: string, subject: string, html: string, from?:
       method: "POST",
       headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from: from || "Lumied <no-reply@lumied.com.br>", to, subject, html }),
+      signal: AbortSignal.timeout(8000),
     });
     const j = await resp.json();
     if (!resp.ok) return { error: j?.message || `HTTP ${resp.status}` };
@@ -147,7 +148,7 @@ router.on("regua_executar", authGerenteOuFinanceiro, requireFeature("regua_cobra
 
       await ctx.sb.from("regua_execucoes").insert({
         config_id: cfg.id,
-        escola_id: mens.escola_id || null,
+        escola_id: mens.escola_id || ctx.escola_id,
         mensalidade_id: mens.id || null,
         aluno_id: mens.aluno_id || null,
         familia_id: mens.familia_id || null,

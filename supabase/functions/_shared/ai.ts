@@ -64,6 +64,7 @@ export async function askClaude(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!res.ok) {
@@ -129,6 +130,7 @@ export async function askWithImage(
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!res.ok) {
@@ -267,6 +269,7 @@ export async function askClaudeWithTools(
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000),
       });
     } catch (e) {
       console.error("[AI] Fetch error:", e);

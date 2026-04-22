@@ -43,6 +43,7 @@ async function interFetch(
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${relaySecret}` },
     body: JSON.stringify({ path, method, headers, body }),
+    signal: AbortSignal.timeout(15000),
   });
   const { status, body: resBody } = await res.json();
   if (status < 200 || status >= 300) throw new Error(`Inter API error ${status}: ${resBody}`);
@@ -64,6 +65,7 @@ async function getInterToken(...scopeOptions: string[]): Promise<string> {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${relaySecret}` },
         body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() }),
+        signal: AbortSignal.timeout(15000),
       });
       const { status, body } = await res.json() as { status: number; body: string };
       if (status >= 200 && status < 300) {
@@ -101,6 +103,7 @@ async function sendEmail(to: string, subject: string, html: string, attachments?
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(8000),
   });
 }
 
@@ -344,6 +347,7 @@ router.on("contabil_exportacoes_list", authGerente, requireFeature("contabil"), 
 //  CONCILIAÇÃO AUTOMÁTICA
 // ═══════════════════════════════════════════════════════════════
 router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
+  const escolaId = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const relayUrl = Deno.env.get("INTER_RELAY_URL");
   if (!relayUrl) {
     return successResponse({ error: "Inter API não configurada. Configure INTER_RELAY_URL para habilitar a conciliação automática.", matched: 0, created: 0, pendente_revisao: 0 });
@@ -401,6 +405,7 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
         valor: txValor,
         data_lancamento: txData,
         status: "pendente_revisao",
+        escola_id: escolaId,
       });
       created++;
     }
@@ -413,6 +418,7 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
       origem: "inter_api",
       inter_tipo_operacao: tx.tipoOperacao,
       inter_tipo_transacao: tx.tipoTransacao,
+      escola_id: escolaId,
     });
   }
 
@@ -423,6 +429,7 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
     conciliadas: matched,
     novas: created,
     executado_por: ctx.user?.nome || "cron",
+    escola_id: escolaId,
   });
 
   log.info("Conciliação executada", { metadata: { dataRef, matched, created, total: transacoes.length } });
@@ -567,6 +574,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
       itens: items,
       vencimento: vencimento,
       status: "aguardando",
+      escola_id: escolaIdCron,
     });
   }
 
@@ -692,6 +700,7 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
             descricao: item.descricao_detalhada,
             inter_response: result,
             status: "emitido",
+            escola_id: item.escola_id,
           }).catch((e: any) => log.warn("Insert fin_boletos_emitidos failed", { error: e.message }));
 
           // Upsert fin_mensalidades
@@ -782,6 +791,7 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
         familia_email: m.familia_email, crianca_nome: m.crianca_nome,
         dias_atraso: diasAtraso, valor_total_devedor: m.valor_total || 0,
         bucket, mensalidades_ids: [m.id],
+        escola_id: m.escola_id,
       });
     });
 
@@ -1215,6 +1225,7 @@ Dê sugestões curtas e acionáveis. Sem markdown, texto puro.`;
         max_tokens: 800,
         messages: [{ role: "user", content: prompt }],
       }),
+      signal: AbortSignal.timeout(30000),
     });
     const result = await resp.json();
     return result?.content?.[0]?.text || "Sem sugestões disponíveis.";
@@ -1224,6 +1235,7 @@ Dê sugestões curtas e acionáveis. Sem markdown, texto puro.`;
 }
 
 router.on("relatorio_mensal_enviar", authCronOrGerente, async (ctx) => {
+  const escolaIdRelatorio = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const data = await buildRelatorioData(ctx.sb);
   const sugestoes = await getAiSugestoes(data);
   const html = await buildRelatorioHtml(data, sugestoes);
@@ -1251,6 +1263,7 @@ router.on("relatorio_mensal_enviar", authCronOrGerente, async (ctx) => {
     sugestoes_ia: sugestoes,
     enviado_para: recipientEmail || null,
     gerado_por: ctx.user?.nome || "cron",
+    escola_id: escolaIdRelatorio,
   });
 
   log.info("Relatório mensal enviado", { metadata: { mes: data.mes_referencia, para: recipientEmail } });
@@ -1299,6 +1312,7 @@ router.on("folha_upload_parse", authGerente, async (ctx) => {
         ],
       }],
     }),
+    signal: AbortSignal.timeout(30000),
   });
 
   const result = await resp.json();

@@ -8,6 +8,7 @@ import { Router, rateLimit, authGerente, authProfessora, requireFeature, type Mi
 import { successResponse, AppError } from "../_shared/errors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { uploadArquivo } from "../_shared/auth.ts";
+import { resolveEscolaId } from "../_shared/tenant.ts";
 
 const log = createLogger("comunicacao");
 const router = new Router("comunicacao");
@@ -95,17 +96,19 @@ router.on("agenda_registros_list", agendaFeat, async (ctx) => {
 });
 
 router.on("agenda_registros_create", authProfessora, agendaFeat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { serie_id, aluno_email, aluno_nome, data: dataStr } = ctx.body as any;
   if (!serie_id || !dataStr) throw new AppError("VALIDATION_FAILED", "serie_id e data obrigatórios.");
-  const { data, error } = await ctx.sb.from("agenda_registros").insert({ serie_id, aluno_email: aluno_email || null, aluno_nome: aluno_nome || null, data: dataStr, professor_id: ctx.user!.id }).select().single();
+  const { data, error } = await ctx.sb.from("agenda_registros").insert({ escola_id: ctx.escola_id, serie_id, aluno_email: aluno_email || null, aluno_nome: aluno_nome || null, data: dataStr, professor_id: ctx.user!.id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
 router.on("agenda_itens_add", authProfessora, agendaFeat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { registro_id, tipo, titulo, descricao, valor, hora, ordem } = ctx.body as any;
   if (!registro_id || !tipo) throw new AppError("VALIDATION_FAILED", "registro_id e tipo obrigatórios.");
-  const { data, error } = await ctx.sb.from("agenda_itens").insert({ registro_id, tipo, titulo, descricao, valor, hora, ordem: ordem || 0 }).select().single();
+  const { data, error } = await ctx.sb.from("agenda_itens").insert({ escola_id: ctx.escola_id, registro_id, tipo, titulo, descricao, valor, hora, ordem: ordem || 0 }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
@@ -157,7 +160,8 @@ router.on("agenda_foto_upload", authProfessora, agendaFeat, async (ctx) => {
   if (!base64 || !mime) throw new AppError("VALIDATION_FAILED", "base64 e mime obrigatórios.");
   const result = await uploadArquivo(ctx.sb, "agenda", ctx.user!.id, base64, mime);
   if ("error" in result) throw new AppError("BAD_REQUEST", result.error);
-  const { data, error } = await ctx.sb.from("agenda_fotos").insert({ item_id, registro_id, url: result.url }).select().single();
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data, error } = await ctx.sb.from("agenda_fotos").insert({ escola_id: ctx.escola_id, item_id, registro_id, url: result.url }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
@@ -185,16 +189,19 @@ router.on("chat_conversas_list", authAny, chatFeat, async (ctx) => {
 router.on("chat_conversa_create", authAny, chatFeat, async (ctx) => {
   const { tipo, titulo, serie_id, participantes } = ctx.body as any;
   if (!tipo) throw new AppError("VALIDATION_FAILED", "tipo obrigatório.");
+  // Resolve escola_id (authAny may not set it for pais)
+  if (!ctx.escola_id) ctx.escola_id = (await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body)) || undefined;
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Não foi possível determinar a escola.");
   // Derive creator identity from authenticated session, never from body.
   const criado_por_tipo = ctx.user!.tipo;
   const criado_por_id = criado_por_tipo === "pais" ? ctx.user!.email : ctx.user!.id;
-  const { data: conv, error } = await ctx.sb.from("chat_conversas").insert({ tipo, titulo, serie_id, criado_por_tipo, criado_por_id }).select().single();
+  const { data: conv, error } = await ctx.sb.from("chat_conversas").insert({ escola_id: ctx.escola_id, tipo, titulo, serie_id, criado_por_tipo, criado_por_id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   // Always ensure the creator is a participant.
-  const allParticipants: any[] = [{ conversa_id: conv.id, usuario_tipo: criado_por_tipo, usuario_id: criado_por_id, usuario_nome: ctx.user!.nome, papel: "admin" }];
+  const allParticipants: any[] = [{ escola_id: ctx.escola_id, conversa_id: conv.id, usuario_tipo: criado_por_tipo, usuario_id: criado_por_id, usuario_nome: ctx.user!.nome, papel: "admin" }];
   if (Array.isArray(participantes) && participantes.length) {
     for (const p of participantes) {
-      allParticipants.push({ conversa_id: conv.id, usuario_tipo: p.tipo, usuario_id: p.id, usuario_nome: p.nome, papel: p.papel || "membro" });
+      allParticipants.push({ escola_id: ctx.escola_id, conversa_id: conv.id, usuario_tipo: p.tipo, usuario_id: p.id, usuario_nome: p.nome, papel: p.papel || "membro" });
     }
   }
   await ctx.sb.from("chat_participantes").insert(allParticipants);
@@ -210,9 +217,12 @@ router.on("chat_mensagem_send", authAny, chatFeat, async (ctx) => {
   const remetente_nome = ctx.user!.nome;
   const { data: part } = await ctx.sb.from("chat_participantes").select("id").eq("conversa_id", conversa_id).eq("usuario_tipo", remetente_tipo).eq("usuario_id", remetente_id).maybeSingle();
   if (!part) throw new AppError("FORBIDDEN", "Você não participa desta conversa.");
-  const { data, error } = await ctx.sb.from("chat_mensagens").insert({ conversa_id, remetente_tipo, remetente_id, remetente_nome, conteudo, tipo_msg: tipo_msg || "texto", arquivo_url }).select().single();
+  // Resolve escola_id
+  if (!ctx.escola_id) ctx.escola_id = (await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body)) || undefined;
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Não foi possível determinar a escola.");
+  const { data, error } = await ctx.sb.from("chat_mensagens").insert({ escola_id: ctx.escola_id, conversa_id, remetente_tipo, remetente_id, remetente_nome, conteudo, tipo_msg: tipo_msg || "texto", arquivo_url }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
-  await ctx.sb.from("chat_leituras").upsert({ conversa_id, usuario_tipo: remetente_tipo, usuario_id: remetente_id, ultima_leitura: new Date().toISOString() }, { onConflict: "conversa_id,usuario_tipo,usuario_id" });
+  await ctx.sb.from("chat_leituras").upsert({ escola_id: ctx.escola_id, conversa_id, usuario_tipo: remetente_tipo, usuario_id: remetente_id, ultima_leitura: new Date().toISOString() }, { onConflict: "conversa_id,usuario_tipo,usuario_id" });
   return successResponse(data);
 });
 
@@ -234,22 +244,26 @@ router.on("chat_marcar_lida", authAny, chatFeat, async (ctx) => {
   await assertParticipant(ctx, conversa_id);
   const usuario_tipo = ctx.user!.tipo;
   const usuario_id = usuario_tipo === "pais" ? ctx.user!.email : ctx.user!.id;
-  await ctx.sb.from("chat_leituras").upsert({ conversa_id, usuario_tipo, usuario_id, ultima_leitura: new Date().toISOString() }, { onConflict: "conversa_id,usuario_tipo,usuario_id" });
+  // Resolve escola_id
+  if (!ctx.escola_id) ctx.escola_id = (await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body)) || undefined;
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Não foi possível determinar a escola.");
+  await ctx.sb.from("chat_leituras").upsert({ escola_id: ctx.escola_id, conversa_id, usuario_tipo, usuario_id, ultima_leitura: new Date().toISOString() }, { onConflict: "conversa_id,usuario_tipo,usuario_id" });
   return successResponse({ success: true });
 });
 
 router.on("chat_avisos_turma", authGerente, chatFeat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { serie_id, titulo, conteudo } = ctx.body as any;
   if (!conteudo) throw new AppError("VALIDATION_FAILED", "Conteúdo obrigatório.");
   const remetente = ctx.user!;
   let convId: string;
-  const { data: existing } = await ctx.sb.from("chat_conversas").select("id").eq("tipo", "turma").eq("serie_id", serie_id).maybeSingle();
+  const { data: existing } = await ctx.sb.from("chat_conversas").select("id").eq("escola_id", ctx.escola_id).eq("tipo", "turma").eq("serie_id", serie_id).maybeSingle();
   if (existing) { convId = existing.id; }
   else {
-    const { data: newConv } = await ctx.sb.from("chat_conversas").insert({ tipo: "turma", titulo: titulo || "Avisos", serie_id, criado_por_tipo: "gerente", criado_por_id: remetente.email }).select().single();
+    const { data: newConv } = await ctx.sb.from("chat_conversas").insert({ escola_id: ctx.escola_id, tipo: "turma", titulo: titulo || "Avisos", serie_id, criado_por_tipo: "gerente", criado_por_id: remetente.email }).select().single();
     convId = newConv!.id;
   }
-  const { data, error } = await ctx.sb.from("chat_mensagens").insert({ conversa_id: convId, remetente_tipo: "gerente", remetente_id: remetente.email, remetente_nome: remetente.nome, conteudo, tipo_msg: "aviso" }).select().single();
+  const { data, error } = await ctx.sb.from("chat_mensagens").insert({ escola_id: ctx.escola_id, conversa_id: convId, remetente_tipo: "gerente", remetente_id: remetente.email, remetente_nome: remetente.nome, conteudo, tipo_msg: "aviso" }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   log.info("Aviso turma enviado", { metadata: { serie_id } });
   return successResponse(data);
@@ -266,15 +280,20 @@ router.on("chat_mensagem_delete", authAny, chatFeat, async (ctx) => {
   const isOwner = (msg as any).remetente_tipo === callerTipo && (msg as any).remetente_id === callerId;
   const isGerente = callerTipo === "gerente";
   if (!isOwner && !isGerente) throw new AppError("FORBIDDEN", "Apenas o autor ou um gerente pode excluir esta mensagem.");
-  const { error } = await ctx.sb.from("chat_mensagens").update({ excluida: true }).eq("id", id);
+  // Resolve escola_id for tenant-safe update
+  if (!ctx.escola_id) ctx.escola_id = (await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body)) || undefined;
+  const updateQ = ctx.sb.from("chat_mensagens").update({ excluida: true }).eq("id", id);
+  if (ctx.escola_id) updateQ.eq("escola_id", ctx.escola_id);
+  const { error } = await updateQ;
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
 
 router.on("chat_mensagem_aprovar", authGerente, chatFeat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id, aprovada } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
-  const { error } = await ctx.sb.from("chat_mensagens").update({ aprovada: aprovada !== false, aprovada_por: ctx.user!.nome }).eq("id", id);
+  const { error } = await ctx.sb.from("chat_mensagens").update({ aprovada: aprovada !== false, aprovada_por: ctx.user!.nome }).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });

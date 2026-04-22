@@ -10,6 +10,7 @@ import { createLogger } from "../_shared/logger.ts";
 import { askClaude, askClaudeWithTools, SYSTEM_PROMPTS, buildContextFromData } from "../_shared/ai.ts";
 import { STAFF_GTM_SYSTEM_PROMPT } from "../_shared/playbooks.ts";
 import { isFlagOn } from "../_shared/flags.ts";
+import { getEscolaPadrao } from "../_shared/modulos.ts";
 import { McpServer, type McpScope } from "../_shared/mcp.ts";
 import { staffTools } from "../mcp/tools_staff.ts";
 import { gerenteTools } from "../mcp/tools_gerente.ts";
@@ -156,6 +157,7 @@ ${sanitizeForPrompt(pergunta, 2000)}`;
     total_mensagens: 2,
     tokens_total: resposta.tokens_input + resposta.tokens_output,
     custo_total: resposta.cost,
+    escola_id: ctx.escola_id,
   });
 
   return successResponse({ resposta: resposta.text, tokens: resposta.tokens_input + resposta.tokens_output });
@@ -230,6 +232,7 @@ router.on("ai_perguntar_mcp", authFlexivel, async (ctx) => {
     total_mensagens: 2,
     tokens_total: resposta.tokens_input + resposta.tokens_output,
     custo_total: resposta.cost,
+    escola_id: ctx.escola_id,
   });
 
   return successResponse({
@@ -277,6 +280,7 @@ router.on("ai_perguntar_gtm", authFlexivel, async (ctx) => {
     total_mensagens: 2,
     tokens_total: resposta.tokens_input + resposta.tokens_output,
     custo_total: resposta.cost,
+    escola_id: ctx.escola_id,
   });
 
   return successResponse({
@@ -319,7 +323,8 @@ ${sanitizeForPrompt(pergunta, 2000)}`;
 router.on("gerar_insights_diarios", async (ctx) => {
   // Internal-only: only the cron (service role key) can trigger this
   requireServiceAuth(ctx.req);
-  const dados = await coletarContexto(ctx.sb, "gerente");
+  const escolaIdInsights = ctx.escola_id || (ctx.body as any)?.escola_id || await getEscolaPadrao(ctx.sb);
+  const dados = await coletarContexto(ctx.sb, "gerente", escolaIdInsights);
   const insights: any[] = [];
 
   // 1. Análise financeira
@@ -396,7 +401,7 @@ Gere um resumo de 2-3 frases sobre o dia da escola. Tom: direto e útil.`,
 
   // Salvar insights
   for (const insight of insights) {
-    await ctx.sb.from("ia_insights").insert(insight);
+    await ctx.sb.from("ia_insights").insert({ ...insight, escola_id: escolaIdInsights });
   }
 
   return successResponse({ gerados: insights.length });
