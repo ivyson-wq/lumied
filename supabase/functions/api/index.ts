@@ -1157,6 +1157,142 @@ serve(async (req: Request) => {
     return ok({ success: true, numero: ticketNumero });
   }
 
+  // ── Calcular risk scores (pg_cron ou admin — autenticação via CRON_INTERNAL_KEY) ──
+  if (action === "calcular_risk_scores") {
+    const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+    const authH = req.headers.get("authorization")?.replace("Bearer ", "") || "";
+    const bodyKey = (body._cron_key as string) || "";
+    if (!cronKey || (authH !== cronKey && bodyKey !== cronKey)) return err("Unauthorized", 401);
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+    const { data: escolas } = await admin.from("escolas").select("id").eq("ativo", true);
+    if (!escolas?.length) return ok({ calculados: 0, alto_risco: 0 });
+
+    let totalCalculados = 0;
+    let totalAltoRisco = 0;
+
+    for (const escola of escolas) {
+      const escolaId = escola.id;
+      const { data: familias } = await admin.from("familias")
+        .select("email, nome_aluno")
+        .eq("escola_id", escolaId);
+      if (!familias?.length) continue;
+
+      // Fetch chamadas dos últimos 30 dias
+      const { data: chamadas30d } = await admin.from("frequencia_chamadas")
+        .select("id")
+        .eq("escola_id", escolaId)
+        .gte("data", thirtyDaysAgo);
+      const chamadaIds = (chamadas30d || []).map((c: any) => c.id);
+      const totalAulas30d = chamadaIds.length;
+
+      // Fetch últimas 6 avaliações da escola
+      const { data: avaliacoes6 } = await admin.from("notas_avaliacoes")
+        .select("id")
+        .eq("escola_id", escolaId)
+        .order("data_avaliacao", { ascending: false })
+        .limit(6);
+      const ava6Ids = (avaliacoes6 || []).map((a: any) => a.id);
+      const ava3Recent = ava6Ids.slice(0, 3);
+      const ava3Older = ava6Ids.slice(3);
+
+      const upserts: unknown[] = [];
+
+      for (const f of familias) {
+        const email = f.email;
+        if (!email) continue;
+        const fatores: string[] = [];
+
+        // ── score_frequencia ──
+        let scoreFreq = 50;
+        if (totalAulas30d > 0 && chamadaIds.length > 0) {
+          const { count: ausencias } = await admin.from("frequencia_registros")
+            .select("id", { count: "exact", head: true })
+            .eq("aluno_email", email)
+            .eq("status", "ausente")
+            .in("chamada_id", chamadaIds);
+          const pctAusencia = ((ausencias || 0) / totalAulas30d) * 100;
+          scoreFreq = Math.round(Math.max(0, 100 - pctAusencia));
+          if (pctAusencia >= 25) fatores.push(`Frequência baixa (${Math.round(100 - pctAusencia)}%)`);
+        }
+
+        // ── score_notas ──
+        let scoreNotas = 50;
+        if (ava6Ids.length > 0) {
+          const { data: lancamentos } = await admin.from("notas_lancamentos")
+            .select("valor, avaliacao_id")
+            .eq("aluno_email", email)
+            .in("avaliacao_id", ava6Ids);
+          const vals = (lancamentos || []).map((l: any) => Number(l.valor)).filter(v => !isNaN(v));
+          if (vals.length > 0) {
+            const media = vals.reduce((s, v) => s + v, 0) / vals.length;
+            scoreNotas = Math.round(Math.min(100, Math.max(0, media * 10)));
+            if (media < 5) fatores.push(`Média baixa (${media.toFixed(1)})`);
+          }
+        }
+
+        // ── score_tendencia ──
+        let scoreTend = 50;
+        if (ava3Recent.length > 0 && ava3Older.length > 0) {
+          const { data: recNotas } = await admin.from("notas_lancamentos")
+            .select("valor")
+            .eq("aluno_email", email)
+            .in("avaliacao_id", ava3Recent);
+          const { data: oldNotas } = await admin.from("notas_lancamentos")
+            .select("valor")
+            .eq("aluno_email", email)
+            .in("avaliacao_id", ava3Older);
+          const recVals = (recNotas || []).map((l: any) => Number(l.valor)).filter(v => !isNaN(v));
+          const oldVals = (oldNotas || []).map((l: any) => Number(l.valor)).filter(v => !isNaN(v));
+          if (recVals.length && oldVals.length) {
+            const recMedia = recVals.reduce((s, v) => s + v, 0) / recVals.length;
+            const oldMedia = oldVals.reduce((s, v) => s + v, 0) / oldVals.length;
+            const diff = recMedia - oldMedia;
+            if (diff >= 0.5) { scoreTend = 80; }
+            else if (diff <= -0.5) { scoreTend = 20; fatores.push("Notas em queda"); }
+            else { scoreTend = 50; }
+          }
+        }
+
+        // ── score_engajamento_pais ──
+        let scoreEngaj = 50;
+        const { data: authUser } = await admin.auth.admin.listUsers();
+        const parentUser = (authUser?.users || []).find((u: any) => u.email === email);
+        if (parentUser?.last_sign_in_at) {
+          const daysSince = (Date.now() - new Date(parentUser.last_sign_in_at).getTime()) / 86400000;
+          if (daysSince < 7) { scoreEngaj = 80; }
+          else if (daysSince < 30) { scoreEngaj = 50; }
+          else { scoreEngaj = 20; fatores.push("Responsável sem acesso há 30+ dias"); }
+        }
+
+        const rawScore = scoreFreq * 0.35 + scoreNotas * 0.30 + scoreEngaj * 0.20 + scoreTend * 0.15;
+        const score = Math.round(Math.max(0, Math.min(100, 100 - rawScore)));
+
+        upserts.push({
+          escola_id: escolaId,
+          aluno_email: email,
+          aluno_nome: f.nome_aluno,
+          score,
+          score_frequencia: scoreFreq,
+          score_notas: scoreNotas,
+          score_engajamento_pais: scoreEngaj,
+          score_tendencia: scoreTend,
+          fatores: JSON.stringify(fatores),
+          calculado_em: new Date().toISOString(),
+        });
+
+        if (score >= 60) totalAltoRisco++;
+        totalCalculados++;
+      }
+
+      if (upserts.length > 0) {
+        await admin.from("aluno_risk_scores").upsert(upserts, { onConflict: "escola_id,aluno_email" });
+      }
+    }
+
+    return ok({ calculados: totalCalculados, alto_risco: totalAltoRisco });
+  }
+
   // ════════════════════════════════════════════════════════════
   //  AÇÕES AUTENTICADAS (Gerente)
   // ════════════════════════════════════════════════════════════
@@ -3313,6 +3449,19 @@ serve(async (req: Request) => {
     if (c?.status === 'assinado') return err("Contrato assinado não pode ser excluído.");
     await admin.from("contratos").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
+  }
+
+  // ── Risk scores ──────────────────────────────────────
+  if (action === "risk_scores_list") {
+    const { filtro } = body as { filtro?: string };
+    let q = admin.from("aluno_risk_scores")
+      .select("aluno_email, aluno_nome, score, score_frequencia, score_notas, score_engajamento_pais, score_tendencia, fatores, calculado_em")
+      .eq("escola_id", sessionEscolaId)
+      .order("score", { ascending: false });
+    if (filtro === "alto") q = q.gte("score", 80);
+    else if (filtro === "medio") q = q.gte("score", 60).lt("score", 80);
+    const { data } = await q;
+    return ok(data ?? []);
   }
 
   return err("Ação desconhecida.");
