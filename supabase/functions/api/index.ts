@@ -21,6 +21,8 @@ import {
   cacheSet,
 } from "../_shared/mod.ts";
 import { askClaude, askClaudeWithTools, SYSTEM_PROMPTS } from "../_shared/ai.ts";
+import { McpServer } from "../_shared/mcp.ts";
+import { gerenteTools } from "../mcp/tools_gerente.ts";
 
 const log = createLogger("api");
 
@@ -42,6 +44,20 @@ async function sha256Hex(s: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+function sanitizeForPrompt(v: unknown, max = 1000): string {
+  if (typeof v !== "string") return "";
+  return v
+    .replace(/\u0000/g, "")
+    .replace(/\r/g, "")
+    .replace(/^(system|assistant|ignore[^\n]*instructions)/gim, "[$1]")
+    .slice(0, max);
+}
+
+// Module-level McpServer for ia_consulta_rapida (subset of gerente tools)
+const _iaRapidaTools = ["kpis_resumo_dia", "buscar_aluno", "alunos_frequencia_critica", "leads_parados"];
+const _iaRapidaServer = new McpServer("api-ia-rapida", "1.0.0");
+_iaRapidaServer.registerAll(gerenteTools.filter(t => _iaRapidaTools.includes(t.name)));
+
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -4015,6 +4031,48 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     else if (filtro === 'medio') q = q.gte("score", 60).lt("score", 80);
     const { data } = await q;
     return ok(data || []);
+  }
+
+  // ── IA: Consulta rápida natural language (Ctrl+K) ──
+  // gerente + sessionEscolaId are already validated by the shared auth block above.
+  if (action === 'ia_consulta_rapida') {
+    const pergunta = typeof body.pergunta === "string" ? body.pergunta.trim() : "";
+    if (!pergunta || pergunta.length > 2000) return err("Pergunta inválida.");
+
+    // Feature flag guard
+    const iaAtiva = await isFlagOn(admin, "ia_ativa", sessionEscolaId);
+    if (!iaAtiva) return err("IA não habilitada para esta escola.", 403);
+
+    // Rate limit: 10 req/min per user (DB-backed)
+    const userId = String((gerente as any).id || ip);
+    const rl = await checkRateLimitDb(admin, userId, "ia_consulta_rapida", { maxRequests: 10, windowMs: 60000 });
+    if (!rl.allowed) return err(`Aguarde ${rl.retryAfterSeconds}s antes de nova consulta.`, 429);
+
+    const tools = _iaRapidaServer.asClaudeTools("gerente");
+    const mcpCtx = { sb: admin, user: gerente, scope: "gerente" as const, req };
+    // deno-lint-ignore no-explicit-any
+    const executor = async (name: string, args: Record<string, any>) => {
+      if (!_iaRapidaServer.canCall(name, "gerente")) throw new Error(`Tool '${name}' não permitida.`);
+      const tool = _iaRapidaServer.getTool(name)!;
+      return await tool.handler(args, mcpCtx);
+    };
+
+    const resposta = await askClaudeWithTools(sanitizeForPrompt(pergunta, 2000), tools, executor, {
+      system: (SYSTEM_PROMPTS.gerente || "") +
+        "\n\nVocê tem ferramentas que consultam dados reais da escola. " +
+        "SEMPRE use as tools antes de responder sobre números, alunos ou frequência. " +
+        "Respostas concisas (máx 3 parágrafos). Nunca invente dados.",
+      maxTokens: 512,
+      maxTurns: 4,
+      budget: { sb: admin, escolaId: sessionEscolaId },
+    });
+
+    if (!resposta) return err("IA indisponível no momento.", 503);
+    if ((resposta as { stop_reason?: string }).stop_reason === "blocked") {
+      return err(resposta.text || "IA bloqueada.", 503);
+    }
+
+    return ok({ resposta: resposta.text, dados: resposta.tool_calls?.length ? resposta.tool_calls.map(t => ({ tool: t.name, result: t.output })) : undefined });
   }
 
   return err("Ação desconhecida.");
