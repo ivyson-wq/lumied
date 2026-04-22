@@ -526,6 +526,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> <span data-i18n="gerente.nav.impressoes">Impressões</span></a>
         <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> <span data-i18n="gerente.nav.horariosAcesso">Horários de Acesso</span></a>
         <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.reunioes">Reuniões</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('engajamento',this)"><span class="ic">💡</span> Engajamento</a>
       </div>
 
       <!-- ═══ ACADÊMICO ═══ -->
@@ -2942,6 +2943,42 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
+      <!-- ── ENGAJAMENTO DE FAMÍLIAS ── -->
+      <div id="panelEngajamento" class="panel">
+        <div class="sec-title">💡 Engajamento Famílias</div>
+
+        <!-- Resumo / Dashboard -->
+        <div class="dip-stats" id="engDashStats" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-label">Score Médio</div><div class="stat-value" id="engAvgScore">—</div><div class="stat-sub">de 100</div></div>
+          <div class="stat-card"><div class="stat-label">Alto &gt;70</div><div class="stat-value" style="color:#2d7a3a;" id="engAlto">—</div><div class="stat-sub">famílias</div></div>
+          <div class="stat-card"><div class="stat-label">Médio 40-70</div><div class="stat-value" style="color:#b07d10;" id="engMedio">—</div><div class="stat-sub">famílias</div></div>
+          <div class="stat-card"><div class="stat-label">Baixo &lt;40</div><div class="stat-value" style="color:#c0392b;" id="engBaixo">—</div><div class="stat-sub">famílias</div></div>
+          <div class="stat-card"><div class="stat-label">Tendência</div>
+            <div style="font-size:13px;margin-top:4px;">
+              <span style="color:#2d7a3a;">▲ <span id="engSubindo">—</span></span>
+              <span style="color:#888;margin:0 4px;">● <span id="engEstavel">—</span></span>
+              <span style="color:#c0392b;">▼ <span id="engDescendo">—</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles -->
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="filter-bar">
+            <button class="fb active" onclick="filtrarEngajamento('',this)">Todos</button>
+            <button class="fb" onclick="filtrarEngajamento('descendo',this)" style="color:#c0392b;">▼ Descendo</button>
+            <button class="fb" onclick="filtrarEngajamento('estavel',this)">● Estável</button>
+            <button class="fb" onclick="filtrarEngajamento('subindo',this)" style="color:#2d7a3a;">▲ Subindo</button>
+          </div>
+          <button onclick="calcularEngajamento()" style="margin-left:auto;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">⟳ Recalcular</button>
+        </div>
+
+        <!-- Tabela de famílias -->
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <div id="engLista"><div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+        </div>
+      </div>
+
       <!-- ── CADASTRAR FAMÍLIA ── -->
       <div id="panelFamilias" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
@@ -3609,10 +3646,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -3705,6 +3742,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='acessoRfid') loadAcessoRfid();
     if(id==='acessoPermissoes') loadAcessoPermissoes();
     if(id==='acessoEventos') loadAcessoEventos();
+    if(id==='engajamento') loadEngajamentoPanel();
     // Track usage for recents & smart ordering
     if(id !== 'analytics') trackPanelUsage(id);
     updateBottomBarActive(id);
@@ -9490,6 +9528,92 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   function toggleCadastroForm() {
     const el = document.getElementById('cadFormWrap');
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  ENGAJAMENTO DE FAMÍLIAS
+  // ═══════════════════════════════════════════════════════════════
+
+  var _engTrendFilter = '';
+
+  async function loadEngajamentoPanel() {
+    const [dash, lista] = await Promise.all([
+      api({ action: 'engagement_dashboard' }),
+      api({ action: 'engagement_list' }),
+    ]);
+    renderEngDashboard(dash);
+    renderEngLista(Array.isArray(lista) ? lista : []);
+  }
+
+  function renderEngDashboard(d) {
+    if (!d) return;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('engAvgScore', d.avg_score ?? '—');
+    set('engAlto', d.alto ?? 0);
+    set('engMedio', d.medio ?? 0);
+    set('engBaixo', d.baixo ?? 0);
+    set('engSubindo', d.subindo ?? 0);
+    set('engEstavel', d.estavel ?? 0);
+    set('engDescendo', d.descendo ?? 0);
+  }
+
+  function renderEngLista(rows) {
+    const el = document.getElementById('engLista');
+    if (!el) return;
+    if (!rows.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Nenhuma família encontrada. Clique em "Recalcular" para calcular os scores.</div>'; return; }
+    const filtered = _engTrendFilter ? rows.filter(r => r.trend === _engTrendFilter) : rows;
+    if (!filtered.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Sem famílias com esse filtro.</div>'; return; }
+    const trendIcon = t => t === 'subindo' ? '<span style="color:#2d7a3a;font-weight:700;">▲</span>' : t === 'descendo' ? '<span style="color:#c0392b;font-weight:700;">▼</span>' : '<span style="color:#888;">●</span>';
+    const scoreColor = s => s > 70 ? '#2d7a3a' : s >= 40 ? '#b07d10' : '#c0392b';
+    const rows_html = filtered.map(r => {
+      const pct = r.score ?? 0;
+      const cor = scoreColor(pct);
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;">${esc(r.familia_nome || r.familia_email)}</div>
+          <div style="font-size:11px;color:var(--muted);">${esc(r.familia_email)}</div>
+        </div>
+        <div style="width:120px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
+            <span style="color:${cor};font-weight:700;">${pct}</span><span style="color:var(--muted);">/ 100</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${cor};border-radius:4px;transition:width .4s;"></div>
+          </div>
+        </div>
+        <div style="width:32px;text-align:center;">${trendIcon(r.trend)}</div>
+        <button onclick="engEnviarMensagem('${esc(r.familia_email)}','${esc(r.familia_nome || '')}',this)" style="padding:5px 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">✉ Mensagem</button>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:8px 16px;border-bottom:1px solid var(--border);">${filtered.length} família${filtered.length !== 1 ? 's' : ''} — ordenado por menor engajamento primeiro</div>${rows_html}`;
+  }
+
+  async function filtrarEngajamento(trend, btn) {
+    _engTrendFilter = trend;
+    document.querySelectorAll('#panelEngajamento .filter-bar .fb').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const lista = await api({ action: 'engagement_list', trend });
+    renderEngLista(Array.isArray(lista) ? lista : []);
+  }
+
+  async function calcularEngajamento() {
+    const btn = document.querySelector('#panelEngajamento button[onclick="calcularEngajamento()"]');
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ Calculando...'; }
+    const r = await api({ action: 'calcular_engagement' });
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ Recalcular'; }
+    if (r?.calculadas !== undefined) {
+      showToast?.(`Score calculado para ${r.calculadas} família(s).`, 'success');
+      loadEngajamentoPanel();
+    }
+  }
+
+  function engEnviarMensagem(email, nome, btn) {
+    // Redireciona para o chat com a família pré-selecionada
+    showPanel('chatConversas', null);
+    setTimeout(() => {
+      const searchEl = document.getElementById('chatBusca');
+      if (searchEl) { searchEl.value = nome || email; searchEl.dispatchEvent(new Event('input')); }
+    }, 400);
   }
 
   async function loadFamiliasPanel() {
