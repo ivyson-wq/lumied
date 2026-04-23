@@ -34,11 +34,8 @@ SELECT cron.schedule(
   '0 3 * * *',
   $$
   SELECT net.http_post(
-    url := current_setting('app.settings.supabase_url') || '/functions/v1/api',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.settings.cron_internal_key', true)
-    ),
+    url := 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzc2NTQ1NSwiZXhwIjoyMDg5MzQxNDU1fQ.MI9khO-VnKpmi80n12rsuBySOPdOi7KhapCV5JOAsj8"}'::jsonb,
     body := '{"action":"calcular_engagement_todas_escolas"}'::jsonb
   );
   $$

@@ -3702,18 +3702,63 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
 
   if (action === "calcular_engagement_todas_escolas") {
-    // Chamada interna pelo cron — sem autenticação de gerente
-    const cronKey = req.headers.get("Authorization")?.replace("Bearer ", "");
-    const { data: cfg } = await admin.rpc("get_app_setting", { key: "cron_internal_key" }).maybeSingle();
-    if (!cronKey || cronKey !== cfg) return err("Não autorizado.", 401);
+    const cronEnvKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+    const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "") || "";
+    const isAuthorized = (cronEnvKey && authHeader === cronEnvKey) || (svcKey && authHeader === svcKey);
+    if (!isAuthorized) return err("Não autorizado.", 401);
 
     const { data: escolas } = await admin.from("escolas").select("id").eq("ativo", true);
-    let total = 0;
-    for (const escola of escolas ?? []) {
-      // Reutiliza a lógica disparando internamente (simplificado: só conta escolas)
-      total++;
+    if (!escolas?.length) return ok({ escolas_processadas: 0, calculadas: 0 });
+
+    const now = new Date();
+    const d30 = new Date(now.getTime() - 30 * 86400_000).toISOString();
+    let totalEscolas = 0;
+    let totalCalculadas = 0;
+
+    for (const escola of escolas) {
+      const eid = escola.id;
+      const { data: familias } = await admin.from("familias").select("email, nome_responsavel").eq("escola_id", eid);
+      if (!familias?.length) continue;
+
+      const upserts = [];
+      for (const fam of familias) {
+        if (!fam.email) continue;
+        const { count: sessoes } = await admin.from("sessoes").select("id", { count: "exact", head: true }).eq("escola_id", eid).gte("criado_em", d30).eq("email", fam.email);
+        const cnt = sessoes ?? 0;
+        const score_app_usage = cnt === 0 ? 0 : cnt <= 3 ? 30 : cnt <= 10 ? 60 : cnt < 30 ? 90 : 100;
+
+        const { data: boletos } = await admin.from("boletos").select("vencimento, pago_em").eq("escola_id", eid).eq("familia_email", fam.email).eq("status", "pago").limit(10).order("vencimento", { ascending: false });
+        let score_pagamento = 50;
+        if (boletos?.length) {
+          const avgDias = boletos.reduce((acc: number, b: any) => { if (!b.pago_em) return acc; return acc + Math.max(0, (new Date(b.pago_em).getTime() - new Date(b.vencimento).getTime()) / 86400_000); }, 0) / boletos.length;
+          score_pagamento = avgDias <= 0 ? 100 : avgDias <= 5 ? 70 : avgDias <= 15 ? 40 : 10;
+        }
+
+        const { count: enviadas } = await admin.from("mensagens").select("id", { count: "exact", head: true }).eq("escola_id", eid).eq("destinatario_email", fam.email).gte("criado_em", d30);
+        const { count: respondidas } = await admin.from("mensagens").select("id", { count: "exact", head: true }).eq("escola_id", eid).eq("remetente_email", fam.email).gte("criado_em", d30);
+        let score_comunicacao = 50;
+        if ((enviadas ?? 0) > 0) { const taxa = Math.min(1, (respondidas ?? 0) / (enviadas ?? 1)); score_comunicacao = taxa >= 1 ? 100 : taxa >= 0.75 ? 80 : taxa >= 0.5 ? 50 : 20; }
+
+        const { data: reunioes } = await admin.from("reunioes_agenda").select("confirmado").eq("escola_id", eid).eq("familia_email", fam.email).order("data_hora", { ascending: false }).limit(1);
+        const score_presenca = reunioes?.length ? (reunioes[0].confirmado ? 100 : 30) : 60;
+
+        const score = Math.round(score_app_usage * 0.30 + score_pagamento * 0.25 + score_comunicacao * 0.25 + score_presenca * 0.20);
+        const { data: prev } = await admin.from("familia_engagement").select("score").eq("escola_id", eid).eq("familia_email", fam.email).maybeSingle();
+        const score_anterior = prev?.score ?? score;
+        const diff = score - score_anterior;
+        const trend = diff > 10 ? "subindo" : diff < -10 ? "descendo" : "estavel";
+        upserts.push({ escola_id: eid, familia_email: fam.email, familia_nome: fam.nome_responsavel, score, score_app_usage, score_pagamento, score_comunicacao, score_presenca, trend, score_anterior, detalhes: { sessoes: cnt, boletos_analisados: boletos?.length ?? 0, mensagens_enviadas: enviadas ?? 0, mensagens_respondidas: respondidas ?? 0 }, calculado_em: now.toISOString() });
+      }
+
+      if (upserts.length > 0) {
+        await admin.from("familia_engagement").upsert(upserts, { onConflict: "escola_id,familia_email" });
+        totalCalculadas += upserts.length;
+      }
+      totalEscolas++;
     }
-    return ok({ escolas_processadas: total });
+
+    return ok({ escolas_processadas: totalEscolas, calculadas: totalCalculadas });
   }
 
   if (action === "engagement_list") {
