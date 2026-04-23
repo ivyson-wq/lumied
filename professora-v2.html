@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumied — Portal da Professora</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="/sentry-init.js"></script>
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--surface-2); color: var(--ink); }
+button { cursor: pointer; font-family: inherit; border: none; background: none; }
+input { font-family: inherit; border: none; outline: none; }
+a { text-decoration: none; color: inherit; }
+
+/* ── Tokens ── */
+:root {
+  --mb-red: #b3142a;
+  --mb-red-700: #8a0f20;
+  --mb-red-50: #fbecef;
+  --mb-cream: #f6f1e8;
+  --ink: #1a1413;
+  --ink-2: #3d3431;
+  --ink-3: #6b605c;
+  --ink-4: #9c928e;
+  --line: #e6ddd0;
+  --line-2: #d9cfc0;
+  --surface: #ffffff;
+  --surface-2: #fafaf7;
+  --ok: #1f7a4d;
+  --ok-bg: #ecfdf5;
+  --warn: #b8730a;
+  --warn-bg: #fffbeb;
+  --info: #2563eb;
+  --info-bg: #eff6ff;
+  --danger-bg: #fef2f2;
+  --purple: #7c3aed;
+  --purple-bg: #f5f3ff;
+  --shadow-sm: 0 1px 2px rgba(26,20,19,.04);
+  --shadow: 0 2px 8px rgba(26,20,19,.06), 0 1px 2px rgba(26,20,19,.04);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --transition: 180ms ease;
+}
+
+@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+.skeleton { background: linear-gradient(90deg, var(--line) 25%, #ede6db 50%, var(--line) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite ease-in-out; border-radius: var(--radius-sm); }
+.skeleton-text { height: 14px; width: 80%; margin-bottom: 8px; }
+.skeleton-value { height: 28px; width: 50%; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { animation: fadeUp .35s ease both; }
+.fade-up-d1 { animation-delay: .05s; }
+.fade-up-d2 { animation-delay: .10s; }
+.fade-up-d3 { animation-delay: .15s; }
+
+/* ── Login ── */
+#login-screen { display:flex; align-items:center; justify-content:center; position:fixed; inset:0; z-index:9999; background:var(--ink); }
+#login-screen.hidden { display:none; }
+.login-card { background:var(--surface); border-radius:16px; padding:40px; width:100%; max-width:400px; box-shadow:0 24px 48px rgba(0,0,0,.25); animation:fadeUp .4s ease both; }
+.login-logo { display:flex; align-items:center; gap:10px; margin-bottom:32px; }
+.login-logo-mark { width:36px; height:36px; background:var(--purple); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:'Instrument Serif',serif; font-size:22px; color:#fff; }
+.login-logo-text { font-size:18px; font-weight:600; color:var(--ink); }
+.login-card h2 { font-family:'Instrument Serif',serif; font-size:24px; font-weight:400; margin-bottom:4px; }
+.login-card p { font-size:13px; color:var(--ink-3); margin-bottom:24px; }
+.login-field { margin-bottom:16px; }
+.login-field label { display:block; font-size:12px; font-weight:500; color:var(--ink-2); margin-bottom:6px; }
+.login-field input { width:100%; padding:10px 12px; font-size:14px; border:1px solid var(--line); border-radius:8px; background:var(--surface-2); transition:border-color var(--transition); }
+.login-field input:focus { border-color:var(--purple); }
+.login-btn { width:100%; padding:11px; font-size:14px; font-weight:600; color:#fff; background:var(--purple); border-radius:8px; margin-top:4px; transition:background var(--transition); }
+.login-btn:hover { background:#6d28d9; }
+.login-btn:disabled { opacity:.6; cursor:not-allowed; }
+.login-error { font-size:12px; color:var(--mb-red); margin-top:12px; display:none; }
+.login-error.show { display:block; }
+
+/* ── Shell ── */
+#app-shell { display:none; min-height:100vh; }
+#app-shell.visible { display:flex; flex-direction:column; }
+
+/* ── Topbar ── */
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; background:var(--surface); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; }
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.topbar-logo { width:28px; height:28px; background:var(--purple); border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Instrument Serif',serif; font-size:16px; color:#fff; }
+.topbar-greeting { font-size:15px; font-weight:600; color:var(--ink); }
+.topbar-right { display:flex; align-items:center; gap:8px; }
+.topbar-avatar { width:32px; height:32px; border-radius:50%; background:var(--purple-bg); color:var(--purple); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+.sandbox-badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--purple); background:var(--purple-bg); padding:3px 8px; border-radius:999px; }
+
+/* ── Content ── */
+.content { padding:20px 24px 100px; max-width:720px; margin:0 auto; width:100%; }
+
+/* ── Alert card (access alert) ── */
+.alert-card { background:var(--ok-bg); border:1px solid #bbf7d0; border-radius:var(--radius); padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ok); }
+.alert-card.warn { background:var(--warn-bg); border-color:#fde68a; color:var(--warn); }
+.alert-card i { width:18px; height:18px; flex-shrink:0; }
+.alert-card-text { flex:1; }
+.alert-card-time { font-size:11px; color:var(--ink-4); }
+
+/* ── Section ── */
+.section-title { font-family:'Instrument Serif',serif; font-size:20px; color:var(--ink); margin:24px 0 12px; }
+.section-sub { font-size:12px; color:var(--ink-3); margin-top:-8px; margin-bottom:16px; }
+
+/* ── Quick actions grid ── */
+.actions-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:24px; }
+.action-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all var(--transition); }
+.action-card:hover { border-color:var(--purple); box-shadow:var(--shadow); transform:translateY(-1px); }
+.action-card:active { transform:scale(.98); }
+.action-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.action-icon i { width:20px; height:20px; }
+.action-icon.purple { background:var(--purple-bg); color:var(--purple); }
+.action-icon.green { background:var(--ok-bg); color:var(--ok); }
+.action-icon.blue { background:var(--info-bg); color:var(--info); }
+.action-icon.red { background:var(--danger-bg); color:var(--mb-red); }
+.action-icon.warm { background:var(--warn-bg); color:var(--warn); }
+.action-label { font-size:13px; font-weight:600; color:var(--ink); }
+.action-sub { font-size:11px; color:var(--ink-3); margin-top:2px; }
+
+/* ── Turma card ── */
+.turma-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+.turma-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.turma-name { font-size:14px; font-weight:600; }
+.turma-badge { font-size:11px; padding:3px 10px; border-radius:999px; font-weight:600; }
+.turma-badge.green { background:var(--ok-bg); color:var(--ok); }
+.turma-stats { display:flex; gap:16px; font-size:12px; color:var(--ink-3); }
+.turma-stat b { color:var(--ink); }
+
+/* ── Agenda item ── */
+.agenda-item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+.agenda-item:last-child { border-bottom:none; }
+.agenda-time { font-size:12px; font-weight:600; color:var(--purple); min-width:50px; padding-top:2px; }
+.agenda-body { flex:1; }
+.agenda-title { font-size:13px; font-weight:500; color:var(--ink); }
+.agenda-desc { font-size:12px; color:var(--ink-3); margin-top:2px; }
+
+/* ── Bottom bar ── */
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--line); display:flex; justify-content:space-around; padding:6px 0 calc(6px + env(safe-area-inset-bottom)); z-index:100; }
+.bar-item { display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:600; color:var(--ink-4); cursor:pointer; transition:all var(--transition); text-transform:uppercase; letter-spacing:.03em; }
+.bar-item:active { transform:scale(.92); }
+.bar-item.active { color:var(--purple); }
+.bar-item i { width:20px; height:20px; }
+.bar-fab { width:48px; height:48px; border-radius:50%; background:var(--purple); color:#fff; display:flex; align-items:center; justify-content:center; margin-top:-20px; box-shadow:0 4px 16px rgba(124,58,237,.35); }
+.bar-fab i { width:22px; height:22px; }
+
+/* ── Responsive ── */
+@media (min-width: 768px) {
+  .content { padding:32px 40px 60px; }
+  .actions-grid { grid-template-columns:repeat(3, 1fr); }
+  .bottom-bar { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark">L</div>
+      <div class="login-logo-text">Lumied</div>
+    </div>
+    <h2>Portal da Professora</h2>
+    <p>Entre com suas credenciais para acessar.</p>
+    <form id="login-form" autocomplete="on">
+      <div class="login-field">
+        <label for="login-email">E-mail</label>
+        <input id="login-email" type="email" placeholder="seu@email.com" autocomplete="email" required>
+      </div>
+      <div class="login-field">
+        <label for="login-senha">Senha</label>
+        <input id="login-senha" type="password" placeholder="Sua senha" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="login-btn" id="login-btn">Entrar</button>
+    </form>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app-shell">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">L</div>
+      <span class="topbar-greeting" id="greeting">Bom dia</span>
+    </div>
+    <div class="topbar-right">
+      <span class="sandbox-badge">SANDBOX v2</span>
+      <div class="topbar-avatar" id="topbar-initials">--</div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Alerts (access events) -->
+    <div id="alerts-container"></div>
+
+    <!-- Quick actions -->
+    <div class="section-title fade-up">Acoes rapidas</div>
+    <div class="actions-grid">
+      <a class="action-card fade-up" href="professora.html#chamada">
+        <div class="action-icon green"><i data-lucide="check-square"></i></div>
+        <div><div class="action-label">Chamada</div><div class="action-sub">Registrar presenca</div></div>
+      </a>
+      <a class="action-card fade-up fade-up-d1" href="professora.html#agenda">
+        <div class="action-icon blue"><i data-lucide="send"></i></div>
+        <div><div class="action-label">Agenda Digital</div><div class="action-sub">Enviar recado</div></div>
+      </a>
+      <a class="action-card fade-up fade-up-d2" href="professora.html#notas">
+        <div class="action-icon purple"><i data-lucide="file-edit"></i></div>
+        <div><div class="action-label">Notas</div><div class="action-sub">Lancar notas</div></div>
+      </a>
+      <a class="action-card fade-up fade-up-d3" href="professora.html#materiais">
+        <div class="action-icon warm"><i data-lucide="package"></i></div>
+        <div><div class="action-label">Materiais</div><div class="action-sub">Solicitar insumos</div></div>
+      </a>
+      <a class="action-card fade-up fade-up-d3" href="professora.html#diario">
+        <div class="action-icon red"><i data-lucide="book-open"></i></div>
+        <div><div class="action-label">Diario</div><div class="action-sub">Registro de aula</div></div>
+      </a>
+      <a class="action-card fade-up fade-up-d3" href="professora.html#diplomas">
+        <div class="action-icon purple"><i data-lucide="award"></i></div>
+        <div><div class="action-label">Diplomas</div><div class="action-sub">Gerar diplomas</div></div>
+      </a>
+    </div>
+
+    <!-- Minha turma -->
+    <div class="section-title fade-up">Minha turma</div>
+    <div id="turma-container">
+      <div class="turma-card fade-up">
+        <div class="turma-header">
+          <span class="turma-name"><span class="skeleton skeleton-text" style="width:120px;display:inline-block;">&nbsp;</span></span>
+        </div>
+        <div class="turma-stats">
+          <span class="skeleton skeleton-text" style="width:200px;">&nbsp;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agenda do dia -->
+    <div class="section-title fade-up fade-up-d1">Agenda de hoje</div>
+    <div class="section-sub fade-up fade-up-d1" id="agenda-date"></div>
+    <div id="agenda-container" class="fade-up fade-up-d2">
+      <div class="agenda-item">
+        <div class="agenda-time"><span class="skeleton" style="width:40px;height:14px;display:inline-block;">&nbsp;</span></div>
+        <div class="agenda-body"><span class="skeleton skeleton-text">&nbsp;</span></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Bottom bar (mobile) -->
+  <nav class="bottom-bar">
+    <a class="bar-item active" href="professora-v2.html"><i data-lucide="home"></i> Inicio</a>
+    <a class="bar-item" href="professora.html#chamada"><i data-lucide="check-square"></i> Chamada</a>
+    <div class="bar-item bar-fab" onclick="window.location='professora.html#agenda'"><i data-lucide="plus"></i></div>
+    <a class="bar-item" href="professora.html#notas"><i data-lucide="file-edit"></i> Notas</a>
+    <a class="bar-item" href="professora.html#materiais"><i data-lucide="package"></i> Materiais</a>
+  </nav>
+
+</div><!-- /app-shell -->
+
+<script>
+/* ─── API ─── */
+var SUPABASE_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
+function getToken() { return localStorage.getItem('prof_token'); }
+
+async function api(fn, body) {
+  var token = getToken();
+  var headers = {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON};
+  var r = await fetch(SUPABASE_URL + '/functions/v1/' + fn, { method:'POST', headers: headers, body: JSON.stringify(Object.assign({}, body, { _prof_token: token, _token: token })) });
+  return r.json();
+}
+
+/* ─── State ─── */
+var currentUser = { nome: '', email: '' };
+
+/* ─── Helpers ─── */
+function getGreeting() {
+  var h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+function initials(name) {
+  if (!name) return '--';
+  var parts = name.trim().split(/\s+/);
+  return parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ─── Login ─── */
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('login-btn');
+  var errEl = document.getElementById('login-error');
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  try {
+    var email = document.getElementById('login-email').value;
+    var senha = document.getElementById('login-senha').value;
+    var res = await api('diplomas', { action: 'professora_login', email: email, senha: senha });
+    if (!res) res = await api('diplomas', { action: 'unified_login', email: email, senha: senha });
+    if (res && res.token) {
+      localStorage.setItem('prof_token', res.token);
+      currentUser.nome = res.nome || '';
+      currentUser.email = res.email || email;
+      enterApp();
+    } else {
+      errEl.textContent = res?.error || 'Credenciais incorretas.';
+      errEl.classList.add('show');
+    }
+  } catch (err) {
+    errEl.textContent = 'Erro de conexao.';
+    errEl.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+});
+
+/* ─── Auto-login ─── */
+(async function() {
+  var token = getToken();
+  if (!token) return;
+  try {
+    // Try to get dashboard data — if it works, token is valid
+    var res = await api('diplomas', { action: 'prof_turnos_dashboard' });
+    if (res && !res.error) {
+      currentUser.nome = res.nome || '';
+      enterApp();
+    }
+  } catch (e) { /* show login */ }
+})();
+
+/* ─── Enter App ─── */
+function enterApp() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-shell').classList.add('visible');
+
+  var first = currentUser.nome ? currentUser.nome.split(' ')[0] : '';
+  document.getElementById('greeting').textContent = getGreeting() + (first ? ', ' + first + '!' : '!');
+  document.getElementById('topbar-initials').textContent = initials(currentUser.nome);
+
+  var today = new Date();
+  var days = ['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+  document.getElementById('agenda-date').textContent = days[today.getDay()] + ', ' + today.getDate() + '/' + (today.getMonth()+1);
+
+  lucide.createIcons();
+  loadDashboard();
+}
+
+/* ─── Dashboard ─── */
+async function loadDashboard() {
+  // Load turma info
+  try {
+    var turmaData = await api('diplomas', { action: 'alm_minha_turma', mes: new Date().toISOString().slice(0,7) });
+    if (turmaData && !turmaData.error) {
+      renderTurma(turmaData);
+    } else {
+      document.getElementById('turma-container').innerHTML = '<div class="turma-card"><div style="text-align:center;padding:12px;color:var(--ink-3);font-size:13px;">Nenhuma turma associada.</div></div>';
+    }
+  } catch(e) {
+    document.getElementById('turma-container').innerHTML = '<div class="turma-card"><div style="color:var(--ink-3);font-size:13px;padding:12px;">Erro ao carregar turma.</div></div>';
+  }
+
+  // Load agenda
+  try {
+    var agendaData = await api('diplomas', { action: 'prof_atividades_dashboard' });
+    renderAgenda(agendaData);
+  } catch(e) {
+    document.getElementById('agenda-container').innerHTML = '<div style="color:var(--ink-3);font-size:13px;padding:12px;">Sem agenda para hoje.</div>';
+  }
+}
+
+function renderTurma(data) {
+  var container = document.getElementById('turma-container');
+  var turmas = data.turmas || (data.turma ? [data] : []);
+  if (!turmas.length) {
+    container.innerHTML = '<div class="turma-card"><div style="color:var(--ink-3);font-size:13px;padding:8px;">Nenhuma turma.</div></div>';
+    return;
+  }
+  container.innerHTML = turmas.map(function(t) {
+    var nome = t.serie_nome || t.nome || 'Turma';
+    var alunos = t.total_alunos || t.alunos || '—';
+    var orcamento = t.orcamento ? 'R$ ' + Number(t.orcamento).toLocaleString('pt-BR') : '';
+    var disponivel = t.disponivel ? 'R$ ' + Number(t.disponivel).toLocaleString('pt-BR') : '';
+    return '<div class="turma-card fade-up">' +
+      '<div class="turma-header"><span class="turma-name">' + esc(nome) + '</span><span class="turma-badge green">' + alunos + ' alunos</span></div>' +
+      (orcamento ? '<div class="turma-stats"><span>Orcamento: <b>' + orcamento + '</b></span>' + (disponivel ? '<span>Disponivel: <b>' + disponivel + '</b></span>' : '') + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function renderAgenda(data) {
+  var container = document.getElementById('agenda-container');
+  var items = data?.atividades || data?.agenda || [];
+  if (!items.length && !data?.error) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3);font-size:13px;">Nenhum evento para hoje. Aproveite! ☀️</div>';
+    return;
+  }
+  if (data?.error) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3);font-size:13px;">Agenda nao disponivel.</div>';
+    return;
+  }
+  container.innerHTML = items.map(function(a) {
+    var hora = a.horario || a.hora || '';
+    var titulo = a.nome || a.titulo || a.atividade || 'Atividade';
+    var desc = a.descricao || a.turma || '';
+    return '<div class="agenda-item">' +
+      '<div class="agenda-time">' + esc(hora) + '</div>' +
+      '<div class="agenda-body"><div class="agenda-title">' + esc(titulo) + '</div>' +
+      (desc ? '<div class="agenda-desc">' + esc(desc) + '</div>' : '') +
+      '</div></div>';
+  }).join('');
+}
+
+/* ─── Sidebar search (for desktop link to full portal) ─── */
+function goLegacy() {
+  window.location = 'professora.html';
+}
+</script>
+
+<script src="/lumied-ux.js" defer></script>
+<script src="/lumied-a11y.js" defer></script>
+<script src="/lumied-delight.js" defer></script>
+<script src="/lumied-pro.js" defer></script>
+</body>
+</html>
