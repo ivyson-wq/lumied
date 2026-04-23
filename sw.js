@@ -1,5 +1,5 @@
-// Lumied — Service Worker v7 (SWR em JS/CSS, Network-First HTML, Push)
-const CACHE_NAME = 'lumied-v7';
+// Lumied — Service Worker v8 (SWR em JS/CSS, Network-First HTML, Push)
+const CACHE_NAME = 'lumied-v8';
 const OFFLINE_ASSETS = [
   '/themes.css',
   '/webauthn-client.js',
