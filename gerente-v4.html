@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lumied — Gestão Escolar</title>
+<meta name="theme-color" content="#111110">
+<link rel="icon" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/sentry-init.js"></script>
+<style>
+/*═══════════════════════════════════════════════════════════
+  LUMIED v4 — Bento Grid Dashboard
+  Inspired by Linear, Notion, Vercel, Apple
+═══════════════════════════════════════════════════════════*/
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',-apple-system,sans-serif;background:#f8f7f5;color:#1a1a18;font-size:13px}
+button{cursor:pointer;font-family:inherit;border:none;background:none}
+input,select,textarea{font-family:inherit}
+a{text-decoration:none;color:inherit}
+:root{
+  --accent:#c8102e;--accent-h:#a50d24;--accent-l:rgba(200,16,46,.05);
+  --bg:#f8f7f5;--card:#fff;--card-2:#f3f1ed;
+  --ink:#1a1a18;--ink2:#4a4744;--ink3:#8a8580;--ink4:#b5b0ab;
+  --line:#e8e3dc;--line2:#d8d2ca;
+  --ok:#1a7a3e;--ok-bg:#edfcf2;--warn:#b07d00;--warn-bg:#fef9eb;--err:#dc2626;--err-bg:#fef2f2;--blue:#2563eb;--blue-bg:#eff6ff;
+  --sb:#111110;--sb-text:rgba(255,255,255,.6);--sb-active:rgba(255,255,255,.08);
+  --r:10px;--r-sm:6px;--r-lg:14px;
+  --shadow:0 1px 2px rgba(0,0,0,.04);
+  --shadow-hover:0 4px 12px rgba(0,0,0,.06);
+}
+
+/* ═══ LOGIN ═══ */
+#login{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--sb)}
+#login.hide{display:none}
+.lcard{background:var(--card);border-radius:14px;padding:36px;width:100%;max-width:370px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.lcard h2{font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;margin-bottom:2px}
+.lcard .sub{font-size:12px;color:var(--ink3);margin-bottom:22px}
+.lf{margin-bottom:12px}
+.lf label{display:block;font-size:10px;font-weight:600;color:var(--ink2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.lf input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:13px;background:var(--bg);transition:border .15s}
+.lf input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-l)}
+.lbtn{width:100%;padding:10px;background:var(--accent);color:#fff;border-radius:var(--r-sm);font-size:13px;font-weight:600;transition:background .15s}
+.lbtn:hover{background:var(--accent-h)}
+.lbtn:disabled{opacity:.5}
+.lerr{font-size:11px;color:var(--err);margin-top:8px;display:none}
+
+/* ═══ SHELL ═══ */
+#app{display:none;height:100vh}
+#app.on{display:grid;grid-template-columns:220px 1fr}
+
+/* ═══ SIDEBAR ═══ */
+.sb{background:var(--sb);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+.sb::-webkit-scrollbar{width:3px}.sb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
+.sb-top{padding:14px 12px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.05)}
+.sb-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:15px;color:#fff;flex-shrink:0}
+.sb-name{font-size:13px;font-weight:600;color:#fff}
+.sb-sub{font-size:9px;color:rgba(255,255,255,.3)}
+.sb-search{padding:8px 10px}
+.sb-search input{width:100%;padding:6px 10px 6px 28px;font-size:11px;background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:5px;color:#fff;transition:all .15s}
+.sb-search input::placeholder{color:rgba(255,255,255,.25)}
+.sb-search input:focus{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12)}
+.sb-search-w{position:relative}
+.sb-search-w svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:12px;height:12px;color:rgba(255,255,255,.25);pointer-events:none}
+.sb-nav{flex:1;padding:4px 8px}
+.sb-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.2);padding:12px 10px 3px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:color .12s}
+.sb-lbl:hover{color:rgba(255,255,255,.4)}
+.sb-arr{font-size:7px;transition:transform .2s}.sb-arr.c{transform:rotate(-90deg)}
+.sb-sec{overflow:hidden;transition:max-height .25s ease;max-height:400px}.sb-sec.c{max-height:0}
+.ni{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:5px;color:var(--sb-text);font-size:12px;font-weight:500;cursor:pointer;transition:all .1s;margin-bottom:1px}
+.ni:hover{background:var(--sb-active);color:rgba(255,255,255,.85)}
+.ni.on{background:var(--sb-active);color:#fff;font-weight:600}
+.ni svg{width:14px;height:14px;opacity:.5;flex-shrink:0}.ni.on svg{opacity:.9}
+.sb-foot{padding:8px 10px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-user{display:flex;align-items:center;gap:7px;padding:5px 6px}
+.sb-av{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.sb-uname{font-size:11px;color:rgba(255,255,255,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-out{width:100%;padding:6px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:5px;color:rgba(255,255,255,.35);font-size:10px;text-align:left;margin-top:5px;transition:all .12s;display:flex;align-items:center;gap:5px}
+.sb-out:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.6)}
+
+/* ═══ MAIN ═══ */
+.main{overflow-y:auto;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:50;min-height:44px}
+.top h2{font-size:14px;font-weight:600}
+.top-r{display:flex;align-items:center;gap:6px}
+.v4badge{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink4);background:var(--card-2);padding:2px 7px;border-radius:999px}
+.notif-b{position:relative;padding:5px;border-radius:5px;transition:background .12s}.notif-b:hover{background:var(--card-2)}
+.notif-b svg{width:16px;height:16px;color:var(--ink3)}
+.cnt{padding:16px 20px 40px;flex:1}
+
+/* ═══ BENTO GRID ═══ */
+.bento{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.bento>.span2{grid-column:span 2}
+.bento>.span3{grid-column:span 3}
+.bento>.span4{grid-column:span 4}
+
+/* ═══ CARDS ═══ */
+.bc{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;transition:box-shadow .15s}
+.bc:hover{box-shadow:var(--shadow-hover)}
+.bc-t{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.bc-v{font-family:'Instrument Serif',serif;font-size:28px;color:var(--ink);line-height:1.1}
+.bc-d{font-size:10px;margin-top:3px;font-weight:500;display:flex;align-items:center;gap:3px}
+.bc-d.up{color:var(--ok)}.bc-d.dn{color:var(--err)}
+
+/* ═══ TASK CARD ═══ */
+.task-list{list-style:none}
+.task-i{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:background .1s;border-radius:4px;padding:8px 6px;margin:0 -6px}
+.task-i:hover{background:var(--card-2)}
+.task-i:last-child{border-bottom:none}
+.task-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.task-dot.red{background:var(--err)}.task-dot.warn{background:var(--warn)}.task-dot.blue{background:var(--blue)}.task-dot.ok{background:var(--ok)}
+.task-txt{flex:1;min-width:0}
+.task-title{font-size:12px;font-weight:500;color:var(--ink)}
+.task-sub{font-size:10px;color:var(--ink3);margin-top:1px}
+.task-arr{width:14px;height:14px;color:var(--ink4)}
+
+/* ═══ CHART AREA ═══ */
+.chart-area{height:180px;position:relative}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.chart-title{font-size:12px;font-weight:600;color:var(--ink)}
+.chart-sub{font-size:10px;color:var(--ink3)}
+
+/* ═══ QUICK GRID ═══ */
+.quick{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.qi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:all .12s;text-align:center}
+.qi:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow-hover)}
+.qi:active{transform:scale(.97)}
+.qi svg{width:20px;height:20px;color:var(--ink3)}
+.qi:hover svg{color:var(--accent)}
+.qi span{font-size:10px;font-weight:600;color:var(--ink2)}
+
+/* ═══ AI CARD ═══ */
+.ai-card{background:linear-gradient(135deg,#faf8ff,#fff);border:1px solid #e8e0f5}
+.ai-card .bc-t{color:#7c3aed}
+.ai-icon{font-size:16px}
+
+/* ═══ HAMBURGER ═══ */
+.ham{display:none;padding:6px;border-radius:5px}.ham:hover{background:var(--card-2)}
+.sb-over{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
+.sb-over.on{display:block}
+
+/* ═══ BOTTOM BAR ═══ */
+.bbar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--card);border-top:1px solid var(--line);padding:4px 8px calc(4px + env(safe-area-inset-bottom));justify-content:space-around}
+.bb-i{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;padding:5px 4px;cursor:pointer;color:var(--ink3);font-size:8px;font-weight:600;transition:color .1s;text-transform:uppercase;letter-spacing:.02em}
+.bb-i.on{color:var(--accent)}
+.bb-i svg{width:18px;height:18px}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:900px){
+  #app.on{grid-template-columns:1fr}
+  .sb{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:100;transform:translateX(-100%);transition:transform .25s ease}
+  .sb.open{transform:translateX(0)}
+  .sb-over.on{display:block}
+  .ham{display:flex}
+  .bbar{display:flex}
+  .bento{grid-template-columns:repeat(2,1fr)}
+  .bento>.span2,.bento>.span3{grid-column:span 2}
+  .bento>.span4{grid-column:span 2}
+  .quick{grid-template-columns:repeat(3,1fr)}
+  .cnt{padding:12px 12px 80px}
+  .top{padding:8px 12px}
+}
+@media(max-width:480px){
+  .bento{grid-template-columns:1fr}
+  .bento>.span2,.bento>.span3,.bento>.span4{grid-column:span 1}
+  .quick{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade{animation:fadeIn .3s ease both}
+.fd1{animation-delay:.04s}.fd2{animation-delay:.08s}.fd3{animation-delay:.12s}.fd4{animation-delay:.16s}.fd5{animation-delay:.2s}
+.skel{background:linear-gradient(90deg,var(--line) 25%,#ede6db 50%,var(--line) 75%);background-size:800px 100%;animation:shimmer 1.5s infinite;border-radius:var(--r-sm)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--accent-l);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+
+/* ═══ PANELS (content loaded inline) ═══ */
+.panel{display:none}.panel.active{display:block;animation:fadeIn .2s ease}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login">
+  <div class="lcard">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+      <div class="sb-mark">L</div>
+      <span style="font-size:14px;font-weight:600">Lumied</span>
+    </div>
+    <h2>Entrar</h2>
+    <div class="sub">Acesse o painel de gestão da escola.</div>
+    <form id="loginForm" autocomplete="on">
+      <div class="lf"><label>Email</label><input type="email" id="inEmail" required autocomplete="email" placeholder="seu@email.com"></div>
+      <div class="lf"><label>Senha</label><input type="password" id="inSenha" required autocomplete="current-password" placeholder="••••••"></div>
+      <button type="submit" class="lbtn" id="btnLogin">Entrar</button>
+    </form>
+    <div class="lerr" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <aside class="sb" id="sidebar">
+    <div class="sb-top">
+      <div class="sb-mark">L</div>
+      <div><div class="sb-name" id="schoolName">Lumied</div><div class="sb-sub">Gestão Escolar</div></div>
+    </div>
+    <div class="sb-search"><div class="sb-search-w"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Buscar... (Ctrl+K)" onclick="if(typeof _openCommandPalette==='function')_openCommandPalette()" readonly></div></div>
+    <nav class="sb-nav" id="sidebarNav">
+      <a class="ni on" onclick="go('dash',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</a>
+
+      <div class="sb-lbl" onclick="tog(this)">Dia a Dia <span class="sb-arr">▼</span></div>
+      <div class="sb-sec">
+        <a class="ni" onclick="goFull('alunos',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Alunos</a>
+        <a class="ni" onclick="goFull('notasVisao',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg> Notas</a>
+        <a class="ni" onclick="goFull('frequencia',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Frequência</a>
+        <a class="ni" onclick="goFull('chatConversas',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</a>
+        <a class="ni" onclick="goFull('series',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 10 3 12 0v-5"/></svg> Séries</a>
+      </div>
+
+      <div class="sb-lbl" onclick="tog(this)">Almoxarifado <span class="sb-arr c">▼</span></div>
+      <div class="sb-sec c">
+        <a class="ni" onclick="goFull('almDash',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Dashboard</a>
+        <a class="ni" onclick="goFull('almPend',this)">⏳ Pendentes</a>
+        <a class="ni" onclick="goFull('almCompras',this)">🛒 Compras</a>
+        <a class="ni" onclick="goFull('almInsumos',this)">🗃️ Insumos</a>
+        <a class="ni" onclick="goFull('almRel',this)">📈 Relatório</a>
+      </div>
+
+      <div class="sb-lbl" onclick="tog(this)">Pessoas <span class="sb-arr c">▼</span></div>
+      <div class="sb-sec c">
+        <a class="ni" onclick="goFull('equipe',this)">👥 Equipe</a>
+        <a class="ni" onclick="goFull('familias',this)">👨‍👩‍👧 Famílias</a>
+        <a class="ni" onclick="goFull('impressoes',this)">🖨️ Impressões</a>
+      </div>
+
+      <div class="sb-lbl" onclick="tog(this)">CRM <span class="sb-arr c">▼</span></div>
+      <div class="sb-sec c">
+        <a class="ni" onclick="goFull('crmKanban',this)">📋 Pipeline</a>
+        <a class="ni" onclick="goFull('crmLeads',this)">👥 Leads</a>
+        <a class="ni" onclick="goFull('crmMatriculas',this)">📝 Matrículas</a>
+        <a class="ni" onclick="goFull('contratos',this)">📜 Contratos</a>
+      </div>
+
+      <div class="sb-lbl" onclick="tog(this)">Financeiro <span class="sb-arr c">▼</span></div>
+      <div class="sb-sec c">
+        <a class="ni" onclick="goFull('panelFinDash',this)">📊 Dashboard</a>
+        <a class="ni" onclick="goFull('panelFinLanc',this)">💳 Lançamentos</a>
+      </div>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="sb-user"><div class="sb-av" id="uInit">--</div><div class="sb-uname" id="uName">...</div></div>
+      <button class="sb-out" onclick="doLogout()"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> Sair</button>
+    </div>
+  </aside>
+
+  <div class="sb-over" id="sbOver" onclick="closeSb()"></div>
+
+  <!-- Bottom bar (mobile) -->
+  <nav class="bbar">
+    <button class="bb-i on" onclick="go('dash')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Home</button>
+    <button class="bb-i" onclick="goFull('alunos')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Alunos</button>
+    <button class="bb-i" onclick="goFull('crmKanban')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>CRM</button>
+    <button class="bb-i" onclick="goFull('panelFinDash')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Financeiro</button>
+  </nav>
+
+  <div class="main">
+    <div class="top">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="ham" onclick="openSb()" aria-label="Menu"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+        <h2 id="topTitle">Dashboard</h2>
+      </div>
+      <div class="top-r">
+        <span class="v4badge">v4 sandbox</span>
+        <button class="notif-b" aria-label="Notificações"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
+      </div>
+    </div>
+
+    <div class="cnt" id="content">
+      <!-- BENTO DASHBOARD -->
+      <div id="panelDash">
+        <!-- KPIs -->
+        <div class="bento" style="margin-bottom:12px">
+          <div class="bc fade"><div class="bc-t">Alunos ativos</div><div class="bc-v" id="kAlunos"><span class="skel" style="display:inline-block;width:50px;height:28px">&nbsp;</span></div></div>
+          <div class="bc fade fd1"><div class="bc-t">Presença hoje</div><div class="bc-v" id="kPresenca"><span class="skel" style="display:inline-block;width:60px;height:28px">&nbsp;</span></div></div>
+          <div class="bc fade fd2"><div class="bc-t" id="kReceitaLabel">Receita mensal</div><div class="bc-v" id="kReceita"><span class="skel" style="display:inline-block;width:80px;height:28px">&nbsp;</span></div></div>
+          <div class="bc fade fd3" style="border-color:var(--accent-l);background:var(--accent-l)"><div class="bc-t" style="color:var(--accent)">Pendências</div><div class="bc-v" style="color:var(--accent)" id="kPend"><span class="skel" style="display:inline-block;width:30px;height:28px">&nbsp;</span></div></div>
+        </div>
+
+        <!-- Charts + Tasks -->
+        <div class="bento" style="margin-bottom:12px">
+          <div class="bc span2 fade fd1">
+            <div class="chart-head"><div><div class="chart-title">Frequência (30 dias)</div><div class="chart-sub">Presença diária da escola</div></div></div>
+            <div class="chart-area"><canvas id="chartFreq"></canvas></div>
+          </div>
+          <div class="bc span2 fade fd2">
+            <div class="bc-t">Precisa de você agora</div>
+            <ul class="task-list" id="taskList">
+              <li class="task-i"><span class="task-dot red"></span><div class="task-txt"><div class="task-title"><span class="skel" style="display:inline-block;width:150px;height:12px">&nbsp;</span></div></div></li>
+              <li class="task-i"><span class="task-dot warn"></span><div class="task-txt"><div class="task-title"><span class="skel" style="display:inline-block;width:120px;height:12px">&nbsp;</span></div></div></li>
+              <li class="task-i"><span class="task-dot blue"></span><div class="task-txt"><div class="task-title"><span class="skel" style="display:inline-block;width:140px;height:12px">&nbsp;</span></div></div></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Quick Access + AI -->
+        <div class="bento">
+          <div class="bc span3 fade fd3">
+            <div class="bc-t">Acesso rápido</div>
+            <div class="quick">
+              <a class="qi" onclick="goFull('alunos')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Alunos</span></a>
+              <a class="qi" onclick="goFull('notasVisao')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg><span>Notas</span></a>
+              <a class="qi" onclick="goFull('panelFinDash')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>Financeiro</span></a>
+              <a class="qi" onclick="goFull('crmKanban')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg><span>CRM</span></a>
+              <a class="qi" onclick="goFull('almDash')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg><span>Almox</span></a>
+              <a class="qi" onclick="goFull('chatConversas')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Chat</span></a>
+            </div>
+          </div>
+          <div class="bc ai-card fade fd4">
+            <div class="bc-t"><span class="ai-icon">🧠</span> Lumi IA</div>
+            <div style="font-size:12px;line-height:1.6;color:var(--ink2)" id="aiSummary">
+              <span class="skel" style="display:block;width:100%;height:10px;margin-bottom:6px">&nbsp;</span>
+              <span class="skel" style="display:block;width:90%;height:10px;margin-bottom:6px">&nbsp;</span>
+              <span class="skel" style="display:block;width:70%;height:10px">&nbsp;</span>
+            </div>
+          </div>
+        </div>
+      </div><!-- /panelDash -->
+    </div><!-- /cnt -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+var SB_URL='https://brgorknbrjlfwvrrlwxj.supabase.co';
+var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+var H={'Content-Type':'application/json','apikey':AK,'Authorization':'Bearer '+AK};
+function tk(){return localStorage.getItem('mb_token')}
+async function api(b){var r=await fetch(SB_URL+'/functions/v1/api',{method:'POST',headers:H,body:JSON.stringify(Object.assign({},b,{_token:tk()}))});return r.json()}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function ini(n){if(!n)return'--';var p=n.trim().split(/\s+/);return p.length===1?p[0][0].toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase()}
+
+// Login
+document.getElementById('loginForm').addEventListener('submit',async function(e){
+  e.preventDefault();var btn=document.getElementById('btnLogin');btn.disabled=true;btn.textContent='...';
+  try{var r=await api({action:'login',email:document.getElementById('inEmail').value,senha:document.getElementById('inSenha').value});
+    if(r.token){localStorage.setItem('mb_token',r.token);showApp(r)}
+    else{var el=document.getElementById('loginErr');el.textContent=r.error||'Erro';el.style.display='block'}
+  }catch(e){document.getElementById('loginErr').textContent='Erro de conexão';document.getElementById('loginErr').style.display='block'}
+  btn.disabled=false;btn.textContent='Entrar';
+});
+
+// Auto-login
+(async function(){if(!tk())return;try{var r=await api({action:'hub_whoami'});if(r&&r.logged)showApp(r)}catch(e){}})();
+
+function showApp(u){
+  document.getElementById('login').classList.add('hide');
+  document.getElementById('app').classList.add('on');
+  var n=u.nome||u.email||'';
+  document.getElementById('uName').textContent=n;
+  document.getElementById('uInit').textContent=ini(n);
+  var h=new Date().getHours();
+  document.getElementById('topTitle').textContent=(h<12?'Bom dia':h<18?'Boa tarde':'Boa noite')+(n?', '+n.split(' ')[0]:'');
+  loadDash();
+}
+function doLogout(){localStorage.removeItem('mb_token');location.reload()}
+
+// Sidebar
+function tog(el){var s=el.nextElementSibling;if(s){s.classList.toggle('c');var a=el.querySelector('.sb-arr');if(a)a.classList.toggle('c')}}
+function openSb(){document.getElementById('sidebar').classList.add('open');document.getElementById('sbOver').classList.add('on')}
+function closeSb(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sbOver').classList.remove('on')}
+
+// Navigation
+function go(id,ni){
+  if(ni){document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on')});ni.classList.add('on')}
+  document.getElementById('topTitle').textContent=id==='dash'?'Dashboard':id;
+  closeSb();
+}
+function goFull(panel,ni){
+  // Redirect to the full gerente.html portal with the panel hash
+  window.location='gerente.html#'+panel;
+}
+
+// Dashboard data
+async function loadDash(){
+  try{
+    var d=await api({action:'analytics_dashboard',ano:'2026'});
+    if(d&&!d.error){
+      document.getElementById('kAlunos').textContent=d.alunos_ativos||'—';
+      document.getElementById('kPresenca').textContent=(d.presenca_hoje||'—');
+      var meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+      var mes=meses[new Date().getMonth()];
+      document.getElementById('kReceitaLabel').textContent='Receita de '+mes;
+      document.getElementById('kReceita').textContent=d.receita_mes?'R$ '+(d.receita_mes/1000).toFixed(1)+'k':'—';
+      document.getElementById('kPend').textContent=d.pendencias||'0';
+      // Tasks
+      renderTasks(d);
+      // Chart
+      renderChart(d);
+    }
+  }catch(e){console.warn('[dash]',e)}
+
+  // AI summary
+  try{
+    var ai=await api({action:'aluno_resumo_ia',aluno_email:'_escola'}).catch(function(){return null});
+    if(ai&&ai.resumo){document.getElementById('aiSummary').textContent=ai.resumo}
+    else{document.getElementById('aiSummary').innerHTML='<span style="color:var(--ink3)">Lumi analisa os dados da escola e gera insights automaticamente.</span>'}
+  }catch(e){document.getElementById('aiSummary').innerHTML='<span style="color:var(--ink3)">IA disponível no painel completo.</span>'}
+}
+
+function renderTasks(d){
+  var tasks=[];
+  if(d.boletos_vencidos)tasks.push({dot:'red',title:d.boletos_vencidos+' boletos vencidos',sub:'Financeiro',link:'panelFinDash'});
+  if(d.manutencao_pendente)tasks.push({dot:'warn',title:d.manutencao_pendente+' chamados pendentes',sub:'Infraestrutura',link:'manutencao'});
+  if(d.alm_pendentes)tasks.push({dot:'blue',title:d.alm_pendentes+' requisições aguardando',sub:'Almoxarifado',link:'almPend'});
+  if(d.leads_novos)tasks.push({dot:'ok',title:d.leads_novos+' leads novos esta semana',sub:'CRM',link:'crmKanban'});
+  if(!tasks.length)tasks.push({dot:'ok',title:'Tudo em dia!',sub:'Nenhuma pendência',link:'dash'});
+
+  document.getElementById('taskList').innerHTML=tasks.map(function(t){
+    return '<li class="task-i" onclick="goFull(\''+t.link+'\')"><span class="task-dot '+t.dot+'"></span><div class="task-txt"><div class="task-title">'+esc(t.title)+'</div><div class="task-sub">'+esc(t.sub)+'</div></div><svg class="task-arr" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></li>';
+  }).join('');
+}
+
+function renderChart(d){
+  if(typeof Chart==='undefined')return;
+  var sol=d.solicitacoes_por_mes||[0,0,0,0,0,0,0,0,0,0,0,0];
+  var ctx=document.getElementById('chartFreq');
+  if(!ctx)return;
+  new Chart(ctx,{
+    type:'line',
+    data:{labels:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],datasets:[{label:'Solicitações',data:sol,borderColor:'#c8102e',backgroundColor:'rgba(200,16,46,.05)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#c8102e',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10,family:'Inter'}}},y:{grid:{color:'#eae5df',drawBorder:false},ticks:{font:{size:10,family:'Inter'}}}}}
+  });
+}
+</script>
+
+<script src="/lumied-ux.js" defer></script>
+<script src="/lumied-a11y.js" defer></script>
+<script src="/lumied-delight.js" defer></script>
+<script src="/lumied-pro.js" defer></script>
+</body>
+</html>
