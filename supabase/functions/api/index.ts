@@ -3904,8 +3904,10 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   // ── Risk Scores: Calcular (cron/admin only) ──
   if (action === 'calcular_risk_scores') {
     const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || "";
+    const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "") || "";
-    if (!cronKey || authHeader !== cronKey) return err("Unauthorized", 401);
+    const isAuthorized = (cronKey && authHeader === cronKey) || (svcKey && authHeader === svcKey);
+    if (!isAuthorized) return err("Unauthorized", 401);
 
     const anoAtual = new Date().getFullYear();
     const limite30d = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
