@@ -16,6 +16,7 @@ async function interFetch(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${relaySecret}` },
     body: JSON.stringify({ path, method: init.method ?? 'GET', headers: init.headers ?? {}, body: bodyStr }),
+    signal: AbortSignal.timeout(15000),
   })
 
   if (!res.ok) {

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { captureException } from '../_shared/sentry.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -47,6 +48,7 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: 'client_credentials' }),
+        signal: AbortSignal.timeout(15000),
       }
       const res = await fetch(`${INTER_BASE}/oauth/v2/token`, fetchOpts)
 
@@ -79,7 +81,7 @@ Deno.serve(async (req) => {
     const url = `${INTER_BASE}/cobranca/v3/cobrancas?cpfCnpj=${cpf}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&itensPorPagina=100`
     console.log('Buscando boletos:', url)
 
-    const boletosRes = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const boletosRes = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15000) })
 
     if (!boletosRes.ok) {
       const errText = await boletosRes.text()
@@ -116,7 +118,7 @@ Deno.serve(async (req) => {
       // PDF
       let pdfUrl: string | null = null
       try {
-        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${boletoId}/pdf`, { headers: { Authorization: `Bearer ${accessToken}` } })
+        const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${boletoId}/pdf`, { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15000) })
         if (pdfRes.ok) {
           const pdfData = await pdfRes.json()
           if (pdfData.pdf) {
@@ -154,6 +156,7 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error('Erro geral:', err)
+    captureException(err instanceof Error ? err : new Error(String(err)), { function: 'boletos-sync' }).catch(() => {})
     return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS })
   }
 })

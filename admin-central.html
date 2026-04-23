@@ -1316,10 +1316,10 @@ async function criarCobrancaAvulsa() {
   const descricao = document.getElementById('ncDesc').value.trim();
   const data_vencimento = document.getElementById('ncVenc').value;
   const forma_pagamento = document.getElementById('ncForma').value;
-  if (!escola_id || !valor || !descricao) return alert('Preencha escola, valor e descrição.');
+  if (!escola_id || !valor || !descricao) return showToast('Preencha escola, valor e descrição.', 'warning');
   const d = await callBillingStaff({ action:'fatura_avulsa', escola_id, valor, descricao, data_vencimento, forma_pagamento });
-  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
-  alert('Cobrança gerada!\n\nFatura: ' + (d.invoice_url || '—') + '\nBoleto: ' + (d.boleto_url || '—'));
+  if (d.error) return showToast('Falha: ' + (d.error.message || d.error), 'error');
+  showToast('Cobrança gerada! Fatura: ' + (d.invoice_url || '—') + ' | Boleto: ' + (d.boleto_url || '—'), 'success', 6000);
   document.getElementById('novaCobrancaModal').style.display = 'none';
   loadFinanceiro();
 }
@@ -1328,7 +1328,7 @@ async function registrarPagtoManual(fatura_id, valor) {
   const obs = prompt('Registrar pagamento manual de R$ ' + valor + ' para essa fatura?\n\nObservação (opcional):', '');
   if (obs === null) return;
   const d = await callBillingStaff({ action:'registrar_pagto_manual', fatura_id, valor_pago: valor, observacao: obs });
-  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
+  if (d.error) return showToast('Falha: ' + (d.error.message || d.error), 'error');
   showToast('Pagamento registrado');
   loadFinanceiro();
 }
@@ -1344,7 +1344,7 @@ async function enviarLembreteConfirm() {
   if (!_finLembreteCtx) return;
   const mensagem_extra = document.getElementById('lembreteMsg').value.trim();
   const d = await callBillingStaff({ action:'enviar_lembrete', escola_id: _finLembreteCtx.escola_id, fatura_id: _finLembreteCtx.fatura_id, mensagem_extra });
-  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
+  if (d.error) return showToast('Falha: ' + (d.error.message || d.error), 'error');
   showToast('Lembrete enviado para ' + (d.sent_to || '?'));
   document.getElementById('lembreteModal').style.display = 'none';
 }
@@ -1354,7 +1354,7 @@ async function marcarStatusEscola(escola_id, nome, atual) {
   const novo = prompt('Escola "' + nome + '"\nStatus atual: ' + atual + '\n\nNovo status? (' + opcoes.join('/') + ')', atual);
   if (!novo || !opcoes.includes(novo)) return;
   const d = await callBillingStaff({ action:'marcar_inadimplente', escola_id, novo_status: novo });
-  if (d.error) return alert('Falha: ' + (d.error.message || d.error));
+  if (d.error) return showToast('Falha: ' + (d.error.message || d.error), 'error');
   showToast('Status atualizado');
   loadFinanceiro();
 }
@@ -1931,7 +1931,7 @@ let _currentTicketId = null;
 async function abrirTicketDetail(id) {
   _currentTicketId = id;
   const d = await api({ action: 'staff_ticket_get', ticket_id: id });
-  if (d.error) { alert(d.error); return; }
+  if (d.error) { showToast(d.error, 'error'); return; }
   const t = d;
   document.getElementById('tdTitle').textContent = 'Ticket #' + (t.numero || '?');
   const escolaNome = t.escolas?.nome || '-';
@@ -1964,7 +1964,7 @@ async function salvarTicketDetail() {
     resposta: document.getElementById('tdResposta').value.trim() || undefined,
     status: document.getElementById('tdStatus').value,
   });
-  if (d.error) { alert(d.error); return; }
+  if (d.error) { showToast(d.error, 'error'); return; }
   document.getElementById('tdOk').style.display = 'inline';
   setTimeout(() => document.getElementById('tdOk').style.display = 'none', 3000);
   loadTickets();
@@ -2123,7 +2123,7 @@ async function loadCRM() {
 
 async function abrirLead(id) {
   const d = await callGtm({ action:'lead_get', id });
-  if (d.error) return alert(d.error.message || 'Erro');
+  if (d.error) return showToast(d.error.message || 'Erro', 'error');
   _crmCurrentLead = d.lead;
   document.getElementById('lmTitle').textContent = '🎯 ' + (d.lead.nome_escola || 'Lead');
   const info = [
@@ -2168,7 +2168,7 @@ async function lmSalvar() {
     nurture_optout: document.getElementById('lmOptout').value === 'true',
   };
   const d = await callGtm(upd);
-  if (d.error) return alert(d.error.message || 'Erro');
+  if (d.error) return showToast(d.error.message || 'Erro', 'error');
   showToast('Lead atualizado');
   document.getElementById('leadModal').style.display = 'none';
   loadCRM();
@@ -2178,7 +2178,7 @@ async function lmRegistrarToque(n) {
   if (!_crmCurrentLead) return;
   const desc = prompt('Descrição do toque T' + n + ' (opcional):', '');
   const d = await callGtm({ action:'lead_registrar_toque', id: _crmCurrentLead.id, toque: n, descricao: desc || '' });
-  if (d.error) return alert(d.error.message || 'Erro');
+  if (d.error) return showToast(d.error.message || 'Erro', 'error');
   showToast('Toque T' + n + ' registrado');
   abrirLead(_crmCurrentLead.id);
 }
@@ -2188,7 +2188,7 @@ async function lmSalvarNota() {
   const nota = document.getElementById('lmNota').value.trim();
   if (!nota) return;
   const d = await callGtm({ action:'lead_nota', id: _crmCurrentLead.id, nota });
-  if (d.error) return alert(d.error.message || 'Erro');
+  if (d.error) return showToast(d.error.message || 'Erro', 'error');
   document.getElementById('lmNota').value = '';
   abrirLead(_crmCurrentLead.id);
 }

@@ -4,13 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, validateInput, auth, type Context } from "../_shared/router.ts";
-import { successResponse, errorResponse, AppError } from "../_shared/errors.ts";
-import { getModulosResolvidos } from "../_shared/modulos.ts";
-import { createLogger } from "../_shared/logger.ts";
-import { hashSenha, verificarSenhaAuto, gerarToken, criarSessao } from "../_shared/auth.ts";
-import type { Schema } from "../_shared/validation.ts";
-import { logAudit } from "../_shared/audit.ts";
+import { Router, rateLimit, validateInput, auth, type Context, successResponse, errorResponse, AppError, getModulosResolvidos, createLogger, hashSenha, verificarSenhaAuto, gerarToken, criarSessao, type Schema, logAudit } from "../_shared/mod.ts";
 
 const log = createLogger("admin");
 

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { captureException } from '../_shared/sentry.ts'
 
 async function interFetch(
   path: string,
@@ -14,6 +15,7 @@ async function interFetch(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${relaySecret}` },
     body: JSON.stringify({ path, method: init.method ?? 'GET', headers: init.headers ?? {}, body: bodyStr }),
+    signal: AbortSignal.timeout(15000),
   })
 
   const { status, body } = await res.json() as { status: number; body: string }
@@ -97,44 +99,71 @@ Deno.serve(async (req) => {
       const valorRecebido = payload.valorTotalRecebido ?? valor
       console.log(`[inter-webhook] PAGO nossoNumero=${nossoNumero} valor=${valorRecebido} data=${dataPagamento}`)
 
-      // 1. Busca e atualiza fin_boletos_emitidos
-      const { data: boleto } = await supabase.from('fin_boletos_emitidos')
-        .select('id, mensalidade_id, batch_item_id')
-        .eq('nosso_numero', nossoNumero).maybeSingle()
+      // 1. Atomic update: only mark as pago if not already processed (prevents race condition)
+      const { data: updatedBoletos, error: updateErr } = await supabase.from('fin_boletos_emitidos')
+        .update({
+          status: 'pago', pago_em: dataPagamento,
+        })
+        .eq('nosso_numero', nossoNumero)
+        .neq('status', 'pago')
+        .select('id, mensalidade_id, batch_item_id, escola_id')
 
-      if (boleto) {
-        // Download comprovante PDF
-        let comprovanteUrl: string | null = null
-        try {
-          const token = await getInterToken()
-          const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
-          const fileName = `comprovantes/${nossoNumero}_pago.pdf`
-          await supabase.storage.from('boletos').upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
-          const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
-          comprovanteUrl = urlData.publicUrl
-        } catch (e) { console.warn('[inter-webhook] PDF comprovante indisponível:', e) }
-
-        await supabase.from('fin_boletos_emitidos').update({
-          status: 'pago', pago_em: dataPagamento, comprovante_url: comprovanteUrl,
-        }).eq('id', boleto.id)
-
-        // 2. Atualiza mensalidade vinculada
-        if (boleto.mensalidade_id) {
-          await supabase.from('fin_mensalidades').update({
-            status: 'pago', data_pagamento: dataPagamento,
-          }).eq('id', boleto.mensalidade_id)
-        }
-
-        // 3. Atualiza batch item se houver
-        if (boleto.batch_item_id) {
-          await supabase.from('fin_boleto_batch_items').update({ status: 'pago' }).eq('id', boleto.batch_item_id)
-        }
-
-        console.log(`[inter-webhook] Boleto ${nossoNumero} marcado como PAGO`)
+      if (updateErr) {
+        console.error(`[inter-webhook] Erro ao atualizar boleto ${nossoNumero}:`, updateErr)
+        throw updateErr
       }
 
-      // 4. Atualiza tabela legada boletos
-      await supabase.from('boletos').update({ situacao: 'PAGO' }).eq('nosso_numero', nossoNumero)
+      const boleto = updatedBoletos?.[0] ?? null
+
+      // If no rows updated, boleto was already processed or doesn't exist — return early
+      if (!boleto) {
+        console.log(`[inter-webhook] Boleto ${nossoNumero} já processado ou não encontrado, ignorando duplicata`)
+        return new Response(JSON.stringify({ ok: true, action: 'pago', nossoNumero, duplicado: true }), {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      const escolaId: string | null = boleto.escola_id ?? null
+
+      // Download comprovante PDF and update comprovante_url separately
+      let comprovanteUrl: string | null = null
+      try {
+        const token = await getInterToken()
+        const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
+        const fileName = `comprovantes/${nossoNumero}_pago.pdf`
+        await supabase.storage.from('boletos').upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
+        const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
+        comprovanteUrl = urlData.publicUrl
+      } catch (e) { console.warn('[inter-webhook] PDF comprovante indisponível:', e) }
+
+      if (comprovanteUrl) {
+        await supabase.from('fin_boletos_emitidos').update({ comprovante_url: comprovanteUrl })
+          .eq('id', boleto.id)
+      }
+
+      // 2. Atualiza mensalidade vinculada (with escola_id filter)
+      if (boleto.mensalidade_id) {
+        const mensalidadeFilter = supabase.from('fin_mensalidades').update({
+          status: 'pago', data_pagamento: dataPagamento,
+        }).eq('id', boleto.mensalidade_id)
+        if (escolaId) mensalidadeFilter.eq('escola_id', escolaId)
+        await mensalidadeFilter
+      }
+
+      // 3. Atualiza batch item se houver (with escola_id filter)
+      if (boleto.batch_item_id) {
+        const batchFilter = supabase.from('fin_boleto_batch_items').update({ status: 'pago' })
+          .eq('id', boleto.batch_item_id)
+        if (escolaId) batchFilter.eq('escola_id', escolaId)
+        await batchFilter
+      }
+
+      console.log(`[inter-webhook] Boleto ${nossoNumero} marcado como PAGO`)
+
+      // 4. Atualiza tabela legada boletos (with escola_id filter)
+      const legadoFilter = supabase.from('boletos').update({ situacao: 'PAGO' }).eq('nosso_numero', nossoNumero)
+      if (escolaId) legadoFilter.eq('escola_id', escolaId)
+      await legadoFilter
 
       return new Response(JSON.stringify({ ok: true, action: 'pago', nossoNumero }), {
         headers: { 'Content-Type': 'application/json' },
@@ -147,16 +176,27 @@ Deno.serve(async (req) => {
       const newStatus = statusMap[situacao] ?? 'vencido'
       console.log(`[inter-webhook] ${situacao} nossoNumero=${nossoNumero}`)
 
-      await supabase.from('fin_boletos_emitidos').update({ status: newStatus }).eq('nosso_numero', nossoNumero)
-      await supabase.from('boletos').update({ situacao }).eq('nosso_numero', nossoNumero)
+      // Atomic update: only transition if not already in final state 'pago'
+      const { data: updatedBoletos } = await supabase.from('fin_boletos_emitidos')
+        .update({ status: newStatus })
+        .eq('nosso_numero', nossoNumero)
+        .neq('status', 'pago')
+        .select('escola_id, mensalidade_id')
 
-      // Marcar mensalidade como atrasado se VENCIDO
-      if (situacao === 'VENCIDO') {
-        const { data: boleto } = await supabase.from('fin_boletos_emitidos')
-          .select('mensalidade_id').eq('nosso_numero', nossoNumero).maybeSingle()
-        if (boleto?.mensalidade_id) {
-          await supabase.from('fin_mensalidades').update({ status: 'atrasado' }).eq('id', boleto.mensalidade_id)
-        }
+      const boleto = updatedBoletos?.[0] ?? null
+      const escolaId: string | null = boleto?.escola_id ?? null
+
+      // Update legacy table (with escola_id filter)
+      const legadoFilter = supabase.from('boletos').update({ situacao }).eq('nosso_numero', nossoNumero)
+      if (escolaId) legadoFilter.eq('escola_id', escolaId)
+      await legadoFilter
+
+      // Marcar mensalidade como atrasado se VENCIDO (with escola_id filter)
+      if (situacao === 'VENCIDO' && boleto?.mensalidade_id) {
+        const mensalidadeFilter = supabase.from('fin_mensalidades').update({ status: 'atrasado' })
+          .eq('id', boleto.mensalidade_id)
+        if (escolaId) mensalidadeFilter.eq('escola_id', escolaId)
+        await mensalidadeFilter
       }
 
       return new Response(JSON.stringify({ ok: true, action: situacao.toLowerCase(), nossoNumero }), {
@@ -192,7 +232,12 @@ Deno.serve(async (req) => {
 
     const cpfFormatado = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 
-    await supabase.from('boletos').upsert({
+    // Resolve escola_id from existing fin_boletos_emitidos record
+    const { data: boletoEmitido } = await supabase.from('fin_boletos_emitidos')
+      .select('escola_id').eq('nosso_numero', nossoNumero).maybeSingle()
+    const escolaIdEmitido: string | null = boletoEmitido?.escola_id ?? null
+
+    const boletoRecord: Record<string, unknown> = {
       cpf: cpfFormatado,
       nosso_numero: nossoNumero,
       valor,
@@ -200,12 +245,12 @@ Deno.serve(async (req) => {
       linha_digitavel: linhaDigitavel,
       situacao: 'EMITIDO',
       pdf_url: pdfUrl,
-    }, { onConflict: 'nosso_numero' }).catch(() => {
+    }
+    if (escolaIdEmitido) boletoRecord.escola_id = escolaIdEmitido
+
+    await supabase.from('boletos').upsert(boletoRecord, { onConflict: 'nosso_numero' }).catch(() => {
       // Fallback: insert if upsert fails (no unique constraint)
-      return supabase.from('boletos').insert({
-        cpf: cpfFormatado, nosso_numero: nossoNumero, valor, vencimento,
-        linha_digitavel: linhaDigitavel, situacao: 'EMITIDO', pdf_url: pdfUrl,
-      })
+      return supabase.from('boletos').insert(boletoRecord)
     })
 
     console.log(`[inter-webhook] Boleto ${nossoNumero} EMITIDO para CPF ${cpfFormatado}`)
@@ -215,6 +260,7 @@ Deno.serve(async (req) => {
     })
   } catch (err) {
     console.error('Erro no webhook Inter:', err)
+    captureException(err instanceof Error ? err : new Error(String(err)), { function: 'inter-webhook' }).catch(() => {})
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

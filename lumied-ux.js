@@ -340,10 +340,582 @@
       @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
       @keyframes popIn { from { opacity:0; transform:scale(.92) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
       @keyframes spin { to { transform:rotate(360deg); } }
+      @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+      @keyframes panelIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
       .lumied-validation { transition: opacity .2s; }
       input:focus, select:focus, textarea:focus { outline: none; }
+
+      /* ── Skeleton loaders ── */
+      .skel-row { display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border,#e2dbd1); }
+      .skel-cell { height:14px; border-radius:6px; background:linear-gradient(90deg,#ede8e1 25%,#f5f1ec 50%,#ede8e1 75%); background-size:800px 100%; animation:shimmer 1.5s infinite linear; }
+      .skel-cell:nth-child(1) { width:30%; }
+      .skel-cell:nth-child(2) { width:20%; }
+      .skel-cell:nth-child(3) { width:25%; }
+      .skel-cell:nth-child(4) { width:15%; }
+      .skel-cell:nth-child(5) { width:10%; }
+      .skel-header { height:12px; opacity:.5; margin-bottom:4px; }
+
+      /* ── Panel transitions ── */
+      .panel.entering { animation: panelIn .25s ease both; }
+
+      /* ── Command palette (Ctrl+K) ── */
+      .cmd-overlay { position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding-top:min(20vh,120px);backdrop-filter:blur(4px);font-family:'DM Sans',system-ui,sans-serif; }
+      .cmd-box { background:#fff;border-radius:16px;width:100%;max-width:520px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;animation:popIn .2s ease; }
+      .cmd-input { width:100%;padding:16px 20px;border:none;font-size:15px;font-family:inherit;outline:none;background:transparent;border-bottom:1px solid var(--border,#e2dbd1); }
+      .cmd-results { max-height:360px;overflow-y:auto;padding:6px; }
+      .cmd-item { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--text,#1a1a1a);transition:background .1s; }
+      .cmd-item:hover,.cmd-item.active { background:var(--red-light,rgba(200,16,46,.08)); }
+      .cmd-item .cmd-ic { width:24px;text-align:center;font-size:16px;flex-shrink:0; }
+      .cmd-item .cmd-label { flex:1; }
+      .cmd-item .cmd-hint { font-size:11px;color:var(--muted,#5a5249);flex-shrink:0; }
+      .cmd-empty { padding:24px;text-align:center;color:var(--muted,#888);font-size:13px; }
+      .cmd-footer { padding:8px 14px;border-top:1px solid var(--border,#e2dbd1);display:flex;gap:12px;font-size:11px;color:var(--muted,#888); }
+      .cmd-footer kbd { background:#f0ece6;padding:2px 6px;border-radius:4px;font-family:inherit;font-size:10px;border:1px solid #ddd; }
+      .cmd-ai-thinking { padding:20px;text-align:center;color:#7c3aed;font-size:13px; }
+      .cmd-ai-result { padding:10px; }
+      .cmd-ai-bubble { background:linear-gradient(135deg,rgba(88,28,135,.07),rgba(139,92,246,.05));border:1px solid rgba(139,92,246,.2);border-radius:12px;padding:14px;font-size:13px;line-height:1.6;color:var(--text,#1a1a1a); }
+      .cmd-ai-bubble .lumi-label { font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;letter-spacing:.04em; }
+      .cmd-ai-bubble .lumi-text { white-space:pre-wrap; }
+      .cmd-ai-goto { display:inline-flex;align-items:center;gap:4px;margin-top:10px;padding:5px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit; }
+      .cmd-ai-goto:hover { background:#6d28d9; }
+      .cmd-ai-error { padding:14px;color:#dc2626;font-size:13px;text-align:center; }
+      .cmd-box.cmd-ai-mode { border-top:3px solid #7c3aed; }
+      .cmd-input.ai-active { border-bottom-color:#7c3aed; }
+      body.theme-dark .cmd-ai-bubble { background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(88,28,135,.08));border-color:rgba(139,92,246,.3); }
+
+      /* ── Pagination ── */
+      .lm-pagination { display:flex;align-items:center;justify-content:space-between;padding:12px 0;font-size:12px;color:var(--muted,#888);font-family:'DM Sans',system-ui,sans-serif; }
+      .lm-pagination button { padding:6px 14px;border:1px solid var(--border,#e2dbd1);border-radius:8px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s; }
+      .lm-pagination button:hover:not(:disabled) { border-color:var(--red,#C8102E);color:var(--red,#C8102E); }
+      .lm-pagination button:disabled { opacity:.4;cursor:not-allowed; }
+
+      /* ── Dark mode ── */
+      body.theme-dark { --bg:#1a1714;--white:#252220;--text:#e8e2da;--muted:#a09889;--border:#3a3530;--red:#e85566;--red-dark:#c7394a;--red-light:rgba(232,85,102,.1);--green:#5cb85c;--blue:#5bc0de; }
+      body.theme-dark .sidebar { background:linear-gradient(180deg,#141210 0%,#1e1b18 100%); }
+      body.theme-dark .topbar { background:rgba(37,34,32,.92);border-color:var(--border); }
+      body.theme-dark .login-card { background:var(--white);box-shadow:0 24px 60px rgba(0,0,0,.5); }
+      body.theme-dark table th { background:rgba(255,255,255,.04); }
+      body.theme-dark .stats-card,.dark-card { background:var(--white);border-color:var(--border); }
+      body.theme-dark input,body.theme-dark select,body.theme-dark textarea { background:rgba(255,255,255,.04);border-color:var(--border);color:var(--text); }
+      body.theme-dark .modal { background:var(--white);color:var(--text); }
+      body.theme-dark .skel-cell { background:linear-gradient(90deg,#2a2520 25%,#353028 50%,#2a2520 75%);background-size:800px 100%; }
+      body.theme-dark .cmd-box { background:#252220; }
+      body.theme-dark .cmd-input { color:#e8e2da;border-color:#3a3530; }
+
+      /* ── Dark mode toggle ── */
+      .dark-toggle { background:none;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 8px;cursor:pointer;font-size:16px;line-height:1;transition:all .2s; }
+      .dark-toggle:hover { background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2); }
+
+      /* ── Breadcrumb ── */
+      .lm-breadcrumb { display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted,#888); }
+      .lm-breadcrumb a { color:var(--blue,#1a6bb5);text-decoration:none;cursor:pointer; }
+      .lm-breadcrumb a:hover { text-decoration:underline; }
+      .lm-breadcrumb .sep { opacity:.4; }
     `;
     document.head.appendChild(style);
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 10. SKELETON LOADERS — show shimmer while loading
+  // ═══════════════════════════════════════════════════
+  window._showSkeleton = function (container, rows = 5, cols = 4) {
+    let html = '<div class="skel-header skel-row">';
+    for (let c = 0; c < cols; c++) html += '<div class="skel-cell" style="height:10px;"></div>';
+    html += '</div>';
+    for (let r = 0; r < rows; r++) {
+      html += '<div class="skel-row">';
+      for (let c = 0; c < cols; c++) html += '<div class="skel-cell"></div>';
+      html += '</div>';
+    }
+    if (typeof container === 'string') container = document.getElementById(container);
+    if (container) container.innerHTML = html;
+  };
+
+  // ═══════════════════════════════════════════════════
+  // 11. COMMAND PALETTE (Ctrl+K)
+  // ═══════════════════════════════════════════════════
+  function setupCommandPalette() {
+    if (portal !== 'gerente') return;
+
+    function getNavItems() {
+      const items = [];
+      document.querySelectorAll('.nav-item').forEach(el => {
+        const onclick = el.getAttribute('onclick') || '';
+        const match = onclick.match(/showPanel\('([^']+)'/);
+        if (!match) return;
+        const panel = match[1];
+        const icon = el.querySelector('.ic')?.textContent || '📄';
+        const label = el.textContent.trim().replace(icon, '').trim();
+        let section = '';
+        const sectionEl = el.closest('.sb-section');
+        if (sectionEl) {
+          const labelEl = sectionEl.previousElementSibling;
+          if (labelEl?.classList?.contains('sb-label')) section = labelEl.textContent.replace('▼', '').trim();
+        }
+        items.push({ panel, icon, label, section, element: el });
+      });
+      return items;
+    }
+
+    function openPalette() {
+      if (document.getElementById('cmdPalette')) return;
+      const allItems = getNavItems();
+      let activeIdx = 0;
+      let aiDebounce = null;
+      let aiQueryPending = null;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'cmdPalette';
+      overlay.className = 'cmd-overlay';
+      overlay.innerHTML = `
+        <div class="cmd-box">
+          <input class="cmd-input" placeholder="Buscar painel ou ? perguntar para Lumi..." autofocus>
+          <div class="cmd-results"></div>
+          <div class="cmd-footer"><span><kbd>↑↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>?</kbd> modo IA</span><span><kbd>Esc</kbd> fechar</span></div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      const box = overlay.querySelector('.cmd-box');
+      const input = overlay.querySelector('.cmd-input');
+      const results = overlay.querySelector('.cmd-results');
+
+      function normalize(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+
+      function isAiQuery(q) {
+        if (!q) return false;
+        const l = q.toLowerCase().trim();
+        if (l.startsWith('?') || l.startsWith('/lumi')) return true;
+        const aiWords = ['quem ', 'quantos ', 'quais ', 'mostre ', 'liste ', 'qual é', 'como está', 'quando ', 'me diga', 'me mostre', 'me liste', 'analise ', 'busque ', 'buscar ', 'encontre '];
+        return aiWords.some(w => l.includes(w));
+      }
+
+      function showAiResult(resposta, _dados) {
+        const panelMap = {};
+        allItems.forEach(i => { panelMap[normalize(i.label)] = i.panel; });
+        let gotoPanel = null;
+        const normalResp = normalize(resposta);
+        for (const [label, panel] of Object.entries(panelMap)) {
+          if (label.length > 3 && normalResp.includes(label)) { gotoPanel = panel; break; }
+        }
+        const safe = resposta.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const gotoBtn = gotoPanel ? `<button class="cmd-ai-goto" data-panel="${gotoPanel}">Ir para painel →</button>` : '';
+        results.innerHTML = `
+          <div class="cmd-ai-result">
+            <div class="cmd-ai-bubble">
+              <div class="lumi-label">🧠 Lumi</div>
+              <div class="lumi-text">${safe}</div>
+              ${gotoBtn}
+            </div>
+          </div>`;
+        if (gotoPanel) {
+          results.querySelector('.cmd-ai-goto').addEventListener('click', () => go(gotoPanel));
+        }
+      }
+
+      async function askLumi(query) {
+        box.classList.add('cmd-ai-mode');
+        input.classList.add('ai-active');
+        results.innerHTML = '<div class="cmd-ai-thinking">🧠 Lumi está pensando...</div>';
+
+        const apiFn = typeof window.api === 'function' ? window.api : null;
+        if (!apiFn) {
+          results.innerHTML = '<div class="cmd-ai-error">Erro: API indisponível.</div>';
+          return;
+        }
+
+        // Client-side timeout display (edge fn has its own 10s timeout)
+        const timeoutId = setTimeout(() => {
+          results.innerHTML = '<div class="cmd-ai-error">Tempo esgotado. Tente uma pergunta mais simples.</div>';
+        }, 11000);
+
+        try {
+          const d = await apiFn({ action: 'ia_consulta_rapida', pergunta: query });
+          clearTimeout(timeoutId);
+          if (!d || d.error) {
+            const msg = (d?.error || 'Erro desconhecido').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            results.innerHTML = `<div class="cmd-ai-error">${msg}</div>`;
+            return;
+          }
+          showAiResult(d.resposta || 'Sem resposta.', d.dados);
+        } catch {
+          clearTimeout(timeoutId);
+          results.innerHTML = '<div class="cmd-ai-error">Erro ao conectar com Lumi. Tente novamente.</div>';
+        }
+      }
+
+      function render(query) {
+        const q = normalize(query);
+        const rawQuery = query.trim();
+
+        if (rawQuery && isAiQuery(rawQuery)) {
+          if (aiDebounce) clearTimeout(aiDebounce);
+          box.classList.add('cmd-ai-mode');
+          input.classList.add('ai-active');
+          results.innerHTML = '<div class="cmd-ai-thinking">🧠 Lumi está pensando...</div>';
+          aiQueryPending = rawQuery;
+          aiDebounce = setTimeout(() => {
+            if (aiQueryPending === rawQuery) askLumi(rawQuery);
+          }, 500);
+          return;
+        }
+
+        if (aiDebounce) { clearTimeout(aiDebounce); aiDebounce = null; }
+        aiQueryPending = null;
+        box.classList.remove('cmd-ai-mode');
+        input.classList.remove('ai-active');
+
+        const filtered = q ? allItems.filter(i => normalize(i.label).includes(q) || normalize(i.section).includes(q)) : allItems;
+        activeIdx = 0;
+        if (filtered.length === 0 && rawQuery) {
+          if (aiDebounce) clearTimeout(aiDebounce);
+          box.classList.add('cmd-ai-mode');
+          input.classList.add('ai-active');
+          results.innerHTML = '<div class="cmd-ai-thinking">🧠 Lumi está pensando...</div>';
+          aiQueryPending = rawQuery;
+          aiDebounce = setTimeout(() => { if (aiQueryPending === rawQuery) askLumi(rawQuery); }, 500);
+          return;
+        }
+        if (filtered.length === 0) {
+          results.innerHTML = '<div class="cmd-empty">Nenhum painel encontrado.</div>';
+          return;
+        }
+        results.innerHTML = filtered.map((item, i) =>
+          `<div class="cmd-item${i === 0 ? ' active' : ''}" data-panel="${item.panel}" data-idx="${i}">
+            <span class="cmd-ic">${item.icon}</span>
+            <span class="cmd-label">${item.label}</span>
+            <span class="cmd-hint">${item.section}</span>
+          </div>`
+        ).join('');
+
+        results.querySelectorAll('.cmd-item').forEach(el => {
+          el.addEventListener('click', () => { go(el.dataset.panel); });
+          el.addEventListener('mouseenter', () => {
+            results.querySelector('.cmd-item.active')?.classList.remove('active');
+            el.classList.add('active');
+            activeIdx = parseInt(el.dataset.idx);
+          });
+        });
+      }
+
+      function go(panel) {
+        closePalette();
+        const navItem = document.querySelector(`.nav-item[onclick*="showPanel('${panel}'"]`);
+        if (navItem) navItem.click();
+        else if (typeof window.showPanel === 'function') window.showPanel(panel);
+      }
+
+      function closePalette() {
+        if (aiDebounce) clearTimeout(aiDebounce);
+        overlay.remove();
+      }
+
+      input.addEventListener('input', () => render(input.value));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closePalette(); });
+      input.addEventListener('keydown', (e) => {
+        const items = results.querySelectorAll('.cmd-item');
+        if (e.key === 'Escape') { closePalette(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, items.length - 1); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); }
+        if (e.key === 'Enter') { const active = results.querySelector('.cmd-item.active'); if (active) go(active.dataset.panel); return; }
+        items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+        items[activeIdx]?.scrollIntoView({ block: 'nearest' });
+      });
+
+      render('');
+      input.focus();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openPalette();
+      }
+    });
+
+    // Also expose globally
+    window._openCommandPalette = openPalette;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 12. PANEL TRANSITIONS — smooth fade on switch
+  // ═══════════════════════════════════════════════════
+  function setupPanelTransitions() {
+    const origShowPanel = window.showPanel;
+    if (typeof origShowPanel !== 'function') return;
+
+    window.showPanel = function (panelId, navItem) {
+      // Hide current active panel
+      const current = document.querySelector('.panel.active');
+      if (current && current.id !== panelId) {
+        current.classList.remove('active', 'entering');
+      }
+      // Call original showPanel
+      origShowPanel(panelId, navItem);
+      // Animate new panel
+      const next = document.getElementById(panelId);
+      if (next) {
+        next.classList.remove('entering');
+        void next.offsetWidth; // force reflow
+        next.classList.add('entering');
+      }
+    };
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 13. DARK MODE TOGGLE
+  // ═══════════════════════════════════════════════════
+  function setupDarkMode() {
+    const DARK_KEY = 'lumied_dark_mode';
+    const saved = localStorage.getItem(DARK_KEY);
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+    let isDark = saved === '1' || (saved === null && prefersDark);
+
+    function apply() {
+      document.body.classList.toggle('theme-dark', isDark);
+      const toggle = document.getElementById('darkToggle');
+      if (toggle) toggle.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    window._toggleDarkMode = function () {
+      isDark = !isDark;
+      localStorage.setItem(DARK_KEY, isDark ? '1' : '0');
+      apply();
+    };
+
+    // Inject toggle button into sidebar footer
+    setTimeout(() => {
+      const footer = document.querySelector('.sb-footer');
+      if (footer) {
+        const btn = document.createElement('button');
+        btn.id = 'darkToggle';
+        btn.className = 'dark-toggle';
+        btn.title = 'Modo escuro';
+        btn.onclick = window._toggleDarkMode;
+        footer.insertBefore(btn, footer.firstChild);
+      }
+      apply();
+    }, 500);
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 14. BREADCRUMBS
+  // ═══════════════════════════════════════════════════
+  function setupBreadcrumbs() {
+    if (portal !== 'gerente') return;
+    const origShowPanel = window.showPanel;
+    if (typeof origShowPanel !== 'function') return;
+
+    const panelHistory = [{ id: 'analytics', label: 'Dashboard' }];
+
+    const _prevShowPanel = window.showPanel;
+    window.showPanel = function (panelId, navItem) {
+      _prevShowPanel(panelId, navItem);
+      // Find label
+      let label = panelId;
+      if (navItem) {
+        const text = navItem.textContent?.trim();
+        const ic = navItem.querySelector('.ic')?.textContent || '';
+        label = text.replace(ic, '').trim();
+      }
+      // Update breadcrumb trail
+      const existing = panelHistory.findIndex(h => h.id === panelId);
+      if (existing >= 0) panelHistory.length = existing + 1;
+      else panelHistory.push({ id: panelId, label });
+      if (panelHistory.length > 4) panelHistory.splice(1, panelHistory.length - 4);
+      renderBreadcrumb();
+    };
+
+    function renderBreadcrumb() {
+      const el = document.getElementById('breadcrumb');
+      if (!el) return;
+      el.innerHTML = panelHistory.map((h, i) => {
+        if (i === panelHistory.length - 1) return `<span>${h.label}</span>`;
+        return `<a onclick="showPanel('${h.id}')">${h.label}</a><span class="sep">›</span>`;
+      }).join(' ');
+      el.className = 'lm-breadcrumb';
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 15. KEYBOARD SHORTCUTS — Enter to submit modals
+  // ═══════════════════════════════════════════════════
+  function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Enter → confirm modal (if no textarea focused)
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+        if (document.activeElement?.tagName === 'TEXTAREA') return;
+        const modal = document.querySelector('.modal-overlay[style*="flex"]');
+        if (modal) {
+          const confirmBtn = modal.querySelector('.modal-confirm, .lumiedConfirmOkBtn');
+          if (confirmBtn && document.activeElement?.tagName !== 'INPUT') {
+            e.preventDefault();
+            confirmBtn.click();
+          }
+        }
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 16. LANG SWITCHER — fallback injection for portals
+  //     without a portal-init.js bundle
+  // ═══════════════════════════════════════════════════
+  function setupLangSwitcher() {
+    // Skip if already injected by portal-init.js
+    if (document.querySelector('.lang-switcher')) return;
+
+    const STORAGE_KEY = 'lumied_lang';
+    const STYLES = `
+.lang-switcher{display:inline-flex;align-items:center;gap:2px;background:rgba(0,0,0,.2);border-radius:8px;padding:3px;flex-shrink:0;}
+.lang-btn{padding:4px 10px;border:none;background:transparent;color:rgba(255,255,255,.55);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .2s;white-space:nowrap;line-height:1.4;}
+.lang-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.9);}
+.lang-btn.active{background:rgba(255,255,255,.14);color:#fff;}
+`;
+
+    if (!document.getElementById('lang-switcher-styles')) {
+      const style = document.createElement('style');
+      style.id = 'lang-switcher-styles';
+      style.textContent = STYLES;
+      document.head.appendChild(style);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'lang-switcher';
+    wrapper.setAttribute('role', 'group');
+    wrapper.setAttribute('aria-label', 'Language / Idioma');
+
+    const ptBtn = document.createElement('button');
+    ptBtn.className = 'lang-btn';
+    ptBtn.setAttribute('data-lang', 'pt-BR');
+    ptBtn.setAttribute('aria-label', 'Português (Brasil)');
+    ptBtn.textContent = '🇧🇷 PT';
+
+    const enBtn = document.createElement('button');
+    enBtn.className = 'lang-btn';
+    enBtn.setAttribute('data-lang', 'en');
+    enBtn.setAttribute('aria-label', 'English');
+    enBtn.textContent = '🇺🇸 EN';
+
+    function getCurrentLocale() {
+      try { return localStorage.getItem(STORAGE_KEY) || 'pt-BR'; } catch (_) { return 'pt-BR'; }
+    }
+
+    function syncButtons() {
+      const locale = getCurrentLocale();
+      ptBtn.classList.toggle('active', locale === 'pt-BR');
+      enBtn.classList.toggle('active', locale === 'en');
+    }
+
+    function switchLocale(lang) {
+      try { localStorage.setItem(STORAGE_KEY, lang); } catch (_) {}
+      syncButtons();
+      // Use bundle-exposed translatePage if available, otherwise reload
+      if (typeof window.__translatePage === 'function') {
+        window.__translatePage();
+      } else {
+        location.reload();
+      }
+    }
+
+    ptBtn.addEventListener('click', () => switchLocale('pt-BR'));
+    enBtn.addEventListener('click', () => switchLocale('en'));
+
+    wrapper.appendChild(ptBtn);
+    wrapper.appendChild(enBtn);
+    syncButtons();
+
+    // Inject into the right location based on portal type
+    if (['gerente', 'secretaria', 'admin'].includes(portal)) {
+      const footer = document.querySelector('.sb-footer');
+      if (footer) {
+        wrapper.style.marginBottom = '10px';
+        footer.insertBefore(wrapper, footer.firstChild);
+        return;
+      }
+    }
+
+    // Topbar portals (professora, aluno, pais)
+    const topbarUser = document.querySelector('.topbar-user');
+    if (topbarUser) {
+      topbarUser.prepend(wrapper);
+      return;
+    }
+
+    // Pais portal: inject into site-header
+    const headerInner = document.querySelector('.header-inner');
+    if (headerInner) {
+      wrapper.style.cssText = 'margin-top:12px;justify-content:center;';
+      headerInner.appendChild(wrapper);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  // 17. MIC BUTTON — floating toggle for voice commands (professora)
+  // ═══════════════════════════════════════════════════
+  function setupMicButton() {
+    if (portal !== 'professora') return;
+    // Hidden on desktop — teachers use mobile/tablet
+    if (window.innerWidth > 1024) return;
+    if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) return;
+
+    const PREF_KEY = 'lumied_voice_enabled';
+
+    const btn = document.createElement('button');
+    btn.id = 'lumiMicBtn';
+    btn.setAttribute('aria-label', 'Ativar comandos de voz Lumi');
+    btn.style.cssText = [
+      'position:fixed',
+      'bottom:16px',
+      'left:16px',
+      'z-index:99989',
+      'width:56px',
+      'height:56px',
+      'border-radius:50%',
+      'border:none',
+      'background:#1a1a1a',
+      'color:#fff',
+      'font-size:22px',
+      'cursor:pointer',
+      'box-shadow:0 4px 20px rgba(0,0,0,.35)',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'transition:background .25s,transform .2s',
+      'font-family:inherit',
+    ].join(';');
+    btn.textContent = '🎤';
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes micPulse {
+        0%,100% { box-shadow:0 4px 20px rgba(0,0,0,.35),0 0 0 0 rgba(200,16,46,.4); }
+        70%      { box-shadow:0 4px 20px rgba(0,0,0,.35),0 0 0 12px rgba(200,16,46,0); }
+      }
+      #lumiMicBtn.active { background:#C8102E !important; animation:micPulse 1.4s ease infinite; }
+      #lumiMicBtn:hover { transform:scale(1.08); }
+    `;
+    document.head.appendChild(style);
+
+    function syncState() {
+      const isOn = window.__voice?.isListening?.() || localStorage.getItem(PREF_KEY) === '1';
+      btn.classList.toggle('active', isOn);
+      btn.setAttribute('aria-pressed', String(isOn));
+      btn.title = isOn ? 'Desativar voz Lumi' : 'Ativar voz Lumi';
+    }
+
+    btn.addEventListener('click', () => {
+      if (window.__voice) {
+        window.__voice.toggle();
+        syncState();
+      }
+    });
+
+    // Keep button state in sync when voice module updates it
+    window.__voiceOnChange = syncState;
+
+    document.body.appendChild(btn);
+    syncState();
   }
 
   // ═══════════════════════════════════════════════════
@@ -356,6 +928,17 @@
     improveEmptyStates();
     addSidebarSearch();
     setupUsageTracking();
+    setupCommandPalette();
+    setupDarkMode();
+    setupLangSwitcher();
+    setupKeyboardShortcuts();
+    // Panel transitions and breadcrumbs need showPanel to exist first
+    setTimeout(() => {
+      setupPanelTransitions();
+      setupBreadcrumbs();
+    }, 100);
+    // Mic button for voice commands (professora portal, mobile only)
+    setTimeout(setupMicButton, 600);
     // Onboarding after app loads
     const appShell = document.getElementById('appShell') || document.getElementById('appWrap');
     if (appShell) {
@@ -377,6 +960,62 @@
     init();
   }
 })();
+
+// ═══════════════════════════════════════════════════════
+//  Error sanitizer — hide technical messages from users
+// ═══════════════════════════════════════════════════════
+window.sanitizeErrorMessage = function (msg) {
+  if (typeof msg !== 'string') msg = String(msg || '');
+  // Technical patterns that should never reach users
+  const technicalPatterns = [
+    /tenant isolation/i,
+    /escola_id/i,
+    /\b(INSERT|UPDATE|DELETE|SELECT)\b.*\b(INTO|FROM|SET|WHERE)\b/i,
+    /\bconstraint\b/i,
+    /\bviolation\b/i,
+    /\bduplicate key\b/i,
+    /\bforeign key\b/i,
+    /\bnull value in column\b/i,
+    /\brelation ".*" does not exist/i,
+    /\bfunction .* does not exist/i,
+    /\bpermission denied for\b/i,
+    /\bsyntax error at or near\b/i,
+    /\bROW LEVEL SECURITY\b/i,
+    /pg_catalog/i,
+    /supabase/i,
+    /PGRST\d+/i,
+  ];
+  for (const pat of technicalPatterns) {
+    if (pat.test(msg)) return 'Erro interno. Tente novamente.';
+  }
+  // Generic SQL / DB error fallback
+  if (/\b(SQL|postgres|database|db error|internal server error)\b/i.test(msg)) {
+    return 'Erro no servidor. Tente novamente.';
+  }
+  // User-facing messages pass through as-is
+  return msg;
+};
+
+// ═══════════════════════════════════════════════════════
+//  Double-submit prevention — withLoading(btn, asyncFn)
+// ═══════════════════════════════════════════════════════
+window.withLoading = async function (btn, asyncFn) {
+  if (!btn || btn.disabled) return;
+  const originalHtml = btn.innerHTML;
+  const originalWidth = btn.offsetWidth;
+  btn.disabled = true;
+  btn.style.opacity = '0.7';
+  btn.style.minWidth = originalWidth + 'px';
+  btn.innerHTML = '<span class="spinner-sm" style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:middle;"></span> Salvando...';
+  try {
+    return await asyncFn();
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.minWidth = '';
+    btn.innerHTML = originalHtml;
+  }
+};
 
 // ═══════════════════════════════════════════════════════
 //  Focus trap for modals

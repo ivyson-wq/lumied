@@ -373,12 +373,12 @@ body.has-bottomnav{padding-bottom:56px;}
 <div id="loginWall">
   <div class="login-card">
     <div style="margin-bottom:24px;">
-      <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;">Portal dos Pais</div>
+      <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;" data-i18n="pais.login.portalTitle">Portal dos Pais</div>
       <div style="font-size:11px;color:#7a7169;">Lumied</div>
     </div>
     <div class="lw-icon">🔐</div>
-    <div class="lw-title">Identifique-se para continuar</div>
-    <p class="lw-sub">Para garantir a autenticidade das solicitações, confirme sua identidade antes de preencher o formulário.</p>
+    <div class="lw-title" data-i18n="pais.login.identifique">Identifique-se para continuar</div>
+    <p class="lw-sub" data-i18n="pais.login.identifiqueSub">Para garantir a autenticidade das solicitações, confirme sua identidade antes de preencher o formulário.</p>
 
     <!-- Estado: acesso negado -->
     <div id="accessDeniedMsg" style="display:none;">
@@ -436,18 +436,18 @@ body.has-bottomnav{padding-bottom:56px;}
 
       <!-- 1. Email + Senha (principal) -->
       <div class="ml-field">
-        <label>E-mail</label>
-        <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" autocomplete="email">
+        <label data-i18n="auth.email">E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder">
       </div>
       <div class="ml-field">
-        <label>Senha</label>
+        <label data-i18n="auth.password">Senha</label>
         <input type="password" id="loginSenha" placeholder="Sua senha" autocomplete="current-password">
       </div>
       <div id="loginErr" style="display:none;font-size:13px;color:#a00d24;padding:8px 12px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);margin-bottom:8px;"></div>
-      <button class="btn-magic" id="btnLogin" onclick="loginEmailSenha()">Entrar</button>
+      <button class="btn-magic" id="btnLogin" onclick="loginEmailSenha()" data-i18n="auth.login">Entrar</button>
       <div style="display:flex;justify-content:space-between;margin-top:8px;">
-        <a href="#" onclick="toggleCadastro();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;">Criar conta</a>
-        <a href="#" onclick="toggleMagicLink();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;">Esqueci minha senha</a>
+        <a href="#" onclick="toggleCadastro();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;" data-i18n="pais.login.criarConta">Criar conta</a>
+        <a href="#" onclick="toggleMagicLink();return false" style="font-size:13px;color:var(--muted);text-decoration:none;padding:8px 4px;display:inline-block;" data-i18n="pais.login.esqueciSenha">Esqueci minha senha</a>
       </div>
 
       <!-- Cadastro (colapsavel) -->
@@ -560,7 +560,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- ESTOU A CAMINHO -->
   <div class="card" id="pickupCard" data-modulo="pickup" style="display:none;">
     <div class="card-title" style="margin-bottom:12px;">
-      🚗 Estou a Caminho
+      🚗 <span data-i18n="pais.cards.estamoACaminho">Estou a Caminho</span>
       <button onclick="loadPickupCard()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Avise a escola quando você estiver a caminho para buscar seu filho. A professora será notificada e preparará a criança.</p>
@@ -615,7 +615,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- AGENDA PERMANENTE -->
   <div class="card" id="agendaCard" style="display:none;">
     <div class="card-title" style="margin-bottom:12px;">
-      📅 Agenda da Criança
+      📅 <span data-i18n="pais.cards.agendaCrianca">Agenda da Criança</span>
       <button onclick="carregarAgenda()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Próximos dias com presença prevista. Clique em <strong>Registrar ausência</strong> se a criança não comparecer.</p>
@@ -633,7 +633,7 @@ body.has-bottomnav{padding-bottom:56px;}
 
     <!-- DADOS COMUNS -->
     <div class="card" id="cardDados">
-      <div class="card-title">👤 Seus Dados</div>
+      <div class="card-title">👤 <span data-i18n="pais.perfil.seusDados">Seus Dados</span></div>
       <div class="field">
         <label for="email">E-mail</label>
         <input type="email" id="email" readonly>
@@ -657,7 +657,7 @@ body.has-bottomnav{padding-bottom:56px;}
 
     <!-- SÉRIE (comum) -->
     <div class="card" id="cardSerie">
-      <div class="card-title">🎒 Série</div>
+      <div class="card-title">🎒 <span data-i18n="pais.perfil.serieLabel">Série</span></div>
       <div class="field">
         <label for="serieSelect">Série da criança <span class="req">*</span></label>
         <select id="serieSelect"><option value="">Carregando…</option></select>
@@ -668,7 +668,7 @@ body.has-bottomnav{padding-bottom:56px;}
     <!-- SEÇÃO: TURNO -->
     <div id="secaoTurno">
       <div class="card">
-        <div class="card-title">🕐 Turno Desejado</div>
+        <div class="card-title">🕐 <span data-i18n="pais.perfil.turnoDesejado">Turno Desejado</span></div>
         <div class="field">
           <label for="turnoSelect">Selecione o turno <span class="req">*</span></label>
           <select id="turnoSelect" onchange="onTurnoChange()">
@@ -702,7 +702,7 @@ body.has-bottomnav{padding-bottom:56px;}
     <!-- SEÇÃO: ATIVIDADES (usada no tabAtividades) -->
     <div id="secaoAtividades" style="display:none;">
       <div class="card">
-        <div class="card-title">🎯 Atividades Extracurriculares</div>
+        <div class="card-title">🎯 <span data-i18n="pais.perfil.atividadesExtras">Atividades Extracurriculares</span></div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Selecione uma ou mais atividades. Os horários não podem ser conflitantes.</p>
         <div id="atividadesLista">
           <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando atividades…</div>
@@ -721,7 +721,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- TAB: ATIVIDADES -->
   <div class="tab-panel" id="tabAtividades">
     <div class="card">
-      <div class="card-title">👤 Seus Dados</div>
+      <div class="card-title">👤 <span data-i18n="pais.perfil.seusDados">Seus Dados</span></div>
       <div class="field">
         <label>E-mail</label>
         <input type="email" id="emailAtiv" readonly>
@@ -743,7 +743,7 @@ body.has-bottomnav{padding-bottom:56px;}
       </div>
     </div>
     <div class="card">
-      <div class="card-title">🎒 Série</div>
+      <div class="card-title">🎒 <span data-i18n="pais.perfil.serieLabel">Série</span></div>
       <div class="field">
         <label for="serieSelectAtiv">Série da criança <span class="req">*</span></label>
         <select id="serieSelectAtiv"><option value="">Carregando…</option></select>
@@ -751,7 +751,7 @@ body.has-bottomnav{padding-bottom:56px;}
       </div>
     </div>
     <div class="card">
-      <div class="card-title">🎯 Atividades Extracurriculares</div>
+      <div class="card-title">🎯 <span data-i18n="pais.perfil.atividadesExtras">Atividades Extracurriculares</span></div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Selecione uma ou mais atividades. Os horários não podem ser conflitantes.</p>
       <div id="atividadesListaAtiv">
         <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando atividades…</div>
@@ -815,19 +815,19 @@ body.has-bottomnav{padding-bottom:56px;}
 
     <!-- Minha Face -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:12px;">👤 Meu Cadastro Facial</div>
+      <div class="card-title" style="margin-bottom:12px;">👤 <span data-i18n="pais.cards.cadastroFacial">Meu Cadastro Facial</span></div>
       <div id="minhaFaceContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
     </div>
 
     <!-- Filhos na escola -->
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:12px;">👶 Meus Filhos — Presença Hoje</div>
+      <div class="card-title" style="margin-bottom:12px;">👶 <span data-i18n="pais.cards.meusFilhosPresenca">Meus Filhos — Presença Hoje</span></div>
       <div id="meusFilhosPresenca"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
     </div>
 
     <!-- Pessoas autorizadas -->
     <div class="card">
-      <div class="card-title" style="margin-bottom:4px;">🔐 Pessoas Autorizadas para Retirada</div>
+      <div class="card-title" style="margin-bottom:4px;">🔐 <span data-i18n="pais.cards.pessoasAutorizadas">Pessoas Autorizadas para Retirada</span></div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Gerencie quem pode retirar seus filhos da escola. Cada pessoa autorizada precisa ter uma foto cadastrada para reconhecimento facial.</p>
       <div id="autorizadosLista" style="margin-bottom:16px;"></div>
 
@@ -878,7 +878,7 @@ body.has-bottomnav{padding-bottom:56px;}
   <!-- TAB: MEU PERFIL -->
   <div class="tab-panel" id="tabPerfil">
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title" style="margin-bottom:16px;">👤 Meus Dados</div>
+      <div class="card-title" style="margin-bottom:16px;">👤 <span data-i18n="pais.perfil.meusDados">Meus Dados</span></div>
       <div class="ml-field">
         <label>Nome completo</label>
         <input type="text" id="perfilNome" placeholder="Seu nome">
@@ -896,7 +896,7 @@ body.has-bottomnav{padding-bottom:56px;}
     </div>
 
     <div class="card">
-      <div class="card-title" style="margin-bottom:16px;">🔑 Alterar Senha</div>
+      <div class="card-title" style="margin-bottom:16px;">🔑 <span data-i18n="pais.perfil.alterarSenha">Alterar Senha</span></div>
       <div class="ml-field">
         <label>Nova senha (mínimo 6 caracteres)</label>
         <input type="password" id="perfilSenhaNova" placeholder="Digite a nova senha" autocomplete="new-password">
@@ -916,30 +916,30 @@ body.has-bottomnav{padding-bottom:56px;}
 <nav class="bottom-nav" id="bottomNav" role="navigation" aria-label="Menu principal">
   <button class="bnav-item active" onclick="switchTab('inicio')" data-tab="inicio">
     <span class="bnav-icon">🏠</span>
-    <span class="bnav-label">Início</span>
+    <span class="bnav-label" data-i18n="pais.nav.inicio">Início</span>
   </button>
   <button class="bnav-item" onclick="switchTab('diaadia')" data-tab="diaadia" data-modulo="agenda_digital">
     <span class="bnav-icon">📅</span>
-    <span class="bnav-label">Dia a Dia</span>
+    <span class="bnav-label" data-i18n="pais.bnav.diaADia">Dia a Dia</span>
   </button>
   <button class="bnav-item" onclick="switchTab('boletim')" data-tab="boletim" data-modulo="notas">
     <span class="bnav-icon">📝</span>
-    <span class="bnav-label">Boletim</span>
+    <span class="bnav-label" data-i18n="pais.nav.boletim">Boletim</span>
   </button>
   <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos" data-modulo="financeiro">
     <span class="bnav-icon">💰</span>
-    <span class="bnav-label">Boletos</span>
+    <span class="bnav-label" data-i18n="pais.nav.boletos">Boletos</span>
   </button>
   <button class="bnav-item" onclick="togglePaisMore()" id="paisMoreBtn" aria-label="Menu">
     <span class="bnav-icon">☰</span>
-    <span class="bnav-label">Mais</span>
+    <span class="bnav-label" data-i18n="pais.bnav.mais">Mais</span>
   </button>
 </nav>
 <div id="paisMoreMenu" style="display:none;position:fixed;bottom:56px;left:0;right:0;background:#fff;border-top:1px solid var(--border);box-shadow:0 -8px 24px rgba(0,0,0,.12);z-index:60;padding:12px 16px;border-radius:16px 16px 0 0;">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-    <button class="bnav-more-item" onclick="switchTab('solicitar');closePaisMore()" data-modulo="turno"><span>🕐</span>Turno</button>
-    <button class="bnav-more-item" onclick="switchTab('atividades');closePaisMore()" data-modulo="atividades"><span>🎯</span>Atividades</button>
-    <button class="bnav-more-item" onclick="switchTab('achados');closePaisMore()" data-modulo="achados"><span>🔍</span>Achados</button>
+    <button class="bnav-more-item" onclick="switchTab('solicitar');closePaisMore()" data-modulo="turno"><span>🕐</span><span data-i18n="pais.bnav.turno">Turno</span></button>
+    <button class="bnav-more-item" onclick="switchTab('atividades');closePaisMore()" data-modulo="atividades"><span>🎯</span><span data-i18n="pais.bnav.atividades">Atividades</span></button>
+    <button class="bnav-more-item" onclick="switchTab('achados');closePaisMore()" data-modulo="achados"><span>🔍</span><span data-i18n="pais.bnav.achados">Achados</span></button>
   </div>
 </div>
 
@@ -3317,6 +3317,9 @@ body.has-bottomnav{padding-bottom:56px;}
   window.addEventListener('beforeunload', () => { stopPickupPoll(); });
 </script>
 <script src="/lumied-ux.js" defer></script>
+<script src="/lumied-a11y.js" defer></script>
+<script src="/lumied-delight.js" defer></script>
+<script src="/lumied-pro.js" defer></script>
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
 </body>

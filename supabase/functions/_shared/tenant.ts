@@ -59,7 +59,8 @@ function extractToken(req: Request, body?: Record<string, unknown> | null): stri
   }
   const auth = req.headers.get("authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
-  if (m && m[1] && m[1].length < 200) return m[1];
+  // Ignorar anon/service-role JWTs do Supabase (começam com eyJ e são longos)
+  if (m && m[1] && m[1].length < 200 && !m[1].startsWith("eyJ")) return m[1];
   return null;
 }
 

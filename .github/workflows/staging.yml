@@ -1,0 +1,110 @@
+name: Staging — PR Preview
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
+
+jobs:
+  # ═══ 1. TYPE CHECK (Edge Functions) ═══
+  deno-check:
+    name: Deno Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check _shared types
+        run: |
+          set -e
+          for f in supabase/functions/_shared/*.ts; do
+            echo "Checking $f..."
+            deno check --config supabase/functions/deno.json "$f"
+          done
+
+  # ═══ 2. FRONTEND BUILD ═══
+  build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build frontend bundles (esbuild)
+        run: node build.js
+
+      - name: Verify key bundles exist
+        run: |
+          set -e
+          for f in dist/portals/professora/index.js dist/portals/gerente/index.js dist/portals/pais/index.js; do
+            [ -f "$f" ] && echo "✓ $f" || (echo "✗ missing: $f" && exit 1)
+          done
+
+  # ═══ 3. PREVIEW URL COMMENT ═══
+  preview-comment:
+    name: Preview URL
+    runs-on: ubuntu-latest
+    needs: [deno-check, build]
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment preview link on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.sha.slice(0, 7);
+            const prNum = context.payload.pull_request.number;
+            const branch = context.payload.pull_request.head.ref
+              .replace(/[^a-z0-9-]/gi, '-').toLowerCase().slice(0, 48);
+            const previewUrl = `https://lumied-git-${branch}-maple-bear.vercel.app`;
+            const body = [
+              '## 🚀 Preview deploy',
+              '',
+              `**Preview:** ${previewUrl}`,
+              `**Commit:** \`${sha}\``,
+              '',
+              '| Check | Status |',
+              '|-------|--------|',
+              '| Deno type check | ✅ |',
+              '| Frontend build  | ✅ |',
+              '',
+              '_Vercel deploys preview automatically on every push to this PR._',
+            ].join('\n');
+
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNum,
+            });
+
+            const existing = comments.data.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Preview deploy')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNum,
+                body,
+              });
+            }

@@ -7,7 +7,7 @@
 
   // Esperar autenticacao — widgets so aparecem apos login
   function hasAuth() {
-    return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('mb_aluno_token');
+    return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('sec_token') || localStorage.getItem('mb_aluno_token');
   }
   if (!hasAuth()) {
     const chk = setInterval(() => { if (hasAuth()) { clearInterval(chk); startWidget(); } }, 2000);
@@ -133,6 +133,8 @@
     sendBtn.textContent = 'Enviando...';
 
     const email = getUserEmail() || 'anonimo@lumied.com.br';
+    // Incluir token de sessão para resolução de escola (tenant isolation)
+    const sessionToken = localStorage.getItem('prof_token') || localStorage.getItem('mb_token') || localStorage.getItem('sec_token') || localStorage.getItem('mb_aluno_token') || '';
     const body = {
       action: 'ticket_create',
       email: email,
@@ -143,6 +145,12 @@
       user_agent: navigator.userAgent,
       resolucao_tela: screen.width + 'x' + screen.height,
     };
+    // Mapear token para o campo correto que resolveEscolaId espera
+    if (sessionToken) {
+      if (portal === 'professora') body._prof_token = sessionToken;
+      else if (portal === 'aluno') body._aluno_token = sessionToken;
+      else body._token = sessionToken;
+    }
 
     try {
       const url = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';

@@ -1,14 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode, b64urlDecode } from '../_shared/webauthn.ts'
-import { getModulosHabilitados, getModulosResolvidos, getEscolaPadrao } from '../_shared/modulos.ts'
-import { resolveEscolaId } from '../_shared/tenant.ts'
-import { getCorsHeaders } from '../_shared/cors.ts'
-import { checkRateLimit, getClientIP } from '../_shared/ratelimit.ts'
-import { sanitizeBody } from '../_shared/validation.ts'
-import { createLogger } from '../_shared/logger.ts'
-import { hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken } from '../_shared/auth.ts'
-import { logAudit } from '../_shared/audit.ts'
-import { generatePdf, pdfResponse } from '../_shared/pdf.ts'
+import {
+  generateChallenge, verifyRegistration, verifyAuthentication, b64urlEncode,
+  getModulosHabilitados, getModulosResolvidos, getEscolaPadrao,
+  resolveEscolaId,
+  getCorsHeaders,
+  checkRateLimit, getClientIP,
+  sanitizeBody,
+  createLogger,
+  hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken, uploadArquivo,
+  resolveUsuario,
+  logAudit,
+  generatePdf, pdfResponse, generateXlsx, xlsxResponse,
+  b64urlDecode,
+} from '../_shared/mod.ts'
 
 const log = createLogger('diplomas')
 
@@ -19,8 +23,10 @@ function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: CORS })
 }
 
-async function criarNotif(sb: any, portal: string, destinatario: string, titulo: string, mensagem: string, tipo = 'info') {
-  await sb.from('notificacoes').insert({ portal, destinatario, titulo, mensagem, tipo })
+async function criarNotif(sb: any, portal: string, destinatario: string, titulo: string, mensagem: string, tipo = 'info', escola_id?: string) {
+  const row: Record<string, unknown> = { portal, destinatario, titulo, mensagem, tipo }
+  if (escola_id) row.escola_id = escola_id
+  await sb.from('notificacoes').insert(row)
 }
 
 // ── Verificação de horário de acesso ────────────────────────
@@ -49,133 +55,21 @@ async function verificarHorarioAcesso(sb: ReturnType<typeof createClient>, profe
   return { permitido: true }
 }
 
-// ── Session validators ──────────────────────────────────────
-async function getProfessora(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  const PROF_FIELDS = 'id, nome, email, escola_id'
-  // Tenta sessão legada (professora_sessoes)
-  const { data: sessao } = await sb
-    .from('professora_sessoes').select('professora_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (sessao && new Date(sessao.expira_em) >= new Date()) {
-    const { data } = await sb
-      .from('professoras').select(PROF_FIELDS)
-      .eq('id', sessao.professora_id).maybeSingle()
-    if (data) return data
-  }
-  // Fallback: sessão unificada (tabela sessoes/usuarios)
-  const user = await getUsuario(sb, token)
-  if (!user) return null
-  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  if (roles.includes('professora') || roles.includes('professora_assistente')) {
-    // Busca dados da professora pelo mesmo ID ou email
-    const { data: prof } = await sb
-      .from('professoras').select(PROF_FIELDS)
-      .eq('id', user.id).maybeSingle()
-    if (prof) return prof
-    // Fallback por email
-    const { data: profByEmail } = await sb
-      .from('professoras').select(PROF_FIELDS)
-      .eq('email', user.email).maybeSingle()
-    if (profByEmail) return profByEmail
-    // Cria registro na tabela professoras se não existe (auto-provision escopado por escola)
-    if (!(user as any).escola_id) return null
-    const { data: novaProfessora } = await sb
-      .from('professoras').insert({ nome: user.nome, email: user.email, escola_id: (user as any).escola_id })
-      .select('id, nome, email, escola_id').single()
-    if (novaProfessora) return novaProfessora
-    return null
-  }
-  return null
-}
+// ── Session validators (delegated to _shared/auth.ts) ──────
+// These are thin wrappers that maintain the same call signature for
+// backward compatibility with the 100+ call sites in this file.
+import {
+  resolveProfessora,
+  resolveGerente,
+  resolveSecretaria,
+  resolveAlmoxarifado,
+} from '../_shared/mod.ts'
 
-async function getGerente(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  // Tenta sessão legada (gerente_sessoes)
-  const { data: sessao } = await sb
-    .from('gerente_sessoes').select('gerente_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (sessao && new Date(sessao.expira_em) >= new Date()) {
-    const { data } = await sb
-      .from('gerentes').select('id, nome, email, escola_id')
-      .eq('id', sessao.gerente_id).maybeSingle()
-    if (data) return data
-  }
-  // Fallback: sessão unificada
-  const user = await getUsuario(sb, token)
-  if (!user) return null
-  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  if (roles.includes('gerente') || roles.includes('diretor') || roles.includes('financeiro')) {
-    const { data: ger } = await sb
-      .from('gerentes').select('id, nome, email, escola_id')
-      .eq('email', user.email).maybeSingle()
-    if (ger) return ger
-    return { id: user.id, nome: user.nome, email: user.email }
-  }
-  return null
-}
-
-async function getSecretaria(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  // Tenta sessão legada (secretaria_sessoes)
-  const { data: sessao } = await sb
-    .from('secretaria_sessoes').select('secretaria_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (sessao && new Date(sessao.expira_em) >= new Date()) {
-    const { data } = await sb
-      .from('secretarias').select('id, nome, email, features, escola_id')
-      .eq('id', sessao.secretaria_id).maybeSingle()
-    if (data) return { ...data, features: data.features || ['atestados'] }
-  }
-  // Fallback: sessão unificada
-  const user = await getUsuario(sb, token)
-  if (!user) return null
-  const roles: string[] = user.papeis?.length ? user.papeis : (user.papel ? [user.papel] : [])
-  const secRoles = ['secretaria', 'comercial', 'financeiro', 'diretor', 'manutencao', 'impressao', 'nutricionista', 'almoxarifado']
-  if (roles.some((r: string) => secRoles.includes(r))) {
-    const { data: sec } = await sb
-      .from('secretarias').select('id, nome, email, features, escola_id')
-      .eq('email', user.email).maybeSingle()
-    if (sec) {
-      // Garante que papéis tenham features correspondentes mesmo em registros antigos
-      const feats = new Set<string>(sec.features || ['atestados'])
-      if (roles.includes('nutricionista')) feats.add('cozinha')
-      if (roles.includes('almoxarifado')) feats.add('almoxarifado')
-      return { ...sec, features: Array.from(feats) }
-    }
-    // Constrói features baseado nos papéis
-    const features: string[] = []
-    if (roles.includes('secretaria')) features.push('atestados')
-    if (roles.includes('comercial')) features.push('crm', 'templates', 'metas')
-    if (roles.includes('financeiro') || roles.includes('diretor')) features.push('financeiro')
-    if (roles.includes('manutencao')) features.push('manutencao')
-    if (roles.includes('impressao')) features.push('impressao')
-    if (roles.includes('nutricionista')) features.push('cozinha')
-    if (roles.includes('almoxarifado')) features.push('almoxarifado')
-    return { id: user.id, nome: user.nome, email: user.email, escola_id: (user as any).escola_id, features: features.length ? features : ['atestados'] }
-  }
-  return null
-}
-
-// ── Almoxarifado: acesso secretaria com feature/papel 'almoxarifado' ──────
-async function getAlmoxarifado(sb: ReturnType<typeof createClient>, token: string) {
-  const sec = await getSecretaria(sb, token)
-  if (sec && ((sec as any).features || []).includes('almoxarifado')) return sec
-  return null
-}
-
-// ── Unified session validator (new) ──────────────────────────
-async function getUsuario(sb: ReturnType<typeof createClient>, token: string) {
-  if (!token) return null
-  const { data: sessao } = await sb
-    .from('sessoes').select('usuario_id, expira_em')
-    .eq('token', token).maybeSingle()
-  if (!sessao || new Date(sessao.expira_em) < new Date()) return null
-  const { data } = await sb
-    .from('usuarios').select('id, nome, email, papel, papeis, escola_id')
-    .eq('id', sessao.usuario_id).maybeSingle()
-  return data ?? null
-}
+const getProfessora = (sb: ReturnType<typeof createClient>, token: string) => resolveProfessora(sb, token)
+const getGerente = (sb: ReturnType<typeof createClient>, token: string) => resolveGerente(sb, token)
+const getSecretaria = (sb: ReturnType<typeof createClient>, token: string) => resolveSecretaria(sb, token)
+const getAlmoxarifado = (sb: ReturnType<typeof createClient>, token: string) => resolveAlmoxarifado(sb, token)
+const getUsuario = (sb: ReturnType<typeof createClient>, token: string) => resolveUsuario(sb, token)
 
 // ── Parent (Supabase Auth JWT) validator ────────────────────
 async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string, fallbackEmail?: string): Promise<string | null> {
@@ -183,7 +77,7 @@ async function getPaiEmail(sb: ReturnType<typeof createClient>, token: string, f
     try {
       const { data: { user } } = await sb.auth.getUser(token)
       if (user?.email) return user.email.toLowerCase().trim()
-    } catch (_) { /* ignora */ }
+    } catch (e) { console.warn('[diplomas] getPaiEmail auth failed:', (e as Error).message) }
   }
   return fallbackEmail ? fallbackEmail.toLowerCase().trim() : null
 }
@@ -223,22 +117,7 @@ function calcEtaLocal(latPai: number, lonPai: number): number {
   return Math.max(1, Math.ceil(dist / 40 * 60)) // 40 km/h average urban speed
 }
 
-// ── Upload helper ───────────────────────────────────────────
-async function uploadArquivo(
-  sb: ReturnType<typeof createClient>,
-  bucket: string,
-  ownerId: string,
-  base64: string,
-  mime: string
-): Promise<{ url: string } | { error: string }> {
-  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
-  const ext = mime === 'application/pdf' ? 'pdf' : mime.split('/')[1] || 'jpg'
-  const fileName = `${ownerId}/${Date.now()}.${ext}`
-  const { error } = await sb.storage.from(bucket).upload(fileName, bytes, { contentType: mime, upsert: false })
-  if (error) return { error: error.message }
-  const { data: { publicUrl } } = sb.storage.from(bucket).getPublicUrl(fileName)
-  return { url: publicUrl }
-}
+// uploadArquivo imported from _shared/auth.ts (includes 10MB size check)
 
 const ML_CLIENT_ID = Deno.env.get('ML_CLIENT_ID') || ''
 const ML_CLIENT_SECRET = Deno.env.get('ML_CLIENT_SECRET') || ''
@@ -255,6 +134,7 @@ async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string |
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `grant_type=refresh_token&client_id=${ML_CLIENT_ID}&client_secret=${ML_CLIENT_SECRET}&refresh_token=${data.refresh_token}`,
+        signal: AbortSignal.timeout(10000),
       })
       if (res.ok) {
         const t = await res.json()
@@ -266,7 +146,7 @@ async function getMLToken(sb: ReturnType<typeof createClient>): Promise<string |
         }).eq('id', data.id)
         return t.access_token
       }
-    } catch (_) {}
+    } catch (e) { console.warn('[diplomas] ML token refresh failed:', (e as Error).message) }
     return null
   }
   return data.access_token
@@ -298,6 +178,7 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `grant_type=authorization_code&client_id=${ML_CLIENT_ID}&client_secret=${ML_CLIENT_SECRET}&code=${code}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`,
+        signal: AbortSignal.timeout(10000),
       })
       const t = await res.json()
       if (t.access_token) {
@@ -354,6 +235,8 @@ Deno.serve(async (req) => {
     const senha: string = body.senha || ''
     const papelEsperado: string = body.papel || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
+    const rlLogin = checkRateLimit(email || clientIp, 'login')
+    if (!rlLogin.allowed) return json({ error: `Muitas tentativas de login. Tente em ${rlLogin.retryAfterSeconds}s.`, code: 'RATE_LIMITED' }, 429)
     const { data: user } = await sb
       .from('usuarios')
       .select('id, nome, email, senha_hash, papel, papeis, ativo')
@@ -389,6 +272,8 @@ Deno.serve(async (req) => {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
+    const rlLogin = checkRateLimit(email || clientIp, 'login')
+    if (!rlLogin.allowed) return json({ error: `Muitas tentativas de login. Tente em ${rlLogin.retryAfterSeconds}s.`, code: 'RATE_LIMITED' }, 429)
     // Deriva escola via Origin para evitar colisão de email cross-tenant
     const escolaIdProf = await resolveEscolaId(req, sb, null, body)
     let q = sb.from('professoras').select('id, nome, email, senha_hash, escola_id').eq('email', email)
@@ -428,6 +313,8 @@ Deno.serve(async (req) => {
     const email: string = (body.email || '').toLowerCase().trim()
     const senha: string = body.senha || ''
     if (!email || !senha) return json({ error: 'E-mail e senha são obrigatórios.', code: 'VALIDATION_FAILED' }, 400)
+    const rlLogin = checkRateLimit(email || clientIp, 'login')
+    if (!rlLogin.allowed) return json({ error: `Muitas tentativas de login. Tente em ${rlLogin.retryAfterSeconds}s.`, code: 'RATE_LIMITED' }, 429)
     const escolaIdSec = await resolveEscolaId(req, sb, null, body)
     let qs = sb.from('secretarias').select('id, nome, email, senha_hash, escola_id').eq('email', email)
     if (escolaIdSec) qs = qs.eq('escola_id', escolaIdSec)
@@ -486,6 +373,8 @@ Deno.serve(async (req) => {
       if (!nome_curso) return json({ error: 'Informe o nome do curso.' }, 400)
       if (carga_horaria <= 0) return json({ error: 'Carga horária deve ser maior que zero.' }, 400)
       if (!base64) return json({ error: 'Selecione o arquivo do diploma.' }, 400)
+      const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+      if (!allowedMimes.includes(mime)) return json({ error: 'Tipo de arquivo não permitido. Envie PDF, JPEG, PNG ou WebP.' }, 400)
       const up = await uploadArquivo(sb, 'diplomas', prof.id, base64, mime)
       if ('error' in up) return json({ error: 'Erro ao fazer upload: ' + up.error }, 400)
       if (!(prof as any).escola_id) return json({ error: 'Professora sem escola associada.' }, 403)
@@ -498,7 +387,7 @@ Deno.serve(async (req) => {
       // Notifica APENAS gerentes da mesma escola
       const { data: gerentes } = await sb.from('gerentes').select('email').eq('escola_id', (prof as any).escola_id)
       for (const g of gerentes ?? []) {
-        await criarNotif(sb, 'gerente', g.email, 'Novo diploma', `${prof.nome} enviou o diploma "${nome_curso}" (${carga_horaria}h) para validação.`, 'info')
+        await criarNotif(sb, 'gerente', g.email, 'Novo diploma', `${prof.nome} enviou o diploma "${nome_curso}" (${carga_horaria}h) para validação.`, 'info', (prof as any).escola_id)
       }
       return json({ ok: true })
     }
@@ -519,6 +408,8 @@ Deno.serve(async (req) => {
       if (!data_inicio || !data_fim) return json({ error: 'Informe as datas do atestado.' }, 400)
       if (data_fim < data_inicio) return json({ error: 'Data de fim não pode ser anterior à data de início.' }, 400)
       if (!base64) return json({ error: 'Selecione o arquivo do atestado.' }, 400)
+      const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+      if (!allowedMimes.includes(mime)) return json({ error: 'Tipo de arquivo não permitido. Envie PDF, JPEG, PNG ou WebP.' }, 400)
       const up = await uploadArquivo(sb, 'atestados', prof.id, base64, mime)
       if ('error' in up) return json({ error: 'Erro ao fazer upload: ' + up.error }, 400)
       if (!(prof as any).escola_id) return json({ error: 'Professora sem escola associada.' }, 403)
@@ -531,7 +422,7 @@ Deno.serve(async (req) => {
       // Notifica APENAS secretárias da mesma escola
       const { data: secs } = await sb.from('secretarias').select('email').eq('escola_id', (prof as any).escola_id)
       for (const s of secs ?? []) {
-        await criarNotif(sb, 'secretaria', s.email, 'Novo atestado', `${prof.nome} enviou um atestado (${data_inicio} a ${data_fim}) para validação.`, 'info')
+        await criarNotif(sb, 'secretaria', s.email, 'Novo atestado', `${prof.nome} enviou um atestado (${data_inicio} a ${data_fim}) para validação.`, 'info', (prof as any).escola_id)
       }
       return json({ ok: true })
     }
@@ -588,7 +479,7 @@ Deno.serve(async (req) => {
         pdiId = pdiExist.id
       } else {
         const { data: novo, error: errCria } = await sb
-          .from('pdis').insert({ professora_id: prof.id, ciclo_id: ciclo.id, status: 'rascunho' })
+          .from('pdis').insert({ professora_id: prof.id, ciclo_id: ciclo.id, status: 'rascunho', escola_id: (prof as any).escola_id })
           .select('id').single()
         if (errCria) return json({ error: errCria.message }, 400)
         pdiId = novo.id
@@ -597,7 +488,7 @@ Deno.serve(async (req) => {
       // Upsert competências
       for (const c of competencias) {
         await sb.from('pdi_competencias').upsert(
-          { pdi_id: pdiId, area: c.area, nota_auto: c.nota_auto, comentario: c.comentario ?? null },
+          { pdi_id: pdiId, area: c.area, nota_auto: c.nota_auto, comentario: c.comentario ?? null, escola_id: (prof as any).escola_id },
           { onConflict: 'pdi_id,area' }
         )
       }
@@ -624,7 +515,7 @@ Deno.serve(async (req) => {
         return json({ error: 'PDI já aprovado. Contate a gestora para alterações.' }, 400)
 
       // Remove metas antigas e insere novas
-      await sb.from('pdi_metas').delete().eq('pdi_id', pdi_id)
+      await sb.from('pdi_metas').delete().eq('pdi_id', pdi_id).eq('escola_id', (prof as any).escola_id)
       const { error } = await sb.from('pdi_metas').insert(
         metas.map(m => ({
           pdi_id,
@@ -634,6 +525,7 @@ Deno.serve(async (req) => {
           area_vinculada: m.area_vinculada ?? null,
           status: 'pendente',
           progressao_pct: 0,
+          escola_id: (prof as any).escola_id,
         }))
       )
       if (error) return json({ error: error.message }, 400)
@@ -642,7 +534,7 @@ Deno.serve(async (req) => {
       await sb.from('pdis').update({
         status: 'aguardando_aprovacao',
         submetido_em: new Date().toISOString(),
-      }).eq('id', pdi_id)
+      }).eq('id', pdi_id).eq('escola_id', (prof as any).escola_id)
 
       return json({ ok: true })
     }
@@ -675,7 +567,7 @@ Deno.serve(async (req) => {
         status,
         evidencia_texto: body.evidencia_texto ?? null,
         diploma_id: body.diploma_id ?? null,
-      }).eq('id', meta_id)
+      }).eq('id', meta_id).eq('escola_id', (prof as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
@@ -695,7 +587,7 @@ Deno.serve(async (req) => {
         return json({ error: 'Só é possível registrar check-in em PDIs em andamento.' }, 400)
 
       const { error } = await sb.from('pdi_acompanhamentos').insert({
-        pdi_id, tipo, relato_professora: relato,
+        pdi_id, tipo, relato_professora: relato, escola_id: (prof as any).escola_id,
       })
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
@@ -750,10 +642,10 @@ Deno.serve(async (req) => {
         validado_por: sec.nome,
         data_validacao: new Date().toISOString(),
         observacao: body.observacao || null,
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (sec as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = atest?.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado aprovado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ✅ aprovado pela secretaria.`, 'success')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado aprovado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ✅ aprovado pela secretaria.`, 'success', (sec as any).escola_id)
       logAudit(sb, { ator_tipo: 'secretaria', ator_email: sec.email, recurso: 'atestado', recurso_id: id, acao: 'aprovar', metadata: { observacao: body.observacao } })
       return json({ ok: true })
     }
@@ -767,10 +659,10 @@ Deno.serve(async (req) => {
         validado_por: sec.nome,
         data_validacao: new Date().toISOString(),
         observacao: body.observacao || null,
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (sec as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = atest?.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado rejeitado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Atestado rejeitado', `Seu atestado (${atest.data_inicio} a ${atest.data_fim}) foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error', (sec as any).escola_id)
       logAudit(sb, { ator_tipo: 'secretaria', ator_email: sec.email, recurso: 'atestado', recurso_id: id, acao: 'rejeitar', metadata: { observacao: body.observacao } })
       return json({ ok: true })
     }
@@ -801,8 +693,8 @@ Deno.serve(async (req) => {
       const { id, nome_responsavel, email: leadEmail, telefone, nome_crianca, data_nascimento, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, data_proximo_contato, data_visita } = body
       if (!nome_responsavel) return json({ error: 'Nome obrigatório.' }, 400)
       const leadData: Record<string, unknown> = { nome_responsavel, email: leadEmail, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade as string) : null, observacoes, responsavel_interno: sec.nome, responsavel_id: sec.id, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString() }
-      if (id) { await sb.from('crm_leads').update(leadData).eq('id', id) }
-      else { await sb.from('crm_leads').insert(leadData) }
+      if (id) { await sb.from('crm_leads').update(leadData).eq('id', id).eq('escola_id', (sec as any).escola_id) }
+      else { await sb.from('crm_leads').insert({ ...leadData, escola_id: (sec as any).escola_id }) }
       return json({ ok: true })
     }
 
@@ -811,7 +703,7 @@ Deno.serve(async (req) => {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
       const { id, estagio_id } = body
       if (!id || !estagio_id) return json({ error: 'id e estagio_id obrigatórios.' }, 400)
-      await sb.from('crm_leads').update({ estagio_id, atualizado_em: new Date().toISOString() }).eq('id', id)
+      await sb.from('crm_leads').update({ estagio_id, atualizado_em: new Date().toISOString() }).eq('id', id).eq('escola_id', (sec as any).escola_id)
       return json({ ok: true })
     }
 
@@ -828,8 +720,8 @@ Deno.serve(async (req) => {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
       const { lead_id, tipo, descricao } = body
       if (!lead_id || !descricao) return json({ error: 'lead_id e descrição obrigatórios.' }, 400)
-      await sb.from('crm_interacoes').insert({ lead_id, tipo: tipo || 'nota', descricao, criado_por: sec.nome })
-      await sb.from('crm_leads').update({ atualizado_em: new Date().toISOString() }).eq('id', lead_id)
+      await sb.from('crm_interacoes').insert({ lead_id, tipo: tipo || 'nota', descricao, criado_por: sec.nome, escola_id: (sec as any).escola_id })
+      await sb.from('crm_leads').update({ atualizado_em: new Date().toISOString() }).eq('id', lead_id).eq('escola_id', (sec as any).escola_id)
       return json({ ok: true })
     }
 
@@ -917,10 +809,10 @@ Deno.serve(async (req) => {
         status: 'aprovado', pontuacao: diploma.carga_horaria,
         validado_por: ger.nome, data_validacao: new Date().toISOString(),
         observacao: body.observacao || null,
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (ger as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = diploma.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Diploma aprovado', `Seu diploma "${diploma.nome_curso}" foi ✅ aprovado! +${diploma.carga_horaria} pontos.`, 'success')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Diploma aprovado', `Seu diploma "${diploma.nome_curso}" foi ✅ aprovado! +${diploma.carga_horaria} pontos.`, 'success', (ger as any).escola_id)
       return json({ ok: true })
     }
 
@@ -933,10 +825,10 @@ Deno.serve(async (req) => {
         status: 'rejeitado', pontuacao: 0,
         validado_por: ger.nome, data_validacao: new Date().toISOString(),
         observacao: body.observacao || null,
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (ger as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = diploma?.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Diploma rejeitado', `Seu diploma "${diploma.nome_curso}" foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Diploma rejeitado', `Seu diploma "${diploma.nome_curso}" foi ❌ rejeitado.${body.observacao ? ' Motivo: ' + body.observacao : ''}`, 'error', (ger as any).escola_id)
       return json({ ok: true })
     }
 
@@ -993,6 +885,7 @@ Deno.serve(async (req) => {
         meta_leads: parseInt(meta_leads as string) || 0,
         meta_matriculas: parseInt(meta_matriculas as string) || 0,
         meta_valor: parseFloat(meta_valor as string) || 0,
+        escola_id: (ger as any).escola_id,
       }, { onConflict: 'secretaria_id,mes,ano' })
       return json({ ok: true })
     }
@@ -1082,10 +975,10 @@ Deno.serve(async (req) => {
         status: 'em_andamento',
         feedback_gestora: feedback ?? null,
         aprovado_em: new Date().toISOString(),
-      }).eq('id', pdi_id)
+      }).eq('id', pdi_id).eq('escola_id', (ger as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = pdi.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Growth Plan aprovado', `Seu Annual Growth Plan foi ✅ aprovado e está em andamento.${feedback ? ' Feedback: ' + feedback : ''}`, 'success')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Growth Plan aprovado', `Seu Annual Growth Plan foi ✅ aprovado e está em andamento.${feedback ? ' Feedback: ' + feedback : ''}`, 'success', (ger as any).escola_id)
       return json({ ok: true })
     }
 
@@ -1098,10 +991,10 @@ Deno.serve(async (req) => {
         status: 'rascunho',
         feedback_gestora: feedback,
         submetido_em: null,
-      }).eq('id', pdi_id)
+      }).eq('id', pdi_id).eq('escola_id', (ger as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       const profEmail = pdi.professoras?.email
-      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Growth Plan devolvido', `Seu Annual Growth Plan foi devolvido para revisão. Feedback: ${feedback}`, 'warning')
+      if (profEmail) await criarNotif(sb, 'professora', profEmail, 'Growth Plan devolvido', `Seu Annual Growth Plan foi devolvido para revisão. Feedback: ${feedback}`, 'warning', (ger as any).escola_id)
       return json({ ok: true })
     }
 
@@ -1139,7 +1032,7 @@ Deno.serve(async (req) => {
         nota_final,
         feedback_gestora: feedback,
         encerrado_em: new Date().toISOString(),
-      }).eq('id', pdi_id)
+      }).eq('id', pdi_id).eq('escola_id', (ger as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
@@ -1151,7 +1044,7 @@ Deno.serve(async (req) => {
         return json({ error: 'Informe acompanhamento_id e feedback.' }, 400)
       const { error } = await sb.from('pdi_acompanhamentos')
         .update({ feedback_gestora })
-        .eq('id', acompanhamento_id)
+        .eq('id', acompanhamento_id).eq('escola_id', (ger as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
@@ -1249,10 +1142,12 @@ Deno.serve(async (req) => {
         }
       }
 
+      const pickupEscolaId = await resolveEscolaId(req, sb, null, body)
       const { data: novo, error: err } = await sb.from('pickup_notificacoes').insert({
         email_pai: emailPai, nome_resp, nome_crianca,
         serie: serie || null, lat_pai, lon_pai,
         eta_minutos, eta_modo, status: 'a_caminho',
+        escola_id: pickupEscolaId,
       }).select('id, eta_minutos, eta_modo').single()
       if (err) return json({ error: err.message }, 400)
       return json({ ok: true, id: novo.id, eta_minutos: novo.eta_minutos, eta_modo: novo.eta_modo })
@@ -1488,7 +1383,7 @@ Deno.serve(async (req) => {
                 }
               }
             }
-          } catch (_) { /* skip this product */ }
+          } catch (e) { console.warn('[diplomas] ML product parse skipped:', (e as Error).message) }
         }
         fontes['Mercado Livre'] = { status: mlCount > 0 ? 'ok' : 'sem resultados', produtos: mlCount }
       } else {
@@ -1666,7 +1561,7 @@ Deno.serve(async (req) => {
               }
             }
           }
-        } catch (_) {}
+        } catch (e) { console.warn('[diplomas] Zoom price scrape failed:', (e as Error).message) }
 
         // ML (tentativa — pode falhar com 403)
         try {
@@ -1680,7 +1575,7 @@ Deno.serve(async (req) => {
               }
             }
           }
-        } catch (_) {}
+        } catch (e) { console.warn('[diplomas] ML price scrape failed:', (e as Error).message) }
 
         if (melhorPreco !== null && melhorPreco > 0) {
           await sb.from('alm_insumos').update({ preco: melhorPreco }).eq('id', insumo.id)
@@ -1688,7 +1583,7 @@ Deno.serve(async (req) => {
         }
 
         await new Promise(r => setTimeout(r, 300))
-      } catch (_) {}
+      } catch (e) { console.warn('[diplomas] Price update loop error for insumo:', (e as Error).message) }
     }
 
     return json({ ok: true, atualizados, total: insumos.length, pulados })
@@ -1755,6 +1650,7 @@ Deno.serve(async (req) => {
         url_produto:     it.url_produto || null,
         url_carrinho:    it.url_carrinho|| null,
         encaminhado_por: gerente.nome,
+        escola_id: (gerente as any).escola_id,
       }))
       const { error } = await sb.from('alm_compras').insert(rows)
       if (error) return json({ error: error.message }, 400)
@@ -1929,8 +1825,8 @@ Deno.serve(async (req) => {
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
     'alm_relatorio', 'alm_prof_set_turma',
-    'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_entregues',
-    'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
+    'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_observacoes', 'alm_excel_observacoes',
+    'alm_pdf_entregues', 'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
   ].includes(action)
 
   if (isAlmGerenteAction) {
@@ -2082,6 +1978,88 @@ Deno.serve(async (req) => {
         tables,
       })
       return pdfResponse(bytes, `ordem-compra-${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    if (action === 'alm_pdf_observacoes' || action === 'alm_excel_observacoes') {
+      const mes = body.mes || new Date().toISOString().slice(0, 7)
+      const landscape = body.landscape === true
+      const { data: reqs } = await sb.from('alm_requisicoes')
+        .select('*, professoras(nome), series(nome)')
+        .eq('mes', mes)
+        .order('criado_em', { ascending: true })
+      const rows: string[][] = []
+      let totalGeral = 0
+      let comObs = 0
+      let naoCatalogados = 0
+      for (const r of (reqs ?? []) as any[]) {
+        const prof = r.professoras?.nome || '—'
+        const turma = r.series?.nome || '—'
+        const obs = (r.observacao || '').trim()
+        const status = r.status === 'aprovado' ? 'Aprovado' : r.status === 'rejeitado' ? 'Rejeitado' : 'Pendente'
+        for (const it of (r.itens || [])) {
+          const desc = (it.descricao || '').trim()
+          const nota = [obs, desc].filter(Boolean).join(' | ')
+          if (nota) comObs++
+          if (!it.insumo_id) naoCatalogados++
+          const catalogado = it.insumo_id ? 'Sim' : 'Novo'
+          const qty = Number(it.qty_solicitado || 0)
+          const pu = Number(it.preco_unit || 0)
+          const tot = qty * pu
+          totalGeral += tot
+          rows.push([
+            turma,
+            prof,
+            it.nome || '—',
+            catalogado,
+            `${qty} ${it.unidade || ''}`,
+            status,
+            `R$ ${tot.toFixed(2)}`,
+            nota || '',
+          ])
+        }
+      }
+
+      if (action === 'alm_excel_observacoes') {
+        const headers = ['Turma', 'Professora', 'Item', 'Catalogado?', 'Qtd', 'Status', 'Valor', 'Observação / Descrição / Link']
+        const xlsxRows = rows.length ? rows : [['(nenhuma requisição neste mês)', '', '', '', '', '', '', '']]
+        xlsxRows.push(['', '', '', '', '', '', `R$ ${totalGeral.toFixed(2)}`, ''])
+        const bytes = generateXlsx(headers, xlsxRows)
+        return xlsxResponse(bytes, `relatorio-completo-${mes}.xlsx`)
+      }
+
+      const colWidths = landscape
+        ? [
+            { label: 'Turma',    width: 70 },
+            { label: 'Prof.',    width: 80 },
+            { label: 'Item',     width: 120 },
+            { label: 'Cat.?',   width: 35, align: 'center' as const },
+            { label: 'Qtd',      width: 50, align: 'right' as const },
+            { label: 'Status',   width: 55 },
+            { label: 'Valor',    width: 60, align: 'right' as const },
+            { label: 'Observação / Descrição / Link', width: 292 },
+          ]
+        : [
+            { label: 'Turma',    width: 60 },
+            { label: 'Prof.',    width: 65 },
+            { label: 'Item',     width: 100 },
+            { label: 'Cat.?',   width: 30, align: 'center' as const },
+            { label: 'Qtd',      width: 45, align: 'right' as const },
+            { label: 'Status',   width: 45 },
+            { label: 'Valor',    width: 50, align: 'right' as const },
+            { label: 'Observação / Descrição / Link', width: 120 },
+          ]
+
+      const bytes = await generatePdf({
+        title: 'Relatório Completo de Requisições — com Observações',
+        subtitle: `Mês: ${mes}  ·  ${rows.length} item(ns)  ·  ${comObs} com obs.  ·  ${naoCatalogados} não catalogado(s)  ·  Total: R$ ${totalGeral.toFixed(2)}`,
+        landscape,
+        tables: [{
+          columns: colWidths,
+          rows: rows.length ? rows : [['(nenhuma requisição neste mês)', '', '', '', '', '', '', '']],
+          footer: ['', '', '', '', '', '', `R$ ${totalGeral.toFixed(2)}`, ''],
+        }],
+      })
+      return pdfResponse(bytes, `relatorio-completo-${mes}.pdf`)
     }
 
     if (action === 'alm_pdf_entregues') {
@@ -2273,7 +2251,7 @@ Deno.serve(async (req) => {
           if (ins) {
             await sb.from('alm_insumos').update({
               estoque_qty: Math.max(0, (ins as any).estoque_qty - parseFloat(it.qty_aprovado))
-            }).eq('id', it.insumo_id)
+            }).eq('id', it.insumo_id).eq('escola_id', (gerente as any).escola_id)
           }
         }
       }
@@ -2312,7 +2290,7 @@ Deno.serve(async (req) => {
       const { error } = await sb.from('alm_requisicoes').update({
         status: 'rejeitado', nota_gerente: nota_gerente || null,
         rejeitado_em: new Date().toISOString(),
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       await sb.from('alm_notificacoes').insert({
         professora_id: req.professora_id,
@@ -2338,7 +2316,7 @@ Deno.serve(async (req) => {
           data.referencia_fonte = 'manual'
           data.preco_atualizado_em = new Date().toISOString()
         }
-        const { error } = await sb.from('alm_insumos').update(data).eq('id', id)
+        const { error } = await sb.from('alm_insumos').update(data).eq('id', id).eq('escola_id', (gerente as any).escola_id)
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true })
       } else {
@@ -2352,7 +2330,7 @@ Deno.serve(async (req) => {
     if (action === 'alm_insumo_del') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('alm_insumos').update({ ativo: false }).eq('id', id)
+      const { error } = await sb.from('alm_insumos').update({ ativo: false }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
@@ -2366,7 +2344,7 @@ Deno.serve(async (req) => {
         referencia_fonte: referencia_fonte ?? null,
         referencia_url: referencia_url ?? null,
         preco_atualizado_em: preco_referencia ? new Date().toISOString() : null,
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
@@ -2439,7 +2417,7 @@ Deno.serve(async (req) => {
         referencia_url: url,
         preco_referencia: preco,
         preco_atualizado_em: new Date().toISOString(),
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
 
       return json({ ok: true, qtd_por_embalagem: qtdEmb, unidade_compra: unidadeCompra })
     }
@@ -2487,7 +2465,7 @@ Deno.serve(async (req) => {
         updateData.preco_atualizado_em = new Date().toISOString()
       }
 
-      const { error } = await sb.from('alm_insumos').update(updateData).eq('id', id)
+      const { error } = await sb.from('alm_insumos').update(updateData).eq('id', id).eq('escola_id', (gerente as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true, estoque_anterior: ins.estoque_qty, estoque_novo: novoEstoque })
     }
@@ -2536,7 +2514,7 @@ Deno.serve(async (req) => {
       const { turma_id, mes, valor } = body
       if (!turma_id || !mes) return json({ error: 'turma_id e mes são obrigatórios.' }, 400)
       const { error } = await sb.from('alm_orcamentos').upsert(
-        { turma_id, mes, valor: parseFloat(valor) || 0 },
+        { turma_id, mes, valor: parseFloat(valor) || 0, escola_id: (gerente as any).escola_id },
         { onConflict: 'turma_id,mes' }
       )
       if (error) return json({ error: error.message }, 400)
@@ -2630,9 +2608,23 @@ Deno.serve(async (req) => {
     const token = (body._token as string) || (body._prof_token as string)
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    // Resolve escola_id: prof.escola_id > professoras table > Origin
+    let escolaId = (prof as any).escola_id as string | null
+    if (!escolaId) {
+      // Fallback: buscar escola_id direto da tabela professoras (pode ter sido adicionado depois da sessão)
+      const { data: profFresh } = await sb.from('professoras').select('escola_id').eq('id', prof.id).maybeSingle()
+      escolaId = profFresh?.escola_id ?? null
+    }
+    if (!escolaId) {
+      // Fallback: resolver via Origin do request
+      escolaId = await resolveEscolaId(req, sb, null, body)
+    }
+    if (!escolaId) return json({ error: 'Não foi possível identificar a escola. Faça login novamente.' }, 400)
     const { copias, tipo_papel, para_dia, observacao, base64, mime, arquivo_nome } = body as any
     if (!base64) return json({ error: 'Arquivo obrigatorio.' }, 400)
     if (!copias || copias < 1) return json({ error: 'Informe a quantidade de copias.' }, 400)
+    const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+    if (mime && !allowedMimes.includes(mime)) return json({ error: 'Tipo de arquivo não permitido. Envie PDF, JPEG, PNG ou WebP.' }, 400)
     // Upload arquivo
     const ext = (mime || 'application/pdf').includes('pdf') ? 'pdf' : (mime || '').includes('png') ? 'png' : 'jpg'
     const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`
@@ -2671,6 +2663,7 @@ Deno.serve(async (req) => {
       return json({ error: `Limite mensal de ${limite} folhas excedido. Ja utilizado: ${totalUsado}. Disponivel: ${limite - totalUsado}. Este arquivo: ${numPaginas} pag × ${nCopias} copias = ${totalFolhas} folhas.` }, 400)
     }
     const { error } = await sb.from('impressoes').insert({
+      escola_id: escolaId,
       professora_id: prof.id, professora_nome: prof.nome,
       turma_id: turma?.id || null, turma_nome: turma?.nome || null,
       arquivo_url: pub.publicUrl, arquivo_nome: arquivo_nome || path,
@@ -2678,10 +2671,14 @@ Deno.serve(async (req) => {
       para_dia: para_dia || null, observacao: observacao || null,
     })
     if (error) return json({ error: error.message }, 400)
+    // Backfill escola_id na professora se estava null
+    if (!(prof as any).escola_id) {
+      await sb.from('professoras').update({ escola_id: escolaId }).eq('id', prof.id).is('escola_id', null)
+    }
     // Notifica gerentes
-    const { data: gerentes } = await sb.from('gerentes').select('email')
+    const { data: gerentes } = await sb.from('gerentes').select('email').eq('escola_id', escolaId)
     for (const g of gerentes ?? []) {
-      await criarNotif(sb, 'gerente', g.email, 'Nova impressao', `${prof.nome} solicitou ${nCopias} copias × ${numPaginas} pag = ${totalFolhas} folhas (${tipo_papel}).`, 'info')
+      await criarNotif(sb, 'gerente', g.email, 'Nova impressao', `${prof.nome} solicitou ${nCopias} copias × ${numPaginas} pag = ${totalFolhas} folhas (${tipo_papel}).`, 'info', escolaId)
     }
     return json({ ok: true, usado: totalUsado + totalFolhas, limite, num_paginas: numPaginas })
   }
@@ -2796,6 +2793,8 @@ Deno.serve(async (req) => {
     if (!descricao) return json({ error: 'Descrição obrigatória.' }, 400)
     let foto_url: string | null = null
     if (body.base64 && body.mime) {
+      const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+      if (!allowedMimes.includes(body.mime as string)) return json({ error: 'Tipo de arquivo não permitido. Envie PDF, JPEG, PNG ou WebP.' }, 400)
       const ext = (body.mime as string).includes('png') ? 'png' : 'jpg'
       const path = `fotos/${Date.now()}-${crypto.randomUUID()}.${ext}`
       const buf = Uint8Array.from(atob(body.base64 as string), c => c.charCodeAt(0))
@@ -2861,7 +2860,7 @@ Deno.serve(async (req) => {
     if (!ger) return json({ error: 'Sessão inválida.' }, 401)
     const { id } = body as { id: string }
     if (!id) return json({ error: 'ID obrigatório.' }, 400)
-    await sb.from('achados_perdidos').delete().eq('id', id)
+    await sb.from('achados_perdidos').delete().eq('id', id).eq('escola_id', (ger as any).escola_id)
     return json({ ok: true })
   }
 
@@ -3052,7 +3051,7 @@ Deno.serve(async (req) => {
     const { pesquisa_id, perguntas } = body as any
     if (!pesquisa_id || !Array.isArray(perguntas)) return json({ error: 'pesquisa_id e perguntas[] obrigatórios' }, 400)
     // Delete existing and re-insert
-    await sb.from('pesquisa_perguntas').delete().eq('pesquisa_id', pesquisa_id)
+    await sb.from('pesquisa_perguntas').delete().eq('pesquisa_id', pesquisa_id).eq('escola_id', (ger as any).escola_id)
     if (perguntas.length > 0) {
       const rows = perguntas.map((p: any, i: number) => ({
         pesquisa_id, texto: p.texto, tipo: p.tipo || 'texto',
@@ -3070,8 +3069,9 @@ Deno.serve(async (req) => {
     if (!paiEmail) return json({ error: 'Sessão inválida.' }, 401)
     const { pesquisa_id, respostas } = body as any
     if (!pesquisa_id || !Array.isArray(respostas)) return json({ error: 'pesquisa_id e respostas[] obrigatórios' }, 400)
+    const pesqRespostaEscolaId = await resolveEscolaId(req, sb, null, body)
     const rows = respostas.map((r: any) => ({
-      pesquisa_id, pergunta_id: r.pergunta_id, respondido_por: paiEmail, valor: r.valor || ''
+      pesquisa_id, pergunta_id: r.pergunta_id, respondido_por: paiEmail, valor: r.valor || '', escola_id: pesqRespostaEscolaId,
     }))
     const { error } = await sb.from('pesquisa_respostas').upsert(rows, { onConflict: 'pergunta_id,respondido_por' })
     if (error) return json({ error: error.message }, 400)
@@ -3096,9 +3096,11 @@ Deno.serve(async (req) => {
     if (!paiEmail) return json({ error: 'Sessão inválida.' }, 401)
     const { pesquisa_id, aluno_nome, autorizado } = body as any
     if (!pesquisa_id) return json({ error: 'pesquisa_id obrigatório' }, 400)
+    const autorizEscolaId = await resolveEscolaId(req, sb, null, body)
     const { error } = await sb.from('autorizacoes').upsert({
       pesquisa_id, familia_email: paiEmail, aluno_nome: aluno_nome || null,
-      autorizado: autorizado !== false, assinatura_data: new Date().toISOString()
+      autorizado: autorizado !== false, assinatura_data: new Date().toISOString(),
+      escola_id: autorizEscolaId,
     }, { onConflict: 'pesquisa_id,familia_email' })
     if (error) return json({ error: error.message }, 400)
     return json({ success: true })
@@ -3162,6 +3164,40 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400)
     }
     return json({ success: true, overrides: inserts.length })
+  }
+
+  // ━━ CLEANUP IMPRESSÕES (pg_cron) ━━━━━━━━━━━━━━━━━━━━━━━━
+  if (action === 'impressoes_cleanup') {
+    const cronKey = Deno.env.get("CRON_INTERNAL_KEY") || ""
+    const authH = req.headers.get("Authorization")?.replace("Bearer ", "") || ""
+    if (!cronKey || authH !== cronKey) return json({ error: "Unauthorized" }, 401)
+
+    // Buscar impressões entregues há mais de 15 dias ou rejeitadas há mais de 15 dias
+    const { data: rows } = await sb.from('impressoes')
+      .select('id, arquivo_url, status')
+      .or('and(status.eq.entregue,entregue_em.lt.' + new Date(Date.now() - 15 * 86400000).toISOString() + '),and(status.eq.rejeitado,criado_em.lt.' + new Date(Date.now() - 15 * 86400000).toISOString() + ')')
+
+    if (!rows || rows.length === 0) return json({ cleaned: 0 })
+
+    // Extrair paths do storage a partir das URLs
+    const paths = rows
+      .map(r => r.arquivo_url?.split('/impressoes/')[1])
+      .filter(Boolean) as string[]
+
+    // Deletar arquivos do storage em batches de 100
+    let deletedFiles = 0
+    for (let i = 0; i < paths.length; i += 100) {
+      const batch = paths.slice(i, i + 100)
+      const { data: removed } = await sb.storage.from('impressoes').remove(batch)
+      deletedFiles += removed?.length || 0
+    }
+
+    // Deletar registros do banco
+    const ids = rows.map(r => r.id)
+    const { error } = await sb.from('impressoes').delete().in('id', ids)
+
+    console.log(`[impressoes_cleanup] Cleaned ${deletedFiles} files, ${ids.length} rows. Error: ${error?.message || 'none'}`)
+    return json({ cleaned: ids.length, files: deletedFiles })
   }
 
   if (action === 'escola_modulos_reset') {

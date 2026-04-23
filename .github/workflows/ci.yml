@@ -85,10 +85,29 @@ jobs:
             exit 1
           fi
 
+  # ═══ 3b. API CONTRACT SMOKE TEST (after deploy) ═══
+  api-smoke-test:
+    name: API Contract Smoke Test
+    runs-on: ubuntu-latest
+    needs: [deploy-functions]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run API smoke test (188 actions across 7 edge functions)
+        run: node tests/smoke/smoke-api.mjs
+
+      - name: Run UX smoke test (88 checks)
+        run: node tests/smoke/smoke-ux.mjs
+
   deploy-frontend:
     name: Deploy Frontend (Vercel)
     runs-on: ubuntu-latest
-    needs: [lint, test, deploy-functions]
+    needs: [lint, test, deploy-functions, api-smoke-test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v5

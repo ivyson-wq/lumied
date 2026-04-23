@@ -744,8 +744,8 @@ async function tryAutoLogin() {
   var token = getToken();
   if (!token) return;
   try {
-    var res = await api({ action: 'verificar_sessao' });
-    if (res && !res.erro && !res.error) {
+    var res = await api({ action: 'hub_whoami' });
+    if (res && res.logged) {
       currentUser.nome = res.nome || '';
       currentUser.email = res.email || '';
       enterApp();
@@ -928,5 +928,9 @@ document.addEventListener('DOMContentLoaded', function() {
   tryAutoLogin();
 });
 </script>
+<script src="/lumied-ux.js" defer></script>
+<script src="/lumied-a11y.js" defer></script>
+<script src="/lumied-delight.js" defer></script>
+<script src="/lumied-pro.js" defer></script>
 </body>
 </html>

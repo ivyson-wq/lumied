@@ -1,42 +1,44 @@
 /**
- * Portal das Professoras — Main Entry Point (ES Module)
+ * Portal das Professoras — Main Entry Point
  */
-import { createClient } from '../../shared/api-client.js';
-import { appStore } from '../../shared/state.js';
+import { initPortal, loadModulos } from '../../shared/portal-init.js';
+import { initRealtime, subscribeAccess } from '../../shared/realtime.js';
 import { showToast } from '../../shared/components/toast.js';
-import { initSentry, setSentryUser } from '../../shared/sentry.js';
+import { initVoice } from '../../shared/voice.js';
 
-initSentry();
+const { api } = initPortal({ tokenKey: 'prof_token' });
 
-const SUPABASE_ANON = window.__SUPABASE_ANON || '';
+window.__loadModulosHabilitadosProf = () => loadModulos(api, 'diplomas');
 
-const api = createClient(SUPABASE_ANON, {
-  tokenKey: 'prof_token',
-  onAuthError: () => {
-    showToast('Sessão expirada.', 'error');
-    appStore.set('user', null);
-  },
-});
+// --- Realtime: replace 10s polling with WebSocket ---
+const anonKey = window.__SUPABASE_ANON
+  || document.querySelector('meta[name="sb-anon"]')?.content
+  || '';
 
-async function loadModulosHabilitadosProf() {
-  try {
-    const d = await api.diplomas({ action: 'modulos_habilitados' });
-    if (d?.modulos) {
-      appStore.set('modulos', new Set(d.modulos));
-      document.querySelectorAll('[data-modulo]').forEach(el => {
-        el.style.display = appStore.get('modulos').has(el.dataset.modulo) ? '' : 'none';
+if (anonKey) {
+  initRealtime(anonKey);
+
+  // Subscribe to access events once escola_id is available
+  const escolaId = window.__store.get('escola_id');
+  if (escolaId) {
+    subscribeAccess(escolaId, (evt) => {
+      const tipo = evt.tipo === 'entrada' ? 'chegou' : 'saiu';
+      showToast(`${evt.aluno_nome} ${tipo} (${evt.hora || ''})`, 'info', 5000);
+    });
+  } else {
+    // Wait for escola_id to be set
+    const unsub = window.__store.subscribe('escola_id', (id) => {
+      if (!id) return;
+      unsub();
+      subscribeAccess(id, (evt) => {
+        const tipo = evt.tipo === 'entrada' ? 'chegou' : 'saiu';
+        showToast(`${evt.aluno_nome} ${tipo} (${evt.hora || ''})`, 'info', 5000);
       });
-    }
-  } catch {}
+    });
+  }
 }
 
-// Update Sentry user context when user changes
-appStore.subscribe('user', (user) => setSentryUser(user, appStore.get('escola_id')));
-appStore.subscribe('escola_id', (id) => setSentryUser(appStore.get('user'), id));
-
-window.__api = api;
-window.__store = appStore;
-window.__toast = showToast;
-window.__loadModulosHabilitadosProf = loadModulosHabilitadosProf;
+// Voice commands — optional, degrades gracefully on unsupported browsers
+initVoice();
 
 console.log('[Lumied] Professora module loaded.');

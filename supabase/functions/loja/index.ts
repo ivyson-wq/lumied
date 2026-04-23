@@ -3,9 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, requireFeature, requireEscola, loadEscola } from "../_shared/router.ts";
-import { successResponse, AppError, sanitizePgError } from "../_shared/errors.ts";
-import { createLogger } from "../_shared/logger.ts";
+import { Router, rateLimit, authGerente, requireFeature, requireEscola, loadEscola, successResponse, AppError, sanitizePgError, createLogger } from "../_shared/mod.ts";
 
 const log = createLogger("loja");
 const router = new Router("loja");
@@ -203,7 +201,7 @@ router.on("pedido_create", loadEscola, feat, async (ctx) => {
   }
 
   const { error: itensErr } = await ctx.sb.from("loja_itens_pedido")
-    .insert(itensDetalhados.map((i) => ({ ...i, pedido_id: pedido.id })));
+    .insert(itensDetalhados.map((i) => ({ ...i, pedido_id: pedido.id, escola_id: pedido.escola_id || ctx.escola_id })));
   if (itensErr) {
     log.apiError("pedido_create.itens", itensErr);
     // Best-effort rollback

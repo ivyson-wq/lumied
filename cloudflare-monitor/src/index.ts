@@ -339,7 +339,7 @@ async function checkVercelDeploys(env: Env): Promise<CheckResult> {
   const start = Date.now();
   try {
     const resp = await fetchWithTimeout(
-      "https://api.vercel.com/v6/deployments?limit=3",
+      "https://api.vercel.com/v6/deployments?limit=3&teamId=team_k3kAHF00rep1GFrBRA53OmGg",
       {
         headers: {
           Authorization: `Bearer ${env.VERCEL_TOKEN}`,

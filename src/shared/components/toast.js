@@ -1,6 +1,8 @@
 /**
  * Toast Notification Component
- * Usage: showToast('Mensagem!', 'success', 4000);
+ * Usage:
+ *   showToast('Mensagem!', 'success', 4000);
+ *   showToast('Item excluído.', 'warning', 5000, { undo: () => restoreItem() });
  */
 
 let container = null;
@@ -29,7 +31,13 @@ const COLORS = {
   info: { bg: '#eff6ff', border: '#93c5fd', text: '#1e40af', icon: '#3b82f6' },
 };
 
-export function showToast(message, type = 'info', duration = 4000) {
+/**
+ * @param {string} message
+ * @param {'success'|'error'|'warning'|'info'} type
+ * @param {number} duration - ms (0 = persistent)
+ * @param {Object} [opts] - { undo: Function } for undo button
+ */
+export function showToast(message, type = 'info', duration = 4000, opts = {}) {
   const c = getContainer();
   const colors = COLORS[type] || COLORS.info;
 
@@ -50,14 +58,31 @@ export function showToast(message, type = 'info', duration = 4000) {
   text.style.cssText = 'flex:1;line-height:1.4;';
   text.textContent = message;
 
+  toast.appendChild(icon);
+  toast.appendChild(text);
+
+  // Undo button
+  if (opts.undo && typeof opts.undo === 'function') {
+    const undoBtn = document.createElement('button');
+    undoBtn.style.cssText = `background:${colors.icon};color:#fff;border:none;padding:4px 12px;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;transition:opacity .2s;`;
+    undoBtn.textContent = 'Desfazer';
+    undoBtn.onclick = () => { opts.undo(); remove(); };
+    toast.appendChild(undoBtn);
+
+    // Progress bar
+    const bar = document.createElement('div');
+    bar.style.cssText = `position:absolute;bottom:0;left:0;right:0;height:3px;background:${colors.icon};opacity:.3;border-radius:0 0 10px 10px;transform-origin:left;animation:shrink ${duration}ms linear;`;
+    toast.style.position = 'relative';
+    toast.style.overflow = 'hidden';
+    toast.appendChild(bar);
+  }
+
   const close = document.createElement('button');
   close.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;color:inherit;opacity:.5;padding:0 2px;flex-shrink:0;';
   close.textContent = '✕';
   close.onclick = () => remove();
-
-  toast.appendChild(icon);
-  toast.appendChild(text);
   toast.appendChild(close);
+
   c.appendChild(toast);
 
   function remove() {
@@ -74,6 +99,7 @@ export function showToast(message, type = 'info', duration = 4000) {
     style.textContent = `
       @keyframes toastIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
       @keyframes toastOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(40px); } }
+      @keyframes shrink { from { transform:scaleX(1); } to { transform:scaleX(0); } }
     `;
     document.head.appendChild(style);
   }

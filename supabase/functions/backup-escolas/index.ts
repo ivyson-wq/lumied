@@ -16,6 +16,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { gzip } from "compress/mod.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { captureException } from "../_shared/sentry.ts";
 
 const log = createLogger("backup-escolas");
 let CORS: Record<string, string> = getCorsHeaders();
@@ -448,6 +449,7 @@ serve(async (req) => {
     return err("Ação inválida.", 400);
   } catch (e) {
     log.error("backup-escolas erro", { metadata: { err: (e as Error).message } });
+    captureException(e instanceof Error ? e : new Error(String(e)), { function: 'backup-escolas', action }).catch(() => {});
     return err((e as Error).message, 500);
   }
 });

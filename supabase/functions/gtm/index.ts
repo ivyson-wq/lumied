@@ -4,9 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, type Context, type Middleware } from "../_shared/router.ts";
-import { successResponse, AppError } from "../_shared/errors.ts";
-import { createLogger } from "../_shared/logger.ts";
+import { Router, rateLimit, type Context, type Middleware, successResponse, AppError, createLogger } from "../_shared/mod.ts";
 
 const log = createLogger("gtm");
 

@@ -6,7 +6,7 @@
 <script src="/sentry-init.js"></script>
 <script src="/analytics.js" defer></script>
 <script src="/referral-widget.js" defer></script>
-<title>Maple Bear — Painel do Gerente</title>
+<title>Lumied — Painel do Gerente</title>
 <meta name="theme-color" content="#1c1712">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Maple Bear Gerente">
@@ -25,6 +25,8 @@
 <script src="/webauthn-client.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
+<script src="/lumied-charts.js" defer></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -397,6 +399,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 .btn-pdi-aprovar{padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
 .btn-pdi-rejeitar{padding:10px 20px;background:#fdf0f2;color:var(--red);border:1px solid rgba(200,16,46,.2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
 .btn-pdi-encerrar{padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+#almRelDropdown.show{display:block !important;}
+#almRelDropdown a:hover{background:#f3f4f6;}
 </style>
 </head>
 <body>
@@ -427,13 +431,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           }
         </script>
       </div>
-      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;">Bem-vindo de volta</h2>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;">Entre com suas credenciais para acessar o painel.</p>
-      <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"></div>
-      <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
-      <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
-      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;">Entrar com biometria</button>
-      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;">E-mail ou senha incorretos.</div>
+      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;" data-i18n="auth.welcome">Bem-vindo de volta</h2>
+      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;" data-i18n="auth.enterCredentials">Entre com suas credenciais para acessar o painel.</p>
+      <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder"></div>
+      <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
+      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;" data-i18n="auth.loginWithBiometrics">Entrar com biometria</button>
+      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;" data-i18n="auth.emailOrPasswordIncorrect">E-mail ou senha incorretos.</div>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
         <img src="/lumied-logo.png" style="height:32px;object-fit:contain;" alt="Lumied">
       </div>
@@ -449,7 +453,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     <div class="sb-brand">
       <img class="sb-logo-img" id="sidebarLogo" alt="">
       <img src="/lumied-logo-branco.png" id="sidebarLeaf" class="sb-leaf" style="height:36px;object-fit:contain;" alt="Lumied">
-      <h1>Maple Bear</h1><span>Painel do Gerente</span>
+      <h1>Maple Bear</h1><span data-i18n="gerente.title">Painel do Gerente</span>
       <script>
         if (/^demo\./i.test(location.hostname)) {
           document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = 'Demo Lumied');
@@ -460,204 +464,210 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     <nav class="sb-nav" role="navigation" aria-label="Menu principal">
       <!-- Favoritos (populated by JS) -->
       <div class="fav-section" id="favSection"></div>
-      <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> Dashboard</a>
+      <a class="nav-item active" href="#" onclick="showPanel('analytics',this)"><span class="ic">📊</span> <span data-i18n="gerente.sidebar.dashboard">Dashboard</span></a>
 
       <!-- ═══ DIA A DIA ═══ -->
-      <div class="sb-label" onclick="toggleSbSection(this)" style="color:rgba(255,255,255,.45);">Dia a Dia <span class="sb-arrow">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)" style="color:rgba(255,255,255,.45);"><span data-i18n="gerente.sidebar.diaADia">Dia a Dia</span> <span class="sb-arrow">▼</span></div>
       <div class="sb-section">
-        <a class="nav-item" href="#" onclick="showPanel('alunos',this)"><span class="ic">🎓</span> Alunos</a>
+        <a class="nav-item" href="#" onclick="showPanel('alunos',this)"><span class="ic">🎓</span> <span data-i18n="gerente.nav.alunos">Alunos</span></a>
         <div data-modulo="notas">
-        <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> Notas & Boletim</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.notasBoletim">Notas & Boletim</span></a>
         </div>
         <div data-modulo="frequencia">
-        <a class="nav-item" href="#" onclick="showPanel('frequencia',this)"><span class="ic">✅</span> Frequência</a>
+        <a class="nav-item" href="#" onclick="showPanel('frequencia',this)"><span class="ic">✅</span> <span data-i18n="gerente.nav.frequencia">Frequência</span></a>
         </div>
         <div data-modulo="chat">
-        <a class="nav-item" href="#" onclick="showPanel('chatConversas',this)"><span class="ic">💬</span> Chat Famílias</a>
+        <a class="nav-item" href="#" onclick="showPanel('chatConversas',this)"><span class="ic">💬</span> <span data-i18n="gerente.nav.chatFamilias">Chat Famílias</span></a>
         </div>
         <div data-modulo="calendario">
-        <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> Calendário</a>
+        <a class="nav-item" href="#" onclick="showPanel('calendario',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.calendario">Calendário</span></a>
         </div>
         <div data-modulo="turno">
-        <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> Séries & Turmas</a>
+        <a class="nav-item" href="#" onclick="showPanel('series',this)"><span class="ic">🎒</span> <span data-i18n="gerente.nav.seriesTurmas">Séries & Turmas</span></a>
         </div>
       </div>
 
       <!-- ═══ ALMOXARIFADO ═══ -->
       <div data-modulo="almoxarifado">
-      <div class="sb-label" onclick="toggleSbSection(this)">Almoxarifado <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.almoxarifado">Almoxarifado</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> Pendentes</a>
-        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> Requisições</a>
-        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> Compras</a>
-        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> Insumos</a>
-        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> Por Turma</a>
-        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> Orçamentos</a>
-        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> Relatório</a>
+        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> <span data-i18n="gerente.nav.almDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> <span data-i18n="gerente.nav.almPendentes">Pendentes</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.almRequisicoes">Requisições</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> <span data-i18n="gerente.nav.almCompras">Compras</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> <span data-i18n="gerente.nav.almInsumos">Insumos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> <span data-i18n="gerente.nav.almPorTurma">Por Turma</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> <span data-i18n="gerente.nav.almOrcamentos">Orçamentos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.almRelatorio">Relatório</span></a>
       </div>
       </div>
 
       <!-- ═══ INFRAESTRUTURA ═══ -->
       <div data-modulo="manutencao">
-      <div class="sb-label" onclick="toggleSbSection(this)">Infraestrutura <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.infraestrutura">Infraestrutura</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> Manutenção</a>
-        <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> Achados & Perdidos</a>
-        <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> Turnos & Horários</a>
-        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> Atividades Extra</a>
-        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> Gerenciar Atividades</a>
+        <a class="nav-item" href="#" onclick="showPanel('manutencao',this)"><span class="ic">🔧</span> <span data-i18n="gerente.nav.manutencao">Manutenção</span></a>
+        <a class="nav-item" href="#" data-modulo="achados" onclick="showPanel('achados',this)"><span class="ic">🔍</span> <span data-i18n="gerente.nav.achadosPerdidos">Achados & Perdidos</span></a>
+        <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.turnosHorarios">Turnos & Horários</span></a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.atividadesExtra">Atividades Extra</span></a>
+        <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> <span data-i18n="gerente.nav.gerenciarAtividades">Gerenciar Atividades</span></a>
       </div>
       </div>
 
       <!-- ═══ PESSOAS (Equipe + Famílias) ═══ -->
-      <div class="sb-label" onclick="toggleSbSection(this)">Pessoas <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.pessoas">Pessoas</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> Equipe</a>
-        <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> Famílias</a>
-        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔑</span> Acesso de Famílias</a>
-        <a class="nav-item" href="#" data-modulo="diplomas" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> Diplomas</a>
-        <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> Atestados</a>
-        <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> Growth Plan</a>
-        <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> Impressões</a>
-        <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> Horários de Acesso</a>
-        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> Reuniões</a>
+        <a class="nav-item" href="#" onclick="showPanel('equipe',this)"><span class="ic">👥</span> <span data-i18n="gerente.nav.equipe">Equipe</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('familias',this)"><span class="ic">👨‍👩‍👧</span> <span data-i18n="gerente.nav.familias">Famílias</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acesso',this)"><span class="ic">🔑</span> <span data-i18n="gerente.nav.acessoFamilias">Acesso de Famílias</span></a>
+        <a class="nav-item" href="#" data-modulo="diplomas" onclick="showPanel('diplomas',this)"><span class="ic">🏆</span> <span data-i18n="gerente.nav.diplomas">Diplomas</span></a>
+        <a class="nav-item" href="#" data-modulo="atestados" onclick="showPanel('atestados',this)"><span class="ic">🏥</span> <span data-i18n="gerente.nav.atestados">Atestados</span></a>
+        <a class="nav-item" href="#" data-modulo="pdi" onclick="showPanel('pdi',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.growthPlan">Growth Plan</span></a>
+        <a class="nav-item" href="#" data-modulo="impressoes" onclick="showPanel('impressoes',this)"><span class="ic">🖨️</span> <span data-i18n="gerente.nav.impressoes">Impressões</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('horarioAcesso',this)"><span class="ic">🕐</span> <span data-i18n="gerente.nav.horariosAcesso">Horários de Acesso</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('reunioes',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.reunioes">Reuniões</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('engajamento',this)"><span class="ic">💡</span> Engajamento</a>
       </div>
 
       <!-- ═══ ACADÊMICO ═══ -->
       <div data-modulo="notas">
-      <div class="sb-label" onclick="toggleSbSection(this)">Acadêmico <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.academico">Acadêmico</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('notasDisciplinas',this)"><span class="ic">📚</span> Disciplinas</a>
-        <a class="nav-item" href="#" onclick="showPanel('notasPeriodos',this)"><span class="ic">📅</span> Períodos</a>
-        <a class="nav-item" href="#" onclick="showPanel('notasConfig',this)"><span class="ic">⚙️</span> Config Notas</a>
-        <a class="nav-item" href="#" data-modulo="diario_classe" onclick="showPanel('diarioClasse',this)"><span class="ic">📖</span> Diário de Classe</a>
-        <a class="nav-item" href="#" data-modulo="pesquisas" onclick="showPanel('pesquisas',this)"><span class="ic">📊</span> Pesquisas</a>
+        <a class="nav-item" href="#" onclick="showPanel('notasDisciplinas',this)"><span class="ic">📚</span> <span data-i18n="gerente.nav.disciplinas">Disciplinas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('notasPeriodos',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.periodos">Períodos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('notasConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.configNotas">Config Notas</span></a>
+        <a class="nav-item" href="#" data-modulo="diario_classe" onclick="showPanel('diarioClasse',this)"><span class="ic">📖</span> <span data-i18n="gerente.nav.diarioClasse">Diário de Classe</span></a>
+        <a class="nav-item" href="#" data-modulo="pesquisas" onclick="showPanel('pesquisas',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.pesquisas">Pesquisas</span></a>
       </div>
       </div>
 
       <!-- ═══ CRM & MATRÍCULAS ═══ -->
       <div data-modulo="crm">
-      <div class="sb-label" onclick="toggleSbSection(this)">CRM & Matrículas <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.crm">CRM & Matrículas</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> Leads</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> Matrículas</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> Vagas</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> Templates WhatsApp</a>
-        <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> Séries / Idade</a>
-        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> Formulários Online</a>
-        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> Status Matrículas</a>
-        <a class="nav-item" href="#" onclick="showPanel('contratos',this)"><span class="ic">📜</span> Contratos</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.pipeline">Pipeline</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> <span data-i18n="gerente.nav.leads">Leads</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.matriculas">Matrículas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> <span data-i18n="gerente.nav.vagas">Vagas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> <span data-i18n="gerente.nav.templatesWhatsapp">Templates WhatsApp</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.seriesIdade">Séries / Idade</span></a>
+        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.formulariosOnline">Formulários Online</span></a>
+        <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.statusMatriculas">Status Matrículas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('contratos',this)"><span class="ic">📜</span> <span data-i18n="gerente.nav.contratos">Contratos</span></a>
       </div>
       </div>
 
       <!-- ═══ FINANCEIRO — OPERAÇÃO ═══ -->
       <div data-modulo="financeiro">
-      <div class="sb-label" onclick="toggleSbSection(this)">Financeiro <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.financeiro">Financeiro</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> Mensalidades</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> Boletos</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBatchBoletos',this)"><span class="ic">📄</span> Boletos em Lote</a>
-        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> Lançamentos</a>
-        <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> Inadimplência</a>
-        <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> Folha de Pagamento</a>
+        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> <span data-i18n="gerente.nav.finDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> <span data-i18n="gerente.nav.mensalidades">Mensalidades</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> <span data-i18n="gerente.nav.boletos">Boletos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finBatchBoletos',this)"><span class="ic">📄</span> <span data-i18n="gerente.nav.boletosLote">Boletos em Lote</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.lancamentos">Lançamentos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.inadimplencia">Inadimplência</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> <span data-i18n="gerente.nav.folhaPagamento">Folha de Pagamento</span></a>
       </div>
       </div>
 
       <!-- ═══ FINANCEIRO — CONTÁBIL ═══ -->
       <div data-modulo="financeiro">
-      <div class="sb-label" onclick="toggleSbSection(this)">Contabilidade <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.contabilidade">Contabilidade</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> DRE</a>
-        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> Balanço</a>
-        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> Conciliação</a>
-        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> Plano de Contas</a>
+        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.dre">DRE</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> <span data-i18n="gerente.nav.balanco">Balanço</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> <span data-i18n="gerente.nav.conciliacao">Conciliação</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.planoContas">Plano de Contas</span></a>
       </div>
       </div>
 
       <!-- ═══ BIBLIOTECA & CANTINA ═══ -->
-      <div class="sb-label" onclick="toggleSbSection(this)">Biblioteca & Cantina <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.bibliotecaCantina">Biblioteca & Cantina</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('biblioteca',this)"><span class="ic">📚</span> Acervo</a>
-        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('bibEmprestimos',this)"><span class="ic">📖</span> Empréstimos</a>
-        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantina',this)"><span class="ic">🍽️</span> Cardápio</a>
-        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantCreditos',this)"><span class="ic">💳</span> Créditos</a>
+        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('biblioteca',this)"><span class="ic">📚</span> <span data-i18n="gerente.nav.acervo">Acervo</span></a>
+        <a class="nav-item" href="#" data-modulo="biblioteca" onclick="showPanel('bibEmprestimos',this)"><span class="ic">📖</span> <span data-i18n="gerente.nav.emprestimos">Empréstimos</span></a>
+        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantina',this)"><span class="ic">🍽️</span> <span data-i18n="gerente.nav.cardapio">Cardápio</span></a>
+        <a class="nav-item" href="#" data-modulo="cantina" onclick="showPanel('cantCreditos',this)"><span class="ic">💳</span> <span data-i18n="gerente.nav.creditos">Créditos</span></a>
       </div>
 
       <!-- ═══ COZINHA (Merenda Escolar) ═══ -->
       <div data-modulo="cozinha">
-      <div class="sb-label" onclick="toggleSbSection(this)">Cozinha <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.cozinha">Cozinha</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('cozDash',this)"><span class="ic">🍳</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozCardapio',this)"><span class="ic">📅</span> Cardápio</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozReceitas',this)"><span class="ic">📖</span> Receitas</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozAlimentos',this)"><span class="ic">🥕</span> Alimentos & Estoque</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozCompras',this)"><span class="ic">🛒</span> Compras</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozSanitario',this)"><span class="ic">🌡️</span> Sanitário</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozDesperd',this)"><span class="ic">♻️</span> Desperdício</a>
-        <a class="nav-item" href="#" onclick="showPanel('cozConfig',this)"><span class="ic">⚙️</span> Config</a>
+        <a class="nav-item" href="#" onclick="showPanel('cozDash',this)"><span class="ic">🍳</span> <span data-i18n="gerente.nav.cozDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozCardapio',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.cozCardapio">Cardápio</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozReceitas',this)"><span class="ic">📖</span> <span data-i18n="gerente.nav.cozReceitas">Receitas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozAlimentos',this)"><span class="ic">🥕</span> <span data-i18n="gerente.nav.cozAlimentosEstoque">Alimentos & Estoque</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozCompras',this)"><span class="ic">🛒</span> <span data-i18n="gerente.nav.cozCompras">Compras</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozSanitario',this)"><span class="ic">🌡️</span> <span data-i18n="gerente.nav.cozSanitario">Sanitário</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozDesperd',this)"><span class="ic">♻️</span> <span data-i18n="gerente.nav.cozDesperdicio">Desperdício</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('cozConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.cozConfig">Config</span></a>
       </div>
       </div>
 
       <!-- ═══ CONTROLE DE ACESSO (Face/RFID) ═══ -->
       <div data-modulo="controle_acesso">
-      <div class="sb-label" onclick="toggleSbSection(this)">Controle de Acesso <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.controleAcesso">Controle de Acesso</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('acessoDash',this)"><span class="ic">🚪</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoDispositivos',this)"><span class="ic">📡</span> Dispositivos</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoFaces',this)"><span class="ic">👤</span> Faces Cadastradas</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoRfid',this)"><span class="ic">💳</span> Cartões RFID</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoPermissoes',this)"><span class="ic">🔐</span> Permissões de Retirada</a>
-        <a class="nav-item" href="#" onclick="showPanel('acessoEventos',this)"><span class="ic">📋</span> Log de Acessos</a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoDash',this)"><span class="ic">🚪</span> <span data-i18n="gerente.nav.acessoDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoDispositivos',this)"><span class="ic">📡</span> <span data-i18n="gerente.nav.dispositivos">Dispositivos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoFaces',this)"><span class="ic">👤</span> <span data-i18n="gerente.nav.facesCadastradas">Faces Cadastradas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoRfid',this)"><span class="ic">💳</span> <span data-i18n="gerente.nav.cartoesRfid">Cartões RFID</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoPermissoes',this)"><span class="ic">🔐</span> <span data-i18n="gerente.nav.permissoesRetirada">Permissões de Retirada</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoEventos',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.logAcessos">Log de Acessos</span></a>
       </div>
       </div>
 
       <!-- ═══ COMPLIANCE — REGULATÓRIO ═══ -->
       <div data-modulo="compliance">
-      <div class="sb-label" onclick="toggleSbSection(this)">Compliance <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.compliance">Compliance</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> Painel Geral</a>
-        <a class="nav-item" href="#" onclick="showPanel('compAlertas',this)"><span class="ic">📧</span> Alertas</a>
-        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> Incidentes</a>
-        <a class="nav-item" href="#" onclick="showPanel('compCertificacoes',this)"><span class="ic">🎓</span> Certificações</a>
-        <a class="nav-item" href="#" onclick="showPanel('compInspecoes',this)"><span class="ic">📋</span> Inspeções</a>
-        <a class="nav-item" href="#" onclick="showPanel('compPoliticas',this)"><span class="ic">📄</span> Políticas</a>
-        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> Calendário Regulatório</a>
+        <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> <span data-i18n="gerente.nav.compPainelGeral">Painel Geral</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compAlertas',this)"><span class="ic">📧</span> <span data-i18n="gerente.nav.compAlertas">Alertas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> <span data-i18n="gerente.nav.compIncidentes">Incidentes</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compCertificacoes',this)"><span class="ic">🎓</span> <span data-i18n="gerente.nav.compCertificacoes">Certificações</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compInspecoes',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.compInspecoes">Inspeções</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compPoliticas',this)"><span class="ic">📄</span> <span data-i18n="gerente.nav.compPoliticas">Políticas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.compCalendario">Calendário Regulatório</span></a>
       </div>
       </div>
 
       <!-- ═══ PONTO CLT ═══ -->
       <div data-modulo="compliance">
-      <div class="sb-label" onclick="toggleSbSection(this)">Ponto CLT <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.pontoClt">Ponto CLT</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> Horários de Profs</a>
-        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> Importar Ponto</a>
-        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> Hora Extra</a>
-        <a class="nav-item" href="#" onclick="showPanel('compFeriados',this)"><span class="ic">📅</span> Feriados</a>
-        <a class="nav-item" href="#" onclick="showPanel('compConfig',this)"><span class="ic">⚙️</span> Config. de Ponto</a>
+        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> <span data-i18n="gerente.nav.horarioProfs">Horários de Profs</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> <span data-i18n="gerente.nav.importarPonto">Importar Ponto</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.horaExtra">Hora Extra</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compFeriados',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.feriados">Feriados</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.configPonto">Config. de Ponto</span></a>
       </div>
       </div>
 
       <!-- ROI & Economia e Logotipo movidos para admin.html (painel Admin da Escola).
            Panels 'roi' e 'logo' continuam existindo e acessíveis via gerente.html#roi / #logo. -->
 
+      <!-- ═══ AUTOMAÇÕES ═══ -->
+      <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
+        <a class="nav-item" href="#" onclick="showPanel('workflows',this)" data-tooltip="Automações"><span class="ic">⚡</span> Automações</a>
+      </div>
+
       <!-- ═══ PORTAIS ═══ -->
       <div style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
-        <a class="nav-item" href="familia.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👨‍👩‍👧</span> Portal Pais</a>
-        <a class="nav-item" href="professora.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👩‍🏫</span> Portal Professoras</a>
-        <a class="nav-item" href="secretaria.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">📋</span> Portal Secretaria</a>
+        <a class="nav-item" href="familia.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👨‍👩‍👧</span> <span data-i18n="gerente.nav.portalPais">Portal Pais</span></a>
+        <a class="nav-item" href="professora.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">👩‍🏫</span> <span data-i18n="gerente.nav.portalProfessoras">Portal Professoras</span></a>
+        <a class="nav-item" href="secretaria.html" target="_blank" style="opacity:.6;font-size:12px;"><span class="ic">📋</span> <span data-i18n="gerente.nav.portalSecretaria">Portal Secretaria</span></a>
       </div>
 
       <!-- ═══ EMERGÊNCIA ═══ -->
       <div data-modulo="emergencias" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:8px;">
-        <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> Emergência</a>
+        <a class="nav-item" href="#" onclick="showPanel('emergencia',this)" style="color:#e53e3e;font-weight:700;"><span class="ic">🚨</span> <span data-i18n="gerente.nav.emergencia">Emergência</span></a>
       </div>
     </nav>
     <div class="sb-footer">
       <div class="user-info"><strong id="userNome">Gerente</strong><span id="userEmail"></span></div>
-      <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
+      <button class="logout-btn" onclick="doLogout()">↩ <span data-i18n="nav.logout">Sair</span></button>
     </div>
   </div>
 
@@ -1020,6 +1030,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
         <!-- Tab: Dados -->
         <div class="aluno-tab-panel active" id="alunoTabInfo">
+          <div id="alunoIaResumo" style="display:none;background:linear-gradient(135deg,#f8f5ff,#fff);border:1px solid #e0d8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:18px;">🧠</span>
+              <strong style="font-size:13px;">Resumo Lumi IA</strong>
+              <span style="font-size:10px;color:var(--muted);margin-left:auto;" id="iaResumoTime"></span>
+            </div>
+            <div id="iaResumoText" style="font-size:13px;line-height:1.6;color:var(--text);"></div>
+          </div>
           <div id="alunoDetInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div style="padding:16px;background:var(--bg);border-radius:10px;">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;">E-mail</div>
@@ -1593,6 +1611,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <button onclick="almBaixarPdf('alm_pdf_guia_recebimento')" class="btn-create" style="padding:7px 16px;background:#b5591a;" title="Leve este PDF na mão ao abrir caixas dos correios">📦 Guia Recebimento</button>
             <button onclick="almBaixarPdf('alm_pdf_romaneio_turma')" class="btn-create" style="padding:7px 16px;background:#6b46c1;">🚚 Romaneio Turmas</button>
             <button onclick="almBaixarPdf('alm_pdf_entregues','mes='+(document.getElementById('almTodasMes')?.value||new Date().toISOString().slice(0,7)))" class="btn-create" style="padding:7px 16px;background:#334155;">📄 Recibo Entregas</button>
+            <div style="display:inline-block;position:relative;">
+              <button onclick="document.getElementById('almRelDropdown').classList.toggle('show')" class="btn-create" style="padding:7px 16px;background:#d97706;" title="Todos os itens do mês com observações, links e status">📋 Relatório Completo ▾</button>
+              <div id="almRelDropdown" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:99;min-width:200px;margin-top:4px;">
+                <a href="#" onclick="almBaixarRelatorio('pdf');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Retrato)</a>
+                <a href="#" onclick="almBaixarRelatorio('pdf-landscape');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Paisagem)</a>
+                <a href="#" onclick="almBaixarRelatorio('excel');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;">📊 Excel (.xlsx)</a>
+              </div>
+            </div>
             <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
           </div>
           <div id="almComprasLoading" class="empty-state">⏳ Carregando…</div>
@@ -2930,6 +2956,42 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
+      <!-- ── ENGAJAMENTO DE FAMÍLIAS ── -->
+      <div id="panelEngajamento" class="panel">
+        <div class="sec-title">💡 Engajamento Famílias</div>
+
+        <!-- Resumo / Dashboard -->
+        <div class="dip-stats" id="engDashStats" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-label">Score Médio</div><div class="stat-value" id="engAvgScore">—</div><div class="stat-sub">de 100</div></div>
+          <div class="stat-card"><div class="stat-label">Alto &gt;70</div><div class="stat-value" style="color:#2d7a3a;" id="engAlto">—</div><div class="stat-sub">famílias</div></div>
+          <div class="stat-card"><div class="stat-label">Médio 40-70</div><div class="stat-value" style="color:#b07d10;" id="engMedio">—</div><div class="stat-sub">famílias</div></div>
+          <div class="stat-card"><div class="stat-label">Baixo &lt;40</div><div class="stat-value" style="color:#c0392b;" id="engBaixo">—</div><div class="stat-sub">famílias</div></div>
+          <div class="stat-card"><div class="stat-label">Tendência</div>
+            <div style="font-size:13px;margin-top:4px;">
+              <span style="color:#2d7a3a;">▲ <span id="engSubindo">—</span></span>
+              <span style="color:#888;margin:0 4px;">● <span id="engEstavel">—</span></span>
+              <span style="color:#c0392b;">▼ <span id="engDescendo">—</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles -->
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="filter-bar">
+            <button class="fb active" onclick="filtrarEngajamento('',this)">Todos</button>
+            <button class="fb" onclick="filtrarEngajamento('descendo',this)" style="color:#c0392b;">▼ Descendo</button>
+            <button class="fb" onclick="filtrarEngajamento('estavel',this)">● Estável</button>
+            <button class="fb" onclick="filtrarEngajamento('subindo',this)" style="color:#2d7a3a;">▲ Subindo</button>
+          </div>
+          <button onclick="calcularEngajamento()" style="margin-left:auto;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">⟳ Recalcular</button>
+        </div>
+
+        <!-- Tabela de famílias -->
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+          <div id="engLista"><div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+        </div>
+      </div>
+
       <!-- ── CADASTRAR FAMÍLIA ── -->
       <div id="panelFamilias" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
@@ -3340,6 +3402,99 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   <div id="matStatusContent" class="empty-state">Carregando...</div>
 </div>
 
+<!-- ═══ AUTOMAÇÕES / WORKFLOWS ═══ -->
+<div id="panelWorkflows" class="panel">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h2 class="panel-title" style="margin-bottom:4px;">⚡ Automações</h2>
+      <p style="color:var(--muted);font-size:13px;">Automatize tarefas com eventos, agendamentos e ações encadeadas.</p>
+    </div>
+    <button onclick="abrirModalWorkflow()" style="padding:10px 18px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Criar automação</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+      <div style="font-size:26px;font-weight:700;color:var(--green);" id="wfStatAtivas">—</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">Ativas</div>
+    </div>
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+      <div style="font-size:26px;font-weight:700;color:#1a6bb5;" id="wfStatExecucoes">—</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">Execuções hoje</div>
+    </div>
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+      <div style="font-size:26px;font-weight:700;color:var(--red);" id="wfStatFalhas">—</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">Falhas</div>
+    </div>
+  </div>
+
+  <div id="wfList"><div class="empty-state">Carregando automações...</div></div>
+</div>
+
+<!-- MODAL: Workflow Editor -->
+<div id="modalWorkflowEditor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:var(--white);border-radius:14px;padding:28px;width:calc(100% - 32px);max-width:800px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 id="wfEditorTitle" style="font-family:'Lora',serif;font-size:18px;">⚡ Nova Automação</h3>
+      <button onclick="fecharModalWorkflow()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">&times;</button>
+    </div>
+
+    <div id="wfTemplatesWrap" style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">Usar template</div>
+      <div id="wfTemplateCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;"></div>
+    </div>
+    <div style="border-top:1px solid var(--border);margin-bottom:20px;"></div>
+
+    <input type="hidden" id="wfEditId">
+    <div style="display:grid;gap:14px;">
+      <div class="ff">
+        <label>Nome *</label>
+        <input id="wfNome" type="text" placeholder="Ex: Alertar falta de aluno" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+      </div>
+      <div class="ff">
+        <label>Descrição</label>
+        <textarea id="wfDesc" rows="2" placeholder="O que essa automação faz?" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+      </div>
+      <div class="ff">
+        <label>Quando disparar</label>
+        <select id="wfTriggerTipo" onchange="wfUpdateTriggerConfig()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+          <option value="evento">Quando acontecer...</option>
+          <option value="cron">Agendamento (cron)</option>
+          <option value="manual">Manual</option>
+        </select>
+      </div>
+      <div id="wfTriggerConfigSection"></div>
+
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">Condições <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
+        <div id="wfCondList" style="display:grid;gap:6px;margin-bottom:8px;"></div>
+        <button type="button" onclick="wfAddCondicao()" style="width:100%;padding:8px;background:none;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;color:var(--muted);">+ Adicionar condição</button>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">Ações *</div>
+        <div id="wfAcaoList" style="display:grid;gap:8px;margin-bottom:8px;"></div>
+        <button type="button" onclick="wfAddAcao()" style="width:100%;padding:8px;background:none;border:1.5px dashed var(--border);border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;color:var(--muted);">+ Adicionar ação</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:24px;justify-content:flex-end;">
+      <button onclick="fecharModalWorkflow()" style="padding:11px 20px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+      <button onclick="salvarWorkflow()" style="padding:11px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Salvar Automação</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Workflow Histórico -->
+<div id="modalWorkflowHistorico" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:var(--white);border-radius:14px;padding:28px;width:calc(100% - 32px);max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h3 id="wfHistTitle" style="font-family:'Lora',serif;font-size:17px;">📋 Histórico de Execuções</h3>
+      <button onclick="document.getElementById('modalWorkflowHistorico').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">&times;</button>
+    </div>
+    <div id="wfHistContent"><div class="empty-state">Carregando...</div></div>
+  </div>
+</div>
+
 <script>
   var SUPABASE_URL  = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
   var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
@@ -3408,7 +3563,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const headers = {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON};
     const r = await fetch(API, { method:'POST', headers, body: JSON.stringify({...body, _token: token}) });
     const d = await r.json();
-    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login' && body.action !== 'unified_login' && body.action !== 'setup_check') { doLogout(); return d; }
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login' && body.action !== 'unified_login' && body.action !== 'setup_check' && body.action !== 'logout' && body.action !== 'config_publica') { doLogout(); return d; }
     return d;
   }
 
@@ -3453,7 +3608,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const headers = {'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON};
     const r = await fetch(FIN_EXT_API, { method:'POST', headers, body: JSON.stringify({...body, _token: token}) });
     const d = await r.json();
-    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login') { doLogout(); return d; }
+    if (d.error === 'Sessão inválida ou expirada. Faça login novamente.' && body.action !== 'login' && body.action !== 'logout') { doLogout(); return d; }
     return d;
   }
 
@@ -3494,6 +3649,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         }
       }
       return;
+    }
+    // Validar sessão no servidor antes de mostrar o app
+    const check = await api({ action: 'config_publica' }).catch(() => null);
+    if (check && check.error && check.error.includes('Sessão inválida')) {
+      localStorage.removeItem('mb_token');
+      localStorage.removeItem('mb_nome');
+      localStorage.removeItem('mb_email');
+      return; // mostra tela de login
     }
     const nome  = localStorage.getItem('mb_nome');
     const email = localStorage.getItem('mb_email');
@@ -3597,10 +3760,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -3687,18 +3850,377 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='contaFinanceiro') loadContaFinanceiro();
     if(id==='roi') loadRoiDashboard();
     if(id==='contratos') loadContratos();
+    if(id==='workflows') loadWorkflows();
     if(id==='acessoDash') loadAcessoDash();
     if(id==='acessoDispositivos') loadAcessoDispositivos();
     if(id==='acessoFaces') loadAcessoFaces();
     if(id==='acessoRfid') loadAcessoRfid();
     if(id==='acessoPermissoes') loadAcessoPermissoes();
     if(id==='acessoEventos') loadAcessoEventos();
+    if(id==='engajamento') loadEngajamentoPanel();
     // Track usage for recents & smart ordering
     if(id !== 'analytics') trackPanelUsage(id);
     updateBottomBarActive(id);
     updateTopbarPillActive(id);
     return false;
   }
+
+  // ═══ WORKFLOWS / AUTOMAÇÕES ═══════════════════════════
+  var WF_API_URL = SUPABASE_URL + '/functions/v1/workflows';
+  var wfEditingId = null;
+  var wfCondCount = 0;
+  var wfAcaoCount = 0;
+
+  var WF_TEMPLATES = [
+    { id: 'falta_alert',    nome: 'Alerta de Falta',      descricao: 'Notifica responsável quando aluno falta',        trigger_tipo: 'evento', trigger_config: { evento: 'aluno_falta' },     acoes: [{ tipo: 'enviar_whatsapp',    config: { template: 'falta_aluno',    destinatario: 'responsavel' } }] },
+    { id: 'boleto_venc',    nome: 'Boleto Vencendo',       descricao: 'Lembrete 3 dias antes do vencimento',            trigger_tipo: 'evento', trigger_config: { evento: 'boleto_vencendo' }, acoes: [{ tipo: 'enviar_whatsapp',    config: { template: 'lembrete_boleto', destinatario: 'responsavel' } }] },
+    { id: 'lead_parado',    nome: 'Lead Parado',           descricao: 'Alerta CRM quando lead não avança há 7 dias',    trigger_tipo: 'cron',   trigger_config: { cron: '0 8 * * 1' },        acoes: [{ tipo: 'criar_notificacao',  config: { titulo: 'Lead parado', mensagem: 'Lead sem movimentação há 7 dias' } }] },
+    { id: 'matricula_bv',   nome: 'Boas-vindas Matrícula', descricao: 'Envia boas-vindas ao confirmar matrícula',       trigger_tipo: 'evento', trigger_config: { evento: 'matricula_nova' },  acoes: [{ tipo: 'enviar_email',       config: { template: 'boas_vindas',    destinatario: 'responsavel' } }] },
+    { id: 'aniversario',    nome: 'Parabéns Aniversário',  descricao: 'Mensagem no dia do aniversário do aluno',        trigger_tipo: 'cron',   trigger_config: { cron: '0 8 * * *' },        acoes: [{ tipo: 'enviar_whatsapp',    config: { template: 'aniversario',    destinatario: 'responsavel' } }] },
+  ];
+
+  var WF_EVENTOS = [
+    { value: 'aluno_falta',     label: 'Aluno faltou' },
+    { value: 'boleto_vencendo', label: 'Boleto vencendo (3 dias)' },
+    { value: 'lead_parado',     label: 'Lead parado (7 dias)' },
+    { value: 'matricula_nova',  label: 'Nova matrícula confirmada' },
+    { value: 'aniversario',     label: 'Aniversário do aluno' },
+  ];
+
+  var WF_ACAO_TIPOS = [
+    { value: 'enviar_email',       label: '📧 Enviar e-mail' },
+    { value: 'enviar_whatsapp',    label: '💬 Enviar WhatsApp' },
+    { value: 'criar_notificacao',  label: '🔔 Criar notificação' },
+    { value: 'criar_tarefa',       label: '📋 Criar tarefa' },
+  ];
+
+  async function wfApi(body) {
+    const token = getToken();
+    try {
+      const r = await fetch(WF_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ ...body, _token: token }) });
+      return await r.json();
+    } catch (e) {
+      return { error: e.message };
+    }
+  }
+
+  async function loadWorkflows() {
+    document.getElementById('wfList').innerHTML = '<div class="empty-state">Carregando...</div>';
+    const d = await wfApi({ action: 'workflow_list' });
+    const wfs = Array.isArray(d) ? d : (d.workflows || []);
+    if (d.error) {
+      document.getElementById('wfStatAtivas').textContent = '0';
+      document.getElementById('wfStatExecucoes').textContent = '0';
+      document.getElementById('wfStatFalhas').textContent = '0';
+      document.getElementById('wfList').innerHTML = wfEmptyState();
+      return;
+    }
+    document.getElementById('wfStatAtivas').textContent = wfs.filter(function(w){ return w.ativo; }).length;
+    document.getElementById('wfStatExecucoes').textContent = wfs.reduce(function(s,w){ return s + (w.execucoes_total||0); }, 0);
+    document.getElementById('wfStatFalhas').textContent = '—';
+    document.getElementById('wfList').innerHTML = wfs.length ? wfs.map(wfCard).join('') : wfEmptyState();
+  }
+
+  function wfEmptyState() {
+    return '<div style="text-align:center;padding:60px 20px;background:var(--white);border:1px solid var(--border);border-radius:12px;">' +
+      '<div style="font-size:48px;margin-bottom:12px;">⚡</div>' +
+      '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;">Nenhuma automação criada</div>' +
+      '<p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Automatize tarefas repetitivas para economizar tempo.</p>' +
+      '<button onclick="abrirModalWorkflow()" style="padding:11px 20px;background:var(--red);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">Criar primeira automação</button>' +
+      '</div>';
+  }
+
+  function wfEsc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function wfCard(wf) {
+    var triggerLabels = { evento:'⚡ Evento', cron:'🕐 Agendamento', manual:'👆 Manual' };
+    var triggerColors = { evento:'#1a6bb5', cron:'#6b3a9e', manual:'#5a5249' };
+    var tipo = wf.trigger_tipo || 'manual';
+    var lastRun = (wf.ultima_execucao||wf.last_run_at) ? new Date(wf.ultima_execucao||wf.last_run_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : 'Nunca executado';
+    return '<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;align-items:flex-start;gap:16px;margin-bottom:10px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:180px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">' +
+          '<span style="font-weight:600;font-size:14px;">' + wfEsc(wf.nome) + '</span>' +
+          '<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;color:#fff;background:' + (triggerColors[tipo]||'#5a5249') + ';">' + (triggerLabels[tipo]||tipo) + '</span>' +
+        '</div>' +
+        (wf.descricao ? '<p style="color:var(--muted);font-size:12px;margin-bottom:8px;">' + wfEsc(wf.descricao) + '</p>' : '') +
+        '<div style="display:flex;gap:16px;font-size:11px;color:var(--muted);">' +
+          '<span>🕐 ' + wfEsc(lastRun) + '</span>' +
+          '<span>▶ ' + (wf.execucoes_total||wf.execucao_count||0) + ' execuções</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<div onclick="toggleWorkflow(\'' + wf.id + '\',' + (!wf.ativo) + ')" title="' + (wf.ativo ? 'Desativar' : 'Ativar') + '" style="display:flex;align-items:center;gap:6px;cursor:pointer;">' +
+          '<div style="width:38px;height:20px;border-radius:20px;background:' + (wf.ativo ? 'var(--green)' : 'var(--border)') + ';position:relative;transition:background .2s;">' +
+            '<div style="width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;left:' + (wf.ativo ? '20px' : '2px') + ';transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></div>' +
+          '</div>' +
+          '<span style="font-size:11px;font-weight:600;color:' + (wf.ativo ? 'var(--green)' : 'var(--muted)') + ';">' + (wf.ativo ? 'Ativo' : 'Inativo') + '</span>' +
+        '</div>' +
+        '<button onclick="abrirModalWorkflow(\'' + wf.id + '\')" style="padding:7px 12px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;">Editar</button>' +
+        '<button onclick="executarWorkflow(\'' + wf.id + '\')" style="padding:7px 12px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;color:#1a6bb5;">▶ Executar</button>' +
+        '<button onclick="verHistoricoWorkflow(\'' + wf.id + '\',\'' + wfEsc(wf.nome) + '\')" style="padding:7px 12px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;color:var(--muted);">Histórico</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function abrirModalWorkflow(id) {
+    wfEditingId = id || null;
+    wfCondCount = 0;
+    wfAcaoCount = 0;
+    document.getElementById('wfEditId').value = id || '';
+    document.getElementById('wfEditorTitle').textContent = id ? '⚡ Editar Automação' : '⚡ Nova Automação';
+    document.getElementById('wfNome').value = '';
+    document.getElementById('wfDesc').value = '';
+    document.getElementById('wfTriggerTipo').value = 'evento';
+    document.getElementById('wfCondList').innerHTML = '';
+    document.getElementById('wfAcaoList').innerHTML = '';
+    document.getElementById('wfTemplatesWrap').style.display = id ? 'none' : '';
+    wfUpdateTriggerConfig();
+    if (!id) wfRenderTemplates();
+    if (id) wfCarregarWorkflow(id);
+    document.getElementById('modalWorkflowEditor').style.display = 'flex';
+  }
+
+  function fecharModalWorkflow() {
+    document.getElementById('modalWorkflowEditor').style.display = 'none';
+  }
+
+  async function wfCarregarWorkflow(id) {
+    var d = await wfApi({ action: 'workflow_get', id: id });
+    if (d.error) return;
+    var wf = d.workflow || d;
+    document.getElementById('wfNome').value = wf.nome || '';
+    document.getElementById('wfDesc').value = wf.descricao || '';
+    document.getElementById('wfTriggerTipo').value = wf.trigger_tipo || 'evento';
+    wfUpdateTriggerConfig(wf.trigger_config);
+    (wf.condicoes || []).forEach(function(c){ wfAddCondicao(c); });
+    (wf.acoes || []).forEach(function(a){ wfAddAcao(a); });
+  }
+
+  function wfRenderTemplates() {
+    var colors = ['#1a6bb5','#6b3a9e','#2d7a3a','#C8102E','#d4830a'];
+    document.getElementById('wfTemplateCards').innerHTML = WF_TEMPLATES.map(function(t, i) {
+      return '<div onclick="wfUseTemplate(\'' + t.id + '\')" style="padding:12px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s;" ' +
+        'onmouseover="this.style.borderColor=\'' + colors[i % colors.length] + '\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;">' + wfEsc(t.nome) + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);">' + wfEsc(t.descricao) + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function wfUseTemplate(id) {
+    var t = WF_TEMPLATES.find(function(x){ return x.id === id; });
+    if (!t) return;
+    document.getElementById('wfNome').value = t.nome;
+    document.getElementById('wfDesc').value = t.descricao;
+    document.getElementById('wfTriggerTipo').value = t.trigger_tipo;
+    document.getElementById('wfCondList').innerHTML = '';
+    document.getElementById('wfAcaoList').innerHTML = '';
+    wfCondCount = 0;
+    wfAcaoCount = 0;
+    wfUpdateTriggerConfig(t.trigger_config);
+    (t.acoes || []).forEach(function(a){ wfAddAcao(a); });
+  }
+
+  function wfUpdateTriggerConfig(config) {
+    var tipo = document.getElementById('wfTriggerTipo').value;
+    var el = document.getElementById('wfTriggerConfigSection');
+    if (tipo === 'evento') {
+      var sel = config && config.evento ? config.evento : '';
+      el.innerHTML = '<div class="ff"><label>Evento</label>' +
+        '<select id="wfTriggerEvento" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">' +
+        WF_EVENTOS.map(function(e){ return '<option value="' + e.value + '"' + (sel === e.value ? ' selected' : '') + '>' + e.label + '</option>'; }).join('') +
+        '</select></div>';
+    } else if (tipo === 'cron') {
+      var val = config && config.cron ? config.cron : '0 8 * * 1';
+      el.innerHTML = '<div class="ff"><label>Expressão Cron</label>' +
+        '<input id="wfTriggerCron" type="text" value="' + wfEsc(val) + '" placeholder="0 8 * * 1" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Ex: 0 8 * * 1 = toda segunda às 8h · 0 9 * * * = todo dia às 9h</div></div>';
+    } else {
+      el.innerHTML = '<div style="padding:10px 14px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--muted);">Esta automação só será executada manualmente.</div>';
+    }
+  }
+
+  function wfAddCondicao(data) {
+    var id = ++wfCondCount;
+    var campo = data && data.campo ? data.campo : '';
+    var op    = data && data.operador ? data.operador : 'igual';
+    var val   = data && data.valor   ? data.valor   : '';
+    var row = document.createElement('div');
+    row.id = 'wfCond' + id;
+    row.style.cssText = 'display:grid;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:center;';
+    row.innerHTML =
+      '<input type="text" placeholder="Campo (ex: turma)" value="' + wfEsc(campo) + '" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">' +
+      '<select style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">' +
+        '<option value="igual"'     + (op==='igual'     ?' selected':'') + '>igual a</option>' +
+        '<option value="diferente"' + (op==='diferente' ?' selected':'') + '>diferente de</option>' +
+        '<option value="contem"'    + (op==='contem'    ?' selected':'') + '>contém</option>' +
+        '<option value="maior"'     + (op==='maior'     ?' selected':'') + '>maior que</option>' +
+        '<option value="menor"'     + (op==='menor'     ?' selected':'') + '>menor que</option>' +
+      '</select>' +
+      '<input type="text" placeholder="Valor" value="' + wfEsc(val) + '" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">' +
+      '<button onclick="document.getElementById(\'wfCond' + id + '\').remove()" style="padding:8px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;color:var(--muted);">&times;</button>';
+    document.getElementById('wfCondList').appendChild(row);
+  }
+
+  function wfAddAcao(data) {
+    var id = ++wfAcaoCount;
+    var tipo = data && data.tipo ? data.tipo : 'criar_notificacao';
+    var cfg  = data && data.config ? data.config : {};
+    var row = document.createElement('div');
+    row.id = 'wfAcao' + id;
+    row.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;';
+    row.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+        '<select onchange="wfUpdateAcaoCfg(' + id + ',this.value)" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--white);">' +
+          WF_ACAO_TIPOS.map(function(t){ return '<option value="' + t.value + '"' + (tipo===t.value?' selected':'') + '>' + t.label + '</option>'; }).join('') +
+        '</select>' +
+        '<button onclick="document.getElementById(\'wfAcao' + id + '\').remove()" style="padding:6px 10px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;color:var(--muted);">&times;</button>' +
+      '</div>' +
+      '<div id="wfAcaoCfg' + id + '"></div>';
+    document.getElementById('wfAcaoList').appendChild(row);
+    wfUpdateAcaoCfg(id, tipo, cfg);
+  }
+
+  function wfUpdateAcaoCfg(id, tipo, cfg) {
+    cfg = cfg || {};
+    var el = document.getElementById('wfAcaoCfg' + id);
+    if (!el) return;
+    var tplsEmail = ['boas_vindas','lembrete_boleto','comunicado','relatorio'];
+    var tplsWpp   = ['falta_aluno','lembrete_boleto','aniversario','comunicado'];
+    if (tipo === 'enviar_email' || tipo === 'enviar_whatsapp') {
+      var tpls = tipo === 'enviar_email' ? tplsEmail : tplsWpp;
+      el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        '<div><label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:4px;">Template</label>' +
+          '<select style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--white);">' +
+            tpls.map(function(t){ return '<option value="' + t + '"' + (cfg.template===t?' selected':'') + '>' + t.replace(/_/g,' ') + '</option>'; }).join('') +
+          '</select></div>' +
+        '<div><label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:block;margin-bottom:4px;">Destinatário</label>' +
+          '<select style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--white);">' +
+            '<option value="responsavel"' + (cfg.destinatario==='responsavel'?' selected':'') + '>Responsável</option>' +
+            '<option value="gerente"'     + (cfg.destinatario==='gerente'    ?' selected':'') + '>Gerente</option>' +
+            '<option value="professora"'  + (cfg.destinatario==='professora' ?' selected':'') + '>Professora</option>' +
+          '</select></div>' +
+        '</div>';
+    } else if (tipo === 'criar_notificacao') {
+      el.innerHTML = '<div style="display:grid;gap:8px;">' +
+        '<input type="text" placeholder="Título da notificação" value="' + wfEsc(cfg.titulo||'') + '" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;">' +
+        '<input type="text" placeholder="Mensagem" value="' + wfEsc(cfg.mensagem||'') + '" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box;">' +
+        '</div>';
+    } else if (tipo === 'criar_tarefa') {
+      el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        '<input type="text" placeholder="Título da tarefa" value="' + wfEsc(cfg.titulo||'') + '" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">' +
+        '<select style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--white);">' +
+          '<option value="gerente"'    + (cfg.atribuir==='gerente'    ?' selected':'') + '>Gerente</option>' +
+          '<option value="secretaria"' + (cfg.atribuir==='secretaria' ?' selected':'') + '>Secretaria</option>' +
+          '<option value="comercial"'  + (cfg.atribuir==='comercial'  ?' selected':'') + '>Comercial</option>' +
+        '</select>' +
+        '</div>';
+    }
+  }
+
+  function wfReadAcoes() {
+    var acoes = [];
+    document.querySelectorAll('#wfAcaoList > div[id^="wfAcao"]').forEach(function(row) {
+      var id = row.id.replace('wfAcao', '');
+      var tipoSel = row.querySelector('select');
+      if (!tipoSel) return;
+      var tipo = tipoSel.value;
+      var cfg = {};
+      var cfgEl = document.getElementById('wfAcaoCfg' + id);
+      if (cfgEl) {
+        var keys = { enviar_email:['template','destinatario'], enviar_whatsapp:['template','destinatario'], criar_notificacao:['titulo','mensagem'], criar_tarefa:['titulo','atribuir'] };
+        cfgEl.querySelectorAll('input,select').forEach(function(inp, i) {
+          var k = (keys[tipo] || [])[i];
+          if (k) cfg[k] = inp.value;
+        });
+      }
+      acoes.push({ tipo: tipo, config: cfg });
+    });
+    return acoes;
+  }
+
+  function wfReadCondicoes() {
+    var conds = [];
+    document.querySelectorAll('#wfCondList > div[id^="wfCond"]').forEach(function(row) {
+      var inps = row.querySelectorAll('input,select');
+      if (inps.length >= 3) conds.push({ campo: inps[0].value, operador: inps[1].value, valor: inps[2].value });
+    });
+    return conds;
+  }
+
+  async function salvarWorkflow() {
+    var nome = document.getElementById('wfNome').value.trim();
+    if (!nome) { showToast('Informe o nome da automação', 'error'); return; }
+    var tipo = document.getElementById('wfTriggerTipo').value;
+    var trigger_config = {};
+    if (tipo === 'evento') {
+      var evEl = document.getElementById('wfTriggerEvento');
+      if (evEl) trigger_config.evento = evEl.value;
+    } else if (tipo === 'cron') {
+      var cronEl = document.getElementById('wfTriggerCron');
+      if (cronEl) trigger_config.cron = cronEl.value;
+    }
+    var acoes = wfReadAcoes();
+    if (!acoes.length) { showToast('Adicione ao menos uma ação', 'error'); return; }
+    var payload = {
+      action: wfEditingId ? 'workflow_update' : 'workflow_create',
+      id: wfEditingId,
+      nome: nome,
+      descricao: document.getElementById('wfDesc').value.trim(),
+      trigger_tipo: tipo,
+      trigger_config: trigger_config,
+      condicoes: wfReadCondicoes(),
+      acoes: acoes,
+    };
+    var d = await wfApi(payload);
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast(wfEditingId ? 'Automação atualizada!' : 'Automação criada!', 'success');
+    fecharModalWorkflow();
+    loadWorkflows();
+  }
+
+  async function toggleWorkflow(id, ativo) {
+    var d = await wfApi({ action: 'workflow_toggle', id: id, ativo: ativo });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    loadWorkflows();
+  }
+
+  async function executarWorkflow(id) {
+    showToast('Executando automação...', 'info');
+    var d = await wfApi({ action: 'workflow_executar', id: id });
+    if (d.error) { showToast('Erro ao executar: ' + d.error, 'error'); return; }
+    showToast('Automação executada!', 'success');
+    loadWorkflows();
+  }
+
+  async function verHistoricoWorkflow(id, nome) {
+    document.getElementById('wfHistTitle').textContent = '📋 Histórico — ' + nome;
+    document.getElementById('wfHistContent').innerHTML = '<div class="empty-state">Carregando...</div>';
+    document.getElementById('modalWorkflowHistorico').style.display = 'flex';
+    var d = await wfApi({ action: 'workflow_execucoes_list', workflow_id: id });
+    var execucoes = Array.isArray(d) ? d : (d.execucoes || []);
+    if (d.error || !execucoes.length) {
+      document.getElementById('wfHistContent').innerHTML = '<div class="empty-state">Nenhuma execução registrada ainda.</div>';
+      return;
+    }
+    var statusColors = { sucesso:'var(--green)', falha:'var(--red)', parcial:'#d4830a' };
+    document.getElementById('wfHistContent').innerHTML = execucoes.map(function(ex) {
+      var ts = new Date(ex.iniciado_em || ex.created_at).toLocaleString('pt-BR');
+      var color = statusColors[ex.status] || 'var(--muted)';
+      return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+          '<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:#fff;background:' + color + ';">' + wfEsc(ex.status) + '</span>' +
+          '<span style="font-size:11px;color:var(--muted);">' + wfEsc(ts) + '</span>' +
+        '</div>' +
+        (ex.resultado ? '<div style="font-size:12px;color:var(--text);margin-top:4px;">' + wfEsc(JSON.stringify(ex.resultado)) + '</div>' : '') +
+        (ex.trigger_data ? '<div style="font-size:11px;color:var(--muted);margin-top:4px;">Trigger: ' + wfEsc(JSON.stringify(ex.trigger_data)) + '</div>' : '') +
+        '</div>';
+    }).join('');
+  }
+  // ════════════════════════════════════════════════════════
 
   // ── FAVORITOS & PERSONALIZAÇÃO ─────────────────────────
   var FAV_KEY = 'lumied_fav_gerente';
@@ -4539,7 +5061,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function loadBibAcervo() {
-    const d = await opApi({ action:'biblioteca_acervo_list' });
+    const d = await opApi({ action:'acervo_list' });
     bibAcervo = Array.isArray(d) ? d : (d.data || []);
     renderBibAcervo(bibAcervo);
   }
@@ -4564,19 +5086,19 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const autor = prompt('Autor:') || '';
     const categoria = prompt('Categoria (ficção, didático, infantil, referência):') || 'didático';
     const qtd = parseInt(prompt('Quantidade:') || '1') || 1;
-    const d = await opApi({ action:'biblioteca_acervo_create', titulo, autor, categoria, quantidade:qtd });
+    const d = await opApi({ action:'acervo_create', titulo, autor, categoria, quantidade:qtd });
     if (d.error) return showToast(d.error,'error');
     showToast('Livro adicionado!','success');
     loadBibAcervo();
   }
   async function deletarLivro(id) {
     if (!await _lumiedConfirm('Remover este livro do acervo?')) return;
-    await opApi({ action:'biblioteca_acervo_update', id, ativo:false });
+    await opApi({ action:'acervo_update', id, ativo:false });
     loadBibAcervo();
   }
 
   async function loadBibEmprestimos() {
-    const d = await opApi({ action:'biblioteca_emprestimos_list' });
+    const d = await opApi({ action:'biblioteca_emprestimos' });
     const lista = Array.isArray(d) ? d : (d.data || []);
     const body = document.getElementById('bibEmprestimosBody');
     if (!lista.length) { body.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Nenhum empréstimo registrado.</td></tr>'; return; }
@@ -4603,13 +5125,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (!livro) return;
     const acervoId = disponiveis.find(b => b.id.startsWith(livro) || b.titulo.toLowerCase().includes(livro.toLowerCase()))?.id;
     if (!acervoId) return showToast('Livro não encontrado','error');
-    const d = await opApi({ action:'biblioteca_emprestar', acervo_id:acervoId, aluno_nome:aluno, aluno_email:email });
+    const d = await opApi({ action:'data_emprestimo', acervo_id:acervoId, aluno_nome:aluno, aluno_email:email });
     if (d.error) return showToast(d.error,'error');
     showToast('Empréstimo registrado!','success');
     loadBibEmprestimos();
   }
   async function devolverLivro(id) {
-    const d = await opApi({ action:'biblioteca_devolver', id });
+    const d = await opApi({ action:'devolvido', id });
     if (d.error) return showToast(d.error,'error');
     showToast('Livro devolvido!','success');
     loadBibEmprestimos();
@@ -4640,7 +5162,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   var cantCreditos = [];
   async function loadCantCreditos() {
-    const d = await opApi({ action:'cantina_creditos_list' });
+    const d = await opApi({ action:'cantina_creditos' });
     cantCreditos = Array.isArray(d) ? d : (d.data || []);
     renderCantCreditos(cantCreditos);
   }
@@ -5106,10 +5628,17 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   // ── ALUNOS ──────────────────────────────────────────────
   var alunosData = [], alunoAtual = null;
+  var riskScoresMap = {}; // email -> score record
 
   async function loadAlunos() {
-    const d = await api({ action: 'alunos_list' });
+    const [d, rs] = await Promise.all([
+      api({ action: 'alunos_list' }),
+      api({ action: 'risk_scores_list' }).catch(() => []),
+    ]);
     alunosData = Array.isArray(d) ? d : (d.data || []);
+    const rsList = Array.isArray(rs) ? rs : [];
+    riskScoresMap = {};
+    for (const r of rsList) riskScoresMap[r.aluno_email] = r;
     // Populate turma filter
     const turmas = [...new Set(alunosData.map(a => a.serie || a.turma || '').filter(Boolean))].sort();
     const sel = document.getElementById('alunosFiltroTurma');
@@ -5144,10 +5673,18 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       const media = a.media_geral != null ? Number(a.media_geral).toFixed(1) : '—';
       const freqColor = a.frequencia_pct >= 75 ? 'var(--green)' : a.frequencia_pct != null ? 'var(--red)' : 'var(--muted)';
       const mediaColor = a.media_geral >= 7 ? 'var(--green)' : a.media_geral != null ? 'var(--red)' : 'var(--muted)';
+      const rs = riskScoresMap[a.email] || null;
+      const riskBadge = rs
+        ? rs.score >= 80
+          ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;" title="Score de risco: ${rs.score}">⚠️ Alto risco</span>`
+          : rs.score >= 60
+            ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;" title="Score de risco: ${rs.score}">⚠ Atenção</span>`
+            : ''
+        : '';
       return `<tr style="border-bottom:1px solid #f0ece6;cursor:pointer;" onclick="abrirFichaAluno('${a.id || a.email}')">
         <td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:10px;">
           <div style="width:36px;height:36px;border-radius:50%;background:var(--red-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--red);flex-shrink:0;">${initials}</div>
-          <div><strong>${esc(a.nome)}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(a.email || '')}</span></div>
+          <div><strong>${esc(a.nome)}</strong>${riskBadge}<br><span style="font-size:11px;color:var(--muted);">${esc(a.email || '')}</span></div>
         </div></td>
         <td style="padding:10px 12px;font-size:12px;">${esc(a.serie || a.turma || '—')}</td>
         <td style="padding:10px 12px;text-align:center;font-weight:600;color:${freqColor};">${freq}</td>
@@ -5180,6 +5717,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAlunoFreq(a);
     loadAlunoDocs(a);
     loadAlunoAtas(a);
+    loadAlunoIaResumo(a.email);
   }
 
   function switchAlunoTab(tab, btn) {
@@ -5195,7 +5733,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const el = document.getElementById('alunoDetNotas');
     el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
     try {
-      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'boletim_aluno', aluno_email: a.email, ano: new Date().getFullYear(), _token: getToken() }) }).then(r => r.json());
+      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'boletim_get', aluno_email: a.email, ano: new Date().getFullYear(), _token: getToken() }) }).then(r => r.json());
       const discs = Array.isArray(d) ? d : (d.disciplinas || []);
       if (!discs.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Nenhuma nota registrada.</div>'; return; }
       el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px;text-align:left;">Disciplina</th><th style="padding:8px;text-align:center;">Média</th><th style="padding:8px;text-align:center;">Status</th></tr></thead><tbody>' +
@@ -5212,7 +5750,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const el = document.getElementById('alunoDetFreq');
     el.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
     try {
-      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'frequencia_aluno', aluno_email: a.email, _token: getToken() }) }).then(r => r.json());
+      const d = await fetch(SUPABASE_URL + '/functions/v1/academico', { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON }, body: JSON.stringify({ action: 'frequencia_relatorio_aluno', aluno_email: a.email, _token: getToken() }) }).then(r => r.json());
       const pct = d.percent_presenca ?? d.pct ?? null;
       const total = d.total_aulas ?? 0;
       const faltas = d.total_faltas ?? 0;
@@ -5258,6 +5796,22 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">Por: ${esc(at.registrado_por || '—')} ${at.arquivo_url ? `· <a href="${esc(at.arquivo_url)}" target="_blank" style="color:var(--blue);">📎 Anexo</a>` : ''}</div>
       </div>`).join('');
     } catch { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar atas.</div>'; }
+  }
+
+  async function loadAlunoIaResumo(email) {
+    const card = document.getElementById('alunoIaResumo');
+    card.style.display = 'block';
+    document.getElementById('iaResumoText').innerHTML = '<span class="spinner-sm"></span> Analisando...';
+    document.getElementById('iaResumoTime').textContent = '';
+    try {
+      const d = await api({ action: 'aluno_resumo_ia', aluno_email: email });
+      if (d.resumo) {
+        document.getElementById('iaResumoText').textContent = d.resumo;
+        document.getElementById('iaResumoTime').textContent = 'Gerado: ' + new Date(d.gerado_em).toLocaleString('pt-BR');
+      } else {
+        card.style.display = 'none';
+      }
+    } catch { card.style.display = 'none'; }
   }
 
   async function alunoNovaAta() {
@@ -7390,7 +7944,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function salvarDispositivo() {
-    const body = { action: 'acesso_dispositivo_create', nome: document.getElementById('adNome').value, ip: document.getElementById('adIp').value, porta: document.getElementById('adPorta').value, tipo: document.getElementById('adTipo').value, localizacao: document.getElementById('adLocal').value };
+    const body = { action: 'acesso_dispositivo_save', nome: document.getElementById('adNome').value, ip: document.getElementById('adIp').value, porta: document.getElementById('adPorta').value, tipo: document.getElementById('adTipo').value, localizacao: document.getElementById('adLocal').value };
     const d = await api(body);
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Dispositivo adicionado!', 'success');
@@ -7408,7 +7962,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function syncFacesDispositivo(id) {
     showToast('Sincronizando faces...', 'info');
-    const d = await callAcesso({ action: 'acesso_dispositivo_sync_faces', id });
+    const d = await callAcesso({ action: 'acesso_dispositivo_sync', id });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Faces sincronizadas!', 'success');
   }
@@ -7463,7 +8017,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (!fileInput.files.length) { showToast('Selecione uma foto.', 'error'); return; }
     const reader = new FileReader();
     reader.onload = async function() {
-      const d = await callAcesso({ action: 'acesso_face_create', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
+      const d = await callAcesso({ action: 'acesso_face_cadastrar', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
       if (d.error) { showToast(d.error, 'error'); return; }
       showToast('Face cadastrada!', 'success');
       closeFaceModal();
@@ -7480,7 +8034,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   async function syncAllFaces() {
     showToast('Sincronizando todas as faces...', 'info');
-    const d = await callAcesso({ action: 'acesso_sync_all_faces' });
+    const d = await callAcesso({ action: 'acesso_face_sync_all' });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Sincronizacao iniciada!', 'success');
     loadAcessoFaces();
@@ -7524,7 +8078,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const tipo = document.getElementById('rfidTipo').value;
     if (!uid) { showToast('Informe o UID do cartao.', 'error'); return; }
     if (!pessoaId) { showToast('Selecione uma pessoa.', 'error'); return; }
-    const d = await callAcesso({ action: 'acesso_rfid_create', card_uid: uid, pessoa_id: pessoaId, pessoa_tipo: tipo });
+    const d = await callAcesso({ action: 'acesso_rfid_cadastrar', card_uid: uid, pessoa_id: pessoaId, pessoa_tipo: tipo });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Cartao adicionado!', 'success');
     document.getElementById('rfidUid').value = '';
@@ -7534,7 +8088,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 
   async function toggleRfid(id, ativo) {
-    await callAcesso({ action: 'acesso_rfid_update', id, ativo });
+    await callAcesso({ action: 'acesso_rfid_cadastrar', id, ativo });
     loadAcessoRfid();
   }
 
@@ -7588,7 +8142,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (fileInput.files.length) {
       foto_base64 = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(fileInput.files[0]); });
     }
-    const d = await callAcesso({ action: 'acesso_permissao_create', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
+    const d = await callAcesso({ action: 'acesso_permissao_save', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Pessoa autorizada adicionada!', 'success');
     closePermModal();
@@ -9465,6 +10019,92 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  //  ENGAJAMENTO DE FAMÍLIAS
+  // ═══════════════════════════════════════════════════════════════
+
+  var _engTrendFilter = '';
+
+  async function loadEngajamentoPanel() {
+    const [dash, lista] = await Promise.all([
+      api({ action: 'engagement_dashboard' }),
+      api({ action: 'engagement_list' }),
+    ]);
+    renderEngDashboard(dash);
+    renderEngLista(Array.isArray(lista) ? lista : []);
+  }
+
+  function renderEngDashboard(d) {
+    if (!d) return;
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('engAvgScore', d.avg_score ?? '—');
+    set('engAlto', d.alto ?? 0);
+    set('engMedio', d.medio ?? 0);
+    set('engBaixo', d.baixo ?? 0);
+    set('engSubindo', d.subindo ?? 0);
+    set('engEstavel', d.estavel ?? 0);
+    set('engDescendo', d.descendo ?? 0);
+  }
+
+  function renderEngLista(rows) {
+    const el = document.getElementById('engLista');
+    if (!el) return;
+    if (!rows.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Nenhuma família encontrada. Clique em "Recalcular" para calcular os scores.</div>'; return; }
+    const filtered = _engTrendFilter ? rows.filter(r => r.trend === _engTrendFilter) : rows;
+    if (!filtered.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Sem famílias com esse filtro.</div>'; return; }
+    const trendIcon = t => t === 'subindo' ? '<span style="color:#2d7a3a;font-weight:700;">▲</span>' : t === 'descendo' ? '<span style="color:#c0392b;font-weight:700;">▼</span>' : '<span style="color:#888;">●</span>';
+    const scoreColor = s => s > 70 ? '#2d7a3a' : s >= 40 ? '#b07d10' : '#c0392b';
+    const rows_html = filtered.map(r => {
+      const pct = r.score ?? 0;
+      const cor = scoreColor(pct);
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;">${esc(r.familia_nome || r.familia_email)}</div>
+          <div style="font-size:11px;color:var(--muted);">${esc(r.familia_email)}</div>
+        </div>
+        <div style="width:120px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
+            <span style="color:${cor};font-weight:700;">${pct}</span><span style="color:var(--muted);">/ 100</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${cor};border-radius:4px;transition:width .4s;"></div>
+          </div>
+        </div>
+        <div style="width:32px;text-align:center;">${trendIcon(r.trend)}</div>
+        <button onclick="engEnviarMensagem('${esc(r.familia_email)}','${esc(r.familia_nome || '')}',this)" style="padding:5px 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">✉ Mensagem</button>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:8px 16px;border-bottom:1px solid var(--border);">${filtered.length} família${filtered.length !== 1 ? 's' : ''} — ordenado por menor engajamento primeiro</div>${rows_html}`;
+  }
+
+  async function filtrarEngajamento(trend, btn) {
+    _engTrendFilter = trend;
+    document.querySelectorAll('#panelEngajamento .filter-bar .fb').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const lista = await api({ action: 'engagement_list', trend });
+    renderEngLista(Array.isArray(lista) ? lista : []);
+  }
+
+  async function calcularEngajamento() {
+    const btn = document.querySelector('#panelEngajamento button[onclick="calcularEngajamento()"]');
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ Calculando...'; }
+    const r = await api({ action: 'calcular_engagement' });
+    if (btn) { btn.disabled = false; btn.textContent = '⟳ Recalcular'; }
+    if (r?.calculadas !== undefined) {
+      showToast?.(`Score calculado para ${r.calculadas} família(s).`, 'success');
+      loadEngajamentoPanel();
+    }
+  }
+
+  function engEnviarMensagem(email, nome, btn) {
+    // Redireciona para o chat com a família pré-selecionada
+    showPanel('chatConversas', null);
+    setTimeout(() => {
+      const searchEl = document.getElementById('chatBusca');
+      if (searchEl) { searchEl.value = nome || email; searchEl.dispatchEvent(new Event('input')); }
+    }, 400);
+  }
+
   async function loadFamiliasPanel() {
     loadCadastroPanel();
     if (!famSeriesOpts) {
@@ -9988,7 +10628,51 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>`).join('') : '<div style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</div>'}
         </div>
       </div>
+
+      <!-- Chart.js Enhanced Visualizations -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Tendencia de Solicitacoes</div>
+          <div style="height:200px;"><canvas id="chartSolicitacoes"></canvas></div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Gastos Almoxarifado</div>
+          <div style="height:200px;"><canvas id="chartAlmox"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Chamados de Manutencao (Tendencia)</div>
+        <div style="height:200px;"><canvas id="chartManutencao"></canvas></div>
+      </div>
+      <div id="riskScoreWidget" style="margin-top:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:700;">Alunos em Risco</div>
+          <button onclick="showPanel('alunos')" style="font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:inherit;">Ver todos →</button>
+        </div>
+        <div id="riskScoreWidgetContent"><div class="empty-state" style="padding:12px;">Carregando...</div></div>
+      </div>
     `;
+    api({ action: 'risk_scores_list', filtro: 'alto' }).then(function(rs) {
+      const el = document.getElementById('riskScoreWidgetContent');
+      if (!el) return;
+      const list = Array.isArray(rs) ? rs.slice(0, 5) : [];
+      if (!list.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhum aluno em alto risco. ✅</div>'; return; }
+      el.innerHTML = '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">' + list.length + (rs.length > list.length ? '+' : '') + ' aluno(s) em alto risco hoje</div>' +
+        list.map(function(r) {
+          const barW = Math.round(r.score);
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5;" onclick="showPanel(\'alunos\')" style="cursor:pointer;">' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(r.aluno_nome || r.aluno_email) + '</div>' +
+            '<div style="height:4px;background:#fef2f2;border-radius:2px;margin-top:4px;"><div style="height:4px;width:' + barW + '%;background:#ef4444;border-radius:2px;"></div></div>' +
+            '</div>' +
+            '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef2f2;color:#b91c1c;white-space:nowrap;">' + r.score + '/100</span>' +
+            '</div>';
+        }).join('');
+    }).catch(function() {
+      const el = document.getElementById('riskScoreWidgetContent');
+      if (el) el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Dados de risco não disponíveis.</div>';
+    });
+    if (typeof _renderAnalyticsCharts === 'function') _renderAnalyticsCharts(d);
     } catch(e) { el.innerHTML = '<div class="empty-state">Erro ao renderizar analytics: ' + e.message + '</div>'; }
   }
 
@@ -10040,7 +10724,18 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <span style="color:#2d7a3a;">Pago: <strong>${fmtR(d.mensalidades.pago)}</strong></span>
           <span style="color:#b07d00;">Pendente: <strong>${fmtR(d.mensalidades.pendente)}</strong></span>
         </div>
-      </div>` : ''}`;
+      </div>` : ''}
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px;">
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Receitas vs Despesas (Grafico)</div>
+          <div style="height:220px;"><canvas id="chartFinRecDesp"></canvas></div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Composicao</div>
+          <div style="height:220px;"><canvas id="chartFinDonut"></canvas></div>
+        </div>
+      </div>`;
+    if (typeof _renderFinCharts === 'function') _renderFinCharts(d);
   }
 
   async function loadFinLancamentos() {
@@ -11164,8 +11859,39 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadImpressoesGerente();
   }
   async function impMarcarImpresso(id) {
-    await api({ action: 'impressao_marcar_impresso', id });
-    showToast('Marcado como impresso!', 'success');
+    // Buscar turmas
+    let turmas = window._impTurmasCache || [];
+    if (!turmas.length) {
+      try {
+        const d = await api({ action: 'series_list_all' });
+        turmas = (Array.isArray(d) ? d : (d?.data || [])).filter(t => t.ativo !== false);
+        window._impTurmasCache = turmas;
+      } catch { turmas = []; }
+    }
+    const turmaDestino = await new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;';
+      overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:28px;max-width:380px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2);">
+        <h3 style="font-family:'Lora',serif;font-size:16px;margin-bottom:12px;">🖨️ Turma de destino</h3>
+        <select id="impTurmaSelGer" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;margin-bottom:16px;">
+          <option value="">— Selecione —</option>
+          ${turmas.map(t => '<option value="' + esc(t.nome) + '">' + esc(t.nome) + '</option>').join('')}
+        </select>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button onclick="this.closest('div[style]').parentElement.remove()" style="padding:8px 18px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button id="impConfirmGer" style="padding:8px 18px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Confirmar</button>
+        </div></div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (e) => { if(e.target===overlay) { overlay.remove(); resolve(null); }});
+      document.getElementById('impConfirmGer').onclick = () => {
+        const v = document.getElementById('impTurmaSelGer').value;
+        overlay.remove();
+        resolve(v || null);
+      };
+    });
+    if (!turmaDestino) return;
+    await api({ action: 'impressao_marcar_impresso', id, turma_destino: turmaDestino });
+    showToast('Marcado como impresso! Entregar para: ' + turmaDestino, 'success');
     loadImpressoesGerente();
   }
   async function impMarcarEntregue(id) {
@@ -11595,6 +12321,50 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       alert('Erro ao gerar PDF: ' + e.message);
     }
   }
+
+  async function almBaixarRelatorio(tipo) {
+    document.getElementById('almRelDropdown').classList.remove('show');
+    const mes = document.getElementById('almTodasMes')?.value || new Date().toISOString().slice(0, 7);
+    const token = getToken();
+    const payload = { _token: token, mes };
+    if (tipo === 'excel') {
+      payload.action = 'alm_excel_observacoes';
+    } else {
+      payload.action = 'alm_pdf_observacoes';
+      if (tipo === 'pdf-landscape') payload.landscape = true;
+    }
+    try {
+      const r = await fetch(DIPLOMAS_FN, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(()=>({error:'Falha'}));
+        alert('Erro: ' + (j.error || r.status));
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cd = r.headers.get('Content-Disposition') || '';
+      const m = /filename="([^"]+)"/.exec(cd);
+      a.download = m ? m[1] : ('relatorio-completo-' + mes + (tipo === 'excel' ? '.xlsx' : '.pdf'));
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    } catch (e) {
+      alert('Erro ao gerar relatório: ' + e.message);
+    }
+  }
+
+  // Close dropdown on click outside
+  document.addEventListener('click', function(e) {
+    const dd = document.getElementById('almRelDropdown');
+    if (dd && !e.target.closest('#almRelDropdown') && !e.target.closest('[onclick*="almRelDropdown"]')) {
+      dd.classList.remove('show');
+    }
+  });
 
   async function loadPesquisasPanel() {
     const d = await apiDiplomas({ action:'pesquisa_list' });
@@ -12357,6 +13127,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
 </script>
 <script src="/lumied-ux.js" defer></script>
+<script src="/lumied-a11y.js" defer></script>
+<script src="/lumied-delight.js" defer></script>
+<script src="/lumied-pro.js" defer></script>
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
 </body>

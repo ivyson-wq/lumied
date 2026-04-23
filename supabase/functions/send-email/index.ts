@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
   if (!RESEND_KEY) {
     // Se Resend não está configurado, loga e retorna sucesso silencioso
     console.log('[send-email] RESEND_API_KEY não configurada. E-mail não enviado:', email.subject)
-    return ok({ sent: false, reason: 'RESEND_API_KEY não configurada' })
+    return new Response(JSON.stringify({ sent: false, reason: 'RESEND_API_KEY não configurada' }), { status: 503, headers: CORS })
   }
 
   try {
@@ -137,18 +137,19 @@ Deno.serve(async (req) => {
         subject: email.subject,
         html: email.html,
       }),
+      signal: AbortSignal.timeout(8000),
     })
 
     if (!resp.ok) {
       const errBody = await resp.text()
       console.error('[send-email] Resend error:', resp.status, errBody)
-      return ok({ sent: false, reason: 'Resend retornou ' + resp.status })
+      return new Response(JSON.stringify({ sent: false, reason: 'Resend retornou ' + resp.status }), { status: 502, headers: CORS })
     }
 
     return ok({ sent: true })
   } catch (e) {
     console.error('[send-email] Fetch error:', e)
-    return ok({ sent: false, reason: 'Erro de conexão com Resend' })
+    return new Response(JSON.stringify({ sent: false, reason: 'Erro de conexão com Resend' }), { status: 502, headers: CORS })
   }
 
   } catch (error) {

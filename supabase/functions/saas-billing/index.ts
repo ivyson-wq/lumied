@@ -52,6 +52,7 @@ async function interToken(scope = "boleto-cobranca.read boleto-cobranca.write"):
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${relaySecret}` },
     body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() }),
+    signal: AbortSignal.timeout(15000),
   });
   const { status, body } = await res.json() as { status: number; body: string };
   if (status < 200 || status >= 300) throw new Error(`Inter OAuth falhou (${status}): ${body}`);
@@ -73,6 +74,7 @@ async function interCall(path: string, method = "GET", token: string, body?: unk
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${relaySecret}` },
     body: JSON.stringify({ path, method, headers, body: body ? JSON.stringify(body) : "" }),
+    signal: AbortSignal.timeout(15000),
   });
   const { status, body: resBody } = await res.json() as { status: number; body: string };
   const parsed = resBody ? (() => { try { return JSON.parse(resBody); } catch { return resBody; } })() : null;

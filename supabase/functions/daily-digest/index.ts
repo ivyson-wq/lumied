@@ -7,12 +7,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { successResponse, errorResponse, corsResponse } from "../_shared/errors.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { captureException } from "../_shared/sentry.ts";
 
 const log = createLogger("daily-digest");
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return corsResponse();
 
+  try {
   // Service role authentication check
   const authHeader = req.headers.get("authorization")?.replace("Bearer ", "");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -46,11 +48,11 @@ serve(async (req: Request) => {
     }
 
     // 2. Agrupar por aluno/família
-    const porFamilia: Record<string, { nome: string; itens: any[] }> = {};
+    const porFamilia: Record<string, { nome: string; itens: any[]; escola_id: string | null }> = {};
     for (const reg of registros) {
       const email = reg.aluno_email;
       if (!email) continue; // registro de turma inteira, não de aluno específico
-      if (!porFamilia[email]) porFamilia[email] = { nome: reg.aluno_nome || "seu filho", itens: [] };
+      if (!porFamilia[email]) porFamilia[email] = { nome: reg.aluno_nome || "seu filho", itens: [], escola_id: reg.escola_id || null };
       for (const item of reg.agenda_itens || []) {
         porFamilia[email].itens.push(item);
       }
@@ -114,6 +116,7 @@ serve(async (req: Request) => {
         corpo: htmlEmail,
         dados: { tipo: "daily_digest", aluno_nome: dados.nome, total_itens: dados.itens.length },
         lote_id: `digest_${hoje}`,
+        escola_id: dados.escola_id,
       });
 
       // 5. Também enfileirar push notification
@@ -125,6 +128,7 @@ serve(async (req: Request) => {
         corpo: `${dados.itens.length} atividades registradas hoje. Abra para ver!`,
         dados: { tipo: "daily_digest", url: "/familia.html" },
         lote_id: `digest_push_${hoje}`,
+        escola_id: dados.escola_id,
       });
 
       enviados++;
@@ -160,4 +164,10 @@ serve(async (req: Request) => {
   }
 
   return errorResponse("NOT_FOUND", "Action desconhecida: " + action);
+
+  } catch (error) {
+    console.error("[daily-digest] Unhandled error:", error);
+    captureException(error instanceof Error ? error : new Error(String(error)), { function: 'daily-digest' }).catch(() => {});
+    return new Response(JSON.stringify({ error: "Erro interno do servidor." }), { status: 500 });
+  }
 });

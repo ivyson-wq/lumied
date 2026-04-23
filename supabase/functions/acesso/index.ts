@@ -5,8 +5,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, authProfessora } from "../_shared/router.ts";
-import { successResponse, AppError } from "../_shared/errors.ts";
+import { Router, rateLimit, authGerente, authProfessora, successResponse, AppError, resolveEscolaId } from "../_shared/mod.ts";
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
@@ -24,20 +23,21 @@ const authGerenteOrSecretaria: import("../_shared/router.ts").Middleware = async
   // Try 1: gerente_sessoes → gerentes
   const { data: gs } = await ctx.sb
     .from("gerente_sessoes")
-    .select("*, gerentes(id, nome, email)")
+    .select("*, gerentes(id, nome, email, escola_id)")
     .eq("token", token)
     .single();
 
   if (gs && new Date(gs.expira_em) >= new Date()) {
     const user = (gs as Any).gerentes;
     ctx.user = { ...user, tipo: "gerente" };
+    if (user?.escola_id) ctx.escola_id = user.escola_id as string;
     return next();
   }
 
   // Try 2: sessoes → usuarios
   const { data: su } = await ctx.sb
     .from("sessoes")
-    .select("*, usuarios(id, nome, email, papeis)")
+    .select("*, usuarios(id, nome, email, papeis, escola_id)")
     .eq("token", token)
     .single();
 
@@ -47,6 +47,7 @@ const authGerenteOrSecretaria: import("../_shared/router.ts").Middleware = async
     const papeis: string[] = usuario?.papeis || [];
     if (papeis.some((p: string) => allowed.includes(p))) {
       ctx.user = { ...usuario, tipo: papeis[0] };
+      if (usuario?.escola_id) ctx.escola_id = usuario.escola_id as string;
       return next();
     }
   }
@@ -133,7 +134,7 @@ async function getDeviceSession(sb: Any, device: Any): Promise<string> {
   const data = await res.json();
   if (!data.session) throw new AppError("BAD_REQUEST", `Dispositivo ${device.nome} não retornou session token.`);
   // Save session
-  await sb.from("acesso_dispositivos").update({ api_session: data.session, ultimo_heartbeat: new Date().toISOString() }).eq("id", device.id);
+  await sb.from("acesso_dispositivos").update({ api_session: data.session, ultimo_heartbeat: new Date().toISOString() }).eq("id", device.id).eq("escola_id", device.escola_id);
   return data.session;
 }
 
@@ -165,33 +166,36 @@ router.on("acesso_dispositivos_list", authGerenteOrSecretaria, async (ctx) => {
 });
 
 router.on("acesso_dispositivo_save", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id, nome, ip, porta, tipo, localizacao, modelo } = ctx.body as Any;
   if (!nome || !ip || !tipo) throw new AppError("VALIDATION_FAILED", "nome, ip e tipo são obrigatórios.");
 
   const row = { nome, ip, porta: porta || 443, tipo, localizacao: localizacao || null, modelo: modelo || "iDFace" };
 
   if (id) {
-    const { data, error } = await ctx.sb.from("acesso_dispositivos").update(row).eq("id", id).select().single();
+    const { data, error } = await ctx.sb.from("acesso_dispositivos").update(row).eq("id", id).eq("escola_id", ctx.escola_id).select().single();
     if (error) throw new AppError("BAD_REQUEST", error.message);
     return successResponse(data);
   }
-  const { data, error } = await ctx.sb.from("acesso_dispositivos").insert(row).select().single();
+  const { data, error } = await ctx.sb.from("acesso_dispositivos").insert({ ...row, escola_id: ctx.escola_id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
 router.on("acesso_dispositivo_delete", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
-  await ctx.sb.from("acesso_dispositivos").update({ ativo: false }).eq("id", id);
+  await ctx.sb.from("acesso_dispositivos").update({ ativo: false }).eq("id", id).eq("escola_id", ctx.escola_id);
   return successResponse({ ok: true });
 });
 
 router.on("acesso_dispositivo_ping", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
 
-  const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).single();
+  const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).eq("escola_id", ctx.escola_id).single();
   if (!device) throw new AppError("NOT_FOUND", "Dispositivo não encontrado.");
 
   try {
@@ -203,10 +207,11 @@ router.on("acesso_dispositivo_ping", authGerente, async (ctx) => {
 });
 
 router.on("acesso_dispositivo_sync", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
 
-  const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).single();
+  const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).eq("escola_id", ctx.escola_id).single();
   if (!device) throw new AppError("NOT_FOUND", "Dispositivo não encontrado.");
 
   try {
@@ -222,6 +227,7 @@ router.on("acesso_dispositivo_sync", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { pessoa_tipo, pessoa_id, pessoa_nome, foto } = ctx.body as Any;
   if (!pessoa_tipo || !pessoa_id || !pessoa_nome) {
     throw new AppError("VALIDATION_FAILED", "pessoa_tipo, pessoa_id e pessoa_nome são obrigatórios.");
@@ -256,6 +262,7 @@ router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
   const { data: existing } = await ctx.sb
     .from("acesso_faces")
     .select("id")
+    .eq("escola_id", ctx.escola_id)
     .eq("pessoa_tipo", pessoa_tipo)
     .eq("pessoa_id", pessoa_id)
     .eq("ativo", true)
@@ -266,12 +273,12 @@ router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
     const { data, error } = await ctx.sb.from("acesso_faces").update({
       pessoa_nome, foto_url: fotoUrl, device_user_id: deviceUserId,
       sync_status: "pendente", sync_erro: null, atualizado_em: new Date().toISOString(),
-    }).eq("id", existing.id).select().single();
+    }).eq("id", existing.id).eq("escola_id", ctx.escola_id).select().single();
     if (error) throw new AppError("BAD_REQUEST", error.message);
     faceRecord = data;
   } else {
     const { data, error } = await ctx.sb.from("acesso_faces").insert({
-      pessoa_tipo, pessoa_id, pessoa_nome, foto_url: fotoUrl,
+      escola_id: ctx.escola_id, pessoa_tipo, pessoa_id, pessoa_nome, foto_url: fotoUrl,
       device_user_id: deviceUserId, sync_status: "pendente",
     }).select().single();
     if (error) throw new AppError("BAD_REQUEST", error.message);
@@ -279,7 +286,7 @@ router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
   }
 
   // Sync to all active devices
-  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
   const syncResults: Any[] = [];
 
   for (const dev of devices ?? []) {
@@ -320,29 +327,54 @@ router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
     sync_status: allOk ? "sincronizado" : anyErr ? "erro" : "pendente",
     sync_erro: anyErr ? syncResults.filter((r) => !r.ok).map((r) => `${r.device}: ${r.error}`).join("; ") : null,
     atualizado_em: new Date().toISOString(),
-  }).eq("id", faceRecord.id);
+  }).eq("id", faceRecord.id).eq("escola_id", ctx.escola_id);
 
   return successResponse({ face: faceRecord, sync: syncResults });
 });
 
+// Search for a person (aluno/professora/funcionario) by name — used for face/RFID registration
+router.on("acesso_buscar_pessoa", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { tipo, busca } = ctx.body as Any;
+  if (!busca || String(busca).length < 2) return successResponse([]);
+  const term = `%${String(busca).trim()}%`;
+  let data: Any[] = [];
+  if (tipo === 'aluno' || !tipo) {
+    const { data: alunos } = await ctx.sb.from("familias").select("id, nome_aluno, email").eq("escola_id", ctx.escola_id).ilike("nome_aluno", term).limit(10);
+    data = data.concat((alunos ?? []).map((a: Any) => ({ id: a.id, nome: a.nome_aluno, email: a.email, tipo: 'aluno' })));
+  }
+  if (tipo === 'professora' || !tipo) {
+    const { data: profs } = await ctx.sb.from("professoras").select("id, nome, email").eq("escola_id", ctx.escola_id).ilike("nome", term).limit(10);
+    data = data.concat((profs ?? []).map((p: Any) => ({ ...p, tipo: 'professora' })));
+  }
+  if (tipo === 'funcionario' || !tipo) {
+    const { data: funcs } = await ctx.sb.from("usuarios").select("id, nome, email").eq("escola_id", ctx.escola_id).ilike("nome", term).limit(10);
+    data = data.concat((funcs ?? []).map((f: Any) => ({ ...f, tipo: 'funcionario' })));
+  }
+  return successResponse(data);
+});
+
 router.on("acesso_faces_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { pessoa_tipo } = ctx.body as Any;
-  let q = ctx.sb.from("acesso_faces").select("*").eq("ativo", true).order("criado_em", { ascending: false });
+  let q = ctx.sb.from("acesso_faces").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true).order("criado_em", { ascending: false });
   if (pessoa_tipo) q = q.eq("pessoa_tipo", pessoa_tipo);
   const { data } = await q;
   return successResponse(data ?? []);
 });
 
 router.on("acesso_face_delete", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
-  await ctx.sb.from("acesso_faces").update({ ativo: false, atualizado_em: new Date().toISOString() }).eq("id", id);
+  await ctx.sb.from("acesso_faces").update({ ativo: false, atualizado_em: new Date().toISOString() }).eq("id", id).eq("escola_id", ctx.escola_id);
   return successResponse({ ok: true });
 });
 
 router.on("acesso_face_sync_all", authGerente, async (ctx) => {
-  const { data: faces } = await ctx.sb.from("acesso_faces").select("*").eq("ativo", true);
-  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data: faces } = await ctx.sb.from("acesso_faces").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
 
   if (!faces?.length) return successResponse({ synced: 0, message: "Nenhuma face cadastrada." });
   if (!devices?.length) return successResponse({ synced: 0, message: "Nenhum dispositivo ativo." });
@@ -378,11 +410,11 @@ router.on("acesso_face_sync_all", authGerente, async (ctx) => {
 
           await ctx.sb.from("acesso_faces").update({
             sync_status: "sincronizado", sync_erro: null, atualizado_em: new Date().toISOString(),
-          }).eq("id", face.id);
+          }).eq("id", face.id).eq("escola_id", ctx.escola_id);
         } catch (err) {
           await ctx.sb.from("acesso_faces").update({
             sync_status: "erro", sync_erro: `${dev.nome}: ${String(err)}`, atualizado_em: new Date().toISOString(),
-          }).eq("id", face.id);
+          }).eq("id", face.id).eq("escola_id", ctx.escola_id);
         }
       }
 
@@ -400,18 +432,19 @@ router.on("acesso_face_sync_all", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_rfid_cadastrar", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { card_uid, pessoa_tipo, pessoa_id, pessoa_nome } = ctx.body as Any;
   if (!card_uid || !pessoa_tipo || !pessoa_id || !pessoa_nome) {
     throw new AppError("VALIDATION_FAILED", "card_uid, pessoa_tipo, pessoa_id e pessoa_nome são obrigatórios.");
   }
 
   const { data, error } = await ctx.sb.from("acesso_rfid").insert({
-    card_uid, pessoa_tipo, pessoa_id, pessoa_nome,
+    escola_id: ctx.escola_id, card_uid, pessoa_tipo, pessoa_id, pessoa_nome,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.code === "23505" ? "Cartão já cadastrado." : error.message);
 
   // Sync card to all active devices
-  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
   const deviceUserId = uuidToDeviceId(pessoa_id);
   for (const dev of devices ?? []) {
     try {
@@ -430,14 +463,16 @@ router.on("acesso_rfid_cadastrar", authGerente, async (ctx) => {
 });
 
 router.on("acesso_rfid_list", authGerenteOrSecretaria, async (ctx) => {
-  const { data } = await ctx.sb.from("acesso_rfid").select("*").eq("ativo", true).order("criado_em", { ascending: false });
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("acesso_rfid").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true).order("criado_em", { ascending: false });
   return successResponse(data ?? []);
 });
 
 router.on("acesso_rfid_delete", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
-  await ctx.sb.from("acesso_rfid").update({ ativo: false }).eq("id", id);
+  await ctx.sb.from("acesso_rfid").update({ ativo: false }).eq("id", id).eq("escola_id", ctx.escola_id);
   return successResponse({ ok: true });
 });
 
@@ -446,14 +481,16 @@ router.on("acesso_rfid_delete", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_permissoes_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { aluno_id } = ctx.body as Any;
-  let q = ctx.sb.from("acesso_permissoes_retirada").select("*").eq("autorizado", true).order("criado_em", { ascending: false });
+  let q = ctx.sb.from("acesso_permissoes_retirada").select("*").eq("escola_id", ctx.escola_id).eq("autorizado", true).order("criado_em", { ascending: false });
   if (aluno_id) q = q.eq("aluno_id", aluno_id);
   const { data } = await q;
   return successResponse(data ?? []);
 });
 
 router.on("acesso_permissao_save", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id, aluno_id, aluno_nome, responsavel_id, responsavel_nome, responsavel_email, responsavel_foto_url, parentesco, validade } = ctx.body as Any;
   if (!aluno_id || !aluno_nome || !responsavel_nome) {
     throw new AppError("VALIDATION_FAILED", "aluno_id, aluno_nome e responsavel_nome são obrigatórios.");
@@ -470,19 +507,20 @@ router.on("acesso_permissao_save", authGerente, async (ctx) => {
   };
 
   if (id) {
-    const { data, error } = await ctx.sb.from("acesso_permissoes_retirada").update(row).eq("id", id).select().single();
+    const { data, error } = await ctx.sb.from("acesso_permissoes_retirada").update(row).eq("id", id).eq("escola_id", ctx.escola_id).select().single();
     if (error) throw new AppError("BAD_REQUEST", error.message);
     return successResponse(data);
   }
-  const { data, error } = await ctx.sb.from("acesso_permissoes_retirada").insert(row).select().single();
+  const { data, error } = await ctx.sb.from("acesso_permissoes_retirada").insert({ ...row, escola_id: ctx.escola_id }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
 });
 
 router.on("acesso_permissao_delete", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
-  await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
+  await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id).eq("escola_id", ctx.escola_id);
   return successResponse({ ok: true });
 });
 
@@ -553,10 +591,18 @@ router.on("acesso_evento_callback", async (ctx) => {
     }
   }
 
+  // Derive escola_id from the registered device
+  const eventoEscolaId = dispositivo.escola_id;
+  if (!eventoEscolaId) {
+    console.warn(`[acesso_evento_callback] Dispositivo ${dispositivo.id} sem escola_id.`);
+    throw new AppError("BAD_REQUEST", "Dispositivo sem escola associada.");
+  }
+
   // Unknown person
   if (!pessoa) {
     // Create event for unknown person
     const { data: evento } = await ctx.sb.from("acesso_eventos").insert({
+      escola_id: eventoEscolaId,
       dispositivo_id: dispositivo?.id || null,
       pessoa_tipo: "desconhecido",
       pessoa_id: "00000000-0000-0000-0000-000000000000",
@@ -572,6 +618,7 @@ router.on("acesso_evento_callback", async (ctx) => {
     const alertaDesconhecido = await getConfig(ctx.sb, "alerta_desconhecido");
     if (alertaDesconhecido !== "false") {
       await ctx.sb.from("acesso_alertas").insert({
+        escola_id: eventoEscolaId,
         evento_id: evento?.id,
         tipo: "desconhecido",
         pessoa_nome: "Pessoa não identificada",
@@ -586,6 +633,7 @@ router.on("acesso_evento_callback", async (ctx) => {
   // Create event
   const metodo = method === "card" ? "rfid" : "face";
   const { data: evento } = await ctx.sb.from("acesso_eventos").insert({
+    escola_id: eventoEscolaId,
     dispositivo_id: dispositivo?.id || null,
     pessoa_tipo: pessoa.tipo,
     pessoa_id: pessoa.id,
@@ -605,22 +653,23 @@ router.on("acesso_evento_callback", async (ctx) => {
     if (direcao === "entrada") {
       // Upsert presence (entrada)
       const { data: existing } = await ctx.sb.from("acesso_presenca")
-        .select("id").eq("aluno_id", pessoa.id).eq("data", hoje).maybeSingle();
+        .select("id").eq("escola_id", eventoEscolaId).eq("aluno_id", pessoa.id).eq("data", hoje).maybeSingle();
 
       if (existing) {
         await ctx.sb.from("acesso_presenca").update({
           hora_entrada: agora, entrada_metodo: metodo, entrada_evento_id: evento?.id, status: "presente",
-        }).eq("id", existing.id);
+        }).eq("id", existing.id).eq("escola_id", eventoEscolaId);
       } else {
         // Get aluno_nome
         await ctx.sb.from("acesso_presenca").insert({
-          aluno_id: pessoa.id, aluno_nome: pessoa.nome, data: hoje,
+          escola_id: eventoEscolaId, aluno_id: pessoa.id, aluno_nome: pessoa.nome, data: hoje,
           hora_entrada: agora, entrada_metodo: metodo, entrada_evento_id: evento?.id, status: "presente",
         });
       }
 
       // Alert: aluno entered
       await ctx.sb.from("acesso_alertas").insert({
+        escola_id: eventoEscolaId,
         evento_id: evento?.id,
         tipo: "entrada_aluno",
         pessoa_nome: pessoa.nome,
@@ -632,21 +681,22 @@ router.on("acesso_evento_callback", async (ctx) => {
     } else {
       // Saida
       const { data: existing } = await ctx.sb.from("acesso_presenca")
-        .select("id").eq("aluno_id", pessoa.id).eq("data", hoje).maybeSingle();
+        .select("id").eq("escola_id", eventoEscolaId).eq("aluno_id", pessoa.id).eq("data", hoje).maybeSingle();
 
       if (existing) {
         await ctx.sb.from("acesso_presenca").update({
           hora_saida: agora, saida_metodo: metodo, saida_evento_id: evento?.id, status: "saiu",
-        }).eq("id", existing.id);
+        }).eq("id", existing.id).eq("escola_id", eventoEscolaId);
       } else {
         await ctx.sb.from("acesso_presenca").insert({
-          aluno_id: pessoa.id, aluno_nome: pessoa.nome, data: hoje,
+          escola_id: eventoEscolaId, aluno_id: pessoa.id, aluno_nome: pessoa.nome, data: hoje,
           hora_saida: agora, saida_metodo: metodo, saida_evento_id: evento?.id, status: "saiu",
         });
       }
 
       // Alert: aluno leaving
       await ctx.sb.from("acesso_alertas").insert({
+        escola_id: eventoEscolaId,
         evento_id: evento?.id,
         tipo: "saida_aluno",
         pessoa_nome: pessoa.nome,
@@ -674,6 +724,7 @@ router.on("acesso_evento_callback", async (ctx) => {
       const alertaNaoAut = await getConfig(ctx.sb, "alerta_nao_autorizado");
       if (alertaNaoAut !== "false") {
         await ctx.sb.from("acesso_alertas").insert({
+          escola_id: eventoEscolaId,
           evento_id: evento?.id,
           tipo: "nao_autorizado",
           pessoa_nome: pessoa.nome,
@@ -705,6 +756,7 @@ router.on("acesso_evento_callback", async (ctx) => {
 
         // Alert for reception
         await ctx.sb.from("acesso_alertas").insert({
+          escola_id: eventoEscolaId,
           evento_id: evento?.id,
           tipo: "chegada_responsavel",
           pessoa_nome: pessoa.nome,
@@ -717,6 +769,7 @@ router.on("acesso_evento_callback", async (ctx) => {
         // Alert for professora (if found)
         if (professoraId) {
           await ctx.sb.from("acesso_alertas").insert({
+            escola_id: eventoEscolaId,
             evento_id: evento?.id,
             tipo: "chegada_responsavel",
             pessoa_nome: pessoa.nome,
@@ -798,11 +851,12 @@ router.on("acesso_alertas_list", authGerenteOrSecretaria, async (ctx) => {
 });
 
 router.on("acesso_alerta_marcar_lido", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id, ids } = ctx.body as Any;
   if (ids && Array.isArray(ids)) {
-    await ctx.sb.from("acesso_alertas").update({ lido: true }).in("id", ids);
+    await ctx.sb.from("acesso_alertas").update({ lido: true }).in("id", ids).eq("escola_id", ctx.escola_id);
   } else if (id) {
-    await ctx.sb.from("acesso_alertas").update({ lido: true }).eq("id", id);
+    await ctx.sb.from("acesso_alertas").update({ lido: true }).eq("id", id).eq("escola_id", ctx.escola_id);
   } else {
     throw new AppError("VALIDATION_FAILED", "id ou ids obrigatório.");
   }
@@ -810,35 +864,36 @@ router.on("acesso_alerta_marcar_lido", authGerenteOrSecretaria, async (ctx) => {
 });
 
 router.on("acesso_dashboard", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const hoje = new Date().toISOString().split("T")[0];
 
   // Alunos presentes hoje
   const { data: presentes } = await ctx.sb.from("acesso_presenca")
-    .select("id", { count: "exact" }).eq("data", hoje).eq("status", "presente");
+    .select("id", { count: "exact" }).eq("escola_id", ctx.escola_id).eq("data", hoje).eq("status", "presente");
 
   // Alunos que saíram
   const { data: sairam } = await ctx.sb.from("acesso_presenca")
-    .select("id", { count: "exact" }).eq("data", hoje).eq("status", "saiu");
+    .select("id", { count: "exact" }).eq("escola_id", ctx.escola_id).eq("data", hoje).eq("status", "saiu");
 
   // Total alunos ativos
   const { count: totalAlunos } = await ctx.sb.from("alunos")
-    .select("id", { count: "exact", head: true }).eq("ativo", true);
+    .select("id", { count: "exact", head: true }).eq("escola_id", ctx.escola_id).eq("ativo", true);
 
   // Alertas não lidos
   const { count: alertasNaoLidos } = await ctx.sb.from("acesso_alertas")
-    .select("id", { count: "exact", head: true }).eq("lido", false);
+    .select("id", { count: "exact", head: true }).eq("escola_id", ctx.escola_id).eq("lido", false);
 
   // Eventos hoje
   const { count: eventosHoje } = await ctx.sb.from("acesso_eventos")
-    .select("id", { count: "exact", head: true }).gte("criado_em", `${hoje}T00:00:00`);
+    .select("id", { count: "exact", head: true }).eq("escola_id", ctx.escola_id).gte("criado_em", `${hoje}T00:00:00`);
 
   // Devices online (heartbeat within last 2 minutes)
   const twoMinAgo = new Date(Date.now() - 120000).toISOString();
   const { count: devicesOnline } = await ctx.sb.from("acesso_dispositivos")
-    .select("id", { count: "exact", head: true }).eq("ativo", true).gte("ultimo_heartbeat", twoMinAgo);
+    .select("id", { count: "exact", head: true }).eq("escola_id", ctx.escola_id).eq("ativo", true).gte("ultimo_heartbeat", twoMinAgo);
 
   const { count: devicesTotal } = await ctx.sb.from("acesso_dispositivos")
-    .select("id", { count: "exact", head: true }).eq("ativo", true);
+    .select("id", { count: "exact", head: true }).eq("escola_id", ctx.escola_id).eq("ativo", true);
 
   return successResponse({
     presentes: presentes?.length ?? 0,
@@ -857,17 +912,19 @@ router.on("acesso_dashboard", authGerenteOrSecretaria, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_config_list", authGerenteOrSecretaria, async (ctx) => {
-  const { data } = await ctx.sb.from("acesso_config").select("*").order("chave");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("acesso_config").select("*").eq("escola_id", ctx.escola_id).order("chave");
   return successResponse(data ?? []);
 });
 
 router.on("acesso_config_save", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { chave, valor, descricao } = ctx.body as Any;
   if (!chave || valor === undefined) throw new AppError("VALIDATION_FAILED", "chave e valor são obrigatórios.");
 
   const { data, error } = await ctx.sb.from("acesso_config").upsert(
-    { chave, valor: String(valor), descricao: descricao || null },
-    { onConflict: "chave" }
+    { escola_id: ctx.escola_id, chave, valor: String(valor), descricao: descricao || null },
+    { onConflict: "escola_id,chave" }
   ).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
@@ -880,9 +937,11 @@ router.on("acesso_config_save", authGerente, async (ctx) => {
 router.on("acesso_alertas_professora", authProfessora, async (ctx) => {
   const professoraId = ctx.user?.id;
   if (!professoraId) throw new AppError("AUTH_REQUIRED", "Professora ID não encontrado.");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
 
   const { data } = await ctx.sb.from("acesso_alertas")
     .select("*")
+    .eq("escola_id", ctx.escola_id)
     .eq("destinatario_tipo", "professora")
     .eq("destinatario_id", professoraId)
     .eq("lido", false)
@@ -895,16 +954,17 @@ router.on("acesso_alertas_professora", authProfessora, async (ctx) => {
 router.on("acesso_presenca_turma", authProfessora, async (ctx) => {
   const professoraId = ctx.user?.id;
   if (!professoraId) throw new AppError("AUTH_REQUIRED", "Professora ID não encontrado.");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
 
   // Get professora's serie_id
   const { data: prof } = await ctx.sb.from("professoras")
-    .select("serie_id").eq("id", professoraId).single();
+    .select("serie_id").eq("id", professoraId).eq("escola_id", ctx.escola_id).single();
 
   if (!prof?.serie_id) return successResponse([]);
 
   // Get alunos from that serie
   const { data: alunos } = await ctx.sb.from("alunos")
-    .select("id, nome").eq("serie_id", prof.serie_id).eq("ativo", true);
+    .select("id, nome").eq("escola_id", ctx.escola_id).eq("serie_id", prof.serie_id).eq("ativo", true);
 
   if (!alunos?.length) return successResponse([]);
 
@@ -912,7 +972,7 @@ router.on("acesso_presenca_turma", authProfessora, async (ctx) => {
   const alunoIds = alunos.map((a: Any) => a.id);
 
   const { data: presenca } = await ctx.sb.from("acesso_presenca")
-    .select("*").eq("data", hoje).in("aluno_id", alunoIds);
+    .select("*").eq("escola_id", ctx.escola_id).eq("data", hoje).in("aluno_id", alunoIds);
 
   // Merge: for each aluno, attach their presence status
   const presMap = new Map((presenca ?? []).map((p: Any) => [p.aluno_id, p]));
@@ -1015,9 +1075,13 @@ router.on("acesso_adicionar_autorizado", async (ctx) => {
     fotoUrl = urlData?.publicUrl || null;
   }
 
+  // Resolve escola_id from request origin
+  const paiEscolaId = await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body);
+  if (!paiEscolaId) throw new AppError("BAD_REQUEST", "Não foi possível determinar a escola.");
+
   // Criar permissão de retirada
   const { error: permErr } = await ctx.sb.from("acesso_permissoes_retirada").insert({
-    aluno_id, aluno_nome: aluno_nome || "", responsavel_id: familia.id,
+    escola_id: paiEscolaId, aluno_id, aluno_nome: aluno_nome || "", responsavel_id: familia.id,
     responsavel_nome, responsavel_email: email_responsavel,
     responsavel_foto_url: fotoUrl, parentesco, validade: validade || null,
     autorizado: true, autorizado_por: "auto (portal pais)",
@@ -1028,7 +1092,7 @@ router.on("acesso_adicionar_autorizado", async (ctx) => {
   const pessoaId = crypto.randomUUID();
   const deviceUserId = uuidToDeviceId(pessoaId);
   await ctx.sb.from("acesso_faces").insert({
-    pessoa_tipo: "responsavel", pessoa_id: pessoaId,
+    escola_id: paiEscolaId, pessoa_tipo: "responsavel", pessoa_id: pessoaId,
     pessoa_nome: responsavel_nome, foto_url: fotoUrl,
     device_user_id: deviceUserId, sync_status: "aguardando_aprovacao",
   });
@@ -1061,7 +1125,13 @@ router.on("acesso_cancelar_autorizado", async (ctx) => {
     throw new AppError("FORBIDDEN", "Você não tem permissão para cancelar esta autorização.");
   }
 
-  await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
+  // Resolve escola_id for tenant scoping on the update
+  const cancelEscolaId = await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body);
+  if (cancelEscolaId) {
+    await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id).eq("escola_id", cancelEscolaId);
+  } else {
+    await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
+  }
   return successResponse({ ok: true });
 });
 
@@ -1161,6 +1231,10 @@ router.on("acesso_face_cadastro_publico", async (ctx) => {
 
   const deviceUserId = uuidToDeviceId(tk.pessoa_id);
 
+  // Resolve escola_id from token record or request origin
+  const publicEscolaId = tk.escola_id || await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body);
+  if (!publicEscolaId) throw new AppError("BAD_REQUEST", "Não foi possível determinar a escola.");
+
   // Criar/atualizar face com status 'aguardando_aprovacao'
   const { data: existing } = await ctx.sb
     .from("acesso_faces")
@@ -1179,6 +1253,7 @@ router.on("acesso_face_cadastro_publico", async (ctx) => {
     }).eq("id", existing.id);
   } else {
     await ctx.sb.from("acesso_faces").insert({
+      escola_id: publicEscolaId,
       pessoa_tipo: tk.pessoa_tipo,
       pessoa_id: tk.pessoa_id,
       pessoa_nome: pessoa_nome || tk.pessoa_nome,
@@ -1199,6 +1274,7 @@ router.on("acesso_face_cadastro_publico", async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_gerar_link_cadastro", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { pessoa_tipo, pessoa_id, pessoa_nome, email } = ctx.body as Any;
   if (!pessoa_tipo || !pessoa_id || !pessoa_nome) {
     throw new AppError("VALIDATION_FAILED", "pessoa_tipo, pessoa_id e pessoa_nome são obrigatórios.");
@@ -1209,6 +1285,7 @@ router.on("acesso_gerar_link_cadastro", authGerente, async (ctx) => {
     .map(b => b.toString(16).padStart(2, "0")).join("");
 
   const { data, error } = await ctx.sb.from("acesso_cadastro_tokens").insert({
+    escola_id: ctx.escola_id,
     token,
     pessoa_tipo,
     pessoa_id,
@@ -1230,23 +1307,24 @@ router.on("acesso_gerar_link_cadastro", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_face_aprovar", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { id } = ctx.body as Any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
 
-  const { data: face } = await ctx.sb.from("acesso_faces").select("*").eq("id", id).single();
+  const { data: face } = await ctx.sb.from("acesso_faces").select("*").eq("id", id).eq("escola_id", ctx.escola_id).single();
   if (!face) throw new AppError("NOT_FOUND", "Face não encontrada.");
 
   // Baixar foto do storage para sincronizar
   let fotoBinary: Uint8Array | null = null;
   if (face.foto_url) {
     try {
-      const res = await fetch(face.foto_url);
+      const res = await fetch(face.foto_url, { signal: AbortSignal.timeout(10000) });
       if (res.ok) fotoBinary = new Uint8Array(await res.arrayBuffer());
-    } catch (_) {}
+    } catch (e) { console.warn('[acesso] Face photo download failed:', (e as Error).message) }
   }
 
   // Sincronizar com todos os dispositivos
-  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
   const syncResults: Any[] = [];
 
   for (const dev of devices ?? []) {
@@ -1274,7 +1352,7 @@ router.on("acesso_face_aprovar", authGerente, async (ctx) => {
     sync_status: allOk ? "sincronizado" : "erro",
     sync_erro: allOk ? null : syncResults.filter(r => !r.ok).map(r => `${r.device}: ${r.error}`).join("; "),
     atualizado_em: new Date().toISOString(),
-  }).eq("id", id);
+  }).eq("id", id).eq("escola_id", ctx.escola_id);
 
   return successResponse({ aprovado: true, sync: syncResults });
 });

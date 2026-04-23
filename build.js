@@ -5,6 +5,9 @@ const entryPoints = [
   'src/portals/gerente/index.js',
   'src/portals/pais/index.js',
   'src/portals/professora/index.js',
+  'src/portals/secretaria/index.js',
+  'src/portals/admin/index.js',
+  'src/portals/aluno/index.js',
 ];
 
 async function build() {

@@ -1,42 +1,36 @@
 /**
- * Portal dos Pais — Main Entry Point (ES Module)
+ * Portal dos Pais — Main Entry Point
  */
-import { createClient } from '../../shared/api-client.js';
-import { appStore } from '../../shared/state.js';
+import { initPortal, loadModulos } from '../../shared/portal-init.js';
+import { initRealtime, subscribePickup } from '../../shared/realtime.js';
 import { showToast } from '../../shared/components/toast.js';
-import { initSentry, setSentryUser } from '../../shared/sentry.js';
 
-initSentry();
+const { api } = initPortal({ tokenKey: 'mb_pais_token' });
 
-const SUPABASE_ANON = window.__SUPABASE_ANON || '';
+window.__loadModulosHabilitadosPais = () => loadModulos(api, 'api');
 
-const api = createClient(SUPABASE_ANON, {
-  tokenKey: 'mb_pais_token',
-  onAuthError: () => {
-    showToast('Sessão expirada.', 'error');
-    appStore.set('user', null);
-  },
-});
+// --- Realtime: pickup notifications ---
+const anonKey = window.__SUPABASE_ANON
+  || document.querySelector('meta[name="sb-anon"]')?.content
+  || '';
 
-async function loadModulosHabilitadosPais() {
-  try {
-    const d = await api.api({ action: 'modulos_habilitados' });
-    if (d?.modulos) {
-      appStore.set('modulos', new Set(d.modulos));
-      document.querySelectorAll('[data-modulo]').forEach(el => {
-        el.style.display = appStore.get('modulos').has(el.dataset.modulo) ? '' : 'none';
+if (anonKey) {
+  initRealtime(anonKey);
+
+  const escolaId = window.__store.get('escola_id');
+  if (escolaId) {
+    subscribePickup(escolaId, (notif) => {
+      showToast(notif.mensagem || 'Notificacao de retirada recebida', 'info', 5000);
+    });
+  } else {
+    const unsub = window.__store.subscribe('escola_id', (id) => {
+      if (!id) return;
+      unsub();
+      subscribePickup(id, (notif) => {
+        showToast(notif.mensagem || 'Notificacao de retirada recebida', 'info', 5000);
       });
-    }
-  } catch {}
+    });
+  }
 }
-
-// Update Sentry user context when user changes
-appStore.subscribe('user', (user) => setSentryUser(user, appStore.get('escola_id')));
-appStore.subscribe('escola_id', (id) => setSentryUser(appStore.get('user'), id));
-
-window.__api = api;
-window.__store = appStore;
-window.__toast = showToast;
-window.__loadModulosHabilitadosPais = loadModulosHabilitadosPais;
 
 console.log('[Lumied] Pais module loaded.');

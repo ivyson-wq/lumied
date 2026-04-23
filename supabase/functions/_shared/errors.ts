@@ -24,15 +24,6 @@ export function runWithCors<T>(req: Request, fn: () => T | Promise<T>): Promise<
   return Promise.resolve(corsStorage.run(getCorsHeaders(req), fn));
 }
 
-/**
- * @deprecated Legacy no-op kept for backwards compatibility. The CORS headers
- * are now managed per-request via runWithCors(). Call sites inside a request
- * handler wrapped by withErrorHandler() or router.handle() don't need to do
- * anything — the context is already set up.
- */
-export function setRequestForCors(_req: Request): void {
-  // no-op: headers are now managed by AsyncLocalStorage
-}
 
 export type ErrorCode =
   | 'VALIDATION_FAILED'

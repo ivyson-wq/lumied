@@ -9,6 +9,7 @@ import { checkRateLimit, checkRateLimitDb, getClientIP, RateLimitConfig } from "
 import { validate, sanitizeBody, Schema } from "./validation.ts";
 import { createLogger } from "./logger.ts";
 import { getModulosHabilitados, getEscolaPadrao } from "./modulos.ts";
+import { captureException } from "./sentry.ts";
 
 export type Context = {
   req: Request;
@@ -97,6 +98,11 @@ export class Router {
       return response;
     } catch (error) {
       this.logger.apiError(action, error, { user_id: ctx.user?.id });
+      if (!(error instanceof AppError)) {
+        captureException(error instanceof Error ? error : new Error(String(error)), {
+          function: this.functionName, action, user_id: ctx.user?.id, escola_id: ctx.escola_id,
+        }).catch(() => {});
+      }
       if (error instanceof AppError) {
         return errorResponse(error.code, error.message, error.details);
       }
@@ -279,6 +285,122 @@ export function validateInput(schema: Schema): Middleware {
       return errorResponse("VALIDATION_FAILED", errors[0].message, { errors });
     }
     return next();
+  };
+}
+
+/**
+ * Auth middleware that accepts professora OR gerente/unified sessions.
+ * Tries _prof_token first, falls back to _token (gerente/unified).
+ * Populates ctx.user with tipo = "professora" | "gerente".
+ */
+export function authProfOrGerente(
+  allowedPapeis: string[] = ["gerente", "diretor", "financeiro", "secretaria"],
+): Middleware {
+  return async (ctx, next) => {
+    // 1. Try _prof_token → professora_sessoes → unified (professora role)
+    const profToken = (ctx.body._prof_token as string) || null;
+    if (profToken) {
+      // Legacy professora_sessoes
+      const { data: ps } = await ctx.sb
+        .from("professora_sessoes")
+        .select("*, professoras(id, nome, email, escola_id, serie_id)")
+        .eq("token", profToken)
+        .maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const p = ps as any;
+      if (p && new Date(p.expira_em) >= new Date() && p.professoras) {
+        ctx.user = { ...p.professoras, tipo: "professora" };
+        if (p.professoras.escola_id) ctx.escola_id = p.professoras.escola_id;
+        return next();
+      }
+      // Unified session check for prof token
+      const { data: us } = await ctx.sb
+        .from("sessoes").select("*, usuarios(id, nome, email, papeis, papel, escola_id)")
+        .eq("token", profToken).maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const u = us as any;
+      if (u && new Date(u.expira_em) >= new Date() && u.usuarios) {
+        const papeis: string[] = u.usuarios.papeis?.length ? u.usuarios.papeis : (u.usuarios.papel ? [u.usuarios.papel] : []);
+        if (papeis.includes("professora") || papeis.includes("professora_assistente")) {
+          ctx.user = { ...u.usuarios, tipo: "professora" };
+          if (u.usuarios.escola_id) ctx.escola_id = u.usuarios.escola_id;
+          return next();
+        }
+      }
+    }
+
+    // 2. Try _token → gerente_sessoes → unified (gerente/diretor/etc)
+    const token = (ctx.body._token as string) || null;
+    if (token) {
+      const { data: gs } = await ctx.sb
+        .from("gerente_sessoes")
+        .select("*, gerentes(id, nome, email, escola_id)")
+        .eq("token", token)
+        .maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const g = gs as any;
+      if (g && new Date(g.expira_em) >= new Date() && g.gerentes) {
+        ctx.user = { ...g.gerentes, tipo: "gerente" };
+        if (g.gerentes.escola_id) ctx.escola_id = g.gerentes.escola_id;
+        return next();
+      }
+      // Unified session
+      const { data: us } = await ctx.sb
+        .from("sessoes").select("*, usuarios(id, nome, email, papeis, papel, escola_id)")
+        .eq("token", token).maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const u = us as any;
+      if (u && new Date(u.expira_em) >= new Date() && u.usuarios) {
+        const papeis: string[] = u.usuarios.papeis?.length ? u.usuarios.papeis : (u.usuarios.papel ? [u.usuarios.papel] : []);
+        if (papeis.some((p: string) => allowedPapeis.includes(p))) {
+          ctx.user = { ...u.usuarios, tipo: papeis[0] };
+          if (u.usuarios.escola_id) ctx.escola_id = u.usuarios.escola_id;
+          return next();
+        }
+      }
+    }
+
+    throw new AppError("AUTH_INVALID", "Sessão inválida.");
+  };
+}
+
+/**
+ * Auth middleware for aluno portal.
+ * Accepts _aluno_token (aluno_sessoes) or _token/_prof_token fallback to Supabase Auth JWT.
+ */
+export function authAluno(): Middleware {
+  return async (ctx, next) => {
+    const alunoToken = (ctx.body._aluno_token as string) || (ctx.body._token as string) || null;
+    if (!alunoToken) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
+
+    // 1. Try aluno_sessoes
+    const { data: sessao } = await ctx.sb
+      .from("aluno_sessoes").select("aluno_id, expira_em")
+      .eq("token", alunoToken).maybeSingle();
+    // deno-lint-ignore no-explicit-any
+    const s = sessao as any;
+    if (s && new Date(s.expira_em) >= new Date()) {
+      const { data: aluno } = await ctx.sb
+        .from("alunos_login").select("id, email, aluno_nome, serie")
+        .eq("id", s.aluno_id).maybeSingle();
+      if (aluno) {
+        // deno-lint-ignore no-explicit-any
+        const a = aluno as any;
+        ctx.user = { id: a.id, nome: a.aluno_nome, email: a.email, tipo: "aluno" };
+        return next();
+      }
+    }
+
+    // 2. Try Supabase Auth JWT
+    try {
+      const { data: { user } } = await ctx.sb.auth.getUser(alunoToken);
+      if (user?.email) {
+        ctx.user = { id: user.id, nome: (user.user_metadata as Record<string, string>)?.full_name || user.email, email: user.email.toLowerCase().trim(), tipo: "aluno" };
+        return next();
+      }
+    } catch { /* JWT invalid — fall through */ }
+
+    throw new AppError("AUTH_INVALID", "Sessão de aluno inválida.");
   };
 }
 
