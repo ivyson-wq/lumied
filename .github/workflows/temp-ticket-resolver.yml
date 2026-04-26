@@ -16,7 +16,12 @@ jobs:
       SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: support/auto-tickets-20260426
+
       - name: Process tickets
+        id: process
         run: |
           pip install requests -q
 
@@ -190,5 +195,21 @@ jobs:
                   print(f"   ⚠️  Falha ao atualizar")
 
           print(f"\n{'━'*50}")
-          print(f"✅ Concluído: {resolved} resolvido(s), {escalated} escalado(s)")
+          summary = f"✅ Concluído: {resolved} resolvido(s), {escalated} escalado(s)"
+          print(summary)
+
+          # Write results file for verification via GitHub API
+          with open("support-results.txt", "w") as f:
+              f.write(f"run_at={__import__('datetime').datetime.utcnow().isoformat()}Z\n")
+              f.write(f"resolved={resolved}\n")
+              f.write(f"escalated={escalated}\n")
+              f.write(f"total={len(rows)}\n")
           PYEOF
+
+      - name: Commit results
+        run: |
+          git config user.email "claude-ai@lumied.com.br"
+          git config user.name "Lumied Support Bot"
+          git add support-results.txt
+          git commit -m "ci: ticket resolution results [skip ci]" 2>/dev/null || echo "No changes to commit"
+          git push origin support/auto-tickets-20260426 || true
