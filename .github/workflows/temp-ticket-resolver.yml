@@ -112,12 +112,18 @@ jobs:
           )
 
           if rows is None:
+              with open("support-results.txt", "w") as f:
+                  f.write(f"run_at={__import__('datetime').datetime.utcnow().isoformat()}Z\n")
+                  f.write("error=Falha ao conectar ao Supabase Management API\n")
+                  f.write("resolved=0\nescalated=0\ntotal=0\n")
               print("Erro ao consultar banco. Abortando.")
               exit(1)
 
           if not rows:
+              with open("support-results.txt", "w") as f:
+                  f.write(f"run_at={__import__('datetime').datetime.utcnow().isoformat()}Z\n")
+                  f.write("resolved=0\nescalated=0\ntotal=0\nstatus=Nenhum ticket aberto\n")
               print("Nenhum ticket aberto. Nada a fazer.")
-              exit(0)
 
           print(f"Encontrados {len(rows)} tickets abertos.\n")
 
@@ -207,9 +213,10 @@ jobs:
           PYEOF
 
       - name: Commit results
+        if: always()
         run: |
           git config user.email "claude-ai@lumied.com.br"
           git config user.name "Lumied Support Bot"
-          git add support-results.txt
-          git commit -m "ci: ticket resolution results [skip ci]" 2>/dev/null || echo "No changes to commit"
+          git add support-results.txt 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "ci: ticket resolution results [skip ci]"
           git push origin support/auto-tickets-20260426 || true
