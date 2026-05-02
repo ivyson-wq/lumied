@@ -13094,5 +13094,20 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 <script src="/lumied-pro.js" defer></script>
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
+<script>
+setTimeout(function(){
+  var m=document.querySelector('.main');
+  var c=document.querySelector('.content');
+  var p=document.querySelector('.panel.active');
+  var s=document.querySelector('.sidebar');
+  var msg='DIAG:\nwindow='+window.innerWidth+'x'+window.innerHeight;
+  if(s)msg+='\nsidebar='+s.offsetWidth+'x'+s.offsetHeight;
+  if(m)msg+='\nmain='+m.offsetWidth+'x'+m.offsetHeight+' left='+m.offsetLeft;
+  if(c)msg+='\ncontent='+c.offsetWidth+'x'+c.offsetHeight;
+  if(p)msg+='\npanel='+p.offsetWidth+'x'+p.offsetHeight+' id='+p.id;
+  msg+='\nbody.scrollWidth='+document.body.scrollWidth;
+  alert(msg);
+},4000);
+</script>
 </body>
 </html>
