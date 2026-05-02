@@ -4,6 +4,30 @@
   "redirects": [
     {
       "source": "/",
+      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "destination": "https://caxiasdosul.maplebear.com.br/pt/",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "destination": "https://caxiasdosul.maplebear.com.br/pt/",
+      "permanent": false
+    },
+    {
+      "source": "/:path((?!blog).*)",
+      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "destination": "https://caxiasdosul.maplebear.com.br/pt/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path((?!blog).*)",
+      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "destination": "https://caxiasdosul.maplebear.com.br/pt/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/",
       "has": [{ "type": "host", "value": "admin.lumied.com.br" }],
       "destination": "/admin-central.html",
       "permanent": false
@@ -190,6 +214,46 @@
       "source": "/whatsapp-float.js",
       "has": [{ "type": "host", "value": "lumied.com.br" }],
       "destination": "/site/whatsapp-float.js"
+    },
+    {
+      "source": "/blog",
+      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/index.html"
+    },
+    {
+      "source": "/blog/",
+      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/index.html"
+    },
+    {
+      "source": "/blog/:slug",
+      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/:slug/index.html"
+    },
+    {
+      "source": "/blog/:slug/",
+      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/:slug/index.html"
+    },
+    {
+      "source": "/blog",
+      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/index.html"
+    },
+    {
+      "source": "/blog/",
+      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/index.html"
+    },
+    {
+      "source": "/blog/:slug",
+      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/:slug/index.html"
+    },
+    {
+      "source": "/blog/:slug/",
+      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/:slug/index.html"
     },
     {
       "source": "/",

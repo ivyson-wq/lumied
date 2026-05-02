@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════
 //  Maple Bear Caxias do Sul — Google Analytics 4 + LGPD
-//  Incluir: <script src="/maple-bear-blog/analytics.js" defer></script>
+//  Incluir: <script src="/blog/analytics.js" defer></script>
 //  GA4 Measurement ID: definir após criar property
 // ═══════════════════════════════════════════════════════
 (function() {
@@ -33,7 +33,7 @@
   var path = location.pathname;
   var config = { page_title: document.title, send_page_view: true };
 
-  if (path.includes('/maple-bear-blog/') && path !== '/maple-bear-blog/' && path !== '/maple-bear-blog/index.html') {
+  if (path.includes('/blog/') && path !== '/blog/' && path !== '/blog/index.html') {
     var section = document.querySelector('meta[property="article:section"]');
     config.content_group = 'Blog' + (section ? ' - ' + section.content : '');
   }

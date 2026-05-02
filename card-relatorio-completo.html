@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card WhatsApp — Relatório Completo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .card {
+    width: 440px;
+    background: linear-gradient(145deg, #ffffff 0%, #fdf8f0 100%);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,.12);
+  }
+  .header {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    padding: 28px 28px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,.08);
+    border-radius: 50%;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 20px;
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,.05);
+    border-radius: 50%;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+    position: relative;
+    z-index: 1;
+  }
+  .header p {
+    color: rgba(255,255,255,.85);
+    font-size: 13px;
+    margin-top: 6px;
+    position: relative;
+    z-index: 1;
+  }
+  .body {
+    padding: 24px 28px 20px;
+  }
+  .feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .feature-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .feature-icon.orange { background: #fef3c7; }
+  .feature-icon.green  { background: #d1fae5; }
+  .feature-icon.blue   { background: #dbeafe; }
+  .feature-icon.purple { background: #ede9fe; }
+  .feature-text h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+  }
+  .feature-text p {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+  .highlight {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 18px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .highlight-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .highlight-text {
+    font-size: 12px;
+    color: #92400e;
+    line-height: 1.45;
+  }
+  .highlight-text strong {
+    color: #78350f;
+  }
+  .footer {
+    padding: 16px 28px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #f3f0ea;
+  }
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .footer-logo {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .footer-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+  }
+  .footer-sub {
+    font-size: 10px;
+    color: #9ca3af;
+  }
+  .footer-action {
+    font-size: 11px;
+    font-weight: 600;
+    color: #d97706;
+    background: #fffbeb;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #fde68a;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="badge">Novidade Almoxarifado</div>
+    <h1>Relatorio Completo com Observacoes</h1>
+    <p>Agora voce ve tudo que as professoras pediram em um so PDF</p>
+  </div>
+
+  <div class="body">
+    <div class="feature">
+      <div class="feature-icon orange">📋</div>
+      <div class="feature-text">
+        <h3>Todos os itens do mes</h3>
+        <p>Cada requisicao, cada item — nada fica de fora do relatorio</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon green">🆕</div>
+      <div class="feature-text">
+        <h3>Itens novos identificados</h3>
+        <p>Materiais que nao estavam no catalogo aparecem marcados como "Novo"</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon blue">🔗</div>
+      <div class="feature-text">
+        <h3>Links e observacoes</h3>
+        <p>Tudo que a professora escreveu — links de produtos, descricoes, justificativas</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-icon purple">📊</div>
+      <div class="feature-text">
+        <h3>Status e valores</h3>
+        <p>Aprovado, pendente ou rejeitado — com valor total por item e no mes</p>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <div class="highlight-icon">💡</div>
+      <div class="highlight-text">
+        <strong>Como acessar:</strong> Almoxarifado → Compras → botao laranja <strong>"Relatorio Completo"</strong>. Selecione o mes desejado.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-brand">
+      <div class="footer-logo">L</div>
+      <div>
+        <div class="footer-name">Lumied</div>
+        <div class="footer-sub">Gestao Escolar Inteligente</div>
+      </div>
+    </div>
+    <div class="footer-action">Ja disponivel ✓</div>
+  </div>
+</div>
+
+</body>
+</html>
