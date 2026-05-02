@@ -395,9 +395,12 @@
       const container = document.createElement('div');
       container.id = 'presenceAvatars';
       container.style.cssText = 'display:flex;align-items:center;gap:-4px;margin-right:8px;flex-shrink:0;';
-      // Insert before the right-side buttons
-      const rightSide = topbar.querySelector('div:last-child');
-      if (rightSide) topbar.insertBefore(container, rightSide);
+      // Insert before the right-side buttons (safely)
+      try {
+        const rightSide = topbar.querySelector('div:last-child');
+        if (rightSide && rightSide.parentNode === topbar) topbar.insertBefore(container, rightSide);
+        else topbar.appendChild(container);
+      } catch(e) { topbar.appendChild(container); }
 
       // Track presence via Supabase Realtime (if available)
       trackPresence(container);
