@@ -1600,7 +1600,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <input type="number" id="almOrcPadrao" value="500" min="0" step="50" style="width:110px;padding:8px 10px;border:1.5px solid rgba(26,107,181,.3);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;text-align:right;">
               <button onclick="almAplicarOrcPadrao()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aplicar ao Mês</button>
               <span style="color:var(--muted);font-size:12px;margin:0 4px;">ou</span>
-              <input type="number" id="almOrcAno" value="${new Date().getFullYear()}" min="2024" max="2030" style="width:80px;padding:8px 10px;border:1.5px solid rgba(26,107,181,.3);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;text-align:center;">
+              <input type="number" id="almOrcAno" value="2026" min="2024" max="2030" style="width:80px;padding:8px 10px;border:1.5px solid rgba(26,107,181,.3);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;text-align:center;">
               <button onclick="almAplicarOrcAnual()" style="padding:8px 16px;background:#0d5a9e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Aplicar ao Ano Inteiro</button>
             </div>
           </div>
@@ -12204,8 +12204,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     await api({ action: 'onboarding_dismiss' });
     document.getElementById('onbBanner').style.display = 'none';
   }
-  // Dispara após pequeno delay pra sessão estar validada
-  setTimeout(loadOnboardingBilling, 2000);
+  // Dispara após pequeno delay pra sessão estar validada (só se logado)
+  setTimeout(function() { if (localStorage.getItem('mb_token')) loadOnboardingBilling(); }, 2000);
 
   // ═══════════════════════════════════════════════════════════
   //  COMUNICAÇÃO — CHAT
