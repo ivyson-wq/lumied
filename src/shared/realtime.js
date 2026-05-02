@@ -43,7 +43,13 @@ export function initRealtime(anonKey) {
   _status = 'connecting';
   console.log('[Realtime] Initializing Supabase Realtime client...');
 
-  // supabase UMD exposes window.supabase
+  // supabase UMD exposes window.supabase — skip if not loaded
+  if (typeof supabase === 'undefined' || !supabase.createClient) {
+    console.warn('[Realtime] Supabase JS not loaded — realtime disabled');
+    _status = 'disconnected';
+    return null;
+  }
+
   _client = supabase.createClient(SUPABASE_URL, key, {
     realtime: {
       params: { eventsPerSecond: 10 },
