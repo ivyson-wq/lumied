@@ -1,245 +1,236 @@
 /* ═══════════════════════════════════════════════
-   Lumied Mobile Optimizations
-   Include in all portals: <link rel="stylesheet" href="/lumied-mobile.css">
+   Lumied Mobile — targeted fixes for known issues
+   Included in all portals via <link>
+
+   Strategy: only fix what's broken, don't override
+   working desktop styles with !important
    ═══════════════════════════════════════════════ */
 
-/* ── Tables: horizontal scroll + compact cells ── */
+/* ────────────────────────────────────────────
+   PHONE (<= 768px)
+   ──────────────────────────────────────────── */
 @media (max-width: 768px) {
+
+  /* ── Tables: allow horizontal scroll ── */
   .table-wrap {
-    overflow-x: auto !important;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrap th,
+  .table-wrap td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .table-wrap th {
+    font-size: 10px;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  /* ── Dias da semana: 1 col on phones, horizontal scroll on medium ── */
+  .dias-semana-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dia-card-header {
+    padding: 8px 12px;
+  }
+
+  .dia-card-header .dia-nome {
+    font-size: 13px;
+  }
+
+  .dia-card-body {
+    padding: 8px 10px;
+    min-height: auto;
+  }
+
+  /* ── Stats grid: 2 cols ── */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-sub {
+    font-size: 10px;
+  }
+
+  /* ── Stats grids with inline 4-col: force 2 ── */
+  [style*="grid-template-columns:repeat(4,1fr)"],
+  [style*="grid-template-columns: repeat(4, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ── Ocupação grid: 1 col ── */
+  [style*="grid-template-columns:repeat(2,1fr)"],
+  [style*="grid-template-columns: repeat(2, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Filter bar: scrollable ── */
+  .filter-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .filter-bar .fb {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .filter-bar .p-search-input {
+    width: 100%;
+    min-width: 140px;
+  }
+
+  /* ── Section titles: smaller ── */
+  .sec-title {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  /* ── Upload cards / form cards ── */
+  .upload-card {
+    padding: 14px;
+    margin-bottom: 14px;
     border-radius: 10px;
   }
-  .table-wrap table {
-    min-width: 600px; /* force scroll instead of squish */
-  }
-  table th, table td {
-    padding: 8px 10px !important;
-    font-size: 12px !important;
-    white-space: nowrap;
-  }
-  table th {
-    font-size: 10px !important;
-    padding: 6px 10px !important;
-  }
-  /* Scroll hint gradient */
-  .table-wrap::after {
-    content: '';
-    position: sticky;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 30px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.8));
-    pointer-events: none;
-    display: block;
-    float: right;
-    margin-top: -100%;
-    height: 100%;
+
+  /* ── Form inputs: 16px to prevent iOS zoom ── */
+  .ff input,
+  .ff select,
+  .ff textarea,
+  .lf input,
+  .lf select {
+    font-size: 16px;
   }
 
-  /* ── Stats/KPI grids: 2 columns ── */
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-  .stat-card, .kpi-card {
-    padding: 10px 12px !important;
-  }
-  .stat-value, .kpi-value {
-    font-size: 20px !important;
-  }
-  .stat-label, .kpi-label {
-    font-size: 9px !important;
-  }
-
-  /* ── Cards: less padding ── */
-  .upload-card, .card {
-    padding: 14px !important;
-    margin-bottom: 10px !important;
-    border-radius: 10px !important;
-  }
-
-  /* ── Buttons: bigger touch targets ── */
-  .action-btn, .kc-btn {
-    min-height: 36px !important;
-    min-width: 36px !important;
-    padding: 6px 10px !important;
-    font-size: 12px !important;
-  }
-  .btn-submit, .btn-create, .btn-primary {
-    min-height: 44px !important;
-    font-size: 14px !important;
-  }
-
-  /* ── Filter pills: scrollable ── */
-  .fb {
-    padding: 6px 12px !important;
-    font-size: 11px !important;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  /* ── Modals: full screen on mobile ── */
-  .modal-overlay > div,
-  .modal,
-  #almModal > div {
-    max-width: 100% !important;
-    width: 100% !important;
-    max-height: 100vh !important;
-    border-radius: 12px 12px 0 0 !important;
-    margin-top: auto !important;
-  }
-
-  /* ── Section titles ── */
-  .sec-title {
-    font-size: 16px !important;
-    margin-bottom: 10px !important;
-  }
-
-  /* ── Form fields ── */
-  .ff input, .ff select, .ff textarea,
-  .lf input, .lf select {
-    font-size: 16px !important; /* prevents iOS zoom */
-    padding: 10px 12px !important;
-  }
-
-  /* ── Kanban: single column stack ── */
-  .kanban-board {
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
-  .kanban-col {
-    min-width: 100% !important;
-    max-height: none !important;
-  }
-  .kanban-col-body {
-    max-height: none !important;
-  }
-
-  /* ── Two-column grids → single column ── */
-  .two-col,
-  [style*="grid-template-columns: 1fr 1fr"],
-  [style*="grid-template-columns:1fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* ── Almoxarifado rows: stack vertically ── */
+  /* ── Almox requisition rows: stack ── */
   .alm-req-row {
-    flex-direction: column !important;
-    gap: 8px !important;
+    flex-direction: column;
+    gap: 8px;
   }
+
   .alm-budget-row {
-    flex-wrap: wrap !important;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  /* ── Greeting bar: more compact ── */
-  .greeting-bar {
-    padding: 10px 16px !important;
-  }
-  .greeting-name {
-    font-size: 15px !important;
+  /* ── Kanban: stack columns ── */
+  .kanban-board {
+    flex-direction: column;
+    gap: 10px;
   }
 
-  /* ── Content area ── */
-  .content {
-    padding: 12px 12px 80px !important;
+  .kanban-col {
+    min-width: 100%;
   }
 
-  /* ── Impressoes cards: stack ── */
-  div[style*="display:flex"][style*="align-items:flex-start"][style*="gap:12px"] {
-    flex-direction: column !important;
+  .kanban-col-body {
+    max-height: none;
   }
 
-  /* ── Search inputs: full width ── */
+  /* ── Action buttons: bigger ── */
+  .action-btn {
+    min-height: 32px;
+    padding: 4px 10px;
+  }
+
+  .btn-submit,
+  .btn-create {
+    min-height: 40px;
+  }
+
+  /* ── Impressoes/items inline flex: wrap ── */
+  .content div[style*="display:flex"][style*="align-items:flex-start"][style*="gap:12px"] {
+    flex-direction: column;
+  }
+
+  /* ── Search input: full width ── */
+  .p-search-input,
   .search-input {
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 100%;
   }
 
-  /* ── Hide non-essential columns on very small screens ── */
-  table .hide-mobile {
-    display: none !important;
+  /* ── Modals: nearly full width ── */
+  .modal-overlay > div,
+  .modal {
+    max-width: 95vw;
+    max-height: 90vh;
+  }
+
+  #almModal > div {
+    max-width: 95vw;
   }
 }
 
-/* ── Extra small (phones < 400px) ── */
+/* ────────────────────────────────────────────
+   SMALL PHONE (<= 400px)
+   ──────────────────────────────────────────── */
 @media (max-width: 400px) {
   .stats-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
-  .table-wrap table {
-    min-width: 500px;
+
+  .stat-value {
+    font-size: 20px;
   }
-  table th, table td {
-    padding: 6px 8px !important;
-    font-size: 11px !important;
-  }
-  .topbar h2 {
-    font-size: 13px !important;
-  }
-  .upload-card, .card {
-    padding: 10px !important;
+
+  .table-wrap th,
+  .table-wrap td {
+    padding: 6px 8px;
+    font-size: 11px;
   }
 }
 
-/* ── Landscape phone optimizations ── */
-@media (max-width: 900px) and (orientation: landscape) {
-  .greeting-bar {
-    padding: 6px 16px !important;
-  }
-  .greeting-name {
-    font-size: 13px !important;
-  }
-  .greeting-date {
-    display: none !important;
-  }
-  .content {
-    padding: 8px 12px 60px !important;
-  }
-}
-
-/* ── Touch-friendly improvements ── */
+/* ────────────────────────────────────────────
+   TOUCH DEVICE IMPROVEMENTS
+   ──────────────────────────────────────────── */
 @media (hover: none) and (pointer: coarse) {
-  /* Remove hover effects on touch devices */
-  .nav-item:hover,
-  .ni:hover,
-  .ps-item:hover,
-  .action-btn:hover,
-  .qi:hover {
-    transform: none !important;
-    box-shadow: none !important;
+  /* Disable hover transforms on touch (they stick) */
+  .stat-card:hover,
+  .dia-card:hover,
+  .upload-card:hover {
+    transform: none;
   }
 
-  /* Bigger tap targets */
-  .nav-item, .ni, .ps-item {
+  /* Bigger nav tap targets */
+  .ps-item,
+  .nav-item,
+  .ni {
+    min-height: 40px;
+  }
+
+  .pbnav-item {
     min-height: 44px;
-    display: flex;
-    align-items: center;
-  }
-
-  /* Scroll indicators for tables */
-  .table-wrap {
-    position: relative;
-  }
-  .table-wrap::before {
-    content: '← deslize →';
-    display: block;
-    text-align: center;
-    font-size: 10px;
-    color: var(--muted, #888);
-    padding: 4px;
-    background: var(--bg, #f0ece6);
-    border-radius: 6px 6px 0 0;
   }
 }
 
-/* ── Safe area for notch phones ── */
+/* ────────────────────────────────────────────
+   SAFE AREA (notch phones)
+   ──────────────────────────────────────────── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .prof-bnav, .ger-bottom-bar, .bbar, .bottom-bar {
-    padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
-  }
-  .has-prof-bnav, .has-bnav {
-    padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+  .prof-bnav.visible,
+  .ger-bottom-bar,
+  .bbar,
+  .bottom-bar {
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
   }
 }
