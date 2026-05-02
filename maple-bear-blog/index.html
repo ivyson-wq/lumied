@@ -150,7 +150,15 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--
 .blog-card-img {
   aspect-ratio: 16/10; overflow: hidden; position: relative;
   background: linear-gradient(135deg, var(--red-light) 0%, #fce4ec 50%, #f8bbd0 100%);
+  display: flex; align-items: center; justify-content: center;
 }
+.blog-card-img::after {
+  content: '🍁'; font-size: 48px; opacity: .25; position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+}
+.blog-card-img:has(img) { display: block; }
+.blog-card-img:has(img)::after { display: none; }
+.blog-card-link { text-decoration: none; color: inherit; display: flex; flex-direction: column; height: 100%; }
 .blog-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
 .blog-card:hover .blog-card-img img { transform: scale(1.05); }
 .blog-card-body { padding: 22px 24px 24px; display: flex; flex-direction: column; flex: 1; }
@@ -307,18 +315,20 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--
 <section class="blog-section">
   <div class="blog-grid" id="blog-grid">
 <article class="blog-card" data-category="educacao-bilingue">
-  <div class="blog-card-img"></div>
-  <div class="blog-card-body">
-    <span class="blog-card-cat" data-cat="educacao-bilingue">EDUCAÇÃO BILÍNGUE</span>
-    <h2 class="blog-card-title"><a href="/blog/desenvolvimento-socioemocional-bilingue/">Desenvolvimento Socioemocional Bilíngue: Como a Educação Bilíngue Forma Crianças Mais Completas</a></h2>
-    <p class="blog-card-excerpt">Descubra como o desenvolvimento socioemocional bilíngue transforma crianças em indivíduos mais empáticos, resilientes e preparados para o futuro.</p>
-    <div class="blog-card-meta">
-      <span>Maple Bear Caxias do Sul</span>
-      <span>·</span>
-      <time>2 de maio de 2026</time>
-      <span class="reading-time">⏱ 13 min</span>
+  <a href="/blog/desenvolvimento-socioemocional-bilingue/" class="blog-card-link">
+    <div class="blog-card-img"></div>
+    <div class="blog-card-body">
+      <span class="blog-card-cat" data-cat="educacao-bilingue">EDUCAÇÃO BILÍNGUE</span>
+      <h2 class="blog-card-title">Desenvolvimento Socioemocional Bilíngue: Como a Educação Bilíngue Forma Crianças Mais Completas</h2>
+      <p class="blog-card-excerpt">Descubra como o desenvolvimento socioemocional bilíngue transforma crianças em indivíduos mais empáticos, resilientes e preparados para o futuro.</p>
+      <div class="blog-card-meta">
+        <span>Maple Bear Caxias do Sul</span>
+        <span>·</span>
+        <time>2 de maio de 2026</time>
+        <span class="reading-time">⏱ 13 min</span>
+      </div>
     </div>
-  </div>
+  </a>
 </article>
   </div>
 
