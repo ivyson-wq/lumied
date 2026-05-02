@@ -226,6 +226,11 @@
       "destination": "/maple-bear-blog/index.html"
     },
     {
+      "source": "/blog/:file(.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|js|css|woff2?|ttf|eot))",
+      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/:file"
+    },
+    {
       "source": "/blog/:slug",
       "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
       "destination": "/maple-bear-blog/:slug/index.html"
@@ -234,6 +239,11 @@
       "source": "/blog/:slug/",
       "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
       "destination": "/maple-bear-blog/:slug/index.html"
+    },
+    {
+      "source": "/blog/:file(.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|js|css|woff2?|ttf|eot))",
+      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "destination": "/maple-bear-blog/:file"
     },
     {
       "source": "/blog",
