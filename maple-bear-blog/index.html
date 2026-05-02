@@ -3,298 +3,395 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blog — Maple Bear Caxias do Sul | Educação Bilíngue</title>
-<meta name="description" content="Blog da Maple Bear Caxias do Sul: artigos sobre educação bilíngue, metodologia canadense, desenvolvimento infantil e dicas para pais.">
+<title>Blog — Maple Bear Caxias do Sul | Educação Bilíngue Canadense</title>
+<meta name="description" content="Blog da Maple Bear Caxias do Sul: artigos sobre educação bilíngue, metodologia canadense, desenvolvimento infantil e dicas para pais. Conteúdo especializado para famílias.">
+<meta name="keywords" content="educação bilíngue, escola bilíngue Caxias do Sul, metodologia canadense, Maple Bear, desenvolvimento infantil, escola bilingue RS">
 <meta name="theme-color" content="#B71C1C">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://maplebearcaxiasdosul.com.br/blog">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Blog — Maple Bear Caxias do Sul">
+<meta property="og:description" content="Artigos sobre educação bilíngue, metodologia canadense e desenvolvimento infantil.">
+<meta property="og:url" content="https://maplebearcaxiasdosul.com.br/blog">
+<meta property="og:site_name" content="Maple Bear Caxias do Sul">
+<meta property="og:locale" content="pt_BR">
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "Blog Maple Bear Caxias do Sul",
+  "description": "Artigos sobre educação bilíngue, metodologia canadense, desenvolvimento infantil e dicas para pais.",
+  "url": "https://maplebearcaxiasdosul.com.br/blog",
+  "publisher": {
+    "@type": "EducationalOrganization",
+    "name": "Maple Bear Caxias do Sul",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Rua Jacob Luchesi, 2374",
+      "addressLocality": "Caxias do Sul",
+      "addressRegion": "RS",
+      "postalCode": "95032-000",
+      "addressCountry": "BR"
+    },
+    "telephone": "+55-54-99939-6742",
+    "url": "https://maplebearcaxiasdosul.com.br"
+  },
+  "inLanguage": "pt-BR"
+}
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="/blog/analytics.js" defer></script>
 <style>
 :root {
-  --primary: #C62828;
-  --primary-dark: #B71C1C;
-  --primary-light: #FFEBEE;
-  --accent: #C62828;
-  --accent-dark: #B71C1C;
-  --bg: #FAFAFA;
+  --red: #B71C1C;
+  --red-dark: #7F1D1D;
+  --red-medium: #C62828;
+  --red-light: #FFEBEE;
+  --red-accent: #E53935;
+  --bg: #FAFBFC;
   --bg-card: #FFFFFF;
-  --text: #1E293B;
-  --text-muted: #64748B;
-  --border: #E2E8F0;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 16px rgba(0,0,0,.08);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,.12);
+  --text: #1A1A2E;
+  --text-secondary: #4A5568;
+  --text-muted: #718096;
+  --border: #E8ECF1;
+  --shadow-card: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-hover: 0 10px 40px rgba(183,28,28,.08), 0 4px 12px rgba(0,0,0,.05);
+  --radius: 12px;
+  --max-w: 1240px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text); line-height: 1.6; background: var(--bg); }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--text); line-height: 1.6; background: var(--bg); }
 
 /* ── Header ── */
 .header {
   position: sticky; top: 0; z-index: 100;
-  background: rgba(255,255,255,.95); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 clamp(16px, 4vw, 48px); height: 68px;
-  display: flex; align-items: center; justify-content: space-between;
-  max-width: 100%;
+  background: #fff; border-bottom: 1px solid var(--border);
+  height: 72px; display: flex; align-items: center;
+  padding: 0 clamp(20px, 5vw, 48px);
+  transition: box-shadow .3s;
 }
-.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo-icon {
-  width: 38px; height: 38px;
-  background: linear-gradient(135deg, #B71C1C, #E53935);
-  border-radius: 10px; display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-}
-.logo-text { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 800; color: var(--text); }
-.logo-text span { color: var(--primary); }
+.header.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,.06); }
+.header-inner { max-width: var(--max-w); margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; }
+.logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.logo-img { height: 44px; width: auto; }
+.logo-divider { width: 1px; height: 28px; background: var(--border); }
+.logo-unit { font-size: 13px; font-weight: 600; color: var(--text-secondary); line-height: 1.3; }
+.logo-unit strong { display: block; color: var(--text); font-weight: 700; }
 
-.nav { display: flex; align-items: center; gap: 28px; }
-.nav a {
-  color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500;
-  transition: color .2s;
-}
-.nav a:hover { color: var(--text); }
+.nav { display: flex; align-items: center; gap: 32px; }
+.nav a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; position: relative; }
+.nav a:hover { color: var(--red); }
+.nav a.active { color: var(--red); font-weight: 600; }
+.nav a.active::after { content: ''; position: absolute; bottom: -24px; left: 0; right: 0; height: 2px; background: var(--red); border-radius: 1px; }
 .nav-cta {
-  background: var(--accent); color: #fff !important; padding: 10px 22px;
-  border-radius: 8px; font-weight: 600; font-size: 14px; transition: background .2s;
+  background: var(--red); color: #fff !important; padding: 10px 24px;
+  border-radius: 8px; font-weight: 600; font-size: 14px; transition: all .2s;
+  box-shadow: 0 2px 8px rgba(183,28,28,.25);
 }
-.nav-cta:hover { background: var(--accent-dark); }
+.nav-cta:hover { background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(183,28,28,.3); }
 
 /* ── Hero ── */
 .hero {
-  background: linear-gradient(135deg, #7F1D1D 0%, #B71C1C 40%, #E53935 100%);
-  padding: 80px 24px 64px; text-align: center;
-  position: relative; overflow: hidden;
+  background: linear-gradient(160deg, #7F1D1D 0%, #B71C1C 35%, #C62828 65%, #E53935 100%);
+  padding: 72px 24px 56px; text-align: center; position: relative; overflow: hidden;
 }
 .hero::before {
-  content: ''; position: absolute; inset: 0;
-  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  content: ''; position: absolute; inset: 0; opacity: .06;
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 10 C40 10 48 25 55 30 C60 33 70 35 70 35 C70 35 60 40 55 45 C50 50 48 65 48 65 C48 65 40 55 40 55 C40 55 32 65 32 65 C32 65 30 50 25 45 C20 40 10 35 10 35 C10 35 20 33 25 30 C32 25 40 10 40 10Z' fill='white'/%3E%3C/svg%3E");
 }
-.hero-inner { position: relative; max-width: 700px; margin: 0 auto; }
+.hero-inner { position: relative; max-width: 640px; margin: 0 auto; }
 .hero-badge {
-  display: inline-block; background: rgba(255,255,255,.15); color: #fff;
-  padding: 6px 16px; border-radius: 50px; font-size: 13px; font-weight: 600;
-  margin-bottom: 20px; letter-spacing: .3px;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.12); backdrop-filter: blur(4px);
+  color: rgba(255,255,255,.95); padding: 8px 18px; border-radius: 50px;
+  font-size: 13px; font-weight: 600; margin-bottom: 24px; letter-spacing: .3px;
+  border: 1px solid rgba(255,255,255,.15);
 }
 .hero h1 {
-  font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3rem);
-  color: #fff; margin-bottom: 12px; line-height: 1.2;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2rem, 5vw, 2.8rem); color: #fff;
+  margin-bottom: 16px; line-height: 1.15; font-weight: 700;
 }
-.hero-tagline {
-  color: rgba(255,255,255,.85); font-size: 18px; margin-bottom: 8px; font-weight: 500;
-}
-.hero-subtitle {
-  color: rgba(255,255,255,.65); font-size: 15px; max-width: 560px; margin: 0 auto;
-}
+.hero-subtitle { color: rgba(255,255,255,.8); font-size: 16px; line-height: 1.7; max-width: 520px; margin: 0 auto; }
 
-/* ── Category Filters ── */
+/* ── Filters ── */
 .filters {
-  max-width: 1200px; margin: 0 auto; padding: 24px 24px 0;
-  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  max-width: var(--max-w); margin: 0 auto; padding: 28px 24px 0;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
 }
+.filters-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-right: 8px; text-transform: uppercase; letter-spacing: .5px; }
 .filter-btn {
-  padding: 8px 20px; border-radius: 50px; border: 1px solid var(--border);
-  background: var(--bg-card); color: var(--text-muted); font-size: 13px; font-weight: 500;
+  padding: 7px 18px; border-radius: 50px; border: 1px solid var(--border);
+  background: #fff; color: var(--text-secondary); font-size: 13px; font-weight: 500;
   cursor: pointer; transition: all .2s; font-family: inherit;
 }
-.filter-btn:hover { border-color: var(--primary); color: var(--primary); }
-.filter-btn.active {
-  background: var(--primary); color: #fff; border-color: var(--primary);
-}
+.filter-btn:hover { border-color: var(--red); color: var(--red); }
+.filter-btn.active { background: var(--red); color: #fff; border-color: var(--red); }
 
 /* ── Blog Grid ── */
+.blog-section { max-width: var(--max-w); margin: 32px auto 0; padding: 0 24px; }
 .blog-grid {
-  max-width: 1200px; margin: 32px auto 0; padding: 0 24px;
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
 }
 .blog-card {
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
-  overflow: hidden; transition: transform .25s ease, box-shadow .25s ease;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; transition: transform .3s ease, box-shadow .3s ease;
   display: flex; flex-direction: column;
 }
-.blog-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+.blog-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
 .blog-card-img {
-  aspect-ratio: 4/3; overflow: hidden; position: relative;
-  background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 50%, #EF9A9A 100%);
+  aspect-ratio: 16/10; overflow: hidden; position: relative;
+  background: linear-gradient(135deg, var(--red-light) 0%, #fce4ec 50%, #f8bbd0 100%);
 }
-.blog-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
-.blog-card:hover .blog-card-img img { transform: scale(1.04); }
-.blog-card-body { padding: 20px 22px 22px; display: flex; flex-direction: column; flex: 1; }
-.blog-card-badge {
+.blog-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.blog-card:hover .blog-card-img img { transform: scale(1.05); }
+.blog-card-body { padding: 22px 24px 24px; display: flex; flex-direction: column; flex: 1; }
+.blog-card-cat {
   display: inline-block; width: fit-content;
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px;
-  padding: 4px 10px; border-radius: 50px; margin-bottom: 10px;
-  background: var(--primary-light); color: var(--primary);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+  padding: 4px 12px; border-radius: 4px; margin-bottom: 12px;
+  background: var(--red-light); color: var(--red);
 }
-.blog-card-badge[data-cat="metodologia"] { background: #FFF3E0; color: #E65100; }
-.blog-card-badge[data-cat="familia"] { background: #E3F2FD; color: #1565C0; }
-.blog-card-badge[data-cat="desenvolvimento"] { background: #FCE4EC; color: #AD1457; }
+.blog-card-cat[data-cat="metodologia"] { background: #FFF8E1; color: #F57F17; }
+.blog-card-cat[data-cat="familia"] { background: #E8EAF6; color: #283593; }
+.blog-card-cat[data-cat="desenvolvimento"] { background: #F3E5F5; color: #6A1B9A; }
+.blog-card-cat[data-cat="noticias"] { background: #E0F2F1; color: #00695C; }
 .blog-card-title {
-  font-size: 17px; font-weight: 700; line-height: 1.35; margin-bottom: 8px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px; font-weight: 700; line-height: 1.35; margin-bottom: 10px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .blog-card-title a { color: var(--text); text-decoration: none; transition: color .2s; }
-.blog-card-title a:hover { color: var(--primary); }
+.blog-card-title a:hover { color: var(--red); }
 .blog-card-excerpt {
-  font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 16px;
+  font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-bottom: 16px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   flex: 1;
 }
 .blog-card-meta {
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; color: var(--text-muted); padding-top: 14px;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12px; color: var(--text-muted); padding-top: 16px;
   border-top: 1px solid var(--border);
 }
-.blog-card-author { font-weight: 500; }
+.blog-card-meta .reading-time { margin-left: auto; display: flex; align-items: center; gap: 4px; }
 
 /* ── Empty State ── */
-.empty-state {
-  text-align: center; padding: 80px 24px; max-width: 480px; margin: 0 auto;
+.empty-state { text-align: center; padding: 80px 24px; max-width: 480px; margin: 0 auto; }
+.empty-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--red-light); display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px; font-size: 32px;
 }
-.empty-state-icon {
-  width: 64px; height: 64px; border-radius: 16px;
-  background: var(--primary-light); display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px; font-size: 28px;
+.empty-state h2 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 10px; }
+.empty-state p { color: var(--text-muted); font-size: 15px; line-height: 1.7; }
+
+/* ── Newsletter ── */
+.newsletter {
+  max-width: var(--max-w); margin: 64px auto 0; padding: 0 24px;
 }
-.empty-state h2 {
-  font-family: 'Playfair Display', serif; font-size: 24px; margin-bottom: 10px; color: var(--text);
+.newsletter-inner {
+  background: linear-gradient(135deg, #7F1D1D, #B71C1C);
+  border-radius: 16px; padding: 48px; display: flex; align-items: center; gap: 40px;
+  position: relative; overflow: hidden;
 }
-.empty-state p { color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+.newsletter-inner::before {
+  content: ''; position: absolute; right: -40px; top: -40px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: rgba(255,255,255,.05);
+}
+.newsletter-text { flex: 1; position: relative; }
+.newsletter-text h3 { font-family: 'Playfair Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+.newsletter-text p { color: rgba(255,255,255,.75); font-size: 15px; }
+.newsletter-form { display: flex; gap: 8px; position: relative; }
+.newsletter-form input {
+  padding: 12px 18px; border: 2px solid rgba(255,255,255,.2); border-radius: 8px;
+  background: rgba(255,255,255,.1); color: #fff; font-size: 14px; width: 260px;
+  font-family: inherit; outline: none; transition: border-color .2s;
+}
+.newsletter-form input::placeholder { color: rgba(255,255,255,.5); }
+.newsletter-form input:focus { border-color: rgba(255,255,255,.5); }
+.newsletter-form button {
+  padding: 12px 24px; border: none; border-radius: 8px;
+  background: #fff; color: var(--red); font-weight: 700; font-size: 14px;
+  cursor: pointer; font-family: inherit; transition: transform .2s;
+}
+.newsletter-form button:hover { transform: translateY(-1px); }
 
 /* ── Footer ── */
-.footer {
-  background: #7F1D1D; padding: 48px 24px; margin-top: 80px;
-}
-.footer-inner {
-  max-width: 1200px; margin: 0 auto;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
-}
-.footer-col h3 {
-  font-family: 'Playfair Display', serif; font-size: 16px; color: #fff; margin-bottom: 16px;
-}
-.footer-col p, .footer-col a {
-  color: rgba(255,255,255,.7); font-size: 14px; line-height: 1.8; text-decoration: none;
-}
+.footer { background: var(--red-dark); padding: 56px 24px 32px; margin-top: 80px; }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 48px; }
+.footer-brand { }
+.footer-logo { height: 40px; margin-bottom: 16px; filter: brightness(0) invert(1); }
+.footer-brand p { color: rgba(255,255,255,.6); font-size: 14px; line-height: 1.7; max-width: 300px; }
+.footer-col h4 { color: #fff; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 16px; }
+.footer-col a { display: block; color: rgba(255,255,255,.65); font-size: 14px; text-decoration: none; line-height: 2.2; transition: color .2s; }
 .footer-col a:hover { color: #fff; }
-.footer-col a { display: block; }
-.footer-bottom {
-  max-width: 1200px; margin: 32px auto 0; padding-top: 24px;
-  border-top: 1px solid rgba(255,255,255,.15); text-align: center;
+.footer-social { display: flex; gap: 12px; margin-top: 20px; }
+.footer-social a {
+  width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 16px; transition: background .2s;
 }
-.footer-bottom p { color: rgba(255,255,255,.5); font-size: 13px; }
+.footer-social a:hover { background: rgba(255,255,255,.2); }
+.footer-bottom {
+  max-width: var(--max-w); margin: 32px auto 0; padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.footer-bottom p { color: rgba(255,255,255,.4); font-size: 12px; }
+.footer-bottom a { color: rgba(255,255,255,.5); font-size: 12px; text-decoration: none; }
 
 /* ── Responsive ── */
-@media (max-width: 1024px) {
-  .blog-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
-}
+@media (max-width: 1024px) { .blog-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) {
-  .nav-links-list { display: none; }
-  .blog-grid { grid-template-columns: 1fr; gap: 18px; }
-  .footer-inner { grid-template-columns: 1fr; gap: 24px; text-align: center; }
-  .hero { padding: 60px 20px 48px; }
+  .nav { display: none; }
+  .blog-grid { grid-template-columns: 1fr; gap: 20px; }
+  .footer-inner { grid-template-columns: 1fr; gap: 32px; }
+  .newsletter-inner { flex-direction: column; padding: 32px 24px; text-align: center; }
+  .newsletter-form { flex-direction: column; }
+  .newsletter-form input { width: 100%; }
+  .header-inner { justify-content: center; }
 }
 @media (max-width: 480px) {
-  .filters { gap: 6px; }
-  .filter-btn { padding: 6px 14px; font-size: 12px; }
+  .hero { padding: 56px 20px 40px; }
+  .filters { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 12px; }
 }
+
+/* ── Header scroll effect ── */
 </style>
 </head>
 <body>
 
-<header class="header">
-  <a href="/blog/" class="logo">
-    <div class="logo-icon">🍁</div>
-    <div class="logo-text">Maple Bear <span>Blog</span></div>
-  </a>
-  <nav class="nav">
-    <span class="nav-links-list" style="display:flex;gap:28px;">
+<header class="header" id="header">
+  <div class="header-inner">
+    <a href="https://maplebearcaxiasdosul.com.br" class="logo">
+      <img src="https://d35apin9vunb5k.cloudfront.net/prd-maplebear/media/filer_public/f3/53/f3537343-c9d5-417b-83bd-e7591395beec/logo-site-maple-bear.png" alt="Maple Bear" class="logo-img">
+      <div class="logo-divider"></div>
+      <div class="logo-unit"><strong>Caxias do Sul</strong>Blog</div>
+    </a>
+    <nav class="nav">
       <a href="https://maplebearcaxiasdosul.com.br">A Escola</a>
-      <a href="/blog/">Blog</a>
-      <a href="https://wa.me/5554999396742?text=Olá! Gostaria de mais informações sobre a Maple Bear Caxias do Sul.">Fale Conosco</a>
-    </span>
-    <a href="https://wa.me/5554999396742?text=Olá! Gostaria de agendar uma visita à Maple Bear Caxias do Sul." class="nav-cta">Agende uma Visita</a>
-  </nav>
+      <a href="/blog" class="active">Blog</a>
+      <a href="https://www.instagram.com/maplebearcaxiasdosul/" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://wa.me/5554999396742?text=Ol%C3%A1!%20Gostaria%20de%20agendar%20uma%20visita%20%C3%A0%20Maple%20Bear%20Caxias%20do%20Sul." class="nav-cta" target="_blank" rel="noopener">Agende uma Visita</a>
+    </nav>
+  </div>
 </header>
 
 <section class="hero">
   <div class="hero-inner">
-    <span class="hero-badge">Maple Bear Caxias do Sul</span>
-    <h1>Educacao Bilingue que Transforma</h1>
-    <p class="hero-tagline">A melhor metodologia canadense no Sul do Brasil</p>
-    <p class="hero-subtitle">Artigos sobre educacao bilingue, metodologia canadense e desenvolvimento infantil</p>
+    <div class="hero-badge">🍁 Maple Bear Canadian School</div>
+    <h1>Educação Bilíngue que Transforma</h1>
+    <p class="hero-subtitle">Artigos sobre metodologia canadense, desenvolvimento infantil, educação bilíngue e orientações para famílias.</p>
   </div>
 </section>
 
 <div class="filters">
-  <button class="filter-btn active" data-filter="todos">Todos</button>
-  <button class="filter-btn" data-filter="educacao-bilingue">Educacao Bilingue</button>
+  <span class="filters-label">Filtrar:</span>
+  <button class="filter-btn active" data-filter="all">Todos</button>
+  <button class="filter-btn" data-filter="educacao-bilingue">Educação Bilíngue</button>
   <button class="filter-btn" data-filter="metodologia">Metodologia</button>
-  <button class="filter-btn" data-filter="familia">Familia</button>
+  <button class="filter-btn" data-filter="familia">Família</button>
   <button class="filter-btn" data-filter="desenvolvimento">Desenvolvimento Infantil</button>
+  <button class="filter-btn" data-filter="noticias">Notícias</button>
 </div>
 
-<div class="blog-grid">
-  <!-- Artigos serao adicionados aqui pelo sistema de publicacao -->
-</div>
+<section class="blog-section">
+  <div class="blog-grid" id="blog-grid">
+    <!-- Artigos inseridos pelo sistema de publicação -->
+  </div>
 
-<div class="empty-state">
-  <div class="empty-state-icon">📝</div>
-  <h2>Em breve</h2>
-  <p>Nossos primeiros artigos estao sendo preparados com carinho. Volte em breve para conteudo sobre educacao bilingue e metodologia canadense.</p>
-</div>
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">📝</div>
+    <h2>Em breve, novos artigos</h2>
+    <p>Estamos preparando conteúdo especializado sobre educação bilíngue e metodologia canadense para você. Volte em breve!</p>
+  </div>
+</section>
+
+<section class="newsletter">
+  <div class="newsletter-inner">
+    <div class="newsletter-text">
+      <h3>Receba nossos artigos</h3>
+      <p>Cadastre-se e receba conteúdo sobre educação bilíngue diretamente no seu e-mail.</p>
+    </div>
+    <form class="newsletter-form" onsubmit="return false;">
+      <input type="email" placeholder="Seu melhor e-mail" required>
+      <button type="submit">Inscrever-se</button>
+    </form>
+  </div>
+</section>
 
 <footer class="footer">
   <div class="footer-inner">
-    <div class="footer-col">
-      <h3>Maple Bear Caxias do Sul</h3>
-      <p>Educacao bilingue com a melhor metodologia canadense. Formando cidadaos globais desde a primeira infancia.</p>
+    <div class="footer-brand">
+      <img src="https://d35apin9vunb5k.cloudfront.net/prd-maplebear/media/filer_public/f3/53/f3537343-c9d5-417b-83bd-e7591395beec/logo-site-maple-bear.png" alt="Maple Bear" class="footer-logo">
+      <p>Educação bilíngue canadense de excelência em Caxias do Sul. Formando cidadãos globais desde a primeira infância.</p>
+      <div class="footer-social">
+        <a href="https://www.instagram.com/maplebearcaxiasdosul/" target="_blank" rel="noopener" aria-label="Instagram">📷</a>
+        <a href="https://wa.me/5554999396742" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>
+        <a href="https://www.facebook.com/maplebearcaxiasdosul" target="_blank" rel="noopener" aria-label="Facebook">📘</a>
+      </div>
     </div>
     <div class="footer-col">
-      <h3>Contato</h3>
-      <p>Rua Jacob Luchesi, 2374<br>Santa Catarina, Caxias do Sul/RS</p>
+      <h4>A Escola</h4>
+      <a href="https://maplebearcaxiasdosul.com.br">Página Inicial</a>
+      <a href="/blog">Blog</a>
+      <a href="https://wa.me/5554999396742?text=Gostaria de agendar uma visita">Agende uma Visita</a>
+      <a href="https://wa.me/5554999396742?text=Gostaria de informações sobre matrículas">Matrículas</a>
+    </div>
+    <div class="footer-col">
+      <h4>Contato</h4>
       <a href="tel:+5554999396742">(54) 9 9939-6742</a>
-      <a href="https://wa.me/5554999396742" target="_blank">WhatsApp</a>
-    </div>
-    <div class="footer-col">
-      <h3>Redes Sociais</h3>
-      <a href="https://www.instagram.com/maplebearcaxiasdosul/" target="_blank">@maplebearcaxiasdosul</a>
-      <a href="https://maplebearcaxiasdosul.com.br" target="_blank">maplebearcaxiasdosul.com.br</a>
+      <a href="https://wa.me/5554999396742">WhatsApp</a>
+      <a>Rua Jacob Luchesi, 2374</a>
+      <a>Santa Catarina — Caxias do Sul/RS</a>
     </div>
   </div>
   <div class="footer-bottom">
     <p>&copy; 2026 Maple Bear Caxias do Sul. Todos os direitos reservados.</p>
+    <a href="https://maplebear.com.br" target="_blank" rel="noopener">maplebear.com.br</a>
   </div>
 </footer>
 
 <script>
-// Category filter (for future use when articles are added with data-category attributes)
+// Header scroll effect
+const header = document.getElementById('header');
+window.addEventListener('scroll', () => {
+  header.classList.toggle('scrolled', window.scrollY > 10);
+});
+
+// Category filter
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const filter = btn.dataset.filter;
     document.querySelectorAll('.blog-card').forEach(card => {
-      if (filter === 'todos' || card.dataset.category === filter) {
+      if (filter === 'all' || card.dataset.category === filter) {
         card.style.display = '';
       } else {
         card.style.display = 'none';
       }
     });
     // Toggle empty state
-    const grid = document.querySelector('.blog-grid');
-    const visible = grid.querySelectorAll('.blog-card:not([style*="display: none"])');
-    const emptyState = document.querySelector('.empty-state');
-    if (grid.children.length === 0 || visible.length === 0) {
-      emptyState.style.display = '';
-    } else {
-      emptyState.style.display = 'none';
-    }
+    const visible = document.querySelectorAll('.blog-card:not([style*="display: none"])');
+    const empty = document.getElementById('empty-state');
+    if (empty) empty.style.display = visible.length === 0 ? '' : 'none';
   });
 });
-// Auto-hide empty state if articles exist
+
+// Hide empty state if there are cards
 if (document.querySelectorAll('.blog-card').length > 0) {
-  document.querySelector('.empty-state').style.display = 'none';
+  const e = document.getElementById('empty-state');
+  if (e) e.style.display = 'none';
 }
 </script>
 
