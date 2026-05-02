@@ -3655,7 +3655,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (realtimeChannel) { sbClient.removeChannel(realtimeChannel); realtimeChannel = null; }
     document.getElementById('appShell').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
-    }
   }
 
   function showApp(user) {
@@ -12069,10 +12068,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAchadosGerente();
   }
 
-  // ── WEBAUTHN / BIOMETRIA ─────────────────────────────
-  (async function() {
-    }
-  })();
   checkSession();
 
   // ═══ ONBOARDING + BILLING BANNERS ═══
