@@ -20,7 +20,6 @@
 <link rel="stylesheet" href="/themes.css">
 <script src="/dist/pais/index.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
-<script src="/webauthn-client.js"></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.07);--cream:#f8f5f0;--border:#e6ddd3;--text:#1a1a1a;--muted:#5a5249;--white:#fff;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -474,7 +473,6 @@ body.has-bottomnav{padding-bottom:56px;}
       </div>
 
       <!-- Biometria -->
-      <button id="bioLoginBtn" onclick="doBioLogin()" style="display:none;width:100%;padding:13px;background:#1a6bb5;color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px;box-shadow:0 4px 14px rgba(26,107,181,.3);">🔐 Entrar com biometria</button>
 
       <p class="lw-note">🔒 Seus dados são usados apenas para identificação.<br>Não compartilhamos informações com terceiros.</p>
     </div>
@@ -543,9 +541,6 @@ body.has-bottomnav{padding-bottom:56px;}
     <div class="greeting-date" id="greetingDate"></div>
   </div>
 
-  <div id="bioRegBanner" style="display:none;background:#eef4ff;border-bottom:1px solid #c7d9f0;padding:12px 24px;text-align:center;">
-    <button id="bioRegBtn" onclick="registerBiometric()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔐 Ativar login por biometria (Face ID / Digital)</button>
-    <button onclick="document.getElementById('bioRegBanner').style.display='none';sessionStorage.setItem('bio_banner_shown','1')" style="background:none;border:none;color:#7a7169;font-size:18px;cursor:pointer;margin-left:12px;vertical-align:middle;">×</button>
   </div>
 
   <!-- TAB: INICIO -->
@@ -1222,19 +1217,12 @@ body.has-bottomnav{padding-bottom:56px;}
       currentUser = session.user; await showForm(session.user);
     } else {
       // Tenta auto-login biométrico se tem credencial salva
-      const bioEmail = localStorage.getItem('pais_bio_email');
-      if (bioEmail && typeof WebAuthnClient !== 'undefined') {
-        const available = await WebAuthnClient.isPlatformAvailable();
         if (available) {
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
           if (isMobile) {
             try {
-              const ch = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_challenge', email: bioEmail, portal:'pais', rp_id: location.hostname }) }).then(r=>r.json());
               if (!ch.error) {
-                const assertion = await WebAuthnClient.authenticate(ch);
-                const d = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname }) }).then(r=>r.json());
                 if (!d.error) {
-                  currentUser = { email: bioEmail, user_metadata: { full_name: localStorage.getItem('pais_bio_nome')||'', avatar_url: localStorage.getItem('pais_bio_avatar')||'' } };
                   await showForm(currentUser);
                   return;
                 }
@@ -1514,15 +1502,11 @@ body.has-bottomnav{padding-bottom:56px;}
     document.getElementById('boletosCard').style.display = 'none';
     document.getElementById('bottomNav').classList.remove('visible');
     document.getElementById('greetingBar').style.display = 'none';
-    document.getElementById('bioRegBanner').style.display = 'none';
     document.getElementById('accessPending').style.display = 'none';
     document.body.classList.remove('has-bottomnav');
     document.querySelector('.site-header')?.classList.remove('compact');
     document.getElementById('emailState').style.display = 'block';
     document.getElementById('sentState').style.display = 'none';
-    // Show biometric login button if registered
-    const bioEmail = localStorage.getItem('pais_bio_email');
-    document.getElementById('bioLoginBtn').style.display = bioEmail ? 'block' : 'none';
     const btn = document.getElementById('btnMagic');
     btn.disabled = false; btn.innerHTML = '✉️ Enviar link de acesso';
   }
@@ -3191,54 +3175,33 @@ body.has-bottomnav{padding-bottom:56px;}
 
   // ── WEBAUTHN / BIOMETRIA (portal dos pais) ─────────────
   function showBioRegisterButton() {
-    if (typeof WebAuthnClient === 'undefined') return;
-    WebAuthnClient.isPlatformAvailable().then(ok => {
       if (!ok) return;
-      if (!localStorage.getItem('pais_bio_email') && !sessionStorage.getItem('bio_banner_shown')) {
-        document.getElementById('bioRegBanner').style.display = 'block';
-        sessionStorage.setItem('bio_banner_shown', '1');
       }
     });
   }
 
-  async function registerBiometric() {
-    const btn = document.getElementById('bioRegBtn');
     btn.disabled = true; btn.textContent = 'Aguarde…';
     try {
       const email = currentUser?.email;
       if (!email) { showToast('Faça login primeiro.','warning'); return; }
       // Usa a edge function diplomas para registrar (público com _email)
-      const ch = await callDiplomas({ action:'webauthn_register_challenge', rp_id: location.hostname });
       if (ch.error) { showToast(ch.error,'error'); return; }
-      const credential = await WebAuthnClient.register(ch);
-      const r = await callDiplomas({ action:'webauthn_register_verify', credential, rp_id: location.hostname });
       if (r.error) { showToast(r.error,'error'); return; }
       localStorage.setItem('pais_bio_email', email);
-      // Save user info for biometric login (no Supabase Auth needed)
       const meta = currentUser?.user_metadata || {};
       localStorage.setItem('pais_bio_nome', meta.full_name || meta.name || '');
       localStorage.setItem('pais_bio_avatar', meta.avatar_url || meta.picture || '');
-      document.getElementById('bioRegBanner').style.display = 'none';
-      showToast('Biometria ativada com sucesso! Na próxima vez, use Face ID / Digital para entrar.','success', 5000);
     } catch(e) {
-      if (e.name !== 'NotAllowedError') showToast('Erro ao ativar biometria.','error');
-    } finally { btn.disabled = false; btn.textContent = '🔐 Ativar login por biometria (Face ID / Digital)'; }
   }
 
   async function doBioLogin() {
-    const btn = document.getElementById('bioLoginBtn');
     btn.disabled = true; btn.textContent = 'Verificando…';
     try {
       const email = localStorage.getItem('pais_bio_email');
       const nome = localStorage.getItem('pais_bio_nome') || '';
       const avatar = localStorage.getItem('pais_bio_avatar') || '';
-      if (!email) { showToast('Nenhuma biometria cadastrada.','warning'); return; }
 
-      // 1. Verify biometric identity via WebAuthn
-      const ch = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_challenge', email, portal:'pais', rp_id: location.hostname }) }).then(r=>r.json());
       if (ch.error) { showToast(ch.error,'error'); return; }
-      const assertion = await WebAuthnClient.authenticate(ch);
-      const d = await fetch(DIPLOMAS, { method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}, body: JSON.stringify({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname }) }).then(r=>r.json());
       if (d.error) { showToast(d.error,'error'); return; }
 
       // 2. Biometria verificada — acesso direto sem Supabase Auth
@@ -3246,15 +3209,10 @@ body.has-bottomnav{padding-bottom:56px;}
       showForm(currentUser);
     } catch(e) {
       if (e.name !== 'NotAllowedError') showToast('Erro na autenticação.','error');
-    } finally { btn.disabled = false; btn.textContent = '🔐 Entrar com biometria'; }
   }
 
   (async function() {
-    if (typeof WebAuthnClient === 'undefined') return;
-    const ok = await WebAuthnClient.isPlatformAvailable();
     if (!ok) return;
-    const bioEmail = localStorage.getItem('pais_bio_email');
-    if (bioEmail) document.getElementById('bioLoginBtn').style.display = 'block';
   })();
 
   loadLogo(); loadSeries(); initAuth();

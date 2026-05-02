@@ -13,9 +13,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/lumied-design.css">
 <link rel="stylesheet" href="/themes.css">
-<script src="/dist/professora/index.js?v=1777718591" defer></script>
+<script src="/dist/professora/index.js?v=1777719245" defer></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
-<script src="/webauthn-client.js"></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;--primary:#C8102E;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -390,7 +389,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   .prof-sidebar{display:flex !important;}
   .content{margin-left:220px;max-width:none;padding:32px 40px 64px;}
   .greeting-bar{margin-left:220px;}
-  #bioRegBanner{margin-left:220px;}
   #almModal > div{max-width:900px;}
 }
 </style>
@@ -417,7 +415,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder"></div>
       <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
       <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
-      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;" data-i18n="auth.loginWithBiometrics">Entrar com biometria</button>
       <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;" data-i18n="auth.emailOrPasswordIncorrect">E-mail ou senha incorretos.</div>
       <p style="font-size:12px;color:#a89f95;text-align:center;margin-top:16px;" data-i18n="prof.login.contactSupport">Problemas para acessar? Fale com a coordenacao.</p>
       <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
@@ -479,9 +476,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     <div class="greeting-date" id="greetingDate"></div>
   </div>
 
-  <div id="bioRegBanner" style="display:none;background:#eef4ff;border-bottom:1px solid #c7d9f0;padding:12px 24px;text-align:center;">
-    <button id="bioRegBtn" onclick="registerBiometric()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔐 Ativar login por biometria (Face ID / Digital)</button>
-    <button onclick="document.getElementById('bioRegBanner').style.display='none';sessionStorage.setItem('bio_banner_shown','1')" style="background:none;border:none;color:#7a7169;font-size:18px;cursor:pointer;margin-left:12px;vertical-align:middle;">×</button>
   </div>
 
   <div class="content" role="main">
@@ -816,7 +810,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         <select id="almTurmaSelect" onchange="almOnTurmaChange()" style="font-size:13px;font-weight:600;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'DM Sans',sans-serif;background:#fff;"></select>
         <div style="font-size:12px;color:var(--muted);" id="almMesLabel"></div>
       </div>
-      <button onclick="almAbrirNovaReq()" style="font-size:13px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" id="almBtnNovaReq">+ Nova Requisição</button>
+      <button onclick="almAbrirNovaReq()" style="font-size:13px;padding:10px 20px;background:#C8102E;color:#ffffff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;box-shadow:0 2px 8px rgba(200,16,46,.3);" id="almBtnNovaReq">+ Nova Requisição</button>
     </div>
     <div style="background:#f0ece6;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px;">
       <div id="almBudgetBar" style="height:100%;background:var(--primary);border-radius:8px;transition:width .4s;width:0%;"></div>
@@ -1320,26 +1314,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('loginScreen').style.display = 'flex';
     currentProf = null;
     // Show bio login if registered
-    const bioEmail = localStorage.getItem('prof_bio_email');
-    document.getElementById('bioLoginBtn').style.display = bioEmail ? 'block' : 'none';
-    if (bioEmail) document.getElementById('loginEmail').value = bioEmail;
   }
 
   async function checkSession() {
     const token = getToken();
     if (!token) {
-      const bioEmail = localStorage.getItem('prof_bio_email');
-      if (bioEmail && typeof WebAuthnClient !== 'undefined') {
-        const available = await WebAuthnClient.isPlatformAvailable();
         if (available) {
           // Mobile: auto-login biométrico
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
           if (isMobile) {
             try {
-              const ch = await callApi({ action:'webauthn_login_challenge', email: bioEmail, portal:'professora', rp_id: location.hostname });
               if (!ch.error) {
-                const assertion = await WebAuthnClient.authenticate(ch);
-                const d = await callApi({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname });
                 if (!d.error && d.token) {
                   localStorage.setItem('prof_token', d.token);
                   localStorage.setItem('prof_nome', d.nome);
@@ -1351,8 +1336,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
             } catch(_) {}
           }
           // Desktop ou fallback: mostra botão
-          document.getElementById('bioLoginBtn').style.display = 'block';
-          document.getElementById('loginEmail').value = bioEmail;
         }
       }
       return;
@@ -4078,52 +4061,31 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   // ── WEBAUTHN / BIOMETRIA ─────────────────────────────
   (async function() {
-    if (!await WebAuthnClient.isPlatformAvailable()) return;
-    const bioEmail = localStorage.getItem('prof_bio_email');
-    if (bioEmail) {
-      document.getElementById('bioLoginBtn').style.display = 'block';
-      document.getElementById('loginEmail').value = bioEmail;
     }
   })();
 
   function showBioRegisterButton() {
-    if (typeof WebAuthnClient === 'undefined') return;
-    WebAuthnClient.isPlatformAvailable().then(ok => {
       if (!ok) return;
-      if (!localStorage.getItem('prof_bio_email') && !sessionStorage.getItem('bio_banner_shown')) {
-        document.getElementById('bioRegBanner').style.display = 'block';
-        sessionStorage.setItem('bio_banner_shown', '1');
       }
     });
   }
 
-  async function registerBiometric() {
-    const btn = document.getElementById('bioRegBtn');
     btn.disabled = true; btn.textContent = 'Aguarde…';
     try {
-      const ch = await callApi({ action:'webauthn_register_challenge', rp_id: location.hostname });
       if (ch.error) { showToast(ch.error,'error'); return; }
-      const credential = await WebAuthnClient.register(ch);
-      const r = await callApi({ action:'webauthn_register_verify', credential, rp_id: location.hostname });
       if (r.error) { showToast(r.error,'error'); return; }
       localStorage.setItem('prof_bio_email', currentProf.email);
       btn.style.display = 'none';
       showToast('Biometria ativada com sucesso!','success');
     } catch(e) {
-      if (e.name !== 'NotAllowedError') showToast('Erro ao registrar biometria.','error');
-    } finally { btn.disabled = false; btn.textContent = '🔐 Ativar biometria'; }
   }
 
   async function doBioLogin() {
-    const btn = document.getElementById('bioLoginBtn');
     const errEl = document.getElementById('loginError');
     btn.disabled = true; btn.textContent = 'Verificando…'; errEl.style.display = 'none';
     try {
       const email = localStorage.getItem('prof_bio_email');
-      const ch = await callApi({ action:'webauthn_login_challenge', email, portal:'professora', rp_id: location.hostname });
       if (ch.error) { errEl.textContent = ch.error; errEl.style.display = 'block'; return; }
-      const assertion = await WebAuthnClient.authenticate(ch);
-      const d = await callApi({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname });
       if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
       localStorage.setItem('prof_token', d.token);
       localStorage.setItem('prof_nome', d.nome);
@@ -4131,7 +4093,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       showApp(d);
     } catch(e) {
       if (e.name !== 'NotAllowedError') { errEl.textContent = 'Erro na autenticação.'; errEl.style.display = 'block'; }
-    } finally { btn.disabled = false; btn.textContent = '🔐 Entrar com biometria'; }
   }
 
   checkSession();

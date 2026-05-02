@@ -22,7 +22,6 @@
 <script src="/dist/gerente/index.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
-<script src="/webauthn-client.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
@@ -436,7 +435,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder"></div>
       <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
       <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
-      <button class="login-btn" id="bioLoginBtn" onclick="doBioLogin()" style="display:none;background:#1a6bb5;margin-top:8px;" data-i18n="auth.loginWithBiometrics">Entrar com biometria</button>
       <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;" data-i18n="auth.emailOrPasswordIncorrect">E-mail ou senha incorretos.</div>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
         <img src="/lumied-logo.png" style="height:32px;object-fit:contain;" alt="Lumied">
@@ -694,9 +692,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </button>
       </div>
     </div>
-    <div id="bioRegBanner" style="display:none;background:#eef4ff;border-bottom:1px solid #c7d9f0;padding:12px 24px;text-align:center;">
-      <button id="bioRegBtn" onclick="registerBiometric()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔐 Ativar login por biometria (Face ID / Digital)</button>
-      <button onclick="document.getElementById('bioRegBanner').style.display='none';sessionStorage.setItem('bio_banner_shown','1')" style="background:none;border:none;color:#7a7169;font-size:18px;cursor:pointer;margin-left:12px;vertical-align:middle;">×</button>
     </div>
     <div class="content">
 
@@ -3623,17 +3618,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   async function checkSession() {
     const token = getToken();
     if (!token) {
-      const bioEmail = localStorage.getItem('mb_bio_email');
-      if (bioEmail && typeof WebAuthnClient !== 'undefined') {
-        const available = await WebAuthnClient.isPlatformAvailable();
         if (available) {
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
           if (isMobile) {
             try {
-              const ch = await api({ action:'webauthn_login_challenge', email: bioEmail, rp_id: location.hostname });
               if (!ch.error) {
-                const assertion = await WebAuthnClient.authenticate(ch);
-                const d = await api({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname });
                 if (!d.error && d.token) {
                   localStorage.setItem('mb_token', d.token);
                   localStorage.setItem('mb_nome', d.nome);
@@ -3644,8 +3633,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               }
             } catch(_) {}
           }
-          document.getElementById('bioLoginBtn').style.display = 'block';
-          document.getElementById('loginEmail').value = bioEmail;
         }
       }
       return;
@@ -3687,10 +3674,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (realtimeChannel) { sbClient.removeChannel(realtimeChannel); realtimeChannel = null; }
     document.getElementById('appShell').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
-    const bioEmail = localStorage.getItem('mb_bio_email');
-    if (bioEmail) {
-      document.getElementById('bioLoginBtn').style.display = 'block';
-      document.getElementById('loginEmail').value = bioEmail;
     }
   }
 
@@ -12108,53 +12091,33 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   // ── WEBAUTHN / BIOMETRIA ─────────────────────────────
   (async function() {
-    if (!await WebAuthnClient.isPlatformAvailable()) return;
-    const bioEmail = localStorage.getItem('mb_bio_email');
-    if (bioEmail) {
-      document.getElementById('bioLoginBtn').style.display = 'block';
-      document.getElementById('loginEmail').value = bioEmail;
     }
   })();
   function showBioRegisterButton() {
-    if (typeof WebAuthnClient === 'undefined') return;
-    WebAuthnClient.isPlatformAvailable().then(ok => {
-      console.log('[WebAuthn] isPlatformAvailable:', ok);
       if (!ok) return;
-      if (!localStorage.getItem('mb_bio_email') && !sessionStorage.getItem('bio_banner_shown')) { document.getElementById('bioRegBanner').style.display = 'block'; sessionStorage.setItem('bio_banner_shown', '1'); }
     });
   }
-  async function registerBiometric() {
-    const btn = document.getElementById('bioRegBtn');
     btn.disabled = true; btn.textContent = 'Aguarde…';
     try {
-      const ch = await api({ action:'webauthn_register_challenge', rp_id: location.hostname });
       if (ch.error) { showToast(ch.error,'error'); return; }
-      const credential = await WebAuthnClient.register(ch);
-      const r = await api({ action:'webauthn_register_verify', credential, rp_id: location.hostname });
       if (r.error) { showToast(r.error,'error'); return; }
       localStorage.setItem('mb_bio_email', currentGerente.email);
       btn.style.display = 'none';
       showToast('Biometria ativada!','success');
     } catch(e) { if (e.name !== 'NotAllowedError') showToast('Erro.','error'); }
-    finally { btn.disabled = false; btn.textContent = '🔐 Ativar biometria'; }
   }
   async function doBioLogin() {
-    const btn = document.getElementById('bioLoginBtn');
     const errEl = document.getElementById('loginError');
     btn.disabled = true; btn.textContent = 'Verificando…'; errEl.style.display = 'none';
     try {
       const email = localStorage.getItem('mb_bio_email');
-      const ch = await api({ action:'webauthn_login_challenge', email, rp_id: location.hostname });
       if (ch.error) { errEl.textContent = ch.error; errEl.style.display = 'block'; return; }
-      const assertion = await WebAuthnClient.authenticate(ch);
-      const d = await api({ action:'webauthn_login_verify', credential: assertion, rp_id: location.hostname });
       if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
       localStorage.setItem('mb_token', d.token);
       localStorage.setItem('mb_nome', d.nome);
       localStorage.setItem('mb_email', d.email);
       showApp(d);
     } catch(e) { if (e.name !== 'NotAllowedError') { errEl.textContent = 'Erro.'; errEl.style.display = 'block'; } }
-    finally { btn.disabled = false; btn.textContent = '🔐 Entrar com biometria'; }
   }
 
   checkSession();
