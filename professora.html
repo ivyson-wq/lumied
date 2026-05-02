@@ -13,7 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/lumied-design.css">
 <link rel="stylesheet" href="/themes.css">
-<script src="/dist/professora/index.js?v=1777719245" defer></script>
+<script src="/dist/professora/index.js?v=1777720342" defer></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--gold:#d4830a;--blue:#1a6bb5;--primary:#C8102E;}
@@ -1318,28 +1318,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   async function checkSession() {
     const token = getToken();
-    if (!token) {
-        if (available) {
-          // Mobile: auto-login biométrico
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          if (isMobile) {
-            try {
-              if (!ch.error) {
-                if (!d.error && d.token) {
-                  localStorage.setItem('prof_token', d.token);
-                  localStorage.setItem('prof_nome', d.nome);
-                  localStorage.setItem('prof_email', d.email);
-                  showApp(d);
-                  return;
-                }
-              }
-            } catch(_) {}
-          }
-          // Desktop ou fallback: mostra botão
-        }
-      }
-      return;
-    }
+    if (!token) return;
     // Validar sessão no servidor antes de mostrar o app
     const check = await callApi({ action: 'professora_verificar_horario' }).catch(() => null);
     if (check && check.error && check.error.includes('Sessão inválida')) {
@@ -1382,7 +1361,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     // Agora navegar para o dashboard (primeira página visível)
     switchProfPage('dashboard', document.querySelector('[data-page="dashboard"]'));
     loadAll();
-    showBioRegisterButton();
     // checkGerenteAccess(); // módulos config removido — só no admin
     verificarCienciasPendentes();
     verificarQuizPendente();
@@ -4063,37 +4041,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   (async function() {
     }
   })();
-
-  function showBioRegisterButton() {
-      if (!ok) return;
-      }
-    });
-  }
-
-    btn.disabled = true; btn.textContent = 'Aguarde…';
-    try {
-      if (ch.error) { showToast(ch.error,'error'); return; }
-      if (r.error) { showToast(r.error,'error'); return; }
-      localStorage.setItem('prof_bio_email', currentProf.email);
-      btn.style.display = 'none';
-      showToast('Biometria ativada com sucesso!','success');
-    } catch(e) {
-  }
-
-  async function doBioLogin() {
-    const errEl = document.getElementById('loginError');
-    btn.disabled = true; btn.textContent = 'Verificando…'; errEl.style.display = 'none';
-    try {
-      const email = localStorage.getItem('prof_bio_email');
-      if (ch.error) { errEl.textContent = ch.error; errEl.style.display = 'block'; return; }
-      if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
-      localStorage.setItem('prof_token', d.token);
-      localStorage.setItem('prof_nome', d.nome);
-      localStorage.setItem('prof_email', d.email);
-      showApp(d);
-    } catch(e) {
-      if (e.name !== 'NotAllowedError') { errEl.textContent = 'Erro na autenticação.'; errEl.style.display = 'block'; }
-  }
 
   checkSession();
 

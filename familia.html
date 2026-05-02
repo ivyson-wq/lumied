@@ -1216,21 +1216,6 @@ body.has-bottomnav{padding-bottom:56px;}
     if (session?.user) {
       currentUser = session.user; await showForm(session.user);
     } else {
-      // Tenta auto-login biométrico se tem credencial salva
-        if (available) {
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          if (isMobile) {
-            try {
-              if (!ch.error) {
-                if (!d.error) {
-                  await showForm(currentUser);
-                  return;
-                }
-              }
-            } catch(_) { /* cancelou — mostra login normal */ }
-          }
-        }
-      }
       showLoginWall();
     }
 
@@ -1652,7 +1637,6 @@ body.has-bottomnav{padding-bottom:56px;}
     loadPickupCard();
     carregarAgenda();
     carregarAchados();
-    showBioRegisterButton();
     loadModulosHabilitadosPais();
     renderPaisShortcuts();
   }
@@ -3173,47 +3157,6 @@ body.has-bottomnav{padding-bottom:56px;}
     btn.disabled = false; btn.textContent = 'Adicionar Autorizado';
   }
 
-  // ── WEBAUTHN / BIOMETRIA (portal dos pais) ─────────────
-  function showBioRegisterButton() {
-      if (!ok) return;
-      }
-    });
-  }
-
-    btn.disabled = true; btn.textContent = 'Aguarde…';
-    try {
-      const email = currentUser?.email;
-      if (!email) { showToast('Faça login primeiro.','warning'); return; }
-      // Usa a edge function diplomas para registrar (público com _email)
-      if (ch.error) { showToast(ch.error,'error'); return; }
-      if (r.error) { showToast(r.error,'error'); return; }
-      localStorage.setItem('pais_bio_email', email);
-      const meta = currentUser?.user_metadata || {};
-      localStorage.setItem('pais_bio_nome', meta.full_name || meta.name || '');
-      localStorage.setItem('pais_bio_avatar', meta.avatar_url || meta.picture || '');
-    } catch(e) {
-  }
-
-  async function doBioLogin() {
-    btn.disabled = true; btn.textContent = 'Verificando…';
-    try {
-      const email = localStorage.getItem('pais_bio_email');
-      const nome = localStorage.getItem('pais_bio_nome') || '';
-      const avatar = localStorage.getItem('pais_bio_avatar') || '';
-
-      if (ch.error) { showToast(ch.error,'error'); return; }
-      if (d.error) { showToast(d.error,'error'); return; }
-
-      // 2. Biometria verificada — acesso direto sem Supabase Auth
-      currentUser = { email, user_metadata: { full_name: nome, avatar_url: avatar } };
-      showForm(currentUser);
-    } catch(e) {
-      if (e.name !== 'NotAllowedError') showToast('Erro na autenticação.','error');
-  }
-
-  (async function() {
-    if (!ok) return;
-  })();
 
   loadLogo(); loadSeries(); initAuth();
 

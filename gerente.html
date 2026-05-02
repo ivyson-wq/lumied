@@ -3617,26 +3617,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // ── AUTH ──────────────────────────────────────────────
   async function checkSession() {
     const token = getToken();
-    if (!token) {
-        if (available) {
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          if (isMobile) {
-            try {
-              if (!ch.error) {
-                if (!d.error && d.token) {
-                  localStorage.setItem('mb_token', d.token);
-                  localStorage.setItem('mb_nome', d.nome);
-                  localStorage.setItem('mb_email', d.email);
-                  showApp(d);
-                  return;
-                }
-              }
-            } catch(_) {}
-          }
-        }
-      }
-      return;
-    }
+    if (!token) return;
     // Validar sessão no servidor antes de mostrar o app
     const check = await api({ action: 'config_publica' }).catch(() => null);
     if (check && check.error && check.error.includes('Sessão inválida')) {
@@ -3691,7 +3672,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAnalytics();
     loadNotificacoes();
     loadSidebarLogo();
-    showBioRegisterButton();
     checkPrimeiroAcesso();
     loadModulosHabilitados();
     loadTemaEscola();
@@ -12093,33 +12073,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   (async function() {
     }
   })();
-  function showBioRegisterButton() {
-      if (!ok) return;
-    });
-  }
-    btn.disabled = true; btn.textContent = 'Aguarde…';
-    try {
-      if (ch.error) { showToast(ch.error,'error'); return; }
-      if (r.error) { showToast(r.error,'error'); return; }
-      localStorage.setItem('mb_bio_email', currentGerente.email);
-      btn.style.display = 'none';
-      showToast('Biometria ativada!','success');
-    } catch(e) { if (e.name !== 'NotAllowedError') showToast('Erro.','error'); }
-  }
-  async function doBioLogin() {
-    const errEl = document.getElementById('loginError');
-    btn.disabled = true; btn.textContent = 'Verificando…'; errEl.style.display = 'none';
-    try {
-      const email = localStorage.getItem('mb_bio_email');
-      if (ch.error) { errEl.textContent = ch.error; errEl.style.display = 'block'; return; }
-      if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
-      localStorage.setItem('mb_token', d.token);
-      localStorage.setItem('mb_nome', d.nome);
-      localStorage.setItem('mb_email', d.email);
-      showApp(d);
-    } catch(e) { if (e.name !== 'NotAllowedError') { errEl.textContent = 'Erro.'; errEl.style.display = 'block'; } }
-  }
-
   checkSession();
 
   // ═══ ONBOARDING + BILLING BANNERS ═══
