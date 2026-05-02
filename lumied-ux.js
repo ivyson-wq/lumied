@@ -285,7 +285,7 @@
 
     // Track clicks on navigation items
     document.addEventListener('click', (e) => {
-      const navItem = e.target.closest('.nav-item, .bnav-item');
+      if(!e.target?.closest)return;const navItem = e.target.closest('.nav-item, .bnav-item');
       if (!navItem) return;
       const tab = navItem.dataset.tab;
       const onclick = navItem.getAttribute('onclick') || '';

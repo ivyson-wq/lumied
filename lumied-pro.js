@@ -12,14 +12,14 @@
   function enhanceDragDrop() {
     // Visual feedback during drag on kanban cards
     document.addEventListener('dragstart', (e) => {
-      const card = e.target.closest('.kanban-card');
+      if(!e.target?.closest)return;const card = e.target.closest('.kanban-card');
       if (!card) return;
       card.style.opacity = '0.5';
       card.style.transform = 'rotate(2deg)';
       e.dataTransfer.effectAllowed = 'move';
     });
     document.addEventListener('dragend', (e) => {
-      const card = e.target.closest('.kanban-card');
+      if(!e.target?.closest)return;const card = e.target.closest('.kanban-card');
       if (!card) return;
       card.style.opacity = '';
       card.style.transform = '';
@@ -27,13 +27,13 @@
       document.querySelectorAll('.kanban-col-body.drag-over').forEach(el => el.classList.remove('drag-over'));
     });
     document.addEventListener('dragover', (e) => {
-      const col = e.target.closest('.kanban-col-body');
+      if(!e.target?.closest)return;const col = e.target.closest('.kanban-col-body');
       if (!col) return;
       e.preventDefault();
       col.classList.add('drag-over');
     });
     document.addEventListener('dragleave', (e) => {
-      const col = e.target.closest('.kanban-col-body');
+      if(!e.target?.closest)return;const col = e.target.closest('.kanban-col-body');
       if (col) col.classList.remove('drag-over');
     });
     document.addEventListener('drop', (e) => {
@@ -45,7 +45,7 @@
     let dragClone = null;
     let touchStartX, touchStartY;
     document.addEventListener('touchstart', (e) => {
-      const card = e.target.closest('.kanban-card');
+      if(!e.target?.closest)return;const card = e.target.closest('.kanban-card');
       if (!card) return;
       dragCard = card;
       const touch = e.touches[0];
@@ -124,7 +124,7 @@
     // Select all checkbox
     document.addEventListener('change', (e) => {
       if (!e.target.matches('.bulk-check-all')) return;
-      const table = e.target.closest('table') || e.target.closest('.table-wrap');
+      if(!e.target?.closest)return;const table = e.target.closest('table') || e.target.closest('.table-wrap');
       if (!table) return;
       const checks = table.querySelectorAll('.bulk-check');
       checks.forEach(c => {
@@ -205,7 +205,7 @@
     }
 
     document.addEventListener('contextmenu', (e) => {
-      const row = e.target.closest('tr[style*="cursor:pointer"], .kanban-card, [data-ctx]');
+      if(!e.target?.closest)return;const row = e.target.closest('tr[style*="cursor:pointer"], .kanban-card, [data-ctx]');
       if (!row) return;
 
       e.preventDefault();

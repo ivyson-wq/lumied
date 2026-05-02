@@ -128,6 +128,7 @@
   // ═══════════════════════════════════════════════════
   function setupHover3D() {
     document.addEventListener('mouseenter', (e) => {
+      if (!e.target?.closest) return;
       const card = e.target.closest('.stat-card, .stats-card, [data-hover3d]');
       if (!card) return;
       card.style.transition = 'transform .2s ease, box-shadow .2s ease';
@@ -135,6 +136,7 @@
       card.style.boxShadow = '0 8px 24px rgba(0,0,0,.12)';
     }, true);
     document.addEventListener('mouseleave', (e) => {
+      if (!e.target?.closest) return;
       const card = e.target.closest('.stat-card, .stats-card, [data-hover3d]');
       if (!card) return;
       card.style.transform = '';
