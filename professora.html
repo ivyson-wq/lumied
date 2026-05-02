@@ -413,9 +413,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
       </div>
       <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;" data-i18n="prof.login.formTitle">Acesse seu portal</h2>
       <p style="font-size:13px;color:#7a7169;margin-bottom:24px;" data-i18n="prof.login.formSub">Use o e-mail e senha fornecidos pela coordenacao.</p>
-      <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder"></div>
-      <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
-      <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
+      <form onsubmit="event.preventDefault();doLogin();return false;" autocomplete="on">
+      <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" required data-i18n-placeholder="auth.emailPlaceholder"></div>
+      <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required></div>
+      <button type="submit" class="login-btn" id="loginBtn" data-i18n="auth.login">Entrar</button>
+      </form>
       <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;" data-i18n="auth.emailOrPasswordIncorrect">E-mail ou senha incorretos.</div>
       <p style="font-size:12px;color:#a89f95;text-align:center;margin-top:16px;" data-i18n="prof.login.contactSupport">Problemas para acessar? Fale com a coordenacao.</p>
       <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
