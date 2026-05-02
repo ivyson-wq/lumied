@@ -67,10 +67,20 @@
     white-space: nowrap;
   }
 
-  /* ── Dias da semana: 1 col on phones, horizontal scroll on medium ── */
+  /* ── Dias da semana: horizontal scroll like a carousel ── */
   .dias-semana-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     gap: 8px;
+    padding-bottom: 6px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .dias-semana-grid .dia-card {
+    min-width: 200px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
   }
 
   .dia-card-header {
