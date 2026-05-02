@@ -432,10 +432,52 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
       <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;" data-i18n="auth.welcome">Bem-vindo de volta</h2>
       <p style="font-size:13px;color:#7a7169;margin-bottom:24px;" data-i18n="auth.enterCredentials">Entre com suas credenciais para acessar o painel.</p>
-      <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" data-i18n-placeholder="auth.emailPlaceholder"></div>
-      <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
-      <button class="login-btn" id="loginBtn" onclick="doLogin()" data-i18n="auth.login">Entrar</button>
-      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;" data-i18n="auth.emailOrPasswordIncorrect">E-mail ou senha incorretos.</div>
+      <form id="loginFormInline" autocomplete="on">
+      <div class="lf"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" required></div>
+      <div class="lf"><label>Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required></div>
+      <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
+      </form>
+      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;">E-mail ou senha incorretos.</div>
+      <script>
+      document.getElementById('loginFormInline').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var email = document.getElementById('loginEmail').value.trim();
+        var senha = document.getElementById('loginPass').value;
+        var btn = document.getElementById('loginBtn');
+        var errEl = document.getElementById('loginError');
+        if (!email || !senha) return;
+        errEl.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Entrando...';
+        var API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/api';
+        var AK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+        fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': AK, 'Authorization': 'Bearer ' + AK },
+          body: JSON.stringify({ action: 'login', email: email, senha: senha })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d && d.token) {
+            localStorage.setItem('mb_token', d.token);
+            localStorage.setItem('mb_nome', d.nome || '');
+            localStorage.setItem('mb_email', d.email || email);
+            location.reload();
+          } else {
+            errEl.textContent = d.error || 'E-mail ou senha incorretos.';
+            errEl.style.display = 'block';
+          }
+        })
+        .catch(function() {
+          errEl.textContent = 'Erro de conexao. Tente novamente.';
+          errEl.style.display = 'block';
+        })
+        .finally(function() {
+          btn.disabled = false;
+          btn.textContent = 'Entrar';
+        });
+      });
+      </script>
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
         <img src="/lumied-logo.png" style="height:32px;object-fit:contain;" alt="Lumied">
       </div>
@@ -3503,7 +3545,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   var MESES_CURTOS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   var allData=[], currentFilter='all', editingId=null, editingSerieId=null, selectedFile=null;
   var currentGerente=null, pollInterval=null, realtimeChannel=null;
-  var sbClient = (typeof supabase !== 'undefined' && supabase?.createClient) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+  var sbClient = (typeof supabase !== 'undefined' && supabase && supabase.createClient) ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
   if (!sbClient) console.error('[gerente] Supabase JS CDN falhou ao carregar — realtime desabilitado');
 
   // Globals de papéis — declarados no topo para evitar TDZ/ordem de execução
