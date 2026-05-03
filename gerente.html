@@ -3710,7 +3710,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   function showApp(user) {
     currentGerente = user;
     document.getElementById('loginScreen').style.display='none';
-    document.getElementById('appShell').style.display='flex';
+    document.getElementById('appShell').style.display='block';
     document.getElementById('userNome').textContent = user.nome || 'Gerente';
     document.getElementById('userEmail').textContent = user.email || '';
     const firstName = (user.nome || 'Gerente').split(/\s/)[0];
