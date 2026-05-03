@@ -273,19 +273,8 @@
       }
     };
 
-    // Restore last panel after login (with slight delay)
-    setTimeout(() => {
-      const appShell = document.getElementById('appShell');
-      if (!appShell || appShell.style.display === 'none') return;
-      const last = localStorage.getItem(LAST_PANEL_KEY);
-      if (last && typeof window.showPanel === 'function') {
-        // Only restore if currently on dashboard (default)
-        const active = document.querySelector('.panel.active');
-        if (active && active.id === 'panelAnalytics') {
-          window.showPanel(last);
-        }
-      }
-    }, 1500);
+    // Smart default disabled — always start on Dashboard
+    // Users reported confusion when the app opened on a random panel
   }
 
   // ═══════════════════════════════════════════════════
