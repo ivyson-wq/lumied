@@ -48,12 +48,12 @@
       environment: env,
       release: window.__SENTRY_RELEASE__ || "maple-bear-rs@" + (document.querySelector('meta[name="version"]')?.content || "unknown"),
 
-      // Performance monitoring
-      tracesSampleRate: env === "production" ? 0.2 : 1.0,
+      // Performance monitoring (reduced to save IO budget)
+      tracesSampleRate: env === "production" ? 0.05 : 1.0,
 
-      // Session Replay
-      replaysSessionSampleRate: env === "production" ? 0.1 : 0,
-      replaysOnErrorSampleRate: 1.0,
+      // Session Replay (disabled to prevent 429 flood)
+      replaysSessionSampleRate: 0,
+      replaysOnErrorSampleRate: 0,
 
       integrations: [
         Sentry.browserTracingIntegration(),
