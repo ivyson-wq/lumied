@@ -46,7 +46,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .login-btn:hover{background:#a00d24;}.login-btn:disabled{opacity:.55;cursor:not-allowed;}
 #loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
 /* APP */
-#appShell{display:none;min-height:100vh;}
+#appShell{display:none;min-height:100vh;overflow:hidden;}
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:linear-gradient(180deg,#1e1a15 0%,#2a2520 100%);display:flex;flex-direction:column;z-index:100;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;border-right:1px solid rgba(255,255,255,.04);}
 .sidebar::-webkit-scrollbar{width:4px;}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px;}
 .hamburger{display:none;align-items:center;justify-content:center;width:38px;height:38px;background:none;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:18px;color:var(--text);margin-right:10px;flex-shrink:0;transition:all .2s;}
@@ -1895,7 +1895,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
           </select>
         </div>
-        <div id="analyticsContent"><div class="empty-state">Carregando...</div></div>
+        <div id="analyticsContent" style="overflow-x:hidden;max-width:100%;"><div class="empty-state">Carregando...</div></div>
       </div>
 
       <!-- FINANCEIRO - DASHBOARD -->
@@ -1906,7 +1906,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
           </select>
         </div>
-        <div id="finDashContent"><div class="empty-state">Carregando...</div></div>
+        <div id="finDashContent" style="overflow-x:hidden;max-width:100%;"><div class="empty-state">Carregando...</div></div>
       </div>
 
       <!-- FINANCEIRO - LANCAMENTOS -->
@@ -10643,6 +10643,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <!-- Chart.js Enhanced Visualizations -->
+      <!-- overflow contained -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
         <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
           <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Tendencia de Solicitacoes</div>
