@@ -24,8 +24,6 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
-<script src="/lumied-charts.js" defer></script>
 <style>
 :root{--red:#C8102E;--red-dark:#a00d24;--red-light:rgba(200,16,46,.08);--bg:#f0ece6;--sb:#1c1712;--white:#fff;--border:#e2dbd1;--text:#1a1a1a;--muted:#5a5249;--green:#2d7a3a;--blue:#1a6bb5;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -46,7 +44,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .login-btn:hover{background:#a00d24;}.login-btn:disabled{opacity:.55;cursor:not-allowed;}
 #loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
 /* APP */
-#appShell{display:none;min-height:100vh;overflow:hidden;}
+#appShell{display:none;min-height:100vh;}
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:linear-gradient(180deg,#1e1a15 0%,#2a2520 100%);display:flex;flex-direction:column;z-index:100;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;border-right:1px solid rgba(255,255,255,.04);}
 .sidebar::-webkit-scrollbar{width:4px;}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px;}
 .hamburger{display:none;align-items:center;justify-content:center;width:38px;height:38px;background:none;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:18px;color:var(--text);margin-right:10px;flex-shrink:0;transition:all .2s;}
@@ -1895,7 +1893,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
           </select>
         </div>
-        <div id="analyticsContent" style="overflow-x:hidden;max-width:100%;"><div class="empty-state">Carregando...</div></div>
+        <div id="analyticsContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
       <!-- FINANCEIRO - DASHBOARD -->
@@ -1906,7 +1904,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
           </select>
         </div>
-        <div id="finDashContent" style="overflow-x:hidden;max-width:100%;"><div class="empty-state">Carregando...</div></div>
+        <div id="finDashContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
       <!-- FINANCEIRO - LANCAMENTOS -->
@@ -10642,22 +10640,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
-      <!-- Chart.js Enhanced Visualizations -->
-      <!-- overflow contained -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Tendencia de Solicitacoes</div>
-          <div style="height:200px;"><canvas id="chartSolicitacoes"></canvas></div>
-        </div>
-        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Gastos Almoxarifado</div>
-          <div style="height:200px;"><canvas id="chartAlmox"></canvas></div>
-        </div>
-      </div>
-      <div style="margin-top:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Chamados de Manutencao (Tendencia)</div>
-        <div style="height:200px;"><canvas id="chartManutencao"></canvas></div>
-      </div>
       <div id="riskScoreWidget" style="margin-top:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <div style="font-size:14px;font-weight:700;">Alunos em Risco</div>
@@ -10686,7 +10668,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       const el = document.getElementById('riskScoreWidgetContent');
       if (el) el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Dados de risco não disponíveis.</div>';
     });
-    if (typeof _renderAnalyticsCharts === 'function') _renderAnalyticsCharts(d);
     } catch(e) { el.innerHTML = '<div class="empty-state">Erro ao renderizar analytics: ' + e.message + '</div>'; }
   }
 
@@ -10739,17 +10720,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <span style="color:#b07d00;">Pendente: <strong>${fmtR(d.mensalidades.pendente)}</strong></span>
         </div>
       </div>` : ''}
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px;">
-        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Receitas vs Despesas (Grafico)</div>
-          <div style="height:220px;"><canvas id="chartFinRecDesp"></canvas></div>
-        </div>
-        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Composicao</div>
-          <div style="height:220px;"><canvas id="chartFinDonut"></canvas></div>
-        </div>
-      </div>`;
-    if (typeof _renderFinCharts === 'function') _renderFinCharts(d);
+      `;
   }
 
   async function loadFinLancamentos() {
