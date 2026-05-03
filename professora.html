@@ -98,9 +98,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .turno-pill.integral{background:rgba(200,16,46,.1);color:#C8102E;}.turno-pill.semi{background:rgba(212,131,10,.1);color:#c27800;}.turno-pill.tarde{background:rgba(26,107,181,.1);color:#1a6bb5;}.turno-pill.diaria{background:rgba(107,63,160,.1);color:#6b3fa0;}
 @media(max-width:768px){
   .stats-grid{grid-template-columns:repeat(2,1fr);}
-  .dias-semana-grid{grid-template-columns:1fr;gap:8px;}
   .table-wrap{overflow-x:auto;}
   .p-search-input{width:100%;}
+  /* Dias da semana: tabs on mobile */
+  .dias-semana-grid{display:flex;flex-direction:column;gap:0;}
+  .dias-semana-grid .dia-card{border-radius:0;border-left:none;border-right:none;border-bottom:none;}
+  .dias-semana-grid .dia-card:first-child{border-radius:12px 12px 0 0;border:1px solid var(--border);}
+  .dias-semana-grid .dia-card:last-child{border-radius:0 0 12px 12px;border-bottom:1px solid var(--border);}
+  .dias-semana-grid .dia-card-header{cursor:pointer;padding:10px 14px;}
+  .dias-semana-grid .dia-card-body{display:none;border-top:1px solid rgba(0,0,0,.06);}
+  .dias-semana-grid .dia-card.dia-open .dia-card-body{display:block;}
+  .dias-semana-grid .dia-card-header::after{content:'▼';float:right;font-size:10px;color:rgba(255,255,255,.6);transition:transform .2s;}
+  .dias-semana-grid .dia-card.dia-open .dia-card-header::after{transform:rotate(180deg);}
 }
 
 /* RANKING TABLE */
@@ -285,7 +294,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .p-ocup-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:28px;}
 @media(max-width:768px){
   .stats-grid{grid-template-columns:repeat(2,1fr);}
-  .dias-semana-grid{grid-template-columns:1fr;gap:8px;}
   .p-ocup-grid{grid-template-columns:1fr;}
 }
 

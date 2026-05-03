@@ -921,6 +921,45 @@
   // ═══════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════
+  // 18. DIAS DA SEMANA ACCORDION (mobile)
+  // ═══════════════════════════════════════════════════
+  function setupDiasAccordion() {
+    if (window.innerWidth > 768) return;
+
+    function initAccordion() {
+      document.querySelectorAll('.dias-semana-grid').forEach(function(grid) {
+        if (grid.dataset.accordion) return;
+        grid.dataset.accordion = '1';
+
+        var cards = grid.querySelectorAll('.dia-card');
+        // Open today's day by default
+        var today = new Date().getDay(); // 0=Sun, 1=Mon...
+        var dayMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 }; // Mon-Fri → index 0-4
+        var todayIdx = dayMap[today];
+
+        cards.forEach(function(card, idx) {
+          if (idx === todayIdx) card.classList.add('dia-open');
+
+          var header = card.querySelector('.dia-card-header');
+          if (header) {
+            header.addEventListener('click', function() {
+              // Close all in this grid
+              cards.forEach(function(c) { c.classList.remove('dia-open'); });
+              // Open clicked one
+              card.classList.toggle('dia-open', true);
+            });
+          }
+        });
+      });
+    }
+
+    // Run on load and when content changes (panels switch)
+    initAccordion();
+    new MutationObserver(function() { setTimeout(initAccordion, 300); })
+      .observe(document.body, { childList: true, subtree: true });
+  }
+
   function init() {
     injectGlobalCSS();
     fixTouchTargets();
@@ -937,6 +976,8 @@
       setupPanelTransitions();
       setupBreadcrumbs();
     }, 100);
+    // Dias da semana accordion on mobile
+    setupDiasAccordion();
     // Mic button for voice commands (professora portal, mobile only)
     setTimeout(setupMicButton, 600);
     // Onboarding after app loads
