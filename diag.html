@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><title>Diagnostico</title></head>
+<body>
+<h2>Diagnostico de Layout</h2>
+<pre id="r">Carregando...</pre>
+<script>
+var main = document.querySelector('.main');
+var content = document.querySelector('.content');
+var panel = document.querySelector('.panel.active');
+document.getElementById('r').textContent =
+  'window: ' + window.innerWidth + 'x' + window.innerHeight + '\n' +
+  'main: ' + (main ? main.offsetWidth + 'x' + main.offsetHeight : 'NAO ENCONTRADO') + '\n' +
+  'content: ' + (content ? content.offsetWidth + 'x' + content.offsetHeight : 'NAO ENCONTRADO') + '\n' +
+  'panel: ' + (panel ? panel.offsetWidth + 'x' + panel.offsetHeight + ' id=' + panel.id : 'NAO ENCONTRADO');
+</script>
+</body>
+</html>
