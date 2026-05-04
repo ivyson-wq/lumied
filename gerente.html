@@ -71,16 +71,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .logout-btn{width:100%;padding:10px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:rgba(255,255,255,.5);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-align:left;transition:all .2s;display:flex;align-items:center;gap:8px;}
 .logout-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.15);}
 .main{margin-left:240px;min-height:100vh;display:flex;flex-direction:column;transition:margin-left .3s;width:calc(100% - 240px);}
-.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;gap:12px;backdrop-filter:blur(8px);background:rgba(255,255,255,.92);}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;position:sticky;top:0;z-index:50;gap:10px;backdrop-filter:blur(8px);background:rgba(255,255,255,.92);}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .topbar h2{font-family:'Lora',serif;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-icon{font-size:18px;flex-shrink:0;}
+.topbar-bc{font-size:11px;color:var(--muted);margin-top:2px;}
 /* Breadcrumb nav pills in topbar */
-.topbar-nav-pills{display:flex;align-items:center;gap:6px;margin-left:16px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;}
+.topbar-nav-pills{display:flex;align-items:center;gap:6px;margin-left:12px;overflow-x:auto;scrollbar-width:none;min-width:0;max-width:400px;}
 .topbar-nav-pills::-webkit-scrollbar{display:none;}
 .tnp{padding:5px 12px;border-radius:100px;border:1px solid var(--border);background:var(--white);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;}
 .tnp:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
 .tnp.active{border-color:var(--red);background:var(--red);color:#fff;}
-.live-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:500;}
-.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+.live-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--green);font-weight:500;padding:3px 8px;background:rgba(45,122,58,.08);border-radius:100px;}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
 .spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(200,16,46,.25);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -304,6 +308,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   .content{padding:16px 12px 80px;overflow-x:hidden;}
   .topbar{padding:8px 12px;}
   .topbar-nav-pills{display:none;}
+  .topbar-bc{display:none;}
+  #greetingBanner{display:none!important;}
+  .topbar-btn-label{display:none;}
+  .btn-export,.btn-whatsapp{padding:6px 10px!important;font-size:14px!important;}
+  .topbar-right{gap:4px!important;}
   .stats-grid{grid-template-columns:repeat(2,1fr)!important;}
   .hamburger{display:flex!important;}
   .ger-bottom-bar{display:flex;}
@@ -736,23 +745,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
   <div class="main" role="main">
     <div class="topbar" role="banner">
-      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-      <span id="greetingTopbar" style="font-size:14px;font-weight:500;color:var(--muted);margin-right:auto;"></span>
-      <div style="min-width:0;"><h2 id="topbarTitle">Dashboard Analytics</h2><div id="breadcrumb" style="font-size:11px;color:var(--muted);margin-top:2px;"></div></div>
-      <div class="topbar-nav-pills" id="topbarPills"></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <button style="position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()" aria-label="Notificações">🔔<span id="notifDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
-        <div class="live-badge" id="liveBadge"><div class="live-dot"></div>Atualizando…</div>
-        <div id="iaUsoChip" onclick="abrirIaUsoDetalhe()" style="display:none;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;font-weight:600;border:1px solid transparent;" title="Consumo de IA no mês"></div>
-        <button class="btn-export" id="btnExportPdf" onclick="exportarPDF()" style="display:none;">
-          📄 Exportar PDF
-        </button>
-        <button class="btn-whatsapp" id="btnWhatsapp" onclick="compartilharWhatsApp()" style="display:none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.522 5.847L.057 23.882l6.186-1.424A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.875 9.875 0 01-5.018-1.368l-.36-.214-3.732.859.896-3.614-.235-.373A9.844 9.844 0 012.118 12C2.118 6.56 6.56 2.118 12 2.118c5.44 0 9.882 4.442 9.882 9.882 0 5.44-4.442 9.882-9.882 9.882z"/></svg>
-          Compartilhar PDF
-        </button>
+      <div class="topbar-left">
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+        <span class="topbar-icon" id="topbarIcon">📊</span>
+        <div style="min-width:0;"><h2 id="topbarTitle">Dashboard Analytics</h2><div id="breadcrumb" class="topbar-bc"></div></div>
+        <div class="topbar-nav-pills" id="topbarPills"></div>
+      </div>
+      <div class="topbar-right">
+        <div class="live-badge" id="liveBadge" style="display:none;"><div class="live-dot"></div>Live</div>
+        <div id="iaUsoChip" onclick="abrirIaUsoDetalhe()" style="display:none;font-size:11px;padding:3px 8px;border-radius:20px;cursor:pointer;font-weight:600;border:1px solid transparent;" title="Consumo de IA no mês"></div>
+        <button style="position:relative;background:none;border:none;font-size:18px;cursor:pointer;padding:6px;line-height:1;" onclick="toggleNotifPanel()" aria-label="Notificações">🔔<span id="notifDot" style="position:absolute;top:2px;right:2px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;display:none;"></span></button>
+        <button class="btn-export" id="btnExportPdf" onclick="exportarPDF()" style="display:none;">📄 <span class="topbar-btn-label">PDF</span></button>
+        <button class="btn-whatsapp" id="btnWhatsapp" onclick="compartilharWhatsApp()" style="display:none;">📲 <span class="topbar-btn-label">Enviar</span></button>
       </div>
     </div>
+    <div id="greetingBanner" style="display:none;padding:12px 28px;background:linear-gradient(90deg,rgba(200,16,46,.04),transparent);font-size:14px;color:var(--text);border-bottom:1px solid var(--border);"><span id="greetingTopbar"></span></div>
     <div class="content">
 
       <div id="notifPanel" style="display:none;position:fixed;top:60px;right:16px;width:340px;max-height:400px;background:#fff;border-radius:12px;border:1px solid #e6ddd3;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:500;overflow-y:auto;">
@@ -3724,7 +3731,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('userNome').textContent = user.nome || 'Gerente';
     document.getElementById('userEmail').textContent = user.email || '';
     const firstName = (user.nome || 'Gerente').split(/\s/)[0];
-    document.getElementById('greetingTopbar').textContent = 'Olá, ' + firstName;
+    const hour = new Date().getHours();
+    const period = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+    document.getElementById('greetingTopbar').textContent = period + ', ' + firstName + ' 👋';
+    document.getElementById('greetingBanner').style.display = '';
     carregarIaUsoChip();
     // Defer loads to after all script declarations are initialized
     setTimeout(function() {
@@ -3784,6 +3794,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
     const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline de Leads',crmLeads:'Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Vagas Disponíveis',crmMatriculas:'Matrículas e Reservas',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
+    const meta = panelMeta[id];
+    document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
     // Breadcrumb
     const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'CRM & Matrículas',crmLeads:'CRM & Matrículas',crmMatriculas:'CRM & Matrículas',crmVagas:'CRM & Matrículas',crmTemplates:'CRM & Matrículas',crmConfigSeries:'CRM & Matrículas',matriculaForm:'CRM & Matrículas',matriculaStatus:'CRM & Matrículas',contratos:'CRM & Matrículas',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração'};
     const sec = panelSections[id] || '';
