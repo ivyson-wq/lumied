@@ -976,8 +976,6 @@
       setupPanelTransitions();
       setupBreadcrumbs();
     }, 100);
-    // Dias da semana accordion on mobile
-    setupDiasAccordion();
     // Mic button for voice commands (professora portal, mobile only)
     setTimeout(setupMicButton, 600);
     // Onboarding after app loads

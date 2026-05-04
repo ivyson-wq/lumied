@@ -317,15 +317,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   [style*="grid-template-columns:repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important;}
   [style*="grid-template-columns:repeat(5,1fr)"]{grid-template-columns:repeat(2,1fr)!important;}
   .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .dias-semana-grid{display:flex!important;flex-direction:column!important;gap:0!important;}
-  .dias-semana-grid .dia-card{border-radius:0!important;border-left:none!important;border-right:none!important;border-bottom:none!important;}
-  .dias-semana-grid .dia-card:first-child{border-radius:12px 12px 0 0!important;border:1px solid var(--border)!important;}
-  .dias-semana-grid .dia-card:last-child{border-radius:0 0 12px 12px!important;border-bottom:1px solid var(--border)!important;}
-  .dias-semana-grid .dia-card-header{cursor:pointer!important;padding:10px 14px!important;}
-  .dias-semana-grid .dia-card-body{display:none!important;}
-  .dias-semana-grid .dia-card.dia-open .dia-card-body{display:block!important;}
-  .dias-semana-grid .dia-card-header::after{content:'▼';float:right;font-size:10px;color:rgba(255,255,255,.6);transition:transform .2s;}
-  .dias-semana-grid .dia-card.dia-open .dia-card-header::after{transform:rotate(180deg);}
+  .dias-semana-grid{grid-template-columns:1fr!important;gap:10px!important;}
   .briefing-metrics{grid-template-columns:repeat(2,1fr)!important;}
   .briefing-card h3{font-size:16px!important;}
   .dash-fav-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important;}
