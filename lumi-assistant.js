@@ -64,7 +64,7 @@
     #lumiResponse{position:fixed;bottom:60px;left:16px;right:16px;z-index:9990;background:#fff;border:1px solid #e2dbd1;border-radius:14px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.12);display:none;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;line-height:1.6;max-height:300px;overflow-y:auto;}
     #lumiResponse .close-resp{position:absolute;top:8px;right:12px;background:none;border:none;font-size:16px;cursor:pointer;color:#7a7169;}
     body{padding-bottom:64px !important;}
-    .bnav,.prof-bnav,.bottom-nav{bottom:56px !important;}
+    .bnav,.prof-bnav,.bottom-nav,.ger-bottom-bar{bottom:56px !important;}
     @media(min-width:901px){#lumiBar{left:240px;}}
     @media(max-width:900px){.bottom-nav.visible{bottom:56px !important;}}
   `;
