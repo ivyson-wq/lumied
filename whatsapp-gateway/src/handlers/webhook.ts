@@ -119,6 +119,12 @@ async function processWebhook(body: WhatsAppWebhookPayload, env: Env): Promise<R
           .eq('whatsapp', waId).single() as { data: Familia | null };
 
         if (!familia) {
+          // ── SDR LEAD CHECK ──
+          // Before saying "not registered", check if this number belongs to an SDR lead.
+          // If so, forward the message to the SDR Agent for autonomous conversation.
+          const sdrHandled = await forwardToSDRAgent(db, env, phoneId, waId, msg);
+          if (sdrHandled) continue;
+
           await enviarTextoLivre(env, phoneId, waId,
             'Olá! Seu número não está cadastrado no sistema da escola. Por favor, entre em contato com a secretaria para vincular seu WhatsApp. 📞');
           continue;
@@ -205,6 +211,85 @@ async function processWebhook(body: WhatsAppWebhookPayload, env: Env): Promise<R
   }
 
   return new Response('OK', { status: 200 });
+}
+
+/**
+ * Check if the sender is an SDR lead and forward the message to InstaPublisher.
+ * Queries the insta_publisher.sdr_leads table for matching phone numbers.
+ * If found, POSTs the reply to the SDR webhook for autonomous conversation.
+ */
+async function forwardToSDRAgent(
+  db: any, env: Env, phoneId: string, waId: string, msg: any,
+): Promise<boolean> {
+  if (!env.SDR_WEBHOOK_URL) return false;
+
+  // Extract message text
+  const text = msg.text?.body
+    ?? msg.interactive?.button_reply?.title
+    ?? msg.interactive?.list_reply?.title
+    ?? '';
+  if (!text) return false;
+
+  // Check if this phone number is an SDR lead
+  // Phone formats: waId is digits only (e.g. "5511999998888")
+  // sdr_leads.phone might have formatting, so we check multiple patterns
+  const phoneCleaned = waId.replace(/^55/, ''); // remove country code
+  const { data: leads } = await db
+    .schema('insta_publisher')
+    .from('sdr_leads')
+    .select('id, company_id')
+    .or(`phone.ilike.%${phoneCleaned},contact_phone.ilike.%${phoneCleaned},phone.ilike.%${waId},contact_phone.ilike.%${waId}`)
+    .not('stage', 'eq', 'lost')
+    .limit(1);
+
+  if (!leads?.length) return false;
+
+  const lead = leads[0];
+  console.log(`[SDR] Forwarding WhatsApp reply from ${waId} (lead ${lead.id}) to SDR Agent`);
+
+  // Find the latest outbound WhatsApp touchpoint to this lead
+  const { data: touchpoint } = await db
+    .schema('insta_publisher')
+    .from('sdr_touchpoints')
+    .select('id')
+    .eq('lead_id', lead.id)
+    .eq('channel', 'whatsapp')
+    .eq('direction', 'outbound')
+    .in('status', ['sent', 'delivered', 'opened'])
+    .order('sent_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  // Forward to SDR webhook
+  try {
+    const payload: any = { reply_text: text };
+
+    if (touchpoint) {
+      // Has prior outbound → link to touchpoint for conversation context
+      payload.touchpoint_id = touchpoint.id;
+    } else {
+      // No prior outbound — this is an inbound-first contact (lead messaged us)
+      // Register as inbound touchpoint
+      payload.from_phone = waId;
+      payload.lead_id = lead.id;
+      payload.channel = 'whatsapp';
+    }
+
+    const res = await fetch(env.SDR_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) {
+      console.error(`[SDR] Webhook error: ${res.status} ${await res.text()}`);
+    }
+  } catch (err) {
+    console.error(`[SDR] Failed to forward to webhook:`, (err as Error).message);
+  }
+
+  return true; // Handled — don't send "not registered" message
 }
 
 async function renovarJanela(db: any, familiaId: string) {

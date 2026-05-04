@@ -8,6 +8,9 @@ export interface Env {
   OPENAI_API_KEY: string;
   APP_INTERNAL_SECRET: string;
   APP_BASE_URL: string;
+  // SDR Agent (InstaPublisher)
+  SDR_WEBHOOK_URL?: string;    // https://insta-publisher.vercel.app/api/sdr/webhook
+  SDR_CRON_SECRET?: string;    // same as CRON_SECRET in InstaPublisher
 }
 
 export interface WhatsAppMessage {
