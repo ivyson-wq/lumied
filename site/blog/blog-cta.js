@@ -57,4 +57,10 @@
   } else {
     init();
   }
+
+  // Load SDR lead capture widget (exit-intent + sticky bar)
+  var sdrScript = document.createElement('script');
+  sdrScript.src = '/blog/sdr-capture.js';
+  sdrScript.defer = true;
+  document.head.appendChild(sdrScript);
 })();
