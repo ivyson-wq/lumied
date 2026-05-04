@@ -1171,8 +1171,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div class="stat-card" data-g="diaria"><div class="stat-label">Diária</div><div class="stat-value" id="sDiaria">—</div><div class="stat-sub">R$ 150,00</div></div>
         </div>
 
-        <!-- Crianças por dia da semana -->
-        <div class="sec-title" style="margin-bottom:16px;">📅 Crianças por Dia da Semana</div>
+        <!-- Crianças por dia da semana (manhã) -->
+        <div class="sec-title" style="margin-bottom:16px;">📅 Integral e Semi por Dia da Semana</div>
         <div class="dias-semana-grid" id="diasSemanaGrid">
           <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="dCount_Segunda">—</span></div><div class="dia-card-body" id="dList_Segunda"><div class="dia-vazio">Carregando…</div></div></div>
           <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terça</span><span class="dia-count" id="dCount_Terça">—</span></div><div class="dia-card-body" id="dList_Terça"><div class="dia-vazio">Carregando…</div></div></div>
@@ -4701,15 +4701,16 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     function getDias(r) {
       if (Array.isArray(r.dias_semana) && r.dias_semana.length) return r.dias_semana;
       if (!r.turno) return [];
-      if (r.turno === 'tarde') return DIAS;
-      if (r.turno === 'diaria') return [];
       const m = r.turno.match(/(\d)x$/);
       return m ? (FREQ_DIAS[+m[1]] || []) : [];
     }
     const map = {};
     DIAS.forEach(d => map[d] = []);
 
+    // Só integral e semi-integral (turno da manhã) — tarde vem todo dia, não precisa listar
     allData.forEach(r => {
+      const g = TURNO_INFO[r.turno]?.g;
+      if (g !== 'integral' && g !== 'semi') return;
       getDias(r).forEach(dia => {
         if (map[dia]) map[dia].push(r);
       });
