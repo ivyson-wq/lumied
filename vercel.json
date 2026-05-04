@@ -216,6 +216,16 @@
       "destination": "/site/whatsapp-float.js"
     },
     {
+      "source": "/materiais/:slug",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/materiais/:slug.html"
+    },
+    {
+      "source": "/materiais/:slug/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/materiais/:slug.html"
+    },
+    {
       "source": "/blog",
       "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
       "destination": "/maple-bear-blog/index.html"

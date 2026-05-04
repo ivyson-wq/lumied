@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calculadora de ROI — Quanto sua escola perde sem automação? | Lumied</title>
+<meta name="description" content="Descubra quanto sua escola particular perde por mês sem automação da gestão escolar. Calculadora gratuita.">
+<meta property="og:title" content="Calculadora de ROI — Quanto sua escola perde sem automação?">
+<meta property="og:description" content="Descubra em 30 segundos quanto sua escola perde sem automação. Calculadora gratuita.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lumied.com.br/materiais/calculadora-roi">
+<meta property="og:image" content="https://lumied.com.br/lumied-logo.png">
+<link rel="canonical" href="https://lumied.com.br/materiais/calculadora-roi">
+<link rel="icon" href="/favicon.png">
+<script src="/analytics.js" defer></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;background:#f8fafc}
+.hero{background:linear-gradient(135deg,#059669 0%,#047857 100%);color:#fff;padding:60px 20px;text-align:center}
+.hero h1{font-size:clamp(24px,5vw,38px);max-width:700px;margin:0 auto 16px;line-height:1.2}
+.hero p{font-size:18px;opacity:.9;max-width:500px;margin:0 auto}
+.container{max-width:600px;margin:0 auto;padding:40px 20px}
+.calc-card{background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.calc-card h2{font-size:20px;margin-bottom:20px;text-align:center}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;margin-top:16px}
+input,select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;outline:none}
+input:focus{border-color:#059669}
+.range-row{display:flex;align-items:center;gap:12px}
+.range-row input[type=range]{flex:1}
+.range-row .val{min-width:60px;text-align:right;font-weight:700;color:#059669}
+.result-box{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:12px;padding:24px;margin:24px 0;text-align:center;display:none}
+.result-box h3{font-size:14px;color:#065f46;margin-bottom:8px}
+.result-box .amount{font-size:36px;font-weight:800;color:#059669}
+.result-box .detail{font-size:13px;color:#047857;margin-top:8px;line-height:1.5}
+.cta-section{margin-top:24px;text-align:center;display:none}
+.cta-section p{font-size:14px;color:#6b7280;margin-bottom:16px}
+.cta-section button{padding:14px 32px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer}
+.cta-section button:hover{opacity:.9}
+.form-section{display:none;margin-top:24px}
+.form-section button{width:100%;padding:14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;margin-top:16px}
+.success{text-align:center;padding:24px;color:#059669;display:none}
+.footer{text-align:center;padding:40px 20px;color:#9ca3af;font-size:12px}
+.footer a{color:#059669}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Quanto sua escola perde sem automação?</h1>
+  <p>Calculadora gratuita — descubra em 30 segundos</p>
+</div>
+
+<div class="container">
+  <div class="calc-card">
+    <h2>📊 Calculadora de ROI</h2>
+
+    <label>Número de alunos</label>
+    <div class="range-row">
+      <input type="range" id="alunos" min="50" max="2000" value="300" step="10">
+      <span class="val" id="alunos-val">300</span>
+    </div>
+
+    <label>Mensalidade média (R$)</label>
+    <div class="range-row">
+      <input type="range" id="mensalidade" min="500" max="5000" value="1500" step="100">
+      <span class="val" id="mensalidade-val">R$ 1.500</span>
+    </div>
+
+    <label>Taxa de inadimplência atual (%)</label>
+    <div class="range-row">
+      <input type="range" id="inadimplencia" min="3" max="30" value="12" step="1">
+      <span class="val" id="inadimplencia-val">12%</span>
+    </div>
+
+    <label>Funcionários na secretaria</label>
+    <div class="range-row">
+      <input type="range" id="secretaria" min="1" max="10" value="3" step="1">
+      <span class="val" id="secretaria-val">3</span>
+    </div>
+
+    <div class="result-box" id="result-box">
+      <h3>Economia mensal estimada com a Lumied</h3>
+      <div class="amount" id="economia-total">R$ 0</div>
+      <div class="detail" id="economia-detail"></div>
+    </div>
+
+    <div class="cta-section" id="cta-section">
+      <p>Quer ver esses números aplicados à sua escola?</p>
+      <button onclick="showForm()">Receber Análise Personalizada →</button>
+    </div>
+
+    <div class="form-section" id="form-section">
+      <label>Seu nome</label>
+      <input type="text" id="f-name" placeholder="Ex: Maria Silva">
+      <label>Email</label>
+      <input type="email" id="f-email" placeholder="diretora@escola.com.br">
+      <label>Nome da escola</label>
+      <input type="text" id="f-school" placeholder="Colégio ABC">
+      <label>Telefone (WhatsApp)</label>
+      <input type="tel" id="f-phone" placeholder="(11) 99999-8888">
+      <button onclick="submitForm()">Quero a Análise Grátis →</button>
+    </div>
+
+    <div class="success" id="success-msg">
+      <h3>✅ Análise enviada!</h3>
+      <p>Verifique seu email. Um consultor Lumied vai entrar em contato em breve.</p>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>© 2026 <a href="https://lumied.com.br">Lumied</a> — Gestão escolar inteligente</p>
+</div>
+
+<script>
+const alunos = document.getElementById('alunos');
+const mensalidade = document.getElementById('mensalidade');
+const inadimplencia = document.getElementById('inadimplencia');
+const secretaria = document.getElementById('secretaria');
+
+function update() {
+  const a = +alunos.value;
+  const m = +mensalidade.value;
+  const i = +inadimplencia.value;
+  const s = +secretaria.value;
+
+  document.getElementById('alunos-val').textContent = a;
+  document.getElementById('mensalidade-val').textContent = 'R$ ' + m.toLocaleString('pt-BR');
+  document.getElementById('inadimplencia-val').textContent = i + '%';
+  document.getElementById('secretaria-val').textContent = s;
+
+  // Calculations
+  const faturamento = a * m;
+  const perdaInadimplencia = faturamento * (i / 100);
+  const reducaoInadimplencia = perdaInadimplencia * 0.3; // 30% reduction
+  const economiaSecretaria = s * 15 * 50; // 15h/semana × R$50/h estimated
+  const total = Math.round(reducaoInadimplencia + economiaSecretaria);
+
+  document.getElementById('economia-total').textContent = 'R$ ' + total.toLocaleString('pt-BR') + '/mês';
+  document.getElementById('economia-detail').innerHTML =
+    `📉 Recuperação de inadimplência: <strong>R$ ${Math.round(reducaoInadimplencia).toLocaleString('pt-BR')}</strong>/mês<br>` +
+    `⏰ Economia da secretaria: <strong>R$ ${Math.round(economiaSecretaria).toLocaleString('pt-BR')}</strong>/mês<br>` +
+    `<br>💡 Investimento Lumied: a partir de <strong>R$ 897/mês</strong><br>` +
+    `<strong style="color:#059669;font-size:16px;">ROI: ${Math.round((total / 897 - 1) * 100)}% no primeiro mês</strong>`;
+
+  document.getElementById('result-box').style.display = 'block';
+  document.getElementById('cta-section').style.display = 'block';
+}
+
+[alunos, mensalidade, inadimplencia, secretaria].forEach(el => el.addEventListener('input', update));
+update();
+
+function showForm() {
+  document.getElementById('form-section').style.display = 'block';
+  document.getElementById('cta-section').style.display = 'none';
+}
+
+async function submitForm() {
+  const data = {
+    name: document.getElementById('f-name').value,
+    email: document.getElementById('f-email').value,
+    school_name: document.getElementById('f-school').value,
+    phone: document.getElementById('f-phone').value || undefined,
+    source: 'calculadora-roi',
+  };
+
+  if (!data.email || !data.school_name) { alert('Preencha email e nome da escola'); return; }
+
+  try {
+    await fetch('https://insta-publisher.vercel.app/api/sdr/capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    document.getElementById('form-section').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+  } catch {
+    alert('Erro ao enviar. Tente novamente.');
+  }
+}
+</script>
+</body>
+</html>
