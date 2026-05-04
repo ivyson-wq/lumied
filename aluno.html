@@ -54,6 +54,18 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
 .login-btn{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;}
 #loginError{display:none;font-size:12px;color:var(--red);margin-top:10px;padding:8px;background:#fdf0f2;border-radius:6px;}
 /* logout-btn is now styled inside .topbar */
+/* MOBILE */
+@media(max-width:480px){
+  .topbar{padding:0 12px;height:48px;}
+  .topbar-brand h1{font-size:13px;}
+  .topbar-brand span{display:none;}
+  .greeting{padding:12px 16px;}
+  .greeting strong{font-size:15px;}
+  .stat-row{grid-template-columns:1fr;}
+  .stat-box .val{font-size:22px;}
+  .card{padding:14px;}
+  .bnav-item{min-height:44px;}
+}
 </style>
 <link rel="stylesheet" href="/lumied-mobile.css">
 </head>

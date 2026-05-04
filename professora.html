@@ -377,11 +377,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   .stats-row{grid-template-columns:1fr 1fr;}
   .stat-card:first-child{grid-column:1 / -1;}
   .topbar{padding:0 16px;}
-  .content{padding:20px 16px 48px;}
+  .content{padding:20px 16px 80px;}
   .comp-item{grid-template-columns:1fr 22px 22px;}.comp-item .comp-label{grid-column:1/-1;}
   .pickup-card{flex-wrap:wrap;}
   #almModal > div > div[style*="grid-template-columns"]{grid-template-columns:1fr !important;}
   .mc-row{gap:8px;padding:8px 10px;}
+  .camera-fab{bottom:80px;}
+}
+@media(max-width:480px){
+  .stats-row,.stats-grid{grid-template-columns:1fr;}
+  .stat-card:first-child{grid-column:auto;}
 }
 @media(min-width:960px){
   .prof-bnav{display:none !important;}

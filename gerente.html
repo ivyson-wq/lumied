@@ -407,7 +407,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 .pdi-comp-cell{background:#fdfbf8;border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
 .pdi-comp-cell-name{font-size:11px;font-weight:700;margin-bottom:4px;}
 .pdi-note-row{display:flex;gap:4px;margin-bottom:4px;}
-.pdi-note-btn{width:30px;height:30px;border-radius:6px;border:1.5px solid var(--border);background:#fdfbf8;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--muted);}
+.pdi-note-btn{min-width:44px;min-height:44px;border-radius:6px;border:1.5px solid var(--border);background:#fdfbf8;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--muted);}
 .pdi-note-btn:hover{border-color:var(--green);color:var(--green);}
 .pdi-note-btn.sel{background:var(--green);color:#fff;border-color:var(--green);}
 .pdi-meta-item{background:#fdfbf8;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;}
@@ -10905,7 +10905,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     };
     document.getElementById('dreContent').innerHTML = `
       <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:900px;">
+      <table style="width:100%;border-collapse:collapse;">
         <thead><tr>
           <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);min-width:180px;">Conta</th>
           ${MS.map(m => `<th style="text-align:right;padding:8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);">${m}</th>`).join('')}

@@ -220,23 +220,84 @@
   /* ── Modals: nearly full width ── */
   .modal-overlay > div,
   .modal {
-    max-width: 95vw;
+    max-width: clamp(300px, 95vw, 540px);
     max-height: 90vh;
+    padding: 16px;
   }
 
   #almModal > div {
     max-width: 95vw;
   }
+
+  /* ── Form inputs/buttons: min touch height ── */
+  .ff input,
+  .ff select,
+  .ff textarea,
+  .lf input,
+  .lf select,
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    min-height: 44px;
+  }
+
+  button,
+  .btn,
+  .btn-create,
+  .btn-submit,
+  .btn-ghost {
+    min-height: 44px;
+  }
+
+  /* ── Tables without .table-wrap: safety net ── */
+  .card[style*="overflow-x:auto"],
+  .card[style*="overflow-x: auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  /* ── Inline 2-col grids in forms: stack ── */
+  .form-row,
+  .ff-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Content bottom padding for portals without bottom nav ── */
+  .content {
+    padding-bottom: 48px;
+  }
 }
 
 /* ────────────────────────────────────────────
-   SMALL PHONE (<= 400px)
+   SMALL PHONE (<= 480px)
    ──────────────────────────────────────────── */
-@media (max-width: 400px) {
-  .stats-grid {
+@media (max-width: 480px) {
+  .stats-grid,
+  .kpi-grid,
+  .plans-grid {
     grid-template-columns: 1fr;
   }
 
+  .stat-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .stat-card {
+    padding: 10px;
+  }
+}
+
+/* ────────────────────────────────────────────
+   EXTRA SMALL PHONE (<= 400px)
+   ──────────────────────────────────────────── */
+@media (max-width: 400px) {
   .stat-value {
     font-size: 20px;
   }
@@ -245,6 +306,11 @@
   .table-wrap td {
     padding: 6px 8px;
     font-size: 11px;
+  }
+
+  .modal-overlay > div,
+  .modal {
+    padding: 12px;
   }
 }
 
@@ -266,7 +332,8 @@
     min-height: 40px;
   }
 
-  .pbnav-item {
+  .pbnav-item,
+  .bnav-item {
     min-height: 44px;
   }
 }
