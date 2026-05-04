@@ -3615,9 +3615,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
   };
 
   async function callProfApi(body) {
-    const tok = getToken();
-    const headers = { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
-    const r = await fetch(PROF_API, { method: 'POST', headers, body: JSON.stringify({ ...body, _token: tok }) });
+    var tok = getToken();
+    var headers = { 'Content-Type': 'application/json', 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
+    var r = await fetch(PROF_API, { method: 'POST', headers: headers, body: JSON.stringify(Object.assign({}, body, { _token: tok })) });
     return r.json();
   }
 
