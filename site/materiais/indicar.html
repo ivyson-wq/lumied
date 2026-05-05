@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Indique uma Escola e Ganhe 1 Mês Grátis | Lumied</title>
+<meta name="description" content="Indique uma escola particular para a Lumied. Se ela fechar, você ganha 1 mês grátis e ela ganha 20% de desconto no primeiro trimestre.">
+<meta property="og:title" content="Indique uma Escola e Ganhe 1 Mês Grátis">
+<meta property="og:description" content="Programa de indicação Lumied — indique escolas e ganhe benefícios.">
+<meta property="og:url" content="https://lumied.com.br/indicar">
+<meta property="og:image" content="https://lumied.com.br/lumied-logo.png">
+<link rel="canonical" href="https://lumied.com.br/indicar">
+<link rel="icon" href="/favicon.png">
+<script src="/analytics.js" defer></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937;background:#f8fafc}
+.hero{background:linear-gradient(135deg,#7c3aed 0%,#ec4899 100%);color:#fff;padding:60px 20px;text-align:center}
+.hero h1{font-size:clamp(24px,5vw,38px);max-width:700px;margin:0 auto 16px;line-height:1.2}
+.hero p{font-size:18px;opacity:.9;max-width:500px;margin:0 auto}
+.container{max-width:700px;margin:0 auto;padding:40px 20px}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;margin:40px 0}
+.step{text-align:center;padding:24px 16px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.step .num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px}
+.step h3{font-size:14px;margin-bottom:6px}
+.step p{font-size:12px;color:#6b7280;line-height:1.4}
+.rewards{background:#fff;border-radius:12px;padding:24px;margin:24px 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.rewards h2{font-size:18px;margin-bottom:16px;text-align:center}
+.reward-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f3f4f6}
+.reward-row:last-child{border:none}
+.reward-row .icon{font-size:24px}
+.reward-row strong{font-size:14px}
+.reward-row span{font-size:12px;color:#6b7280}
+.form-card{background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 20px rgba(0,0,0,.08);margin:32px 0}
+.form-card h2{font-size:20px;margin-bottom:16px;text-align:center}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;margin-top:14px}
+input,select{width:100%;padding:11px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;outline:none}
+input:focus{border-color:#7c3aed}
+.sep{text-align:center;font-size:12px;color:#9ca3af;margin:20px 0 8px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+button[type=submit]{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;margin-top:20px}
+button[type=submit]:hover{opacity:.9}
+.success{display:none;text-align:center;padding:32px;color:#059669}
+.success h3{font-size:20px;margin-bottom:8px}
+.footer{text-align:center;padding:40px 20px;color:#9ca3af;font-size:12px}
+.footer a{color:#7c3aed}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Indique uma Escola e Ganhe 1 Mês Grátis</h1>
+  <p>Conhece uma escola que precisa modernizar a gestão? Indique e ganhe benefícios!</p>
+</div>
+
+<div class="container">
+  <div class="how">
+    <div class="step">
+      <div class="num">1</div>
+      <h3>Indique</h3>
+      <p>Preencha o formulário com os dados da escola</p>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <h3>Conectamos</h3>
+      <p>Nossa equipe entra em contato e agenda uma demo</p>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <h3>Ganhe</h3>
+      <p>Se a escola fechar, você ganha 1 mês grátis!</p>
+    </div>
+  </div>
+
+  <div class="rewards">
+    <h2>Benefícios</h2>
+    <div class="reward-row">
+      <div class="icon">🎁</div>
+      <div><strong>Você: 1 mês grátis</strong><br><span>Para cada escola indicada que fechar contrato</span></div>
+    </div>
+    <div class="reward-row">
+      <div class="icon">💰</div>
+      <div><strong>Escola indicada: 20% off</strong><br><span>Desconto no primeiro trimestre</span></div>
+    </div>
+    <div class="reward-row">
+      <div class="icon">🏆</div>
+      <div><strong>3+ indicações fechadas: Upgrade de plano</strong><br><span>Suba de tier sem custo adicional por 3 meses</span></div>
+    </div>
+  </div>
+
+  <div class="form-card" id="form-container">
+    <h2>Indicar Escola</h2>
+    <form id="referral-form">
+      <div class="sep">Dados da escola indicada</div>
+      <label>Nome da escola</label>
+      <input type="text" name="school_name" placeholder="Ex: Colégio ABC" required>
+      <label>Cidade / Estado</label>
+      <input type="text" name="city" placeholder="Ex: Caxias do Sul / RS" required>
+      <label>Telefone da escola</label>
+      <input type="tel" name="phone" placeholder="(54) 3223-0000">
+      <label>Email da escola (se souber)</label>
+      <input type="email" name="school_email" placeholder="contato@escola.com.br">
+      <label>Nome do diretor/responsável (se souber)</label>
+      <input type="text" name="contact_name" placeholder="Ex: Maria Silva">
+
+      <div class="sep">Quem está indicando</div>
+      <label>Seu nome</label>
+      <input type="text" name="referrer_name" placeholder="Seu nome completo" required>
+      <label>Seu email</label>
+      <input type="email" name="referrer_email" placeholder="seu@email.com" required>
+      <label>Sua escola (se for cliente Lumied)</label>
+      <input type="text" name="referrer_school" placeholder="Nome da sua escola (opcional)">
+
+      <button type="submit">Enviar Indicação →</button>
+    </form>
+  </div>
+
+  <div class="success" id="success-msg">
+    <h3>✅ Indicaç��o recebida!</h3>
+    <p>Vamos entrar em contato com a escola indicada em até 24h.</p>
+    <p style="margin-top:12px;font-size:14px;">Você receberá um email quando a demo for agendada e outro quando o contrato for fechado (e seu mês grátis ativado!).</p>
+  </div>
+</div>
+
+<div class="footer">
+  <p>© 2026 <a href="https://lumied.com.br">Lumied</a> — Gestão escolar inteligente</p>
+</div>
+
+<script>
+const API = 'https://insta-publisher.vercel.app/api/sdr/capture';
+
+document.getElementById('referral-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const cityState = (form.get('city') || '').split('/').map(s => s.trim());
+
+  const data = {
+    school_name: form.get('school_name'),
+    phone: form.get('phone') || undefined,
+    email: form.get('school_email') || undefined,
+    contact_name: form.get('contact_name') || undefined,
+    city: cityState[0] || undefined,
+    state: cityState[1] || undefined,
+    name: form.get('referrer_name'),
+    source: 'referral',
+  };
+
+  try {
+    await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    document.getElementById('form-container').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+  } catch {
+    alert('Erro ao enviar. Tente novamente.');
+  }
+});
+</script>
+</body>
+</html>

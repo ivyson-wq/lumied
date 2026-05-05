@@ -226,6 +226,21 @@
       "destination": "/site/materiais/:slug.html"
     },
     {
+      "source": "/indicar",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/materiais/indicar.html"
+    },
+    {
+      "source": "/sistema-gestao-escolar",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/materiais/sistema-gestao-escolar.html"
+    },
+    {
+      "source": "/demo",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/materiais/sistema-gestao-escolar.html"
+    },
+    {
       "source": "/blog",
       "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
       "destination": "/maple-bear-blog/index.html"
