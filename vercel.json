@@ -466,6 +466,26 @@
       "destination": "/maple-bear-blog/sitemap.xml"
     },
     {
+      "source": "/blog/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
+      "destination": "/maple-bear-blog/robots.txt"
+    },
+    {
+      "source": "/blog/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
+      "destination": "/maple-bear-blog/robots.txt"
+    },
+    {
       "source": "/blog",
       "has": [
         {
