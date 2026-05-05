@@ -675,7 +675,7 @@ Deno.serve(async (req) => {
     // ── CRM: Estágios ──
     if (action === 'sec_crm_estagios_list') {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
-      const { data } = await sb.from('crm_estagios').select('*').eq('ativo', true).order('ordem')
+      const { data } = await sb.from('crm_estagios').select('*').eq('ativo', true).eq('escola_id', (sec as any).escola_id).order('ordem')
       return json(data ?? [])
     }
 
@@ -683,7 +683,7 @@ Deno.serve(async (req) => {
     if (action === 'sec_crm_leads_list' || action === 'sec_crm_leads_all') {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
       const { data } = await sb.from('crm_leads').select('*, crm_estagios(nome, cor, ordem), secretarias(nome)')
-        .order('atualizado_em', { ascending: false })
+        .eq('escola_id', (sec as any).escola_id).order('atualizado_em', { ascending: false })
       return json(data ?? [])
     }
 
