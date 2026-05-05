@@ -1878,8 +1878,8 @@ Deno.serve(async (req) => {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
       const [{ count: pendentes }, { data: reqsMes }, { data: turmas }, { data: orcamentos }] =
         await Promise.all([
-          sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
-          sb.from('alm_requisicoes').select('total, turma_id, status').eq('mes', mes).in('status', ['aprovado', 'pendente']),
+          sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente').eq('escola_id', gerente.escola_id),
+          sb.from('alm_requisicoes').select('total, turma_id, status').eq('mes', mes).eq('escola_id', gerente.escola_id).in('status', ['aprovado', 'pendente']),
           sb.from('series').select('id, nome').eq('ativo', true).eq('escola_id', gerente.escola_id),
           sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
         ])
@@ -1905,7 +1905,7 @@ Deno.serve(async (req) => {
       const { data } = await sb
         .from('alm_requisicoes')
         .select('*, professoras(nome, email), series(nome)')
-        .eq('status', 'pendente').order('criado_em', { ascending: true })
+        .eq('status', 'pendente').eq('escola_id', gerente.escola_id).order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
     }
 
@@ -1913,7 +1913,7 @@ Deno.serve(async (req) => {
     if (action === 'alm_pdf_pendentes') {
       const { data: reqs } = await sb.from('alm_requisicoes')
         .select('*, professoras(nome), series(nome)')
-        .eq('status', 'pendente').order('criado_em', { ascending: true })
+        .eq('status', 'pendente').eq('escola_id', gerente.escola_id).order('criado_em', { ascending: true })
       const rows: string[][] = []
       let totalGeral = 0
       for (const r of (reqs ?? []) as any[]) {
@@ -1954,8 +1954,9 @@ Deno.serve(async (req) => {
     if (action === 'alm_pdf_aprovados') {
       // "Ordem de compra" — agrupada por fornecedor/plataforma
       const { data: compras } = await sb.from('alm_compras')
-        .select('*, alm_requisicoes!inner(professora_id, turma_id, series(nome), professoras(nome))')
+        .select('*, alm_requisicoes!inner(professora_id, turma_id, escola_id, series(nome), professoras(nome))')
         .eq('status', 'pendente')
+        .eq('alm_requisicoes.escola_id', gerente.escola_id)
         .order('plataforma')
       const grupos: Record<string, any[]> = {}
       for (const c of (compras ?? []) as any[]) {
@@ -2099,7 +2100,7 @@ Deno.serve(async (req) => {
       const fim = mes + '-31T23:59:59'
       const { data: entregas } = await sb.from('alm_entregas')
         .select('*, alm_requisicoes(professoras(nome), series(nome)), alm_insumos(nome, unidade)')
-        .gte('entregue_em', ini).lte('entregue_em', fim)
+        .eq('escola_id', gerente.escola_id).gte('entregue_em', ini).lte('entregue_em', fim)
         .order('entregue_em', { ascending: true })
       // Agrupa por turma
       const porTurma: Record<string, any[]> = {}
@@ -2137,7 +2138,7 @@ Deno.serve(async (req) => {
       // Itens aprovados e AINDA não entregues — com descrição completa p/ identificar quando chegar pelos correios
       const { data: reqs } = await sb.from('alm_requisicoes')
         .select('*, professoras(nome), series(nome)')
-        .eq('status', 'aprovado').order('aprovado_em', { ascending: true })
+        .eq('status', 'aprovado').eq('escola_id', gerente.escola_id).order('aprovado_em', { ascending: true })
       // Quantidade já entregue por (requisicao, insumo)
       const { data: entregasTodas } = await sb.from('alm_entregas')
         .select('requisicao_id, insumo_id, qty_entregue')
@@ -2193,7 +2194,7 @@ Deno.serve(async (req) => {
       // Romaneio para entrega às professoras: itens aprovados prontos para entrega agrupados por turma
       const { data: reqs } = await sb.from('alm_requisicoes')
         .select('*, professoras(nome, email), series(nome)')
-        .eq('status', 'aprovado').order('criado_em')
+        .eq('status', 'aprovado').eq('escola_id', gerente.escola_id).order('criado_em')
       const { data: entregasTodas } = await sb.from('alm_entregas').select('requisicao_id, insumo_id, qty_entregue')
       const entregueMap: Record<string, number> = {}
       for (const e of (entregasTodas ?? []) as any[]) {
@@ -2247,6 +2248,7 @@ Deno.serve(async (req) => {
       const status: string = body.status || ''
       let q = sb.from('alm_requisicoes')
         .select('*, professoras(nome, email), series(nome)')
+        .eq('escola_id', gerente.escola_id)
         .order('criado_em', { ascending: false })
       if (mes)    q = q.eq('mes', mes)
       if (status) q = q.eq('status', status)
@@ -2557,7 +2559,7 @@ Deno.serve(async (req) => {
       const { data: reqs } = await sb
         .from('alm_requisicoes')
         .select('turma_id, total, status, itens, professoras(nome), series(nome)')
-        .eq('mes', mes)
+        .eq('mes', mes).eq('escola_id', gerente.escola_id)
       const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
       const orcMap: Record<string, number> = {}
       for (const o of orcs ?? []) orcMap[o.turma_id] = o.valor
