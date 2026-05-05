@@ -37,10 +37,10 @@ Deno.test("cacheClear removes all entries", () => {
 
 Deno.test("withCache returns cached value on second call", async () => {
   let callCount = 0;
-  const fn = async () => { callCount++; return { data: "expensive" }; };
+  const fn = () => { callCount++; return Promise.resolve({ data: "expensive" }); };
 
-  const r1 = await withCache("wc-test-" + Date.now(), 5000, fn);
-  const r2 = await withCache("wc-test-" + Date.now(), 5000, fn);
+  const _r1 = await withCache("wc-test-" + Date.now(), 5000, fn);
+  const _r2 = await withCache("wc-test-" + Date.now(), 5000, fn);
   // Note: different timestamps means different keys, so callCount = 2 in reality
   // Use same key:
   const key = "wc-same-" + Date.now();

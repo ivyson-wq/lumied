@@ -189,9 +189,9 @@ export function generateXlsx(headers: string[], rows: string[][]): Uint8Array {
   writeRow(headers, 1, true);
   rows.forEach((r, i) => writeRow(r, i + 2, false));
 
-  const lastCol = colLetter(headers.length - 1);
-  const lastRow = rows.length + 1;
-  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  const _lastCol = colLetter(headers.length - 1);
+  const _lastRow = rows.length + 1;
+  const sheet =`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows.join("")}</sheetData></worksheet>`;
 
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
