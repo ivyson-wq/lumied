@@ -1880,7 +1880,7 @@ Deno.serve(async (req) => {
         await Promise.all([
           sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
           sb.from('alm_requisicoes').select('total, turma_id, status').eq('mes', mes).in('status', ['aprovado', 'pendente']),
-          sb.from('series').select('id, nome').eq('ativo', true),
+          sb.from('series').select('id, nome').eq('ativo', true).eq('escola_id', gerente.escola_id),
           sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
         ])
       const totalAprovado = (reqsMes ?? []).filter((r: any) => r.status === 'aprovado').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
@@ -2503,7 +2503,7 @@ Deno.serve(async (req) => {
 
     if (action === 'alm_series_list') {
       const { data } = await sb.from('series').select('*, professoras(id, nome, email)')
-        .eq('ativo', true).order('nome')
+        .eq('ativo', true).eq('escola_id', gerente.escola_id).order('nome')
       return json({ data: data ?? [] })
     }
 
@@ -2511,12 +2511,12 @@ Deno.serve(async (req) => {
       const { id, nome } = body
       if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
       if (id) {
-        const { error } = await sb.from('series').update({ nome }).eq('id', id)
+        const { error } = await sb.from('series').update({ nome }).eq('id', id).eq('escola_id', gerente.escola_id)
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true })
       } else {
         const { data: nova, error } = await sb.from('series').insert(
-          { nome, ordem: 99 }
+          { nome, ordem: 99, escola_id: gerente.escola_id }
         ).select('id').single()
         if (error) return json({ error: error.message }, 400)
         return json({ ok: true, id: nova.id })
@@ -2526,14 +2526,14 @@ Deno.serve(async (req) => {
     if (action === 'alm_turma_del') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('series').update({ ativo: false }).eq('id', id)
+      const { error } = await sb.from('series').update({ ativo: false }).eq('id', id).eq('escola_id', gerente.escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
 
     if (action === 'alm_orcamentos_list') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
-      const { data: turmas } = await sb.from('series').select('id, nome').eq('ativo', true).order('nome')
+      const { data: turmas } = await sb.from('series').select('id, nome').eq('ativo', true).eq('escola_id', gerente.escola_id).order('nome')
       const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
       const map: Record<string, number> = {}
       for (const o of orcs ?? []) map[o.turma_id] = o.valor
