@@ -736,6 +736,7 @@ Deno.serve(async (req) => {
     if (action === 'sec_crm_dashboard') {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
       const escolaId = (sec as any).escola_id
+      const anoParam = parseInt(body.ano as string) || new Date().getFullYear()
       const { data: leads } = await sb.from('crm_leads').select('estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome, ordem)')
         .eq('escola_id', escolaId)
       const porEstagio: Record<string, number> = {}
@@ -753,18 +754,29 @@ Deno.serve(async (req) => {
         if (l.valor_mensalidade) valorPipeline += l.valor_mensalidade
         if (l.criado_em) { const d = new Date(l.criado_em); if (d.getMonth() === mesAtual && d.getFullYear() === anoAtual) novosMes++ }
       }
-      // Sort estagios by ordem
       // deno-lint-ignore no-explicit-any
       const estagioOrdem: Record<string, number> = {}; for (const l of leads ?? []) { const e = (l as any).crm_estagios; if (e?.nome) estagioOrdem[e.nome] = e.ordem ?? 99 }
       const porEstagioSorted: Record<string, number> = {}
       for (const k of Object.keys(porEstagio).sort((a, b) => (estagioOrdem[a] ?? 99) - (estagioOrdem[b] ?? 99))) porEstagioSorted[k] = porEstagio[k]
-      // Matriculas summary
-      const { data: matrs } = await sb.from('crm_matriculas').select('status').eq('escola_id', escolaId).eq('ano', anoAtual)
+      // Matriculas summary for requested year
+      const { data: matrs } = await sb.from('crm_matriculas').select('status').eq('escola_id', escolaId).eq('ano', anoParam)
       let matriculados = 0, reservas = 0
       for (const m of matrs ?? []) { if (m.status === 'matriculado') matriculados++; if (m.status === 'reserva') reservas++ }
-      const { data: vagas } = await sb.from('crm_turmas_vagas').select('vagas_total').eq('escola_id', escolaId).eq('ano', anoAtual)
+      const { data: vagas } = await sb.from('crm_turmas_vagas').select('vagas_total').eq('escola_id', escolaId).eq('ano', anoParam)
       const totalVagas = (vagas ?? []).reduce((s: number, v: { vagas_total: number }) => s + (v.vagas_total || 0), 0)
-      return json({ total: (leads ?? []).length, novos_mes: novosMes, por_estagio: porEstagioSorted, por_origem: porOrigem, valor_pipeline: valorPipeline, matriculados, reservas, total_vagas: totalVagas })
+      // Metas for current year + realized counts from actual data
+      const { data: metas } = await sb.from('comercial_metas').select('mes, meta_leads, meta_matriculas, meta_valor')
+        .eq('escola_id', escolaId).eq('ano', anoAtual).order('mes')
+      // Count leads/matriculas created per month this year
+      const { data: leadsThisYear } = await sb.from('crm_leads').select('criado_em').eq('escola_id', escolaId).gte('criado_em', `${anoAtual}-01-01`).lte('criado_em', `${anoAtual}-12-31T23:59:59`)
+      const { data: matsThisYear } = await sb.from('crm_matriculas').select('criado_em').eq('escola_id', escolaId).eq('ano', anoAtual)
+      const leadsPorMes: Record<number, number> = {}
+      const matsPorMes: Record<number, number> = {}
+      for (const l of leadsThisYear ?? []) { const m = new Date(l.criado_em).getMonth() + 1; leadsPorMes[m] = (leadsPorMes[m] || 0) + 1 }
+      for (const m of matsThisYear ?? []) { const mo = new Date(m.criado_em).getMonth() + 1; matsPorMes[mo] = (matsPorMes[mo] || 0) + 1 }
+      // deno-lint-ignore no-explicit-any
+      const metasEnriched = (metas ?? []).map((mt: any) => ({ ...mt, realizado_leads: leadsPorMes[mt.mes] || 0, realizado_matriculas: matsPorMes[mt.mes] || 0 }))
+      return json({ total: (leads ?? []).length, novos_mes: novosMes, por_estagio: porEstagioSorted, por_origem: porOrigem, valor_pipeline: valorPipeline, matriculados, reservas, total_vagas: totalVagas, ano_mat: anoParam, metas: metasEnriched })
     }
 
     // ── Metas ──
