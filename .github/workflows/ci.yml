@@ -122,6 +122,14 @@ jobs:
       - name: Build frontend bundles (esbuild)
         run: node build.js
 
+      - name: Link Vercel project
+        run: |
+          mkdir -p .vercel
+          echo '{"projectId":"'"$VERCEL_PROJECT_ID"'","orgId":"'"$VERCEL_ORG_ID"'"}' > .vercel/project.json
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Deploy to Vercel
         run: npx vercel --yes --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
