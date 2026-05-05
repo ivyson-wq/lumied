@@ -157,7 +157,7 @@ export async function resolveAnySession(
       // deno-lint-ignore no-explicit-any
       const papeis: string[] = (user as any).papeis?.length ? (user as any).papeis : ((user as any).papel ? [(user as any).papel] : []);
       // deno-lint-ignore no-explicit-any
-      return { id: user.id, nome: user.nome, email: user.email, tipo: papeis[0] || "usuario", escola_id: (user as Record<string, unknown>).escola_id };
+      return { id: user.id, nome: user.nome, email: user.email, tipo: papeis[0] || "usuario", escola_id: (user as any).escola_id };
     }
   }
   return null;

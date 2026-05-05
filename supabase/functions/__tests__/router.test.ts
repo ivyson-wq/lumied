@@ -17,7 +17,8 @@ function makeRequest(body: Record<string, unknown>): Request {
 Deno.test("Router dispatches to registered action", async () => {
   const router = new Router("test");
   let called = false;
-  router.on("test_action", (_ctx: Context) => {
+  // deno-lint-ignore require-await
+  router.on("test_action", async (_ctx: Context) => {
     called = true;
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   });
@@ -30,7 +31,8 @@ Deno.test("Router dispatches to registered action", async () => {
 
 Deno.test("Router returns NOT_FOUND for unknown action", async () => {
   const router = new Router("test");
-  router.on("known", () => new Response("ok"));
+  // deno-lint-ignore require-await
+  router.on("known", async () => new Response("ok"));
 
   const req = makeRequest({ action: "unknown_action" });
   const res = await router.handle(req, mockSb);
@@ -49,8 +51,10 @@ Deno.test("Router returns BAD_REQUEST for missing action", async () => {
 Deno.test("Router runs global middleware before handler", async () => {
   const order: string[] = [];
   const router = new Router("test");
-  router.useGlobal((_ctx, next) => { order.push("global"); return next(); });
-  router.on("test", () => { order.push("handler"); return new Response("ok"); });
+  // deno-lint-ignore require-await
+  router.useGlobal(async (_ctx, next) => { order.push("global"); return next(); });
+  // deno-lint-ignore require-await
+  router.on("test", async () => { order.push("handler"); return new Response("ok"); });
 
   await router.handle(makeRequest({ action: "test" }), mockSb);
   assertEquals(order, ["global", "handler"]);
@@ -59,9 +63,12 @@ Deno.test("Router runs global middleware before handler", async () => {
 Deno.test("Router runs route middleware in order", async () => {
   const order: string[] = [];
   const router = new Router("test");
-  const mw1 = (_ctx: Context, next: () => Promise<Response>) => { order.push("mw1"); return next(); };
-  const mw2 = (_ctx: Context, next: () => Promise<Response>) => { order.push("mw2"); return next(); };
-  router.on("test", mw1, mw2, () => { order.push("handler"); return new Response("ok"); });
+  // deno-lint-ignore require-await
+  const mw1 = async (_ctx: Context, next: () => Promise<Response>) => { order.push("mw1"); return next(); };
+  // deno-lint-ignore require-await
+  const mw2 = async (_ctx: Context, next: () => Promise<Response>) => { order.push("mw2"); return next(); };
+  // deno-lint-ignore require-await
+  router.on("test", mw1, mw2, async () => { order.push("handler"); return new Response("ok"); });
 
   await router.handle(makeRequest({ action: "test" }), mockSb);
   assertEquals(order, ["mw1", "mw2", "handler"]);
@@ -69,7 +76,8 @@ Deno.test("Router runs route middleware in order", async () => {
 
 Deno.test("Router catches AppError and returns proper response", async () => {
   const router = new Router("test");
-  router.on("fail", () => { throw new AppError("VALIDATION_FAILED", "Nome obrigatório"); });
+  // deno-lint-ignore require-await
+  router.on("fail", async () => { throw new AppError("VALIDATION_FAILED", "Nome obrigatório"); });
 
   const res = await router.handle(makeRequest({ action: "fail" }), mockSb);
   const body = await res.json();
@@ -80,7 +88,8 @@ Deno.test("Router catches AppError and returns proper response", async () => {
 
 Deno.test({ name: "Router catches unknown errors and returns 500", sanitizeOps: false, sanitizeResources: false }, async () => {
   const router = new Router("test");
-  router.on("crash", () => { throw new Error("unexpected"); });
+  // deno-lint-ignore require-await
+  router.on("crash", async () => { throw new Error("unexpected"); });
 
   const res = await router.handle(makeRequest({ action: "crash" }), mockSb);
   assertEquals(res.status, 500);
@@ -98,7 +107,8 @@ Deno.test("Router handles OPTIONS preflight", async () => {
 Deno.test("Router sanitizes body (XSS prevention)", async () => {
   const router = new Router("test");
   let receivedBody: Record<string, unknown> = {};
-  router.on("xss", (ctx: Context) => {
+  // deno-lint-ignore require-await
+  router.on("xss", async (ctx: Context) => {
     receivedBody = ctx.body;
     return new Response("ok");
   });
@@ -111,7 +121,8 @@ Deno.test("Router sanitizes body (XSS prevention)", async () => {
 Deno.test("Router populates context correctly", async () => {
   const router = new Router("test");
   let ctx: Context | null = null;
-  router.on("check", (c: Context) => { ctx = c; return new Response("ok"); });
+  // deno-lint-ignore require-await
+  router.on("check", async (c: Context) => { ctx = c; return new Response("ok"); });
 
   const req = makeRequest({ action: "check", foo: "bar" });
   await router.handle(req, mockSb);
