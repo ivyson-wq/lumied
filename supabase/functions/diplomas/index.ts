@@ -735,17 +735,36 @@ Deno.serve(async (req) => {
     // ── CRM: Dashboard ──
     if (action === 'sec_crm_dashboard') {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
-      const { data: leads } = await sb.from('crm_leads').select('estagio_id, origem, valor_mensalidade, criado_em, responsavel_id, crm_estagios(nome)')
+      const escolaId = (sec as any).escola_id
+      const { data: leads } = await sb.from('crm_leads').select('estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome, ordem)')
+        .eq('escola_id', escolaId)
       const porEstagio: Record<string, number> = {}
       const porOrigem: Record<string, number> = {}
       let valorPipeline = 0
+      let novosMes = 0
+      const now = new Date()
+      const mesAtual = now.getMonth()
+      const anoAtual = now.getFullYear()
       for (const l of leads ?? []) {
+        // deno-lint-ignore no-explicit-any
         const est = (l as any).crm_estagios?.nome || '?'
         porEstagio[est] = (porEstagio[est] || 0) + 1
         if (l.origem) porOrigem[l.origem] = (porOrigem[l.origem] || 0) + 1
         if (l.valor_mensalidade) valorPipeline += l.valor_mensalidade
+        if (l.criado_em) { const d = new Date(l.criado_em); if (d.getMonth() === mesAtual && d.getFullYear() === anoAtual) novosMes++ }
       }
-      return json({ total: (leads ?? []).length, por_estagio: porEstagio, por_origem: porOrigem, valor_pipeline: valorPipeline })
+      // Sort estagios by ordem
+      // deno-lint-ignore no-explicit-any
+      const estagioOrdem: Record<string, number> = {}; for (const l of leads ?? []) { const e = (l as any).crm_estagios; if (e?.nome) estagioOrdem[e.nome] = e.ordem ?? 99 }
+      const porEstagioSorted: Record<string, number> = {}
+      for (const k of Object.keys(porEstagio).sort((a, b) => (estagioOrdem[a] ?? 99) - (estagioOrdem[b] ?? 99))) porEstagioSorted[k] = porEstagio[k]
+      // Matriculas summary
+      const { data: matrs } = await sb.from('crm_matriculas').select('status').eq('escola_id', escolaId).eq('ano', anoAtual)
+      let matriculados = 0, reservas = 0
+      for (const m of matrs ?? []) { if (m.status === 'matriculado') matriculados++; if (m.status === 'reserva') reservas++ }
+      const { data: vagas } = await sb.from('crm_turmas_vagas').select('vagas_total').eq('escola_id', escolaId).eq('ano', anoAtual)
+      const totalVagas = (vagas ?? []).reduce((s: number, v: { vagas_total: number }) => s + (v.vagas_total || 0), 0)
+      return json({ total: (leads ?? []).length, novos_mes: novosMes, por_estagio: porEstagioSorted, por_origem: porOrigem, valor_pipeline: valorPipeline, matriculados, reservas, total_vagas: totalVagas })
     }
 
     // ── Metas ──
