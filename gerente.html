@@ -615,8 +615,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div data-modulo="crm">
       <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.crm">CRM & Matrículas</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.pipeline">Pipeline</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> <span data-i18n="gerente.nav.leads">Leads</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> Pipeline & Leads</a>
         <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">🎓</span> Matrículas & Vagas</a>
         <a class="nav-item" href="#" onclick="showPanel('crmMetas',this)"><span class="ic">🏆</span> Metas Comerciais</a>
         <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> <span data-i18n="gerente.nav.templatesWhatsapp">Templates WhatsApp</span></a>
@@ -2216,14 +2215,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             </div>
           </div>
         </div>
-        <div id="crmKanbanBoard" class="kanban-board"><div class="empty-state" style="width:100%;">Carregando...</div></div>
+        <style>.gpipe-tab{padding:8px 18px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}.gpipe-tab.active{color:var(--accent,#1a6bb5);border-bottom-color:var(--accent,#1a6bb5);}</style>
+        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);">
+          <button class="gpipe-tab active" onclick="gPipeSetView('kanban',this)">Kanban</button>
+          <button class="gpipe-tab" onclick="gPipeSetView('lista',this)">Lista de Leads</button>
+        </div>
+        <div id="gPipeViewKanban">
+          <div id="crmKanbanBoard" class="kanban-board"><div class="empty-state" style="width:100%;">Carregando...</div></div>
+        </div>
+        <div id="gPipeViewLista" style="display:none;">
+          <div id="crmLeadsList"><div class="empty-state">Carregando...</div></div>
+        </div>
       </div>
 
-      <!-- CRM LEADS -->
-      <div id="panelCrmLeads" class="panel">
-        <div class="sec-title">Todos os Leads</div>
-        <div id="crmLeadsList"><div class="empty-state">Carregando...</div></div>
-      </div>
+      <!-- panelCrmLeads alias for backward compat -->
+      <div id="panelCrmLeads" class="panel" style="display:none !important;"></div>
 
       <!-- CRM TEMPLATES -->
       <div id="panelCrmTemplates" class="panel">
@@ -3192,6 +3198,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <!-- panelCadastro mantido hidden para compatibilidade -->
       <div id="panelCadastro" class="panel" style="display:none;"></div>
 
+      <!-- Matrícula Online (moved inside .content) -->
+      <div id="panelMatriculaForm" class="panel">
+        <div class="sec-title">Formulários de Matrícula</div>
+        <div id="matriculaFormContent" class="empty-state">Carregando...</div>
+      </div>
+      <div id="panelMatriculaStatus" class="panel">
+        <div class="sec-title">Status de Matrículas <span class="count-badge" id="matStatusCount">0</span></div>
+        <div class="filter-bar">
+          <select id="matStatusFiltro" class="fb" onchange="loadMatriculaStatus()">
+            <option value="">Todos</option><option value="reserva">Reserva</option><option value="matriculado">Matriculado</option><option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div id="matStatusContent" class="empty-state">Carregando...</div>
+      </div>
+
     </div>
   </div>
 
@@ -3477,21 +3498,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   <div id="pesquisasContent" class="empty-state">Carregando...</div>
 </div>
 
-<!-- FASE 2: Matrícula Online -->
-<div id="panelMatriculaForm" class="panel">
-  <div class="sec-title">Formulários de Matrícula</div>
-  <div id="matriculaFormContent" class="empty-state">Carregando...</div>
-</div>
-
-<div id="panelMatriculaStatus" class="panel">
-  <div class="sec-title">Status de Matrículas <span class="count-badge" id="matStatusCount">0</span></div>
-  <div class="filter-bar">
-    <select id="matStatusFiltro" class="fb" onchange="loadMatriculaStatus()">
-      <option value="">Todos</option><option value="reserva">Reserva</option><option value="matriculado">Matriculado</option><option value="cancelado">Cancelado</option>
-    </select>
-  </div>
-  <div id="matStatusContent" class="empty-state">Carregando...</div>
-</div>
+<!-- panelMatriculaForm/Status moved inside .content above -->
 
 <!-- ═══ AUTOMAÇÕES / WORKFLOWS ═══ -->
 <div id="panelWorkflows" class="panel">
@@ -3884,7 +3891,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='finInadimplencia') loadInadimplencia();
     if(id==='finBatchBoletos') loadBatchBoletos();
     if(id==='crmKanban')   loadCrmKanban();
-    if(id==='crmLeads')    loadCrmLeads();
+    if(id==='crmLeads')  { showPanel('crmKanban'); loadCrmLeads(); return; }
     if(id==='crmTemplates') loadCrmTemplates();
     if(id==='crmVagas')     loadCrmMatriculas();
     if(id==='crmMatriculas') loadCrmMatriculas();
@@ -11359,6 +11366,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   // ── CRM ────────────────────────────────────────────
   var crmEstagios = [], crmLeads = [];
   function toggleCrmLeadForm() { const el=document.getElementById('crmLeadForm'); el.style.display=el.style.display==='none'?'block':'none'; }
+  function gPipeSetView(view, btn) {
+    btn.parentElement.querySelectorAll('.gpipe-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('gPipeViewKanban').style.display = view === 'kanban' ? '' : 'none';
+    document.getElementById('gPipeViewLista').style.display = view === 'lista' ? '' : 'none';
+    if (view === 'lista') loadCrmLeads();
+  }
   function toggleCrmTemplateForm() { const el=document.getElementById('crmTemplateForm'); el.style.display=el.style.display==='none'?'block':'none'; }
 
   async function loadCrmKanban() {
