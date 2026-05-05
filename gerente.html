@@ -617,13 +617,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('crmKanban',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.pipeline">Pipeline</span></a>
         <a class="nav-item" href="#" onclick="showPanel('crmLeads',this)"><span class="ic">👥</span> <span data-i18n="gerente.nav.leads">Leads</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.matriculas">Matrículas</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('crmVagas',this)"><span class="ic">🎯</span> <span data-i18n="gerente.nav.vagas">Vagas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('crmMatriculas',this)"><span class="ic">🎓</span> Matrículas & Vagas</a>
+        <a class="nav-item" href="#" onclick="showPanel('crmMetas',this)"><span class="ic">🏆</span> Metas Comerciais</a>
         <a class="nav-item" href="#" onclick="showPanel('crmTemplates',this)"><span class="ic">💬</span> <span data-i18n="gerente.nav.templatesWhatsapp">Templates WhatsApp</span></a>
         <a class="nav-item" href="#" onclick="showPanel('crmConfigSeries',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.seriesIdade">Séries / Idade</span></a>
         <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaForm',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.formulariosOnline">Formulários Online</span></a>
         <a class="nav-item" href="#" data-modulo="matricula" onclick="showPanel('matriculaStatus',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.statusMatriculas">Status Matrículas</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('contratos',this)"><span class="ic">📜</span> <span data-i18n="gerente.nav.contratos">Contratos</span></a>
+        <!-- <a class="nav-item" href="#" onclick="showPanel('contratos',this)"><span class="ic">📜</span> Contratos</a> -->
       </div>
       </div>
 
@@ -2245,35 +2245,64 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <!-- CRM VAGAS -->
-      <div id="panelCrmVagas" class="panel">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-          <div class="sec-title" style="margin:0;">Vagas Disponíveis</div>
-          <select id="vagasAno" onchange="loadCrmVagas()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
-            <option value="2026">2026</option><option value="2027">2027</option>
-          </select>
+      <!-- panelCrmVagas alias -->
+      <div id="panelCrmVagas" class="panel" style="display:none !important;"></div>
+
+      <!-- CRM MATRICULAS & VAGAS (unificado) -->
+      <div id="panelCrmMatriculas" class="panel">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;font-size:18px;">Matrículas & Vagas</div>
+          <div style="display:flex;align-items:center;gap:0;">
+            <button onclick="gMatAnoNav(-1)" style="background:none;border:1px solid var(--border);border-radius:8px 0 0 8px;padding:7px 10px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9664;</button>
+            <div id="gMatAnoDisplay" style="padding:7px 18px;background:var(--accent,#1a6bb5);color:#fff;font-size:15px;font-weight:700;font-family:'Lora',serif;min-width:60px;text-align:center;line-height:1;"></div>
+            <button onclick="gMatAnoNav(1)" style="background:none;border:1px solid var(--border);border-radius:0 8px 8px 0;padding:7px 10px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9654;</button>
+          </div>
+          <button class="btn-create" onclick="loadCrmMatriculas()" style="width:auto;padding:6px 14px;font-size:11px;margin-left:auto;">Atualizar</button>
         </div>
-        <div id="crmVagasContent"><div class="empty-state">Carregando...</div></div>
-        <div class="form-card" style="margin-top:16px;max-width:750px;">
-          <h3 style="font-size:13px;margin-bottom:8px;">Adicionar/Editar Serie</h3>
-          <div style="display:grid;grid-template-columns:1fr 80px 80px 60px auto;gap:8px;align-items:end;">
-            <div class="ff" style="margin:0;"><label>Serie</label><input type="text" id="vagSerie" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
-            <div class="ff" style="margin:0;"><label>Turmas</label><input type="number" id="vagQtd" value="1" min="1" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
-            <div class="ff" style="margin:0;"><label>Vagas/T</label><input type="number" id="vagCap" value="18" min="1" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
-            <div class="ff" style="margin:0;"><label>Ano</label><input type="number" id="vagAno" value="2026" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
-            <button onclick="salvarCrmVaga()" class="btn-create" style="width:auto;padding:6px 12px;font-size:11px;">Salvar</button>
+        <style>.gmat-tab{padding:10px 22px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}.gmat-tab.active{color:var(--accent,#1a6bb5);border-bottom-color:var(--accent,#1a6bb5);}</style>
+        <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--border);" id="gMatTabs">
+          <button class="gmat-tab active" onclick="gMatSetView('resumo',this)">Resumo por Série</button>
+          <button class="gmat-tab" onclick="gMatSetView('alunos',this)">Lista de Alunos</button>
+          <button class="gmat-tab" onclick="gMatSetView('config',this)">Configurar Vagas</button>
+        </div>
+        <div class="stats-grid" id="gMatStats"></div>
+        <div id="gMatViewResumo"></div>
+        <div id="gMatViewAlunos" style="display:none;"></div>
+        <div id="gMatViewConfig" style="display:none;">
+          <div id="crmVagasContent"><div class="empty-state">Carregando...</div></div>
+          <div class="form-card" style="margin-top:16px;max-width:750px;">
+            <h3 style="font-size:13px;margin-bottom:8px;">Adicionar/Editar Série</h3>
+            <div style="display:grid;grid-template-columns:1fr 80px 80px 60px auto;gap:8px;align-items:end;">
+              <div class="ff" style="margin:0;"><label>Série</label><input type="text" id="vagSerie" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Turmas</label><input type="number" id="vagQtd" value="1" min="1" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Vagas/T</label><input type="number" id="vagCap" value="18" min="1" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Ano</label><input type="number" id="vagAno" style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;"></div>
+              <button onclick="salvarCrmVaga()" class="btn-create" style="width:auto;padding:6px 12px;font-size:11px;">Salvar</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- CRM MATRICULAS -->
-      <div id="panelCrmMatriculas" class="panel">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-          <div class="sec-title" style="margin:0;">Matriculas e Reservas</div>
-          <select id="matrAno" onchange="loadCrmMatriculas()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
-            <option value="2026">2026</option><option value="2027">2027</option>
-          </select>
+      <!-- CRM METAS COMERCIAIS -->
+      <div id="panelCrmMetas" class="panel">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;font-size:18px;">Metas Comerciais</div>
+          <div style="display:flex;align-items:center;gap:0;">
+            <button onclick="gMetasAnoNav(-1)" style="background:none;border:1px solid var(--border);border-radius:8px 0 0 8px;padding:7px 10px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9664;</button>
+            <div id="gMetasAnoDisplay" style="padding:7px 18px;background:var(--accent,#1a6bb5);color:#fff;font-size:15px;font-weight:700;font-family:'Lora',serif;min-width:60px;text-align:center;line-height:1;"></div>
+            <button onclick="gMetasAnoNav(1)" style="background:none;border:1px solid var(--border);border-radius:0 8px 8px 0;padding:7px 10px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1;">&#9654;</button>
+          </div>
         </div>
-        <div id="crmMatriculasContent"><div class="empty-state">Carregando...</div></div>
+        <div class="stats-grid" id="gMetasStats"></div>
+        <div class="form-card" style="max-width:900px;">
+          <table style="font-size:13px;" id="gMetasTable">
+            <thead><tr><th>Mês</th><th style="text-align:center;">Meta Leads</th><th style="text-align:center;">Realizado</th><th style="text-align:center;">Meta Matrículas</th><th style="text-align:center;">Realizado</th><th style="text-align:center;">Meta Valor (R$)</th><th></th></tr></thead>
+            <tbody id="gMetasBody"></tbody>
+          </table>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button onclick="salvarTodasMetas()" class="btn-create" style="width:auto;padding:8px 20px;font-size:12px;">Salvar Todas as Metas</button>
+          </div>
+        </div>
       </div>
 
       <!-- CONFIG SERIES/IDADE -->
@@ -3857,8 +3886,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='crmKanban')   loadCrmKanban();
     if(id==='crmLeads')    loadCrmLeads();
     if(id==='crmTemplates') loadCrmTemplates();
-    if(id==='crmVagas')     loadCrmVagas();
+    if(id==='crmVagas')     loadCrmMatriculas();
     if(id==='crmMatriculas') loadCrmMatriculas();
+    if(id==='crmMetas')     loadCrmMetas();
     if(id==='crmConfigSeries') loadCrmConfigSeries();
     if(id==='calendario')  loadCalendario();
     if(id==='analytics')   loadAnalytics();
@@ -11510,6 +11540,84 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     }
   }
 
+  // ── CRM METAS COMERCIAIS ─────────────────
+  let gMetasAno = new Date().getFullYear();
+  function gMetasAnoNav(delta) { gMetasAno += delta; loadCrmMetas(); }
+
+  async function loadCrmMetas() {
+    const ano = gMetasAno;
+    document.getElementById('gMetasAnoDisplay').textContent = ano;
+    const mesesNomes = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    // Fetch metas + realized data
+    const [metasResp, leadsResp, matsResp] = await Promise.all([
+      api({ action:'crm_metas_list', ano }),
+      api({ action:'crm_leads_list' }),
+      api({ action:'crm_matriculas_list', ano })
+    ]);
+    const metas = Array.isArray(metasResp) ? metasResp : [];
+    const leads = Array.isArray(leadsResp) ? leadsResp : [];
+    const mats = Array.isArray(matsResp) ? matsResp : [];
+    // Count realized per month
+    const leadsPorMes = {};
+    leads.forEach(l => { if(l.criado_em) { const d=new Date(l.criado_em); if(d.getFullYear()===ano) { const m=d.getMonth()+1; leadsPorMes[m]=(leadsPorMes[m]||0)+1; } } });
+    const matsPorMes = {};
+    mats.forEach(m => { if(m.criado_em) { const d=new Date(m.criado_em); const mo=d.getMonth()+1; matsPorMes[mo]=(matsPorMes[mo]||0)+1; } });
+    // Build editable rows for all 12 months
+    const metaMap = {};
+    metas.forEach(m => { metaMap[m.mes] = m; });
+    const mesAtual = new Date().getMonth()+1;
+    let tML=0,tRL=0,tMM=0,tRM=0,tMV=0;
+    let rows = '';
+    for (let m=1; m<=12; m++) {
+      const meta = metaMap[m] || {};
+      const rL = leadsPorMes[m] || 0;
+      const rM = matsPorMes[m] || 0;
+      const mL = meta.meta_leads || '';
+      const mM = meta.meta_matriculas || '';
+      const mV = meta.meta_valor || '';
+      tML += parseInt(mL)||0; tRL += rL; tMM += parseInt(mM)||0; tRM += rM; tMV += parseFloat(mV)||0;
+      const isCurrent = m === mesAtual && ano === new Date().getFullYear();
+      rows += `<tr style="${isCurrent?'background:rgba(26,107,181,.06);':''}" data-mes="${m}">
+        <td style="padding:8px 12px;font-weight:${isCurrent?'700':'500'};border-bottom:1px solid #f5f0ea;">${mesesNomes[m]}${isCurrent?' *':''}</td>
+        <td style="text-align:center;border-bottom:1px solid #f5f0ea;"><input type="number" min="0" class="gm-input gm-ml" value="${mL}" style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:center;font-family:'DM Sans',sans-serif;"></td>
+        <td style="text-align:center;border-bottom:1px solid #f5f0ea;font-weight:600;color:var(--accent,#1a6bb5);">${rL}</td>
+        <td style="text-align:center;border-bottom:1px solid #f5f0ea;"><input type="number" min="0" class="gm-input gm-mm" value="${mM}" style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:center;font-family:'DM Sans',sans-serif;"></td>
+        <td style="text-align:center;border-bottom:1px solid #f5f0ea;font-weight:600;color:#2d7a3a;">${rM}</td>
+        <td style="text-align:center;border-bottom:1px solid #f5f0ea;"><input type="number" min="0" step="100" class="gm-input gm-mv" value="${mV}" style="width:100px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:center;font-family:'DM Sans',sans-serif;"></td>
+        <td style="border-bottom:1px solid #f5f0ea;"></td>
+      </tr>`;
+    }
+    document.getElementById('gMetasBody').innerHTML = rows;
+    // Stats
+    const pL = tML>0 ? Math.round((tRL/tML)*100) : 0;
+    const pM = tMM>0 ? Math.round((tRM/tMM)*100) : 0;
+    document.getElementById('gMetasStats').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Meta Leads (Ano)</div><div class="stat-value" style="color:var(--accent,#1a6bb5);">${tRL}<span style="font-size:14px;color:var(--muted);font-weight:400;">/${tML||'—'}</span></div>
+        <div style="background:#f0ece6;border-radius:3px;height:5px;margin-top:4px;"><div style="height:100%;border-radius:3px;width:${Math.min(100,pL)}%;background:${pL>=80?'#2d7a3a':'#f6a623'};"></div></div></div>
+      <div class="stat-card"><div class="stat-label">Meta Matrículas (Ano)</div><div class="stat-value" style="color:#2d7a3a;">${tRM}<span style="font-size:14px;color:var(--muted);font-weight:400;">/${tMM||'—'}</span></div>
+        <div style="background:#f0ece6;border-radius:3px;height:5px;margin-top:4px;"><div style="height:100%;border-radius:3px;width:${Math.min(100,pM)}%;background:${pM>=80?'#2d7a3a':'#f6a623'};"></div></div></div>
+      <div class="stat-card"><div class="stat-label">Meta Valor (Ano)</div><div class="stat-value" style="font-size:18px;">R$ ${tMV.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div></div>
+    `;
+  }
+
+  async function salvarTodasMetas() {
+    const rows = document.querySelectorAll('#gMetasBody tr[data-mes]');
+    const promises = [];
+    rows.forEach(row => {
+      const mes = parseInt(row.dataset.mes);
+      const ml = parseInt(row.querySelector('.gm-ml').value) || 0;
+      const mm = parseInt(row.querySelector('.gm-mm').value) || 0;
+      const mv = parseFloat(row.querySelector('.gm-mv').value) || 0;
+      if (ml || mm || mv) {
+        promises.push(api({ action:'crm_metas_save', mes, ano: gMetasAno, meta_leads: ml, meta_matriculas: mm, meta_valor: mv }));
+      }
+    });
+    if (!promises.length) { showToast('Preencha ao menos uma meta.','error'); return; }
+    await Promise.all(promises);
+    showToast('Metas salvas!','success');
+    loadCrmMetas();
+  }
+
   async function loadCrmConfigSeries() {
     const anoFiltro = document.getElementById('csAnoFiltro')?.value || new Date().getFullYear();
     const d = await api({ action: 'config_series_idade_list', ano: parseInt(anoFiltro) });
@@ -11613,9 +11721,24 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadCrmTemplates();
   }
 
-  // ── CRM VAGAS ────────────────────────────
+  // ── CRM MATRICULAS & VAGAS (unified) ─────
+  let gMatAno = new Date().getFullYear();
+  let gMatVagas = [];
+  let gMatData = [];
+
+  function gMatAnoNav(delta) { gMatAno += delta; loadCrmMatriculas(); }
+  function gMatSetView(view, btn) {
+    document.querySelectorAll('#gMatTabs .gmat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('gMatViewResumo').style.display = view === 'resumo' ? '' : 'none';
+    document.getElementById('gMatViewAlunos').style.display = view === 'alunos' ? '' : 'none';
+    document.getElementById('gMatViewConfig').style.display = view === 'config' ? '' : 'none';
+    if (view === 'config') loadCrmVagas();
+  }
+
+  // ── CRM VAGAS (config tab) ─────────────
   async function loadCrmVagas() {
-    const ano = parseInt(document.getElementById('vagasAno').value);
+    const ano = gMatAno;
     document.getElementById('vagAno').value = ano;
     const d = await api({ action:'crm_vagas_list', ano });
     const items = Array.isArray(d) ? d : [];
@@ -11666,66 +11789,78 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if (d.error) { showToast(d.error,'error'); return; }
     showToast('Vaga salva!','success');
     document.getElementById('vagSerie').value = '';
-    document.getElementById('vagasAno').value = String(ano);
     loadCrmVagas();
+    loadCrmMatriculas();
   }
 
-  // ── CRM MATRICULAS ────────────────────────────
+  // ── CRM MATRICULAS (unified) ────────────────
   async function loadCrmMatriculas() {
-    const ano = parseInt(document.getElementById('matrAno').value);
-    const [matrData, vagasData] = await Promise.all([
+    const ano = gMatAno;
+    document.getElementById('gMatAnoDisplay').textContent = ano;
+    const [matrResp, vagasResp] = await Promise.all([
       api({ action:'crm_matriculas_list', ano }),
       api({ action:'crm_vagas_list', ano })
     ]);
-    const items = Array.isArray(matrData) ? matrData : [];
-    const vagas = Array.isArray(vagasData) ? vagasData : [];
-    const el = document.getElementById('crmMatriculasContent');
+    gMatData = Array.isArray(matrResp) ? matrResp : [];
+    gMatVagas = Array.isArray(vagasResp) ? vagasResp : [];
+
+    // Stats
+    const res = gMatData.filter(m => m.status === 'reserva').length;
+    const mat = gMatData.filter(m => m.status === 'matriculado').length;
+    const can = gMatData.filter(m => m.status === 'cancelado').length;
+    const total = res + mat;
+    const totalVagas = gMatVagas.reduce((s, v) => s + (v.vagas_total || 0), 0);
+    const pctOcup = totalVagas > 0 ? Math.round((total / totalVagas) * 100) : 0;
+    const seriesLotadas = gMatVagas.filter(v => (v.ocupados || 0) >= (v.vagas_total || 0)).length;
+    const dispTotal = totalVagas - total;
+    document.getElementById('gMatStats').innerHTML = `
+      <div class="stat-card" data-c="aprov"><div class="stat-label">Matriculados</div><div class="stat-value">${mat}</div></div>
+      <div class="stat-card" data-c="crm"><div class="stat-label">Reservas</div><div class="stat-value">${res}</div></div>
+      <div class="stat-card"><div class="stat-label">Vagas Totais</div><div class="stat-value">${totalVagas}</div><div style="font-size:11px;color:${dispTotal<=5?'var(--red)':'var(--green)'};margin-top:2px;font-weight:600;">${dispTotal} disponíveis</div></div>
+      <div class="stat-card"><div class="stat-label">Ocupação</div><div class="stat-value">${pctOcup}%</div>
+        <div style="background:#f0ece6;border-radius:4px;height:6px;margin-top:6px;"><div style="height:100%;border-radius:4px;width:${pctOcup}%;background:${pctOcup>=90?'#e53e3e':pctOcup>=70?'#f6a623':'#48bb78'};"></div></div>
+      </div>
+      <div class="stat-card"><div class="stat-label">Séries</div><div class="stat-value">${gMatVagas.length}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${seriesLotadas} lotada${seriesLotadas!==1?'s':''}</div></div>
+      <div class="stat-card" data-c="rejeit"><div class="stat-label">Cancelados</div><div class="stat-value">${can}</div></div>
+    `;
+
+    // Resumo table
+    const rEl = document.getElementById('gMatViewResumo');
+    if (!gMatVagas.length) { rEl.innerHTML = '<div class="empty-state">Nenhuma série configurada para ' + ano + '.</div>'; } else {
+      let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:10px 14px;">Série</th><th style="text-align:center;">Turmas</th><th style="text-align:center;">Vagas/T</th><th style="text-align:center;">Total</th><th style="text-align:center;">Matriculados</th><th style="text-align:center;">Reservas</th><th style="text-align:center;background:rgba(26,107,181,.12);color:var(--accent,#1a6bb5);">Disponíveis</th><th style="min-width:130px;">Ocupação</th></tr></thead><tbody>';
+      let tV=0,tM=0,tR=0;
+      for (const v of gMatVagas) {
+        const pct = v.vagas_total > 0 ? Math.round((v.ocupados/v.vagas_total)*100) : 0;
+        const cor = pct>=90?'#e53e3e':pct>=70?'#f6a623':'#48bb78';
+        const disp = v.disponiveis ?? (v.vagas_total-(v.ocupados||0));
+        tV+=v.vagas_total||0; tM+=v.matriculados||0; tR+=v.reservas||0;
+        html += `<tr><td style="padding:10px 14px;font-weight:600;border-bottom:1px solid #f5f0ea;">${esc(v.serie)}</td><td style="text-align:center;border-bottom:1px solid #f5f0ea;">${v.qtd_turmas}</td><td style="text-align:center;border-bottom:1px solid #f5f0ea;">${v.vagas_por_turma}</td><td style="text-align:center;border-bottom:1px solid #f5f0ea;">${v.vagas_total}</td><td style="text-align:center;border-bottom:1px solid #f5f0ea;font-weight:600;color:#2d7a3a;">${v.matriculados||0}</td><td style="text-align:center;border-bottom:1px solid #f5f0ea;color:#b07d00;">${v.reservas||0}</td><td style="text-align:center;border-bottom:1px solid #f5f0ea;font-weight:700;font-size:15px;color:${disp>0?'#2d7a3a':'#fff'};background:${disp>0?'rgba(45,122,58,.08)':'#e53e3e'};">${disp>0?disp:'LOTADO'}</td><td style="border-bottom:1px solid #f5f0ea;"><div style="display:flex;align-items:center;gap:6px;"><div style="background:var(--border);border-radius:4px;height:8px;flex:1;"><div style="height:100%;width:${pct}%;background:${cor};border-radius:4px;"></div></div><span style="font-size:11px;font-weight:600;color:${cor};">${pct}%</span></div></td></tr>`;
+      }
+      const tD=tV-tM-tR,tP=tV>0?Math.round(((tM+tR)/tV)*100):0;
+      html += `<tr style="background:#f8f5f0;font-weight:700;"><td style="padding:10px 14px;">TOTAL</td><td></td><td></td><td style="text-align:center;">${tV}</td><td style="text-align:center;color:#2d7a3a;">${tM}</td><td style="text-align:center;color:#b07d00;">${tR}</td><td style="text-align:center;font-size:15px;color:${tD>0?'#2d7a3a':'#e53e3e'};background:rgba(26,107,181,.08);">${tD}</td><td><span style="font-weight:700;">${tP}%</span></td></tr>`;
+      html += '</tbody></table></div>';
+      rEl.innerHTML = html;
+    }
+
+    // Alunos cards
+    renderGMatAlunos(ano);
+  }
+
+  function renderGMatAlunos(ano) {
     const statusLabels = { reserva:'🟡 Reserva', matriculado:'🟢 Matriculado', cancelado:'🔴 Cancelado' };
     const statusDot = { reserva:'#f6a623', matriculado:'#2d7a3a', cancelado:'#e53e3e' };
     const letras = 'ABCDEFGHIJ';
-
-    // Agrupar por serie
     const porSerie = {};
-    for (const v of vagas) { if (!porSerie[v.serie]) porSerie[v.serie] = { vagas: v, items: [] }; }
-    for (const m of items) {
-      if (!porSerie[m.serie]) porSerie[m.serie] = { vagas: null, items: [] };
-      porSerie[m.serie].items.push(m);
-    }
-
-    const series = Object.keys(porSerie).sort((a,b) => {
-      const oa = porSerie[a].vagas?.ordem ?? 99;
-      const ob = porSerie[b].vagas?.ordem ?? 99;
-      return oa - ob;
-    });
-
-    if (!series.length) { el.innerHTML = '<div class="empty-state">Nenhuma serie configurada para ' + ano + '.</div>'; return; }
-
-    // Gerar cards — se qtd_turmas > 1, separar em turmas A, B, C...
+    for (const v of gMatVagas) { if (!porSerie[v.serie]) porSerie[v.serie] = { vagas: v, items: [] }; }
+    for (const m of gMatData) { if (!porSerie[m.serie]) porSerie[m.serie] = { vagas: null, items: [] }; porSerie[m.serie].items.push(m); }
+    const series = Object.keys(porSerie).sort((a,b) => (porSerie[a].vagas?.ordem??99) - (porSerie[b].vagas?.ordem??99));
+    const el = document.getElementById('gMatViewAlunos');
+    if (!series.length) { el.innerHTML = '<div class="empty-state">Nenhuma série para ' + ano + '.</div>'; return; }
     let html = '';
     for (const serie of series) {
-      const g = porSerie[serie];
-      const v = g.vagas;
-      const qtdTurmas = v ? v.qtd_turmas : 1;
-      const vagasPorTurma = v ? v.vagas_por_turma : '?';
-
-      if (qtdTurmas <= 1) {
-        // Turma unica — renderiza como antes
-        html += renderTurmaCard(serie, serie, g.items, v ? v.vagas_total : null, qtdTurmas, statusLabels, statusDot, letras, ano);
-      } else {
-        // Multiplas turmas — separar A, B, C...
-        for (let t = 0; t < qtdTurmas; t++) {
-          const letra = letras[t] || String(t+1);
-          const nomeTurma = serie + ' ' + letra;
-          const turmaItems = g.items.filter(m => (m.turma || 'A') === letra);
-          html += renderTurmaCard(serie, nomeTurma, turmaItems, vagasPorTurma, 1, statusLabels, statusDot, letras, ano);
-        }
-        // Alunos sem turma definida (turma diferente das esperadas)
-        const letrasValidas = Array.from({length: qtdTurmas}, (_, i) => letras[i] || String(i+1));
-        const semTurma = g.items.filter(m => m.turma && !letrasValidas.includes(m.turma));
-        if (semTurma.length) {
-          html += renderTurmaCard(serie, serie + ' (sem turma)', semTurma, null, 1, statusLabels, statusDot, letras, ano);
-        }
-      }
+      const g = porSerie[serie]; const v = g.vagas; const qtd = v ? v.qtd_turmas : 1; const vpT = v ? v.vagas_por_turma : '?';
+      if (qtd <= 1) { html += renderTurmaCard(serie, serie, g.items, v?v.vagas_total:null, qtd, statusLabels, statusDot, letras, ano); }
+      else { for (let t=0;t<qtd;t++) { const l=letras[t]||String(t+1); html += renderTurmaCard(serie, serie+' '+l, g.items.filter(m=>(m.turma||'A')===l), vpT, 1, statusLabels, statusDot, letras, ano); } }
     }
     el.innerHTML = html;
   }

@@ -2913,6 +2913,22 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const { data } = await admin.from("crm_matriculas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano).order("serie").order("turma").order("criado_em");
     return ok(data ?? []);
   }
+  if (action === "crm_metas_list") {
+    const ano = parseInt((body as any).ano) || new Date().getFullYear();
+    const { data } = await admin.from("comercial_metas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano).order("mes");
+    return ok(data ?? []);
+  }
+  if (action === "crm_metas_save") {
+    const { mes, ano, meta_leads, meta_matriculas, meta_valor } = body as any;
+    if (!mes || !ano) return err("mes e ano obrigatorios.");
+    const { data: existing } = await admin.from("comercial_metas").select("id").eq("escola_id", sessionEscolaId).eq("ano", parseInt(ano)).eq("mes", parseInt(mes)).maybeSingle();
+    if (existing) {
+      await admin.from("comercial_metas").update({ meta_leads: parseInt(meta_leads)||0, meta_matriculas: parseInt(meta_matriculas)||0, meta_valor: parseFloat(meta_valor)||0 }).eq("id", existing.id);
+    } else {
+      await admin.from("comercial_metas").insert({ escola_id: sessionEscolaId, mes: parseInt(mes), ano: parseInt(ano), meta_leads: parseInt(meta_leads)||0, meta_matriculas: parseInt(meta_matriculas)||0, meta_valor: parseFloat(meta_valor)||0 });
+    }
+    return ok({ success: true });
+  }
   if (action === "crm_dashboard") {
     const { data: leads } = await admin.from("crm_leads").select("estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome)").eq("escola_id", sessionEscolaId);
     const { data: estagios } = await admin.from("crm_estagios").select("id, nome, cor, ordem").eq("ativo", true).order("ordem");
