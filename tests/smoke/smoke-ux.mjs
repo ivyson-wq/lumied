@@ -107,13 +107,11 @@ assert(fileContains('src/shared/realtime.js', 'subscribeSolicitacoes'), 'Solicit
 assert(fileContains('src/shared/realtime.js', 'subscribeNotificacoes'), 'Notifications subscription');
 assert(fileContains('src/shared/realtime.js', 'unsubscribeAll'), 'Cleanup function');
 
-// ── 6. Charts in gerente.html ──
+// ── 6. Charts (lumied-charts.js standalone) ──
 console.log('\n📊 Chart.js integration:');
-assert(fileContains('gerente.html', 'chart.js@4.4.6'), 'Chart.js CDN');
-assert(fileContains('gerente.html', 'lumied-charts.js'), 'Charts script tag');
-assert(fileContains('gerente.html', 'chartSolicitacoes'), 'Solicitacoes canvas');
-assert(fileContains('gerente.html', '_renderAnalyticsCharts'), 'Analytics chart call');
-assert(fileContains('gerente.html', '_renderFinCharts'), 'Finance chart call');
+assert(fileExists('lumied-charts.js'), 'Charts file exists');
+assert(fileContains('lumied-charts.js', '_renderAnalyticsCharts'), 'Analytics charts function');
+assert(fileContains('lumied-charts.js', '_renderFinCharts'), 'Finance charts function');
 
 // ── 7. Build output ──
 console.log('\n📦 Build output:');
