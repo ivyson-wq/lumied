@@ -561,14 +561,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div data-modulo="almoxarifado">
       <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.almoxarifado">Almoxarifado</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> <span data-i18n="gerente.nav.almDashboard">Dashboard</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('almPend',this)"><span class="ic">⏳</span> <span data-i18n="gerente.nav.almPendentes">Pendentes</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('almTodas',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.almRequisicoes">Requisições</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('almCompras',this)"><span class="ic">🛒</span> <span data-i18n="gerente.nav.almCompras">Compras</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('almInsumos',this)"><span class="ic">🗃️</span> <span data-i18n="gerente.nav.almInsumos">Insumos</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('almTurmas',this)"><span class="ic">🏫</span> <span data-i18n="gerente.nav.almPorTurma">Por Turma</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('almOrc',this)"><span class="ic">💰</span> <span data-i18n="gerente.nav.almOrcamentos">Orçamentos</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('almRel',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.almRelatorio">Relatório</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Visão Geral</a>
+        <a class="nav-item" href="#" onclick="showPanel('almReqs',this)"><span class="ic">📋</span> Requisições</a>
+        <a class="nav-item" href="#" onclick="showPanel('almConfig',this)"><span class="ic">⚙️</span> Configuração</a>
       </div>
       </div>
 
@@ -1438,46 +1433,70 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Os atestados são gerenciados pelo Portal da Secretaria. Acesse <a href="secretaria.html" target="_blank" style="color:var(--blue);">secretaria.html</a> para aprovar ou rejeitar atestados.</p>
       </div>
 
-      <!-- ALMOXARIFADO — painéis separados -->
-      <div id="panelAlmoxarifado" class="panel" style="display:none;"></div>
+      <!-- ALMOXARIFADO — 3 painéis unificados -->
+      <div id="panelAlmoxarifado" class="panel" style="display:none !important;"></div>
+      <div id="panelAlmPend" class="panel" style="display:none !important;"></div>
+      <div id="panelAlmTodas" class="panel" style="display:none !important;"></div>
+      <div id="panelAlmCompras" class="panel" style="display:none !important;"></div>
+      <div id="panelAlmInsumos" class="panel" style="display:none !important;"></div>
+      <div id="panelAlmTurmas" class="panel" style="display:none !important;"></div>
+      <div id="panelAlmOrc" class="panel" style="display:none !important;"></div>
+      <div id="panelAlmRel" class="panel" style="display:none !important;"></div>
 
+      <style>.alm-utab{padding:9px 20px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}.alm-utab.active{color:var(--accent,#1a6bb5);border-bottom-color:var(--accent,#1a6bb5);}</style>
+
+      <!-- 1. VISÃO GERAL -->
       <div id="panelAlmDash" class="panel">
-          <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-            <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-bottom:12px;">📝 Criar Requisição</button>
-          </div>
-          <div style="margin-bottom:16px;">
-            <input type="hidden" id="almDashMes">
-            <div class="month-nav">
-              <div class="mn-group">
-                <button class="mn-btn" onclick="monthNavYear('almDashMes',-1,almLoadDashboard)">&#8249;</button>
-                <span class="mn-val" id="almDashMesYear" onclick="monthNavToday('almDashMes',almLoadDashboard)"></span>
-                <button class="mn-btn" onclick="monthNavYear('almDashMes',1,almLoadDashboard)">&#8250;</button>
-              </div>
-              <div class="mn-group">
-                <button class="mn-btn" onclick="monthNavMonth('almDashMes',-1,almLoadDashboard)">&#8249;</button>
-                <span class="mn-val month" id="almDashMesMonth" onclick="monthNavToday('almDashMes',almLoadDashboard)"></span>
-                <button class="mn-btn" onclick="monthNavMonth('almDashMes',1,almLoadDashboard)">&#8250;</button>
-              </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;font-size:18px;">Almoxarifado — Visão Geral</div>
+          <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
+        </div>
+        <div style="margin-bottom:16px;">
+          <input type="hidden" id="almDashMes">
+          <div class="month-nav">
+            <div class="mn-group">
+              <button class="mn-btn" onclick="monthNavYear('almDashMes',-1,almLoadDashboard)">&#8249;</button>
+              <span class="mn-val" id="almDashMesYear" onclick="monthNavToday('almDashMes',almLoadDashboard)"></span>
+              <button class="mn-btn" onclick="monthNavYear('almDashMes',1,almLoadDashboard)">&#8250;</button>
+            </div>
+            <div class="mn-group">
+              <button class="mn-btn" onclick="monthNavMonth('almDashMes',-1,almLoadDashboard)">&#8249;</button>
+              <span class="mn-val month" id="almDashMesMonth" onclick="monthNavToday('almDashMes',almLoadDashboard)"></span>
+              <button class="mn-btn" onclick="monthNavMonth('almDashMes',1,almLoadDashboard)">&#8250;</button>
             </div>
           </div>
-          <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);" id="almDashStats"></div>
-          <!-- Integrações -->
-          <div id="almIntegracoes" style="margin-top:20px;"></div>
-          <div class="sec-title" style="margin-top:20px;">Orçamento por Turma</div>
-          <div id="almDashTurmas"></div>
+        </div>
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);" id="almDashStats"></div>
+        <div id="almIntegracoes" style="margin-top:20px;"></div>
+        <div class="sec-title" style="margin-top:20px;">Orçamento por Turma</div>
+        <div id="almDashTurmas"></div>
+        <!-- Relatório inline -->
+        <div class="sec-title" style="margin-top:24px;">Relatório do Mês</div>
+        <div id="almRelatorio"></div>
       </div>
 
-      <div id="panelAlmPend" class="panel">
+      <!-- 2. REQUISIÇÕES (tabs: Pendentes | Histórico | Compras) -->
+      <div id="panelAlmReqs" class="panel">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;font-size:18px;">Requisições</div>
+          <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
+        </div>
+        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);" id="almReqsTabs">
+          <button class="alm-utab active" onclick="almReqsSetTab('pend',this)">Pendentes <span id="almPendBadge" style="background:#e67e22;color:#fff;font-size:10px;border-radius:10px;padding:1px 7px;margin-left:4px;"></span></button>
+          <button class="alm-utab" onclick="almReqsSetTab('hist',this)">Histórico</button>
+          <button class="alm-utab" onclick="almReqsSetTab('compras',this)">Compras</button>
+        </div>
+        <!-- Tab: Pendentes -->
+        <div id="almReqTabPend">
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <button onclick="almBaixarPdf('alm_pdf_pendentes')" class="btn-create" style="padding:7px 16px;background:#0b7a4b;">📄 PDF Pendentes</button>
-            <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;">📝 Criar Requisição</button>
           </div>
           <div id="almPendLoading" class="empty-state">⏳ Carregando…</div>
           <div id="almPendEmpty" class="empty-state" style="display:none;">✅ Nenhuma requisição pendente.</div>
           <div id="almPendList"></div>
-      </div>
-
-      <div id="panelAlmTodas" class="panel">
+        </div>
+        <!-- Tab: Histórico -->
+        <div id="almReqTabHist" style="display:none;">
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
             <input type="hidden" id="almTodasMes">
             <div class="month-nav">
@@ -1498,14 +1517,48 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <option value="aprovado">✅ Aprovado</option>
               <option value="rejeitado">❌ Rejeitado</option>
             </select>
-            <button onclick="almLoadTodas()" class="btn-create" style="width:auto;padding:7px 16px;">Filtrar</button>
           </div>
           <div id="almTodasLoading" class="empty-state">⏳ Carregando…</div>
           <div id="almTodasList"></div>
+        </div>
+        <!-- Tab: Compras -->
+        <div id="almReqTabCompras" style="display:none;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <select id="almComprasStatus" onchange="almLoadCompras()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="pendente">⏳ Pendentes de compra</option>
+              <option value="comprado">✅ Já comprados</option>
+              <option value="">Todos</option>
+            </select>
+            <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado">✅ Marcar comprado</button>
+            <button onclick="almBaixarPdf('alm_pdf_aprovados')" class="btn-create" style="padding:7px 16px;background:#0b7a4b;">📄 Ordem</button>
+            <button onclick="almBaixarPdf('alm_pdf_guia_recebimento')" class="btn-create" style="padding:7px 16px;background:#b5591a;">📦 Guia</button>
+            <button onclick="almBaixarPdf('alm_pdf_romaneio_turma')" class="btn-create" style="padding:7px 16px;background:#6b46c1;">🚚 Romaneio</button>
+            <div style="display:inline-block;position:relative;">
+              <button onclick="document.getElementById('almRelDropdown').classList.toggle('show')" class="btn-create" style="padding:7px 16px;background:#d97706;">📋 Relatório ▾</button>
+              <div id="almRelDropdown" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:99;min-width:200px;margin-top:4px;">
+                <a href="#" onclick="almBaixarRelatorio('pdf');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Retrato)</a>
+                <a href="#" onclick="almBaixarRelatorio('pdf-landscape');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Paisagem)</a>
+                <a href="#" onclick="almBaixarRelatorio('excel');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;">📊 Excel</a>
+              </div>
+            </div>
+          </div>
+          <div id="almComprasLoading" class="empty-state">⏳ Carregando…</div>
+          <div id="almComprasList"></div>
+          <div class="f-alert success" id="almComprasOk" style="margin-top:8px;"></div>
+        </div>
       </div>
 
-      <div id="panelAlmInsumos" class="panel">
+      <!-- 3. CONFIGURAÇÃO (tabs: Catálogo | Turmas | Orçamentos) -->
+      <div id="panelAlmConfig" class="panel">
+        <div class="sec-title" style="margin:0 0 16px;font-size:18px;">Almoxarifado — Configuração</div>
+        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);" id="almConfigTabs">
+          <button class="alm-utab active" onclick="almConfigSetTab('catalogo',this)">Catálogo de Insumos</button>
+          <button class="alm-utab" onclick="almConfigSetTab('turmas',this)">Turmas & Professoras</button>
+          <button class="alm-utab" onclick="almConfigSetTab('orcamentos',this)">Orçamentos</button>
+        </div>
+        <!-- Tab: Catálogo -->
 
+        <div id="almConfigTabCatalogo">
           <!-- Barra de ações fixa -->
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
             <button id="almBtnAtualizarPrecos" onclick="almAtualizarPrecos()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">🔄 Atualizar Precos</button>
@@ -1583,9 +1636,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <div class="f-alert error" id="almInsumoErr" style="margin-top:8px;"></div>
               <div class="f-alert success" id="almInsumoOk" style="margin-top:8px;"></div>
           </div>
-      </div>
-
-      <div id="panelAlmTurmas" class="panel">
+        </div>
+        <!-- Tab: Turmas & Professoras -->
+        <div id="almConfigTabTurmas" style="display:none;">
           <div class="two-col">
             <div>
               <div class="sec-title">Turmas <span class="count-badge" id="almTurmasCount">0</span></div>
@@ -1604,9 +1657,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <!-- Professor-turma assignment -->
           <div class="sec-title" style="margin-top:24px;">Associar Professoras a Turmas</div>
           <div id="almProfTurmaList" style="margin-top:8px;"></div>
-      </div>
-
-      <div id="panelAlmOrc" class="panel">
+        </div>
+        <!-- Tab: Orçamentos -->
+        <div id="almConfigTabOrc" style="display:none;">
           <!-- Orçamento padrão -->
           <div style="background:#f0f7ff;border:1.5px solid rgba(26,107,181,.2);border-radius:12px;padding:16px 20px;margin-bottom:18px;">
             <div style="font-size:14px;font-weight:600;color:#1a6bb5;margin-bottom:8px;">💰 Orçamento Padrão</div>
@@ -1638,12 +1691,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
           <div id="almOrcList"></div>
           <div class="f-alert success" id="almOrcOk" style="margin-top:8px;"></div>
+        </div>
       </div>
 
-      <div id="panelAlmRel" class="panel">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-            <input type="hidden" id="almRelMes">
-            <div class="month-nav">
+      <!-- panelAlmRel content moved to Visão Geral — keep month nav hidden for JS compat -->
+      <div style="display:none;">
+          <input type="hidden" id="almRelMes">
+          <div class="month-nav">
               <div class="mn-group">
                 <button class="mn-btn" onclick="monthNavYear('almRelMes',-1,almLoadRelatorio)">&#8249;</button>
                 <span class="mn-val" id="almRelMesYear" onclick="monthNavToday('almRelMes',almLoadRelatorio)"></span>
@@ -1656,35 +1710,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               </div>
             </div>
           </div>
-          <div id="almRelatorio"></div>
-      </div>
-
-      <div id="panelAlmCompras" class="panel">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-            <select id="almComprasStatus" onchange="almLoadCompras()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
-              <option value="pendente">⏳ Pendentes de compra</option>
-              <option value="comprado">✅ Já comprados</option>
-              <option value="">Todos</option>
-            </select>
-            <button onclick="almLoadCompras()" class="btn-create" style="padding:7px 16px;">Atualizar</button>
-            <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado">✅ Marcar selecionados como comprado</button>
-            <button onclick="almBaixarPdf('alm_pdf_aprovados')" class="btn-create" style="padding:7px 16px;background:#0b7a4b;">📄 Ordem de Compra</button>
-            <button onclick="almBaixarPdf('alm_pdf_guia_recebimento')" class="btn-create" style="padding:7px 16px;background:#b5591a;" title="Leve este PDF na mão ao abrir caixas dos correios">📦 Guia Recebimento</button>
-            <button onclick="almBaixarPdf('alm_pdf_romaneio_turma')" class="btn-create" style="padding:7px 16px;background:#6b46c1;">🚚 Romaneio Turmas</button>
-            <button onclick="almBaixarPdf('alm_pdf_entregues','mes='+(document.getElementById('almTodasMes')?.value||new Date().toISOString().slice(0,7)))" class="btn-create" style="padding:7px 16px;background:#334155;">📄 Recibo Entregas</button>
-            <div style="display:inline-block;position:relative;">
-              <button onclick="document.getElementById('almRelDropdown').classList.toggle('show')" class="btn-create" style="padding:7px 16px;background:#d97706;" title="Todos os itens do mês com observações, links e status">📋 Relatório Completo ▾</button>
-              <div id="almRelDropdown" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:99;min-width:200px;margin-top:4px;">
-                <a href="#" onclick="almBaixarRelatorio('pdf');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Retrato)</a>
-                <a href="#" onclick="almBaixarRelatorio('pdf-landscape');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Paisagem)</a>
-                <a href="#" onclick="almBaixarRelatorio('excel');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;">📊 Excel (.xlsx)</a>
-              </div>
-            </div>
-            <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
-          </div>
-          <div id="almComprasLoading" class="empty-state">⏳ Carregando…</div>
-          <div id="almComprasList"></div>
-          <div class="f-alert success" id="almComprasOk" style="margin-top:8px;"></div>
       </div>
 
       <!-- Modais do Almoxarifado (fora dos painéis) -->
@@ -3828,12 +3853,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Dashboard',almPend:'Almoxarifado — Pendentes',almTodas:'Almoxarifado — Todas as Requisições',almInsumos:'Almoxarifado — Insumos',almTurmas:'Almoxarifado — Turmas',almOrc:'Almoxarifado — Orçamentos',almRel:'Almoxarifado — Relatório',almCompras:'Almoxarifado — Compras',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -3861,14 +3886,17 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='diplomas')    loadDiplomasPanel();
     if(id==='pdi')           loadPdiPanel();
     if(id==='atestados')     loadAtestadosPanel?.();
-    if(id==='almDash')     almInitPanel();
-    if(id==='almPend')     almLoadPendentes();
-    if(id==='almTodas')    { almInitMonths(); almLoadTodas(); }
-    if(id==='almInsumos')  { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); }
-    if(id==='almTurmas')   almLoadTurmas();
-    if(id==='almOrc')      { almInitMonths(); almLoadOrcamentos(); }
-    if(id==='almRel')      { almInitMonths(); almLoadRelatorio(); }
-    if(id==='almCompras')  almLoadCompras();
+    if(id==='almDash')     { almInitPanel(); almInitMonths(); almLoadRelatorio(); }
+    if(id==='almReqs')     { almLoadPendentes(); }
+    if(id==='almConfig')   { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); }
+    // Legacy redirects
+    if(id==='almPend')     { showPanel('almReqs'); return; }
+    if(id==='almTodas')    { showPanel('almReqs'); return; }
+    if(id==='almCompras')  { showPanel('almReqs'); return; }
+    if(id==='almInsumos')  { showPanel('almConfig'); return; }
+    if(id==='almTurmas')   { showPanel('almConfig'); return; }
+    if(id==='almOrc')      { showPanel('almConfig'); return; }
+    if(id==='almRel')      { showPanel('almDash'); return; }
     if(id==='manutencao')    loadManutPanel();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
@@ -4305,10 +4333,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     dashAtiv:{icon:'📊',label:'Ativ. Extra'},atividades:{icon:'🎯',label:'Gerenciar Ativ.'},
     diplomas:{icon:'🏆',label:'Diplomas'},atestados:{icon:'🏥',label:'Atestados'},
     pdi:{icon:'📈',label:'Growth Plan'},impressoes:{icon:'🖨️',label:'Impressões'},
-    almDash:{icon:'📦',label:'Almoxarifado'},almPend:{icon:'⏳',label:'Alm. Pendentes'},
-    almTodas:{icon:'📋',label:'Requisições'},almInsumos:{icon:'🗃️',label:'Insumos'},
-    almTurmas:{icon:'🏫',label:'Alm. Turmas'},almOrc:{icon:'💰',label:'Orçamentos'},
-    almRel:{icon:'📈',label:'Alm. Relatório'},almCompras:{icon:'🛒',label:'Compras'},
+    almDash:{icon:'📦',label:'Visão Geral'},almReqs:{icon:'📋',label:'Requisições'},almConfig:{icon:'⚙️',label:'Configuração'},
+    almPend:{icon:'📋',label:'Requisições'},almTodas:{icon:'📋',label:'Requisições'},almInsumos:{icon:'⚙️',label:'Configuração'},
+    almTurmas:{icon:'⚙️',label:'Configuração'},almOrc:{icon:'⚙️',label:'Configuração'},
+    almRel:{icon:'📦',label:'Visão Geral'},almCompras:{icon:'📋',label:'Requisições'},
     manutencao:{icon:'🔧',label:'Manutenção'},achados:{icon:'🔍',label:'Achados'},
     finDash:{icon:'💰',label:'Financeiro'},finLanc:{icon:'📝',label:'Lançamentos'},
     finMens:{icon:'🧾',label:'Mensalidades'},finContas:{icon:'📊',label:'Plano Contas'},
@@ -8841,6 +8869,28 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       if (!document.getElementById(id).value) monthNavSet(id, mes);
     });
   }
+  // ── Almoxarifado tab switching ──
+  function almReqsSetTab(tab, btn) {
+    document.querySelectorAll('#almReqsTabs .alm-utab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('almReqTabPend').style.display = tab === 'pend' ? '' : 'none';
+    document.getElementById('almReqTabHist').style.display = tab === 'hist' ? '' : 'none';
+    document.getElementById('almReqTabCompras').style.display = tab === 'compras' ? '' : 'none';
+    if (tab === 'pend') almLoadPendentes();
+    if (tab === 'hist') { almInitMonths(); almLoadTodas(); }
+    if (tab === 'compras') almLoadCompras();
+  }
+  function almConfigSetTab(tab, btn) {
+    document.querySelectorAll('#almConfigTabs .alm-utab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('almConfigTabCatalogo').style.display = tab === 'catalogo' ? '' : 'none';
+    document.getElementById('almConfigTabTurmas').style.display = tab === 'turmas' ? '' : 'none';
+    document.getElementById('almConfigTabOrc').style.display = tab === 'orcamentos' ? '' : 'none';
+    if (tab === 'catalogo') { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); }
+    if (tab === 'turmas') almLoadTurmas();
+    if (tab === 'orcamentos') { almInitMonths(); almLoadOrcamentos(); }
+  }
+
   async function almInitPanel() {
     almInitMonths();
     almLoadDashboard();
