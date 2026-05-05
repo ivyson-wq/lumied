@@ -4,103 +4,188 @@
   "redirects": [
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "https://caxiasdosul.maplebear.com.br/pt/",
       "permanent": false
     },
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "https://caxiasdosul.maplebear.com.br/pt/",
       "permanent": false
     },
     {
       "source": "/:path((?!blog).*)",
-      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "https://caxiasdosul.maplebear.com.br/pt/:path*",
       "permanent": false
     },
     {
       "source": "/:path((?!blog).*)",
-      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "https://caxiasdosul.maplebear.com.br/pt/:path*",
       "permanent": false
     },
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "admin.lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.lumied.com.br"
+        }
+      ],
       "destination": "/admin-central.html",
       "permanent": false
     },
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "www.lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/site",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/site/",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/site/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/:path*",
       "permanent": true
     },
     {
       "source": "/familia.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/index.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/area-restrita.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/gerente.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/professora.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/secretaria.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/aluno.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     },
     {
       "source": "/admin.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "https://lumied.com.br/",
       "permanent": true
     }
@@ -108,7 +193,12 @@
   "rewrites": [
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/index.html"
     },
     {
@@ -117,177 +207,362 @@
     },
     {
       "source": "/blog",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/blog/index.html"
     },
     {
       "source": "/blog/",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/blog/index.html"
     },
     {
       "source": "/blog/:slug",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/blog/:slug/index.html"
     },
     {
       "source": "/blog/:slug/",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/blog/:slug/index.html"
     },
     {
       "source": "/sobre",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/sobre/index.html"
     },
     {
       "source": "/sobre/",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/sobre/index.html"
     },
     {
       "source": "/clientes/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/clientes/:path*"
     },
     {
       "source": "/dpa/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/dpa/:path*"
     },
     {
       "source": "/privacidade/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/privacidade/:path*"
     },
     {
       "source": "/sla/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/sla/:path*"
     },
     {
       "source": "/status/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/status/:path*"
     },
     {
       "source": "/termos/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/termos/:path*"
     },
     {
       "source": "/vs/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/vs/:path*"
     },
     {
       "source": "/videos/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/videos/:path*"
     },
     {
       "source": "/screenshots/:path*",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/screenshots/:path*"
     },
     {
       "source": "/certificacao",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/certificacao.html"
     },
     {
       "source": "/certificacao.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/certificacao.html"
     },
     {
       "source": "/instagram-templates",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/instagram-templates.html"
     },
     {
       "source": "/instagram-templates.html",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/instagram-templates.html"
     },
     {
       "source": "/whatsapp-float.js",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/whatsapp-float.js"
     },
     {
       "source": "/materiais/:slug",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/materiais/:slug.html"
     },
     {
       "source": "/materiais/:slug/",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
       "destination": "/site/materiais/:slug.html"
     },
     {
-      "source": "/indicar",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
-      "destination": "/site/materiais/indicar.html"
+      "source": "/blog/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
+      "destination": "/maple-bear-blog/sitemap.xml"
     },
     {
-      "source": "/sistema-gestao-escolar",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
-      "destination": "/site/materiais/sistema-gestao-escolar.html"
+      "source": "/blog/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
+      "destination": "/maple-bear-blog/sitemap.xml"
     },
     {
-      "source": "/demo",
-      "has": [{ "type": "host", "value": "lumied.com.br" }],
-      "destination": "/site/materiais/sistema-gestao-escolar.html"
+      "source": "/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
+      "destination": "/maple-bear-blog/sitemap.xml"
+    },
+    {
+      "source": "/sitemap.xml",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
+      "destination": "/maple-bear-blog/sitemap.xml"
     },
     {
       "source": "/blog",
-      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/index.html"
     },
     {
       "source": "/blog/",
-      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/index.html"
     },
     {
       "source": "/blog/:file(.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|js|css|woff2?|ttf|eot))",
-      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/:file"
     },
     {
       "source": "/blog/:slug",
-      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/:slug/index.html"
     },
     {
       "source": "/blog/:slug/",
-      "has": [{ "type": "host", "value": "maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/:slug/index.html"
     },
     {
       "source": "/blog/:file(.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|js|css|woff2?|ttf|eot))",
-      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/:file"
     },
     {
       "source": "/blog",
-      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/index.html"
     },
     {
       "source": "/blog/",
-      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/index.html"
     },
     {
       "source": "/blog/:slug",
-      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/:slug/index.html"
     },
     {
       "source": "/blog/:slug/",
-      "has": [{ "type": "host", "value": "www.maplebearcaxiasdosul.com.br" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maplebearcaxiasdosul.com.br"
+        }
+      ],
       "destination": "/maple-bear-blog/:slug/index.html"
     },
     {
@@ -299,39 +574,93 @@
     {
       "source": "/(.*).html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "CDN-Cache-Control", "value": "no-store" },
-        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" },
-        { "key": "Pragma", "value": "no-cache" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
       ]
     },
     {
       "source": "/(.*).js",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, must-revalidate" },
-        { "key": "CDN-Cache-Control", "value": "no-store" },
-        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-store"
+        }
       ]
     },
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "CDN-Cache-Control", "value": "no-store" },
-        { "key": "Vercel-CDN-Cache-Control", "value": "no-store" },
-        { "key": "Service-Worker-Allowed", "value": "/" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
-        { "key": "Permissions-Policy", "value": "camera=(self), microphone=(), geolocation=(self), payment=()" },
-        { "key": "X-DNS-Prefetch-Control", "value": "on" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://browser.sentry-cdn.com https://js.sentry-cdn.com https://cdn.jsdelivr.net https://cdn.sheetjs.com https://cdnjs.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://www.google-analytics.com https://www.googletagmanager.com https://img.youtube.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.ingest.us.sentry.io https://www.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://region1.google-analytics.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://browser.sentry-cdn.com; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(), geolocation=(self), payment=()"
+        },
+        {
+          "key": "X-DNS-Prefetch-Control",
+          "value": "on"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://browser.sentry-cdn.com https://js.sentry-cdn.com https://cdn.jsdelivr.net https://cdn.sheetjs.com https://cdnjs.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://www.google-analytics.com https://www.googletagmanager.com https://img.youtube.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.ingest.us.sentry.io https://www.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://region1.google-analytics.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://browser.sentry-cdn.com; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        }
       ]
     }
   ]
