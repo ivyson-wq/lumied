@@ -1449,7 +1449,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelAlmDash" class="panel">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
           <div class="sec-title" style="margin:0;font-size:18px;">Almoxarifado — Visão Geral</div>
-          <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
         </div>
         <div style="margin-bottom:16px;">
           <input type="hidden" id="almDashMes">
@@ -1523,22 +1522,26 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
         <!-- Tab: Compras -->
         <div id="almReqTabCompras" style="display:none;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Itens aprovados aguardando compra. Selecione os checkboxes dos itens comprados e clique em "Marcar como Comprado".</p>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <select id="almComprasStatus" onchange="almLoadCompras()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
               <option value="pendente">⏳ Pendentes de compra</option>
               <option value="comprado">✅ Já comprados</option>
               <option value="">Todos</option>
             </select>
-            <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado">✅ Marcar comprado</button>
-            <button onclick="almBaixarPdf('alm_pdf_aprovados')" class="btn-create" style="padding:7px 16px;background:#0b7a4b;">📄 Ordem</button>
-            <button onclick="almBaixarPdf('alm_pdf_guia_recebimento')" class="btn-create" style="padding:7px 16px;background:#b5591a;">📦 Guia</button>
-            <button onclick="almBaixarPdf('alm_pdf_romaneio_turma')" class="btn-create" style="padding:7px 16px;background:#6b46c1;">🚚 Romaneio</button>
+            <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado" title="Selecione os checkboxes na lista abaixo e clique aqui">✅ Marcar Selecionados como Comprado</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Documentos PDF:</span>
+            <button onclick="almBaixarPdf('alm_pdf_aprovados')" class="btn-create" style="padding:6px 14px;background:#0b7a4b;font-size:11px;" title="Lista de itens aprovados para enviar ao fornecedor">📄 Ordem de Compra</button>
+            <button onclick="almBaixarPdf('alm_pdf_guia_recebimento')" class="btn-create" style="padding:6px 14px;background:#b5591a;font-size:11px;" title="Checklist para conferir ao receber os produtos">📦 Guia de Recebimento</button>
+            <button onclick="almBaixarPdf('alm_pdf_romaneio_turma')" class="btn-create" style="padding:6px 14px;background:#6b46c1;font-size:11px;" title="Distribuição dos itens por turma para entrega interna">🚚 Romaneio por Turma</button>
             <div style="display:inline-block;position:relative;">
-              <button onclick="document.getElementById('almRelDropdown').classList.toggle('show')" class="btn-create" style="padding:7px 16px;background:#d97706;">📋 Relatório ▾</button>
+              <button onclick="document.getElementById('almRelDropdown').classList.toggle('show')" class="btn-create" style="padding:6px 14px;background:#d97706;font-size:11px;" title="Relatório completo com todos os itens e status">📋 Relatório Completo ▾</button>
               <div id="almRelDropdown" class="dropdown-menu" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:99;min-width:200px;margin-top:4px;">
                 <a href="#" onclick="almBaixarRelatorio('pdf');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Retrato)</a>
                 <a href="#" onclick="almBaixarRelatorio('pdf-landscape');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;border-bottom:1px solid #eee;">📄 PDF (Paisagem)</a>
-                <a href="#" onclick="almBaixarRelatorio('excel');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;">📊 Excel</a>
+                <a href="#" onclick="almBaixarRelatorio('excel');return false" style="display:block;padding:8px 14px;color:#333;text-decoration:none;">📊 Excel (.xlsx)</a>
               </div>
             </div>
           </div>
