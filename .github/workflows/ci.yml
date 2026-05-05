@@ -122,17 +122,17 @@ jobs:
       - name: Build frontend bundles (esbuild)
         run: node build.js
 
-      - name: Link Vercel project
-        run: npx vercel link --yes --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Setup Vercel project link
+        run: |
+          mkdir -p .vercel
+          echo '{"projectId":"'"$VERCEL_PROJECT_ID"'","orgId":"'"$VERCEL_ORG_ID"'","settings":{"framework":null}}' > .vercel/project.json
+          cat .vercel/project.json
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to Vercel
-        run: npx vercel --yes --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
 
   # ═══ 4. SENTRY RELEASE & SOURCE MAPS ═══
   sentry-release:
