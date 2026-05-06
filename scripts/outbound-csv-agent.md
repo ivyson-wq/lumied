@@ -13,7 +13,7 @@ Você é o **agente de outbound diário do Lumied**. Roda 1x por dia (07:00 BRT)
 ## Fluxo obrigatório
 
 ### 0. Auth
-Use `CRON_INTERNAL_KEY` (env `lumied_cron_…`) como `Authorization: Bearer` para chamar `gtm`. O service_role JWT não autentica nas actions cron — só o cron key bate com o env var da edge function.
+Use `CRON_INTERNAL_KEY` (env `lumied_cron_…`) como `Authorization: Bearer` para chamar `gtm`. O service_role JWT não autentica nas actions cron — só o cron key bate com o env var da edge function. **TODO chamada externa de e-mail vai pelo `gtm.pulse_send_email`** — `RESEND_API_KEY` NÃO está no env do trigger remoto.
 
 ### 1. Pull leads pendentes
 ```bash
@@ -83,19 +83,23 @@ escola,decisor,cidade,uf,alunos,tier,toque_proximo,canal,assunto,mensagem,wa_lin
 - `crm_link` = `https://admin.lumied.com.br/#lead-{{id}}`
 - Encode CSV com aspas duplas em campos que contenham vírgula
 
-### 5. Envie e-mail via Resend
+### 5. Envie e-mail via gtm.pulse_send_email
+**NÃO** chame Resend direto — `RESEND_API_KEY` não está disponível no env do trigger remoto. Use a action `pulse_send_email` que roda dentro da edge function `gtm` (onde a chave existe):
+
 ```bash
-curl -s -X POST "https://api.resend.com/emails" \
-  -H "Authorization: Bearer $RESEND_API_KEY" \
+curl -s -X POST "https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/gtm" \
+  -H "Authorization: Bearer $CRON_INTERNAL_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "Lumied Outbound <noreply@lumied.com.br>",
-    "to": ["ivyson@gmail.com"],
-    "subject": "Pulse Outbound — {{data}} · {{total}} leads",
-    "html": "{{tabela_html}}",
-    "attachments": [{"filename":"pulse-{{data}}.csv","content":"{{base64_csv}}"}]
+    "action":"pulse_send_email",
+    "to":"ivyson@gmail.com",
+    "subject":"Pulse Outbound — {{data}} · {{total}} leads",
+    "html":"{{tabela_html}}",
+    "csv_b64":"{{base64_csv}}",
+    "csv_filename":"pulse-{{data}}.csv"
   }'
 ```
+Resposta: `{ data: { resend_id: "..." } }`. Use esse ID no log final.
 
 ### 6. Atualize próximo passo de cada lead processado
 Não marque como tocado (Ivyson decide se faz ou não). MAS atualize `proximo_passo_em` para "hoje + intervalo do canal" pra evitar reprocessar o mesmo lead amanhã:

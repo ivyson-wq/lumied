@@ -74,21 +74,29 @@ function sugerirTier(alunos: number | null | undefined): keyof typeof TIER_INFO 
 }
 
 // ── Resend email helper ──
-async function enviarEmail(to: string, subject: string, html: string, replyTo?: string): Promise<string | null> {
+async function enviarEmail(
+  to: string,
+  subject: string,
+  html: string,
+  replyTo?: string,
+  attachments?: Array<{ filename: string; content: string }>,
+): Promise<string | null> {
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key) { log.warn("[gtm] RESEND_API_KEY não configurada"); return null; }
   try {
+    const body: Record<string, unknown> = {
+      from: "Lumied <noreply@lumied.com.br>",
+      to: [to],
+      reply_to: replyTo || "ivyson@gmail.com",
+      subject,
+      html,
+    };
+    if (attachments && attachments.length > 0) body.attachments = attachments;
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "Lumied <noreply@lumied.com.br>",
-        to: [to],
-        reply_to: replyTo || "ivyson@gmail.com",
-        subject,
-        html,
-      }),
-      signal: AbortSignal.timeout(10000),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) { log.error("[gtm] Resend erro", { metadata: { status: res.status, body: await res.text() } }); return null; }
     const data = await res.json();
@@ -463,6 +471,27 @@ router.on("lead_nota", authStaff, async (ctx) => {
     ator_staff_id: ctx.user?.tipo === 'staff' ? ctx.user.id : null,
   });
   return successResponse({ success: true });
+});
+
+// Envia e-mail via Resend (key fica na edge function, não no env do trigger remoto)
+// Auth: CRON_INTERNAL_KEY ou service_role
+router.on("pulse_send_email", async (ctx) => {
+  requireServiceAuth(ctx.req);
+  const b = ctx.body as any;
+  const to = str(b.to, 120) || "ivyson@gmail.com";
+  const subject = str(b.subject, 200);
+  const html = str(b.html, 200000);
+  const csv_b64 = str(b.csv_b64, 5000000); // até ~5MB base64
+  const csv_filename = str(b.csv_filename, 80) || `pulse-${new Date().toISOString().slice(0, 10)}.csv`;
+  if (!subject || !html) throw new AppError("VALIDATION_FAILED", "subject e html obrigatórios.");
+
+  const attachments = csv_b64
+    ? [{ filename: csv_filename, content: csv_b64 }]
+    : undefined;
+
+  const resendId = await enviarEmail(to, subject, html, undefined, attachments);
+  if (!resendId) throw new AppError("EMAIL_FAILED", "Resend retornou erro ou RESEND_API_KEY ausente.");
+  return successResponse({ resend_id: resendId, to, subject });
 });
 
 // Lista leads que precisam de toque hoje (cron + agente outbound)
