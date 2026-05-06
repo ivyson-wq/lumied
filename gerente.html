@@ -72,6 +72,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .logout-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.15);}
 .main{margin-left:240px;min-height:100vh;display:flex;flex-direction:column;transition:margin-left .3s;width:calc(100% - 240px);}
 .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;position:sticky;top:0;z-index:50;gap:10px;backdrop-filter:blur(8px);background:rgba(255,255,255,.92);}
+/* No painel analytics: topbar some por completo. Sino e hamburger viram floating actions. */
+body.dash-clean .topbar{display:none;}
+body.dash-clean #greetingBanner{display:none!important;}
+body.dash-clean .content{padding-top:18px;}
+.dash-floating-actions{position:fixed;top:14px;right:20px;display:flex;gap:6px;z-index:60;}
+.dash-floating-actions .dfa-btn{position:relative;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.95);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.dash-floating-actions .dfa-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.1);border-color:var(--red);}
+.dash-floating-actions .dfa-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:#C8102E;border-radius:50%;border:2px solid #fff;}
+@media(max-width:640px){
+  body.dash-clean .content{padding-top:8px;}
+  .dash-floating-actions{top:8px;right:10px;}
+}
 .topbar-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
 .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .topbar h2{font-family:'Lora',serif;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -2011,6 +2023,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <div id="panelAnalytics" class="panel active">
+        <!-- Floating actions — só aparecem com body.dash-clean -->
+        <div class="dash-floating-actions" id="dashFloatingActions" style="display:none;">
+          <button class="dfa-btn hamburger-mobile" onclick="toggleSidebar()" aria-label="Menu" style="display:none;">☰</button>
+          <button class="dfa-btn" onclick="toggleNotifPanel()" aria-label="Notificações">🔔<span id="notifDotFloat" class="dfa-dot" style="display:none;"></span></button>
+        </div>
         <!-- Morning Briefing — hero card -->
         <div class="briefing-card" id="morningBriefing">
           <h3 id="briefingGreeting">Bom dia!</h3>
@@ -4025,6 +4042,10 @@ docker compose up -d --build</pre>
     document.getElementById('greetingTopbar').textContent = period + ', ' + firstName + ' 👋';
     // O briefing card cobre a saudação no painel analytics — só mostramos esse banner em outros painéis
     document.getElementById('greetingBanner').dataset.shown = '1';
+    // No login o painel ativo já é analytics — aplica modo dashboard limpo direto
+    document.body.classList.add('dash-clean');
+    var _floatActions0 = document.getElementById('dashFloatingActions'); if (_floatActions0) _floatActions0.style.display = 'flex';
+    var _hamMobile0 = document.querySelector('.dfa-btn.hamburger-mobile'); if (_hamMobile0) _hamMobile0.style.display = (window.innerWidth <= 640) ? 'flex' : 'none';
     carregarIaUsoChip();
     // Defer loads to after all script declarations are initialized
     setTimeout(function() {
@@ -4094,6 +4115,12 @@ docker compose up -d --build</pre>
     var _pillsEl = document.getElementById('topbarPills'); if (_pillsEl) _pillsEl.style.display = _isDash ? 'none' : '';
     var _iaChip = document.getElementById('iaUsoChip'); if (_iaChip && _isDash) _iaChip.style.display = 'none';
     var _bcEl = document.getElementById('breadcrumb'); if (_bcEl) _bcEl.style.display = _isDash ? 'none' : '';
+    document.body.classList.toggle('dash-clean', _isDash);
+    var _floatActions = document.getElementById('dashFloatingActions'); if (_floatActions) _floatActions.style.display = _isDash ? 'flex' : 'none';
+    var _hamMobile = document.querySelector('.dfa-btn.hamburger-mobile'); if (_hamMobile) _hamMobile.style.display = (_isDash && window.innerWidth <= 640) ? 'flex' : 'none';
+    // Sincroniza dot de notificação flutuante com o original
+    var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
+    if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
     const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração'};
     const sec = panelSections[id] || '';
@@ -10974,8 +11001,11 @@ docker compose up -d --build</pre>
   function renderNotif() {
     const el = document.getElementById('notifList');
     const dot = document.getElementById('notifDot');
+    const dotFloat = document.getElementById('notifDotFloat');
     const unread = notifData.filter(n => !n.lida);
-    dot.style.display = unread.length > 0 ? 'block' : 'none';
+    const dotDisplay = unread.length > 0 ? 'block' : 'none';
+    dot.style.display = dotDisplay;
+    if (dotFloat) dotFloat.style.display = dotDisplay;
     if (!notifData.length) { el.innerHTML = '<div style="padding:24px;text-align:center;color:#7a7169;font-size:13px;">Nenhuma notificação.</div>'; return; }
     el.innerHTML = notifData.slice(0, 20).map(n => {
       const dt = new Date(n.criado_em);
