@@ -224,16 +224,21 @@
       err.style.display = 'none';
 
       var alunos = parseInt(fd.get('alunos_estimados') || '0', 10);
+      var sistema = fd.get('sistema_atual') || '';
+      // Schema do endpoint /api/sdr/capture (insta-publisher): name, email, phone,
+      // school_name, city, state, source. Campos extras vão concatenados na source
+      // pra preservar contexto sem precisar mudar o schema.
+      var sourceLabel = 'blog-exit-intent'
+        + (alunos > 0 ? ' | alunos=' + alunos : '')
+        + (sistema ? ' | sistema=' + sistema : '');
       postLead({
         name: fd.get('name'),
         email: fd.get('email'),
         school_name: fd.get('school_name'),
         phone: fd.get('phone') || undefined,
-        alunos_estimados: alunos > 0 ? alunos : undefined,
-        cidade: fd.get('cidade') || undefined,
-        uf: (fd.get('uf') || '').toString().toUpperCase().slice(0, 2) || undefined,
-        sistema_atual: fd.get('sistema_atual') || undefined,
-        source: 'blog-exit-intent',
+        city: fd.get('cidade') || undefined,
+        state: (fd.get('uf') || '').toString().toUpperCase().slice(0, 2) || undefined,
+        source: sourceLabel,
       }, function () {
         document.getElementById('sdr-exit-form').style.display = 'none';
         document.getElementById('sdr-exit-success').style.display = 'block';
