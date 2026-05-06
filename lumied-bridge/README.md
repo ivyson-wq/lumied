@@ -9,9 +9,25 @@ Lumied SaaS ──HTTPS──> Gateway (Cloudflare) <──WSS── lumied-brid
 
 ## Pré-requisitos
 
-- Node.js 20+ **ou** Docker
+- Node.js 20+ **ou** Docker (bootstrap.sh instala Node se faltar)
 - Acesso outbound HTTPS/443 para `lumied-bridge-gateway.ivyson.workers.dev`
 - Servidor/mini-PC na mesma LAN dos iDFace (ex.: NUC, Raspberry Pi 4+)
+
+## Instalação one-liner (Raspberry Pi / Linux) ⭐ recomendado
+
+SSH no Pi e execute:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivyson-wq/lumied/main/lumied-bridge/install/bootstrap.sh | sudo bash
+```
+
+Interativo — pede ID da escola, token bridge e senha iDFace. Depois instala Node, builda TS, configura systemd e sobe o serviço. ~5 min num Pi 4.
+
+Pra uso não-interativo (provisionamento):
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivyson-wq/lumied/main/lumied-bridge/install/bootstrap.sh | sudo \
+  LUMIED_ESCOLA_ID=xxx LUMIED_BRIDGE_TOKEN=lbr_yyy IDFACE_PASSWORD=zzz bash
+```
 
 ## Configuração
 

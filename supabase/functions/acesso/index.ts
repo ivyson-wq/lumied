@@ -349,10 +349,19 @@ router.on("acesso_dispositivos_list", authGerenteOrSecretaria, async (ctx) => {
 
 router.on("acesso_dispositivo_save", authGerente, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
-  const { id, nome, ip, porta, tipo, localizacao, modelo } = ctx.body as Any;
+  const { id, nome, ip, porta, tipo, localizacao, modelo, via_bridge, api_login, api_password } = ctx.body as Any;
   if (!nome || !ip || !tipo) throw new AppError("VALIDATION_FAILED", "nome, ip e tipo são obrigatórios.");
 
-  const row = { nome, ip, porta: porta || 443, tipo, localizacao: localizacao || null, modelo: modelo || "iDFace" };
+  const row: Any = {
+    nome, ip,
+    porta: porta || 443,
+    tipo,
+    localizacao: localizacao || null,
+    modelo: modelo || "iDFace",
+  };
+  if (typeof via_bridge === "boolean") row.via_bridge = via_bridge;
+  if (api_login) row.api_login = api_login;
+  if (api_password) row.api_password = api_password; // só persiste se veio (não apaga existente)
 
   if (id) {
     const { data, error } = await ctx.sb.from("acesso_dispositivos").update(row).eq("id", id).eq("escola_id", ctx.escola_id).select().single();
@@ -1829,6 +1838,184 @@ router.on("acesso_faces_pendentes", authGerenteOrSecretaria, async (ctx) => {
     .eq("sync_status", "aguardando_aprovacao")
     .order("criado_em", { ascending: false });
   return successResponse(data ?? []);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Setup Face ID — checklist agregado (tudo que precisa pra funcionar)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_setup_checklist", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+
+  const eid = ctx.escola_id;
+
+  // 1. Token bridge
+  const { data: escola } = await ctx.sb.from("escolas")
+    .select("bridge_token, bridge_ultimo_heartbeat, nome")
+    .eq("id", eid).maybeSingle();
+  const tokenOk = !!escola?.bridge_token;
+
+  // 2. Daemon online (heartbeat < 5min OU gateway diz connected)
+  const gw = await bridgeStatus(eid);
+  const hbDate = escola?.bridge_ultimo_heartbeat ? new Date(escola.bridge_ultimo_heartbeat) : null;
+  const hbFresh = hbDate ? (Date.now() - hbDate.getTime() < 5 * 60 * 1000) : false;
+  const daemonOnline = !!gw.connected || hbFresh;
+
+  // 3. Dispositivos cadastrados
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos")
+    .select("id, nome, ip, porta, tipo, ativo, via_bridge, api_password, ultimo_heartbeat")
+    .eq("escola_id", eid).eq("ativo", true);
+  const totalDevices = devices?.length || 0;
+
+  // 4. Cada device tem credenciais
+  const devicesSemSenha = (devices ?? []).filter((d: Any) => !d.api_password).map((d: Any) => d.nome);
+  const credsOk = totalDevices > 0 && devicesSemSenha.length === 0;
+
+  // 5. Cada device alcançável (último heartbeat < 24h ou aceita ping)
+  const devicesAlcancaveis = (devices ?? []).filter((d: Any) => {
+    if (!d.ultimo_heartbeat) return false;
+    return (Date.now() - new Date(d.ultimo_heartbeat).getTime()) < 24 * 3600 * 1000;
+  }).length;
+
+  // 6. Faces cadastradas (cobertura de alunos)
+  const { count: alunosTotal } = await ctx.sb.from("alunos")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid).eq("ativo", true);
+  const { count: facesAlunos } = await ctx.sb.from("acesso_faces")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid).eq("ativo", true).eq("pessoa_tipo", "aluno");
+
+  // 7. Faces aguardando aprovação
+  const { count: facesPendentes } = await ctx.sb.from("acesso_faces")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid).eq("ativo", true).eq("sync_status", "aguardando_aprovacao");
+
+  // 8. Permissões de retirada (cada aluno deveria ter pelo menos 1)
+  const { count: permissoes } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid).eq("autorizado", true);
+
+  // 9. Faces com erro de sync (precisa atenção)
+  const { count: facesErro } = await ctx.sb.from("acesso_faces")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid).eq("ativo", true).eq("sync_status", "erro");
+
+  // 10. Eventos recentes (sinal de que tá funcionando de verdade)
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { count: eventos24h } = await ctx.sb.from("acesso_eventos")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid).gte("criado_em", since);
+
+  const items = [
+    {
+      id: "token",
+      label: "Token do bridge gerado",
+      ok: tokenOk,
+      detail: tokenOk ? "Token configurado." : "Sem token. Painel Lumied Bridge → Rotacionar.",
+      action: tokenOk ? null : { label: "Gerar token", panel: "acessoBridge" },
+      blocking: false, // Só é bloqueante se algum device for via_bridge
+      severity: tokenOk ? "ok" : "warn",
+    },
+    {
+      id: "devices_cadastrados",
+      label: "Dispositivos iDFace cadastrados",
+      ok: totalDevices > 0,
+      detail: totalDevices > 0 ? `${totalDevices} dispositivo(s) ativo(s).` : "Nenhum iDFace cadastrado.",
+      action: totalDevices > 0 ? null : { label: "Cadastrar dispositivo", panel: "acessoDispositivos" },
+      blocking: true,
+      severity: totalDevices > 0 ? "ok" : "error",
+    },
+    {
+      id: "creds",
+      label: "Credenciais dos iDFace",
+      ok: credsOk,
+      detail: totalDevices === 0 ? "—" : (credsOk ? "Todos os dispositivos têm senha API configurada." : `Sem senha: ${devicesSemSenha.join(", ")}`),
+      action: credsOk ? null : { label: "Configurar credenciais", panel: "acessoDispositivos" },
+      blocking: totalDevices > 0,
+      severity: credsOk ? "ok" : (totalDevices === 0 ? "muted" : "error"),
+    },
+    {
+      id: "daemon",
+      label: "Lumied Bridge daemon conectado",
+      ok: daemonOnline,
+      detail: daemonOnline
+        ? (gw.connected ? "WS ativo no gateway." : `Heartbeat há ${hbDate ? Math.round((Date.now() - hbDate.getTime())/60000) : "?"}min.`)
+        : (escola?.bridge_token ? "Token ok mas daemon nunca conectou. Instale na escola." : "Token ainda não foi gerado."),
+      action: daemonOnline ? null : { label: "Ver instalação", panel: "acessoBridge" },
+      blocking: (devices ?? []).some((d: Any) => d.via_bridge),
+      severity: daemonOnline ? "ok" : ((devices ?? []).some((d: Any) => d.via_bridge) ? "error" : "warn"),
+    },
+    {
+      id: "devices_online",
+      label: "Dispositivos respondendo",
+      ok: totalDevices > 0 && devicesAlcancaveis === totalDevices,
+      detail: totalDevices === 0 ? "—" : `${devicesAlcancaveis}/${totalDevices} com heartbeat nas últimas 24h.`,
+      action: null,
+      blocking: false,
+      severity: totalDevices === 0 ? "muted" : (devicesAlcancaveis === totalDevices ? "ok" : (devicesAlcancaveis > 0 ? "warn" : "error")),
+    },
+    {
+      id: "faces",
+      label: "Faces cadastradas (alunos)",
+      ok: (facesAlunos ?? 0) > 0,
+      detail: (alunosTotal ?? 0) === 0 ? "Nenhum aluno ativo." : `${facesAlunos ?? 0} face(s) de ${alunosTotal} aluno(s) ativos. (${alunosTotal ? Math.round(((facesAlunos || 0) / alunosTotal) * 100) : 0}% cobertura)`,
+      action: { label: "Cadastrar face", panel: "acessoFaces" },
+      blocking: false,
+      severity: (facesAlunos ?? 0) === 0 ? "warn" : "ok",
+    },
+    {
+      id: "faces_pendentes",
+      label: "Faces aguardando aprovação",
+      ok: (facesPendentes ?? 0) === 0,
+      detail: (facesPendentes ?? 0) === 0 ? "Nenhuma pendente." : `${facesPendentes} face(s) aguardando você aprovar.`,
+      action: (facesPendentes ?? 0) > 0 ? { label: "Revisar", panel: "acessoFaces" } : null,
+      blocking: false,
+      severity: (facesPendentes ?? 0) === 0 ? "ok" : "warn",
+    },
+    {
+      id: "faces_erro",
+      label: "Faces com erro de sync",
+      ok: (facesErro ?? 0) === 0,
+      detail: (facesErro ?? 0) === 0 ? "Nenhum erro." : `${facesErro} face(s) com erro — investigar.`,
+      action: (facesErro ?? 0) > 0 ? { label: "Ver erros", panel: "acessoFaces" } : null,
+      blocking: false,
+      severity: (facesErro ?? 0) === 0 ? "ok" : "warn",
+    },
+    {
+      id: "permissoes",
+      label: "Permissões de retirada",
+      ok: (permissoes ?? 0) > 0,
+      detail: (permissoes ?? 0) > 0 ? `${permissoes} autorização(ões) ativas.` : "Nenhuma autorização cadastrada.",
+      action: (permissoes ?? 0) === 0 ? { label: "Cadastrar", panel: "acessoPermissoes" } : null,
+      blocking: false,
+      severity: (permissoes ?? 0) > 0 ? "ok" : "warn",
+    },
+    {
+      id: "eventos",
+      label: "Eventos nas últimas 24h",
+      ok: (eventos24h ?? 0) > 0,
+      detail: (eventos24h ?? 0) > 0 ? `${eventos24h} reconhecimento(s) registrado(s).` : "Nenhum evento — ninguém passou ainda ou callback não está configurado.",
+      action: null,
+      blocking: false,
+      severity: (eventos24h ?? 0) > 0 ? "ok" : (totalDevices === 0 ? "muted" : "warn"),
+    },
+  ];
+
+  const blockers = items.filter((i) => i.blocking && !i.ok).length;
+  const totalOk = items.filter((i) => i.ok).length;
+
+  return successResponse({
+    escola_nome: escola?.nome || "",
+    score: items.length === 0 ? 0 : Math.round((totalOk / items.length) * 100),
+    blockers,
+    pode_operar: blockers === 0,
+    items,
+    devices: (devices ?? []).map((d: Any) => ({
+      id: d.id, nome: d.nome, ip: d.ip, porta: d.porta, tipo: d.tipo,
+      via_bridge: d.via_bridge, tem_senha: !!d.api_password,
+      ultimo_heartbeat: d.ultimo_heartbeat,
+    })),
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════

@@ -974,6 +974,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div data-modulo="controle_acesso">
       <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.controleAcesso">Controle de Acesso</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('acessoSetup',this); loadAcessoSetup()"><span class="ic">✅</span> <strong>Setup Face ID</strong></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoDash',this)"><span class="ic">🚪</span> <span data-i18n="gerente.nav.acessoDashboard">Dashboard</span></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoDispositivos',this)"><span class="ic">📡</span> <span data-i18n="gerente.nav.dispositivos">Dispositivos</span></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoFaces',this)"><span class="ic">👤</span> <span data-i18n="gerente.nav.facesCadastradas">Faces Cadastradas</span></a>
@@ -3303,6 +3304,42 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       </div>
 
+      <!-- ── CONTROLE DE ACESSO: SETUP / CHECKLIST ── -->
+      <div id="panelAcessoSetup" class="panel">
+        <div class="sec-title" style="margin-bottom:6px;">✅ Setup Face ID — checklist completo</div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;">
+          Tudo o que precisa estar configurado pro reconhecimento facial funcionar de verdade na escola. Itens vermelhos bloqueiam o uso; amarelos não bloqueiam mas é bom resolver.
+        </p>
+
+        <!-- Score header -->
+        <div id="setupHeader" style="background:linear-gradient(135deg,#1a1a1a,#333);color:#fff;border-radius:14px;padding:24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div style="font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;">Status geral</div>
+            <div id="setupStatus" style="font-size:28px;font-weight:700;margin-top:4px;">Carregando…</div>
+            <div id="setupBlockers" style="font-size:13px;opacity:.85;margin-top:6px;"></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;">Cobertura</div>
+            <div id="setupScore" style="font-size:42px;font-weight:700;line-height:1;">—</div>
+            <div style="font-size:11px;opacity:.6;">% de itens prontos</div>
+          </div>
+        </div>
+
+        <!-- Checklist items -->
+        <div id="setupItems" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+        <!-- Devices summary -->
+        <div style="margin-top:24px;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;">
+          <div class="sec-title" style="font-size:14px;margin:0 0 12px 0;">📡 iDFace cadastrados</div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Nome</th><th>IP</th><th>Modo</th><th>Senha API</th><th>Último heartbeat</th></tr></thead>
+            <tbody id="setupDevicesTable"><tr><td colspan="5" class="empty-state">Nenhum dispositivo.</td></tr></tbody></table>
+          </div>
+        </div>
+
+        <button onclick="loadAcessoSetup()" style="margin-top:16px;padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Recarregar</button>
+      </div>
+
       <!-- ── CONTROLE DE ACESSO: DASHBOARD ── -->
       <div id="panelAcessoDash" class="panel">
         <div class="sec-title" style="margin-bottom:16px;">Controle de Acesso — Dashboard</div>
@@ -3335,7 +3372,21 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div class="ff"><label>Tipo</label><select id="adTipo" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;"><option value="catraca">Catraca</option><option value="terminal">Terminal</option></select></div>
             <div class="ff"><label>Localizacao</label><input id="adLocal" placeholder="Portaria Principal"></div>
           </div>
-          <button class="btn-create" style="width:auto;padding:8px 20px;margin-top:8px;" onclick="salvarDispositivo()">Salvar</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+            <div class="ff"><label>Login API (iDFace)</label><input id="adApiLogin" placeholder="admin" value="admin"></div>
+            <div class="ff"><label>Senha API (iDFace)</label><input id="adApiPassword" type="password" placeholder="senha admin do iDFace"></div>
+          </div>
+          <div style="margin-top:12px;padding:12px;background:#fdfbf8;border:1px solid var(--border);border-radius:8px;">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="adViaBridge" checked style="width:18px;height:18px;cursor:pointer;">
+              <span><strong>Conectar via Lumied Bridge</strong> <span style="color:var(--muted);">(recomendado se o iDFace estiver atrás de NAT — sem IP público)</span></span>
+            </label>
+            <div style="margin-top:6px;color:var(--muted);font-size:12px;padding-left:28px;">
+              ✓ marcado: comandos passam pelo daemon na LAN da escola.<br>
+              ✗ desmarcado: edge fala HTTPS direto com o iDFace (precisa de IP público + porta aberta).
+            </div>
+          </div>
+          <button class="btn-create" style="width:auto;padding:8px 20px;margin-top:14px;" onclick="salvarDispositivo()">Salvar</button>
         </div>
         <div class="table-wrap">
           <table><thead><tr><th>Nome</th><th>IP</th><th>Tipo</th><th>Localizacao</th><th>Status</th><th>Ultimo Heartbeat</th><th>Acoes</th></tr></thead>
@@ -8565,12 +8616,22 @@ docker compose up -d --build</pre>
   }
 
   async function salvarDispositivo() {
-    const body = { action: 'acesso_dispositivo_save', nome: document.getElementById('adNome').value, ip: document.getElementById('adIp').value, porta: document.getElementById('adPorta').value, tipo: document.getElementById('adTipo').value, localizacao: document.getElementById('adLocal').value };
+    const body = {
+      action: 'acesso_dispositivo_save',
+      nome: document.getElementById('adNome').value,
+      ip: document.getElementById('adIp').value,
+      porta: document.getElementById('adPorta').value,
+      tipo: document.getElementById('adTipo').value,
+      localizacao: document.getElementById('adLocal').value,
+      via_bridge: !!document.getElementById('adViaBridge').checked,
+      api_login: document.getElementById('adApiLogin').value || 'admin',
+      api_password: document.getElementById('adApiPassword').value || null,
+    };
     const d = await api(body);
     if (d.error) { showToast(d.error, 'error'); return; }
     showToast('Dispositivo adicionado!', 'success');
     document.getElementById('acessoDispForm').style.display = 'none';
-    ['adNome','adIp','adLocal'].forEach(id => document.getElementById(id).value = '');
+    ['adNome','adIp','adLocal','adApiPassword'].forEach(id => document.getElementById(id).value = '');
     loadAcessoDispositivos();
   }
 
@@ -8857,6 +8918,77 @@ docker compose up -d --build</pre>
       </tr>`;
     }).join('');
   }
+
+  // ── SETUP FACE ID (CHECKLIST) ─────────────────────────
+  async function loadAcessoSetup() {
+    const r = await callAcesso({ action: 'acesso_setup_checklist' });
+    const d = r?.data || r || {};
+
+    // Header
+    const score = Number(d.score || 0);
+    document.getElementById('setupScore').textContent = score + '%';
+    if (d.pode_operar) {
+      document.getElementById('setupStatus').textContent = '🟢 Pronto pra operar';
+      document.getElementById('setupBlockers').textContent = score === 100 ? 'Tudo configurado.' : `${100 - score}% do checklist ainda em aberto, mas nada bloqueia o uso.`;
+    } else {
+      document.getElementById('setupStatus').textContent = '🔴 Bloqueado';
+      document.getElementById('setupBlockers').textContent = `${d.blockers} item(ns) bloqueante(s) — resolva antes de usar.`;
+    }
+
+    // Items
+    const cont = document.getElementById('setupItems');
+    const items = d.items || [];
+    const COR = { ok: '#2d7a3a', warn: '#b07d10', error: '#c0392b', muted: '#888' };
+    const ICO = { ok: '✅', warn: '⚠️', error: '❌', muted: '○' };
+    cont.innerHTML = items.map(it => {
+      const c = COR[it.severity] || '#666';
+      const ic = ICO[it.severity] || '○';
+      const blk = it.blocking && !it.ok ? '<span style="background:#c0392b;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:8px;text-transform:uppercase;font-weight:600;">Bloqueante</span>' : '';
+      const action = it.action ? `<button onclick="setupGoto('${it.action.panel}')" style="margin-left:auto;padding:6px 14px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;">${escHtml(it.action.label)} →</button>` : '';
+      return `<div style="display:flex;align-items:center;gap:14px;background:#fff;border:1px solid ${c}33;border-left:4px solid ${c};border-radius:10px;padding:14px 18px;">
+        <div style="font-size:22px;">${ic}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;color:${c};font-size:14px;">${escHtml(it.label)}${blk}</div>
+          <div style="color:var(--muted);font-size:12px;margin-top:2px;">${escHtml(it.detail||'')}</div>
+        </div>
+        ${action}
+      </div>`;
+    }).join('');
+
+    // Devices table
+    const devs = d.devices || [];
+    const tb = document.getElementById('setupDevicesTable');
+    if (!devs.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum dispositivo cadastrado. Vá em "Dispositivos" para adicionar.</td></tr>';
+    } else {
+      tb.innerHTML = devs.map(dv => {
+        const modo = dv.via_bridge ? '<span style="color:#1976d2;font-weight:600;">🌐 via Bridge</span>' : '<span style="color:#888;">HTTP direto</span>';
+        const senha = dv.tem_senha ? '<span style="color:#2d7a3a;">✓ OK</span>' : '<span style="color:#c0392b;font-weight:600;">⚠️ não configurada</span>';
+        const hb = dv.ultimo_heartbeat ? new Date(dv.ultimo_heartbeat).toLocaleString('pt-BR') : '—';
+        return `<tr>
+          <td style="font-weight:500;">${escHtml(dv.nome||'—')}</td>
+          <td style="font-family:'DM Mono',monospace;font-size:12px;">${escHtml(dv.ip||'—')}:${dv.porta||443}</td>
+          <td>${modo}</td>
+          <td>${senha}</td>
+          <td style="font-size:12px;">${hb}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  function setupGoto(panel) {
+    const navItems = document.querySelectorAll('.nav-item');
+    let target = null;
+    navItems.forEach(n => { if (n.getAttribute('onclick')?.includes(`'${panel}'`)) target = n; });
+    if (target) target.click();
+    else showPanel(panel);
+  }
+
+  // Auto-refresh enquanto painel aberto
+  setInterval(() => {
+    const p = document.getElementById('panelAcessoSetup');
+    if (p && p.classList.contains('active')) loadAcessoSetup();
+  }, 30_000);
 
   // ── LUMIED BRIDGE ─────────────────────────────────────
   let _bridgeToken = null;
