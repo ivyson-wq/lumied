@@ -54,6 +54,18 @@ export class Router {
     return this;
   }
 
+  /**
+   * Dispatch directly to another registered route's handler from within a
+   * route. Skips middlewares (assumes the caller already passed equivalent
+   * auth/rate-limit). Useful for action aliases that map UI naming to
+   * existing handlers without duplicating logic.
+   */
+  dispatch(action: string, ctx: Context): Promise<Response> {
+    const route = this.routes.get(action);
+    if (!route) throw new AppError("NOT_FOUND", `Ação interna desconhecida: ${action}`);
+    return route.handler({ ...ctx, action });
+  }
+
   /** Handle incoming request */
   handle(req: Request, sb: SupabaseClient): Promise<Response> {
     return runWithCors(req, () => this._handle(req, sb));
