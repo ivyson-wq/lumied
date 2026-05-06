@@ -2995,6 +2995,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <button style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="syncAllFaces()">Sincronizar Todas</button>
           </div>
         </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="acessoFacesFiltro">
+          <button class="face-filter-btn active" data-filter="" onclick="filtrarFaces('')">Todas</button>
+          <button class="face-filter-btn" data-filter="aguardando_aprovacao" onclick="filtrarFaces('aguardando_aprovacao')">⏳ Pendentes Aprovação <span id="acessoFacesPendCount" class="count-badge" style="background:#fff8e1;color:#b07d00;">0</span></button>
+          <button class="face-filter-btn" data-filter="sincronizado" onclick="filtrarFaces('sincronizado')">✓ Sincronizadas</button>
+          <button class="face-filter-btn" data-filter="pendente" onclick="filtrarFaces('pendente')">○ Pendentes Sync</button>
+          <button class="face-filter-btn" data-filter="erro" onclick="filtrarFaces('erro')">✗ Erro</button>
+        </div>
+        <style>.face-filter-btn{padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;}.face-filter-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}</style>
         <div class="table-wrap">
           <table><thead><tr><th>Foto</th><th>Nome</th><th>Tipo</th><th>Sync</th><th>Acoes</th></tr></thead>
           <tbody id="acessoFacesTable"><tr><td colspan="5" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody></table>
@@ -8149,23 +8157,83 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     loadAcessoDispositivos();
   }
 
+  let _acessoFacesFiltro = '';
+  let _acessoFacesCache = [];
+
   async function loadAcessoFaces() {
     const d = await callAcesso({ action: 'acesso_faces_list' });
-    const list = d.data || d || [];
+    _acessoFacesCache = d.data || d || [];
+    renderAcessoFaces();
+  }
+
+  function filtrarFaces(filtro) {
+    _acessoFacesFiltro = filtro || '';
+    document.querySelectorAll('.face-filter-btn').forEach(b => {
+      b.classList.toggle('active', (b.dataset.filter || '') === _acessoFacesFiltro);
+    });
+    renderAcessoFaces();
+  }
+
+  function renderAcessoFaces() {
+    const todas = _acessoFacesCache || [];
+    const pendAprov = todas.filter(f => f.sync_status === 'aguardando_aprovacao').length;
+    const pendCountEl = document.getElementById('acessoFacesPendCount');
+    if (pendCountEl) pendCountEl.textContent = pendAprov;
+
+    const list = _acessoFacesFiltro ? todas.filter(f => f.sync_status === _acessoFacesFiltro) : todas;
     document.getElementById('acessoFacesCount').textContent = list.length;
     const tb = document.getElementById('acessoFacesTable');
-    if (!list.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhuma face cadastrada.</td></tr>'; return; }
+    if (!list.length) {
+      const msg = _acessoFacesFiltro === 'aguardando_aprovacao' ? 'Nenhuma face aguardando aprovação.' : 'Nenhuma face encontrada.';
+      tb.innerHTML = `<tr><td colspan="5" class="empty-state">${msg}</td></tr>`;
+      return;
+    }
     tb.innerHTML = list.map(f => {
-      const syncBadge = f.sync_status === 'synced' ? '<span class="turno-pill integral">Sincronizado</span>' : f.sync_status === 'pending' ? '<span class="turno-pill semi">Pendente</span>' : '<span class="turno-pill tarde">Nao sincronizado</span>';
-      const foto = f.foto_url ? `<img src="${f.foto_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border);">` : '<div class="list-avatar">👤</div>';
+      let syncBadge;
+      if (f.sync_status === 'sincronizado') syncBadge = '<span class="turno-pill integral">Sincronizado</span>';
+      else if (f.sync_status === 'aguardando_aprovacao') syncBadge = '<span class="turno-pill semi" style="background:#fff8e1;color:#b07d00;">⏳ Aguardando Aprovação</span>';
+      else if (f.sync_status === 'pendente') syncBadge = '<span class="turno-pill semi">Pendente</span>';
+      else if (f.sync_status === 'erro') syncBadge = `<span class="turno-pill tarde" title="${escHtml(f.sync_erro||'')}">✗ Erro</span>`;
+      else syncBadge = `<span class="turno-pill tarde">${escHtml(f.sync_status||'—')}</span>`;
+
+      const foto = f.foto_url ? `<img src="${f.foto_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border);cursor:pointer;" onclick="window.open('${f.foto_url}','_blank')">` : '<div class="list-avatar">👤</div>';
+
+      const acoes = [];
+      if (f.sync_status === 'aguardando_aprovacao') {
+        acoes.push(`<button class="action-btn" style="background:#2d7a3a;color:#fff;border-color:#2d7a3a;" onclick="aprovarFace('${f.id}')">✓ Aprovar</button>`);
+      }
+      if (f.sync_status === 'erro') {
+        acoes.push(`<button class="action-btn" onclick="ressincronizarFace('${f.id}')">↻ Tentar de novo</button>`);
+      }
+      acoes.push(`<button class="action-btn del" onclick="removerFace('${f.id}')">Remover</button>`);
+
       return `<tr>
         <td>${foto}</td>
         <td style="font-weight:500;">${escHtml(f.pessoa_nome||'—')}</td>
         <td>${escHtml(f.pessoa_tipo||'—')}</td>
         <td>${syncBadge}</td>
-        <td><button class="action-btn del" onclick="removerFace('${f.id}')">Remover</button></td>
+        <td>${acoes.join(' ')}</td>
       </tr>`;
     }).join('');
+  }
+
+  async function aprovarFace(id) {
+    if (!await _lumiedConfirm('Aprovar esta face e sincronizar com todos os dispositivos?')) return;
+    showToast('Aprovando e sincronizando...', 'info');
+    const d = await callAcesso({ action: 'acesso_face_aprovar', id });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    const sync = (d.data && d.data.sync) || d.sync || [];
+    const okCount = sync.filter(s => s.ok).length;
+    showToast(`Face aprovada. Sincronizada em ${okCount}/${sync.length} dispositivo(s).`, 'success');
+    loadAcessoFaces();
+  }
+
+  async function ressincronizarFace(id) {
+    showToast('Tentando sincronizar novamente...', 'info');
+    const d = await callAcesso({ action: 'acesso_face_aprovar', id });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Tentativa de sincronização concluída.', 'success');
+    loadAcessoFaces();
   }
 
   function openFaceModal() { document.getElementById('faceModal').classList.add('show'); }
