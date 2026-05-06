@@ -385,6 +385,7 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
     const { data: lancamento } = await ctx.sb
       .from("fin_lancamentos")
       .select("id")
+      .eq("escola_id", escolaId)
       .eq("status", "pendente")
       .eq("data_lancamento", txData)
       .gte("valor", txValor - 0.01)
@@ -396,7 +397,7 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
       await ctx.sb.from("fin_lancamentos").update({
         status: "pago",
         data_pagamento: txData,
-      }).eq("id", lancamento.id);
+      }).eq("id", lancamento.id).eq("escola_id", escolaId);
       matched++;
     } else {
       await ctx.sb.from("fin_lancamentos").insert({
@@ -452,15 +453,18 @@ router.on("conciliacao_pendente_resolver", authGerente, async (ctx) => {
   if (!id || !status) throw new AppError("VALIDATION_FAILED", "id e status obrigatórios.");
   if (!["pendente", "pago"].includes(status)) throw new AppError("VALIDATION_FAILED", "Status deve ser 'pendente' ou 'pago'.");
 
-  const { error } = await ctx.sb.from("fin_lancamentos").update({ conta_id, status }).eq("id", id).eq("status", "pendente_revisao");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { error } = await ctx.sb.from("fin_lancamentos").update({ conta_id, status }).eq("id", id).eq("escola_id", ctx.escola_id).eq("status", "pendente_revisao");
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
 
 router.on("conciliacao_historico", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb
     .from("fin_conciliacao_execucoes")
     .select("*")
+    .eq("escola_id", ctx.escola_id)
     .order("executado_em", { ascending: false })
     .limit(20);
   return successResponse(data ?? []);
@@ -488,6 +492,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
   const { data: alunos } = await ctx.sb
     .from("alunos")
     .select("id, nome, serie, turno, familia_email, resp_nome, cpf")
+    .eq("escola_id", escolaIdCron)
     .eq("ativo", true);
 
   if (!alunos || alunos.length === 0) {
@@ -499,6 +504,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
   const { data: familias } = await ctx.sb
     .from("familias")
     .select("email, nome_resp, cpf")
+    .eq("escola_id", escolaIdCron)
     .in("email", emails);
   const familiaMap = new Map((familias ?? []).map((f: any) => [f.email, f]));
 
@@ -509,6 +515,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
       mes_referencia: mesRef,
       status: "aguardando_aprovacao",
       total_boletos: alunos.length,
+      escola_id: escolaIdCron,
     })
     .select()
     .single();
@@ -592,9 +599,11 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
 });
 
 router.on("boletos_batch_list", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb
     .from("fin_boletos_batch")
     .select("*, fin_boleto_batch_items(*)")
+    .eq("escola_id", ctx.escola_id)
     .order("gerado_em", { ascending: false });
   return successResponse(data ?? []);
 });
@@ -608,7 +617,8 @@ router.on("boletos_batch_item_edit", authGerente, async (ctx) => {
   if (descricao_detalhada !== undefined) updates.descricao_detalhada = descricao_detalhada;
   if (itens !== undefined) updates.itens = itens;
 
-  const { error } = await ctx.sb.from("fin_boleto_batch_items").update(updates).eq("id", id);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { error } = await ctx.sb.from("fin_boleto_batch_items").update(updates).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -617,25 +627,28 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
   const { batch_id } = ctx.body as any;
   if (!batch_id) throw new AppError("VALIDATION_FAILED", "batch_id obrigatório.");
 
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+
   // Update batch status
   await ctx.sb.from("fin_boletos_batch").update({
     status: "aprovado",
     aprovado_por: ctx.user?.nome,
     aprovado_em: new Date().toISOString(),
-  }).eq("id", batch_id);
+  }).eq("id", batch_id).eq("escola_id", ctx.escola_id);
 
   // Get all items
   const { data: items } = await ctx.sb
     .from("fin_boleto_batch_items")
     .select("*")
-    .eq("batch_id", batch_id);
+    .eq("batch_id", batch_id)
+    .eq("escola_id", ctx.escola_id);
 
   if (!items || items.length === 0) {
     return successResponse({ batch_id, emitidos: 0, erros: 0 });
   }
 
   // Update all items to aprovado
-  await ctx.sb.from("fin_boleto_batch_items").update({ status: "aprovado" }).eq("batch_id", batch_id);
+  await ctx.sb.from("fin_boleto_batch_items").update({ status: "aprovado" }).eq("batch_id", batch_id).eq("escola_id", ctx.escola_id);
 
   let emitidos = 0;
   let erros = 0;
@@ -729,7 +742,7 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
 
   // Update batch final status
   const finalStatus = erros === 0 ? "emitido" : (emitidos === 0 ? "erro" : "parcial");
-  await ctx.sb.from("fin_boletos_batch").update({ status: finalStatus }).eq("id", batch_id);
+  await ctx.sb.from("fin_boletos_batch").update({ status: finalStatus }).eq("id", batch_id).eq("escola_id", ctx.escola_id);
 
   log.info("Batch aprovado e emitido", { metadata: { batch_id, emitidos, erros } });
   return successResponse({ batch_id, emitidos, erros, status: finalStatus });
@@ -738,7 +751,8 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
 router.on("boletos_batch_rejeitar", authGerente, async (ctx) => {
   const { batch_id } = ctx.body as any;
   if (!batch_id) throw new AppError("VALIDATION_FAILED", "batch_id obrigatório.");
-  await ctx.sb.from("fin_boletos_batch").update({ status: "rejeitado" }).eq("id", batch_id);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  await ctx.sb.from("fin_boletos_batch").update({ status: "rejeitado" }).eq("id", batch_id).eq("escola_id", ctx.escola_id);
   return successResponse({ success: true });
 });
 
@@ -746,9 +760,11 @@ router.on("boletos_batch_rejeitar", authGerente, async (ctx) => {
 //  INADIMPLÊNCIA
 // ═══════════════════════════════════════════════════════════════
 router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
+  const escolaIdInad = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const { data: overdue } = await ctx.sb
     .from("fin_mensalidades")
     .select("*")
+    .eq("escola_id", escolaIdInad)
     .in("status", ["pendente", "atrasado"])
     .lt("data_vencimento", new Date().toISOString().slice(0, 10));
 
@@ -1101,11 +1117,12 @@ router.on("inadimplencia_dashboard", authGerente, async (ctx) => {
 router.on("inadimplencia_marcar_resolvido", authGerente, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { error } = await ctx.sb.from("fin_inadimplencia").update({
     status: "resolvido",
     resolvido_em: new Date().toISOString(),
     resolvido_por: ctx.user?.nome,
-  }).eq("id", id);
+  }).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
@@ -1113,7 +1130,7 @@ router.on("inadimplencia_marcar_resolvido", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 //  RELATÓRIO MENSAL
 // ═══════════════════════════════════════════════════════════════
-async function buildRelatorioData(sb: any) {
+async function buildRelatorioData(sb: any, escolaId: string) {
   const prev = previousMonth();
   const prevPrev = { year: prev.month === 1 ? prev.year - 1 : prev.year, month: prev.month === 1 ? 12 : prev.month - 1 };
   const prevPrevLabel = `${prevPrev.year}-${String(prevPrev.month).padStart(2, "0")}`;
@@ -1127,6 +1144,7 @@ async function buildRelatorioData(sb: any) {
   const { data: lancamentos } = await sb
     .from("fin_lancamentos")
     .select("tipo, plano_contas, valor, descricao")
+    .eq("escola_id", escolaId)
     .gte("data_lancamento", mesInicio)
     .lte("data_lancamento", mesFim);
 
@@ -1134,6 +1152,7 @@ async function buildRelatorioData(sb: any) {
   const { data: lancamentosPrev } = await sb
     .from("fin_lancamentos")
     .select("tipo, plano_contas, valor")
+    .eq("escola_id", escolaId)
     .gte("data_lancamento", prevMesInicio)
     .lte("data_lancamento", prevMesFim);
 
@@ -1236,7 +1255,7 @@ Dê sugestões curtas e acionáveis. Sem markdown, texto puro.`;
 
 router.on("relatorio_mensal_enviar", authCronOrGerente, async (ctx) => {
   const escolaIdRelatorio = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
-  const data = await buildRelatorioData(ctx.sb);
+  const data = await buildRelatorioData(ctx.sb, escolaIdRelatorio);
   const sugestoes = await getAiSugestoes(data);
   const html = await buildRelatorioHtml(data, sugestoes);
 
@@ -1271,7 +1290,8 @@ router.on("relatorio_mensal_enviar", authCronOrGerente, async (ctx) => {
 });
 
 router.on("relatorio_mensal_preview", authGerente, async (ctx) => {
-  const data = await buildRelatorioData(ctx.sb);
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const data = await buildRelatorioData(ctx.sb, ctx.escola_id);
   const sugestoes = await getAiSugestoes(data);
   const html = await buildRelatorioHtml(data, sugestoes);
   return successResponse({ ...data, sugestoes, html });

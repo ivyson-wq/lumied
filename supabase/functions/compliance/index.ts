@@ -421,7 +421,7 @@ router.on("compliance_incidente_atualizar", authGerenteOrSecretaria, feat, async
 router.on("compliance_incidente_historico", authGerenteOrSecretaria, feat, async (ctx) => {
   const { incidente_id } = ctx.body as any;
   if (!incidente_id) throw new AppError("VALIDATION_FAILED", "incidente_id obrigatório.");
-  const { data } = await ctx.sb.from("compliance_incidentes_historico").select("*").eq("incidente_id", incidente_id).order("criado_em");
+  const { data } = await ctx.sb.from("compliance_incidentes_historico").select("*").eq("incidente_id", incidente_id).eq("escola_id", ctx.escola_id!).order("criado_em");
   return successResponse(data ?? []);
 });
 
@@ -551,7 +551,7 @@ router.on("compliance_politica_criar", authGerenteOrSecretaria, feat, async (ctx
 router.on("compliance_politica_aceites", authGerenteOrSecretaria, feat, async (ctx) => {
   const { politica_id } = ctx.body as any;
   if (!politica_id) throw new AppError("VALIDATION_FAILED", "politica_id obrigatório.");
-  const { data } = await ctx.sb.from("compliance_politicas_aceites").select("*").eq("politica_id", politica_id).order("aceito_em", { ascending: false });
+  const { data } = await ctx.sb.from("compliance_politicas_aceites").select("*").eq("politica_id", politica_id).eq("escola_id", ctx.escola_id!).order("aceito_em", { ascending: false });
   return successResponse(data ?? []);
 });
 
@@ -1213,6 +1213,7 @@ router.on("compliance_ciencia_detalhe", authGerenteOrSecretaria, feat, async (ct
   const { data } = await ctx.sb.from("compliance_ciencias")
     .select("*, professoras(id, nome, email)")
     .eq("id", id)
+    .eq("escola_id", ctx.escola_id!)
     .single();
   if (!data) throw new AppError("NOT_FOUND", "Ciência não encontrada.");
   return successResponse(data);
@@ -1323,7 +1324,7 @@ router.on("compliance_quiz_atribuir", authGerenteOrSecretaria, feat, async (ctx)
 
 // Gerente: listar quizzes
 router.on("compliance_quizzes_list", authGerenteOrSecretaria, feat, async (ctx) => {
-  const { data } = await ctx.sb.from("compliance_quizzes").select("*, compliance_politicas(titulo)").eq("ativo", true).order("criado_em", { ascending: false });
+  const { data } = await ctx.sb.from("compliance_quizzes").select("*, compliance_politicas(titulo)").eq("ativo", true).eq("escola_id", ctx.escola_id!).order("criado_em", { ascending: false });
   return successResponse(data ?? []);
 });
 
@@ -1331,8 +1332,8 @@ router.on("compliance_quizzes_list", authGerenteOrSecretaria, feat, async (ctx) 
 router.on("compliance_quiz_resultados", authGerenteOrSecretaria, feat, async (ctx) => {
   const { quiz_id } = ctx.body as any;
   if (!quiz_id) throw new AppError("VALIDATION_FAILED", "quiz_id obrigatório.");
-  const { data: atribuicoes } = await ctx.sb.from("compliance_quiz_atribuicoes").select("*").eq("quiz_id", quiz_id).order("nome");
-  const { data: quiz } = await ctx.sb.from("compliance_quizzes").select("titulo, nota_minima, total_perguntas").eq("id", quiz_id).single();
+  const { data: atribuicoes } = await ctx.sb.from("compliance_quiz_atribuicoes").select("*").eq("quiz_id", quiz_id).eq("escola_id", ctx.escola_id!).order("nome");
+  const { data: quiz } = await ctx.sb.from("compliance_quizzes").select("titulo, nota_minima, total_perguntas").eq("id", quiz_id).eq("escola_id", ctx.escola_id!).single();
   return successResponse({ quiz, atribuicoes: atribuicoes ?? [] });
 });
 

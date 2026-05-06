@@ -619,7 +619,7 @@ Deno.serve(async (req) => {
     if (action === 'atestados_pendentes') {
       const { data } = await sb
         .from('atestados_professoras').select('*, professoras(nome, email)')
-        .eq('status', 'pendente').order('criado_em', { ascending: true })
+        .eq('escola_id', (sec as any).escola_id).eq('status', 'pendente').order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
     }
 
@@ -627,7 +627,7 @@ Deno.serve(async (req) => {
       const filterStatus: string | undefined = body.status
       let query = sb
         .from('atestados_professoras').select('*, professoras(nome, email)')
-        .order('data_inicio', { ascending: false })
+        .eq('escola_id', (sec as any).escola_id).order('data_inicio', { ascending: false })
       if (filterStatus && filterStatus !== 'todos') query = query.eq('status', filterStatus)
       const { data } = await query
       return json({ data: data ?? [] })
@@ -636,7 +636,7 @@ Deno.serve(async (req) => {
     if (action === 'atestado_aprovar') {
       const { id } = body
       if (!id) return json({ error: 'ID do atestado não informado.' }, 400)
-      const { data: atest } = await sb.from('atestados_professoras').select('professora_id, data_inicio, data_fim, professoras(email)').eq('id', id).maybeSingle()
+      const { data: atest } = await sb.from('atestados_professoras').select('professora_id, data_inicio, data_fim, professoras(email)').eq('id', id).eq('escola_id', (sec as any).escola_id).maybeSingle()
       const { error } = await sb.from('atestados_professoras').update({
         status: 'aprovado',
         validado_por: sec.nome,
@@ -653,7 +653,7 @@ Deno.serve(async (req) => {
     if (action === 'atestado_rejeitar') {
       const { id } = body
       if (!id) return json({ error: 'ID do atestado não informado.' }, 400)
-      const { data: atest } = await sb.from('atestados_professoras').select('professora_id, data_inicio, data_fim, professoras(email)').eq('id', id).maybeSingle()
+      const { data: atest } = await sb.from('atestados_professoras').select('professora_id, data_inicio, data_fim, professoras(email)').eq('id', id).eq('escola_id', (sec as any).escola_id).maybeSingle()
       const { error } = await sb.from('atestados_professoras').update({
         status: 'rejeitado',
         validado_por: sec.nome,
@@ -712,7 +712,7 @@ Deno.serve(async (req) => {
       if (!sec.features?.includes('crm')) return json({ error: 'Recurso não habilitado.' }, 403)
       const { lead_id } = body
       if (!lead_id) return json({ error: 'lead_id obrigatório.' }, 400)
-      const { data } = await sb.from('crm_interacoes').select('*').eq('lead_id', lead_id).order('criado_em', { ascending: false })
+      const { data } = await sb.from('crm_interacoes').select('*').eq('lead_id', lead_id).eq('escola_id', (sec as any).escola_id).order('criado_em', { ascending: false })
       return json(data ?? [])
     }
 
@@ -728,7 +728,7 @@ Deno.serve(async (req) => {
     // ── CRM: Templates ──
     if (action === 'sec_crm_templates_list') {
       if (!sec.features?.includes('templates')) return json({ error: 'Recurso não habilitado.' }, 403)
-      const { data } = await sb.from('crm_templates').select('*').eq('ativo', true).order('categoria')
+      const { data } = await sb.from('crm_templates').select('*').eq('ativo', true).eq('escola_id', (sec as any).escola_id).order('categoria')
       return json(data ?? [])
     }
 
@@ -817,14 +817,14 @@ Deno.serve(async (req) => {
     if (action === 'diplomas_pendentes') {
       const { data } = await sb
         .from('diplomas_professoras').select('*, professoras(nome, email)')
-        .eq('status', 'pendente').order('criado_em', { ascending: true })
+        .eq('escola_id', (ger as any).escola_id).eq('status', 'pendente').order('criado_em', { ascending: true })
       return json({ data: data ?? [] })
     }
 
     if (action === 'diplomas_all') {
       const filterStatus: string | undefined = body.status
       let query = sb.from('diplomas_professoras').select('*, professoras(nome, email)')
-        .order('criado_em', { ascending: false })
+        .eq('escola_id', (ger as any).escola_id).order('criado_em', { ascending: false })
       if (filterStatus && filterStatus !== 'todos') query = query.eq('status', filterStatus)
       const { data } = await query
       return json({ data: data ?? [] })
@@ -834,7 +834,7 @@ Deno.serve(async (req) => {
       const { id } = body
       if (!id) return json({ error: 'ID do diploma não informado.' }, 400)
       const { data: diploma } = await sb
-        .from('diplomas_professoras').select('carga_horaria, nome_curso, professora_id, professoras(email)').eq('id', id).maybeSingle()
+        .from('diplomas_professoras').select('carga_horaria, nome_curso, professora_id, professoras(email)').eq('id', id).eq('escola_id', (ger as any).escola_id).maybeSingle()
       if (!diploma) return json({ error: 'Diploma não encontrado.' }, 404)
       const { error } = await sb.from('diplomas_professoras').update({
         status: 'aprovado', pontuacao: diploma.carga_horaria,
@@ -851,7 +851,7 @@ Deno.serve(async (req) => {
       const { id } = body
       if (!id) return json({ error: 'ID do diploma não informado.' }, 400)
       const { data: diploma } = await sb
-        .from('diplomas_professoras').select('nome_curso, professora_id, professoras(email)').eq('id', id).maybeSingle()
+        .from('diplomas_professoras').select('nome_curso, professora_id, professoras(email)').eq('id', id).eq('escola_id', (ger as any).escola_id).maybeSingle()
       const { error } = await sb.from('diplomas_professoras').update({
         status: 'rejeitado', pontuacao: 0,
         validado_por: ger.nome, data_validacao: new Date().toISOString(),
@@ -923,14 +923,14 @@ Deno.serve(async (req) => {
 
     if (action === 'secretaria_metas_list_all') {
       const ano = parseInt(body.ano as string) || new Date().getFullYear()
-      const { data } = await sb.from('comercial_metas').select('*, secretarias(nome)').eq('ano', ano).order('mes')
+      const { data } = await sb.from('comercial_metas').select('*, secretarias(nome)').eq('ano', ano).eq('escola_id', (ger as any).escola_id).order('mes')
       return json(data ?? [])
     }
 
     // ── PDI: gestora ────────────────────────────────────────
 
     if (action === 'pdi_ciclos_list') {
-      const { data } = await sb.from('pdi_ciclos').select('*').order('ano', { ascending: false })
+      const { data } = await sb.from('pdi_ciclos').select('*').eq('escola_id', (ger as any).escola_id).order('ano', { ascending: false })
       return json({ data: data ?? [] })
     }
 
@@ -1225,7 +1225,7 @@ Deno.serve(async (req) => {
     if (!prof) return json({ error: 'Sessão inválida ou expirada. Faça login novamente.' }, 401)
 
     if (action === 'series_list_pub') {
-      const { data } = await sb.from('series').select('nome').order('nome')
+      const { data } = await sb.from('series').select('nome').eq('escola_id', (prof as any).escola_id).order('nome')
       return json({ data: (data ?? []).map((s: { nome: string }) => s.nome) })
     }
 
@@ -1245,6 +1245,7 @@ Deno.serve(async (req) => {
 
       let query = sb
         .from('pickup_notificacoes').select('*')
+        .eq('escola_id', (prof as any).escola_id)
         .gte('saiu_em', today + 'T00:00:00Z')
         .in('status', ['a_caminho', 'chegou'])
         .order('saiu_em', { ascending: true })
@@ -1765,8 +1766,8 @@ Deno.serve(async (req) => {
       // Busca orçamento e gasto de cada turma
       const turmasInfo = []
       for (const t of turmas) {
-        const { data: orc } = await sb.from('alm_orcamentos').select('valor').eq('turma_id', t.id).eq('mes', mes).maybeSingle()
-        const { data: reqs } = await sb.from('alm_requisicoes').select('total, status').eq('turma_id', t.id).eq('mes', mes).in('status', ['aprovado', 'pendente'])
+        const { data: orc } = await sb.from('alm_orcamentos').select('valor').eq('turma_id', t.id).eq('mes', mes).eq('escola_id', (prof as any).escola_id).maybeSingle()
+        const { data: reqs } = await sb.from('alm_requisicoes').select('total, status').eq('turma_id', t.id).eq('mes', mes).eq('escola_id', (prof as any).escola_id).in('status', ['aprovado', 'pendente'])
         const gasto = (reqs ?? []).reduce((s: number, r: any) => s + (r.total ?? 0), 0)
         const gastoAprovado = (reqs ?? []).filter((r: any) => r.status === 'aprovado').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
         const gastoPendente = (reqs ?? []).filter((r: any) => r.status === 'pendente').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
@@ -1881,7 +1882,7 @@ Deno.serve(async (req) => {
           sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente').eq('escola_id', gerente.escola_id),
           sb.from('alm_requisicoes').select('total, turma_id, status').eq('mes', mes).eq('escola_id', gerente.escola_id).in('status', ['aprovado', 'pendente']),
           sb.from('series').select('id, nome').eq('ativo', true).eq('escola_id', gerente.escola_id),
-          sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes),
+          sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes).eq('escola_id', gerente.escola_id),
         ])
       const totalAprovado = (reqsMes ?? []).filter((r: any) => r.status === 'aprovado').reduce((s: number, r: any) => s + (r.total ?? 0), 0)
       const orcMap: Record<string, number> = {}
@@ -2261,7 +2262,7 @@ Deno.serve(async (req) => {
       if (!id) return json({ error: 'ID não informado.' }, 400)
       // itens_aprovados: optional override of qty_aprovado per item
       const { data: req } = await sb.from('alm_requisicoes').select('*')
-        .eq('id', id).maybeSingle()
+        .eq('id', id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
       if (!req) return json({ error: 'Requisição não encontrada.' }, 404)
       if (req.status !== 'pendente') return json({ error: 'Requisição já processada.' }, 400)
       // Merge approved quantities into items
@@ -2274,7 +2275,7 @@ Deno.serve(async (req) => {
       const { error: errUpdate } = await sb.from('alm_requisicoes').update({
         status: 'aprovado', nota_gerente: nota_gerente || null,
         itens, total, aprovado_em: new Date().toISOString(),
-      }).eq('id', id)
+      }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
       if (errUpdate) return json({ error: errUpdate.message }, 400)
       // Deduct from stock
       for (const it of itens) {
@@ -2297,6 +2298,7 @@ Deno.serve(async (req) => {
             preco: parseFloat(it.preco_unit) || 0,
             estoque_qty: 0,
             categoria: it.categoria || null,
+            escola_id: (gerente as any).escola_id,
           }).select('id').maybeSingle()
           if (novo) it.insumo_id = novo.id
         }
@@ -2317,7 +2319,7 @@ Deno.serve(async (req) => {
       const { id, nota_gerente } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
       const { data: req } = await sb.from('alm_requisicoes').select('professora_id, criado_em, status')
-        .eq('id', id).maybeSingle()
+        .eq('id', id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
       if (!req) return json({ error: 'Requisição não encontrada.' }, 404)
       if (req.status !== 'pendente') return json({ error: 'Requisição já processada.' }, 400)
       const { error } = await sb.from('alm_requisicoes').update({
@@ -2334,7 +2336,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'alm_insumos_list') {
-      const { data } = await sb.from('alm_insumos').select('*').order('categoria').order('nome')
+      const { data } = await sb.from('alm_insumos').select('*').eq('escola_id', (gerente as any).escola_id).order('categoria').order('nome')
       return json({ data: data ?? [] })
     }
 
@@ -2536,7 +2538,7 @@ Deno.serve(async (req) => {
     if (action === 'alm_orcamentos_list') {
       const mes = body.mes || new Date().toISOString().slice(0, 7)
       const { data: turmas } = await sb.from('series').select('id, nome').eq('ativo', true).eq('escola_id', gerente.escola_id).order('nome')
-      const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
+      const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes).eq('escola_id', (gerente as any).escola_id)
       const map: Record<string, number> = {}
       for (const o of orcs ?? []) map[o.turma_id] = o.valor
       const result = (turmas ?? []).map((t: any) => ({ ...t, valor: map[t.id] ?? 0 }))
@@ -2560,7 +2562,7 @@ Deno.serve(async (req) => {
         .from('alm_requisicoes')
         .select('turma_id, total, status, itens, professoras(nome), series(nome)')
         .eq('mes', mes).eq('escola_id', gerente.escola_id)
-      const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes)
+      const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes).eq('escola_id', (gerente as any).escola_id)
       const orcMap: Record<string, number> = {}
       for (const o of orcs ?? []) orcMap[o.turma_id] = o.valor
       // Group by turma
@@ -2758,7 +2760,7 @@ Deno.serve(async (req) => {
     const token = (body._token as string) || (body._prof_token as string)
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
-    const { data: sols, error: solErr } = await sb.from('solicitacoes').select('*').order('criado_em', { ascending: false }).limit(500)
+    const { data: sols, error: solErr } = await sb.from('solicitacoes').select('*').eq('escola_id', (prof as any).escola_id).order('criado_em', { ascending: false }).limit(500)
     if (solErr) return json({ error: solErr.message }, 400)
     const TURNO_GROUPS: Record<string, string> = { 'Integral (7h-19h)':'integral','Semi-Integral (7h-13h30)':'semi','Semi-Integral (13h-19h)':'semi','Tarde (13h-17h)':'tarde','Diária (por dia)':'diaria' }
     const counts: Record<string, number> = { integral: 0, semi: 0, tarde: 0, diaria: 0 }
@@ -2775,8 +2777,8 @@ Deno.serve(async (req) => {
     const token = (body._token as string) || (body._prof_token as string)
     const prof = await getProfessora(sb, token)
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
-    const { data: ativs } = await sb.from('atividades').select('*').eq('ativo', true).order('ordem')
-    const { data: inscs } = await sb.from('inscricoes_atividades').select('*').order('criado_em', { ascending: false }).limit(500)
+    const { data: ativs } = await sb.from('atividades').select('*').eq('ativo', true).eq('escola_id', (prof as any).escola_id).order('ordem')
+    const { data: inscs } = await sb.from('inscricoes_atividades').select('*').eq('escola_id', (prof as any).escola_id).order('criado_em', { ascending: false }).limit(500)
     const atividades = (ativs ?? []).map((a: any) => {
       const horarios = (a.horarios || []).map((h: any) => ({
         turma: h.turma || h.dia || '', dia: h.dia || '', hora: h.hora || '', inicio: h.inicio || '', fim: h.fim || '',
@@ -2838,6 +2840,7 @@ Deno.serve(async (req) => {
     const { error } = await sb.from('achados_perdidos').insert({
       descricao, local_encontrado: local_encontrado || null, foto_url,
       postado_por_id: prof.id, postado_por_nome: prof.nome,
+      escola_id: (prof as any).escola_id,
     })
     if (error) return json({ error: error.message }, 400)
     return json({ ok: true })
@@ -2845,7 +2848,9 @@ Deno.serve(async (req) => {
 
   if (action === 'achados_lista_equipe') {
     // Equipe vê todos os itens (internos + públicos, exceto devolvidos antigos)
+    const escolaIdEquipe = await resolveEscolaId(req, sb, null, body)
     const { data } = await sb.from('achados_perdidos').select('*')
+      .eq('escola_id', escolaIdEquipe)
       .neq('status', 'devolvido')
       .order('criado_em', { ascending: false })
     return json({ data: data ?? [] })
@@ -2853,8 +2858,10 @@ Deno.serve(async (req) => {
 
   if (action === 'achados_lista_publica') {
     // Pais veem apenas itens públicos (status = publico OU publicar_em já passou)
+    const escolaIdPub = await resolveEscolaId(req, sb, null, body)
     const agora = new Date().toISOString()
     const { data } = await sb.from('achados_perdidos').select('id, descricao, local_encontrado, foto_url, criado_em, status, publicar_em')
+      .eq('escola_id', escolaIdPub)
       .or(`status.eq.publico,publicar_em.lte.${agora}`)
       .neq('status', 'devolvido')
       .order('criado_em', { ascending: false })
@@ -2868,7 +2875,8 @@ Deno.serve(async (req) => {
     if (!ger && !prof) return json({ error: 'Sessão inválida.' }, 401)
     const { id } = body as { id: string }
     if (!id) return json({ error: 'ID obrigatório.' }, 400)
-    await sb.from('achados_perdidos').update({ status: 'publico', publicar_em: new Date().toISOString() }).eq('id', id)
+    const escolaIdAchado = (ger as any)?.escola_id || (prof as any)?.escola_id
+    await sb.from('achados_perdidos').update({ status: 'publico', publicar_em: new Date().toISOString() }).eq('id', id).eq('escola_id', escolaIdAchado)
     return json({ ok: true })
   }
 
@@ -2881,9 +2889,10 @@ Deno.serve(async (req) => {
     const { id, devolvido_para } = body as { id: string; devolvido_para: string }
     if (!id) return json({ error: 'ID obrigatório.' }, 400)
     const quem = prof?.nome || ger?.nome || 'Equipe'
+    const escolaIdDev = (prof as any)?.escola_id || (ger as any)?.escola_id
     await sb.from('achados_perdidos').update({
       status: 'devolvido', devolvido_para: devolvido_para || null, devolvido_em: new Date().toISOString(),
-    }).eq('id', id)
+    }).eq('id', id).eq('escola_id', escolaIdDev)
     return json({ ok: true })
   }
 

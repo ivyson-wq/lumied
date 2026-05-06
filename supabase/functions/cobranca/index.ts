@@ -18,17 +18,19 @@ const authGerenteOuFinanceiro: import("../_shared/router.ts").Middleware = async
 
   const { data: gs } = await ctx.sb
     .from("gerente_sessoes")
-    .select("*, gerentes(id, nome, email)")
+    .select("*, gerentes(id, nome, email, escola_id)")
     .eq("token", token)
     .maybeSingle();
   if (gs && new Date(gs.expira_em) >= new Date()) {
-    ctx.user = { ...(gs as any).gerentes, tipo: "gerente" };
+    const gerente = (gs as any).gerentes;
+    ctx.user = { ...gerente, tipo: "gerente" };
+    if (gerente?.escola_id) ctx.escola_id = gerente.escola_id as string;
     return next();
   }
 
   const { data: us } = await ctx.sb
     .from("sessoes")
-    .select("*, usuarios(id, nome, email, papeis, papel)")
+    .select("*, usuarios(id, nome, email, papeis, papel, escola_id)")
     .eq("token", token)
     .maybeSingle();
   if (us && new Date(us.expira_em) >= new Date()) {
@@ -37,6 +39,7 @@ const authGerenteOuFinanceiro: import("../_shared/router.ts").Middleware = async
     const permitidos = ["gerente", "diretor", "financeiro"];
     if (papeis.some((p: string) => permitidos.includes(p))) {
       ctx.user = { ...usuario, tipo: papeis[0] };
+      if (usuario?.escola_id) ctx.escola_id = usuario.escola_id as string;
       return next();
     }
   }
@@ -174,9 +177,11 @@ router.on("regua_executar", authGerenteOuFinanceiro, requireFeature("regua_cobra
 });
 
 router.on("regua_execucoes_list", authGerenteOuFinanceiro, requireFeature("regua_cobranca"), async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { familia_email, mensalidade_id, aluno_id, status, desde, ate, limite } = ctx.body as any;
   let q = ctx.sb.from("regua_execucoes")
     .select("*, regua_config(evento, canal, dias_offset)")
+    .eq("escola_id", ctx.escola_id)
     .order("enviado_em", { ascending: false })
     .limit(Math.min(limite || 100, 500));
   if (familia_email)   q = q.eq("familia_email", familia_email);
@@ -233,9 +238,11 @@ router.on("tratativa_create", authGerenteOuFinanceiro, requireFeature("regua_cob
 });
 
 router.on("tratativa_list", authGerenteOuFinanceiro, requireFeature("regua_cobranca"), async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { mensalidade_id, aluno_id, familia_email, tipo, limite } = ctx.body as any;
   let q = ctx.sb.from("cobranca_tratativas")
     .select("*")
+    .eq("escola_id", ctx.escola_id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(Math.min(limite || 100, 500));
@@ -248,11 +255,12 @@ router.on("tratativa_list", authGerenteOuFinanceiro, requireFeature("regua_cobra
 });
 
 router.on("tratativa_update", authGerenteOuFinanceiro, requireFeature("regua_cobranca"), async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const b = ctx.body as any;
   const u = ctx.user as any;
   if (!b.id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   // Só o autor ou gerente pode editar
-  const { data: existing } = await ctx.sb.from("cobranca_tratativas").select("usuario_id").eq("id", b.id).maybeSingle();
+  const { data: existing } = await ctx.sb.from("cobranca_tratativas").select("usuario_id").eq("id", b.id).eq("escola_id", ctx.escola_id).maybeSingle();
   if (!existing) throw new AppError("NOT_FOUND", "Tratativa não encontrada.");
   const isOwner = existing.usuario_id && existing.usuario_id === u?.id;
   const isGerente = ["gerente","diretor"].includes(u?.tipo);
@@ -264,31 +272,34 @@ router.on("tratativa_update", authGerenteOuFinanceiro, requireFeature("regua_cob
   if (update.tipo && !TIPOS_TRATATIVA.includes(update.tipo as string)) {
     throw new AppError("VALIDATION_FAILED", "Tipo inválido.");
   }
-  const { error } = await ctx.sb.from("cobranca_tratativas").update(update).eq("id", b.id);
+  const { error } = await ctx.sb.from("cobranca_tratativas").update(update).eq("id", b.id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ success: true });
 });
 
 router.on("tratativa_delete", authGerenteOuFinanceiro, requireFeature("regua_cobranca"), async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const b = ctx.body as any;
   const u = ctx.user as any;
   if (!b.id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
-  const { data: existing } = await ctx.sb.from("cobranca_tratativas").select("usuario_id").eq("id", b.id).maybeSingle();
+  const { data: existing } = await ctx.sb.from("cobranca_tratativas").select("usuario_id").eq("id", b.id).eq("escola_id", ctx.escola_id).maybeSingle();
   if (!existing) throw new AppError("NOT_FOUND", "Tratativa não encontrada.");
   const isOwner = existing.usuario_id && existing.usuario_id === u?.id;
   const isGerente = ["gerente","diretor"].includes(u?.tipo);
   if (!isOwner && !isGerente) throw new AppError("FORBIDDEN", "Só o autor ou gerente pode remover.");
-  await ctx.sb.from("cobranca_tratativas").update({ deleted_at: new Date().toISOString() }).eq("id", b.id);
+  await ctx.sb.from("cobranca_tratativas").update({ deleted_at: new Date().toISOString() }).eq("id", b.id).eq("escola_id", ctx.escola_id);
   return successResponse({ success: true });
 });
 
 router.on("cobranca_timeline", authGerenteOuFinanceiro, requireFeature("regua_cobranca"), async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { mensalidade_id, aluno_id, familia_email, limite } = ctx.body as any;
   if (!mensalidade_id && !aluno_id && !familia_email) {
     throw new AppError("VALIDATION_FAILED", "Informe mensalidade_id, aluno_id ou familia_email.");
   }
   let q = ctx.sb.from("vw_cobranca_timeline")
     .select("*")
+    .eq("escola_id", ctx.escola_id)
     .order("ocorrido_em", { ascending: false })
     .limit(Math.min(limite || 200, 500));
   if (mensalidade_id) q = q.eq("mensalidade_id", mensalidade_id);

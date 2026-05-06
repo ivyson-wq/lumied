@@ -23,6 +23,7 @@ import {
 import { askClaude, askClaudeWithTools, SYSTEM_PROMPTS } from "../_shared/ai.ts";
 import { McpServer } from "../_shared/mcp.ts";
 import { gerenteTools } from "../mcp/tools_gerente.ts";
+import { createCalendarEvent } from "../_shared/gcal.ts";
 
 const log = createLogger("api");
 
@@ -2046,7 +2047,7 @@ serve(async (req: Request) => {
       chamadaIds.length > 0
         ? admin.from("frequencia_registros").select("status").eq("aluno_email", email).in("chamada_id", chamadaIds)
         : Promise.resolve({ data: [] as { status: string }[] }),
-      admin.from("notas_lancamentos").select("valor").eq("aluno_email", email).order("lancado_em", { ascending: false }).limit(5),
+      admin.from("notas_lancamentos").select("valor").eq("aluno_email", email).eq("escola_id", sessionEscolaId).order("lancado_em", { ascending: false }).limit(5),
       admin.from("familia_engagement").select("score_app_usage, trend, detalhes").eq("escola_id", sessionEscolaId).eq("familia_email", email).maybeSingle(),
     ]);
 
@@ -2789,43 +2790,64 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true });
   }
   if (action === "crm_reuniao_save") {
-    const { lead_id, titulo, data_hora, duracao_min, local, descricao } = body as any;
+    const { lead_id, titulo, data_hora, duracao_min, local, descricao, google_calendar_id } = body as any;
     if (!titulo || !data_hora) return err("Titulo e data obrigatorios.");
-    const { data: r, error: e } = await admin.from("crm_reunioes").insert({ lead_id, titulo, data_hora, duracao_min: duracao_min || 30, local, descricao, criado_por: gerente?.nome, escola_id: sessionEscolaId }).select("id").single();
+    const duration = duracao_min || 30;
+    const { data: r, error: e } = await admin.from("crm_reunioes").insert({ lead_id, titulo, data_hora, duracao_min: duration, local, descricao, criado_por: gerente?.nome, escola_id: sessionEscolaId }).select("id").single();
     if (e) return err(e.message);
+    // Sync with Google Calendar
+    let gcalResult: { eventId?: string; htmlLink?: string } = {};
+    const calId = google_calendar_id || Deno.env.get("GOOGLE_CALENDAR_ID");
+    if (calId) {
+      const gcal = await createCalendarEvent({
+        calendarId: calId,
+        summary: titulo,
+        description: descricao || `Reunião CRM${lead_id ? ' — Lead vinculado' : ''}`,
+        location: local,
+        startDateTime: data_hora,
+        durationMin: duration,
+        timeZone: "America/Sao_Paulo",
+      });
+      if (gcal.success && gcal.eventId) {
+        await admin.from("crm_reunioes").update({ google_event_id: gcal.eventId }).eq("id", r.id);
+        gcalResult = { eventId: gcal.eventId, htmlLink: gcal.htmlLink };
+      } else {
+        log.warn("Google Calendar sync failed:", gcal.error);
+      }
+    }
     // Registra interacao
     if (lead_id) {
-      await admin.from("crm_interacoes").insert({ lead_id, tipo: "reuniao", descricao: `Reunião agendada: ${titulo} em ${new Date(data_hora).toLocaleString("pt-BR")}`, criado_por: gerente?.nome, escola_id: sessionEscolaId });
+      await admin.from("crm_interacoes").insert({ lead_id, tipo: "reuniao", descricao: `Reunião agendada: ${titulo} em ${new Date(data_hora).toLocaleString("pt-BR")}${gcalResult.htmlLink ? ' | Google Calendar: ' + gcalResult.htmlLink : ''}`, criado_por: gerente?.nome, escola_id: sessionEscolaId });
     }
-    return ok({ success: true, id: r.id });
+    return ok({ success: true, id: r.id, google_event_id: gcalResult.eventId, google_calendar_link: gcalResult.htmlLink });
   }
   if (action === "config_series_idade_list") {
     const ano = (body as any).ano || new Date().getFullYear();
-    const { data } = await admin.from("config_series_idade").select("*").eq("ano_ref", ano).eq("ativo", true).order("ordem");
+    const { data } = await admin.from("config_series_idade").select("*").eq("ano_ref", ano).eq("ativo", true).eq("escola_id", sessionEscolaId).order("ordem");
     return ok(data ?? []);
   }
   if (action === "config_series_idade_save") {
     const { id, serie, idade_min_meses, idade_max_meses, data_corte_ref, ano_ref } = body as any;
     if (!serie) return err("Serie obrigatoria.");
     const data = { serie, idade_min_meses: parseInt(idade_min_meses), idade_max_meses: parseInt(idade_max_meses), data_corte_ref: data_corte_ref || "03-31", ano_ref: parseInt(ano_ref) || new Date().getFullYear() };
-    if (id) { await admin.from("config_series_idade").update(data).eq("id", id); }
-    else { await admin.from("config_series_idade").insert({ ...data, ordem: 99 }); }
+    if (id) { await admin.from("config_series_idade").update(data).eq("id", id).eq("escola_id", sessionEscolaId); }
+    else { await admin.from("config_series_idade").insert({ ...data, ordem: 99, escola_id: sessionEscolaId }); }
     return ok({ success: true });
   }
   if (action === "config_series_idade_delete") {
     const { id } = body as { id: string };
-    await admin.from("config_series_idade").delete().eq("id", id);
+    await admin.from("config_series_idade").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
   if (action === "config_series_idade_atualizar_ano") {
     const { ano_origem, ano_destino } = body as any;
     if (!ano_origem || !ano_destino) return err("Ano de origem e destino obrigatorios.");
-    const { data: existentes } = await admin.from("config_series_idade").select("*").eq("ano_ref", parseInt(ano_origem)).eq("ativo", true);
+    const { data: existentes } = await admin.from("config_series_idade").select("*").eq("ano_ref", parseInt(ano_origem)).eq("ativo", true).eq("escola_id", sessionEscolaId);
     if (!existentes?.length) return err("Nenhuma serie encontrada para o ano " + ano_origem);
     for (const s of existentes) {
       await admin.from("config_series_idade").upsert({
         serie: s.serie, idade_min_meses: s.idade_min_meses, idade_max_meses: s.idade_max_meses,
-        data_corte_ref: s.data_corte_ref, ano_ref: parseInt(ano_destino), ordem: s.ordem, ativo: true
+        data_corte_ref: s.data_corte_ref, ano_ref: parseInt(ano_destino), ordem: s.ordem, ativo: true, escola_id: sessionEscolaId
       }, { onConflict: "serie,ano_ref" });
     }
     return ok({ success: true, total: existentes.length });
@@ -2931,7 +2953,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
   if (action === "crm_dashboard") {
     const { data: leads } = await admin.from("crm_leads").select("estagio_id, origem, valor_mensalidade, criado_em, crm_estagios(nome)").eq("escola_id", sessionEscolaId);
-    const { data: estagios } = await admin.from("crm_estagios").select("id, nome, cor, ordem").eq("ativo", true).order("ordem");
+    const { data: estagios } = await admin.from("crm_estagios").select("id, nome, cor, ordem").eq("ativo", true).eq("escola_id", sessionEscolaId).order("ordem");
     const porEstagio: Record<string, number> = {};
     const porOrigem: Record<string, number> = {};
     let valorPipeline = 0;
@@ -3315,7 +3337,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const cleanPhone = String(waPhone).replace(/\D/g, '').replace(/^55/, '');
     if (!cleanPhone || cleanPhone.length < 8 || cleanPhone.length > 15) return err("Phone inválido.");
     // Buscar família por telefone (pai ou mãe)
-    const { data: fam } = await admin.from("familias").select("id, nome_responsavel, email, telefone, alunos(id, nome)").or(`telefone.like.%${cleanPhone}%,telefone2.like.%${cleanPhone}%`).limit(1).single();
+    const { data: fam } = await admin.from("familias").select("id, nome_responsavel, email, telefone, alunos(id, nome)").eq("escola_id", sessionEscolaId).or(`telefone.like.%${cleanPhone}%,telefone2.like.%${cleanPhone}%`).limit(1).single();
     if (!fam) return ok({ data: null });
     const aluno = fam.alunos?.[0];
     return ok({ data: { familia_id: fam.id, nome_responsavel: fam.nome_responsavel, email: fam.email, aluno_id: aluno?.id, aluno_nome: aluno?.nome } });
@@ -3324,8 +3346,8 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   if (action === "wa_student_balance") {
     const { student_id: sid } = body as any;
     if (!sid) return err("student_id obrigatório.");
-    const { data: aluno } = await admin.from("alunos").select("nome").eq("id", sid).single();
-    const { data: boletos } = await admin.from("boletos").select("descricao, valor, vencimento, status").eq("aluno_id", sid).order("vencimento", { ascending: false }).limit(5);
+    const { data: aluno } = await admin.from("alunos").select("nome").eq("id", sid).eq("escola_id", sessionEscolaId).single();
+    const { data: boletos } = await admin.from("boletos").select("descricao, valor, vencimento, status").eq("aluno_id", sid).eq("escola_id", sessionEscolaId).order("vencimento", { ascending: false }).limit(5);
     return ok({ data: { aluno_nome: aluno?.nome, items: boletos ?? [] } });
   }
 
@@ -3333,19 +3355,19 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const { student_id: sid } = body as any;
     if (!sid) return err("student_id obrigatório.");
     const today = new Date().toISOString().split("T")[0];
-    const { data: aluno } = await admin.from("alunos").select("nome").eq("id", sid).single();
-    const { data: freq } = await admin.from("frequencia").select("presente, hora_entrada").eq("aluno_id", sid).eq("data", today).single();
+    const { data: aluno } = await admin.from("alunos").select("nome").eq("id", sid).eq("escola_id", sessionEscolaId).single();
+    const { data: freq } = await admin.from("frequencia").select("presente, hora_entrada").eq("aluno_id", sid).eq("escola_id", sessionEscolaId).eq("data", today).single();
     return ok({ data: freq ? { aluno_nome: aluno?.nome, presente: freq.presente, hora_entrada: freq.hora_entrada } : null });
   }
 
   if (action === "wa_class_events") {
     const { class_id: cid } = body as any;
-    const { data: eventos } = await admin.from("calendario_eventos").select("titulo, data, descricao").gte("data", new Date().toISOString().split("T")[0]).order("data").limit(5);
+    const { data: eventos } = await admin.from("calendario_eventos").select("titulo, data, descricao").eq("escola_id", sessionEscolaId).gte("data", new Date().toISOString().split("T")[0]).order("data").limit(5);
     return ok({ data: eventos ?? [] });
   }
 
   if (action === "wa_meetings_scheduled") {
-    const { data: meetings } = await admin.from("wa_scheduled_meetings").select("*").gte("meeting_at", new Date().toISOString()).eq("followup_sent", false).order("meeting_at");
+    const { data: meetings } = await admin.from("wa_scheduled_meetings").select("*").eq("escola_id", sessionEscolaId).gte("meeting_at", new Date().toISOString()).eq("followup_sent", false).order("meeting_at");
     return ok({ data: meetings ?? [] });
   }
 
@@ -3367,7 +3389,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
 
   // ── Responsável financeiro / Decisões ─────────────
   if (action === "financeiro_resp_get") {
-    const { data: escola } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo, resp_financeiro_definido").limit(1).single();
+    const { data: escola } = await admin.from("escolas").select("resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo, resp_financeiro_definido").eq("id", sessionEscolaId).limit(1).single();
     return ok({ data: escola });
   }
 
@@ -3375,7 +3397,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const { resp_financeiro_nome, resp_financeiro_email, resp_financeiro_telefone, resp_financeiro_cargo } = body as any;
     if (!resp_financeiro_nome || !resp_financeiro_email) return err("Nome e email do responsável financeiro obrigatórios.");
     // Verificar se já foi definido — só staff Lumied pode alterar depois
-    const { data: escolaCheck } = await admin.from("escolas").select("id, resp_financeiro_definido, resp_financeiro_nome, resp_financeiro_email").eq("ativo", true).limit(1).single();
+    const { data: escolaCheck } = await admin.from("escolas").select("id, resp_financeiro_definido, resp_financeiro_nome, resp_financeiro_email").eq("id", sessionEscolaId).eq("ativo", true).limit(1).single();
     if (escolaCheck?.resp_financeiro_definido) {
       return err("O responsável financeiro já foi definido no onboarding e só pode ser alterado pelo suporte Lumied. Contate suporte@lumied.com.br");
     }

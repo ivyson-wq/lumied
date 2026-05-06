@@ -563,11 +563,11 @@ router.on("acesso_evento_callback", async (ctx) => {
 
   if (method === "card" && card_value) {
     // RFID lookup
-    const { data } = await ctx.sb.from("acesso_rfid").select("*").eq("card_uid", String(card_value)).eq("ativo", true).single();
+    const { data } = await ctx.sb.from("acesso_rfid").select("*").eq("card_uid", String(card_value)).eq("ativo", true).eq("escola_id", dispositivo.escola_id).single();
     if (data) pessoa = { tipo: data.pessoa_tipo, id: data.pessoa_id, nome: data.pessoa_nome };
   } else if (user_id) {
     // Face recognition lookup by device_user_id
-    const { data } = await ctx.sb.from("acesso_faces").select("*").eq("device_user_id", Number(user_id)).eq("ativo", true).single();
+    const { data } = await ctx.sb.from("acesso_faces").select("*").eq("device_user_id", Number(user_id)).eq("ativo", true).eq("escola_id", dispositivo.escola_id).single();
     if (data) pessoa = { tipo: data.pessoa_tipo, id: data.pessoa_id, nome: data.pessoa_nome };
   }
 
@@ -712,6 +712,7 @@ router.on("acesso_evento_callback", async (ctx) => {
     // Find which alunos this person can pick up
     const { data: perms } = await ctx.sb.from("acesso_permissoes_retirada")
       .select("*")
+      .eq("escola_id", eventoEscolaId)
       .eq("responsavel_id", pessoa.id)
       .eq("autorizado", true);
 
@@ -739,6 +740,7 @@ router.on("acesso_evento_callback", async (ctx) => {
         const { data: aluno } = await ctx.sb.from("alunos")
           .select("id, nome, serie, serie_id")
           .eq("id", perm.aluno_id)
+          .eq("escola_id", eventoEscolaId)
           .maybeSingle();
 
         const turma = aluno?.serie || "Sem turma";
@@ -1107,28 +1109,32 @@ router.on("acesso_cancelar_autorizado", async (ctx) => {
   // AUTH: verificar JWT do responsável
   const authedEmail = await getAuthenticatedPaiEmail(ctx);
 
+  // Resolve escola_id for tenant scoping on lookup
+  const lookupEscolaId = await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body);
+
   // OWNERSHIP: verificar que o autorizado pertence a uma família cujo email bate com o usuário autenticado
-  const { data: perm } = await ctx.sb.from("acesso_permissoes_retirada")
+  let qPerm = ctx.sb.from("acesso_permissoes_retirada")
     .select("id, responsavel_id, responsavel_email")
-    .eq("id", id)
-    .maybeSingle();
+    .eq("id", id);
+  if (lookupEscolaId) qPerm = qPerm.eq("escola_id", lookupEscolaId);
+  const { data: perm } = await qPerm.maybeSingle();
   if (!perm) throw new AppError("NOT_FOUND", "Autorização não encontrada.");
 
   // Buscar família dona do autorizado (responsavel_id aponta para familias.id)
-  const { data: familia } = await ctx.sb.from("familias")
+  let qFam = ctx.sb.from("familias")
     .select("id, email")
-    .eq("id", perm.responsavel_id)
-    .maybeSingle();
+    .eq("id", perm.responsavel_id);
+  if (lookupEscolaId) qFam = qFam.eq("escola_id", lookupEscolaId);
+  const { data: familia } = await qFam.maybeSingle();
 
   const familiaEmail = String(familia?.email || perm.responsavel_email || "").toLowerCase();
   if (!familiaEmail || familiaEmail !== authedEmail) {
     throw new AppError("FORBIDDEN", "Você não tem permissão para cancelar esta autorização.");
   }
 
-  // Resolve escola_id for tenant scoping on the update
-  const cancelEscolaId = await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body);
-  if (cancelEscolaId) {
-    await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id).eq("escola_id", cancelEscolaId);
+  // Update with tenant scoping
+  if (lookupEscolaId) {
+    await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id).eq("escola_id", lookupEscolaId);
   } else {
     await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
   }
@@ -1239,6 +1245,7 @@ router.on("acesso_face_cadastro_publico", async (ctx) => {
   const { data: existing } = await ctx.sb
     .from("acesso_faces")
     .select("id")
+    .eq("escola_id", publicEscolaId)
     .eq("pessoa_tipo", tk.pessoa_tipo)
     .eq("pessoa_id", tk.pessoa_id)
     .maybeSingle();
@@ -1250,7 +1257,7 @@ router.on("acesso_face_cadastro_publico", async (ctx) => {
       device_user_id: deviceUserId,
       sync_status: "aguardando_aprovacao",
       atualizado_em: new Date().toISOString(),
-    }).eq("id", existing.id);
+    }).eq("id", existing.id).eq("escola_id", publicEscolaId);
   } else {
     await ctx.sb.from("acesso_faces").insert({
       escola_id: publicEscolaId,

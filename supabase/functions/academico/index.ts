@@ -49,7 +49,9 @@ function sanitizeBusca(s: unknown): string {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("notas_config_get", loadEscola, featNotas, async (ctx) => {
-  const { data } = await ctx.sb.from("notas_config").select("*").limit(1).single();
+  let q = ctx.sb.from("notas_config").select("*");
+  if (ctx.escola_id) q = q.eq("escola_id", ctx.escola_id);
+  const { data } = await q.limit(1).single();
   return successResponse(data || {});
 });
 
@@ -64,9 +66,11 @@ router.on("notas_config_update", authGerente, featNotas, async (ctx) => {
   if (permite_recuperacao !== undefined) fields.permite_recuperacao = permite_recuperacao;
   if (peso_recuperacao !== undefined) fields.peso_recuperacao = peso_recuperacao;
   if (periodos_tipo !== undefined) fields.periodos_tipo = periodos_tipo;
-  const { data: existing } = await ctx.sb.from("notas_config").select("id").limit(1).single();
-  if (existing) { await ctx.sb.from("notas_config").update(fields).eq("id", existing.id); }
-  else { await ctx.sb.from("notas_config").insert(fields); }
+  let qExist = ctx.sb.from("notas_config").select("id");
+  if (ctx.escola_id) qExist = qExist.eq("escola_id", ctx.escola_id);
+  const { data: existing } = await qExist.limit(1).single();
+  if (existing) { await ctx.sb.from("notas_config").update(fields).eq("id", existing.id).eq("escola_id", ctx.escola_id!); }
+  else { await ctx.sb.from("notas_config").insert({ ...fields, escola_id: ctx.escola_id }); }
   return successResponse({ success: true });
 });
 
@@ -74,7 +78,9 @@ router.on("notas_config_update", authGerente, featNotas, async (ctx) => {
 
 router.on("notas_periodos_list", loadEscola, featNotas, async (ctx) => {
   const ano = (ctx.body.ano as number) || new Date().getFullYear();
-  const { data } = await ctx.sb.from("notas_periodos").select("*").eq("ano", ano).order("numero");
+  let q = ctx.sb.from("notas_periodos").select("*").eq("ano", ano);
+  if (ctx.escola_id) q = q.eq("escola_id", ctx.escola_id);
+  const { data } = await q.order("numero");
   return successResponse(data ?? []);
 });
 
@@ -209,7 +215,9 @@ router.on("notas_lancamentos_upsert", authPG, featNotas, requireEscola, async (c
 router.on("notas_lancamentos_list", loadEscola, featNotas, async (ctx) => {
   const { avaliacao_id } = ctx.body as any;
   if (!avaliacao_id) throw new AppError("VALIDATION_FAILED", "avaliacao_id obrigatório.");
-  const { data } = await ctx.sb.from("notas_lancamentos").select("*").eq("avaliacao_id", avaliacao_id).order("aluno_nome");
+  let q = ctx.sb.from("notas_lancamentos").select("*").eq("avaliacao_id", avaliacao_id);
+  if (ctx.escola_id) q = q.eq("escola_id", ctx.escola_id);
+  const { data } = await q.order("aluno_nome");
   return successResponse(data ?? []);
 });
 
@@ -226,7 +234,9 @@ router.on("notas_calcular_media", loadEscola, featNotas, async (ctx) => {
   const { data: notas } = await ctx.sb.from("notas_lancamentos").select("avaliacao_id, valor").eq("aluno_email", aluno_email).in("avaliacao_id", avalIds);
   if (!notas || notas.length === 0) return successResponse({ media: null, message: "Sem notas lançadas." });
 
-  const { data: config } = await ctx.sb.from("notas_config").select("*").limit(1).single();
+  let qCfg = ctx.sb.from("notas_config").select("*");
+  if (ctx.escola_id) qCfg = qCfg.eq("escola_id", ctx.escola_id);
+  const { data: config } = await qCfg.limit(1).single();
   const formula = config?.formula_media || "aritmetica";
 
   const normais = avaliacoes.filter(a => a.tipo !== "recuperacao");
@@ -282,7 +292,7 @@ router.on("boletim_gerar", authGerente, featNotas, requireEscola, async (ctx) =>
   const { aluno_email, aluno_nome, periodo_id, ano } = ctx.body as any;
   if (!aluno_email || !aluno_nome || !periodo_id || !ano) throw new AppError("VALIDATION_FAILED", "aluno_email, aluno_nome, periodo_id e ano obrigatórios.");
 
-  const { data: disciplinas } = await ctx.sb.from("notas_disciplinas").select("id, nome, serie_id").eq("ativo", true);
+  const { data: disciplinas } = await ctx.sb.from("notas_disciplinas").select("id, nome, serie_id").eq("ativo", true).eq("escola_id", ctx.escola_id!);
   if (!disciplinas) return successResponse({ dados: { disciplinas: [] } });
 
   const disciplinasResult = [];
@@ -330,7 +340,9 @@ router.on("boletim_get", loadEscola, featNotas, async (ctx) => {
 router.on("notas_alunos_serie", loadEscola, featNotas, async (ctx) => {
   const { serie_id } = ctx.body as any;
   if (!serie_id) throw new AppError("VALIDATION_FAILED", "serie_id obrigatório.");
-  const { data } = await ctx.sb.from("familias").select("email, nome_aluno, nome_responsavel, serie").order("nome_aluno");
+  let qFam = ctx.sb.from("familias").select("email, nome_aluno, nome_responsavel, serie");
+  if (ctx.escola_id) qFam = qFam.eq("escola_id", ctx.escola_id);
+  const { data } = await qFam.order("nome_aluno");
   const { data: serie } = await ctx.sb.from("series").select("nome").eq("id", serie_id).single();
   if (!serie) return successResponse([]);
   const alunos = (data || []).filter(f => f.serie === serie.nome);
@@ -342,18 +354,22 @@ router.on("notas_alunos_serie", loadEscola, featNotas, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("frequencia_config_get", loadEscola, featFreq, async (ctx) => {
-  const { data } = await ctx.sb.from("frequencia_config").select("*").limit(1).single();
+  let q = ctx.sb.from("frequencia_config").select("*");
+  if (ctx.escola_id) q = q.eq("escola_id", ctx.escola_id);
+  const { data } = await q.limit(1).single();
   return successResponse(data || {});
 });
 
 router.on("frequencia_config_update", authGerente, featFreq, async (ctx) => {
   const { limite_faltas_percent, alerta_percent } = ctx.body as any;
-  const { data: existing } = await ctx.sb.from("frequencia_config").select("id").limit(1).single();
+  let qExist = ctx.sb.from("frequencia_config").select("id");
+  if (ctx.escola_id) qExist = qExist.eq("escola_id", ctx.escola_id);
+  const { data: existing } = await qExist.limit(1).single();
   const fields: any = { atualizado_em: new Date().toISOString() };
   if (limite_faltas_percent !== undefined) fields.limite_faltas_percent = limite_faltas_percent;
   if (alerta_percent !== undefined) fields.alerta_percent = alerta_percent;
-  if (existing) await ctx.sb.from("frequencia_config").update(fields).eq("id", existing.id);
-  else await ctx.sb.from("frequencia_config").insert(fields);
+  if (existing) await ctx.sb.from("frequencia_config").update(fields).eq("id", existing.id).eq("escola_id", ctx.escola_id!);
+  else await ctx.sb.from("frequencia_config").insert({ ...fields, escola_id: ctx.escola_id });
   return successResponse({ success: true });
 });
 
@@ -491,7 +507,9 @@ router.on("diario_bncc_habilidades_list", loadEscola, featDiario, async (ctx) =>
 // ═══════════════════════════════════════════════════════════════
 
 router.on("documento_templates_list", loadEscola, featDocs, async (ctx) => {
-  const { data } = await ctx.sb.from("documentos_templates").select("id, tipo, nome, variaveis, ativo").eq("ativo", true).order("tipo");
+  let q = ctx.sb.from("documentos_templates").select("id, tipo, nome, variaveis, ativo").eq("ativo", true);
+  if (ctx.escola_id) q = q.eq("escola_id", ctx.escola_id);
+  const { data } = await q.order("tipo");
   return successResponse(data ?? []);
 });
 
@@ -501,7 +519,9 @@ router.on("documento_templates_update", authGerente, featDocs, async (ctx) => {
   const fields: any = {};
   if (template_html !== undefined) fields.template_html = template_html;
   if (variaveis !== undefined) fields.variaveis = variaveis;
-  const { error } = await ctx.sb.from("documentos_templates").update(fields).eq("id", id);
+  let qUpd = ctx.sb.from("documentos_templates").update(fields).eq("id", id);
+  if (ctx.escola_id) qUpd = qUpd.eq("escola_id", ctx.escola_id);
+  const { error } = await qUpd;
   if (error) throw new AppError("BAD_REQUEST", sanitizePgError(error));
   return successResponse({ success: true });
 });
@@ -510,7 +530,9 @@ router.on("documento_gerar", authGerente, featDocs, requireEscola, async (ctx) =
   const { tipo, aluno_email, aluno_nome, dados } = ctx.body as any;
   if (!tipo || !aluno_email || !aluno_nome) throw new AppError("VALIDATION_FAILED", "tipo, aluno_email e aluno_nome obrigatórios.");
 
-  const { data: tmpl } = await ctx.sb.from("documentos_templates").select("*").eq("tipo", tipo).single();
+  let qTmpl = ctx.sb.from("documentos_templates").select("*").eq("tipo", tipo);
+  if (ctx.escola_id) qTmpl = qTmpl.eq("escola_id", ctx.escola_id);
+  const { data: tmpl } = await qTmpl.single();
   if (!tmpl) throw new AppError("NOT_FOUND", "Template não encontrado para tipo: " + tipo);
 
   let html = tmpl.template_html;
@@ -670,7 +692,9 @@ router.on("aluno_notas_get", authAl, featAluno, async (ctx) => {
 router.on("aluno_frequencia_get", authAl, featAluno, async (ctx) => {
   const { ano } = ctx.body as any;
   const anoFiltro = ano || new Date().getFullYear();
-  const { data: chamadas } = await ctx.sb.from("frequencia_chamadas").select("id").gte("data", `${anoFiltro}-01-01`).lte("data", `${anoFiltro}-12-31`);
+  let qCham = ctx.sb.from("frequencia_chamadas").select("id").gte("data", `${anoFiltro}-01-01`).lte("data", `${anoFiltro}-12-31`);
+  if (ctx.escola_id) qCham = qCham.eq("escola_id", ctx.escola_id);
+  const { data: chamadas } = await qCham;
   const totalAulas = chamadas?.length || 0;
   let totalFaltas = 0;
   if (totalAulas > 0) {
