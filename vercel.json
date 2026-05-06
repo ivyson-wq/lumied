@@ -406,6 +406,66 @@
       "destination": "/site/whatsapp-float.js"
     },
     {
+      "source": "/ig",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/ig/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/li",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/li/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/yt",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/yt/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/email",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/email/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/qr",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/qr/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/wa",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
+      "source": "/wa/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/index.html"
+    },
+    {
       "source": "/materiais/:slug",
       "has": [
         {

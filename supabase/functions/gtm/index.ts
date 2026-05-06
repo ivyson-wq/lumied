@@ -210,6 +210,25 @@ router.on("roi_calcular", rateLimit({ windowMs: 60000, maxRequests: 10 }), async
   });
 });
 
+// Click em shortlink → WhatsApp (origin tracking pre-conversion)
+// Público, sem rate-limit pesado — chamado via navigator.sendBeacon
+router.on("wa_click", rateLimit({ windowMs: 60000, maxRequests: 60 }), async (ctx) => {
+  const b = ctx.body as any;
+  const utm_source = str(b.utm_source, 60);
+  const utm_medium = str(b.utm_medium, 60);
+  const utm_campaign = str(b.utm_campaign, 60);
+  const utm_content = str(b.utm_content, 120);
+  const path = str(b.path, 60);
+  const referrer = str(b.referrer, 500);
+  await ctx.sb.from("wa_clicks").insert({
+    utm_source, utm_medium, utm_campaign, utm_content,
+    path, referrer,
+    ip: ctx.ip,
+    user_agent: ctx.req.headers.get("user-agent") || "",
+  });
+  return successResponse({ ok: true });
+});
+
 // Captura de lead genérica — vindo de qualquer form
 router.on("lead_capture", rateLimit({ windowMs: 60000, maxRequests: 5 }), async (ctx) => {
   const b = ctx.body as any;
@@ -402,6 +421,69 @@ router.on("lead_nota", authStaff, async (ctx) => {
     ator_staff_id: ctx.user?.tipo === 'staff' ? ctx.user.id : null,
   });
   return successResponse({ success: true });
+});
+
+// Lista leads que precisam de toque hoje (cron + agente outbound)
+// Auth: serviceKey OU staff. Retorna até 50 leads ordenados por urgência.
+router.on("outbound_pendentes", async (ctx) => {
+  // Permite serviceKey OR staff
+  let allowedAsService = false;
+  try { requireServiceAuth(ctx.req); allowedAsService = true; } catch { /* fall back */ }
+  if (!allowedAsService) {
+    const token = (ctx.body._token as string) || (ctx.body._staff_token as string) || null;
+    if (!token) throw new AppError("AUTH_REQUIRED", "Token obrigatório.");
+    const { data: ss } = await ctx.sb.from("lumied_staff_sessoes")
+      .select("staff_id, expira_em, lumied_staff(id, nome, email, ativo)")
+      .eq("token", token).maybeSingle();
+    if (!ss || new Date((ss as any).expira_em) < new Date()) throw new AppError("AUTH_INVALID", "Sessão inválida.");
+  }
+
+  const limit = Math.min(num((ctx.body as any).limit) || 50, 200);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Critério: leads ativos cujo proximo_passo_em <= hoje, OU sem próximo passo definido (toque_atual=0 e novo)
+  const { data: dueDirect } = await ctx.sb.from("leads_comerciais")
+    .select("id, nome_escola, email, telefone, cidade, uf, alunos_estimados, sistema_atual, tier_sugerido, status, toque_atual, proximo_passo, proximo_passo_em, qualificado_mql, criado_em, origem, mensagem")
+    .lte("proximo_passo_em", today)
+    .not("status", "in", "(fechado,perdido)")
+    .order("proximo_passo_em", { ascending: true })
+    .limit(limit);
+
+  const { data: dueNew } = await ctx.sb.from("leads_comerciais")
+    .select("id, nome_escola, email, telefone, cidade, uf, alunos_estimados, sistema_atual, tier_sugerido, status, toque_atual, proximo_passo, proximo_passo_em, qualificado_mql, criado_em, origem, mensagem")
+    .is("proximo_passo_em", null)
+    .eq("toque_atual", 0)
+    .not("status", "in", "(fechado,perdido)")
+    .order("criado_em", { ascending: false })
+    .limit(Math.max(0, limit - (dueDirect?.length || 0)));
+
+  // Mapeia próximo toque com base no atual + define canal
+  const TOQUES: Record<number, { canal: string; intervalo_dias: number }> = {
+    0: { canal: 'linkedin_follow', intervalo_dias: 1 },  // Toque 1 → 2 (DM)
+    1: { canal: 'linkedin_dm',     intervalo_dias: 2 },
+    2: { canal: 'email_diagnostico', intervalo_dias: 3 },
+    3: { canal: 'whatsapp',        intervalo_dias: 2 },
+    4: { canal: 'email_case',      intervalo_dias: 3 },
+    5: { canal: 'ligacao',         intervalo_dias: 2 },
+    6: { canal: 'email_breakup',   intervalo_dias: 14 }, // após break-up, espera 14 dias
+  };
+
+  const merged = ([] as any[]).concat(dueDirect || [], dueNew || []).slice(0, limit);
+  const enriched = merged.map((l: any) => {
+    const tNext = (l.toque_atual || 0) + 1;
+    const meta = TOQUES[l.toque_atual || 0] || TOQUES[0];
+    return {
+      ...l,
+      toque_proximo: tNext,
+      canal_proximo: meta.canal,
+      tier_info: TIER_INFO[l.tier_sugerido || 'start'],
+      wa_link_template: l.telefone
+        ? `https://wa.me/${String(l.telefone).replace(/\D/g, '')}?text=${encodeURIComponent('')}`
+        : null,
+    };
+  });
+
+  return successResponse({ leads: enriched, total: enriched.length, gerado_em: new Date().toISOString() });
 });
 
 router.on("funil_stats", authStaff, async (ctx) => {

@@ -159,7 +159,29 @@ curl -s -X POST "https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/admin" \
 ```
 Se a variável `CRON_INTERNAL_KEY` não estiver disponível, pule este passo — o cron diário enviará automaticamente.
 
-### 11. Log final
+### 11. Repurpose para Instagram (Lumied)
+Transforme o artigo em carousel agendado pra @lumi.ed via Insta Publisher. POST pra:
+```bash
+curl -s -X POST "https://insta-publisher.vercel.app/api/auto-content/from-blog" \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "<slug>",
+    "title": "<title>",
+    "lead": "<primeiras 400 chars do lead paragraph>",
+    "category": "<category>",
+    "primary_keyword": "<primary_keyword>",
+    "url": "https://lumied.com.br/site/blog/<slug>/",
+    "type": "carousel",
+    "schedule_offset_hours": 4
+  }'
+```
+- `CRON_SECRET` é o mesmo já usado pelo `insta_publisher_tick` (Vercel env). Se não estiver disponível no ambiente do agente, use `SUPABASE_SERVICE_ROLE_KEY`.
+- Resposta esperada: `{"ok":true,"post_id":"<uuid>","status":"scheduled","scheduled_at":"...","rendered_url":"..."}`
+- O post fica `scheduled` e o cron `insta_publisher_tick` (rodando a cada 5min) publica no IG automaticamente quando o `scheduled_at` chegar.
+- Se a empresa Lumied não tiver IG conectado, o post vira `draft` em vez de `scheduled` — log um aviso e siga em frente. O post manual pode ser publicado pelo painel.
+
+### 12. Log final
 Imprima um resumo:
 ```
 ✓ Artigo publicado: <title>
@@ -169,6 +191,7 @@ Imprima um resumo:
   Links internos: <count>
   Commit: <hash>
   IndexNow: <http_code>
+  IG carousel: <post_id> (scheduled <scheduled_at> | draft)
 ```
 
 ## Regras críticas (NÃO violar)

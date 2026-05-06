@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Redirecionando... | Lumied</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;background:#0F0B1F;color:#fff;margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}
+  .box{max-width:420px}
+  .logo{font-family:'Playfair Display',Georgia,serif;font-size:32px;font-weight:800;background:linear-gradient(135deg,#A78BFA,#60A5FA);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:24px}
+  .spin{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:#A78BFA;border-radius:50%;animation:s 1s linear infinite;margin:0 auto 20px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  p{color:#cbd5e1;font-size:14px;line-height:1.6}
+  a{color:#A78BFA}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Lumied</div>
+  <div class="spin"></div>
+  <p>Abrindo WhatsApp...</p>
+  <p style="font-size:12px;margin-top:24px">Não abriu? <a id="fallback" href="#">Clique aqui</a></p>
+</div>
+<script>
+(function(){
+  var WA_NUMBER = '5554999999999'; // <- substituir pelo número comercial real
+  var path = location.pathname.replace(/\/+$/, '');
+  // /ig → instagram, /li → linkedin, /yt → youtube, /email, /qr — extensível
+  var SOURCE_MAP = {
+    '/ig':       { utm: 'instagram',  msg: 'Olá! Vim pelo Instagram da Lumied. Quero entender se faz sentido pra minha escola.' },
+    '/li':       { utm: 'linkedin',   msg: 'Olá! Vim pelo LinkedIn. Quero conhecer melhor a Lumied e ver se serve pra minha escola.' },
+    '/yt':       { utm: 'youtube',    msg: 'Olá! Vi um vídeo da Lumied no YouTube. Pode me explicar como funciona pra escola?' },
+    '/email':    { utm: 'email',      msg: 'Olá! Vim do email da Lumied. Quero saber mais.' },
+    '/qr':       { utm: 'qr_code',    msg: 'Olá! Escaneei o QR Code da Lumied. Quero entender melhor.' },
+    '/wa':       { utm: 'shortlink',  msg: 'Olá! Quero saber mais sobre o Lumied.' },
+    '/ig/':      { utm: 'instagram',  msg: 'Olá! Vim pelo Instagram da Lumied. Quero entender se faz sentido pra minha escola.' },
+  };
+  var info = SOURCE_MAP[path] || SOURCE_MAP[location.pathname] || SOURCE_MAP['/wa'];
+
+  // Captura UTMs adicionais da URL
+  var qs = new URLSearchParams(location.search);
+  var utmSource    = qs.get('utm_source')   || info.utm;
+  var utmMedium    = qs.get('utm_medium')   || 'social';
+  var utmCampaign  = qs.get('utm_campaign') || 'bio_link';
+  var utmContent   = qs.get('utm_content')  || '';
+  var override     = qs.get('msg');
+
+  // GA4 event (se carregou)
+  if (typeof gtag === 'function') {
+    gtag('event', 'wa_redirect_click', {
+      event_category: 'outbound_wa',
+      event_label: utmSource,
+      utm_source: utmSource, utm_medium: utmMedium, utm_campaign: utmCampaign,
+    });
+  }
+
+  // Server-side log (best-effort, não bloqueia redirect)
+  try {
+    var beaconBody = JSON.stringify({
+      action: 'wa_click',
+      utm_source: utmSource, utm_medium: utmMedium, utm_campaign: utmCampaign, utm_content: utmContent,
+      path: location.pathname, referrer: document.referrer || ''
+    });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/gtm', beaconBody);
+    } else {
+      fetch('https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/gtm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: beaconBody, keepalive: true,
+      }).catch(function(){});
+    }
+  } catch (e) {}
+
+  // Persiste UTMs pra futuras conversões (sdr-capture lê localStorage 'lumied_utm')
+  try {
+    localStorage.setItem('lumied_utm', JSON.stringify({
+      utm_source: utmSource, utm_medium: utmMedium, utm_campaign: utmCampaign,
+    }));
+  } catch (e) {}
+
+  var msg = override ? override : info.msg;
+  var url = 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(msg);
+
+  document.getElementById('fallback').href = url;
+  setTimeout(function(){ location.replace(url); }, 250);
+})();
+</script>
+</body>
+</html>
