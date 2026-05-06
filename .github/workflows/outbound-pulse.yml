@@ -1,0 +1,42 @@
+name: Outbound Pulse Diário
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 10:00 UTC = 07:00 BRT — dias úteis
+    - cron: '0 10 * * 1-5'
+
+env:
+  SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
+  CRON_INTERNAL_KEY: lumied_cron_dbb4070f6b5601bb23bd2cb38d373bea
+
+jobs:
+  pulse:
+    name: Outbound Pulse
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run outbound pulse script
+        env:
+          CRON_INTERNAL_KEY: ${{ env.CRON_INTERNAL_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SUPABASE_URL: https://brgorknbrjlfwvrrlwxj.supabase.co
+        run: node scripts/outbound-pulse.mjs
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Outbound Pulse — $(date -u '+%Y-%m-%d')" >> $GITHUB_STEP_SUMMARY
+          echo "- Executado em: $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          if [ -f /tmp/pulse-summary.txt ]; then
+            cat /tmp/pulse-summary.txt >> $GITHUB_STEP_SUMMARY
+          fi
