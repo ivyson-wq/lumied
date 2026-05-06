@@ -2368,6 +2368,161 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true });
   }
 
+  // ── Dashboard Resumo (KPIs + Action Items para a home do gerente) ───────
+  if (action === "dashboard_resumo_gerente") {
+    const hoje = new Date();
+    const hojeISO = hoje.toISOString().split("T")[0];
+    const mesAtual = hojeISO.slice(0, 7);
+    const anoMes = (d: Date) => d.toISOString().slice(0, 7);
+    const mesAnterior = (() => { const d = new Date(hoje); d.setMonth(d.getMonth() - 1); return anoMes(d); })();
+    const proxima7 = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })();
+
+    const [
+      alunosRes, freqRes, mensRes, mensAntRes, lancRes, lancAntRes,
+      manutRes, almRes, leadsRes, ticketsRes, evRes, alunosBdayRes,
+    ] = await Promise.all([
+      admin.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", sessionEscolaId).eq("ativo", true),
+      admin.from("frequencia").select("presente").eq("escola_id", sessionEscolaId).eq("data", hojeISO),
+      admin.from("fin_mensalidades").select("status, valor_total, familia_nome, vencimento").eq("escola_id", sessionEscolaId).eq("mes", mesAtual),
+      admin.from("fin_mensalidades").select("status, valor_total").eq("escola_id", sessionEscolaId).eq("mes", mesAnterior),
+      admin.from("fin_lancamentos").select("tipo, valor, status, data_lancamento, data_vencimento, descricao, fornecedor").eq("escola_id", sessionEscolaId).gte("data_lancamento", mesAtual + "-01").lte("data_lancamento", mesAtual + "-31"),
+      admin.from("fin_lancamentos").select("tipo, valor, status").eq("escola_id", sessionEscolaId).gte("data_lancamento", mesAnterior + "-01").lte("data_lancamento", mesAnterior + "-31"),
+      admin.from("manutencoes").select("id, status, urgencia").eq("escola_id", sessionEscolaId).in("status", ["pendente", "aprovada", "em_execucao"]),
+      admin.from("alm_requisicoes").select("id, status, total").eq("escola_id", sessionEscolaId).eq("status", "pendente"),
+      admin.from("crm_leads").select("id, atualizado_em").eq("escola_id", sessionEscolaId),
+      admin.from("tickets").select("id", { count: "exact", head: true }).eq("escola_id", sessionEscolaId).in("status", ["aberto", "escalado"]),
+      admin.from("calendario_eventos").select("titulo, data_inicio, tipo, cor").eq("escola_id", sessionEscolaId).gte("data_inicio", hojeISO).lte("data_inicio", proxima7).order("data_inicio").limit(6),
+      admin.from("alunos").select("nome, data_nascimento, serie").eq("escola_id", sessionEscolaId).eq("ativo", true).not("data_nascimento", "is", null),
+    ]);
+
+    const totalAlunos = alunosRes.count || 0;
+    const freq = freqRes.data || [];
+    const presentes = freq.filter((f: any) => f.presente).length;
+    const ausentes = freq.filter((f: any) => !f.presente).length;
+    const presencaPct = freq.length > 0 ? Math.round((presentes / freq.length) * 100) : null;
+
+    const mens = mensRes.data || [];
+    const mensAnt = mensAntRes.data || [];
+    let mensPago = 0, mensPendente = 0, mensAtrasado = 0, mensTotal = 0;
+    let qtdPago = 0, qtdPendente = 0, qtdAtrasado = 0;
+    const devedores = new Map<string, { nome: string; total: number; qtd: number }>();
+    for (const m of mens as any[]) {
+      mensTotal += Number(m.valor_total || 0);
+      if (m.status === "pago") { mensPago += Number(m.valor_total || 0); qtdPago++; }
+      else if (m.status === "atrasado" || (m.status === "pendente" && m.vencimento && m.vencimento < hojeISO)) {
+        mensAtrasado += Number(m.valor_total || 0); qtdAtrasado++;
+        const key = m.familia_nome || "—";
+        const cur = devedores.get(key) || { nome: key, total: 0, qtd: 0 };
+        cur.total += Number(m.valor_total || 0); cur.qtd += 1; devedores.set(key, cur);
+      }
+      else if (m.status === "pendente") { mensPendente += Number(m.valor_total || 0); qtdPendente++; }
+    }
+    let mensPagoAnt = 0, mensTotalAnt = 0;
+    for (const m of mensAnt as any[]) {
+      mensTotalAnt += Number(m.valor_total || 0);
+      if (m.status === "pago") mensPagoAnt += Number(m.valor_total || 0);
+    }
+    const topDevedores = Array.from(devedores.values()).sort((a, b) => b.total - a.total).slice(0, 5);
+
+    const lancs = (lancRes.data || []) as any[];
+    let receitaMes = 0, despesaMes = 0, contasReceber = 0, contasPagar = 0;
+    const proxVenc: any[] = [];
+    for (const l of lancs) {
+      const v = Number(l.valor || 0);
+      if (l.tipo === "receita") {
+        if (l.status === "pago") receitaMes += v;
+        else contasReceber += v;
+      } else {
+        if (l.status === "pago") despesaMes += v;
+        else contasPagar += v;
+      }
+      if (l.status !== "pago" && l.data_vencimento && l.data_vencimento >= hojeISO && l.data_vencimento <= proxima7) {
+        proxVenc.push({ descricao: l.descricao, fornecedor: l.fornecedor, valor: v, vencimento: l.data_vencimento, tipo: l.tipo });
+      }
+    }
+    const lancsAnt = (lancAntRes.data || []) as any[];
+    let receitaAnt = 0, despesaAnt = 0;
+    for (const l of lancsAnt) {
+      const v = Number(l.valor || 0);
+      if (l.tipo === "receita" && l.status === "pago") receitaAnt += v;
+      else if (l.tipo === "despesa" && l.status === "pago") despesaAnt += v;
+    }
+    proxVenc.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+
+    const manuts = (manutRes.data || []) as any[];
+    const manutPendentes = manuts.filter((m) => m.status === "pendente").length;
+    const manutEmExec = manuts.filter((m) => m.status === "em_execucao" || m.status === "aprovada").length;
+    const manutUrgentes = manuts.filter((m) => (m.urgencia === "alta" || m.urgencia === "urgente") && m.status !== "concluida").length;
+
+    const almReqs = (almRes.data || []) as any[];
+    const almPendQtd = almReqs.length;
+    const almPendValor = almReqs.reduce((s, r) => s + Number(r.total || 0), 0);
+
+    const leads = (leadsRes.data || []) as any[];
+    const seteDiasAtras = new Date(hoje); seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+    const leadsParados = leads.filter((l) => l.atualizado_em && new Date(l.atualizado_em) < seteDiasAtras).length;
+    const leadsTotal = leads.length;
+
+    // Aniversariantes próximos 7 dias
+    const bdayList = (alunosBdayRes.data || []) as any[];
+    const aniversariantes: any[] = [];
+    for (const a of bdayList) {
+      if (!a.data_nascimento) continue;
+      const dn = new Date(a.data_nascimento + "T12:00:00");
+      const proxAniv = new Date(hoje.getFullYear(), dn.getMonth(), dn.getDate());
+      if (proxAniv < new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) {
+        proxAniv.setFullYear(hoje.getFullYear() + 1);
+      }
+      const diff = Math.round((proxAniv.getTime() - new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime()) / 86400000);
+      if (diff >= 0 && diff <= 7) {
+        const idade = proxAniv.getFullYear() - dn.getFullYear();
+        aniversariantes.push({ nome: a.nome, serie: a.serie, dia: proxAniv.toISOString().split("T")[0], dias_falta: diff, idade });
+      }
+    }
+    aniversariantes.sort((a, b) => a.dias_falta - b.dias_falta);
+
+    const totalPendencias = manutPendentes + almPendQtd + qtdAtrasado + leadsParados + (ticketsRes.count || 0);
+
+    return ok({
+      data: hojeISO,
+      mes: mesAtual,
+      alunos: { ativos: totalAlunos, presentes_hoje: presentes, ausentes_hoje: ausentes, presenca_pct: presencaPct, freq_registrada: freq.length },
+      financeiro: {
+        receita_mes: receitaMes,
+        despesa_mes: despesaMes,
+        receita_mes_anterior: receitaAnt,
+        despesa_mes_anterior: despesaAnt,
+        contas_receber: contasReceber,
+        contas_pagar: contasPagar,
+        mens_pago: mensPago,
+        mens_pendente: mensPendente,
+        mens_atrasado: mensAtrasado,
+        mens_total: mensTotal,
+        mens_pago_anterior: mensPagoAnt,
+        mens_total_anterior: mensTotalAnt,
+        qtd_atrasado: qtdAtrasado,
+        qtd_pendente: qtdPendente,
+        qtd_pago: qtdPago,
+      },
+      pendencias: {
+        manutencao_pendente: manutPendentes,
+        manutencao_em_execucao: manutEmExec,
+        manutencao_urgentes: manutUrgentes,
+        almox_pendente_qtd: almPendQtd,
+        almox_pendente_valor: almPendValor,
+        leads_parados: leadsParados,
+        leads_total: leadsTotal,
+        tickets_abertos: ticketsRes.count || 0,
+        mensalidades_atrasadas: qtdAtrasado,
+        total: totalPendencias,
+      },
+      top_devedores: topDevedores,
+      proximos_vencimentos: proxVenc.slice(0, 6),
+      aniversariantes: aniversariantes.slice(0, 8),
+      eventos_proximos: evRes.data || [],
+    });
+  }
+
   // ── Analytics Dashboard ───────────────────────────────
   if (action === "analytics_dashboard") {
     const ano = (body as any).ano || new Date().getFullYear().toString();

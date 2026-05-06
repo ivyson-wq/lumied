@@ -267,6 +267,108 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .ru-chips{display:flex;gap:8px;flex-wrap:wrap;}
 .ru-chip{padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:var(--white);font-size:12px;font-weight:500;color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
 .ru-chip:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
+/* MORNING BRIEFING — hero card */
+.briefing-card{position:relative;background:linear-gradient(135deg,#1a1a1a 0%,#2a1f1c 50%,#3d1f24 100%);color:#fff;border-radius:18px;padding:24px 28px;margin-bottom:18px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.18);}
+.briefing-card::before{content:'';position:absolute;top:-60px;right:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(200,16,46,.45) 0%,transparent 70%);pointer-events:none;}
+.briefing-card::after{content:'';position:absolute;bottom:-80px;left:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,193,7,.18) 0%,transparent 70%);pointer-events:none;}
+.briefing-card>*{position:relative;z-index:1;}
+.briefing-card h3{font-family:'Lora',serif;font-size:24px;font-weight:600;margin:0 0 4px;letter-spacing:-.3px;}
+.briefing-card p#briefingDate{font-size:13px;opacity:.72;margin:0 0 18px;text-transform:capitalize;letter-spacing:.2px;}
+.briefing-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.briefing-metric{background:rgba(255,255,255,.07);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .2s;text-align:left;}
+.briefing-metric:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);transform:translateY(-2px);}
+.briefing-metric .bm-icon{font-size:16px;opacity:.8;margin-bottom:6px;display:block;}
+.briefing-metric .bm-value{font-family:'Lora',serif;font-size:26px;font-weight:700;line-height:1.05;letter-spacing:-.5px;}
+.briefing-metric .bm-label{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-top:2px;}
+.briefing-metric .bm-trend{font-size:10px;font-weight:600;margin-top:6px;display:inline-block;padding:2px 8px;border-radius:8px;}
+.briefing-metric .bm-trend.up{background:rgba(72,187,120,.18);color:#86efac;}
+.briefing-metric .bm-trend.down{background:rgba(229,62,62,.18);color:#fca5a5;}
+.briefing-metric .bm-trend.flat{background:rgba(255,255,255,.08);color:rgba(255,255,255,.65);}
+/* DASHBOARD WIDGETS */
+.dash-action-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;}
+.dash-action{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;text-align:left;width:100%;font-family:inherit;}
+.dash-action:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.06);}
+.dash-action.urgent{border-color:#fca5a5;background:linear-gradient(135deg,#fff 0%,#fef2f2 100%);}
+.dash-action.urgent:hover{border-color:#e53e3e;}
+.dash-action.warn{border-color:#fde68a;background:linear-gradient(135deg,#fff 0%,#fffbeb 100%);}
+.dash-action.warn:hover{border-color:#d97706;}
+.dash-action.ok{border-color:#bbf7d0;background:linear-gradient(135deg,#fff 0%,#f0fdf4 100%);}
+.dash-action .da-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:#f5f0ea;}
+.dash-action.urgent .da-icon{background:#fee2e2;color:#b91c1c;}
+.dash-action.warn .da-icon{background:#fef3c7;color:#a16207;}
+.dash-action.ok .da-icon{background:#dcfce7;color:#15803d;}
+.dash-action .da-body{flex:1;min-width:0;}
+.dash-action .da-count{font-family:'Lora',serif;font-size:20px;font-weight:700;line-height:1;color:var(--text);}
+.dash-action .da-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-top:2px;}
+.dash-action .da-arrow{color:var(--muted);font-size:14px;transition:transform .2s;}
+.dash-action:hover .da-arrow{transform:translateX(3px);color:var(--red);}
+.dash-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;margin-bottom:14px;}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr;}}
+.dash-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+.dash-card .dc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;}
+.dash-card .dc-title{font-family:'Lora',serif;font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;margin:0;}
+.dash-card .dc-link{font-size:12px;color:var(--blue,#1a6bb5);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600;padding:0;}
+.dash-card .dc-link:hover{text-decoration:underline;}
+.dash-card .dc-empty{font-size:12px;color:var(--muted);padding:18px 0;text-align:center;font-style:italic;}
+/* Receita widget */
+.rev-hero{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+.rev-hero .rh-value{font-family:'Lora',serif;font-size:32px;font-weight:700;color:#2d7a3a;letter-spacing:-1px;line-height:1;}
+.rev-hero .rh-trend{font-size:12px;font-weight:600;padding:3px 10px;border-radius:12px;}
+.rev-hero .rh-trend.up{background:#dcfce7;color:#15803d;}
+.rev-hero .rh-trend.down{background:#fee2e2;color:#b91c1c;}
+.rev-hero .rh-trend.flat{background:#f5f0ea;color:var(--muted);}
+.rev-bars{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:8px;}
+.rev-bar-item{display:flex;flex-direction:column;gap:6px;}
+.rev-bar-item .rbi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.rev-bar-item .rbi-val{font-size:14px;font-weight:700;color:var(--text);}
+.rev-progress{display:flex;align-items:center;gap:10px;margin-top:8px;}
+.rev-progress .rp-bar{flex:1;height:8px;background:#f5f0ea;border-radius:6px;overflow:hidden;display:flex;}
+.rev-progress .rp-pago{background:#22c55e;}
+.rev-progress .rp-pendente{background:#facc15;}
+.rev-progress .rp-atrasado{background:#ef4444;}
+.rev-progress .rp-pct{font-size:12px;font-weight:700;color:var(--text);min-width:40px;text-align:right;}
+.rev-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;}
+.rev-legend .rl-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+/* Devedores list */
+.devedor-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f5f0ea;cursor:pointer;}
+.devedor-row:last-child{border-bottom:none;}
+.devedor-row:hover{background:#fafafa;border-radius:6px;padding:10px 8px;}
+.devedor-row .dr-rank{width:22px;height:22px;border-radius:50%;background:#fdf0f2;color:#a00d24;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.devedor-row .dr-name{flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.devedor-row .dr-info{font-size:10px;color:var(--muted);}
+.devedor-row .dr-val{font-size:13px;font-weight:700;color:#a00d24;text-align:right;}
+/* Aniversariantes / eventos */
+.bday-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f5f0ea;}
+.bday-row:last-child{border-bottom:none;}
+.bday-row .br-icon{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.bday-row .br-body{flex:1;min-width:0;}
+.bday-row .br-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bday-row .br-info{font-size:11px;color:var(--muted);}
+.bday-row .br-when{font-size:11px;font-weight:700;color:#d97706;text-align:right;flex-shrink:0;}
+.bday-row .br-when.today{background:#fef3c7;padding:2px 8px;border-radius:8px;}
+/* Vencimento item */
+.venc-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f5f0ea;}
+.venc-row:last-child{border-bottom:none;}
+.venc-row .vr-day{width:38px;text-align:center;flex-shrink:0;}
+.venc-row .vr-day .vr-d{font-family:'Lora',serif;font-size:18px;font-weight:700;line-height:1;color:var(--text);}
+.venc-row .vr-day .vr-m{font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:600;letter-spacing:.5px;}
+.venc-row .vr-body{flex:1;min-width:0;}
+.venc-row .vr-desc{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.venc-row .vr-sub{font-size:11px;color:var(--muted);}
+.venc-row .vr-val{font-size:13px;font-weight:700;flex-shrink:0;}
+.venc-row .vr-val.receita{color:#15803d;}
+.venc-row .vr-val.despesa{color:#b91c1c;}
+@media(max-width:640px){
+  .briefing-card{padding:18px 16px;border-radius:14px;}
+  .briefing-card h3{font-size:18px!important;}
+  .briefing-metrics{grid-template-columns:repeat(2,1fr)!important;gap:8px;}
+  .briefing-metric{padding:10px 12px;}
+  .briefing-metric .bm-value{font-size:20px;}
+  .dash-action{padding:10px 12px;}
+  .dash-action .da-count{font-size:17px;}
+  .dash-card{padding:14px;}
+  .rev-hero .rh-value{font-size:24px;}
+}
 /* PRINT STYLES */
 @media print{
   body *{visibility:hidden;}
@@ -1908,21 +2010,80 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <div id="panelAnalytics" class="panel active">
-        <!-- Morning Briefing (hidden until data loads) -->
+        <!-- Morning Briefing — hero card -->
         <div class="briefing-card" id="morningBriefing">
           <h3 id="briefingGreeting">Bom dia!</h3>
           <p id="briefingDate"></p>
           <div class="briefing-metrics" id="briefingMetrics">
-            <div class="briefing-metric"><div class="bm-value" id="bmAlunos">—</div><div class="bm-label">Alunos</div></div>
-            <div class="briefing-metric"><div class="bm-value" id="bmPresenca">—</div><div class="bm-label">Presença</div></div>
-            <div class="briefing-metric"><div class="bm-value" id="bmReceita">—</div><div class="bm-label">Receita Mês</div></div>
-            <div class="briefing-metric"><div class="bm-value" id="bmPendentes">—</div><div class="bm-label">Pendências</div></div>
+            <button class="briefing-metric" onclick="showPanel('alunos')" title="Ver alunos">
+              <span class="bm-icon">🎒</span>
+              <div class="bm-value" id="bmAlunos">—</div>
+              <div class="bm-label">Alunos ativos</div>
+              <span class="bm-trend flat" id="bmAlunosTrend" style="display:none;"></span>
+            </button>
+            <button class="briefing-metric" onclick="showPanel('frequencia')" title="Ver frequência">
+              <span class="bm-icon">✅</span>
+              <div class="bm-value" id="bmPresenca">—</div>
+              <div class="bm-label">Presença hoje</div>
+              <span class="bm-trend flat" id="bmPresencaTrend" style="display:none;"></span>
+            </button>
+            <button class="briefing-metric" onclick="showPanel('finDash')" title="Ver financeiro">
+              <span class="bm-icon">💰</span>
+              <div class="bm-value" id="bmReceita">—</div>
+              <div class="bm-label">Receita do mês</div>
+              <span class="bm-trend flat" id="bmReceitaTrend" style="display:none;"></span>
+            </button>
+            <button class="briefing-metric" id="bmPendentesCard" title="Pendências">
+              <span class="bm-icon">⚠️</span>
+              <div class="bm-value" id="bmPendentes">—</div>
+              <div class="bm-label">Itens pendentes</div>
+              <span class="bm-trend flat" id="bmPendentesTrend" style="display:none;"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Items — pendências clicáveis -->
+        <div class="dash-action-strip" id="dashActionStrip"></div>
+
+        <!-- Receita + Devedores -->
+        <div class="dash-grid">
+          <div class="dash-card" id="receitaWidget">
+            <div class="dc-head">
+              <div class="dc-title">💵 Faturamento do mês</div>
+              <button class="dc-link" onclick="showPanel('finDash')">Detalhes →</button>
+            </div>
+            <div id="receitaWidgetContent"><div class="dc-empty">Carregando...</div></div>
+          </div>
+          <div class="dash-card" id="devedoresWidget">
+            <div class="dc-head">
+              <div class="dc-title">🚨 Inadimplência — Top 5</div>
+              <button class="dc-link" onclick="showPanel('finMens')">Mensalidades →</button>
+            </div>
+            <div id="devedoresWidgetContent"><div class="dc-empty">Carregando...</div></div>
+          </div>
+        </div>
+
+        <!-- Próximos vencimentos + Aniversariantes/Eventos -->
+        <div class="dash-grid">
+          <div class="dash-card" id="vencimentosWidget">
+            <div class="dc-head">
+              <div class="dc-title">📅 Próximos 7 dias</div>
+              <button class="dc-link" onclick="showPanel('finLanc')">Lançamentos →</button>
+            </div>
+            <div id="vencimentosWidgetContent"><div class="dc-empty">Carregando...</div></div>
+          </div>
+          <div class="dash-card" id="agendaWidget">
+            <div class="dc-head">
+              <div class="dc-title">🎂 Agenda da semana</div>
+              <button class="dc-link" onclick="showPanel('calendario')">Calendário →</button>
+            </div>
+            <div id="agendaWidgetContent"><div class="dc-empty">Carregando...</div></div>
           </div>
         </div>
 
         <!-- Atalhos Favoritos (hidden until populated) -->
         <div class="customize-bar">
-          <div class="cb-title">Meus Atalhos</div>
+          <div class="cb-title">⭐ Meus Atalhos</div>
           <button class="customize-btn" id="customizeToggle" onclick="toggleCustomizeMode()">Personalizar</button>
         </div>
         <div class="dash-fav-grid" id="dashFavGrid"></div>
@@ -1933,8 +2094,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div class="ru-chips" id="recentChips"></div>
         </div>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-          <div class="sec-title" style="margin:0;">Dashboard Analytics</div>
+        <!-- Charts — secundários, abaixo do que importa -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:24px 0 16px;flex-wrap:wrap;gap:10px;">
+          <div class="sec-title" style="margin:0;">📊 Tendências do ano</div>
           <select id="analyticsAno" onchange="loadAnalytics()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
             <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
           </select>
@@ -3937,7 +4099,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     if(id==='crmMetas')     loadCrmMetas();
     if(id==='crmConfigSeries') loadCrmConfigSeries();
     if(id==='calendario')  loadCalendario();
-    if(id==='analytics')   loadAnalytics();
+    if(id==='analytics')   { loadAnalytics(); loadDashboardResumo(); }
     if(id==='chatConversas') loadChatConversas();
     if(id==='pesquisas') loadPesquisasPanel();
     if(id==='matriculaForm') loadMatriculaForms();
@@ -13045,7 +13207,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
   }
   function closeOnboarding() { document.getElementById('onboardingWizard').style.display = 'none'; localStorage.setItem('mb_onboarding_done', '1'); }
 
-  // ═══ MORNING BRIEFING ═══
+  // ═══ MORNING BRIEFING + DASHBOARD KPIs ═══
   function loadMorningBriefing() {
     var now = new Date();
     var hour = now.getHours();
@@ -13053,6 +13215,182 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     var firstName = (currentGerente && currentGerente.nome || 'Gestor').split(/\s/)[0];
     document.getElementById('briefingGreeting').textContent = greeting + ', ' + firstName + '!';
     document.getElementById('briefingDate').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    loadDashboardResumo();
+  }
+
+  function _fmtBRLShort(v) {
+    var n = Number(v) || 0;
+    if (Math.abs(n) >= 1000000) return 'R$ ' + (n/1000000).toFixed(1).replace('.',',') + 'M';
+    if (Math.abs(n) >= 1000) return 'R$ ' + (n/1000).toFixed(1).replace('.',',') + 'k';
+    return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function _fmtBRL(v) {
+    return 'R$ ' + (Number(v)||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function _setTrend(elId, current, previous, invertGood) {
+    var el = document.getElementById(elId); if (!el) return;
+    var c = Number(current||0), p = Number(previous||0);
+    if (!p && !c) { el.style.display = 'none'; return; }
+    el.style.display = 'inline-block';
+    if (!p) { el.className = 'bm-trend flat'; el.textContent = 'novo'; return; }
+    var pct = Math.round(((c - p) / Math.abs(p)) * 100);
+    var isUp = pct > 0;
+    var isGood = invertGood ? !isUp : isUp;
+    if (Math.abs(pct) < 2) { el.className = 'bm-trend flat'; el.textContent = '≈ ' + Math.abs(pct) + '%'; }
+    else if (isGood) { el.className = 'bm-trend up'; el.textContent = (isUp?'↑ ':'↓ ') + Math.abs(pct) + '%'; }
+    else { el.className = 'bm-trend down'; el.textContent = (isUp?'↑ ':'↓ ') + Math.abs(pct) + '%'; }
+  }
+
+  async function loadDashboardResumo() {
+    var d;
+    try { d = await api({ action: 'dashboard_resumo_gerente' }); } catch(_) { return; }
+    if (!d || d.error) return;
+
+    // KPIs do hero
+    var al = d.alunos || {};
+    var fin = d.financeiro || {};
+    var pend = d.pendencias || {};
+    document.getElementById('bmAlunos').textContent = al.ativos != null ? al.ativos : '—';
+    document.getElementById('bmPresenca').textContent = al.presenca_pct != null ? al.presenca_pct + '%' : (al.freq_registrada ? '0%' : '—');
+    document.getElementById('bmReceita').textContent = _fmtBRLShort(fin.receita_mes);
+    document.getElementById('bmPendentes').textContent = pend.total != null ? pend.total : '—';
+    _setTrend('bmReceitaTrend', fin.receita_mes, fin.receita_mes_anterior, false);
+    var alunosTrend = document.getElementById('bmAlunosTrend');
+    if (al.ausentes_hoje > 0) { alunosTrend.style.display='inline-block'; alunosTrend.className='bm-trend down'; alunosTrend.textContent = al.ausentes_hoje + ' ausentes'; }
+    else if (al.presentes_hoje > 0) { alunosTrend.style.display='inline-block'; alunosTrend.className='bm-trend up'; alunosTrend.textContent = al.presentes_hoje + ' presentes'; }
+    var pendTrend = document.getElementById('bmPendentesTrend');
+    if (pend.manutencao_urgentes > 0) { pendTrend.style.display='inline-block'; pendTrend.className='bm-trend down'; pendTrend.textContent = pend.manutencao_urgentes + ' urgente(s)'; }
+
+    // Action strip
+    var actions = [];
+    if (pend.mensalidades_atrasadas > 0) actions.push({ icon:'💸', count: pend.mensalidades_atrasadas, label:'Mensalidades atrasadas', cls:'urgent', panel:'finMens' });
+    if (pend.manutencao_pendente > 0) actions.push({ icon:'🔧', count: pend.manutencao_pendente, label:'Manutenções pendentes', cls: pend.manutencao_urgentes>0?'urgent':'warn', panel:'manutencao' });
+    if (pend.almox_pendente_qtd > 0) actions.push({ icon:'📦', count: pend.almox_pendente_qtd, label:'Requisições almox.', cls:'warn', panel:'almPend' });
+    if (pend.tickets_abertos > 0) actions.push({ icon:'🎫', count: pend.tickets_abertos, label:'Tickets abertos', cls:'warn', panel:'tickets' });
+    if (pend.leads_parados > 0) actions.push({ icon:'📋', count: pend.leads_parados, label:'Leads parados +7d', cls:'warn', panel:'crmKanban' });
+    if (al.ausentes_hoje > 0) actions.push({ icon:'🚨', count: al.ausentes_hoje, label:'Faltas hoje', cls:'urgent', panel:'frequencia' });
+    if (!actions.length) actions.push({ icon:'✨', count: '0', label:'Tudo em dia!', cls:'ok', panel:'analytics' });
+    var stripEl = document.getElementById('dashActionStrip');
+    if (stripEl) stripEl.innerHTML = actions.map(function(a) {
+      return '<button class="dash-action ' + a.cls + '" onclick="showPanel(\'' + a.panel + '\')">'
+        + '<div class="da-icon">' + a.icon + '</div>'
+        + '<div class="da-body"><div class="da-count">' + a.count + '</div><div class="da-label">' + esc(a.label) + '</div></div>'
+        + '<div class="da-arrow">→</div></button>';
+    }).join('');
+
+    // Receita widget
+    var revEl = document.getElementById('receitaWidgetContent');
+    if (revEl) {
+      var pago = Number(fin.mens_pago||0), pend2 = Number(fin.mens_pendente||0), atr = Number(fin.mens_atrasado||0);
+      var total = pago + pend2 + atr;
+      var pctPago = total ? Math.round((pago/total)*100) : 0;
+      var pctPend = total ? Math.round((pend2/total)*100) : 0;
+      var pctAtr = total ? Math.round((atr/total)*100) : 0;
+      var diffPct = fin.receita_mes_anterior ? Math.round(((fin.receita_mes - fin.receita_mes_anterior) / fin.receita_mes_anterior) * 100) : 0;
+      var trendCls = !fin.receita_mes_anterior ? 'flat' : diffPct >= 2 ? 'up' : diffPct <= -2 ? 'down' : 'flat';
+      var trendTxt = !fin.receita_mes_anterior ? 'sem comparativo' : (diffPct>0?'↑ ':diffPct<0?'↓ ':'≈ ') + Math.abs(diffPct) + '% vs mês anterior';
+      revEl.innerHTML = ''
+        + '<div class="rev-hero">'
+        +   '<span class="rh-value">' + _fmtBRL(fin.receita_mes) + '</span>'
+        +   '<span class="rh-trend ' + trendCls + '">' + trendTxt + '</span>'
+        + '</div>'
+        + '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Mensalidades do mês</div>'
+        + '<div class="rev-progress">'
+        +   '<div class="rp-bar">'
+        +     (pctPago>0?'<div class="rp-pago" style="width:'+pctPago+'%"></div>':'')
+        +     (pctPend>0?'<div class="rp-pendente" style="width:'+pctPend+'%"></div>':'')
+        +     (pctAtr>0?'<div class="rp-atrasado" style="width:'+pctAtr+'%"></div>':'')
+        +   '</div>'
+        +   '<span class="rp-pct">' + pctPago + '%</span>'
+        + '</div>'
+        + '<div class="rev-bars">'
+        +   '<div class="rev-bar-item"><span class="rbi-label">Pago</span><span class="rbi-val" style="color:#15803d;">' + _fmtBRL(pago) + ' <span style="font-size:11px;color:var(--muted);font-weight:500;">(' + (fin.qtd_pago||0) + ')</span></span></div>'
+        +   '<div class="rev-bar-item"><span class="rbi-label">A receber</span><span class="rbi-val" style="color:#a16207;">' + _fmtBRL(pend2) + ' <span style="font-size:11px;color:var(--muted);font-weight:500;">(' + (fin.qtd_pendente||0) + ')</span></span></div>'
+        + '</div>'
+        + (atr > 0 ? '<div style="margin-top:10px;padding:8px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12px;color:#b91c1c;font-weight:600;">⚠️ ' + _fmtBRL(atr) + ' atrasados (' + (fin.qtd_atrasado||0) + ' famílias)</div>' : '')
+        + '<div class="rev-legend">'
+        +   '<span><span class="rl-dot" style="background:#22c55e;"></span>Pago</span>'
+        +   '<span><span class="rl-dot" style="background:#facc15;"></span>A vencer</span>'
+        +   '<span><span class="rl-dot" style="background:#ef4444;"></span>Atrasado</span>'
+        + '</div>';
+    }
+
+    // Devedores widget
+    var devEl = document.getElementById('devedoresWidgetContent');
+    if (devEl) {
+      var devs = d.top_devedores || [];
+      if (!devs.length) {
+        devEl.innerHTML = '<div class="dc-empty" style="color:#15803d;font-style:normal;font-weight:600;">✓ Nenhuma família inadimplente</div>';
+      } else {
+        devEl.innerHTML = devs.map(function(dv, i) {
+          return '<div class="devedor-row" onclick="showPanel(\'finMens\')">'
+            + '<div class="dr-rank">' + (i+1) + '</div>'
+            + '<div style="flex:1;min-width:0;"><div class="dr-name">' + esc(dv.nome) + '</div>'
+            + '<div class="dr-info">' + dv.qtd + ' mensalidade' + (dv.qtd>1?'s':'') + ' atrasada' + (dv.qtd>1?'s':'') + '</div></div>'
+            + '<div class="dr-val">' + _fmtBRL(dv.total) + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    }
+
+    // Vencimentos widget
+    var vencEl = document.getElementById('vencimentosWidgetContent');
+    if (vencEl) {
+      var vencs = d.proximos_vencimentos || [];
+      if (!vencs.length) {
+        vencEl.innerHTML = '<div class="dc-empty">Sem vencimentos para os próximos 7 dias</div>';
+      } else {
+        var meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+        vencEl.innerHTML = vencs.map(function(v) {
+          var dt = new Date(v.vencimento + 'T12:00:00');
+          return '<div class="venc-row">'
+            + '<div class="vr-day"><div class="vr-d">' + dt.getDate() + '</div><div class="vr-m">' + meses[dt.getMonth()] + '</div></div>'
+            + '<div class="vr-body"><div class="vr-desc">' + esc(v.descricao || '—') + '</div>'
+            + '<div class="vr-sub">' + (v.fornecedor ? esc(v.fornecedor) : (v.tipo === 'receita' ? 'A receber' : 'A pagar')) + '</div></div>'
+            + '<div class="vr-val ' + v.tipo + '">' + (v.tipo==='receita'?'+':'−') + ' ' + _fmtBRL(v.valor) + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    }
+
+    // Agenda widget (eventos + aniversariantes intercalados por proximidade)
+    var agEl = document.getElementById('agendaWidgetContent');
+    if (agEl) {
+      var items = [];
+      (d.eventos_proximos || []).forEach(function(e) {
+        var dt = new Date(e.data_inicio + 'T12:00:00');
+        var hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+        var dias = Math.round((dt - hoje0) / 86400000);
+        items.push({ kind:'evento', dias:dias, dt:dt, titulo:e.titulo, cor:e.cor||'#1a6bb5', tipo:e.tipo });
+      });
+      (d.aniversariantes || []).forEach(function(a) {
+        items.push({ kind:'bday', dias:a.dias_falta, titulo:a.nome, idade:a.idade, serie:a.serie, dia:a.dia });
+      });
+      items.sort(function(a,b){ return a.dias - b.dias; });
+      items = items.slice(0, 6);
+      if (!items.length) {
+        agEl.innerHTML = '<div class="dc-empty">Nada agendado para os próximos 7 dias</div>';
+      } else {
+        agEl.innerHTML = items.map(function(it) {
+          var whenTxt = it.dias === 0 ? 'hoje' : it.dias === 1 ? 'amanhã' : 'em ' + it.dias + 'd';
+          var whenCls = it.dias === 0 ? 'today' : '';
+          if (it.kind === 'bday') {
+            return '<div class="bday-row">'
+              + '<div class="br-icon">🎂</div>'
+              + '<div class="br-body"><div class="br-name">' + esc(it.titulo) + '</div>'
+              + '<div class="br-info">faz ' + it.idade + ' anos' + (it.serie?' · '+esc(it.serie):'') + '</div></div>'
+              + '<div class="br-when ' + whenCls + '">' + whenTxt + '</div>'
+              + '</div>';
+          }
+          return '<div class="bday-row">'
+            + '<div class="br-icon" style="background:' + it.cor + '20;color:' + it.cor + ';">📅</div>'
+            + '<div class="br-body"><div class="br-name">' + esc(it.titulo) + '</div>'
+            + '<div class="br-info">' + esc(it.tipo || 'evento') + '</div></div>'
+            + '<div class="br-when ' + whenCls + '">' + whenTxt + '</div>'
+            + '</div>';
+        }).join('');
+      }
+    }
   }
   // Chamar após login
   var _origShowApp = showApp;
