@@ -1,0 +1,15 @@
+{
+  "name": "lumied-bridge-gateway",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker — gateway entre edge function `acesso` e os Lumied Bridges nas escolas (WSS persistente, Durable Object por escola).",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0",
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
