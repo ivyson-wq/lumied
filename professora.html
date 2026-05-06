@@ -349,6 +349,67 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 .greeting-bar{background:var(--white);border-bottom:1px solid var(--border);padding:16px 24px;text-align:center;}
 .greeting-name{font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--text);}
 .greeting-date{font-size:12px;color:var(--muted);margin-top:2px;}
+body.dash-clean #greetingBar{display:none;}
+/* HOME DASHBOARD — hero card + action items (mesmo padrão do gerente/secretaria) */
+.briefing-card{position:relative;background:linear-gradient(135deg,#1a1a1a 0%,#2a1f1c 50%,#3d2e1c 100%);color:#fff;border-radius:18px;padding:24px 28px;margin-bottom:18px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.18);}
+.briefing-card::before{content:'';position:absolute;top:-60px;right:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(212,131,10,.45) 0%,transparent 70%);pointer-events:none;}
+.briefing-card::after{content:'';position:absolute;bottom:-80px;left:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(200,16,46,.18) 0%,transparent 70%);pointer-events:none;}
+.briefing-card>*{position:relative;z-index:1;}
+.briefing-card h3{font-family:'Lora',serif;font-size:24px;font-weight:600;margin:0 0 4px;letter-spacing:-.3px;color:#fff;}
+.briefing-card p#profBriefDate{font-size:13px;opacity:.72;margin:0 0 18px;text-transform:capitalize;letter-spacing:.2px;color:#fff;}
+.briefing-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.briefing-metric{background:rgba(255,255,255,.07);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .2s;text-align:left;color:#fff;font-family:inherit;}
+.briefing-metric:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);transform:translateY(-2px);}
+.briefing-metric .bm-icon{font-size:16px;opacity:.85;margin-bottom:6px;display:block;color:#fff;}
+.briefing-metric .bm-value{font-family:'Lora',serif;font-size:26px;font-weight:700;line-height:1.05;letter-spacing:-.5px;color:#fff;}
+.briefing-metric .bm-label{font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:.6px;font-weight:500;margin-top:2px;color:#fff;}
+.briefing-metric .bm-trend{font-size:10px;font-weight:600;margin-top:6px;display:inline-block;padding:2px 8px;border-radius:8px;}
+.briefing-metric .bm-trend.up{background:rgba(72,187,120,.18);color:#86efac;}
+.briefing-metric .bm-trend.down{background:rgba(229,62,62,.18);color:#fca5a5;}
+.briefing-metric .bm-trend.flat{background:rgba(255,255,255,.08);color:rgba(255,255,255,.65);}
+.dash-action-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;}
+.dash-action{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;text-align:left;width:100%;font-family:inherit;}
+.dash-action:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.06);}
+.dash-action.urgent{border-color:#fca5a5;background:linear-gradient(135deg,#fff 0%,#fef2f2 100%);}
+.dash-action.urgent:hover{border-color:#e53e3e;}
+.dash-action.warn{border-color:#fde68a;background:linear-gradient(135deg,#fff 0%,#fffbeb 100%);}
+.dash-action.warn:hover{border-color:#d97706;}
+.dash-action.ok{border-color:#bbf7d0;background:linear-gradient(135deg,#fff 0%,#f0fdf4 100%);}
+.dash-action .da-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:#f5f0ea;}
+.dash-action.urgent .da-icon{background:#fee2e2;color:#b91c1c;}
+.dash-action.warn .da-icon{background:#fef3c7;color:#a16207;}
+.dash-action.ok .da-icon{background:#dcfce7;color:#15803d;}
+.dash-action .da-body{flex:1;min-width:0;}
+.dash-action .da-count{font-family:'Lora',serif;font-size:20px;font-weight:700;line-height:1;color:var(--text);}
+.dash-action .da-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-top:2px;}
+.dash-action .da-arrow{color:var(--muted);font-size:14px;transition:transform .2s;}
+.dash-action:hover .da-arrow{transform:translateX(3px);color:var(--red);}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr;}}
+.dash-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+.dash-card.clickable{cursor:pointer;transition:all .2s;}
+.dash-card.clickable:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.06);}
+.dash-card .dc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;}
+.dash-card .dc-title{font-family:'Lora',serif;font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;margin:0;}
+.dash-card .dc-link{font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600;padding:0;}
+.dash-card .dc-link:hover{text-decoration:underline;}
+.dash-card .dc-empty{font-size:12px;color:var(--muted);padding:18px 0;text-align:center;font-style:italic;}
+.rank-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f5f0ea;}
+.rank-row:last-child{border-bottom:none;}
+.rank-row.is-me{background:#fef3c7;border-radius:8px;padding:9px 12px;border-bottom:none;}
+.rank-row .rr-pos{width:24px;height:24px;border-radius:50%;background:#f5f0ea;color:#7a7169;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rank-row.is-me .rr-pos,.rank-row .rr-pos.gold{background:#fef3c7;color:#a16207;}
+.rank-row .rr-pos.silver{background:#e5e7eb;color:#4b5563;}
+.rank-row .rr-pos.bronze{background:#fed7aa;color:#9a3412;}
+.rank-row .rr-name{flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rank-row .rr-pts{font-family:'Lora',serif;font-size:15px;font-weight:700;color:#d4830a;}
+@media(max-width:640px){
+  .briefing-card{padding:18px 16px;border-radius:14px;}
+  .briefing-card h3{font-size:18px!important;}
+  .briefing-metrics{grid-template-columns:repeat(2,1fr)!important;gap:8px;}
+  .briefing-metric{padding:10px 12px;}
+  .briefing-metric .bm-value{font-size:20px;}
+}
 
 /* NOTIFICATION BELL */
 .notif-bell{position:relative;background:none;border:none;font-size:20px;cursor:pointer;padding:6px;line-height:1;}
@@ -690,40 +751,45 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
     <!-- ═══ PAGE: DASHBOARD ═══ -->
     <div class="prof-page active" id="pageDashboard">
-      <div class="sec-title">🏠 <span data-i18n="prof.dashboard.meuPainel">Meu Painel</span></div>
-      <div id="profDashStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;"></div>
-      <div id="profDashCards" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div id="profDashAgenda" class="upload-card" style="cursor:pointer;" onclick="switchProfPage('agenda',document.querySelector('[data-page=agenda]'))">
-          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">📅 Agenda de Hoje</div>
-          <div id="profDashAgendaContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
-        </div>
-        <div id="profDashFila" class="upload-card" style="cursor:pointer;" onclick="switchProfPage('fila',document.querySelector('[data-page=fila]'))">
-          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">🚗 Fila de Retirada</div>
-          <div id="profDashFilaContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
-        </div>
-        <div id="profDashNotif" class="upload-card">
-          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">🔔 Notificações</div>
-          <div id="profDashNotifContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
-        </div>
-        <div id="profDashManut" class="upload-card" data-modulo="manutencao" style="cursor:pointer;" onclick="switchProfPage('manut',document.querySelector('[data-page=manut]'))">
-          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">🔧 Manutenção</div>
-          <div id="profDashManutContent" style="font-size:13px;color:var(--muted);">Carregando...</div>
+      <!-- Hero card escuro -->
+      <div class="briefing-card" id="profBriefing">
+        <h3 id="profBriefGreeting">Bom dia, professora!</h3>
+        <p id="profBriefDate"></p>
+        <div class="briefing-metrics">
+          <button class="briefing-metric" id="profBmCard1" style="display:none;"><span class="bm-icon">🏆</span><div class="bm-value" id="profBm1Val">—</div><div class="bm-label" id="profBm1Lbl">—</div></button>
+          <button class="briefing-metric" id="profBmCard2" style="display:none;"><span class="bm-icon">🥇</span><div class="bm-value" id="profBm2Val">—</div><div class="bm-label" id="profBm2Lbl">—</div></button>
+          <button class="briefing-metric" id="profBmCard3" style="display:none;"><span class="bm-icon">🎒</span><div class="bm-value" id="profBm3Val">—</div><div class="bm-label" id="profBm3Lbl">—</div></button>
+          <button class="briefing-metric" id="profBmCard4" style="display:none;"><span class="bm-icon">⚠️</span><div class="bm-value" id="profBm4Val">—</div><div class="bm-label" id="profBm4Lbl">—</div></button>
         </div>
       </div>
-      <div id="profDashAlerts" style="margin-top:16px;"></div>
 
-      <!-- Dashboard Turnos -->
-      <div id="profDashTurnos" style="margin-top:20px;cursor:pointer;" onclick="switchProfPage('turnos',document.querySelector('[data-page=turnos]'))">
-        <div class="sec-title" style="font-size:14px;">📊 Turnos <span style="font-size:11px;color:var(--muted);font-weight:400;">ver tudo &rarr;</span></div>
-        <div id="profTurnosStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;"></div>
-        <div id="profTurnosRecentes" style="max-height:200px;overflow-y:auto;"></div>
+      <!-- Compliance alerts críticos (bloqueiam o portal se houver) -->
+      <div id="profDashAlerts"></div>
+
+      <!-- Action items strip -->
+      <div class="dash-action-strip" id="profActionStrip"></div>
+
+      <!-- 2x2 grid: Agenda/Fila + Ranking/Notificações -->
+      <div class="dash-grid">
+        <div class="dash-card clickable" id="profDashAgenda" onclick="switchProfPage('agenda',document.querySelector('[data-page=agenda]'))">
+          <div class="dc-head"><div class="dc-title">📅 Agenda de Hoje</div><span class="dc-link">Ver →</span></div>
+          <div id="profDashAgendaContent" class="dc-empty">Toque para abrir a agenda</div>
+        </div>
+        <div class="dash-card clickable" id="profDashFila" onclick="switchProfPage('fila',document.querySelector('[data-page=fila]'))">
+          <div class="dc-head"><div class="dc-title">🚗 Fila de Retirada</div><span class="dc-link">Ver →</span></div>
+          <div id="profDashFilaContent" class="dc-empty">Toque para abrir a fila</div>
+        </div>
       </div>
 
-      <!-- Dashboard Atividades Extraclasse -->
-      <div id="profDashAtiv" style="margin-top:20px;cursor:pointer;" data-modulo="atividades" onclick="switchProfPage('atividades',document.querySelector('[data-page=atividades]'))">
-        <div class="sec-title" style="font-size:14px;">🎯 Atividades Extraclasse <span style="font-size:11px;color:var(--muted);font-weight:400;">ver tudo &rarr;</span></div>
-        <div id="profAtivStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:12px;"></div>
-        <div id="profAtivGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+      <div class="dash-grid">
+        <div class="dash-card" id="profDashRanking" data-modulo="diplomas">
+          <div class="dc-head"><div class="dc-title">🏆 Ranking</div><button class="dc-link" onclick="switchProfPage('diplomas',document.querySelector('[data-page=diplomas]'))">Ver completo →</button></div>
+          <div id="profRankingPreview"><div class="dc-empty">Carregando...</div></div>
+        </div>
+        <div class="dash-card" id="profDashNotif">
+          <div class="dc-head"><div class="dc-title">🔔 Notificações</div></div>
+          <div id="profDashNotifContent" class="dc-empty">Carregando...</div>
+        </div>
       </div>
     </div>
 
@@ -1563,6 +1629,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.getElementById('greetingDate').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     document.getElementById('profBottomNav').classList.add('visible');
     document.body.classList.add('has-prof-bnav');
+    // No login o painel ativo já é dashboard — aplica modo dashboard limpo
+    document.body.classList.add('dash-clean');
     // Carregar módulos PRIMEIRO para esconder features desabilitadas antes de carregar dados
     await loadModulosHabilitadosProf();
     showCameraFab();
@@ -2016,6 +2084,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
     document.querySelectorAll('.pbnav-item').forEach(b => b.classList.remove('active'));
     if (btn && btn.classList) btn.classList.add('active');
     document.querySelectorAll('.ps-item').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+    document.body.classList.toggle('dash-clean', page === 'dashboard');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     closeProfMore();
     if (page === 'modulosConfig') loadModulosConfig();
@@ -2295,105 +2364,158 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
   async function loadDashboardProf() {
     const m = window._enabledModules || new Set();
-    const stats = [];
 
-    // Diplomas stat
-    if (m.has('diplomas') && typeof rankingData !== 'undefined') {
-      const me = rankingData.find(r => r.nome === currentProf?.nome);
-      stats.push({ label: 'Pontos Diplomas', value: me?.pontuacao ?? 0, color: '#d4830a' });
-    }
+    // Saudação e data
+    const now = new Date();
+    const hr = now.getHours();
+    const greet = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';
+    const firstName = (currentProf?.nome || 'Professora').split(/\s/)[0];
+    document.getElementById('profBriefGreeting').textContent = greet + ', ' + firstName + '!';
+    document.getElementById('profBriefDate').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-    // Atestados stat
-    if (m.has('atestados')) {
-      try {
-        const d = await callApi({ action: 'meus_atestados' });
-        const arr = d.data || [];
-        const pend = arr.filter(a => a.status === 'pendente').length;
-        stats.push({ label: 'Atestados Pendentes', value: pend, color: pend > 0 ? '#C8102E' : '#2d7a3a' });
-      } catch(_) {}
-    }
-
-    // Impressões stat
-    if (m.has('impressoes')) {
-      try {
-        const d = await callApi({ action: 'minhas_impressoes' });
-        const arr = Array.isArray(d) ? d : (d.data || []);
-        const pend = arr.filter(i => i.status === 'pendente' || i.status === 'aprovado').length;
-        stats.push({ label: 'Impressões', value: pend + ' pendentes', color: '#1a6bb5' });
-      } catch(_) {}
-    }
-
-    // PDI stat
-    if (m.has('pdi')) {
-      try {
-        const d = await callApi({ action: 'pdi_meu_status' });
-        if (d && !d.error) {
-          stats.push({ label: 'Growth Plan', value: d.status || 'ativo', color: '#2d7a3a' });
-        }
-      } catch(_) {}
-    }
-
-    // Render stats
-    document.getElementById('profDashStats').innerHTML = stats.map(s =>
-      `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${s.color};border-radius:12px 12px 0 0;"></div>
-        <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">${s.label}</div>
-        <div style="font-size:24px;font-weight:700;margin-top:4px;">${s.value}</div>
-      </div>`
-    ).join('') || '<div style="color:var(--muted);font-size:13px;">Carregando informações...</div>';
-
-    // Agenda de hoje
-    if (m.has('agenda_digital')) {
-      document.getElementById('profDashAgendaContent').textContent = 'Toque para ver a agenda de hoje';
-      document.getElementById('profDashAgenda').style.display = '';
-    } else {
-      document.getElementById('profDashAgenda').style.display = 'none';
-    }
-
-    // Fila
-    if (m.has('pickup')) {
-      document.getElementById('profDashFilaContent').textContent = 'Toque para ver a fila de retirada';
-      document.getElementById('profDashFila').style.display = '';
-    } else {
-      document.getElementById('profDashFila').style.display = 'none';
-    }
-
-    // Notificações
+    // ─── Coleta de dados em paralelo ───
+    const [atestRes, impRes, manutRes, almRes] = await Promise.all([
+      m.has('atestados') ? callApi({ action: 'meus_atestados' }).catch(() => ({})) : Promise.resolve({}),
+      m.has('impressoes') ? callApi({ action: 'minhas_impressoes' }).catch(() => ({})) : Promise.resolve({}),
+      m.has('manutencao') ? callApi({ action: 'manutencao_minhas' }).catch(() => ({})) : Promise.resolve({}),
+      m.has('almoxarifado') ? callApi({ action: 'alm_minhas_requisicoes' }).catch(() => ({})) : Promise.resolve({}),
+    ]);
+    const atestArr = atestRes.data || [];
+    const atestPend = atestArr.filter(a => a.status === 'pendente').length;
+    const impArr = Array.isArray(impRes) ? impRes : (impRes.data || []);
+    const impPend = impArr.filter(i => i.status === 'pendente' || i.status === 'aprovado').length;
+    const manutArr = Array.isArray(manutRes) ? manutRes : (manutRes.data || []);
+    const manutPend = manutArr.filter(x => x.status === 'pendente' || x.status === 'em_execucao').length;
+    const almArr = Array.isArray(almRes) ? almRes : (almRes.data || []);
+    const almPend = almArr.filter(r => r.status === 'pendente').length;
+    const me = (typeof rankingData !== 'undefined' && rankingData) ? rankingData.find(r => r.nome === currentProf?.nome) : null;
+    const meuPos = me ? (rankingData.findIndex(r => r.nome === currentProf?.nome) + 1) : null;
+    const meusPontos = me?.pontuacao ?? 0;
     const notifData = window._profNotifData || [];
-    const unread = notifData.filter(n => !n.lida).length;
-    document.getElementById('profDashNotifContent').textContent = unread > 0
-      ? unread + ' notificação(ões) não lida(s)'
-      : 'Nenhuma notificação pendente';
+    const unreadNotif = notifData.filter(n => !n.lida).length;
 
-    // Manutenção
-    if (m.has('manutencao')) {
-      document.getElementById('profDashManut').style.display = '';
-      document.getElementById('profDashManutContent').textContent = 'Toque para ver chamados';
+    // Total alunos das turmas da professora (tenta alunos_list)
+    let totalAlunos = '—';
+    try {
+      const aRes = await callProfApi({ action: 'alunos_list' }).catch(() => null);
+      const aList = Array.isArray(aRes) ? aRes : (aRes?.data || []);
+      totalAlunos = aList.filter(a => a.ativo !== false).length;
+    } catch(_) {}
+
+    // ─── KPIs do hero (até 4) ───
+    let slot = 0;
+    function setSlot(icon, val, label) {
+      slot++;
+      if (slot > 4) return;
+      const card = document.getElementById('profBmCard' + slot);
+      if (!card) return;
+      card.style.display = '';
+      card.querySelector('.bm-icon').textContent = icon;
+      document.getElementById('profBm' + slot + 'Val').textContent = val;
+      document.getElementById('profBm' + slot + 'Lbl').textContent = label;
     }
+    for (let i = 1; i <= 4; i++) {
+      const c = document.getElementById('profBmCard' + i);
+      if (c) c.style.display = 'none';
+    }
+    slot = 0;
+    if (m.has('diplomas')) setSlot('🏆', meusPontos, 'Pontos diplomas');
+    if (m.has('diplomas') && meuPos) setSlot('🥇', '#' + meuPos, 'No ranking');
+    setSlot('🎒', totalAlunos, 'Alunos ativos');
+    const totalPend = atestPend + impPend + manutPend + almPend + unreadNotif;
+    setSlot('⚠️', totalPend, 'Itens pendentes');
 
-    // Alertas de compliance
+    // ─── Compliance alerts (críticos) ───
     let alertsHtml = '';
     try {
       const quiz = await callApiCompliance({ action: 'compliance_quiz_pendentes' }).catch(() => null);
       if (quiz && !quiz.error && Array.isArray(quiz) && quiz.length > 0) {
-        alertsHtml += `<div style="background:#fdf0f2;border:1px solid rgba(200,16,46,.2);border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:13px;">
-          <strong style="color:#C8102E;">📋 Quiz de Compliance pendente:</strong> ${quiz[0].titulo || 'Responder quiz'}
+        alertsHtml += `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:13px;display:flex;align-items:center;gap:12px;">
+          <div style="font-size:20px;">📋</div>
+          <div style="flex:1;"><strong style="color:#b91c1c;">Quiz de Compliance pendente</strong><br><span style="color:#7a1d1d;">${esc(quiz[0].titulo || 'Responder quiz')}</span></div>
         </div>`;
       }
     } catch(_) {}
     try {
       const ci = await callApiCompliance({ action: 'compliance_ciencias_pendentes' }).catch(() => null);
       if (ci && !ci.error && Array.isArray(ci) && ci.length > 0) {
-        alertsHtml += `<div style="background:#fdf0f2;border:1px solid rgba(200,16,46,.2);border-radius:10px;padding:12px 16px;margin-bottom:8px;font-size:13px;">
-          <strong style="color:#C8102E;">⚠️ Ciência pendente:</strong> ${ci[0].titulo || 'Confirmar ciência'}
+        alertsHtml += `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:13px;display:flex;align-items:center;gap:12px;">
+          <div style="font-size:20px;">⚠️</div>
+          <div style="flex:1;"><strong style="color:#b91c1c;">Ciência pendente</strong><br><span style="color:#7a1d1d;">${esc(ci[0].titulo || 'Confirmar ciência')}</span></div>
         </div>`;
       }
     } catch(_) {}
     document.getElementById('profDashAlerts').innerHTML = alertsHtml;
 
-    // Dashboards de turnos e atividades (preview no dashboard)
-    loadProfTurnosDashPreview();
-    loadProfAtividades();
+    // ─── Action items strip ───
+    const actions = [];
+    if (atestPend > 0) actions.push({ icon:'🏥', count: atestPend, label:'Atestados pendentes', cls:'warn', page:'atestados' });
+    if (manutPend > 0) actions.push({ icon:'🔧', count: manutPend, label:'Chamados manutenção', cls:'warn', page:'manut' });
+    if (almPend > 0) actions.push({ icon:'📦', count: almPend, label:'Requisições almox.', cls:'warn', page:'almox' });
+    if (impPend > 0) actions.push({ icon:'🖨️', count: impPend, label:'Impressões pendentes', cls:'warn', page:'impressoes' });
+    if (unreadNotif > 0) actions.push({ icon:'🔔', count: unreadNotif, label:'Notificações novas', cls:'warn', page:null });
+    if (!actions.length) actions.push({ icon:'✨', count: '0', label:'Tudo em dia!', cls:'ok', page:null });
+
+    document.getElementById('profActionStrip').innerHTML = actions.map(function(a) {
+      const onclick = a.page ? `onclick="switchProfPage('${a.page}',document.querySelector('[data-page=${a.page}]'))"` : '';
+      return '<button class="dash-action ' + a.cls + '" ' + onclick + '>'
+        + '<div class="da-icon">' + a.icon + '</div>'
+        + '<div class="da-body"><div class="da-count">' + a.count + '</div><div class="da-label">' + esc(a.label) + '</div></div>'
+        + '<div class="da-arrow">→</div></button>';
+    }).join('');
+
+    // ─── Esconder cards que dependem de módulos desabilitados ───
+    document.getElementById('profDashAgenda').style.display = m.has('agenda_digital') ? '' : 'none';
+    document.getElementById('profDashFila').style.display = m.has('pickup') ? '' : 'none';
+    document.getElementById('profDashRanking').style.display = m.has('diplomas') ? '' : 'none';
+
+    // ─── Notificações preview ───
+    const notifEl = document.getElementById('profDashNotifContent');
+    if (notifEl) {
+      const recent = notifData.slice(0, 3);
+      if (!recent.length) {
+        notifEl.className = 'dc-empty';
+        notifEl.textContent = 'Nenhuma notificação pendente';
+      } else {
+        notifEl.className = '';
+        notifEl.innerHTML = recent.map(n => {
+          const dt = n.criado_em ? new Date(n.criado_em) : null;
+          const tempo = dt ? dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }) : '';
+          return `<div style="padding:8px 0;border-bottom:1px solid #f5f0ea;font-size:12px;${n.lida?'':'font-weight:600;'}">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(n.titulo || n.mensagem || 'Notificação')}</div>
+            <div style="font-size:10px;color:var(--muted);">${tempo}</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // ─── Ranking preview (top 3 + minha posição se fora do top) ───
+    const rankEl = document.getElementById('profRankingPreview');
+    if (rankEl && m.has('diplomas')) {
+      if (!rankingData || !rankingData.length) {
+        rankEl.innerHTML = '<div class="dc-empty">Sem dados de ranking ainda</div>';
+      } else {
+        const top3 = rankingData.slice(0, 3);
+        const meIn3 = top3.some(r => r.nome === currentProf?.nome);
+        let html = top3.map((r, i) => {
+          const cls = r.nome === currentProf?.nome ? 'is-me' : '';
+          const posCls = i === 0 ? 'gold' : i === 1 ? 'silver' : 'bronze';
+          return `<div class="rank-row ${cls}">
+            <div class="rr-pos ${posCls}">${i+1}</div>
+            <div class="rr-name">${esc(r.nome || '—')}</div>
+            <div class="rr-pts">${r.pontuacao || 0}</div>
+          </div>`;
+        }).join('');
+        if (!meIn3 && me) {
+          html += `<div class="rank-row is-me" style="margin-top:6px;">
+            <div class="rr-pos">${meuPos}</div>
+            <div class="rr-name">${esc(currentProf?.nome || 'Você')}</div>
+            <div class="rr-pts">${meusPontos}</div>
+          </div>`;
+        }
+        rankEl.innerHTML = html;
+      }
+    }
   }
 
   async function loadProfTurnosDashPreview() {
