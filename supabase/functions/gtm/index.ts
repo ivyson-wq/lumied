@@ -480,10 +480,19 @@ router.on("pulse_send_email", async (ctx) => {
   const b = ctx.body as any;
   const to = str(b.to, 120) || "ivyson@gmail.com";
   const subject = str(b.subject, 200);
-  const html = str(b.html, 200000);
+  let html = str(b.html, 200000);
   const csv_b64 = str(b.csv_b64, 5000000); // até ~5MB base64
   const csv_filename = str(b.csv_filename, 80) || `pulse-${new Date().toISOString().slice(0, 10)}.csv`;
   if (!subject || !html) throw new AppError("VALIDATION_FAILED", "subject e html obrigatórios.");
+
+  // Strip DOCTYPE/html/body wrappers — Gmail às vezes trata como texto se receber doc completo.
+  // Resend wrappa automaticamente.
+  html = html
+    .replace(/<!DOCTYPE[^>]*>/gi, '')
+    .replace(/<\/?html\b[^>]*>/gi, '')
+    .replace(/<\/?head\b[^>]*>[\s\S]*?<\/head>/gi, '')
+    .replace(/<\/?body\b[^>]*>/gi, '')
+    .trim();
 
   const attachments = csv_b64
     ? [{ filename: csv_filename, content: csv_b64 }]

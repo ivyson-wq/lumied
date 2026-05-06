@@ -84,6 +84,9 @@ escola,decisor,cidade,uf,alunos,tier,toque_proximo,canal,assunto,mensagem,wa_lin
 - Encode CSV com aspas duplas em campos que contenham vírgula
 
 ### 5. Envie e-mail via gtm.pulse_send_email
+**HTML do e-mail:** envie apenas o conteúdo inline (`<div>...</div>`), **sem** `<!DOCTYPE>`, `<html>`, `<head>` ou `<body>`. Wrappers de documento fazem alguns clientes (Gmail) renderizar como texto bruto. A action `pulse_send_email` faz strip defensivo, mas mande já enxuto.
+
+
 **NÃO** chame Resend direto — `RESEND_API_KEY` não está disponível no env do trigger remoto. Use a action `pulse_send_email` que roda dentro da edge function `gtm` (onde a chave existe):
 
 ```bash
