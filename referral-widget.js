@@ -42,7 +42,7 @@
 
   // Montagem do widget
   const css = `
-    #lumied-ref-btn{position:fixed;bottom:100px;right:24px;z-index:9998;background:linear-gradient(135deg,#6B3FA0,#8E54B6);color:#fff;border:none;padding:12px 18px;border-radius:50px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(107,63,160,.3);display:flex;align-items:center;gap:8px;animation:lumiedPulse 2s infinite;}
+    #lumied-ref-btn{position:fixed;bottom:130px;right:20px;z-index:9994;background:linear-gradient(135deg,#6B3FA0,#8E54B6);color:#fff;border:none;padding:10px 16px;border-radius:50px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(107,63,160,.3);display:flex;align-items:center;gap:7px;animation:lumiedPulse 2s infinite;}
     #lumied-ref-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(107,63,160,.4);}
     @keyframes lumiedPulse{0%{box-shadow:0 4px 16px rgba(107,63,160,.3);}50%{box-shadow:0 4px 22px rgba(107,63,160,.55);}100%{box-shadow:0 4px 16px rgba(107,63,160,.3);}}
     #lumied-ref-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:20px;font-family:inherit;}
