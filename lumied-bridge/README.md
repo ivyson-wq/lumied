@@ -52,9 +52,28 @@ npm install
 npm run dev
 ```
 
+## Rodar como serviço systemd (Linux, sem Docker)
+
+```bash
+sudo ./install/install.sh
+sudo nano /opt/lumied-bridge/.env   # preencher LUMIED_ESCOLA_ID, LUMIED_BRIDGE_TOKEN, IDFACE_PASSWORD
+sudo systemctl enable --now lumied-bridge
+journalctl -u lumied-bridge -f      # acompanhar logs
+```
+
+O install cria o usuário `lumied`, copia para `/opt/lumied-bridge`, builda TS, e instala a unit (`Restart=always`, hardening básico).
+
 ## Configurar callbacks dos iDFace
 
-Cada iDFace precisa ser configurado para enviar eventos de reconhecimento HTTP para o daemon. No painel admin do iDFace:
+**Auto-config (default):** o daemon, ao iniciar, busca a lista de devices `via_bridge=true` da escola via edge function (`acesso_bridge_devices` autenticado pelo bridge_token), faz login em cada iDFace e configura o callback URL apontando pro listener local. Você verá nos logs:
+
+```
+auto-config: callback URL alvo = http://192.168.1.50:8765/event (4 devices)
+✓ iDFace-Recepção (192.168.1.10) callback configurado
+✗ iDFace-Saída (192.168.1.11) auto-config falhou — configure manualmente
+```
+
+**Manual (fallback):** se a auto-config falhar pra algum dispositivo, configure no painel admin do iDFace:
 
 ```
 URL Server Address: <IP_LAN_DO_DAEMON>

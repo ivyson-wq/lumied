@@ -1835,6 +1835,37 @@ router.on("acesso_faces_pendentes", authGerenteOrSecretaria, async (ctx) => {
 //  Lumied Bridge — gestão de token e status (gerente)
 // ═══════════════════════════════════════════════════════════════
 
+// ─── acesso_bridge_devices: daemon busca devices da escola via bridge_token ───
+//     Sem session token. Body: { bridge_token }. Sem rate limit (chamada pontual no startup).
+router.on("acesso_bridge_devices", async (ctx) => {
+  const { bridge_token } = ctx.body as Any;
+  if (!bridge_token || typeof bridge_token !== "string" || !/^lbr_[0-9a-f]{32,128}$/i.test(bridge_token)) {
+    throw new AppError("AUTH_REQUIRED", "bridge_token inválido.");
+  }
+  const { data: escola } = await ctx.sb.from("escolas")
+    .select("id, bridge_token")
+    .eq("bridge_token", bridge_token)
+    .maybeSingle();
+  if (!escola?.id) throw new AppError("AUTH_INVALID", "Token de bridge não reconhecido.");
+
+  const { data: devices } = await ctx.sb.from("acesso_dispositivos")
+    .select("id, nome, ip, porta, tipo, via_bridge, ativo")
+    .eq("escola_id", escola.id)
+    .eq("ativo", true)
+    .eq("via_bridge", true);
+
+  // Atualiza heartbeat no DB (esse endpoint serve como sinal de "daemon vivo")
+  await ctx.sb.from("escolas")
+    .update({ bridge_ultimo_heartbeat: new Date().toISOString() })
+    .eq("id", escola.id);
+
+  return successResponse({
+    escola_id: escola.id,
+    devices: devices ?? [],
+    daemon_event_path: "/event",
+  });
+});
+
 // ─── acesso_bridge_status: liveness + heartbeat do bridge da escola ───
 router.on("acesso_bridge_status", authGerenteOrSecretaria, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");

@@ -1,0 +1,28 @@
+[Unit]
+Description=Lumied Bridge — relay LAN entre o gateway Cloudflare e iDFace da escola
+Documentation=https://github.com/ivyson-wq/lumied/tree/main/lumied-bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lumied
+Group=lumied
+WorkingDirectory=/opt/lumied-bridge
+EnvironmentFile=/opt/lumied-bridge/.env
+ExecStart=/usr/bin/node /opt/lumied-bridge/dist/index.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lumied-bridge
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/lumied-bridge
+
+[Install]
+WantedBy=multi-user.target
