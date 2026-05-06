@@ -193,12 +193,15 @@ export class BridgeRoom {
     }
 
     if (msg.type === "event") {
-      // iDFace event → repassa para acesso_evento_callback
+      // iDFace event → repassa para acesso_evento_callback (autenticado por Bearer = INTERNAL_SECRET)
       const payload = (msg.payload || {}) as Record<string, unknown>;
       try {
         await fetch(`${this.env.SUPABASE_URL}/functions/v1/acesso`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${this.env.INTERNAL_SECRET}`,
+          },
           body: JSON.stringify({
             action: "acesso_evento_callback",
             escola_id: this.escolaId,

@@ -151,6 +151,182 @@ async function getConfig(sb: Any, chave: string): Promise<string | null> {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  Lumied Bridge — dispatch via Cloudflare gateway (Fase 3)
+//  Quando dispositivo.via_bridge = true, comandos passam pelo
+//  daemon "Lumied Bridge" rodando na LAN da escola (sem IP público).
+// ═══════════════════════════════════════════════════════════════
+
+interface BridgeResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+  body?: Any;
+  comando_id?: string;
+}
+
+async function bridgeDispatch(
+  sb: Any,
+  device: Any,
+  tipo: "http_proxy" | "enroll_user" | "enroll_face" | "delete_user" | "enroll_card" | "ping" | "sync_all",
+  payload: Any,
+  waitMs = 8000,
+): Promise<BridgeResult> {
+  const gatewayUrl = Deno.env.get("BRIDGE_GATEWAY_URL");
+  const gatewaySecret = Deno.env.get("BRIDGE_GATEWAY_SECRET");
+  if (!gatewayUrl || !gatewaySecret) {
+    return { ok: false, status: 500, error: "Bridge gateway não configurado (BRIDGE_GATEWAY_URL/SECRET)." };
+  }
+
+  const { data: cmd, error: insErr } = await sb.from("acesso_bridge_comandos").insert({
+    escola_id: device.escola_id,
+    dispositivo_id: device.id,
+    tipo,
+    payload,
+  }).select("id").single();
+  if (insErr || !cmd) {
+    return { ok: false, status: 500, error: `Erro enfileirando comando: ${insErr?.message || "desconhecido"}` };
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${gatewayUrl}/dispatch/${device.escola_id}`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${gatewaySecret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ req_id: cmd.id, wait_ms: waitMs, tipo, payload }),
+      signal: AbortSignal.timeout(waitMs + 5000),
+    });
+  } catch (e) {
+    await sb.from("acesso_bridge_comandos").update({
+      status: "erro",
+      resultado: { error: `Gateway unreachable: ${String(e)}` },
+      concluido_em: new Date().toISOString(),
+    }).eq("id", cmd.id);
+    return { ok: false, status: 502, error: `Gateway unreachable: ${String(e)}`, comando_id: cmd.id };
+  }
+
+  let data: Any = null;
+  try { data = await res.json(); } catch { /* ignore */ }
+
+  if (res.status === 503) {
+    await sb.from("acesso_bridge_comandos").update({
+      status: "erro",
+      resultado: { error: "Bridge offline" },
+      concluido_em: new Date().toISOString(),
+    }).eq("id", cmd.id);
+    return { ok: false, status: 503, error: "Bridge offline", comando_id: cmd.id };
+  }
+
+  if (data?.timeout) {
+    return { ok: false, status: 504, error: "Timeout aguardando bridge", comando_id: cmd.id };
+  }
+
+  return {
+    ok: !!data?.ok,
+    status: data?.ok ? 200 : 502,
+    error: data?.error,
+    body: data?.payload ?? data,
+    comando_id: cmd.id,
+  };
+}
+
+async function bridgeStatus(escolaId: string): Promise<{ connected: boolean; last_heartbeat: number | null; pending: number; error?: string }> {
+  const gatewayUrl = Deno.env.get("BRIDGE_GATEWAY_URL");
+  const gatewaySecret = Deno.env.get("BRIDGE_GATEWAY_SECRET");
+  if (!gatewayUrl || !gatewaySecret) return { connected: false, last_heartbeat: null, pending: 0, error: "gateway não configurado" };
+  try {
+    const res = await fetch(`${gatewayUrl}/status/${escolaId}`, {
+      headers: { "Authorization": `Bearer ${gatewaySecret}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await res.json();
+    return {
+      connected: !!data.connected,
+      last_heartbeat: data.last_heartbeat ?? null,
+      pending: data.pending ?? 0,
+    };
+  } catch (e) {
+    return { connected: false, last_heartbeat: null, pending: 0, error: String(e) };
+  }
+}
+
+// ── Operações de dispositivo (transparente: bridge ou direto) ──
+function uint8ToBase64(bytes: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+
+interface DeviceOpResult { ok: boolean; status: number; error?: string }
+
+async function deviceEnrollUser(sb: Any, device: Any, user: { id: number; name: string; registration: string }): Promise<DeviceOpResult> {
+  if (device.via_bridge) {
+    const r = await bridgeDispatch(sb, device, "enroll_user", { user });
+    return { ok: r.ok, status: r.status, error: r.error };
+  }
+  const session = await getDeviceSession(sb, device);
+  const res = await deviceFetch(device.ip, device.porta, `/create_objects.fcgi?session=${session}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ object: "users", values: [user] }),
+  });
+  return { ok: res.ok, status: res.status };
+}
+
+async function deviceEnrollUsers(sb: Any, device: Any, users: Array<{ id: number; name: string; registration: string }>): Promise<DeviceOpResult> {
+  if (device.via_bridge) {
+    const r = await bridgeDispatch(sb, device, "enroll_user", { users });
+    return { ok: r.ok, status: r.status, error: r.error };
+  }
+  const session = await getDeviceSession(sb, device);
+  const res = await deviceFetch(device.ip, device.porta, `/create_objects.fcgi?session=${session}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ object: "users", values: users }),
+  });
+  return { ok: res.ok, status: res.status };
+}
+
+async function deviceSetFaceImage(sb: Any, device: Any, deviceUserId: number, photoBytes: Uint8Array): Promise<DeviceOpResult> {
+  if (device.via_bridge) {
+    const r = await bridgeDispatch(sb, device, "enroll_face", { user_id: deviceUserId, photo_b64: uint8ToBase64(photoBytes) }, 15000);
+    return { ok: r.ok, status: r.status, error: r.error };
+  }
+  const session = await getDeviceSession(sb, device);
+  const ts = Math.floor(Date.now() / 1000);
+  const res = await deviceFetch(device.ip, device.porta, `/user_set_image.fcgi?session=${session}&user_id=${deviceUserId}&timestamp=${ts}`, {
+    method: "POST", body: photoBytes,
+  });
+  return { ok: res.ok, status: res.status };
+}
+
+async function deviceEnrollCard(sb: Any, device: Any, card_value: number, deviceUserId: number): Promise<DeviceOpResult> {
+  if (device.via_bridge) {
+    const r = await bridgeDispatch(sb, device, "enroll_card", { card_value, user_id: deviceUserId });
+    return { ok: r.ok, status: r.status, error: r.error };
+  }
+  const session = await getDeviceSession(sb, device);
+  const res = await deviceFetch(device.ip, device.porta, `/create_objects.fcgi?session=${session}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ object: "cards", values: [{ value: card_value, user_id: deviceUserId }] }),
+  });
+  return { ok: res.ok, status: res.status };
+}
+
+async function devicePing(sb: Any, device: Any): Promise<DeviceOpResult> {
+  if (device.via_bridge) {
+    const r = await bridgeDispatch(sb, device, "ping", {}, 5000);
+    return { ok: r.ok, status: r.status, error: r.error };
+  }
+  try {
+    const res = await deviceFetch(device.ip, device.porta, "/login.fcgi");
+    return { ok: res.status < 500, status: res.status };
+  } catch (e) {
+    return { ok: false, status: 0, error: String(e) };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  DEVICE MANAGEMENT (authGerente)
 // ═══════════════════════════════════════════════════════════════
 
@@ -198,12 +374,15 @@ router.on("acesso_dispositivo_ping", authGerente, async (ctx) => {
   const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).eq("escola_id", ctx.escola_id).single();
   if (!device) throw new AppError("NOT_FOUND", "Dispositivo não encontrado.");
 
-  try {
-    const res = await deviceFetch(device.ip, device.porta, "/login.fcgi");
-    return successResponse({ online: res.status < 500, status: res.status, ip: device.ip, porta: device.porta });
-  } catch (err) {
-    return successResponse({ online: false, error: String(err), ip: device.ip, porta: device.porta });
-  }
+  const r = await devicePing(ctx.sb, device);
+  return successResponse({
+    online: r.ok,
+    status: r.status,
+    error: r.error,
+    ip: device.ip,
+    porta: device.porta,
+    via_bridge: !!device.via_bridge,
+  });
 });
 
 router.on("acesso_dispositivo_sync", authGerente, async (ctx) => {
@@ -213,6 +392,11 @@ router.on("acesso_dispositivo_sync", authGerente, async (ctx) => {
 
   const { data: device } = await ctx.sb.from("acesso_dispositivos").select("*").eq("id", id).eq("escola_id", ctx.escola_id).single();
   if (!device) throw new AppError("NOT_FOUND", "Dispositivo não encontrado.");
+
+  if (device.via_bridge) {
+    const r = await devicePing(ctx.sb, device);
+    return successResponse({ ok: r.ok, error: r.error, device_nome: device.nome, via_bridge: true });
+  }
 
   try {
     const session = await getDeviceSession(ctx.sb, device);
@@ -291,27 +475,15 @@ router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
 
   for (const dev of devices ?? []) {
     try {
-      const session = await getDeviceSession(ctx.sb, dev);
+      const userRes = await deviceEnrollUser(ctx.sb, dev, { id: deviceUserId, name: pessoa_nome, registration: pessoa_id });
+      if (!userRes.ok) {
+        syncResults.push({ device: dev.nome, ok: false, error: userRes.error || `enroll_user HTTP ${userRes.status}` });
+        continue;
+      }
 
-      // Create user on device
-      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          object: "users",
-          values: [{ id: deviceUserId, name: pessoa_nome, registration: pessoa_id }],
-        }),
-      });
-
-      // Send face image if available
       if (fotoBinary) {
-        const ts = Math.floor(Date.now() / 1000);
-        const imgRes = await deviceFetch(
-          dev.ip, dev.porta,
-          `/user_set_image.fcgi?session=${session}&user_id=${deviceUserId}&timestamp=${ts}`,
-          { method: "POST", body: fotoBinary }
-        );
-        syncResults.push({ device: dev.nome, ok: imgRes.ok, status: imgRes.status });
+        const imgRes = await deviceSetFaceImage(ctx.sb, dev, deviceUserId, fotoBinary);
+        syncResults.push({ device: dev.nome, ok: imgRes.ok, status: imgRes.status, error: imgRes.error });
       } else {
         syncResults.push({ device: dev.nome, ok: true, note: "Sem foto para enviar" });
       }
@@ -383,34 +555,30 @@ router.on("acesso_face_sync_all", authGerente, async (ctx) => {
 
   for (const dev of devices) {
     try {
-      const session = await getDeviceSession(ctx.sb, dev);
-
-      // Create all users on device
       const users = faces.map((f: Any) => ({ id: f.device_user_id, name: f.pessoa_nome, registration: f.pessoa_id }));
-      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ object: "users", values: users }),
-      });
+      const usersRes = await deviceEnrollUsers(ctx.sb, dev, users);
+      if (!usersRes.ok) {
+        results.push({ device: dev.nome, ok: false, error: usersRes.error || `enroll_user HTTP ${usersRes.status}` });
+        continue;
+      }
 
-      // Send faces with photos
       for (const face of faces) {
         if (!face.foto_url) continue;
         try {
-          // Download photo from storage
           const photoRes = await fetch(face.foto_url, { signal: AbortSignal.timeout(5000) });
           if (!photoRes.ok) continue;
           const photoBytes = new Uint8Array(await photoRes.arrayBuffer());
 
-          const ts = Math.floor(Date.now() / 1000);
-          await deviceFetch(dev.ip, dev.porta,
-            `/user_set_image.fcgi?session=${session}&user_id=${face.device_user_id}&timestamp=${ts}`,
-            { method: "POST", body: photoBytes }
-          );
-
-          await ctx.sb.from("acesso_faces").update({
-            sync_status: "sincronizado", sync_erro: null, atualizado_em: new Date().toISOString(),
-          }).eq("id", face.id).eq("escola_id", ctx.escola_id);
+          const r = await deviceSetFaceImage(ctx.sb, dev, face.device_user_id, photoBytes);
+          if (r.ok) {
+            await ctx.sb.from("acesso_faces").update({
+              sync_status: "sincronizado", sync_erro: null, atualizado_em: new Date().toISOString(),
+            }).eq("id", face.id).eq("escola_id", ctx.escola_id);
+          } else {
+            await ctx.sb.from("acesso_faces").update({
+              sync_status: "erro", sync_erro: `${dev.nome}: ${r.error || `HTTP ${r.status}`}`, atualizado_em: new Date().toISOString(),
+            }).eq("id", face.id).eq("escola_id", ctx.escola_id);
+          }
         } catch (err) {
           await ctx.sb.from("acesso_faces").update({
             sync_status: "erro", sync_erro: `${dev.nome}: ${String(err)}`, atualizado_em: new Date().toISOString(),
@@ -448,12 +616,8 @@ router.on("acesso_rfid_cadastrar", authGerente, async (ctx) => {
   const deviceUserId = uuidToDeviceId(pessoa_id);
   for (const dev of devices ?? []) {
     try {
-      const session = await getDeviceSession(ctx.sb, dev);
-      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ object: "cards", values: [{ value: Number(card_uid), user_id: deviceUserId }] }),
-      });
+      const r = await deviceEnrollCard(ctx.sb, dev, Number(card_uid), deviceUserId);
+      if (!r.ok) console.error(`Erro sync RFID → ${dev.nome}: ${r.error || `HTTP ${r.status}`}`);
     } catch (err) {
       console.error(`Erro sync RFID → ${dev.nome}:`, err);
     }
@@ -573,29 +737,47 @@ router.on("acesso_permissao_delete", authGerente, async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  DEVICE CALLBACK (NO auth — called by Face Control ID devices)
+//  DEVICE CALLBACK (Sem session token — autenticado por:
+//  (a) IP origem registrado em acesso_dispositivos (modo direto), ou
+//  (b) Bearer = BRIDGE_GATEWAY_SECRET + escola_id no body (via gateway))
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_evento_callback", async (ctx) => {
-  const { user_id, device_id, timestamp, method, card_value, direction, confidence, photo } = ctx.body as Any;
+  const { user_id, device_id, timestamp, method, card_value, direction, confidence, photo, escola_id: bodyEscolaId } = ctx.body as Any;
 
-  // Validate request comes from a registered device
-  const sourceIp = ctx.ip;
-  const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+  // Bridge-authenticated path: gateway forwarded a `type:event` from a daemon
+  const authHeader = ctx.req.headers.get("authorization") || ctx.req.headers.get("Authorization") || "";
+  const bridgeSecret = Deno.env.get("BRIDGE_GATEWAY_SECRET");
+  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+  const fromBridge = !!(bridgeSecret && bearerMatch && bearerMatch[1].trim() === bridgeSecret);
 
-  // Find device by device_id or by source IP
   let dispositivo: Any = null;
-  if (device_id) {
-    dispositivo = (devices ?? []).find((d: Any) => d.id === device_id);
-  }
-  if (!dispositivo) {
-    dispositivo = (devices ?? []).find((d: Any) => d.ip === sourceIp);
-  }
 
-  // SECURITY: reject events that did not come from a registered device
-  if (!dispositivo) {
-    console.warn(`[acesso_evento_callback] Rejeitado: origem não reconhecida. sourceIp=${sourceIp} device_id=${device_id}`);
-    throw new AppError("FORBIDDEN", "Evento rejeitado: dispositivo não registrado.");
+  if (fromBridge && bodyEscolaId) {
+    // Trust escola_id from body (gateway already validated bridge_token on WS connect)
+    if (device_id) {
+      const { data } = await ctx.sb.from("acesso_dispositivos")
+        .select("*").eq("id", device_id).eq("escola_id", bodyEscolaId).eq("ativo", true).maybeSingle();
+      dispositivo = data;
+    }
+    if (!dispositivo) {
+      console.warn(`[acesso_evento_callback] Bridge event sem device_id válido. escola=${bodyEscolaId} device_id=${device_id}`);
+      throw new AppError("FORBIDDEN", "Evento bridge: dispositivo não encontrado nessa escola.");
+    }
+  } else {
+    // Direct mode: device IP must match a registered device
+    const sourceIp = ctx.ip;
+    const { data: devices } = await ctx.sb.from("acesso_dispositivos").select("*").eq("ativo", true);
+    if (device_id) {
+      dispositivo = (devices ?? []).find((d: Any) => d.id === device_id);
+    }
+    if (!dispositivo) {
+      dispositivo = (devices ?? []).find((d: Any) => d.ip === sourceIp);
+    }
+    if (!dispositivo) {
+      console.warn(`[acesso_evento_callback] Rejeitado: origem não reconhecida. sourceIp=${sourceIp} device_id=${device_id}`);
+      throw new AppError("FORBIDDEN", "Evento rejeitado: dispositivo não registrado.");
+    }
   }
 
   // Determine direction from device type
@@ -1193,16 +1375,21 @@ router.on("acesso_cancelar_autorizado", async (ctx) => {
 //  Validação de qualidade de foto (Control iD)
 // ═══════════════════════════════════════════════════════════════
 
-/** Valida qualidade da foto usando o primeiro dispositivo ativo */
+/** Valida qualidade da foto usando o primeiro dispositivo ativo (prefere não-bridge para evitar latência) */
 async function validarQualidadeFoto(
   sb: ReturnType<typeof createClient>,
   fotoBinary: Uint8Array,
 ): Promise<{ ok: boolean; scores: Any; errors: string[] }> {
-  const { data: devices } = await sb.from("acesso_dispositivos").select("*").eq("ativo", true).limit(1);
+  const { data: devices } = await sb.from("acesso_dispositivos").select("*").eq("ativo", true);
   if (!devices?.length) {
     return { ok: true, scores: null, errors: ["Nenhum dispositivo ativo para validação. Foto salva sem validação."] };
   }
-  const dev = devices[0];
+  // Prefere dispositivo direto; se só houver via_bridge, ignora validação (iDFace test_image
+  // não é um comando padrão do bridge — daemon não suporta atualmente).
+  const dev = devices.find((d: Any) => !d.via_bridge);
+  if (!dev) {
+    return { ok: true, scores: null, errors: ["Apenas dispositivos via bridge — validação de qualidade pulada."] };
+  }
   try {
     const session = await getDeviceSession(sb, dev);
     const res = await deviceFetch(dev.ip, dev.porta, `/user_test_image.fcgi?session=${session}`, {
@@ -1384,17 +1571,17 @@ router.on("acesso_face_aprovar", authGerente, async (ctx) => {
 
   for (const dev of devices ?? []) {
     try {
-      const session = await getDeviceSession(ctx.sb, dev);
-      await deviceFetch(dev.ip, dev.porta, `/create_objects.fcgi?session=${session}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ object: "users", values: [{ id: face.device_user_id, name: face.pessoa_nome, registration: face.pessoa_id }] }),
-      });
+      const userRes = await deviceEnrollUser(ctx.sb, dev, { id: face.device_user_id, name: face.pessoa_nome, registration: face.pessoa_id });
+      if (!userRes.ok) {
+        syncResults.push({ device: dev.nome, ok: false, error: userRes.error || `enroll_user HTTP ${userRes.status}` });
+        continue;
+      }
       if (fotoBinary) {
-        const ts = Math.floor(Date.now() / 1000);
-        await deviceFetch(dev.ip, dev.porta, `/user_set_image.fcgi?session=${session}&user_id=${face.device_user_id}&timestamp=${ts}`, {
-          method: "POST", body: fotoBinary,
-        });
+        const r = await deviceSetFaceImage(ctx.sb, dev, face.device_user_id, fotoBinary);
+        if (!r.ok) {
+          syncResults.push({ device: dev.nome, ok: false, error: r.error || `set_image HTTP ${r.status}` });
+          continue;
+        }
       }
       syncResults.push({ device: dev.nome, ok: true });
     } catch (err) {
@@ -1542,28 +1729,20 @@ router.on("acesso_dispositivo_sync_faces", authGerente, async (ctx) => {
   const errors: string[] = [];
 
   try {
-    const session = await getDeviceSession(ctx.sb, device);
-
-    // Cadastra usuários no dispositivo em batch
     const users = faces.map((f: Any) => ({ id: f.device_user_id, name: f.pessoa_nome, registration: f.pessoa_id }));
-    await deviceFetch(device.ip, device.porta, `/create_objects.fcgi?session=${session}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ object: "users", values: users }),
-    });
+    const usersRes = await deviceEnrollUsers(ctx.sb, device, users);
+    if (!usersRes.ok) {
+      return successResponse({ ok: false, error: usersRes.error || `enroll_user HTTP ${usersRes.status}` });
+    }
 
-    // Envia fotos
     for (const face of faces) {
       if (!face.foto_url) continue;
       try {
         const photoRes = await fetch(face.foto_url, { signal: AbortSignal.timeout(5000) });
         if (!photoRes.ok) { errCount++; continue; }
         const bytes = new Uint8Array(await photoRes.arrayBuffer());
-        const ts = Math.floor(Date.now() / 1000);
-        const r = await deviceFetch(device.ip, device.porta,
-          `/user_set_image.fcgi?session=${session}&user_id=${face.device_user_id}&timestamp=${ts}`,
-          { method: "POST", body: bytes });
-        if (r.ok) okCount++; else { errCount++; errors.push(`${face.pessoa_nome}: HTTP ${r.status}`); }
+        const r = await deviceSetFaceImage(ctx.sb, device, face.device_user_id, bytes);
+        if (r.ok) okCount++; else { errCount++; errors.push(`${face.pessoa_nome}: ${r.error || `HTTP ${r.status}`}`); }
       } catch (err) {
         errCount++;
         errors.push(`${face.pessoa_nome}: ${String(err)}`);
@@ -1644,6 +1823,54 @@ router.on("acesso_faces_pendentes", authGerenteOrSecretaria, async (ctx) => {
     .eq("sync_status", "aguardando_aprovacao")
     .order("criado_em", { ascending: false });
   return successResponse(data ?? []);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Lumied Bridge — gestão de token e status (gerente)
+// ═══════════════════════════════════════════════════════════════
+
+// ─── acesso_bridge_status: liveness + heartbeat do bridge da escola ───
+router.on("acesso_bridge_status", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data: escola } = await ctx.sb.from("escolas")
+    .select("bridge_token, bridge_ultimo_heartbeat")
+    .eq("id", ctx.escola_id).maybeSingle();
+  const status = await bridgeStatus(ctx.escola_id);
+  const { data: pendentes } = await ctx.sb.from("acesso_bridge_comandos")
+    .select("id, tipo, status, criado_em")
+    .eq("escola_id", ctx.escola_id)
+    .in("status", ["pendente", "em_execucao"])
+    .order("criado_em", { ascending: false })
+    .limit(20);
+  return successResponse({
+    token_configurado: !!escola?.bridge_token,
+    ultimo_heartbeat_db: escola?.bridge_ultimo_heartbeat || null,
+    gateway: status,
+    comandos_em_voo: pendentes ?? [],
+  });
+});
+
+// ─── acesso_bridge_token_get: revela token (gerente apenas, para instalação do daemon) ───
+router.on("acesso_bridge_token_get", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data: escola } = await ctx.sb.from("escolas")
+    .select("bridge_token")
+    .eq("id", ctx.escola_id).maybeSingle();
+  return successResponse({ bridge_token: escola?.bridge_token || null });
+});
+
+// ─── acesso_bridge_token_rotate: gera novo token (invalida o anterior) ───
+router.on("acesso_bridge_token_rotate", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const token = `lbr_${hex}`;
+  const { error } = await ctx.sb.from("escolas")
+    .update({ bridge_token: token, bridge_ultimo_heartbeat: null })
+    .eq("id", ctx.escola_id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ bridge_token: token });
 });
 
 // ═══════════════════════════════════════════════════════════════
