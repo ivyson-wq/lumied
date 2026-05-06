@@ -20,22 +20,59 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 
-/* LOGIN */
-#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--sb);position:relative;overflow:hidden;}
-#loginScreen::before{content:'🍁';position:absolute;font-size:320px;opacity:.03;top:-60px;right:-60px;line-height:1;pointer-events:none;}
-.login-card{background:var(--white);border-radius:16px;padding:48px 44px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;z-index:1;animation:popIn .4s cubic-bezier(.22,.8,.44,1);}
+/* LOGIN — glass + dashboard mockup (mesmo estilo do gerente) */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#1a1410;}
+.login-bg{position:absolute;inset:0;overflow:hidden;}
+.login-bg-grad{position:absolute;inset:0;background:radial-gradient(ellipse at top left,#3d1f24 0%,transparent 55%),radial-gradient(ellipse at bottom right,#2b1814 0%,transparent 55%),#1a1410;}
+.login-bg-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.55;pointer-events:none;animation:orbFloat 14s ease-in-out infinite;}
+.login-bg-orb.o1{width:480px;height:480px;background:radial-gradient(circle,#C8102E,transparent 70%);top:-120px;left:-100px;}
+.login-bg-orb.o2{width:380px;height:380px;background:radial-gradient(circle,#f6a623,transparent 70%);bottom:-100px;right:-80px;animation-delay:-4s;}
+.login-bg-orb.o3{width:300px;height:300px;background:radial-gradient(circle,#1a6bb5,transparent 70%);top:40%;left:35%;opacity:.35;animation-delay:-7s;}
+@keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(40px,-30px) scale(1.05);}66%{transform:translate(-25px,35px) scale(.95);}}
+.login-bg-mockup{position:absolute;inset:60px;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:60px;gap:16px;opacity:.18;pointer-events:none;}
+.login-bg-mockup .lm-card{background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.08);border-radius:12px;backdrop-filter:blur(2px);position:relative;}
+.login-bg-mockup .lm-hero{grid-column:1/9;grid-row:1/3;background:linear-gradient(135deg,rgba(200,16,46,.25),rgba(255,255,255,.05));}
+.login-bg-mockup .lm-side{grid-column:9/13;grid-row:1/4;}
+.login-bg-mockup .lm-act1{grid-column:1/3;grid-row:3/4;}
+.login-bg-mockup .lm-act2{grid-column:3/5;grid-row:3/4;}
+.login-bg-mockup .lm-act3{grid-column:5/7;grid-row:3/4;}
+.login-bg-mockup .lm-act4{grid-column:7/9;grid-row:3/4;}
+.login-bg-mockup .lm-rev{grid-column:1/8;grid-row:4/7;background:linear-gradient(135deg,rgba(45,122,58,.15),rgba(255,255,255,.04));}
+.login-bg-mockup .lm-dev{grid-column:8/13;grid-row:4/7;}
+.login-bg-mockup .lm-bar{height:6px;background:rgba(255,255,255,.15);border-radius:3px;margin:14px;}
+.login-bg-mockup .lm-bar.w70{width:70%;}.login-bg-mockup .lm-bar.w50{width:50%;}.login-bg-mockup .lm-bar.w35{width:35%;}
+.login-bg-mockup .lm-num{position:absolute;top:14px;left:18px;font-family:'Lora',serif;font-size:32px;font-weight:700;color:rgba(255,255,255,.4);}
+.login-bg-vignette{position:absolute;inset:0;background:radial-gradient(circle at center,transparent 30%,rgba(0,0,0,.55) 100%);pointer-events:none;}
+.login-card{background:rgba(255,255,255,.85);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-radius:20px;padding:42px 40px;width:100%;max-width:420px;box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.18);position:relative;z-index:2;animation:popIn .4s cubic-bezier(.22,.8,.44,1);}
 @keyframes popIn{from{opacity:0;transform:scale(.92) translateY(12px);}to{opacity:1;transform:scale(1) translateY(0);}}
-.login-logo{text-align:center;margin-bottom:28px;}.login-logo .leaf{font-size:40px;}
-.login-logo h1{font-family:'Lora',serif;font-size:18px;margin-top:8px;color:var(--text);}
-.login-logo span{font-size:12px;color:var(--muted);}
-.login-card h2{font-family:'Lora',serif;font-size:20px;color:var(--text);margin-bottom:22px;text-align:center;}
-.lf{margin-bottom:16px;}.lf label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:7px;}
-.lf input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:#fdfbf8;}
-.lf input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1);}
-.login-btn{width:100%;padding:13px;background:#C8102E;color:#ffffff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s;box-shadow:0 4px 16px rgba(200,16,46,.3);}
-.login-btn:hover{background:#a00d24;}.login-btn:disabled{opacity:.55;cursor:not-allowed;}
-#loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;border:1px solid rgba(200,16,46,.2);}
-.login-hint{margin-top:16px;text-align:center;font-size:12px;color:var(--muted);}
+.login-brand-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:10px;}
+.login-brand-row img{height:38px;object-fit:contain;max-width:60%;}
+.login-brand-row .lbr-pill{font-size:10px;color:#15803d;background:#dcfce7;padding:3px 10px;border-radius:100px;font-weight:600;letter-spacing:.3px;display:flex;align-items:center;gap:5px;}
+.login-brand-row .lbr-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.login-card h2{font-family:'Lora',serif;font-size:24px;color:var(--text);margin-bottom:6px;letter-spacing:-.3px;text-align:left;}
+.login-card .login-sub{font-size:13px;color:#6b6258;margin-bottom:24px;line-height:1.5;}
+.lf{margin-bottom:14px;position:relative;}.lf label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#6b6258;margin-bottom:6px;}
+.lf input{width:100%;padding:13px 14px;border:1.5px solid #e0d8cc;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;background:rgba(255,255,255,.8);}
+.lf input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.12);background:#fff;}
+.lf-pwd-toggle{position:absolute;right:12px;top:32px;background:none;border:none;cursor:pointer;font-size:14px;color:#6b6258;padding:4px;line-height:1;}
+.lf-pwd-toggle:hover{color:var(--red);}
+.login-btn{width:100%;padding:14px;background:linear-gradient(135deg,#C8102E,#a00d24);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;transition:all .2s;box-shadow:0 6px 20px rgba(200,16,46,.35);display:flex;align-items:center;justify-content:center;gap:8px;}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(200,16,46,.45);}
+.login-btn:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:0 4px 16px rgba(200,16,46,.3);}
+#loginError{display:none;font-size:13px;color:var(--red);text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:8px;border:1px solid #fbcfd6;}
+.login-alt-btn{width:100%;padding:11px;background:rgba(255,255,255,.7);border:1.5px solid #e0d8cc;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.login-alt-btn:hover{background:#fff;border-color:#c8b9a5;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06);}
+.login-alt-btn:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.login-link{display:block;text-align:center;margin-top:14px;font-size:13px;color:#1a6bb5;text-decoration:none;cursor:pointer;background:none;border:none;width:100%;font-family:inherit;font-weight:500;}
+.login-link:hover{text-decoration:underline;}
+.login-footer{margin-top:22px;padding-top:18px;border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;}
+.login-footer img{height:36px;object-fit:contain;}
+.login-hint{margin-top:14px;text-align:center;font-size:12px;color:#6b6258;}
+@media(max-width:480px){
+  .login-card{padding:28px 24px;border-radius:16px;}
+  .login-bg-mockup{display:none;}
+}
 
 /* APP */
 #appShell{display:none;min-height:100vh;}
@@ -402,30 +439,72 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
 <body>
 
 <!-- LOGIN -->
-<div id="loginScreen" style="min-height:100vh;display:flex;">
-  <div style="flex:1;background:url('https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&q=80') center/cover;position:relative;display:flex;align-items:flex-end;padding:40px;" class="login-photo-side">
-    <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.7),transparent 60%);"></div>
-    <div style="position:relative;color:#fff;max-width:360px;">
-      <div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:6px;" data-i18n="prof.login.greeting">Bom dia, professora!</div>
-      <div style="font-size:13px;opacity:.8;line-height:1.5;" data-i18n="prof.login.subtitle">Chamada, notas, agenda digital e muito mais — tudo pronto para o seu dia.</div>
-    </div>
-  </div>
-  <div style="width:480px;max-width:100%;display:flex;align-items:center;justify-content:center;background:#fff;padding:40px;">
-    <div style="width:100%;max-width:340px;">
-      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:32px;">
-        <img src="/maple-bear-logo.png" alt="Maple Bear" style="height:38px;object-fit:contain;max-width:100%;">
-        <div style="font-size:11px;color:#7a7169;font-weight:600;letter-spacing:.4px;text-transform:uppercase;">Portal das Professoras</div>
+<div id="loginScreen">
+  <!-- Background: gradient + dashboard mockup borrado + orbs -->
+  <div class="login-bg" aria-hidden="true">
+    <div class="login-bg-grad"></div>
+    <div class="login-bg-mockup">
+      <div class="lm-card lm-hero">
+        <div class="lm-num">237</div>
+        <div class="lm-bar w50" style="margin-top:54px;"></div>
+        <div class="lm-bar w35"></div>
       </div>
-      <h2 style="font-family:'Lora',serif;font-size:22px;font-weight:700;margin-bottom:6px;" data-i18n="prof.login.formTitle">Acesse seu portal</h2>
-      <p style="font-size:13px;color:#7a7169;margin-bottom:24px;" data-i18n="prof.login.formSub">Use o e-mail e senha fornecidos pela coordenacao.</p>
-      <form id="loginFormInline" autocomplete="on">
-      <div class="lf"><label data-i18n="auth.email">E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" required data-i18n-placeholder="auth.emailPlaceholder"></div>
-      <div class="lf"><label data-i18n="auth.password">Senha</label><input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required></div>
-      <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
-      </form>
-      <div id="loginError" style="display:none;font-size:13px;color:#C8102E;text-align:center;margin-top:12px;padding:10px;background:#fdf0f2;border-radius:7px;">E-mail ou senha incorretos.</div>
-      <script>
-      // Self-contained login — runs immediately, no dependencies
+      <div class="lm-card lm-side"><div class="lm-bar w70"></div><div class="lm-bar w50"></div><div class="lm-bar w35"></div></div>
+      <div class="lm-card lm-act1"></div>
+      <div class="lm-card lm-act2"></div>
+      <div class="lm-card lm-act3"></div>
+      <div class="lm-card lm-act4"></div>
+      <div class="lm-card lm-rev"><div class="lm-bar w35" style="height:18px;"></div><div class="lm-bar w70"></div><div class="lm-bar w50"></div></div>
+      <div class="lm-card lm-dev"><div class="lm-bar w70"></div><div class="lm-bar w50"></div><div class="lm-bar w70"></div><div class="lm-bar w35"></div></div>
+    </div>
+    <div class="login-bg-orb o1"></div>
+    <div class="login-bg-orb o2"></div>
+    <div class="login-bg-orb o3"></div>
+    <div class="login-bg-vignette"></div>
+  </div>
+
+  <!-- Card glass -->
+  <div class="login-card">
+    <div class="login-brand-row">
+      <img src="/maple-bear-logo.png" alt="Maple Bear">
+      <span class="lbr-pill">Online</span>
+    </div>
+    <h2 data-i18n="prof.login.formTitle">Acesse seu portal</h2>
+    <p class="login-sub" data-i18n="prof.login.formSub">Use o e-mail e senha fornecidos pela coordenação.</p>
+
+    <form id="loginFormInline" autocomplete="on">
+      <div class="lf">
+        <label data-i18n="auth.email">E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email" required data-i18n-placeholder="auth.emailPlaceholder">
+      </div>
+      <div class="lf">
+        <label data-i18n="auth.password">Senha</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
+        <button type="button" class="lf-pwd-toggle" onclick="loginTogglePwd()" aria-label="Mostrar senha">👁</button>
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">Entrar <span style="opacity:.7;">→</span></button>
+    </form>
+    <div id="loginError">E-mail ou senha incorretos.</div>
+
+    <button type="button" class="login-alt-btn" id="loginBiometricBtn" onclick="loginBiometric()" style="display:none;margin-top:14px;">
+      <span style="font-size:16px;">👆</span> Entrar com biometria
+    </button>
+
+    <p class="login-hint" data-i18n="prof.login.contactSupport">Problemas para acessar? Fale com a coordenação.</p>
+
+    <div class="login-footer">
+      <img src="/lumied-logo.png" alt="Lumied">
+    </div>
+
+    <script>
+      function loginTogglePwd() {
+        var inp = document.getElementById('loginPass');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+      }
+
+      var _PROF_API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
+      var _PROF_AK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
       document.getElementById('loginFormInline').addEventListener('submit', function(e) {
         e.preventDefault();
         var email = document.getElementById('loginEmail').value.trim();
@@ -435,12 +514,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         if (!email || !senha) return;
         errEl.style.display = 'none';
         btn.disabled = true;
-        btn.textContent = 'Entrando...';
-        var API = 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas';
-        var AK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-        fetch(API, {
+        btn.innerHTML = 'Entrando...';
+        fetch(_PROF_API, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': AK, 'Authorization': 'Bearer ' + AK },
+          headers: { 'Content-Type': 'application/json', 'apikey': _PROF_AK, 'Authorization': 'Bearer ' + _PROF_AK },
           body: JSON.stringify({ action: 'unified_login', email: email, senha: senha, papel: '' })
         })
         .then(function(r) { return r.json(); })
@@ -449,13 +526,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
             localStorage.setItem('prof_token', d.token);
             localStorage.setItem('prof_nome', d.nome || '');
             localStorage.setItem('prof_email', d.email || email);
+            localStorage.setItem('prof_last_email', email);
             location.reload();
             return;
           }
-          // Fallback to professora_login
-          return fetch(API, {
+          return fetch(_PROF_API, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': AK, 'Authorization': 'Bearer ' + AK },
+            headers: { 'Content-Type': 'application/json', 'apikey': _PROF_AK, 'Authorization': 'Bearer ' + _PROF_AK },
             body: JSON.stringify({ action: 'professora_login', email: email, senha: senha })
           }).then(function(r) { return r.json(); });
         })
@@ -465,6 +542,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
             localStorage.setItem('prof_token', d.token);
             localStorage.setItem('prof_nome', d.nome || '');
             localStorage.setItem('prof_email', d.email || email);
+            localStorage.setItem('prof_last_email', email);
             location.reload();
           } else {
             errEl.textContent = d.error || 'E-mail ou senha incorretos.';
@@ -477,18 +555,85 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
         })
         .finally(function() {
           btn.disabled = false;
-          btn.textContent = 'Entrar';
+          btn.innerHTML = 'Entrar <span style="opacity:.7;">→</span>';
         });
       });
-      </script>
-      <p style="font-size:12px;color:#a89f95;text-align:center;margin-top:16px;" data-i18n="prof.login.contactSupport">Problemas para acessar? Fale com a coordenacao.</p>
-      <div style="margin-top:24px;padding-top:18px;border-top:1px solid #e8e4de;display:flex;align-items:center;gap:6px;justify-content:center;">
-        <img src="/lumied-logo.png" style="height:64px;object-fit:contain;" alt="Lumied">
-      </div>
-    </div>
+
+      // Biometria — só aparece se navegador suporta WebAuthn e usuário já logou aqui antes
+      (function() {
+        var lastEmail = localStorage.getItem('prof_last_email');
+        var hasWebAuthn = !!(window.PublicKeyCredential);
+        if (lastEmail && hasWebAuthn) {
+          document.getElementById('loginEmail').value = lastEmail;
+          document.getElementById('loginBiometricBtn').style.display = 'flex';
+        }
+      })();
+
+      function loginBiometric() {
+        var email = document.getElementById('loginEmail').value.trim() || localStorage.getItem('prof_last_email') || '';
+        var btn = document.getElementById('loginBiometricBtn');
+        var errEl = document.getElementById('loginError');
+        if (!email) { errEl.textContent = 'Digite seu e-mail primeiro.'; errEl.style.display = 'block'; return; }
+        btn.disabled = true;
+        btn.innerHTML = '<span style="font-size:16px;">👆</span> Verificando...';
+        fetch(_PROF_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': _PROF_AK, 'Authorization': 'Bearer ' + _PROF_AK },
+          body: JSON.stringify({ action: 'webauthn_login_challenge', email: email })
+        }).then(function(r){return r.json();}).then(function(d) {
+          if (!d || d.error || !d.challenge) { errEl.textContent = (d && d.error) || 'Biometria não cadastrada para este e-mail.'; errEl.style.display = 'block'; throw new Error('no challenge'); }
+          var b64uToBuf = function(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';var raw=atob(s);var arr=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);return arr.buffer;};
+          return navigator.credentials.get({
+            publicKey: {
+              challenge: b64uToBuf(d.challenge),
+              allowCredentials: (d.allowCredentials||[]).map(function(c){return {id:b64uToBuf(c.id),type:'public-key'};}),
+              userVerification: 'preferred',
+              timeout: 60000,
+            }
+          }).then(function(cred) {
+            var bufToB64u = function(buf){var bytes=new Uint8Array(buf);var s='';for(var i=0;i<bytes.length;i++)s+=String.fromCharCode(bytes[i]);return btoa(s).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');};
+            return fetch(_PROF_API, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'apikey': _PROF_AK, 'Authorization': 'Bearer ' + _PROF_AK },
+              body: JSON.stringify({
+                action: 'webauthn_login_verify',
+                email: email,
+                challenge: d.challenge,
+                credential: {
+                  id: cred.id,
+                  rawId: bufToB64u(cred.rawId),
+                  response: {
+                    authenticatorData: bufToB64u(cred.response.authenticatorData),
+                    clientDataJSON: bufToB64u(cred.response.clientDataJSON),
+                    signature: bufToB64u(cred.response.signature),
+                    userHandle: cred.response.userHandle ? bufToB64u(cred.response.userHandle) : null,
+                  },
+                },
+              })
+            }).then(function(r){return r.json();});
+          });
+        }).then(function(d) {
+          if (d && d.token) {
+            localStorage.setItem('prof_token', d.token);
+            localStorage.setItem('prof_nome', d.nome || '');
+            localStorage.setItem('prof_email', d.email || email);
+            localStorage.setItem('prof_last_email', email);
+            location.reload();
+          } else if (d) {
+            errEl.textContent = d.error || 'Falha na autenticação biométrica.';
+            errEl.style.display = 'block';
+          }
+        }).catch(function(e) {
+          if (e && e.name === 'NotAllowedError') { errEl.textContent = 'Autenticação cancelada.'; errEl.style.display = 'block'; }
+          else if (!errEl.style.display || errEl.style.display === 'none') { errEl.textContent = 'Erro na biometria.'; errEl.style.display = 'block'; }
+        }).finally(function() {
+          btn.disabled = false;
+          btn.innerHTML = '<span style="font-size:16px;">👆</span> Entrar com biometria';
+        });
+      }
+    </script>
   </div>
 </div>
-<style>@media(max-width:768px){.login-photo-side{display:none !important;}#loginScreen>div:last-child{width:100% !important;}}</style>
 
 <!-- APP -->
 <div id="appShell">
