@@ -98,21 +98,29 @@ curl -s -X POST "https://api.resend.com/emails" \
 ```
 
 ### 6. Atualize próximo passo de cada lead processado
-Não marque como tocado (Ivyson decide se faz ou não). MAS atualize `proximo_passo_em` para amanhã se for o caso de "espera resposta do toque", ou daqui +N dias conforme o canal:
+Não marque como tocado (Ivyson decide se faz ou não). MAS atualize `proximo_passo_em` para "hoje + intervalo do canal" pra evitar reprocessar o mesmo lead amanhã:
+
+| Canal proposto | Intervalo até próximo passo |
+|---|---|
+| linkedin_dm | +2 dias |
+| email_diagnostico | +3 dias |
+| whatsapp | +2 dias |
+| email_case | +3 dias |
+| ligacao | +2 dias |
+| email_breakup | +14 dias (fim da sequência) |
 
 ```bash
 curl -s -X POST "https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/gtm" \
   -H "Authorization: Bearer $CRON_INTERNAL_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "action":"lead_update",
-    "_token":"<não — usa service auth quando padrão>",
+    "action":"lead_update_service",
     "id":"<lead_id>",
     "proximo_passo": "Aguardando resposta de {{canal_proximo}}",
-    "proximo_passo_em": "<hoje + 2 dias>"
+    "proximo_passo_em": "<hoje + N dias>"
   }'
 ```
-*Atenção:* `lead_update` requer `authStaff`. Para cron, peça ao Ivyson criar uma sessão staff ou implemente uma versão `lead_update_service`. Por ora, **deixe como nota no e-mail** ("não atualizei automaticamente; atualize ao executar o toque").
+A action `lead_update_service` aceita `CRON_INTERNAL_KEY` (sem precisar staff session) e gera evento em `gtm_lead_events` automaticamente.
 
 ### 7. Log final
 ```

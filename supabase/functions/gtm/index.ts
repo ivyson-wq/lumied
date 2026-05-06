@@ -411,6 +411,48 @@ router.on("lead_registrar_toque", authStaff, async (ctx) => {
   return successResponse({ success: true });
 });
 
+// Versão cron-auth do lead_update — pra outbound pulse atualizar
+// proximo_passo_em / toque_atual sem precisar de sessão staff.
+router.on("lead_update_service", async (ctx) => {
+  requireServiceAuth(ctx.req);
+  const b = ctx.body as any;
+  const id = str(b.id, 40);
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const ALLOWED = [
+    "telefone","cidade","uf","alunos_estimados","sistema_atual","tier_sugerido",
+    "status","toque_atual","proximo_passo","proximo_passo_em",
+    "nurture_optout","perdido_motivo","valor_mrr",
+  ];
+  const upd: Record<string, unknown> = {};
+  for (const k of ALLOWED) if (k in b) upd[k] = b[k];
+  if (upd.status === 'fechado' && !upd.fechado_em) upd.fechado_em = new Date().toISOString();
+  if (Object.keys(upd).length === 0) throw new AppError("VALIDATION_FAILED", "Nenhum campo para atualizar.");
+
+  const { data: antes } = await ctx.sb.from("leads_comerciais").select("status, toque_atual").eq("id", id).single();
+  if (!antes) throw new AppError("NOT_FOUND", "Lead não encontrado.");
+
+  const { error } = await ctx.sb.from("leads_comerciais").update(upd).eq("id", id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  // Log eventos relevantes
+  if (upd.status && (antes as any).status !== upd.status) {
+    await ctx.sb.from("gtm_lead_events").insert({
+      lead_id: id, tipo: 'status_change',
+      status_de: (antes as any).status, status_para: upd.status,
+      descricao: `[cron] Status: ${(antes as any).status} → ${upd.status}`,
+      meta: { ator: 'service' },
+    });
+  }
+  if (upd.toque_atual !== undefined && (antes as any).toque_atual !== upd.toque_atual) {
+    await ctx.sb.from("gtm_lead_events").insert({
+      lead_id: id, tipo: 'toque', toque: upd.toque_atual,
+      descricao: `[cron] Toque T${upd.toque_atual} registrado pelo agente outbound`,
+      meta: { ator: 'service', proximo_passo: upd.proximo_passo, proximo_passo_em: upd.proximo_passo_em },
+    });
+  }
+  return successResponse({ success: true });
+});
+
 router.on("lead_nota", authStaff, async (ctx) => {
   const b = ctx.body as any;
   const id = str(b.id, 40);
@@ -601,7 +643,7 @@ const NURTURE_EMAILS: Record<number, { subject: (nome: string) => string; html: 
       <ul>
         <li>Comparativo: <a href="https://lumied.com.br/vs/escolaweb/">lumied.com.br/vs/escolaweb/</a></li>
         <li>Blog (publicamos diariamente): <a href="https://lumied.com.br/blog/">lumied.com.br/blog/</a></li>
-        <li>Meu WhatsApp direto: (54) 99999-9999</li>
+        <li>Meu WhatsApp direto: <a href="https://wa.me/5554997021634">(54) 99702-1634</a></li>
       </ul>
       <p>Se um dia a ${esc(l.nome_escola || 'sua escola')} quiser sair do ${esc(l.sistema_atual || 'sistema atual')}, me chama. Sem compromisso.</p>
       <p>Abraço e sucesso no ano letivo,<br>Ivyson</p>`,

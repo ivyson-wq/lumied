@@ -1,7 +1,7 @@
 // Lumied — Botão flutuante WhatsApp (site comercial)
 // Inclua <script src="/whatsapp-float.js"></script> antes do </body>
 (function(){
-  var WA_NUMBER = (typeof CONFIG !== 'undefined' && CONFIG.WHATSAPP_NUMBER) || '5554999999999';
+  var WA_NUMBER = (typeof CONFIG !== 'undefined' && CONFIG.WHATSAPP_NUMBER) || '5554997021634';
   var WA_MSG = encodeURIComponent('Olá! Gostaria de saber mais sobre o Lumied.');
   var css = document.createElement('style');
   css.textContent = '.whatsapp-float{position:fixed;bottom:24px;left:24px;z-index:998;display:flex;align-items:center;gap:10px;text-decoration:none;animation:waBounce 2s ease infinite;}.whatsapp-float:hover{text-decoration:none;}.whatsapp-float .wa-btn{width:56px;height:56px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(37,211,102,.4);transition:transform .2s;}.whatsapp-float:hover .wa-btn{transform:scale(1.1);}.whatsapp-float .wa-btn svg{width:28px;height:28px;fill:#fff;}.whatsapp-float .wa-tooltip{background:#fff;color:#1a1a1a;padding:8px 14px;border-radius:8px;font-family:Inter,sans-serif;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.1);white-space:nowrap;opacity:0;transform:translateX(-8px);transition:all .2s;}.whatsapp-float:hover .wa-tooltip{opacity:1;transform:translateX(0);}@keyframes waBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}@media print{.whatsapp-float{display:none;}}';
