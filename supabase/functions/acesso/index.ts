@@ -482,11 +482,59 @@ router.on("acesso_rfid_delete", authGerente, async (ctx) => {
 
 router.on("acesso_permissoes_list", authGerenteOrSecretaria, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
-  const { aluno_id } = ctx.body as Any;
-  let q = ctx.sb.from("acesso_permissoes_retirada").select("*").eq("escola_id", ctx.escola_id).eq("autorizado", true).order("criado_em", { ascending: false });
-  if (aluno_id) q = q.eq("aluno_id", aluno_id);
-  const { data } = await q;
-  return successResponse(data ?? []);
+  const { aluno_id, busca } = ctx.body as Any;
+
+  // Modo 1: filtro por aluno_id específico → retorna lista flat (compat antiga)
+  if (aluno_id) {
+    const { data } = await ctx.sb
+      .from("acesso_permissoes_retirada")
+      .select("*")
+      .eq("escola_id", ctx.escola_id)
+      .eq("aluno_id", aluno_id)
+      .eq("autorizado", true)
+      .order("criado_em", { ascending: false });
+    return successResponse(data ?? []);
+  }
+
+  // Modo 2: lista alunos com seus autorizados aninhados (UI gerente)
+  let alq = ctx.sb.from("alunos")
+    .select("id, nome, serie")
+    .eq("escola_id", ctx.escola_id)
+    .eq("ativo", true)
+    .order("nome")
+    .limit(busca ? 100 : 50);
+  if (busca && String(busca).trim().length >= 2) {
+    alq = alq.ilike("nome", `%${String(busca).trim()}%`);
+  }
+  const { data: alunos } = await alq;
+  if (!alunos?.length) return successResponse([]);
+
+  const alunoIds = alunos.map((a: Any) => a.id);
+  const { data: perms } = await ctx.sb
+    .from("acesso_permissoes_retirada")
+    .select("*")
+    .eq("escola_id", ctx.escola_id)
+    .in("aluno_id", alunoIds)
+    .order("criado_em", { ascending: false });
+
+  const byAluno = new Map<string, Any[]>();
+  for (const p of perms ?? []) {
+    const list = byAluno.get(p.aluno_id) || [];
+    list.push({
+      id: p.id,
+      nome: p.responsavel_nome,
+      parentesco: p.parentesco,
+      validade: p.validade,
+      ativo: p.autorizado,
+      foto_url: p.responsavel_foto_url,
+    });
+    byAluno.set(p.aluno_id, list);
+  }
+
+  return successResponse(alunos.map((a: Any) => ({
+    id: a.id, nome: a.nome, serie: a.serie,
+    autorizados: byAluno.get(a.id) || [],
+  })));
 });
 
 router.on("acesso_permissao_save", authGerente, async (ctx) => {
@@ -1362,6 +1410,232 @@ router.on("acesso_face_aprovar", authGerente, async (ctx) => {
   }).eq("id", id).eq("escola_id", ctx.escola_id);
 
   return successResponse({ aprovado: true, sync: syncResults });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  UI ALIASES + ACTIONS QUE FALTAVAM
+//  (mapeiam nomes que a UI já chama → handlers existentes ou novos)
+// ═══════════════════════════════════════════════════════════════
+
+// Helper: faz upload base64 → storage e retorna URL pública.
+async function uploadBase64Photo(sb: Any, base64: string, prefix: string): Promise<string | null> {
+  if (!base64) return null;
+  try {
+    const raw = atob(String(base64).replace(/^data:image\/\w+;base64,/, ""));
+    const bin = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bin[i] = raw.charCodeAt(i);
+    if (bin.length > 2 * 1024 * 1024) throw new AppError("VALIDATION_FAILED", "Foto deve ter no máximo 2MB.");
+    const path = `acesso/${prefix}/${Date.now()}_${crypto.randomUUID()}.jpg`;
+    const { error } = await sb.storage.from("wa-documentos").upload(path, bin, { contentType: "image/jpeg", upsert: true });
+    if (error) return null;
+    const { data: urlData } = sb.storage.from("wa-documentos").getPublicUrl(path);
+    return urlData?.publicUrl || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// ─── Buscar pessoa (alunos / responsaveis / funcionarios) ───────
+router.on("acesso_buscar_pessoa", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { tipo, busca } = ctx.body as Any;
+  const term = String(busca || "").trim();
+  if (term.length < 2) return successResponse([]);
+
+  const like = `%${term}%`;
+
+  if (tipo === "aluno") {
+    const { data } = await ctx.sb.from("alunos")
+      .select("id, nome, serie")
+      .eq("escola_id", ctx.escola_id)
+      .eq("ativo", true)
+      .ilike("nome", like)
+      .order("nome")
+      .limit(20);
+    return successResponse(data ?? []);
+  }
+
+  if (tipo === "responsavel") {
+    const { data } = await ctx.sb.from("familias")
+      .select("id, nome_resp, email")
+      .eq("escola_id", ctx.escola_id)
+      .ilike("nome_resp", like)
+      .order("nome_resp")
+      .limit(20);
+    return successResponse((data ?? []).map((f: Any) => ({ id: f.id, nome: f.nome_resp, email: f.email })));
+  }
+
+  if (tipo === "funcionario") {
+    const { data } = await ctx.sb.from("usuarios")
+      .select("id, nome, email, papeis")
+      .eq("escola_id", ctx.escola_id)
+      .eq("ativo", true)
+      .ilike("nome", like)
+      .order("nome")
+      .limit(20);
+    return successResponse(data ?? []);
+  }
+
+  throw new AppError("VALIDATION_FAILED", "tipo deve ser 'aluno', 'responsavel' ou 'funcionario'.");
+});
+
+// ─── acesso_face_create: gerente cadastra face direto (alias com mapeamento) ───
+router.on("acesso_face_create", authGerente, async (ctx) => {
+  const { pessoa_id, pessoa_tipo, foto_base64, foto, pessoa_nome: nomeOverride } = ctx.body as Any;
+  if (!pessoa_id || !pessoa_tipo) {
+    throw new AppError("VALIDATION_FAILED", "pessoa_id e pessoa_tipo são obrigatórios.");
+  }
+
+  // Resolve pessoa_nome se não veio
+  let pessoa_nome = nomeOverride || null;
+  if (!pessoa_nome) {
+    if (pessoa_tipo === "aluno") {
+      const { data } = await ctx.sb.from("alunos").select("nome").eq("id", pessoa_id).maybeSingle();
+      pessoa_nome = data?.nome || null;
+    } else if (pessoa_tipo === "responsavel") {
+      const { data } = await ctx.sb.from("familias").select("nome_resp").eq("id", pessoa_id).maybeSingle();
+      pessoa_nome = data?.nome_resp || null;
+    } else if (pessoa_tipo === "funcionario") {
+      const { data } = await ctx.sb.from("usuarios").select("nome").eq("id", pessoa_id).maybeSingle();
+      pessoa_nome = data?.nome || null;
+    }
+  }
+  if (!pessoa_nome) throw new AppError("NOT_FOUND", "Pessoa não encontrada.");
+
+  // Re-injeta no body com nomes esperados por acesso_face_cadastrar e dispatcha
+  (ctx.body as Any).pessoa_nome = pessoa_nome;
+  (ctx.body as Any).foto = foto || foto_base64 || null;
+  return router.dispatch("acesso_face_cadastrar", ctx);
+});
+
+// ─── acesso_dispositivo_create: alias para _save (UI usa _create) ───
+router.on("acesso_dispositivo_create", authGerente, async (ctx) => {
+  return router.dispatch("acesso_dispositivo_save", ctx);
+});
+
+// ─── acesso_dispositivo_sync_faces: sincroniza todas faces para UM dispositivo ───
+router.on("acesso_dispositivo_sync_faces", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+
+  const { data: device } = await ctx.sb.from("acesso_dispositivos")
+    .select("*")
+    .eq("id", id)
+    .eq("escola_id", ctx.escola_id)
+    .maybeSingle();
+  if (!device) throw new AppError("NOT_FOUND", "Dispositivo não encontrado.");
+
+  const { data: faces } = await ctx.sb.from("acesso_faces").select("*")
+    .eq("escola_id", ctx.escola_id).eq("ativo", true).neq("sync_status", "aguardando_aprovacao");
+  if (!faces?.length) return successResponse({ synced: 0, message: "Nenhuma face sincronizável." });
+
+  let okCount = 0;
+  let errCount = 0;
+  const errors: string[] = [];
+
+  try {
+    const session = await getDeviceSession(ctx.sb, device);
+
+    // Cadastra usuários no dispositivo em batch
+    const users = faces.map((f: Any) => ({ id: f.device_user_id, name: f.pessoa_nome, registration: f.pessoa_id }));
+    await deviceFetch(device.ip, device.porta, `/create_objects.fcgi?session=${session}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ object: "users", values: users }),
+    });
+
+    // Envia fotos
+    for (const face of faces) {
+      if (!face.foto_url) continue;
+      try {
+        const photoRes = await fetch(face.foto_url, { signal: AbortSignal.timeout(5000) });
+        if (!photoRes.ok) { errCount++; continue; }
+        const bytes = new Uint8Array(await photoRes.arrayBuffer());
+        const ts = Math.floor(Date.now() / 1000);
+        const r = await deviceFetch(device.ip, device.porta,
+          `/user_set_image.fcgi?session=${session}&user_id=${face.device_user_id}&timestamp=${ts}`,
+          { method: "POST", body: bytes });
+        if (r.ok) okCount++; else { errCount++; errors.push(`${face.pessoa_nome}: HTTP ${r.status}`); }
+      } catch (err) {
+        errCount++;
+        errors.push(`${face.pessoa_nome}: ${String(err)}`);
+      }
+    }
+  } catch (err) {
+    return successResponse({ ok: false, error: err instanceof AppError ? err.message : String(err) });
+  }
+
+  return successResponse({ ok: true, device_nome: device.nome, sincronizadas: okCount, erros: errCount, detalhes: errors });
+});
+
+// ─── acesso_sync_all_faces: alias para _face_sync_all ───
+router.on("acesso_sync_all_faces", authGerente, async (ctx) => {
+  return router.dispatch("acesso_face_sync_all", ctx);
+});
+
+// ─── acesso_rfid_create: alias para _rfid_cadastrar com lookup de nome ───
+router.on("acesso_rfid_create", authGerente, async (ctx) => {
+  const { pessoa_id, pessoa_tipo, pessoa_nome: nomeOverride } = ctx.body as Any;
+  let pessoa_nome = nomeOverride || null;
+  if (!pessoa_nome && pessoa_id && pessoa_tipo) {
+    if (pessoa_tipo === "aluno") {
+      const { data } = await ctx.sb.from("alunos").select("nome").eq("id", pessoa_id).maybeSingle();
+      pessoa_nome = data?.nome || null;
+    } else if (pessoa_tipo === "responsavel") {
+      const { data } = await ctx.sb.from("familias").select("nome_resp").eq("id", pessoa_id).maybeSingle();
+      pessoa_nome = data?.nome_resp || null;
+    } else if (pessoa_tipo === "funcionario") {
+      const { data } = await ctx.sb.from("usuarios").select("nome").eq("id", pessoa_id).maybeSingle();
+      pessoa_nome = data?.nome || null;
+    }
+  }
+  if (!pessoa_nome) throw new AppError("NOT_FOUND", "Pessoa não encontrada.");
+  (ctx.body as Any).pessoa_nome = pessoa_nome;
+  return router.dispatch("acesso_rfid_cadastrar", ctx);
+});
+
+// ─── acesso_rfid_update: toggle ativo/inativo ───
+router.on("acesso_rfid_update", authGerente, async (ctx) => {
+  const { id, ativo } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const { error } = await ctx.sb.from("acesso_rfid").update({ ativo: !!ativo }).eq("id", id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ ok: true });
+});
+
+// ─── acesso_permissao_create: cria autorizado de retirada com upload de foto ───
+router.on("acesso_permissao_create", authGerente, async (ctx) => {
+  const { aluno_id, responsavel_nome, parentesco, foto_base64, validade, responsavel_email, responsavel_id } = ctx.body as Any;
+  if (!aluno_id || !responsavel_nome) {
+    throw new AppError("VALIDATION_FAILED", "aluno_id e responsavel_nome são obrigatórios.");
+  }
+
+  // Lookup aluno_nome
+  const { data: aluno } = await ctx.sb.from("alunos").select("id, nome").eq("id", aluno_id).maybeSingle();
+  if (!aluno) throw new AppError("NOT_FOUND", "Aluno não encontrado.");
+
+  // Upload foto se veio
+  const fotoUrl = await uploadBase64Photo(ctx.sb, foto_base64, "autorizados");
+
+  // Re-injeta no body com nomes esperados por acesso_permissao_save
+  (ctx.body as Any).aluno_nome = aluno.nome;
+  (ctx.body as Any).responsavel_foto_url = fotoUrl;
+  if (responsavel_id) (ctx.body as Any).responsavel_id = responsavel_id;
+  if (responsavel_email) (ctx.body as Any).responsavel_email = responsavel_email;
+  return router.dispatch("acesso_permissao_save", ctx);
+});
+
+// ─── acesso_faces_pendentes: lista faces aguardando aprovação ───
+router.on("acesso_faces_pendentes", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("acesso_faces")
+    .select("*")
+    .eq("escola_id", ctx.escola_id)
+    .eq("ativo", true)
+    .eq("sync_status", "aguardando_aprovacao")
+    .order("criado_em", { ascending: false });
+  return successResponse(data ?? []);
 });
 
 // ═══════════════════════════════════════════════════════════════
