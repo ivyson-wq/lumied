@@ -3328,6 +3328,23 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <!-- Checklist items -->
         <div id="setupItems" style="display:flex;flex-direction:column;gap:10px;"></div>
 
+        <!-- Pendências de cadastro facial -->
+        <div style="margin-top:24px;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+            <div class="sec-title" style="font-size:14px;margin:0;">👤 Alunos sem face cadastrada <span class="count-badge" id="setupPendentesCount">0</span></div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="setupTogglePendentes()" id="setupPendentesToggle" style="padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Mostrar lista</button>
+              <button onclick="openLinkModal()" style="padding:6px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">📤 Enviar link manual</button>
+            </div>
+          </div>
+          <div id="setupPendentesWrap" style="display:none;">
+            <div class="table-wrap">
+              <table><thead><tr><th>Aluno</th><th>Email família</th><th>WhatsApp</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="setupPendentesTable"><tr><td colspan="5" class="empty-state">Carregando…</td></tr></tbody></table>
+            </div>
+          </div>
+        </div>
+
         <!-- Devices summary -->
         <div style="margin-top:24px;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;">
           <div class="sec-title" style="font-size:14px;margin:0 0 12px 0;">📡 iDFace cadastrados</div>
@@ -3398,7 +3415,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelAcessoFaces" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <div class="sec-title" style="margin:0;">Faces Cadastradas <span class="count-badge" id="acessoFacesCount">0</span></div>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;" onclick="openLinkModal()">📤 Enviar Link p/ Família</button>
             <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="openFaceModal()">+ Cadastrar Face</button>
             <button style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="syncAllFaces()">Sincronizar Todas</button>
           </div>
@@ -3430,6 +3448,43 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div class="modal-actions">
             <button class="btn-cancel" onclick="closeFaceModal()">Cancelar</button>
             <button class="btn-save" onclick="salvarFace()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Buscar pessoa pra gerar link de cadastro -->
+      <div class="modal-overlay" id="linkPickModal">
+        <div class="modal" style="max-width:500px;">
+          <h3>📤 Enviar link de cadastro facial</h3>
+          <div class="msub">Selecione quem vai receber o link. A família tira a foto pelo celular.</div>
+          <div class="ff"><label>Tipo</label><select id="linkPickTipo" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;" onchange="searchLinkPessoa()"><option value="aluno">Aluno</option><option value="responsavel">Responsável</option><option value="funcionario">Funcionário</option></select></div>
+          <div class="ff"><label>Buscar Pessoa</label><input id="linkPickBusca" placeholder="Digite o nome..." oninput="searchLinkPessoa()"></div>
+          <div id="linkPickResultados" style="max-height:200px;overflow-y:auto;margin-bottom:12px;"></div>
+          <input type="hidden" id="linkPickPessoaId">
+          <input type="hidden" id="linkPickPessoaNome">
+          <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeLinkModal()">Cancelar</button>
+            <button class="btn-save" id="linkPickGerar" onclick="gerarLinkSelecionado()" disabled>Gerar Link</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Link gerado (Copy/WhatsApp/Email) -->
+      <div class="modal-overlay" id="linkResultModal">
+        <div class="modal" style="max-width:520px;">
+          <h3>✅ Link gerado para <span id="linkResultNome">—</span></h3>
+          <div class="msub">Válido por 7 dias e único por pessoa. Escolha como enviar:</div>
+          <div style="background:#fdfbf8;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;">
+            <code id="linkResultUrl" style="font-family:'DM Mono',monospace;font-size:12px;word-break:break-all;color:#1a6bb5;"></code>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <button onclick="linkResultCopy()" style="padding:14px 8px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">📋 Copiar</button>
+            <button onclick="linkResultWhatsApp()" style="padding:14px 8px;background:#25D366;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">💬 WhatsApp</button>
+            <button onclick="linkResultEmail()" id="linkResultEmailBtn" style="padding:14px 8px;background:#1a6bb5;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">✉️ Email</button>
+          </div>
+          <div id="linkResultStatus" style="margin-top:14px;font-size:13px;color:#5a5249;text-align:center;"></div>
+          <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeLinkResultModal()">Fechar</button>
           </div>
         </div>
       </div>
@@ -8739,6 +8794,119 @@ docker compose up -d --build</pre>
   function openFaceModal() { document.getElementById('faceModal').classList.add('show'); }
   function closeFaceModal() { document.getElementById('faceModal').classList.remove('show'); document.getElementById('faceBusca').value = ''; document.getElementById('faceResultados').innerHTML = ''; document.getElementById('facePessoaId').value = ''; }
 
+  // ── ENVIAR LINK DE CADASTRO FACIAL ─────────────────────
+  let _linkResultData = null; // {link, pessoa_tipo, pessoa_id, pessoa_nome, email}
+
+  function openLinkModal(prefill) {
+    document.getElementById('linkPickModal').classList.add('show');
+    document.getElementById('linkPickResultados').innerHTML = '';
+    document.getElementById('linkPickBusca').value = '';
+    document.getElementById('linkPickPessoaId').value = '';
+    document.getElementById('linkPickPessoaNome').value = '';
+    document.getElementById('linkPickGerar').disabled = true;
+    if (prefill) {
+      document.getElementById('linkPickTipo').value = prefill.pessoa_tipo;
+      document.getElementById('linkPickBusca').value = prefill.pessoa_nome || '';
+      document.getElementById('linkPickPessoaId').value = prefill.pessoa_id;
+      document.getElementById('linkPickPessoaNome').value = prefill.pessoa_nome;
+      _linkPickEmail = prefill.email || null;
+      document.getElementById('linkPickGerar').disabled = false;
+    }
+  }
+  function closeLinkModal() { document.getElementById('linkPickModal').classList.remove('show'); }
+
+  let _linkPickEmail = null;
+
+  async function searchLinkPessoa() {
+    const tipo = document.getElementById('linkPickTipo').value;
+    const busca = document.getElementById('linkPickBusca').value.trim();
+    document.getElementById('linkPickGerar').disabled = true;
+    document.getElementById('linkPickPessoaId').value = '';
+    if (busca.length < 2) { document.getElementById('linkPickResultados').innerHTML = ''; return; }
+    const d = await callAcesso({ action: 'acesso_buscar_pessoa', tipo, busca });
+    const list = d.data || d || [];
+    if (!list.length) { document.getElementById('linkPickResultados').innerHTML = '<div class="empty-state" style="padding:8px;font-size:12px;">Nenhum resultado.</div>'; return; }
+    document.getElementById('linkPickResultados').innerHTML = list.map(p => `
+      <div onclick="selectLinkPessoa('${p.id}','${escAttr(p.nome)}','${escAttr(p.email||'')}')" style="padding:10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;" onmouseover="this.style.background='#fdfbf8'" onmouseout="this.style.background=''">
+        <strong>${escHtml(p.nome)}</strong>
+        ${p.email ? `<div style="color:var(--muted);font-size:11px;">${escHtml(p.email)}</div>` : '<div style="color:#c0392b;font-size:11px;">⚠️ sem email cadastrado</div>'}
+      </div>
+    `).join('');
+  }
+
+  function selectLinkPessoa(id, nome, email) {
+    document.getElementById('linkPickPessoaId').value = id;
+    document.getElementById('linkPickPessoaNome').value = nome;
+    _linkPickEmail = email || null;
+    document.getElementById('linkPickGerar').disabled = false;
+    // Visual feedback
+    [...document.getElementById('linkPickResultados').children].forEach(c => c.style.background = '');
+    event.currentTarget.style.background = '#edf7ef';
+  }
+
+  async function gerarLinkSelecionado() {
+    const pessoa_tipo = document.getElementById('linkPickTipo').value;
+    const pessoa_id = document.getElementById('linkPickPessoaId').value;
+    const pessoa_nome = document.getElementById('linkPickPessoaNome').value;
+    if (!pessoa_id) return;
+    const btn = document.getElementById('linkPickGerar');
+    btn.disabled = true; btn.textContent = 'Gerando…';
+    const d = await callAcesso({ action: 'acesso_gerar_link_cadastro', pessoa_tipo, pessoa_id, pessoa_nome, email: _linkPickEmail });
+    btn.disabled = false; btn.textContent = 'Gerar Link';
+    const link = d?.data?.link || d?.link;
+    if (!link) { showToast('Erro: ' + (d?.error || 'falha desconhecida'), 'error'); return; }
+    _linkResultData = { link, pessoa_tipo, pessoa_id, pessoa_nome, email: _linkPickEmail };
+    closeLinkModal();
+    document.getElementById('linkResultNome').textContent = pessoa_nome;
+    document.getElementById('linkResultUrl').textContent = link;
+    document.getElementById('linkResultStatus').textContent = '';
+    document.getElementById('linkResultEmailBtn').disabled = !_linkPickEmail;
+    document.getElementById('linkResultEmailBtn').style.opacity = _linkPickEmail ? 1 : .4;
+    document.getElementById('linkResultEmailBtn').title = _linkPickEmail ? '' : 'Cadastro sem email';
+    document.getElementById('linkResultModal').classList.add('show');
+  }
+
+  function closeLinkResultModal() { document.getElementById('linkResultModal').classList.remove('show'); _linkResultData = null; }
+
+  async function linkResultCopy() {
+    if (!_linkResultData) return;
+    try { await navigator.clipboard.writeText(_linkResultData.link); document.getElementById('linkResultStatus').textContent = '✅ Link copiado!'; }
+    catch { document.getElementById('linkResultStatus').textContent = '⚠️ Não foi possível copiar — selecione manualmente acima.'; }
+  }
+
+  async function linkResultWhatsApp() {
+    if (!_linkResultData) return;
+    document.getElementById('linkResultStatus').textContent = 'Buscando WhatsApp do responsável…';
+    const r = await callAcesso({ action: 'acesso_link_whatsapp_info', ..._linkResultData });
+    const d = r?.data || r;
+    if (d?.wa_url) {
+      const phoneNote = d.whatsapp ? `Abrindo WhatsApp p/ ${d.whatsapp}…` : 'Abrindo WhatsApp (escolha o contato no app)…';
+      document.getElementById('linkResultStatus').textContent = phoneNote;
+      window.open(d.wa_url, '_blank');
+    } else {
+      document.getElementById('linkResultStatus').textContent = '❌ Erro: ' + (d?.error || 'falha');
+    }
+  }
+
+  async function linkResultEmail() {
+    if (!_linkResultData?.email) {
+      document.getElementById('linkResultStatus').textContent = '⚠️ Esse cadastro não tem email — copie o link e envie por outro meio.';
+      return;
+    }
+    document.getElementById('linkResultStatus').textContent = 'Enviando email…';
+    const r = await callAcesso({ action: 'acesso_enviar_link_email', ..._linkResultData });
+    const d = r?.data || r;
+    if (d?.sent) {
+      document.getElementById('linkResultStatus').textContent = `✅ Email enviado para ${_linkResultData.email}`;
+    } else if (d?.reason) {
+      document.getElementById('linkResultStatus').textContent = `❌ Falha: ${d.reason}`;
+    } else {
+      document.getElementById('linkResultStatus').textContent = `❌ Erro: ${r?.error || 'desconhecido'}`;
+    }
+  }
+
+  function escAttr(s) { return String(s||'').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
   async function searchFacePessoa() {
     const tipo = document.getElementById('faceTipo').value;
     const busca = document.getElementById('faceBusca').value.trim();
@@ -8982,6 +9150,56 @@ docker compose up -d --build</pre>
     navItems.forEach(n => { if (n.getAttribute('onclick')?.includes(`'${panel}'`)) target = n; });
     if (target) target.click();
     else showPanel(panel);
+  }
+
+  // ── Pendências de face ───────────────────────────────
+  let _setupPendentesData = [];
+
+  async function setupTogglePendentes() {
+    const wrap = document.getElementById('setupPendentesWrap');
+    const btn = document.getElementById('setupPendentesToggle');
+    if (wrap.style.display === 'none') {
+      wrap.style.display = 'block';
+      btn.textContent = 'Ocultar lista';
+      await loadSetupPendentes();
+    } else {
+      wrap.style.display = 'none';
+      btn.textContent = 'Mostrar lista';
+    }
+  }
+
+  async function loadSetupPendentes() {
+    const r = await callAcesso({ action: 'acesso_pendencias_face' });
+    const d = r?.data || r || {};
+    _setupPendentesData = d.pendentes || [];
+    document.getElementById('setupPendentesCount').textContent = _setupPendentesData.length;
+    const tb = document.getElementById('setupPendentesTable');
+    if (!_setupPendentesData.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="empty-state">🎉 Todos os alunos têm face cadastrada!</td></tr>';
+      return;
+    }
+    tb.innerHTML = _setupPendentesData.map(p => {
+      const linkBadge = p.tem_link_ativo
+        ? `<span style="background:#fff8e1;color:#b07d10;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">Link enviado</span>`
+        : `<span style="color:#888;font-size:12px;">—</span>`;
+      const emailCell = p.email
+        ? `<span style="font-size:12px;">${escHtml(p.email)}</span>`
+        : `<span style="color:#c0392b;font-size:11px;">⚠️ sem email</span>`;
+      const whatsCell = p.whatsapp
+        ? `<span style="font-family:'DM Mono',monospace;font-size:12px;">${escHtml(p.whatsapp)}</span>`
+        : `<span style="color:#888;font-size:12px;">—</span>`;
+      return `<tr>
+        <td style="font-weight:500;">${escHtml(p.nome||'—')}</td>
+        <td>${emailCell}</td>
+        <td>${whatsCell}</td>
+        <td>${linkBadge}</td>
+        <td><button onclick="setupEnviarLinkPendente('${p.id}','${escAttr(p.nome)}','${escAttr(p.email||'')}')" style="padding:6px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">📤 Gerar link</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function setupEnviarLinkPendente(id, nome, email) {
+    openLinkModal({ pessoa_tipo: 'aluno', pessoa_id: id, pessoa_nome: nome, email });
   }
 
   // Auto-refresh enquanto painel aberto

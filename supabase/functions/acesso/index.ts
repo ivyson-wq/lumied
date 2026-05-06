@@ -1452,6 +1452,50 @@ router.on("acesso_validar_foto", async (ctx) => {
 //  Cadastro de face PÚBLICO (link para famílias)
 // ═══════════════════════════════════════════════════════════════
 
+// ─── acesso_cadastro_token_info: retorna info do token sem consumir ───
+//     Sem auth — usado pela página pública pra mostrar nome da pessoa
+router.on("acesso_cadastro_token_info", async (ctx) => {
+  const { token_cadastro } = ctx.body as Any;
+  if (!token_cadastro || typeof token_cadastro !== "string") {
+    throw new AppError("VALIDATION_FAILED", "token_cadastro obrigatório.");
+  }
+  if (!/^[a-f0-9]{32,128}$/i.test(token_cadastro)) {
+    throw new AppError("AUTH_INVALID", "Token inválido.");
+  }
+
+  const { data: tk } = await ctx.sb.from("acesso_cadastro_tokens")
+    .select("pessoa_tipo, pessoa_nome, expira_em, usado, escola_id")
+    .eq("token", token_cadastro).maybeSingle();
+  if (!tk) throw new AppError("AUTH_INVALID", "Link inválido ou já utilizado.");
+  if (tk.usado) throw new AppError("AUTH_INVALID", "Este link já foi utilizado.");
+  if (tk.expira_em && new Date(tk.expira_em) < new Date()) {
+    throw new AppError("AUTH_EXPIRED", "Link expirado. Solicite um novo à escola.");
+  }
+
+  // Branding da escola
+  let escolaNome = "Lumied";
+  let escolaIcone = "🎓";
+  let corPrimaria = "#C8102E";
+  if (tk.escola_id) {
+    const { data: cfgRows } = await ctx.sb.from("escola_config")
+      .select("chave, valor").eq("escola_id", tk.escola_id);
+    const cfg: Any = {};
+    for (const r of cfgRows ?? []) cfg[r.chave] = r.valor;
+    escolaNome = cfg.escola_nome || escolaNome;
+    escolaIcone = cfg.escola_icone || escolaIcone;
+    corPrimaria = cfg.cor_primaria || corPrimaria;
+  }
+
+  return successResponse({
+    pessoa_nome: tk.pessoa_nome,
+    pessoa_tipo: tk.pessoa_tipo,
+    expira_em: tk.expira_em,
+    escola_nome: escolaNome,
+    escola_icone: escolaIcone,
+    cor_primaria: corPrimaria,
+  });
+});
+
 router.on("acesso_face_cadastro_publico", async (ctx) => {
   const { token_cadastro, pessoa_nome, foto } = ctx.body as Any;
   if (!token_cadastro || !foto) throw new AppError("VALIDATION_FAILED", "token_cadastro e foto são obrigatórios.");
@@ -1557,6 +1601,160 @@ router.on("acesso_gerar_link_cadastro", authGerente, async (ctx) => {
   const link = `${appUrl}/cadastro-face.html?token=${token}`;
 
   return successResponse({ token, link, expira_em: data.expira_em });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Pendências de cadastro facial — alunos sem face cadastrada
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_pendencias_face", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+
+  const { data: alunos } = await ctx.sb.from("alunos")
+    .select("id, nome, serie_id, familia_email, email")
+    .eq("escola_id", ctx.escola_id).eq("ativo", true)
+    .order("nome");
+
+  const alunoIds = (alunos ?? []).map((a: Any) => a.id);
+  let comFace = new Set<string>();
+  if (alunoIds.length) {
+    const { data: faces } = await ctx.sb.from("acesso_faces")
+      .select("pessoa_id, sync_status")
+      .eq("escola_id", ctx.escola_id).eq("ativo", true).eq("pessoa_tipo", "aluno")
+      .in("pessoa_id", alunoIds);
+    comFace = new Set((faces ?? []).map((f: Any) => f.pessoa_id));
+  }
+
+  // Tokens já enviados (não consumidos, não expirados) — pra exibir "Já enviado"
+  const { data: tokens } = await ctx.sb.from("acesso_cadastro_tokens")
+    .select("pessoa_id, criado_em, expira_em, usado")
+    .eq("escola_id", ctx.escola_id).eq("pessoa_tipo", "aluno");
+  const tokenByAluno = new Map<string, Any>();
+  for (const t of tokens ?? []) {
+    const cur = tokenByAluno.get(t.pessoa_id);
+    if (!cur || new Date(t.criado_em) > new Date(cur.criado_em)) tokenByAluno.set(t.pessoa_id, t);
+  }
+
+  // Whatsapp do responsável via wa_familias (matching por aluno_nome)
+  const { data: waFams } = await ctx.sb.from("wa_familias")
+    .select("aluno_nome, whatsapp, opt_in")
+    .eq("escola_id", ctx.escola_id);
+  const waByNome = new Map<string, string>();
+  for (const w of waFams ?? []) {
+    if (w.aluno_nome && w.whatsapp) waByNome.set(String(w.aluno_nome).toLowerCase().trim(), w.whatsapp);
+  }
+
+  const pendentes = (alunos ?? []).filter((a: Any) => !comFace.has(a.id)).map((a: Any) => {
+    const tk = tokenByAluno.get(a.id);
+    const linkAtivo = tk && !tk.usado && new Date(tk.expira_em) > new Date();
+    return {
+      id: a.id,
+      nome: a.nome,
+      email: a.familia_email || a.email || null,
+      whatsapp: waByNome.get(String(a.nome || "").toLowerCase().trim()) || null,
+      tem_link_ativo: !!linkAtivo,
+      link_expira_em: linkAtivo ? tk.expira_em : null,
+    };
+  });
+
+  return successResponse({
+    total_alunos: alunos?.length || 0,
+    com_face: comFace.size,
+    pendentes,
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Envio do link por email (Resend via send-email)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_enviar_link_email", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { pessoa_tipo, pessoa_id, pessoa_nome, email } = ctx.body as Any;
+  if (!pessoa_tipo || !pessoa_id || !pessoa_nome || !email) {
+    throw new AppError("VALIDATION_FAILED", "pessoa_tipo, pessoa_id, pessoa_nome e email são obrigatórios.");
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new AppError("VALIDATION_FAILED", "Email inválido.");
+  }
+
+  // Reutiliza acesso_gerar_link_cadastro internamente
+  const innerCtx: Any = { ...ctx, body: { pessoa_tipo, pessoa_id, pessoa_nome, email } };
+  const linkRes: Any = await router.dispatch("acesso_gerar_link_cadastro", innerCtx);
+  let linkData: Any = null;
+  try { linkData = await linkRes.json(); } catch (_) { /* ignore */ }
+  const link = linkData?.data?.link || linkData?.link;
+  if (!link) throw new AppError("BAD_REQUEST", "Não consegui gerar o link.");
+
+  // Chama send-email com tipo='cadastro_face'
+  const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`;
+  const r = await fetch(sendUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    },
+    body: JSON.stringify({
+      tipo: "cadastro_face",
+      escola_id: ctx.escola_id,
+      to: email,
+      pessoa_nome,
+      pessoa_tipo,
+      link,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const sendBody: Any = await r.json().catch(() => ({}));
+  if (!r.ok || sendBody?.sent === false) {
+    return successResponse({ ok: false, link, sent: false, reason: sendBody?.reason || `HTTP ${r.status}` });
+  }
+  return successResponse({ ok: true, link, sent: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  WhatsApp helper — retorna URL wa.me e telefone do responsável
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_link_whatsapp_info", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { pessoa_tipo, pessoa_id, pessoa_nome, link } = ctx.body as Any;
+  if (!pessoa_tipo || !pessoa_id || !pessoa_nome || !link) {
+    throw new AppError("VALIDATION_FAILED", "pessoa_tipo, pessoa_id, pessoa_nome e link são obrigatórios.");
+  }
+
+  // Buscar telefone via wa_familias (apenas pra alunos)
+  let phone: string | null = null;
+  if (pessoa_tipo === "aluno") {
+    const { data: aluno } = await ctx.sb.from("alunos").select("nome").eq("id", pessoa_id).maybeSingle();
+    if (aluno?.nome) {
+      const { data: wa } = await ctx.sb.from("wa_familias")
+        .select("whatsapp")
+        .eq("escola_id", ctx.escola_id)
+        .ilike("aluno_nome", aluno.nome)
+        .maybeSingle();
+      phone = wa?.whatsapp || null;
+    }
+  }
+
+  // Branding pra mensagem
+  const { data: cfgRows } = await ctx.sb.from("escola_config")
+    .select("chave, valor").eq("escola_id", ctx.escola_id);
+  const cfg: Any = {};
+  for (const r of cfgRows ?? []) cfg[r.chave] = r.valor;
+  const escolaNome = cfg.escola_nome || "a escola";
+
+  const msg = `Olá! ${escolaNome} preparou um cadastro facial para ${pessoa_nome}. ` +
+    `Use o link abaixo (válido por 7 dias) pra enviar uma foto. ` +
+    `Tudo é feito do celular, leva menos de 1 minuto:\n\n${link}\n\n` +
+    `Dicas: boa iluminação, rosto centralizado, sem óculos escuros ou máscara. ` +
+    `Após o envio, a escola revisa e aprova.`;
+
+  const phoneClean = phone ? phone.replace(/[^\d]/g, "") : null;
+  const waUrl = phoneClean
+    ? `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+  return successResponse({ whatsapp: phone, wa_url: waUrl, mensagem: msg });
 });
 
 // ═══════════════════════════════════════════════════════════════

@@ -81,6 +81,47 @@ function emailAtividade(body: Record<string, unknown>, escolaNome: string, cor: 
   }
 }
 
+function emailCadastroFace(body: Record<string, unknown>, escolaNome: string, cor: string, icone: string): { subject: string; html: string } {
+  const { pessoa_nome, pessoa_tipo, link } = body
+  const tipoLabel = pessoa_tipo === 'aluno' ? 'aluno(a)' : (pessoa_tipo === 'responsavel' ? 'responsável' : 'colaborador(a)')
+  return {
+    subject: `📷 Cadastro facial — ${escolaNome}`,
+    html: `
+      <div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
+        <h2 style="color:${cor};margin:0 0 8px 0;">${icone} ${escolaNome}</h2>
+        <p style="font-size:15px;line-height:1.6;margin:16px 0;">Olá!</p>
+        <p style="font-size:15px;line-height:1.6;margin:16px 0;">
+          A escola preparou um <strong>cadastro facial</strong> para o(a) ${tipoLabel} <strong>${pessoa_nome}</strong>.
+          Esse cadastro permite o reconhecimento na entrada/saída sem precisar de cartão.
+        </p>
+        <p style="text-align:center;margin:28px 0;">
+          <a href="${link}" style="display:inline-block;background:${cor};color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
+            Cadastrar foto agora
+          </a>
+        </p>
+        <div style="background:#f8f5f0;border-radius:10px;padding:16px;margin:24px 0;font-size:13px;line-height:1.6;color:#5a5249;">
+          <strong style="color:#1a1a1a;">Dicas para uma boa foto:</strong><br>
+          • Olhe diretamente para a câmera<br>
+          • Boa iluminação no rosto, sem sombras<br>
+          • Sem óculos escuros, boné ou máscara<br>
+          • Rosto centralizado, próximo da câmera
+        </div>
+        <p style="font-size:13px;color:#666;margin:16px 0;">
+          O link é válido por <strong>7 dias</strong>. Após o envio, a escola revisa e aprova manualmente.
+        </p>
+        <p style="font-size:12px;color:#999;margin:24px 0 0 0;">
+          Se o botão acima não funcionar, copie este link: <br>
+          <a href="${link}" style="color:${cor};word-break:break-all;">${link}</a>
+        </p>
+        <hr style="border:none;border-top:1px solid #e2dbd1;margin:32px 0 16px;">
+        <p style="font-size:11px;color:#999;text-align:center;margin:0;">
+          Este é um e-mail automático do Portal ${escolaNome}.
+        </p>
+      </div>
+    `,
+  }
+}
+
 // ── Handler ──────────────────────────────────────────────────
 Deno.serve(async (req) => {
   CORS = getCorsHeaders(req)
@@ -114,12 +155,16 @@ Deno.serve(async (req) => {
     case 'ausencia':  email = emailAusencia(body, escolaNome, cor, icone); break
     case 'turno':     email = emailTurno(body, escolaNome, cor, icone); break
     case 'atividade': email = emailAtividade(body, escolaNome, cor, icone); break
+    case 'cadastro_face': email = emailCadastroFace(body, escolaNome, cor, icone); break
     default: return err('Tipo de e-mail não reconhecido: ' + tipo)
   }
 
-  // Busca o e-mail da escola para enviar a notificação
+  // Busca o e-mail destino:
+  // - Para `cadastro_face`, vai para o responsável (body.to)
+  // - Para os demais (ausência/turno/atividade), notifica a secretaria da escola
   const RESEND_KEY = Deno.env.get('RESEND_API_KEY')
   const ESCOLA_EMAIL = cfg.escola_email_notif || Deno.env.get('ESCOLA_EMAIL') || cfg.escola_email_sender || 'secretaria@escola.com.br'
+  const TO_EMAIL = (tipo === 'cadastro_face' && body.to) ? String(body.to) : ESCOLA_EMAIL
 
   if (!RESEND_KEY) {
     // Se Resend não está configurado, loga e retorna sucesso silencioso
@@ -133,7 +178,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
       body: JSON.stringify({
         from: `${escolaNome} <${emailSender}>`,
-        to: [ESCOLA_EMAIL],
+        to: [TO_EMAIL],
         subject: email.subject,
         html: email.html,
       }),

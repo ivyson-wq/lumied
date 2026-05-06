@@ -129,26 +129,41 @@ async function apiCall(body) {
   return r.json();
 }
 
-// Verificar token ao carregar
+// Verificar token ao carregar (sem consumir)
 (async function() {
   if (!token) { showError('Nenhum token fornecido. Use o link enviado pela escola.'); return; }
 
-  // Validar token fazendo uma chamada que retorna info sem consumir
-  // Como não temos um endpoint de verificação separado, tentamos enviar foto vazia para ver se o token é válido
-  // Melhor: verificar direto no banco
   try {
-    const d = await apiCall({ action: 'acesso_face_cadastro_publico', token_cadastro: token, foto: 'test' });
-    if (d.error && d.error.includes('inválido')) { showError('Este link é inválido ou já foi utilizado.'); return; }
-    if (d.error && d.error.includes('expirado')) { showError('Este link expirou. Solicite um novo à escola.'); return; }
-    // Se deu outro erro (ex: foto inválida), o token é válido — mostrar form
-  } catch(_) {}
+    const r = await apiCall({ action: 'acesso_cadastro_token_info', token_cadastro: token });
+    if (r?.code === 'AUTH_INVALID' || (r?.error && /inv[áa]lid/i.test(r.error))) {
+      showError(r.error || 'Este link é inválido ou já foi utilizado.'); return;
+    }
+    if (r?.code === 'AUTH_EXPIRED' || (r?.error && /expir/i.test(r.error))) {
+      showError('Este link expirou. Solicite um novo à escola.'); return;
+    }
+    if (r?.error) { showError(r.error); return; }
 
-  // Token parece válido — precisamos buscar os dados
-  // Vamos extrair do próprio erro ou mostrar formulário genérico
-  document.getElementById('stateLoading').style.display = 'none';
-  document.getElementById('stateForm').style.display = 'block';
-  document.getElementById('pessoaNome').textContent = 'Carregando...';
-  document.getElementById('pessoaTipo').textContent = '';
+    const d = r?.data || r || {};
+    const nome = d.pessoa_nome || '—';
+    const tipo = d.pessoa_tipo === 'aluno' ? 'Aluno(a)' : (d.pessoa_tipo === 'responsavel' ? 'Responsável' : 'Funcionário(a)');
+    document.getElementById('pessoaNome').textContent = nome;
+    document.getElementById('pessoaTipo').textContent = `${tipo} — ${d.escola_nome || 'Lumied'}`;
+
+    // Branding
+    if (d.cor_primaria) {
+      const style = document.createElement('style');
+      style.textContent = `.btn-primary{background:${d.cor_primaria}!important;}.btn-primary:hover{filter:brightness(.9);}.quality-feedback.ok{color:${d.cor_primaria};}`;
+      document.head.appendChild(style);
+    }
+    if (d.escola_icone) {
+      document.title = `${d.escola_icone} Cadastro Facial — ${d.escola_nome || 'Lumied'}`;
+    }
+
+    document.getElementById('stateLoading').style.display = 'none';
+    document.getElementById('stateForm').style.display = 'block';
+  } catch(e) {
+    showError('Não foi possível verificar o link. Verifique sua conexão e tente novamente.');
+  }
 })();
 
 function showError(msg) {
