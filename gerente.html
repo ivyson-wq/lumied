@@ -2081,27 +2081,22 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
         </div>
 
-        <!-- Atalhos Favoritos (hidden until populated) -->
-        <div class="customize-bar">
-          <div class="cb-title">⭐ Meus Atalhos</div>
-          <button class="customize-btn" id="customizeToggle" onclick="toggleCustomizeMode()">Personalizar</button>
-        </div>
-        <div class="dash-fav-grid" id="dashFavGrid"></div>
+        <!-- Tendências do ano (colapsável, compacto) -->
+        <details id="trendsBlock" style="margin-top:18px;">
+          <summary style="cursor:pointer;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;list-style:none;user-select:none;">
+            <span style="font-size:14px;">📈</span>
+            <span style="flex:1;">Tendências do ano</span>
+            <select id="analyticsAno" onchange="event.stopPropagation();loadAnalytics();" onclick="event.stopPropagation();" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff;">
+              <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
+            </select>
+            <span style="font-size:11px;color:var(--muted);">▼</span>
+          </summary>
+          <div id="analyticsContent" style="padding-top:12px;"><div class="empty-state" style="font-size:12px;">Carregando...</div></div>
+        </details>
 
-        <!-- Acessados Recentemente (hidden until populated) -->
-        <div class="recently-used" id="recentlyUsed">
-          <div class="ru-title">Recentes</div>
-          <div class="ru-chips" id="recentChips"></div>
-        </div>
-
-        <!-- Charts — secundários, abaixo do que importa -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin:24px 0 16px;flex-wrap:wrap;gap:10px;">
-          <div class="sec-title" style="margin:0;">📊 Tendências do ano</div>
-          <select id="analyticsAno" onchange="loadAnalytics()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
-            <option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option>
-          </select>
-        </div>
-        <div id="analyticsContent"><div class="empty-state">Carregando...</div></div>
+        <!-- Atalhos Favoritos (escondido — ocultos do dashboard mas mantidos para outros usos) -->
+        <div id="dashFavGrid" style="display:none;"></div>
+        <div id="recentlyUsed" style="display:none;"><div id="recentChips"></div></div>
       </div>
 
       <!-- FINANCEIRO - DASHBOARD -->
@@ -3968,7 +3963,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const hour = new Date().getHours();
     const period = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
     document.getElementById('greetingTopbar').textContent = period + ', ' + firstName + ' 👋';
-    document.getElementById('greetingBanner').style.display = '';
+    // O briefing card cobre a saudação no painel analytics — só mostramos esse banner em outros painéis
+    document.getElementById('greetingBanner').dataset.shown = '1';
     carregarIaUsoChip();
     // Defer loads to after all script declarations are initialized
     setTimeout(function() {
@@ -4030,6 +4026,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
+    // No painel analytics, escondemos title+icon+breadcrumb+pills (a hero card já dá boas-vindas e contexto)
+    var _isDash = (id === 'analytics');
+    document.getElementById('topbarTitle').style.display = _isDash ? 'none' : '';
+    document.getElementById('topbarIcon').style.display = _isDash ? 'none' : '';
+    var _greetEl = document.getElementById('greetingBanner'); if (_greetEl) _greetEl.style.display = _isDash ? 'none' : _greetEl.dataset.shown === '1' ? '' : 'none';
+    var _pillsEl = document.getElementById('topbarPills'); if (_pillsEl) _pillsEl.style.display = _isDash ? 'none' : '';
     // Breadcrumb
     const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração'};
     const sec = panelSections[id] || '';
@@ -11003,64 +11005,61 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     const maxGasto = Math.max(...d.gastos_almox_por_mes, 1);
     const maxManut = Math.max(...d.manutencao_por_mes, 1);
 
+    var sumGastos = d.gastos_almox_por_mes.reduce((s,v)=>s+v,0);
+    var miniChart = function(values, max, color, fmt) {
+      return '<div style="display:flex;align-items:flex-end;gap:2px;height:48px;">' +
+        values.map(function(v,i) {
+          var h = Math.max(2, v/max*44);
+          return '<div style="flex:1;background:' + (v>0?color:'#f0ece6') + ';border-radius:2px 2px 0 0;height:' + h + 'px;" title="' + _MC[i] + ': ' + (fmt?fmt(v):v) + '"></div>';
+        }).join('') +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-top:4px;letter-spacing:.3px;"><span>' + _MC[0] + '</span><span>' + _MC[5] + '</span><span>' + _MC[11] + '</span></div>';
+    };
     try { el.innerHTML = `
-      <!-- Solicitacoes por mes -->
-      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Solicitacoes de Turno por Mes</div>
-        <div style="display:flex;align-items:flex-end;gap:4px;height:120px;">
-          ${d.solicitacoes_por_mes.map((v,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div style="font-size:10px;font-weight:600;color:${v>0?'var(--red)':'var(--muted)'};">${v||''}</div>
-            <div style="width:100%;background:${v>0?'var(--red)':'#f0ece6'};border-radius:4px 4px 0 0;height:${Math.max(4,v/maxSol*100)}px;transition:height .3s;"></div>
-            <div style="font-size:9px;color:var(--muted);">${_MC[i]}</div>
-          </div>`).join('')}
-        </div>
-      </div>
-
-      <!-- Gastos almoxarifado por mes -->
-      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Gastos Almoxarifado por Mes (R$)</div>
-        <div style="display:flex;align-items:flex-end;gap:4px;height:120px;">
-          ${d.gastos_almox_por_mes.map((v,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div style="font-size:9px;font-weight:600;color:${v>0?'#1a6bb5':'var(--muted)'};">${v>0?_fmtBRL(v):''}</div>
-            <div style="width:100%;background:${v>0?'#1a6bb5':'#f0ece6'};border-radius:4px 4px 0 0;height:${Math.max(4,v/maxGasto*100)}px;transition:height .3s;"></div>
-            <div style="font-size:9px;color:var(--muted);">${_MC[i]}</div>
-          </div>`).join('')}
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <!-- Manutencao por mes -->
-        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Chamados de Manutencao</div>
-          <div style="display:flex;align-items:flex-end;gap:4px;height:100px;">
-            ${d.manutencao_por_mes.map((v,i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
-              <div style="font-size:9px;color:${v>0?'#d4830a':'var(--muted)'};">${v||''}</div>
-              <div style="width:100%;background:${v>0?'#d4830a':'#f0ece6'};border-radius:4px 4px 0 0;height:${Math.max(4,v/maxManut*100)}px;"></div>
-              <div style="font-size:8px;color:var(--muted);">${_MC[i]}</div>
-            </div>`).join('')}
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+        <!-- Solicitacoes -->
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Solicitações de turno</div>
+            <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;color:var(--red);">${d.solicitacoes_por_mes.reduce((s,v)=>s+v,0)}</div>
           </div>
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-            ${Object.entries(d.manutencao_status||{}).map(([s,c]) => `<span style="font-size:11px;padding:2px 8px;background:#f5f0ea;border-radius:10px;">${_MS[s]||s}: ${c}</span>`).join('')}
+          ${miniChart(d.solicitacoes_por_mes, maxSol, 'var(--red)')}
+        </div>
+
+        <!-- Gastos almox -->
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Gastos almoxarifado</div>
+            <div style="font-family:'Lora',serif;font-size:16px;font-weight:700;color:#1a6bb5;">${sumGastos>=1000?'R$ '+(sumGastos/1000).toFixed(1).replace('.',',')+'k':_fmtBRL(sumGastos)}</div>
           </div>
+          ${miniChart(d.gastos_almox_por_mes, maxGasto, '#1a6bb5', _fmtBRL)}
+        </div>
+
+        <!-- Manutencao -->
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Manutenção</div>
+            <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;color:#d4830a;">${d.manutencao_por_mes.reduce((s,v)=>s+v,0)}</div>
+          </div>
+          ${miniChart(d.manutencao_por_mes, maxManut, '#d4830a')}
         </div>
 
         <!-- Atividades -->
-        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Atividades Extracurriculares</div>
-          ${(d.atividades||[]).length ? d.atividades.map(a => `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            <div style="flex:1;font-size:13px;font-weight:500;">${esc(a.nome)}</div>
-            <div style="font-size:13px;font-weight:700;color:var(--blue);">${a.inscritos}</div>
-            <div style="font-size:10px;color:var(--muted);">inscritos</div>
-          </div>`).join('') : '<div style="color:var(--muted);font-size:13px;">Nenhuma atividade cadastrada.</div>'}
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px;">Atividades extracurriculares</div>
+          ${(d.atividades||[]).length ? d.atividades.slice(0,4).map(a => `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.nome)}</span>
+            <span style="font-weight:700;color:var(--blue);">${a.inscritos}</span>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:12px;font-style:italic;">Nenhuma atividade.</div>'}
         </div>
       </div>
 
-      <div id="riskScoreWidget" style="margin-top:16px;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div style="font-size:14px;font-weight:700;">Alunos em Risco</div>
-          <button onclick="showPanel('alunos')" style="font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:inherit;">Ver todos →</button>
+      <div id="riskScoreWidget" style="margin-top:10px;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Alunos em risco</div>
+          <button onclick="showPanel('alunos')" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600;">Ver todos →</button>
         </div>
-        <div id="riskScoreWidgetContent"><div class="empty-state" style="padding:12px;">Carregando...</div></div>
+        <div id="riskScoreWidgetContent" style="font-size:12px;">Carregando...</div>
       </div>
     `;
     api({ action: 'risk_scores_list', filtro: 'alto' }).then(function(rs) {
