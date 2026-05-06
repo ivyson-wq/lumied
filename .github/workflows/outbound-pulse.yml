@@ -2,6 +2,9 @@ name: Outbound Pulse Diário
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - .github/outbound-trigger.txt
   schedule:
     # 10:00 UTC = 07:00 BRT — dias úteis
     - cron: '0 10 * * 1-5'
