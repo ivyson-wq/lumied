@@ -174,14 +174,16 @@ WhatsApp travas: 80% alerta, 95% urgente, 100% bloqueio. Resp financeiro imutáv
 
 ---
 
-## Blog Automation
+## Blog Automation & Sales Pipeline
 
-2 Remote Triggers publicam 1 artigo SEO/dia automaticamente:
-- **`lumied-daily-blog`** (`trig_016b85mG9n2bhfnKYRkR9YgX`): 08:00 BRT, publica de `scripts/seo-topics.json`, Sonnet 4.6
+3 Remote Triggers automatizam aquisição/conteúdo:
+- **`lumied-daily-blog`** (`trig_016b85mG9n2bhfnKYRkR9YgX`): 08:00 BRT, publica artigo de `scripts/seo-topics.json` em `lumied.com.br/site/blog/<slug>/`, Sonnet 4.6. Step 11 chama `insta-publisher/api/auto-content/from-blog` pra gerar carousel @lumi.ed.
 - **`lumied-weekly-topic-refill`** (`trig_01MwQDjREyasfxp71bQUAiSv`): dom 07:00 BRT, gera +30 tópicos se pending < 30
-- Playbooks: `scripts/daily-blog-agent.md`, `scripts/weekly-topic-refill-agent.md`
+- **`lumied-outbound-pulse`** (`trig_016BPyyCVVemHwyaEiNo4wef`): seg-sex 07:00 BRT (`0 10 * * 1-5`), puxa leads de `gtm.outbound_pendentes`, personaliza com Sonnet 4.6 e envia CSV+HTML pro Ivyson via Resend
+- Playbooks: `scripts/daily-blog-agent.md`, `scripts/weekly-topic-refill-agent.md`, `scripts/outbound-csv-agent.md`
 - IndexNow: `scripts/indexnow-submit.sh` | Key: `507a0a2834397332e34d6e9c94480acd`
 - Google Search Console verificado, sitemap submetido
+- Shortlinks WA: `lumied.com.br/{ig,li,yt,email,qr,wa}` (vercel.json) → `wa.me/5554997021634` + log `wa_clicks` (mig 262)
 
 ---
 
