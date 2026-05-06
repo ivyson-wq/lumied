@@ -177,11 +177,17 @@ async function bridgeDispatch(
     return { ok: false, status: 500, error: "Bridge gateway não configurado (BRIDGE_GATEWAY_URL/SECRET)." };
   }
 
+  // Embute device address no payload para o daemon saber a qual iDFace falar
+  const fullPayload = {
+    device: { id: device.id, ip: device.ip, porta: device.porta || 443 },
+    ...payload,
+  };
+
   const { data: cmd, error: insErr } = await sb.from("acesso_bridge_comandos").insert({
     escola_id: device.escola_id,
     dispositivo_id: device.id,
     tipo,
-    payload,
+    payload: fullPayload,
   }).select("id").single();
   if (insErr || !cmd) {
     return { ok: false, status: 500, error: `Erro enfileirando comando: ${insErr?.message || "desconhecido"}` };
@@ -192,7 +198,7 @@ async function bridgeDispatch(
     res = await fetch(`${gatewayUrl}/dispatch/${device.escola_id}`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${gatewaySecret}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ req_id: cmd.id, wait_ms: waitMs, tipo, payload }),
+      body: JSON.stringify({ req_id: cmd.id, wait_ms: waitMs, tipo, payload: fullPayload }),
       signal: AbortSignal.timeout(waitMs + 5000),
     });
   } catch (e) {
