@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Preview — Email cadastro facial Maple Bear</title>
+<style>
+body { background:#f0ece6; padding:32px 16px; font-family:Arial,sans-serif; min-height:100vh; margin:0; }
+.preview-shell {
+  max-width:700px; margin:0 auto; background:#fff; border-radius:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.08); overflow:hidden;
+}
+.preview-bar {
+  background:#1a1a1a; color:#fff; padding:14px 24px; font-size:13px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.preview-bar .meta { font-family:'DM Mono',Consolas,monospace; opacity:.7; font-size:11px; }
+.email-body { padding:0; }
+.note {
+  max-width:700px; margin:24px auto 0; padding:14px 18px;
+  background:#fff8e1; border:1px solid #ffe082; border-radius:10px;
+  color:#5a4a00; font-size:13px; line-height:1.6;
+}
+</style>
+</head>
+<body>
+
+<div class="note">
+  <strong>📧 Preview do email enviado ao responsável.</strong><br>
+  Cores, ícone e nome da escola vêm do <code>escola_config</code> — esse exemplo usa o branding da Maple Bear (vermelho #C8102E, ícone 🍁). Pra Construfare ou outra escola, troca automaticamente.
+</div>
+
+<div class="preview-shell">
+  <div class="preview-bar">
+    <div>
+      <strong>De:</strong> Maple Bear Caxias do Sul &lt;noreply@maplebearcaxias.lumied.com.br&gt;<br>
+      <strong>Para:</strong> mariana.silva@gmail.com<br>
+      <strong>Assunto:</strong> 📷 Cadastro facial — Maple Bear Caxias do Sul
+    </div>
+    <div class="meta">tipo=cadastro_face</div>
+  </div>
+  <div class="email-body">
+
+  <!-- ↓↓↓ HTML EXATO do template de send-email/index.ts ↓↓↓ -->
+  <div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
+    <h2 style="color:#C8102E;margin:0 0 8px 0;">🍁 Maple Bear Caxias do Sul</h2>
+    <p style="font-size:15px;line-height:1.6;margin:16px 0;">Olá!</p>
+    <p style="font-size:15px;line-height:1.6;margin:16px 0;">
+      A escola preparou um <strong>cadastro facial</strong> para o(a) aluno(a) <strong>João Silva</strong>.
+      Esse cadastro permite o reconhecimento na entrada/saída sem precisar de cartão.
+    </p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="https://maplebearcaxias.lumied.com.br/cadastro-face.html?token=a3f7c9d2e1b8..." style="display:inline-block;background:#C8102E;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
+        Cadastrar foto agora
+      </a>
+    </p>
+    <div style="background:#f8f5f0;border-radius:10px;padding:16px;margin:24px 0;font-size:13px;line-height:1.6;color:#5a5249;">
+      <strong style="color:#1a1a1a;">Dicas para uma boa foto:</strong><br>
+      • Olhe diretamente para a câmera<br>
+      • Boa iluminação no rosto, sem sombras<br>
+      • Sem óculos escuros, boné ou máscara<br>
+      • Rosto centralizado, próximo da câmera
+    </div>
+    <p style="font-size:13px;color:#666;margin:16px 0;">
+      O link é válido por <strong>7 dias</strong>. Após o envio, a escola revisa e aprova manualmente.
+    </p>
+    <p style="font-size:12px;color:#999;margin:24px 0 0 0;">
+      Se o botão acima não funcionar, copie este link: <br>
+      <a href="https://maplebearcaxias.lumied.com.br/cadastro-face.html?token=a3f7c9d2e1b8..." style="color:#C8102E;word-break:break-all;">https://maplebearcaxias.lumied.com.br/cadastro-face.html?token=a3f7c9d2e1b8c5d4e3f2a1b9c8d7e6f5</a>
+    </p>
+    <hr style="border:none;border-top:1px solid #e2dbd1;margin:32px 0 16px;">
+    <p style="font-size:11px;color:#999;text-align:center;margin:0;">
+      Este é um e-mail automático do Portal Maple Bear Caxias do Sul.
+    </p>
+  </div>
+  <!-- ↑↑↑ FIM template ↑↑↑ -->
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -1604,6 +1604,155 @@ router.on("acesso_gerar_link_cadastro", authGerente, async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  Status de responsáveis por aluno (slots: 1 obrigatório + 2 opc)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_alunos_responsaveis_status", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { busca } = ctx.body as Any;
+
+  let aq = ctx.sb.from("alunos")
+    .select("id, nome, serie_id, familia_email, email")
+    .eq("escola_id", ctx.escola_id).eq("ativo", true)
+    .order("nome");
+  if (busca && String(busca).trim().length >= 2) {
+    aq = aq.ilike("nome", `%${String(busca).trim()}%`);
+  }
+  aq = aq.limit(busca ? 100 : 200);
+  const { data: alunos } = await aq;
+  if (!alunos?.length) {
+    return successResponse({ alunos: [], total: 0, com_min_obrigatorio: 0, min_responsaveis: 1, recomendado: 3 });
+  }
+
+  const alunoIds = alunos.map((a: Any) => a.id);
+
+  // Autorizados de retirada (responsáveis cadastrados pelo gerente)
+  const { data: perms } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id, aluno_id, responsavel_id, responsavel_nome, responsavel_email, responsavel_foto_url, parentesco, validade")
+    .eq("escola_id", ctx.escola_id)
+    .in("aluno_id", alunoIds)
+    .eq("autorizado", true)
+    .order("criado_em", { ascending: true });
+
+  // Faces cadastradas (com sync_status — pra mostrar pendente/aprovado/erro)
+  const responsavelIds = (perms ?? []).map((p: Any) => p.responsavel_id).filter((x: Any) => x);
+  let facesByPid = new Map<string, Any>();
+  if (responsavelIds.length) {
+    const { data: faces } = await ctx.sb.from("acesso_faces")
+      .select("pessoa_id, sync_status, atualizado_em")
+      .eq("escola_id", ctx.escola_id).eq("ativo", true).eq("pessoa_tipo", "responsavel")
+      .in("pessoa_id", responsavelIds);
+    for (const f of faces ?? []) facesByPid.set(f.pessoa_id, f);
+  }
+
+  // Tokens ativos (link enviado, ainda não usado, não expirou) por responsavel_id
+  const { data: tokens } = await ctx.sb.from("acesso_cadastro_tokens")
+    .select("pessoa_id, criado_em, expira_em, usado")
+    .eq("escola_id", ctx.escola_id).eq("pessoa_tipo", "responsavel");
+  const tokenByPid = new Map<string, Any>();
+  for (const t of tokens ?? []) {
+    const cur = tokenByPid.get(t.pessoa_id);
+    if (!cur || new Date(t.criado_em) > new Date(cur.criado_em)) tokenByPid.set(t.pessoa_id, t);
+  }
+
+  // Agrupa por aluno
+  const permsByAluno = new Map<string, Any[]>();
+  for (const p of perms ?? []) {
+    const list = permsByAluno.get(p.aluno_id) || [];
+    list.push(p);
+    permsByAluno.set(p.aluno_id, list);
+  }
+
+  const min = 1;       // obrigatório
+  const recomendado = 3; // 1 + 2 opcionais
+
+  const alunosOut = alunos.map((a: Any) => {
+    const responsaveis = (permsByAluno.get(a.id) || []).map((p: Any) => {
+      const face = p.responsavel_id ? facesByPid.get(p.responsavel_id) : null;
+      const tk = p.responsavel_id ? tokenByPid.get(p.responsavel_id) : null;
+      const linkAtivo = tk && !tk.usado && new Date(tk.expira_em) > new Date();
+      let face_status: "cadastrada" | "aguardando_aprovacao" | "erro" | "link_enviado" | "sem_face" = "sem_face";
+      if (face) {
+        if (face.sync_status === "sincronizado") face_status = "cadastrada";
+        else if (face.sync_status === "aguardando_aprovacao") face_status = "aguardando_aprovacao";
+        else if (face.sync_status === "erro") face_status = "erro";
+        else face_status = "cadastrada";
+      } else if (linkAtivo) face_status = "link_enviado";
+      return {
+        id: p.id,
+        responsavel_id: p.responsavel_id,
+        nome: p.responsavel_nome,
+        email: p.responsavel_email,
+        parentesco: p.parentesco,
+        foto_url: p.responsavel_foto_url,
+        validade: p.validade,
+        face_status,
+        link_expira_em: linkAtivo ? tk.expira_em : null,
+      };
+    });
+    const cadastrados = responsaveis.filter((r: Any) => r.face_status === "cadastrada" || r.face_status === "aguardando_aprovacao").length;
+    return {
+      id: a.id,
+      nome: a.nome,
+      familia_email: a.familia_email || a.email || null,
+      responsaveis,
+      slots_preenchidos: responsaveis.length,
+      faces_ok: cadastrados,
+      atende_minimo: cadastrados >= min,
+      atende_recomendado: cadastrados >= recomendado,
+    };
+  });
+
+  const comMin = alunosOut.filter((a: Any) => a.atende_minimo).length;
+
+  return successResponse({
+    alunos: alunosOut,
+    total: alunos.length,
+    com_min_obrigatorio: comMin,
+    min_responsaveis: min,
+    recomendado,
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Cadastrar responsável + opcionalmente já gerar link de face
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_responsavel_create", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { aluno_id, responsavel_nome, parentesco, responsavel_email, validade, gerar_link } = ctx.body as Any;
+  if (!aluno_id || !responsavel_nome) {
+    throw new AppError("VALIDATION_FAILED", "aluno_id e responsavel_nome são obrigatórios.");
+  }
+  const { data: aluno } = await ctx.sb.from("alunos").select("id, nome").eq("id", aluno_id).eq("escola_id", ctx.escola_id).maybeSingle();
+  if (!aluno) throw new AppError("NOT_FOUND", "Aluno não encontrado.");
+
+  const responsavel_id = crypto.randomUUID();
+  const { data: perm, error } = await ctx.sb.from("acesso_permissoes_retirada").insert({
+    escola_id: ctx.escola_id,
+    aluno_id,
+    aluno_nome: aluno.nome,
+    responsavel_id,
+    responsavel_nome,
+    responsavel_email: responsavel_email || null,
+    parentesco: parentesco || null,
+    validade: validade || null,
+    autorizado: true,
+    autorizado_por: ctx.user?.nome || "Gerente",
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  let linkData: Any = null;
+  if (gerar_link) {
+    const innerCtx: Any = { ...ctx, body: { pessoa_tipo: "responsavel", pessoa_id: responsavel_id, pessoa_nome: responsavel_nome, email: responsavel_email } };
+    const lr: Any = await router.dispatch("acesso_gerar_link_cadastro", innerCtx);
+    try { const j = await lr.json(); linkData = j?.data || j; } catch (_) { /* */ }
+  }
+
+  return successResponse({ permissao: perm, responsavel_id, link: linkData });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Pendências de cadastro facial — alunos sem face cadastrada
 // ═══════════════════════════════════════════════════════════════
 
@@ -2189,6 +2338,15 @@ router.on("acesso_setup_checklist", authGerenteOrSecretaria, async (ctx) => {
       severity: (permissoes ?? 0) > 0 ? "ok" : "warn",
     },
     {
+      id: "responsaveis_face",
+      label: "Responsáveis com face cadastrada",
+      ok: false, // computed below
+      detail: "—",
+      action: { label: "Cadastrar", panel: "acessoPermissoes" },
+      blocking: false,
+      severity: "muted",
+    },
+    {
       id: "eventos",
       label: "Eventos nas últimas 24h",
       ok: (eventos24h ?? 0) > 0,
@@ -2198,6 +2356,46 @@ router.on("acesso_setup_checklist", authGerenteOrSecretaria, async (ctx) => {
       severity: (eventos24h ?? 0) > 0 ? "ok" : (totalDevices === 0 ? "muted" : "warn"),
     },
   ];
+
+  // Compute responsaveis_face item: % de alunos com pelo menos 1 responsável com face cadastrada
+  if ((alunosTotal ?? 0) > 0) {
+    const { data: rfRows } = await ctx.sb.rpc("count_alunos_com_responsavel_face", { p_escola_id: eid }).maybeSingle();
+    let comResp = rfRows?.count;
+    if (typeof comResp !== "number") {
+      // Fallback sem RPC: query inline
+      const { data: permsRf } = await ctx.sb.from("acesso_permissoes_retirada")
+        .select("aluno_id, responsavel_id")
+        .eq("escola_id", eid).eq("autorizado", true);
+      const respIds = (permsRf ?? []).map((p: Any) => p.responsavel_id).filter((x: Any) => x);
+      let facesSet = new Set<string>();
+      if (respIds.length) {
+        const { data: faces } = await ctx.sb.from("acesso_faces")
+          .select("pessoa_id").eq("escola_id", eid).eq("ativo", true).eq("pessoa_tipo", "responsavel")
+          .in("pessoa_id", respIds);
+        facesSet = new Set((faces ?? []).map((f: Any) => f.pessoa_id));
+      }
+      const alunosComFaceResp = new Set<string>();
+      for (const p of permsRf ?? []) {
+        if (p.responsavel_id && facesSet.has(p.responsavel_id)) alunosComFaceResp.add(p.aluno_id);
+      }
+      comResp = alunosComFaceResp.size;
+    }
+    const respItem = items.find((i) => i.id === "responsaveis_face");
+    if (respItem) {
+      const pct = Math.round(((comResp || 0) / alunosTotal) * 100);
+      respItem.ok = (comResp || 0) === alunosTotal;
+      respItem.detail = `${comResp || 0} de ${alunosTotal} aluno(s) com pelo menos 1 responsável com face. (${pct}% cobertura)`;
+      respItem.severity = respItem.ok ? "ok" : (pct >= 50 ? "warn" : "error");
+      respItem.blocking = false;
+    }
+  } else {
+    const respItem = items.find((i) => i.id === "responsaveis_face");
+    if (respItem) {
+      respItem.detail = "Nenhum aluno ativo.";
+      respItem.severity = "muted";
+      respItem.ok = true;
+    }
+  }
 
   const blockers = items.filter((i) => i.blocking && !i.ok).length;
   const totalOk = items.filter((i) => i.ok).length;

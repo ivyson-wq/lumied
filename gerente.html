@@ -3510,26 +3510,34 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       <!-- ── CONTROLE DE ACESSO: PERMISSOES RETIRADA ── -->
       <div id="panelAcessoPermissoes" class="panel">
-        <div class="sec-title" style="margin-bottom:16px;">Permissoes de Retirada</div>
-        <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <div class="sec-title" style="margin-bottom:6px;">👨‍👩‍👧 Responsáveis e cadastro facial</div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5;">
+          Cada criança precisa de pelo menos <strong>1 responsável (obrigatório)</strong>. Recomendamos <strong>3</strong> (ex.: mãe + pai + avó/tio). O cadastro facial libera retirada automática pelo iDFace.
+        </p>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
           <input class="search-input" id="permBuscaAluno" placeholder="Buscar aluno..." oninput="loadAcessoPermissoes()" style="margin:0;flex:1;max-width:400px;">
+          <div id="permResumo" style="font-size:13px;color:var(--muted);"></div>
         </div>
         <div id="acessoPermissoesWrap"><div class="empty-state"><span class="spinner-sm"></span> Carregando...</div></div>
       </div>
 
       <!-- Modal Adicionar Autorizado -->
       <div class="modal-overlay" id="permModal">
-        <div class="modal" style="max-width:500px;">
+        <div class="modal" style="max-width:520px;">
           <h3>Adicionar Pessoa Autorizada</h3>
-          <div class="msub">Autorize uma pessoa para retirada do aluno <strong id="permAlunoNome"></strong>.</div>
+          <div class="msub">Autorize uma pessoa para retirada do aluno <strong id="permAlunoNome"></strong>. O cadastro facial pode ser feito agora (foto direta) ou enviado por link pra família tirar.</div>
           <input type="hidden" id="permAlunoId">
-          <div class="ff"><label>Nome do Responsavel</label><input id="permNome" placeholder="Nome completo"></div>
-          <div class="ff"><label>Parentesco</label><select id="permParentesco" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;"><option value="pai">Pai</option><option value="mae">Mae</option><option value="avo">Avo</option><option value="avoa">Avo</option><option value="tio">Tio</option><option value="tia">Tia</option><option value="motorista">Motorista</option><option value="outro">Outro</option></select></div>
-          <div class="ff"><label>Foto</label><input type="file" id="permFoto" accept="image/*" style="padding:8px;"></div>
+          <div class="ff"><label>Nome do Responsável</label><input id="permNome" placeholder="Nome completo"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="ff"><label>Parentesco</label><select id="permParentesco" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;"><option value="pai">Pai</option><option value="mae">Mãe</option><option value="avo">Avô</option><option value="avoa">Avó</option><option value="tio">Tio</option><option value="tia">Tia</option><option value="padrasto">Padrasto</option><option value="madrasta">Madrasta</option><option value="motorista">Motorista</option><option value="outro">Outro</option></select></div>
+            <div class="ff"><label>Email (pra enviar link)</label><input id="permEmail" type="email" placeholder="email@exemplo.com"></div>
+          </div>
+          <div class="ff"><label>Foto (opcional, se já tiver agora)</label><input type="file" id="permFoto" accept="image/*" style="padding:8px;"></div>
           <div class="ff"><label>Validade (opcional)</label><input type="date" id="permValidade"></div>
-          <div class="modal-actions">
+          <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
             <button class="btn-cancel" onclick="closePermModal()">Cancelar</button>
-            <button class="btn-save" onclick="salvarPermissao()">Salvar</button>
+            <button onclick="salvarPermissao(false)" style="padding:10px 18px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Só cadastrar</button>
+            <button class="btn-save" onclick="salvarPermissao(true)">Cadastrar + enviar link</button>
           </div>
         </div>
       </div>
@@ -9010,52 +9018,184 @@ docker compose up -d --build</pre>
 
   async function loadAcessoPermissoes() {
     const busca = (document.getElementById('permBuscaAluno')?.value || '').trim();
-    const d = await callAcesso({ action: 'acesso_permissoes_list', busca });
-    const list = d.data || d || [];
+    const r = await callAcesso({ action: 'acesso_alunos_responsaveis_status', busca });
+    const d = r?.data || r || {};
+    const list = d.alunos || [];
     const wrap = document.getElementById('acessoPermissoesWrap');
+
+    // Resumo
+    const resumoEl = document.getElementById('permResumo');
+    if (resumoEl) {
+      const total = d.total || 0;
+      const ok = d.com_min_obrigatorio || 0;
+      if (total === 0) resumoEl.textContent = '';
+      else {
+        const pct = Math.round((ok / total) * 100);
+        const cor = pct === 100 ? '#2d7a3a' : (pct >= 50 ? '#b07d10' : '#c0392b');
+        resumoEl.innerHTML = `<span style="color:${cor};font-weight:600;">${ok}/${total}</span> alunos com responsável obrigatório`;
+      }
+    }
+
     if (!list.length) { wrap.innerHTML = '<div class="empty-state">Nenhum aluno encontrado.</div>'; return; }
+
     wrap.innerHTML = list.map(aluno => {
-      const autorizados = (aluno.autorizados || []).map(a => {
-        const foto = a.foto_url ? `<img src="${a.foto_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">` : '<span style="font-size:20px;">👤</span>';
-        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0ece6;">
-          ${foto}
-          <div style="flex:1;"><strong style="font-size:13px;">${escHtml(a.nome||'—')}</strong><div style="font-size:11px;color:var(--muted);">${escHtml(a.parentesco||'—')}${a.validade ? ' · Valido ate ' + new Date(a.validade).toLocaleDateString('pt-BR') : ''}</div></div>
-          <span class="turno-pill ${a.ativo?'integral':'tarde'}" style="font-size:10px;">${a.ativo?'Ativo':'Inativo'}</span>
-          <button class="action-btn del" onclick="removerPermissao('${a.id}')">Remover</button>
-        </div>`;
-      }).join('');
-      return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px 20px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-weight:600;font-size:14px;">${escHtml(aluno.nome||'—')} <span style="font-size:12px;color:var(--muted);">${escHtml(aluno.serie||'')}</span></div>
-          <button class="action-btn" onclick="openPermModal('${aluno.id}','${escHtml(aluno.nome)}')">+ Adicionar Autorizado</button>
+      const slots = renderResponsavelSlots(aluno);
+      const total = aluno.faces_ok || 0;
+      const min = d.min_responsaveis || 1;
+      const recom = d.recomendado || 3;
+      let badgeBg = '#fdf0f2', badgeColor = '#c0392b', badgeIcon = '⚠️';
+      let badgeText = 'Sem responsável';
+      if (aluno.atende_recomendado) { badgeBg = '#edf7ef'; badgeColor = '#2d7a3a'; badgeIcon = '✅'; badgeText = 'Completo'; }
+      else if (aluno.atende_minimo) { badgeBg = '#fff8e1'; badgeColor = '#b07d10'; badgeIcon = '🟡'; badgeText = `${total}/${recom} cadastrados`; }
+      else { badgeText = `${total}/${recom} — falta o obrigatório`; }
+
+      return `<div style="background:var(--white);border-radius:14px;border:1px solid var(--border);padding:16px 20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-weight:600;font-size:15px;">${escHtml(aluno.nome||'—')}</div>
+            ${aluno.familia_email ? `<div style="font-size:11px;color:var(--muted);">${escHtml(aluno.familia_email)}</div>` : '<div style="font-size:11px;color:#c0392b;">⚠️ sem email família</div>'}
+          </div>
+          <span style="background:${badgeBg};color:${badgeColor};padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600;">${badgeIcon} ${escHtml(badgeText)}</span>
         </div>
-        ${autorizados || '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhuma pessoa autorizada.</div>'}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
+          ${slots}
+        </div>
       </div>`;
     }).join('');
   }
 
-  function openPermModal(alunoId, alunoNome) {
+  function renderResponsavelSlots(aluno) {
+    const recom = 3;
+    const cards = [];
+    const respCount = (aluno.responsaveis || []).length;
+    // Slots preenchidos
+    for (const r of aluno.responsaveis || []) {
+      const isObrigatorio = cards.length === 0;
+      cards.push(renderRespCard(aluno, r, isObrigatorio, false));
+    }
+    // Slots vazios até atingir o recomendado
+    while (cards.length < recom) {
+      const isObrigatorio = cards.length === 0 && respCount === 0;
+      cards.push(renderRespCard(aluno, null, isObrigatorio, true));
+    }
+    return cards.join('');
+  }
+
+  function renderRespCard(aluno, resp, isObrigatorio, vazio) {
+    if (vazio) {
+      const labelObr = isObrigatorio ? '<span style="background:#c0392b;color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;margin-left:4px;text-transform:uppercase;font-weight:600;">Obrigatório</span>' : '<span style="color:var(--muted);font-size:11px;">opcional</span>';
+      return `<div style="border:2px dashed #d0c8bd;border-radius:10px;padding:14px;text-align:center;background:#fafafa;cursor:pointer;transition:all .2s;" onclick="openPermModal('${aluno.id}','${escAttr(aluno.nome)}','${escAttr(aluno.familia_email||'')}')" onmouseover="this.style.borderColor='#1a6bb5';this.style.background='#f0f7ff'" onmouseout="this.style.borderColor='#d0c8bd';this.style.background='#fafafa'">
+        <div style="font-size:32px;color:#c8c0b3;margin-bottom:6px;">＋</div>
+        <div style="font-size:12px;color:#5a5249;font-weight:600;">Adicionar responsável ${labelObr}</div>
+      </div>`;
+    }
+    // Slot preenchido
+    let badgeBg, badgeColor, badgeIcon, badgeText, btnText, btnAction;
+    switch (resp.face_status) {
+      case 'cadastrada':
+        badgeBg = '#edf7ef'; badgeColor = '#2d7a3a'; badgeIcon = '✅'; badgeText = 'Face OK'; break;
+      case 'aguardando_aprovacao':
+        badgeBg = '#fff8e1'; badgeColor = '#b07d10'; badgeIcon = '⏳'; badgeText = 'Aguarda aprovação'; break;
+      case 'erro':
+        badgeBg = '#fdf0f2'; badgeColor = '#c0392b'; badgeIcon = '✗'; badgeText = 'Erro sync'; break;
+      case 'link_enviado':
+        badgeBg = '#e3f2fd'; badgeColor = '#1976d2'; badgeIcon = '📨'; badgeText = 'Link enviado'; break;
+      default:
+        badgeBg = '#f8f5f0'; badgeColor = '#888'; badgeIcon = '○'; badgeText = 'Sem foto';
+    }
+    if (resp.face_status === 'sem_face' || resp.face_status === 'erro') {
+      btnText = '📤 Enviar link'; btnAction = 'enviarLinkResp';
+    } else if (resp.face_status === 'link_enviado') {
+      btnText = '↻ Reenviar'; btnAction = 'enviarLinkResp';
+    } else {
+      btnText = ''; btnAction = '';
+    }
+    const foto = resp.foto_url
+      ? `<img src="${resp.foto_url}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid ${badgeColor};">`
+      : `<div style="width:48px;height:48px;border-radius:50%;background:${badgeBg};color:${badgeColor};display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`;
+    const obr = isObrigatorio ? '<span style="background:#c0392b;color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;margin-left:4px;text-transform:uppercase;font-weight:600;">Obrig.</span>' : '';
+
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${foto}
+        <div style="flex:1;min-width:0;overflow:hidden;">
+          <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(resp.nome||'—')}${obr}</div>
+          <div style="font-size:11px;color:var(--muted);">${escHtml(resp.parentesco||'sem parentesco')}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <span style="background:${badgeBg};color:${badgeColor};padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;">${badgeIcon} ${badgeText}</span>
+        ${btnText ? `<button onclick="${btnAction}('${resp.responsavel_id}','${escAttr(resp.nome)}','${escAttr(resp.email||'')}')" style="padding:5px 10px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">${btnText}</button>` : ''}
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button onclick="removerPermissao('${resp.id}')" style="padding:3px 8px;background:none;color:#c0392b;border:none;font-size:11px;cursor:pointer;">remover</button>
+      </div>
+    </div>`;
+  }
+
+  function enviarLinkResp(responsavel_id, responsavel_nome, email) {
+    openLinkModal({ pessoa_tipo: 'responsavel', pessoa_id: responsavel_id, pessoa_nome: responsavel_nome, email });
+  }
+
+  function openPermModal(alunoId, alunoNome, familiaEmail) {
     document.getElementById('permAlunoId').value = alunoId;
     document.getElementById('permAlunoNome').textContent = alunoNome;
+    document.getElementById('permNome').value = '';
+    document.getElementById('permEmail').value = familiaEmail || '';
+    document.getElementById('permFoto').value = '';
+    document.getElementById('permValidade').value = '';
     document.getElementById('permModal').classList.add('show');
   }
   function closePermModal() { document.getElementById('permModal').classList.remove('show'); }
 
-  async function salvarPermissao() {
+  async function salvarPermissao(comLink) {
     const alunoId = document.getElementById('permAlunoId').value;
     const nome = document.getElementById('permNome').value.trim();
     const parentesco = document.getElementById('permParentesco').value;
+    const email = document.getElementById('permEmail').value.trim();
     const validade = document.getElementById('permValidade').value || null;
     if (!nome) { showToast('Informe o nome.', 'error'); return; }
     const fileInput = document.getElementById('permFoto');
-    let foto_base64 = null;
+
+    // Caminho 1: tem foto local → fluxo legado (foto direta sem link)
     if (fileInput.files.length) {
-      foto_base64 = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(fileInput.files[0]); });
+      const foto_base64 = await new Promise(resolve => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsDataURL(fileInput.files[0]); });
+      const d = await callAcesso({ action: 'acesso_permissao_create', aluno_id: alunoId, responsavel_nome: nome, parentesco, responsavel_email: email || null, foto_base64, validade });
+      if (d.error) { showToast(d.error, 'error'); return; }
+      showToast('Cadastrado com foto local!', 'success');
+      closePermModal(); loadAcessoPermissoes(); return;
     }
-    const d = await callAcesso({ action: 'acesso_permissao_save', aluno_id: alunoId, responsavel_nome: nome, parentesco, foto_base64, validade });
-    if (d.error) { showToast(d.error, 'error'); return; }
-    showToast('Pessoa autorizada adicionada!', 'success');
+
+    // Caminho 2: cria responsável (sem foto) + opcionalmente já gera link
+    const r = await callAcesso({
+      action: 'acesso_responsavel_create',
+      aluno_id: alunoId,
+      responsavel_nome: nome,
+      parentesco,
+      responsavel_email: email || null,
+      validade,
+      gerar_link: !!comLink,
+    });
+    const d = r?.data || r;
+    if (r?.error) { showToast(r.error, 'error'); return; }
+    showToast(comLink ? 'Cadastrado! Link gerado.' : 'Cadastrado.', 'success');
     closePermModal();
+
+    if (comLink && d?.link?.link) {
+      _linkResultData = {
+        link: d.link.link,
+        pessoa_tipo: 'responsavel',
+        pessoa_id: d.responsavel_id,
+        pessoa_nome: nome,
+        email: email || null,
+      };
+      document.getElementById('linkResultNome').textContent = nome;
+      document.getElementById('linkResultUrl').textContent = d.link.link;
+      document.getElementById('linkResultStatus').textContent = '';
+      document.getElementById('linkResultEmailBtn').disabled = !email;
+      document.getElementById('linkResultEmailBtn').style.opacity = email ? 1 : .4;
+      document.getElementById('linkResultModal').classList.add('show');
+    }
     loadAcessoPermissoes();
   }
 
