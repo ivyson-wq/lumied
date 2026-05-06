@@ -85,7 +85,7 @@ async function assertFamiliaOwnership(ctx: { req: Request; sb: Any }, email: str
   if (authedEmail !== String(email || "").toLowerCase()) {
     throw new AppError("FORBIDDEN", "Você não tem permissão para acessar dados desta família.");
   }
-  const { data: familia } = await ctx.sb.from("familias").select("id, nome_resp, email").eq("email", authedEmail).maybeSingle();
+  const { data: familia } = await ctx.sb.from("familias").select("id, nome_responsavel, email").eq("email", authedEmail).maybeSingle();
   return familia;
 }
 
@@ -1456,13 +1456,19 @@ router.on("acesso_buscar_pessoa", authGerenteOrSecretaria, async (ctx) => {
   }
 
   if (tipo === "responsavel") {
-    const { data } = await ctx.sb.from("familias")
-      .select("id, nome_resp, email")
+    // Responsáveis não têm UUID em `familias` (PK é CPF). Para cadastro de
+    // face de responsável, use o fluxo de link público (acesso_gerar_link_cadastro).
+    // Aqui retornamos apenas responsáveis JÁ cadastrados em acesso_faces — útil
+    // para re-cadastro / atualização de foto.
+    const { data } = await ctx.sb.from("acesso_faces")
+      .select("pessoa_id, pessoa_nome")
       .eq("escola_id", ctx.escola_id)
-      .ilike("nome_resp", like)
-      .order("nome_resp")
+      .eq("pessoa_tipo", "responsavel")
+      .eq("ativo", true)
+      .ilike("pessoa_nome", like)
+      .order("pessoa_nome")
       .limit(20);
-    return successResponse((data ?? []).map((f: Any) => ({ id: f.id, nome: f.nome_resp, email: f.email })));
+    return successResponse((data ?? []).map((f: Any) => ({ id: f.pessoa_id, nome: f.pessoa_nome })));
   }
 
   if (tipo === "funcionario") {
@@ -1493,8 +1499,9 @@ router.on("acesso_face_create", authGerente, async (ctx) => {
       const { data } = await ctx.sb.from("alunos").select("nome").eq("id", pessoa_id).maybeSingle();
       pessoa_nome = data?.nome || null;
     } else if (pessoa_tipo === "responsavel") {
-      const { data } = await ctx.sb.from("familias").select("nome_resp").eq("id", pessoa_id).maybeSingle();
-      pessoa_nome = data?.nome_resp || null;
+      // Responsáveis vivem em acesso_faces (UUID gerado pelo link público).
+      const { data } = await ctx.sb.from("acesso_faces").select("pessoa_nome").eq("pessoa_id", pessoa_id).eq("pessoa_tipo", "responsavel").maybeSingle();
+      pessoa_nome = data?.pessoa_nome || null;
     } else if (pessoa_tipo === "funcionario") {
       const { data } = await ctx.sb.from("usuarios").select("nome").eq("id", pessoa_id).maybeSingle();
       pessoa_nome = data?.nome || null;
@@ -1583,8 +1590,9 @@ router.on("acesso_rfid_create", authGerente, async (ctx) => {
       const { data } = await ctx.sb.from("alunos").select("nome").eq("id", pessoa_id).maybeSingle();
       pessoa_nome = data?.nome || null;
     } else if (pessoa_tipo === "responsavel") {
-      const { data } = await ctx.sb.from("familias").select("nome_resp").eq("id", pessoa_id).maybeSingle();
-      pessoa_nome = data?.nome_resp || null;
+      // Responsáveis vivem em acesso_faces (UUID gerado pelo link público).
+      const { data } = await ctx.sb.from("acesso_faces").select("pessoa_nome").eq("pessoa_id", pessoa_id).eq("pessoa_tipo", "responsavel").maybeSingle();
+      pessoa_nome = data?.pessoa_nome || null;
     } else if (pessoa_tipo === "funcionario") {
       const { data } = await ctx.sb.from("usuarios").select("nome").eq("id", pessoa_id).maybeSingle();
       pessoa_nome = data?.nome || null;
