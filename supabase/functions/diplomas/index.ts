@@ -1853,6 +1853,7 @@ Deno.serve(async (req) => {
     'alm_encaminhar_compra', 'alm_compras_pendentes',
     'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
     'alm_compras_compilado', 'alm_distribuir_grupo',
+    'alm_compras_compilado_pdf', 'alm_compras_compilado_xlsx',
   ].includes(action)
 
   if (isAlmCompraAction) {
@@ -1901,43 +1902,27 @@ Deno.serve(async (req) => {
       return json({ data: data ?? [] })
     }
 
-    // Compras compiladas: agrega itens iguais entre requisições de turmas
-    // distintas. Critério de agrupamento:
-    //   - Se insumo_id existe (item catalogado): chave = insumo_id
-    //   - Senão (item livre da professora): chave = nome normalizado
-    // Resultado: 1 linha por item agregado com qty_total, turmas, IDs filhos.
-    if (action === 'alm_compras_compilado') {
+    // Helper: compila as compras agrupadas. Reusado nos endpoints
+    // alm_compras_compilado, _pdf e _xlsx.
+    const compilarCompras = async (statusFiltro: string) => {
       const escolaId = (gerente as any).escola_id
-      const statusFiltro: string = body.status_filtro || 'pendente' // pendente | comprado | entregue | todos
       let q = sb.from('alm_compras')
         .select('id, insumo_id, insumo_nome, qty, plataforma, produto_nome, preco_unit, match_pct, url_produto, url_carrinho, status, encaminhado_em, requisicao_id, alm_requisicoes(mes, professoras(nome), series(nome))')
         .eq('escola_id', escolaId)
         .order('encaminhado_em', { ascending: false })
       if (statusFiltro !== 'todos') q = q.eq('status', statusFiltro)
       const { data: linhas } = await q
-
       const norm = (s: string) => (s || '').toLowerCase()
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
         .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
-
       type FilhaInfo = { compra_id: string; requisicao_id: string; turma: string; professora: string; qty: number; status: string };
       type Grupo = {
-        chave: string;
-        insumo_id: string | null;
-        nome: string;
-        qty_total: number;
-        ids: string[];
-        filhas: FilhaInfo[];
-        turmas: Set<string>;
-        professoras: Set<string>;
-        meses: Set<string>;
-        precos: number[];
-        plataformas: Record<string, number>;
-        produto_nome_sugestao: string | null;
-        match_pct_max: number;
-        url_produto: string | null;
-        url_carrinho: string | null;
-        statuses: Set<string>;
+        chave: string; insumo_id: string | null; nome: string; qty_total: number;
+        ids: string[]; filhas: FilhaInfo[];
+        turmas: Set<string>; professoras: Set<string>; meses: Set<string>;
+        precos: number[]; plataformas: Record<string, number>;
+        produto_nome_sugestao: string | null; match_pct_max: number;
+        url_produto: string | null; url_carrinho: string | null; statuses: Set<string>;
       }
       const grupos: Record<string, Grupo> = {}
       for (const l of (linhas ?? []) as any[]) {
@@ -1946,8 +1931,7 @@ Deno.serve(async (req) => {
           grupos[chave] = {
             chave, insumo_id: l.insumo_id, nome: l.insumo_nome,
             qty_total: 0, ids: [], filhas: [], turmas: new Set(), professoras: new Set(), meses: new Set(),
-            precos: [], plataformas: {},
-            produto_nome_sugestao: null, match_pct_max: 0,
+            precos: [], plataformas: {}, produto_nome_sugestao: null, match_pct_max: 0,
             url_produto: null, url_carrinho: null, statuses: new Set(),
           }
         }
@@ -1956,12 +1940,10 @@ Deno.serve(async (req) => {
         g.qty_total += qty
         g.ids.push(l.id)
         g.filhas.push({
-          compra_id: l.id,
-          requisicao_id: l.requisicao_id,
+          compra_id: l.id, requisicao_id: l.requisicao_id,
           turma: l.alm_requisicoes?.series?.nome || '—',
           professora: l.alm_requisicoes?.professoras?.nome || '—',
-          qty,
-          status: l.status,
+          qty, status: l.status,
         })
         g.statuses.add(l.status)
         if (l.alm_requisicoes?.series?.nome) g.turmas.add(l.alm_requisicoes.series.nome)
@@ -1976,38 +1958,32 @@ Deno.serve(async (req) => {
           g.url_carrinho = l.url_carrinho
         }
       }
-
-      // Para itens cataloged sem produto sugerido, busca referencia_url do insumo
-      const semSugestao = Object.values(grupos).filter(g => g.insumo_id && !g.url_produto).map(g => g.insumo_id!)
-      if (semSugestao.length) {
+      // Fallback de preço/url via alm_insumos (catalogados)
+      const idsCatalogados = Object.values(grupos).filter(g => g.insumo_id).map(g => g.insumo_id!)
+      if (idsCatalogados.length) {
         const { data: insumos } = await sb.from('alm_insumos')
-          .select('id, referencia_url, referencia_nome, preco_referencia')
-          .in('id', semSugestao).eq('escola_id', escolaId)
+          .select('id, referencia_url, referencia_nome, preco_referencia, preco, qtd_por_embalagem')
+          .in('id', idsCatalogados).eq('escola_id', escolaId)
         for (const ins of (insumos ?? []) as any[]) {
           const g = Object.values(grupos).find(x => x.insumo_id === ins.id)
-          if (g) {
-            if (!g.url_produto && ins.referencia_url) g.url_produto = ins.referencia_url
-            if (!g.produto_nome_sugestao && ins.referencia_nome) g.produto_nome_sugestao = ins.referencia_nome
-            if (g.precos.length === 0 && ins.preco_referencia != null) g.precos.push(parseFloat(ins.preco_referencia))
+          if (!g) continue
+          if (!g.url_produto && ins.referencia_url) g.url_produto = ins.referencia_url
+          if (!g.produto_nome_sugestao && ins.referencia_nome) g.produto_nome_sugestao = ins.referencia_nome
+          if (g.precos.length === 0) {
+            const qtdEmb = parseFloat(ins.qtd_por_embalagem) || 1
+            if (ins.preco_referencia != null) g.precos.push(parseFloat(ins.preco_referencia))
+            else if (ins.preco != null) g.precos.push(parseFloat(ins.preco) / qtdEmb)
           }
         }
       }
-
       const out = Object.values(grupos).map(g => {
         const precoMedio = g.precos.length ? g.precos.reduce((s, p) => s + p, 0) / g.precos.length : null
         const plataformaMaisComum = Object.entries(g.plataformas).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
-        // Status agregado: se todas filhas mesmo status, retorna esse; senão 'misto'
         const statusArr = Array.from(g.statuses)
         const statusGrupo = statusArr.length === 1 ? statusArr[0] : 'misto'
         return {
-          chave: g.chave,
-          insumo_id: g.insumo_id,
-          nome: g.nome,
-          qty_total: g.qty_total,
-          n_requisicoes: g.ids.length,
-          ids: g.ids,
-          filhas: g.filhas,
-          status_grupo: statusGrupo,
+          chave: g.chave, insumo_id: g.insumo_id, nome: g.nome, qty_total: g.qty_total,
+          n_requisicoes: g.ids.length, ids: g.ids, filhas: g.filhas, status_grupo: statusGrupo,
           turmas: Array.from(g.turmas).sort(),
           professoras: Array.from(g.professoras).sort(),
           meses: Array.from(g.meses).sort(),
@@ -2016,18 +1992,72 @@ Deno.serve(async (req) => {
           plataforma_sugerida: plataformaMaisComum,
           produto_nome_sugestao: g.produto_nome_sugestao,
           match_pct_max: g.match_pct_max || null,
-          url_produto: g.url_produto,
-          url_carrinho: g.url_carrinho,
+          url_produto: g.url_produto, url_carrinho: g.url_carrinho,
         }
       }).sort((a, b) => b.qty_total - a.qty_total)
-
-      return json({
+      return {
         data: out,
         total_grupos: out.length,
         total_linhas: (linhas ?? []).length,
         valor_estimado: out.reduce((s, g) => s + (g.preco_total_estimado || 0), 0),
-      })
+      }
     }
+
+    if (action === 'alm_compras_compilado_pdf' || action === 'alm_compras_compilado_xlsx') {
+      const statusFiltro: string = body.status_filtro || 'pendente'
+      const r = await compilarCompras(statusFiltro)
+      const grupos = r.data
+      const fmt = (v: number) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      if (action === 'alm_compras_compilado_xlsx') {
+        const headers = ['Item', 'Qty Total', 'Turmas', 'Detalhe por turma', 'Sugestão', 'Plataforma', 'Match%', 'Preço/un', 'Total estim.', 'Mês', 'Link']
+        const rows = grupos.map(g => [
+          g.nome,
+          String(g.qty_total),
+          g.turmas.join(', '),
+          g.filhas.map((f: any) => `${f.turma}×${f.qty}`).join('; '),
+          g.produto_nome_sugestao || '',
+          g.plataforma_sugerida || '',
+          g.match_pct_max ? String(g.match_pct_max) + '%' : '',
+          g.preco_unit_medio != null ? fmt(g.preco_unit_medio) : '',
+          g.preco_total_estimado != null ? fmt(g.preco_total_estimado) : '',
+          g.meses.join(', '),
+          g.url_carrinho || g.url_produto || '',
+        ])
+        // Linha de total
+        rows.push(['TOTAL', String(grupos.reduce((s: number, g: any) => s + g.qty_total, 0)), '', '', '', '', '', '', fmt(r.valor_estimado), '', ''])
+        const xlsx = generateXlsx(headers, rows)
+        return xlsxResponse(xlsx, `compras-compilado-${statusFiltro}-${new Date().toISOString().slice(0,10)}.xlsx`)
+      }
+      // PDF: lista compacta com totalizador
+      const sections: any[] = []
+      sections.push({
+        heading: `${grupos.length} item(ns) únicos · ${r.total_linhas} pedido(s) · ${fmt(r.valor_estimado)} estimado`,
+        lines: [`Status: ${statusFiltro}  ·  Gerado em ${new Date().toLocaleString('pt-BR')}`, ''],
+      })
+      for (const g of grupos) {
+        const linhas = [
+          `Qty: ${g.qty_total}  ·  ${g.preco_unit_medio != null ? fmt(g.preco_unit_medio) + '/un · total ' + fmt(g.preco_total_estimado) : 'sem preço de referência'}`,
+          `Turmas: ${(g as any).filhas.map((f: any) => `${f.turma}×${f.qty}`).join(', ')}`,
+        ]
+        if (g.produto_nome_sugestao) linhas.push(`Sugestão: ${g.produto_nome_sugestao}${g.match_pct_max ? ` (${g.match_pct_max}%)` : ''}`)
+        if (g.plataforma_sugerida) linhas.push(`Plataforma: ${g.plataforma_sugerida}`)
+        if (g.url_carrinho || g.url_produto) linhas.push(`Link: ${g.url_carrinho || g.url_produto}`)
+        linhas.push('─────────────────────────────────────────────')
+        sections.push({ heading: g.nome, lines: linhas })
+      }
+      const bytes = await generatePdf({
+        title: 'Compras compiladas — Almoxarifado',
+        subtitle: `Itens iguais agregados entre turmas. Status: ${statusFiltro}.`,
+        sections,
+      })
+      return pdfResponse(bytes, `compras-compilado-${statusFiltro}-${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    if (action === 'alm_compras_compilado') {
+      const r = await compilarCompras(body.status_filtro || 'pendente')
+      return json(r)
+    }
+
 
     // Distribuir grupo recebido pelas turmas que pediram. Recebe array de
     // { compra_id, requisicao_id, insumo_id, qty_entregue }. Cria registros em
