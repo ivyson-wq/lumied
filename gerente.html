@@ -863,6 +863,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('almDash',this)"><span class="ic">📦</span> Visão Geral</a>
         <a class="nav-item" href="#" onclick="showPanel('almReqs',this)"><span class="ic">📋</span> Requisições</a>
+        <a class="nav-item" href="#" onclick="showPanel('almInventario',this)"><span class="ic">🔍</span> Inventário Físico</a>
         <a class="nav-item" href="#" onclick="showPanel('almConfig',this)"><span class="ic">⚙️</span> Configuração</a>
       </div>
       </div>
@@ -2188,6 +2189,61 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               </div>
             </div>
           </div>
+      </div>
+
+      <!-- 5. INVENTÁRIO FÍSICO (sessão de contagem) -->
+      <div id="panelAlmInventario" class="panel">
+        <!-- Tela LISTA: sessões existentes + abrir nova -->
+        <div id="almInvListView">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+            <div class="sec-title" style="margin:0;font-size:18px;">🔍 Inventário Físico</div>
+            <button onclick="almInvAbrirNovo()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📋 Nova Contagem</button>
+          </div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Conte fisicamente o que existe na escola. A sessão fica em rascunho — você pode parar e continuar depois. Ao finalizar, divergências viram ajustes automáticos no estoque.</p>
+          <div id="almInvLista"></div>
+        </div>
+
+        <!-- Tela CONTAGEM: lista de itens com input inline -->
+        <div id="almInvCountView" style="display:none;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+            <button onclick="almInvVoltar()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">← Voltar</button>
+            <div style="font-family:'Lora',serif;font-size:17px;font-weight:600;" id="almInvNomeHeader">—</div>
+            <div style="margin-left:auto;display:flex;gap:8px;">
+              <button onclick="almInvCancelarSessao()" style="background:#fff;border:1.5px solid #c0392b;color:#c0392b;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar sessão</button>
+              <button onclick="almInvFinalizarSessao()" class="btn-create" style="padding:6px 16px;background:#16a34a;">✅ Finalizar e aplicar</button>
+            </div>
+          </div>
+
+          <!-- Progresso -->
+          <div style="background:#f8f6f1;border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;">
+              <span><b id="almInvProgLabel" style="color:#1a6bb5;">0 / 0</b> contados</span>
+              <span><b id="almInvDivLabel" style="color:#d97706;">0</b> divergências</span>
+            </div>
+            <div style="background:#e5e1d8;height:8px;border-radius:4px;overflow:hidden;">
+              <div id="almInvProgBar" style="background:linear-gradient(90deg,#1a6bb5,#16a34a);height:100%;width:0%;transition:width .3s;"></div>
+            </div>
+          </div>
+
+          <!-- Filtros -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+            <input type="text" id="almInvSearch" placeholder="🔍 Buscar item..." oninput="almInvRender()" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+            <select id="almInvFiltroLoc" onchange="almInvRender()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="">Toda localização</option>
+            </select>
+            <select id="almInvFiltroCat" onchange="almInvRender()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="">Toda categoria</option>
+            </select>
+            <select id="almInvFiltroStatus" onchange="almInvRender()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
+              <option value="todos">Todos</option>
+              <option value="pendente" selected>Não contados</option>
+              <option value="contado">Contados</option>
+              <option value="divergente">Divergentes</option>
+            </select>
+          </div>
+
+          <div id="almInvItens"></div>
+        </div>
       </div>
 
       <!-- Modais do Almoxarifado (fora dos painéis) -->
@@ -11658,7 +11714,9 @@ docker compose up -d --build</pre>
           ${g.produto_nome_sugestao ? `<div style="font-size:10px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">💡 ${esc(g.produto_nome_sugestao)}${g.match_pct_max ? ` <span style="color:${matchColor(g.match_pct_max)};font-weight:600;">(${g.match_pct_max}%)</span>` : ''}</div>` : ''}
         </div>
         <div style="text-align:right;white-space:nowrap;">
-          ${g.preco_unit_medio != null ? `<div style="font-size:10px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un.</div><div style="font-size:12px;font-weight:700;">${fmt(g.preco_total_estimado)}</div>` : '<span style="font-size:10px;color:var(--muted);">sem ref.</span>'}
+          ${g.preco_unit_medio != null
+            ? `<div style="font-size:10px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un.${g.preco_origem === 'referencia' ? ' <span title="preço de referência cadastrado" style="font-size:9px;">📌</span>' : g.preco_origem === 'cadastro' ? ' <span title="preço do cadastro do insumo" style="font-size:9px;">📋</span>' : ''}</div><div style="font-size:12px;font-weight:700;">${fmt(g.preco_total_estimado)}</div>`
+            : `<span title="${g.preco_baixa_confianca ? 'Busca retornou produto incerto (match baixo). Pesquise manualmente.' : 'Sem preço cadastrado'}" style="font-size:10px;color:#b45309;">⚠️ verificar</span>`}
         </div>
         <div style="display:flex;gap:4px;align-items:center;">${acoesCol}</div>
       </div>`;

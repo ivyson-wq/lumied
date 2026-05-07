@@ -1294,11 +1294,9 @@ Deno.serve(async (req) => {
   // CRON_INTERNAL_KEY ou staff. Processa 3 itens por chamada (limite do
   // worker) → ~72 itens/dia, suficiente pro catálogo escolar típico.
   if (action === 'alm_reval_warmup') {
-    const internalKey = req.headers.get('x-cron-key') || ''
-    const expectedKey = Deno.env.get('CRON_INTERNAL_KEY') || ''
-    if (!expectedKey || internalKey !== expectedKey) {
-      return json({ error: 'forbidden' }, 403)
-    }
+    const cronKey = Deno.env.get('CRON_INTERNAL_KEY') || ''
+    const authH = req.headers.get('Authorization')?.replace('Bearer ', '') || ''
+    if (!cronKey || authH !== cronKey) return json({ error: 'forbidden' }, 403)
     const proxyUrl = Deno.env.get('REVAL_PROXY_URL') || ''
     const proxySecret = Deno.env.get('REVAL_PROXY_SECRET') || ''
     if (!proxyUrl || !proxySecret) return json({ error: 'REVAL_PROXY_* não configurados' }, 500)
@@ -2004,9 +2002,12 @@ Deno.serve(async (req) => {
         if (l.alm_requisicoes?.series?.nome) g.turmas.add(l.alm_requisicoes.series.nome)
         if (l.alm_requisicoes?.professoras?.nome) g.professoras.add(l.alm_requisicoes.professoras.nome)
         if (l.alm_requisicoes?.mes) g.meses.add(l.alm_requisicoes.mes)
-        if (l.preco_unit != null) {
-          // Divide pelo tamanho da embalagem pra obter preço por unidade
-          // de consumo (folha, frasco, etc.) — bate com a unidade de qty.
+        // alm_compras.preco_unit vem de scraper Zoom/ML/Shopee. Quando
+        // match_pct < 80% o produto retornado provavelmente não é o que a
+        // professora pediu (ex: "maça" → kit aleatório R$818). Ignoramos
+        // pra não inflar total — fallback usa preco_referencia/preco do
+        // insumo no próximo passo.
+        if (l.preco_unit != null && (l.match_pct ?? 0) >= 80) {
           const ins = l.insumo_id ? insumoMap[l.insumo_id] : null
           const qtdEmb = parseFloat(ins?.qtd_por_embalagem) || 1
           g.precos.push(parseFloat(l.preco_unit) / qtdEmb)
@@ -2019,6 +2020,13 @@ Deno.serve(async (req) => {
           g.url_carrinho = l.url_carrinho
         }
       }
+      // preco_origem por grupo: 'scraper' (preco_unit pesquisado), 'referencia'
+      // (manual), 'cadastro' (preco do insumo), 'nenhuma' (sem fonte). Quando
+      // todos preços vieram de scraper com baixo match, marca low_confidence.
+      const precoOrigemMap: Record<string, string> = {}
+      for (const k of Object.keys(grupos)) {
+        precoOrigemMap[k] = grupos[k].precos.length > 0 ? 'scraper' : 'nenhuma'
+      }
       // Fallback de preço/url via insumoMap já carregado acima
       for (const id of Object.keys(insumoMap)) {
         const ins = insumoMap[id]
@@ -2029,8 +2037,13 @@ Deno.serve(async (req) => {
         if (g.precos.length === 0) {
           const qtdEmb = parseFloat(ins.qtd_por_embalagem) || 1
           // preco_referencia já é por unidade de consumo (UI alm_insumo_set_referencia)
-          if (ins.preco_referencia != null) g.precos.push(parseFloat(ins.preco_referencia))
-          else if (ins.preco != null) g.precos.push(parseFloat(ins.preco) / qtdEmb)
+          if (ins.preco_referencia != null) {
+            g.precos.push(parseFloat(ins.preco_referencia))
+            precoOrigemMap[g.chave] = 'referencia'
+          } else if (ins.preco != null) {
+            g.precos.push(parseFloat(ins.preco) / qtdEmb)
+            precoOrigemMap[g.chave] = 'cadastro'
+          }
         }
       }
       const out = Object.values(grupos).map(g => {
@@ -2038,14 +2051,21 @@ Deno.serve(async (req) => {
         const plataformaMaisComum = Object.entries(g.plataformas).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
         const statusArr = Array.from(g.statuses)
         const statusGrupo = statusArr.length === 1 ? statusArr[0] : 'misto'
+        // Sanity check: se o preço unitário > R$ 50 e o item não está catalogado,
+        // muito provavelmente é uma sugestão errada do scraper. Marca como
+        // baixa confiança pra UI sinalizar e zerar do total estimado.
+        const baixaConfianca = (precoMedio != null && precoMedio > 50 && !g.insumo_id) ||
+                                precoOrigemMap[g.chave] === 'nenhuma'
         return {
           chave: g.chave, insumo_id: g.insumo_id, nome: g.nome, qty_total: g.qty_total,
           n_requisicoes: g.ids.length, ids: g.ids, filhas: g.filhas, status_grupo: statusGrupo,
           turmas: Array.from(g.turmas).sort(),
           professoras: Array.from(g.professoras).sort(),
           meses: Array.from(g.meses).sort(),
-          preco_unit_medio: precoMedio,
-          preco_total_estimado: precoMedio != null ? precoMedio * g.qty_total : null,
+          preco_unit_medio: baixaConfianca ? null : precoMedio,
+          preco_total_estimado: (baixaConfianca || precoMedio == null) ? null : precoMedio * g.qty_total,
+          preco_origem: precoOrigemMap[g.chave] || 'nenhuma',
+          preco_baixa_confianca: baixaConfianca,
           plataforma_sugerida: plataformaMaisComum,
           produto_nome_sugestao: g.produto_nome_sugestao,
           match_pct_max: g.match_pct_max || null,
@@ -2433,6 +2453,7 @@ Deno.serve(async (req) => {
     'alm_turma_save', 'alm_turma_del',
     'alm_atualizar_precos', 'alm_prof_set_turma',
     'alm_criar_req_gerente',
+    'alm_inventario_criar', 'alm_inventario_finalizar', 'alm_inventario_cancelar',
   ].includes(action)
 
   const isAlmGerenteAction = [
@@ -2445,6 +2466,8 @@ Deno.serve(async (req) => {
     'alm_relatorio', 'alm_prof_set_turma',
     'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_observacoes', 'alm_excel_observacoes',
     'alm_pdf_entregues', 'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
+    'alm_inventario_criar', 'alm_inventario_list', 'alm_inventario_get',
+    'alm_inventario_contar', 'alm_inventario_finalizar', 'alm_inventario_cancelar',
   ].includes(action)
 
   if (isAlmGerenteAction) {
@@ -3235,6 +3258,206 @@ Deno.serve(async (req) => {
       return json({ ok: true, antes, depois: novo, diff })
     }
 
+    // ─── Inventário físico (sessão persistida) ──────────────────────
+    if (action === 'alm_inventario_criar') {
+      const { nome, descricao, filtro_categoria, filtro_localizacao } = body
+      if (!nome) return json({ error: 'Nome da sessão obrigatório.' }, 400)
+      const escolaId = (gerente as any).escola_id
+
+      // Bloqueia abrir 2ª sessão simultânea (rascunho)
+      const { count: abertas } = await sb.from('alm_inventarios')
+        .select('*', { count: 'exact', head: true })
+        .eq('escola_id', escolaId).eq('status', 'rascunho')
+      if ((abertas || 0) > 0) {
+        return json({ error: 'Já existe uma contagem em andamento. Finalize ou cancele antes de abrir outra.' }, 400)
+      }
+
+      // Lista insumos ativos, opcionalmente filtrando
+      let q = sb.from('alm_insumos').select('id, nome, unidade, categoria, localizacao, estoque_qty')
+        .eq('escola_id', escolaId).eq('ativo', true)
+      if (filtro_categoria) q = q.eq('categoria', filtro_categoria)
+      if (filtro_localizacao) q = q.eq('localizacao', filtro_localizacao)
+      const { data: insumos } = await q
+      if (!insumos || insumos.length === 0) {
+        return json({ error: 'Nenhum insumo ativo encontrado para os filtros selecionados.' }, 400)
+      }
+
+      const { data: inv, error: errInv } = await sb.from('alm_inventarios').insert({
+        escola_id: escolaId,
+        nome,
+        descricao: descricao || null,
+        filtro_categoria: filtro_categoria || null,
+        filtro_localizacao: filtro_localizacao || null,
+        total_itens: insumos.length,
+        criado_por: (gerente as any).id || null,
+      }).select('id').single()
+      if (errInv || !inv) return json({ error: errInv?.message || 'Erro ao criar sessão.' }, 400)
+
+      const itens = insumos.map((i: any) => ({
+        escola_id: escolaId,
+        inventario_id: inv.id,
+        insumo_id: i.id,
+        nome_snapshot: i.nome,
+        unidade_snapshot: i.unidade,
+        categoria_snapshot: i.categoria,
+        localizacao_snapshot: i.localizacao,
+        saldo_sistema: Number(i.estoque_qty || 0),
+      }))
+      const { error: errIts } = await sb.from('alm_inventario_itens').insert(itens)
+      if (errIts) {
+        await sb.from('alm_inventarios').delete().eq('id', inv.id)
+        return json({ error: errIts.message }, 400)
+      }
+      return json({ ok: true, id: inv.id, total: insumos.length })
+    }
+
+    if (action === 'alm_inventario_list') {
+      const { data } = await sb.from('alm_inventarios').select('*')
+        .eq('escola_id', (gerente as any).escola_id)
+        .order('criado_em', { ascending: false }).limit(50)
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_inventario_get') {
+      const { id } = body
+      if (!id) return json({ error: 'id obrigatório.' }, 400)
+      const escolaId = (gerente as any).escola_id
+      const { data: inv } = await sb.from('alm_inventarios').select('*')
+        .eq('id', id).eq('escola_id', escolaId).maybeSingle()
+      if (!inv) return json({ error: 'Sessão não encontrada.' }, 404)
+      const { data: itens } = await sb.from('alm_inventario_itens').select('*')
+        .eq('inventario_id', id).eq('escola_id', escolaId)
+        .order('localizacao_snapshot', { ascending: true, nullsFirst: false })
+        .order('categoria_snapshot', { ascending: true, nullsFirst: false })
+        .order('nome_snapshot', { ascending: true })
+      return json({ inventario: inv, itens: itens ?? [] })
+    }
+
+    if (action === 'alm_inventario_contar') {
+      const { item_id, saldo_contado, observacao } = body
+      if (!item_id) return json({ error: 'item_id obrigatório.' }, 400)
+      const escolaId = (gerente as any).escola_id
+
+      // Valida que item pertence a sessão em rascunho
+      const { data: it } = await sb.from('alm_inventario_itens')
+        .select('id, inventario_id, alm_inventarios(status)')
+        .eq('id', item_id).eq('escola_id', escolaId).maybeSingle()
+      if (!it) return json({ error: 'Item não encontrado.' }, 404)
+      const status = (it as any).alm_inventarios?.status
+      if (status !== 'rascunho') return json({ error: 'Sessão já finalizada/cancelada.' }, 400)
+
+      const isClear = saldo_contado === null || saldo_contado === undefined || saldo_contado === ''
+      const novo = isClear ? null : parseFloat(String(saldo_contado).replace(',', '.'))
+      if (!isClear && (Number.isNaN(novo as number) || (novo as number) < 0)) {
+        return json({ error: 'saldo_contado inválido.' }, 400)
+      }
+
+      const { error } = await sb.from('alm_inventario_itens').update({
+        saldo_contado: novo,
+        contado: !isClear,
+        observacao: observacao ?? null,
+        contado_por: isClear ? null : ((gerente as any).id || null),
+        contado_em: isClear ? null : new Date().toISOString(),
+      }).eq('id', item_id).eq('escola_id', escolaId)
+      if (error) return json({ error: error.message }, 400)
+
+      // Atualiza contadores do header
+      const { data: stats } = await sb.from('alm_inventario_itens')
+        .select('contado, saldo_sistema, saldo_contado')
+        .eq('inventario_id', (it as any).inventario_id).eq('escola_id', escolaId)
+      const total = (stats || []).length
+      const contados = (stats || []).filter((x: any) => x.contado).length
+      const divs = (stats || []).filter((x: any) => x.contado && Number(x.saldo_contado) !== Number(x.saldo_sistema)).length
+      await sb.from('alm_inventarios').update({
+        total_contados: contados,
+        total_divergencias: divs,
+        total_itens: total,
+      }).eq('id', (it as any).inventario_id).eq('escola_id', escolaId)
+
+      return json({ ok: true, total_contados: contados, total_divergencias: divs })
+    }
+
+    if (action === 'alm_inventario_finalizar') {
+      const { id, aplicar_nao_contados } = body
+      if (!id) return json({ error: 'id obrigatório.' }, 400)
+      const escolaId = (gerente as any).escola_id
+
+      const { data: inv } = await sb.from('alm_inventarios').select('*')
+        .eq('id', id).eq('escola_id', escolaId).maybeSingle()
+      if (!inv) return json({ error: 'Sessão não encontrada.' }, 404)
+      if (inv.status !== 'rascunho') return json({ error: 'Sessão já finalizada/cancelada.' }, 400)
+
+      const { data: itens } = await sb.from('alm_inventario_itens').select('*')
+        .eq('inventario_id', id).eq('escola_id', escolaId)
+      const lista = itens || []
+
+      const naoContados = lista.filter((x: any) => !x.contado).length
+      if (naoContados > 0 && !aplicar_nao_contados) {
+        return json({
+          error: `Existem ${naoContados} itens não contados. Conte todos ou confirme finalização parcial.`,
+          code: 'PENDING_ITEMS',
+          nao_contados: naoContados,
+        }, 400)
+      }
+
+      // Aplica ajustes: para cada item contado com divergência → update insumo + insert movimentação
+      let aplicados = 0
+      let divergencias = 0
+      for (const it of lista as any[]) {
+        if (!it.contado) continue
+        const antes = Number(it.saldo_sistema || 0)
+        const depois = Number(it.saldo_contado || 0)
+        if (antes === depois) continue
+        divergencias++
+
+        // Releia saldo atual do insumo para evitar race com saídas durante a contagem
+        const { data: insAtual } = await sb.from('alm_insumos').select('estoque_qty')
+          .eq('id', it.insumo_id).eq('escola_id', escolaId).maybeSingle()
+        const atual = insAtual ? Number((insAtual as any).estoque_qty || 0) : antes
+        const diff = depois - antes  // ajuste que o conferente intencionou
+        const novoSaldo = atual + diff
+        const novoSaldoSafe = novoSaldo < 0 ? 0 : novoSaldo
+
+        await sb.from('alm_insumos').update({ estoque_qty: novoSaldoSafe })
+          .eq('id', it.insumo_id).eq('escola_id', escolaId)
+        await sb.from('alm_movimentacoes').insert({
+          escola_id: escolaId,
+          insumo_id: it.insumo_id,
+          tipo: 'ajuste',
+          qty: Math.abs(diff),
+          motivo: `Inventário "${inv.nome}": ${antes} → ${depois}${it.observacao ? ' · ' + it.observacao : ''}`,
+          saldo_antes: atual,
+          saldo_depois: novoSaldoSafe,
+          usuario_id: (gerente as any).id || null,
+        })
+        aplicados++
+      }
+
+      await sb.from('alm_inventarios').update({
+        status: 'finalizado',
+        finalizado_em: new Date().toISOString(),
+        finalizado_por: (gerente as any).id || null,
+        total_divergencias: divergencias,
+      }).eq('id', id).eq('escola_id', escolaId)
+
+      return json({ ok: true, aplicados, divergencias, nao_contados: naoContados })
+    }
+
+    if (action === 'alm_inventario_cancelar') {
+      const { id } = body
+      if (!id) return json({ error: 'id obrigatório.' }, 400)
+      const escolaId = (gerente as any).escola_id
+      const { data: inv } = await sb.from('alm_inventarios').select('status')
+        .eq('id', id).eq('escola_id', escolaId).maybeSingle()
+      if (!inv) return json({ error: 'Sessão não encontrada.' }, 404)
+      if ((inv as any).status !== 'rascunho') return json({ error: 'Apenas rascunhos podem ser cancelados.' }, 400)
+      const { error } = await sb.from('alm_inventarios').update({
+        status: 'cancelado', cancelado_em: new Date().toISOString(),
+      }).eq('id', id).eq('escola_id', escolaId)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
     // Entrada de estoque manual (recebimento de compra)
     if (action === 'alm_entrada_estoque') {
       const { insumo_id, qty, motivo } = body
@@ -3261,9 +3484,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'alm_insumo_save') {
-      const { id, nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra, qtd_por_embalagem } = body
+      const { id, nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra, qtd_por_embalagem, localizacao } = body
       if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
-      const data: Record<string, unknown> = { nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra: unidade_compra || null, qtd_por_embalagem: qtd_por_embalagem || 1 }
+      const data: Record<string, unknown> = { nome, descricao, unidade, estoque_qty, preco, categoria, unidade_compra: unidade_compra || null, qtd_por_embalagem: qtd_por_embalagem || 1, localizacao: localizacao || null }
       if (id) {
         // Se o gerente editou o preço manualmente, marcar como 'manual' para não sobrescrever na atualização automática
         const { data: old } = await sb.from('alm_insumos').select('preco').eq('id', id).maybeSingle()
