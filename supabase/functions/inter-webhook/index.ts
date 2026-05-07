@@ -132,8 +132,8 @@ Deno.serve(async (req) => {
         const pdfBytes = await getBoletoPdf(token, codigoSolicitacao)
         const fileName = `comprovantes/${nossoNumero}_pago.pdf`
         await supabase.storage.from('boletos').upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
-        const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
-        comprovanteUrl = urlData.publicUrl
+        const { data: signed } = await supabase.storage.from('boletos').createSignedUrl(fileName, 60 * 60 * 24 * 365)
+        comprovanteUrl = signed?.signedUrl ?? null
       } catch (e) { console.warn('[inter-webhook] PDF comprovante indisponível:', e) }
 
       if (comprovanteUrl) {
@@ -227,8 +227,9 @@ Deno.serve(async (req) => {
 
     if (uploadError) throw new Error(`Upload PDF falhou: ${uploadError.message}`)
 
-    const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
-    const pdfUrl = urlData.publicUrl
+    const { data: signed } = await supabase.storage.from('boletos').createSignedUrl(fileName, 60 * 60 * 24 * 30)
+    const pdfUrl = signed?.signedUrl ?? null
+    const pdfPath = fileName
 
     const cpfFormatado = cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 

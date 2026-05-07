@@ -208,6 +208,7 @@ Deno.serve(async (req) => {
           .maybeSingle()
 
         let pdfUrl = existing?.pdf_url ?? null
+        let pdfPath: string | null = (existing as any)?.pdf_path ?? null
 
         if (!pdfUrl && codigoSolicitacao) {
           try {
@@ -218,8 +219,9 @@ Deno.serve(async (req) => {
                 .from('boletos')
                 .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: true })
               if (!uploadError) {
-                const { data: urlData } = supabase.storage.from('boletos').getPublicUrl(fileName)
-                pdfUrl = urlData.publicUrl
+                const { data: signed } = await supabase.storage.from('boletos').createSignedUrl(fileName, 60 * 60 * 24 * 30)
+                pdfUrl = signed?.signedUrl ?? null
+                pdfPath = fileName
               }
             }
           } catch { /* PDF download optional */ }
@@ -229,7 +231,7 @@ Deno.serve(async (req) => {
           if (existing.situacao !== situacao || (!existing.pdf_url && pdfUrl)) {
             const { error: updErr } = await supabase
               .from('boletos')
-              .update({ situacao, pdf_url: pdfUrl ?? existing.pdf_url })
+              .update({ situacao, pdf_url: pdfUrl ?? existing.pdf_url, pdf_path: pdfPath ?? (existing as any).pdf_path })
               .eq('nosso_numero', nossoNumero)
             if (updErr) insertErrors.push(`update ${nossoNumero}: ${updErr.message}`)
           }
@@ -248,6 +250,7 @@ Deno.serve(async (req) => {
             linha_digitavel: linhaDigitavel,
             situacao,
             pdf_url: pdfUrl,
+            pdf_path: pdfPath,
             escola_id: fam.escola_id,
           })
           if (insErr) insertErrors.push(`insert ${nossoNumero}: ${insErr.message}`)

@@ -864,6 +864,7 @@ serve(async (req: Request) => {
     const urgencias = ["baixa", "media", "alta", "critica"];
     if (!urgencias.includes(urgencia as string)) return err("Urgência inválida. Use: baixa, media, alta, critica.");
     let foto_url: string | null = null;
+    let foto_path_value: string | null = null;
     if (base64 && mime) {
       const allowed = ["image/jpeg", "image/png", "image/webp"];
       if (!allowed.includes(mime as string)) return err("Tipo de imagem não permitido.");
@@ -871,15 +872,17 @@ serve(async (req: Request) => {
       if (bytes.length > 10 * 1024 * 1024) return err("Imagem muito grande (máx. 10MB).");
       const ext = (mime as string).split("/")[1];
       const path = `fotos/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-      await admin.storage.createBucket("manutencoes", { public: true }).catch(() => {});
+      await admin.storage.createBucket("manutencoes", { public: false }).catch(() => {});
       const { error: upErr } = await admin.storage.from("manutencoes").upload(path, bytes, { contentType: mime as string, upsert: false });
       if (upErr) return err("Erro ao enviar foto: " + upErr.message);
-      const { data: { publicUrl } } = admin.storage.from("manutencoes").getPublicUrl(path);
-      foto_url = publicUrl;
+      // Bucket privado (mig 280): signed URL TTL 7d, regenerada em cada list.
+      const { data: signed } = await admin.storage.from("manutencoes").createSignedUrl(path, 60 * 60 * 24 * 7);
+      foto_url = signed?.signedUrl || null;
+      foto_path_value = path;
     }
     const escolaIdMan = await resolveEscolaId(req, admin, null, body);
     if (!escolaIdMan) return err("Escola não identificada.", 400);
-    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, escola_id: escolaIdMan };
+    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, foto_path: foto_path_value, escola_id: escolaIdMan };
     if (usuario_id) insert.usuario_id = usuario_id;
     else if (_email) {
       const { data: u } = await admin.from("usuarios").select("id").eq("escola_id", escolaIdMan).eq("email", _email as string).maybeSingle();
@@ -2399,16 +2402,24 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const lim = Math.min(Math.max(parseInt(String(limit || 500)) || 500, 1), 2000);
     let q = admin
       .from("manutencoes")
-      .select("id, descricao, localizacao, urgencia, status, equipe_responsavel, foto_url, observacao, observacao_gerente, data_conclusao, criado_em, atualizado_em, usuario_id, escola_id, pergunta_coordenacao, pergunta_em, pergunta_por, pergunta_resposta, pergunta_respondida_em, usuarios(nome, email)")
+      .select("id, descricao, localizacao, urgencia, status, equipe_responsavel, foto_url, foto_path, observacao, observacao_gerente, data_conclusao, criado_em, atualizado_em, usuario_id, escola_id, pergunta_coordenacao, pergunta_em, pergunta_por, pergunta_resposta, pergunta_respondida_em, usuarios(nome, email)")
       .eq("escola_id", sessionEscolaId)
       .order("criado_em", { ascending: false })
       .limit(lim);
     if (somente_abertas) q = q.not("status", "in", "(concluida,rejeitada)");
     const { data, error } = await q;
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+    // Bucket privado (mig 280): regenera signed URL TTL 1h em cada list
+    const refreshed = await Promise.all((data ?? []).map(async (r: any) => {
+      if (r.foto_path) {
+        const { data: signed } = await admin.storage.from("manutencoes").createSignedUrl(r.foto_path, 3600);
+        if (signed?.signedUrl) r.foto_url = signed.signedUrl;
+      }
+      return r;
+    }));
     // Sort by urgencia priority: critica > alta > media > baixa, then by criado_em desc
     const prioridade: Record<string, number> = { critica: 0, alta: 1, media: 2, baixa: 3 };
-    const sorted = (data ?? []).sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+    const sorted = refreshed.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
       const pa = prioridade[a.urgencia as string] ?? 9;
       const pb = prioridade[b.urgencia as string] ?? 9;
       if (pa !== pb) return pa - pb;
@@ -2422,6 +2433,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const urgencias = ["baixa", "media", "alta", "critica"];
     if (!urgencias.includes(urgencia as string)) return err("Urgência inválida. Use: baixa, media, alta, critica.");
     let foto_url: string | null = (fotoUrlBody as string) ?? null;
+    let foto_path_value: string | null = null;
     if (base64 && mime) {
       const allowed = ["image/jpeg", "image/png", "image/webp"];
       if (!allowed.includes(mime as string)) return err("Tipo de imagem não permitido.");
@@ -2429,13 +2441,14 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       if (bytes.length > 10 * 1024 * 1024) return err("Imagem muito grande (máx. 10MB).");
       const ext = (mime as string).split("/")[1];
       const path = `fotos/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-      await admin.storage.createBucket("manutencoes", { public: true }).catch(() => {});
+      await admin.storage.createBucket("manutencoes", { public: false }).catch(() => {});
       const { error: upErr } = await admin.storage.from("manutencoes").upload(path, bytes, { contentType: mime as string, upsert: false });
       if (upErr) return err("Erro ao enviar foto: " + upErr.message);
-      const { data: { publicUrl } } = admin.storage.from("manutencoes").getPublicUrl(path);
-      foto_url = publicUrl;
+      const { data: signed } = await admin.storage.from("manutencoes").createSignedUrl(path, 60 * 60 * 24 * 7);
+      foto_url = signed?.signedUrl || null;
+      foto_path_value = path;
     }
-    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, escola_id: sessionEscolaId };
+    const insert: Record<string, unknown> = { descricao, localizacao, urgencia, foto_url, foto_path: foto_path_value, escola_id: sessionEscolaId };
     if (usuario_id) insert.usuario_id = usuario_id;
     else if (gerente?.id) insert.usuario_id = gerente.id;
     const { error } = await admin.from("manutencoes").insert(insert);

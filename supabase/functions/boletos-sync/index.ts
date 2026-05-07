@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
 
       // PDF
       let pdfUrl: string | null = null
+      let pdfPath: string | null = null
       try {
         const pdfRes = await fetch(`${INTER_BASE}/cobranca/v3/cobrancas/${boletoId}/pdf`, { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15000) })
         if (pdfRes.ok) {
@@ -125,12 +126,14 @@ Deno.serve(async (req) => {
             const binary = atob(pdfData.pdf)
             const bytes = new Uint8Array(binary.length)
             for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-            await sb.storage.createBucket('boletos', { public: true }).catch(() => {})
+            await sb.storage.createBucket('boletos', { public: false }).catch(() => {})
             const fileName = `${cpf}/${nossoNumero}.pdf`
             const { error: upErr } = await sb.storage.from('boletos').upload(fileName, bytes, { contentType: 'application/pdf', upsert: true })
             if (!upErr) {
-              const { data: urlData } = sb.storage.from('boletos').getPublicUrl(fileName)
-              pdfUrl = urlData.publicUrl
+              // Bucket privado (mig 280): signed URL TTL 30d (boletos têm vencimento longo)
+              const { data: signed } = await sb.storage.from('boletos').createSignedUrl(fileName, 60 * 60 * 24 * 30)
+              pdfUrl = signed?.signedUrl ?? null
+              pdfPath = fileName
             }
           }
         }
@@ -144,7 +147,7 @@ Deno.serve(async (req) => {
         valor: bol.valorNominal ?? bol.valor ?? 0,
         vencimento: bol.dataVencimento ?? null,
         linha_digitavel: bol.linhaDigitavel ?? '',
-        situacao, pdf_url: pdfUrl,
+        situacao, pdf_url: pdfUrl, pdf_path: pdfPath,
         escola_id: (fam as any).escola_id,
       })
       if (!dbErr) sincronizados++
