@@ -467,8 +467,9 @@ router.on("acesso_face_cadastrar", authGerente, async (ctx) => {
         contentType: "image/jpeg", upsert: true,
       });
       if (!upErr) {
-        const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
-        fotoUrl = urlData?.publicUrl || null;
+        // Bucket privado (mig 279): signed URL com TTL 7d, regenerada nos handlers de listagem
+        const { data: signed } = await ctx.sb.storage.from("wa-documentos").createSignedUrl(path, 60 * 60 * 24 * 7);
+        fotoUrl = signed?.signedUrl || null;
       }
     } catch (e) {
       console.error("Erro ao processar foto:", e);
@@ -846,8 +847,8 @@ router.on("acesso_evento_callback", async (ctx) => {
         contentType: "image/jpeg", upsert: true,
       });
       if (!upErr) {
-        const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
-        fotoCapturaUrl = urlData?.publicUrl || null;
+        const { data: signed } = await ctx.sb.storage.from("wa-documentos").createSignedUrl(path, 60 * 60 * 24 * 7);
+        fotoCapturaUrl = signed?.signedUrl || null;
       }
     } catch (e) {
       console.error("Erro ao salvar foto captura:", e);
@@ -1336,8 +1337,8 @@ router.on("acesso_adicionar_autorizado", async (ctx) => {
     // Salvar no storage
     const path = `acesso/autorizados/${aluno_id}_${Date.now()}.jpg`;
     await ctx.sb.storage.from("wa-documentos").upload(path, fotoBinary, { contentType: "image/jpeg", upsert: true });
-    const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
-    fotoUrl = urlData?.publicUrl || null;
+    const { data: signed } = await ctx.sb.storage.from("wa-documentos").createSignedUrl(path, 60 * 60 * 24 * 7);
+    fotoUrl = signed?.signedUrl || null;
   }
 
   // Resolve escola_id from request origin
@@ -1892,11 +1893,11 @@ router.on("acesso_face_cadastro_publico", async (ctx) => {
     return successResponse({ ok: false, qualidade_erros: qualidade.errors, scores: qualidade.scores });
   }
 
-  // Salvar foto no storage
+  // Salvar foto no storage (bucket privado)
   const path = `acesso/faces/${tk.pessoa_id}_${Date.now()}.jpg`;
   await ctx.sb.storage.from("wa-documentos").upload(path, binary, { contentType: "image/jpeg", upsert: true });
-  const { data: urlData } = ctx.sb.storage.from("wa-documentos").getPublicUrl(path);
-  const fotoUrl = urlData?.publicUrl || null;
+  const { data: signed } = await ctx.sb.storage.from("wa-documentos").createSignedUrl(path, 60 * 60 * 24 * 7);
+  const fotoUrl = signed?.signedUrl || null;
 
   const deviceUserId = uuidToDeviceId(tk.pessoa_id);
 
@@ -2346,8 +2347,8 @@ async function uploadBase64Photo(sb: Any, base64: string, prefix: string): Promi
     const path = `acesso/${prefix}/${Date.now()}_${crypto.randomUUID()}.jpg`;
     const { error } = await sb.storage.from("wa-documentos").upload(path, bin, { contentType: "image/jpeg", upsert: true });
     if (error) return null;
-    const { data: urlData } = sb.storage.from("wa-documentos").getPublicUrl(path);
-    return urlData?.publicUrl || null;
+    const { data: signed } = await sb.storage.from("wa-documentos").createSignedUrl(path, 60 * 60 * 24 * 7);
+    return signed?.signedUrl || null;
   } catch (_) {
     return null;
   }
