@@ -1155,7 +1155,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <input type="date" id="cozCardFim" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
           <button onclick="loadCozCardapio()" style="padding:10px 20px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Buscar</button>
           <button onclick="novoCardapioItem()" style="padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">+ Item</button>
-          <button onclick="aprovarCardapios()" style="padding:10px 20px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✓ Aprovar Semana</button>
+          <button onclick="aprovarCardapios()" style="padding:10px 20px;background:#6d28d9;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✓ Aprovar Semana</button>
           <button onclick="publicarCardapios()" style="padding:10px 20px;background:var(--orange);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">📣 Publicar</button>
         </div>
         <div id="cozCardapioGrid"></div>
@@ -1193,7 +1193,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelCozCompras" class="panel">
         <h2 class="panel-title">🛒 Cozinha — Compras</h2>
         <div style="display:flex;gap:10px;margin-bottom:16px;">
-          <button onclick="projetarCompras()" style="padding:10px 20px;background:#06b6d4;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">🔮 Projetar (7 dias)</button>
+          <button onclick="projetarCompras()" style="padding:10px 20px;background:#0e7490;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">🔮 Projetar (7 dias)</button>
           <button onclick="novaCompra()" style="padding:10px 20px;background:var(--green);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">+ Nova Compra</button>
           <select id="cozCompFiltroStatus" onchange="loadCozCompras()" style="padding:10px;border:1.5px solid var(--border);border-radius:8px;">
             <option value="">Todos</option><option>rascunho</option><option>cotacao</option><option>aprovada</option><option>enviada</option><option>recebida</option>
@@ -1239,7 +1239,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
         <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;">
           <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">🧪 Amostras Testemunha (72h)</h3>
-          <button onclick="coletarAmostra()" style="padding:8px 16px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px;">+ Coletar Amostra</button>
+          <button onclick="coletarAmostra()" style="padding:8px 16px;background:#6d28d9;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px;">+ Coletar Amostra</button>
           <div id="cozAmostrasList" style="font-size:12px;"></div>
         </div>
       </div>
@@ -1866,7 +1866,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <button onclick="almAbrirNovaReq()" class="btn-create" style="padding:7px 16px;background:#1a6bb5;margin-left:auto;">📝 Criar Requisição</button>
         </div>
         <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);" id="almReqsTabs">
-          <button class="alm-utab active" onclick="almReqsSetTab('pend',this)">Pendentes <span id="almPendBadge" style="background:#e67e22;color:#fff;font-size:10px;border-radius:10px;padding:1px 7px;margin-left:4px;"></span></button>
+          <button class="alm-utab active" onclick="almReqsSetTab('pend',this)">Pendentes <span id="almPendBadge" style="background:#e67e22;color:#3d1a00;font-size:10px;border-radius:10px;padding:1px 7px;margin-left:4px;font-weight:700;"></span></button>
           <button class="alm-utab" onclick="almReqsSetTab('hist',this)">Histórico</button>
           <button class="alm-utab" onclick="almReqsSetTab('compras',this)">Compras</button>
           <button class="alm-utab" onclick="almReqsSetTab('relat',this)">📊 Relatórios</button>
@@ -14982,7 +14982,7 @@ docker compose up -d --build</pre>
     if (!b) {
       b = document.createElement('div');
       b.id = 'offlineBanner';
-      b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#d4830a;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:9999;font-family:"DM Sans",sans-serif;transition:transform .3s;';
+      b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#a16207;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:9999;font-family:"DM Sans",sans-serif;transition:transform .3s;';
       b.textContent = '📡 Sem conexão com a internet';
       document.body.appendChild(b);
     }
