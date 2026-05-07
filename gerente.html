@@ -263,7 +263,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 /* EXPORT BUTTONS */
 .btn-export{padding:7px 14px;border-radius:7px;border:1.5px solid var(--border);background:var(--white);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--text);transition:all .2s;display:flex;align-items:center;gap:6px;}
 .btn-export:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
-.btn-whatsapp{padding:7px 14px;border-radius:7px;border:none;background:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:#fff;transition:background .2s;display:flex;align-items:center;gap:6px;}
+.btn-whatsapp{padding:7px 14px;border-radius:7px;border:none;background:#25D366;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:#0a3d12;transition:background .2s;display:flex;align-items:center;gap:6px;}
 .btn-whatsapp:hover{background:#1da851;}
 /* DIPLOMAS */
 .dip-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;}
@@ -277,7 +277,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .rank-row:last-child{border-bottom:none;}
 .rank-row:hover{background:#faf8f5;}
 .rank-pos-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-weight:700;font-size:13px;flex-shrink:0;}
-.rank-pos-badge.g1{background:#FFD700;color:#7a5c00;}.rank-pos-badge.g2{background:#C0C0C0;color:#444;}.rank-pos-badge.g3{background:#CD7F32;color:#fff;}.rank-pos-badge.gN{background:#f0ece6;color:var(--muted);font-size:11px;}
+.rank-pos-badge.g1{background:#FFD700;color:#7a5c00;}.rank-pos-badge.g2{background:#C0C0C0;color:#444;}.rank-pos-badge.g3{background:#CD7F32;color:#3d1a00;font-weight:700;}.rank-pos-badge.gN{background:#f0ece6;color:var(--muted);font-size:11px;}
 .rank-nome{flex:1;font-size:13px;font-weight:600;}
 .rank-pts-val{font-family:'Lora',serif;font-size:22px;font-weight:700;color:#d4830a;min-width:60px;text-align:right;}
 .rank-pts-lbl{font-size:10px;color:var(--muted);text-align:right;}
@@ -2576,7 +2576,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <button class="mn-btn" onclick="monthNavMonth('concMes',1,loadFinConciliacao)">&#8250;</button>
             </div>
           </div>
-          <button onclick="syncBancoInter()" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🏦 Sincronizar Banco Inter</button>
+          <button onclick="syncBancoInter()" style="background:#15803d;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🏦 Sincronizar Banco Inter</button>
           <button onclick="autoConciliar()" style="background:#1a6bb5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Auto-conciliar</button>
           <button onclick="document.getElementById('concXlsx').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar Extrato</button>
           <input type="file" id="concXlsx" accept=".xlsx,.xls,.csv,.ofx" style="display:none" onchange="importarExtrato(this)">
@@ -3170,7 +3170,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <h3>Relatório de Pendências por Equipe</h3>
             <div style="display:flex;gap:8px;">
               <button onclick="printManutRelatorio()" class="btn-export" style="font-size:12px;">🖨 Imprimir</button>
-              <button onclick="shareManutWhatsApp()" class="btn-export" style="font-size:12px;background:#25D366;color:#fff;">📲 WhatsApp</button>
+              <button onclick="shareManutWhatsApp()" class="btn-export" style="font-size:12px;background:#25D366;color:#0a3d12;">📲 WhatsApp</button>
               <button class="btn-cancel" onclick="closeManutRelatorio()">✕</button>
             </div>
           </div>
@@ -3644,7 +3644,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
             <button onclick="linkResultCopy()" style="padding:14px 8px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">📋 Copiar</button>
-            <button onclick="linkResultWhatsApp()" style="padding:14px 8px;background:#25D366;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">💬 WhatsApp</button>
+            <button onclick="linkResultWhatsApp()" style="padding:14px 8px;background:#25D366;color:#0a3d12;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">💬 WhatsApp</button>
             <button onclick="linkResultEmail()" id="linkResultEmailBtn" style="padding:14px 8px;background:#1a6bb5;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">✉️ Email</button>
           </div>
           <div id="linkResultStatus" style="margin-top:14px;font-size:13px;color:#5a5249;text-align:center;"></div>
@@ -13536,7 +13536,7 @@ docker compose up -d --build</pre>
       </div>
       ${lead.observacoes?`<div style="font-size:12px;color:#555;margin-bottom:12px;padding:8px;background:#f5f0ea;border-radius:8px;">${esc(lead.observacoes)}</div>`:''}
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
-        ${lead.telefone?`<button onclick="abrirWhatsApp('${esc(lead.telefone)}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💬 WhatsApp</button>`:''}
+        ${lead.telefone?`<button onclick="abrirWhatsApp('${esc(lead.telefone)}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#25D366;color:#0a3d12;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💬 WhatsApp</button>`:''}
         <button onclick="this.closest('div[style*=fixed]').remove();agendarReuniaoCrm('${id}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📅 Agendar Reuniao</button>
         <button onclick="criarMatriculaDoLead('${id}')" style="padding:6px 12px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📝 Registrar Reserva/Matricula</button>
       </div>
@@ -13770,7 +13770,7 @@ docker compose up -d --build</pre>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <strong style="font-size:13px;">${esc(t.nome)}</strong>
         <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#f5f0ea;color:var(--muted);">${catLabels[t.categoria]||t.categoria}</span>
-        <button onclick="copiarTemplate('${t.id}')" style="margin-left:auto;padding:3px 10px;background:#25D366;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copiar</button>
+        <button onclick="copiarTemplate('${t.id}')" style="margin-left:auto;padding:3px 10px;background:#25D366;color:#0a3d12;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Copiar</button>
       </div>
       <div style="font-size:12px;color:#555;line-height:1.5;white-space:pre-wrap;">${esc(t.conteudo)}</div>
     </div>`).join('') : '<div class="empty-state">Nenhum template.</div>';
