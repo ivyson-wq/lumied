@@ -3429,16 +3429,26 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
 
   // ── Impressoes (gerente) ────────────────────────────────
+  // Helper: regenera signed URL fresh (TTL 1h) para arquivos do bucket
+  // privado 'impressoes' (mig 281). Caller usa nas listas.
+  const refreshImpressoesUrls = async (rows: any[]) => Promise.all(rows.map(async (r) => {
+    if (r.arquivo_path) {
+      const { data: signed } = await admin.storage.from("impressoes").createSignedUrl(r.arquivo_path, 3600);
+      if (signed?.signedUrl) r.arquivo_url = signed.signedUrl;
+    }
+    return r;
+  }));
+
   if (action === "impressoes_pendentes") {
     const { data } = await admin.from("impressoes").select("*")
       .eq("escola_id", sessionEscolaId).in("status", ["pendente", "aprovado", "impresso"]).order("criado_em", { ascending: true });
-    return ok(data ?? []);
+    return ok(await refreshImpressoesUrls(data ?? []));
   }
   if (action === "impressoes_todas") {
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
     const { data } = await admin.from("impressoes").select("*")
       .eq("escola_id", sessionEscolaId).gte("criado_em", mes + "-01").order("criado_em", { ascending: false });
-    return ok(data ?? []);
+    return ok(await refreshImpressoesUrls(data ?? []));
   }
   if (action === "impressao_aprovar") {
     const { id, nota } = body as { id: string; nota?: string };

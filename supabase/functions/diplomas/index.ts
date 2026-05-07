@@ -1319,9 +1319,41 @@ Deno.serve(async (req) => {
       item_id: string | null        // platform product ID (ML: "MLB...", Shopee: shopid/itemid)
       match: number
       tipo: 'produto' | 'busca'
+      frete_gratis?: boolean
+      full?: boolean
+      condicao?: 'novo' | 'usado' | null
+      qty_pacote?: number | null
+      unidade_pacote?: string | null
+      preco_unit_norm?: number | null
+      preco_unit_norm_fmt?: string | null
     }
     const results: PriceResult[] = []
     const fontes: Record<string, { status: string; produtos: number; erro?: string }> = {}
+
+    function parsePackQty(title: string): { qty: number; unidade: string } | null {
+      const t = (title || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      const patterns: Array<{ rx: RegExp; un: string; mul?: number }> = [
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:kg|kilos?|quilos?)\b/, un: 'g', mul: 1000 },
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:gr|gramas?|g)\b/, un: 'g' },
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:litros?|lt|l)\b/, un: 'ml', mul: 1000 },
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:ml|mililitros?)\b/, un: 'ml' },
+        { rx: /(\d+)\s*(?:folhas?|fls?|fl)\b/, un: 'fl' },
+        { rx: /(?:c\/|com|contendo|pacote\s*c\/|pct\s*c\/|caixa\s*c\/|cx\s*c\/)\s*(\d+)\s*(?:un|unid|unidades?|pe[çc]as?|pcs?)?\b/, un: 'un' },
+        { rx: /(\d+)\s*(?:un|unid|unidades?|pe[çc]as?|pcs?)\b/, un: 'un' },
+      ]
+      for (const p of patterns) {
+        const m = p.rx.exec(t)
+        if (m) {
+          const qty = parseFloat(m[1].replace(',', '.'))
+          if (qty > 0 && qty < 100000) return { qty: qty * (p.mul || 1), unidade: p.un }
+        }
+      }
+      return null
+    }
+    function fmtUnitPrice(n: number, un: string): string {
+      const v = n.toLocaleString('pt-BR', { minimumFractionDigits: n < 1 ? 4 : 2, maximumFractionDigits: 4 })
+      return `R$ ${v}/${un}`
+    }
 
     // ── 0. Zoom.com.br (comparador de preços — scraping) ─────
     try {
@@ -3147,7 +3179,9 @@ Deno.serve(async (req) => {
     const duplicadoAviso = dup ? `Atenção: arquivo idêntico já enviado em ${new Date((dup as any).criado_em).toLocaleString('pt-BR')} por ${(dup as any).professora_nome || '?'} (${(dup as any).copias} cópias). Continuamos com este novo pedido.` : null
     const { error: errUp } = await sb.storage.from('impressoes').upload(path, buf, { contentType: mime || 'application/pdf' })
     if (errUp) return json({ error: 'Falha no upload: ' + errUp.message }, 400)
-    const { data: pub } = sb.storage.from('impressoes').getPublicUrl(path)
+    // Bucket privado (mig 281): signed URL com TTL = 7d (mesma retenção da mig 270)
+    const { data: signed } = await sb.storage.from('impressoes').createSignedUrl(path, 60 * 60 * 24 * 7)
+    const arquivoUrl = signed?.signedUrl || ''
     // Contar páginas do PDF
     let numPaginas = 1
     if (ext === 'pdf') {
@@ -3187,7 +3221,7 @@ Deno.serve(async (req) => {
       escola_id: escolaId,
       professora_id: prof.id, professora_nome: prof.nome,
       turma_id: turma?.id || null, turma_nome: turma?.nome || null,
-      arquivo_url: pub.publicUrl, arquivo_nome: arquivo_nome || path,
+      arquivo_url: arquivoUrl, arquivo_path: path, arquivo_nome: arquivo_nome || path,
       arquivo_hash: hashHex, arquivo_tamanho: buf.length,
       expira_em: new Date(Date.now() + 7 * 86400000).toISOString(),
       copias: nCopias, num_paginas: numPaginas, tipo_papel: tipo_papel || 'sulfite',
@@ -3212,6 +3246,14 @@ Deno.serve(async (req) => {
     if (!prof) return json({ error: 'Sessao invalida.' }, 401)
     const { data } = await sb.from('impressoes').select('*')
       .eq('professora_id', prof.id).order('criado_em', { ascending: false }).limit(30)
+    // Bucket privado (mig 281): regenera signed URL TTL 1h em cada listagem
+    const refreshed = await Promise.all((data ?? []).map(async (r: any) => {
+      if (r.arquivo_path) {
+        const { data: signed } = await sb.storage.from('impressoes').createSignedUrl(r.arquivo_path, 3600)
+        if (signed?.signedUrl) r.arquivo_url = signed.signedUrl
+      }
+      return r
+    }))
     // Buscar uso mensal
     const mes = new Date().toISOString().slice(0, 7)
     const { data: profData } = await sb.from('professoras').select('serie_id').eq('id', prof.id).maybeSingle()
@@ -3221,7 +3263,7 @@ Deno.serve(async (req) => {
     const { data: usadas } = await sb.from('impressoes').select('copias, num_paginas')
       .eq('turma_id', turmaId || '').gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
     const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + ((r.copias || 0) * (r.num_paginas || 1)), 0)
-    return json({ data: data ?? [], usado: totalUsado, limite })
+    return json({ data: refreshed, usado: totalUsado, limite })
   }
 
   // ━━ ALTERAR SENHA PROFESSORA ━━━━━━━━━━━━━━━━━━━━━━━━━━
