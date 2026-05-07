@@ -505,7 +505,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 .alm-tab:hover{border-color:var(--red);color:var(--red);}
 .alm-tab.active{background:var(--red);color:#fff;border-color:var(--red);}
 .alm-tab-panel{display:none;}.alm-tab-panel.active{display:block;}
-.alm-req-row{display:flex;align-items:flex-start;gap:14px;padding:14px;background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;}
+.alm-req-row{display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px;padding:14px;background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;}
 .alm-req-row.pendente{border-left:4px solid #f6a623;}
 .alm-req-row.aprovado{border-left:4px solid #48bb78;}
 .alm-req-row.rejeitado{border-left:4px solid #e53e3e;}
@@ -10934,7 +10934,7 @@ docker compose up -d --build</pre>
         ${r.observacao ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">📝 ${r.observacao}</div>` : ''}
         ${r.nota_gerente ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">💬 ${r.nota_gerente}</div>` : ''}
       </div>
-      ${showBtn ? `<button onclick="almAbrirReview('${r.id}')" class="btn-create" style="width:auto;padding:8px 18px;font-size:12px;white-space:nowrap;flex-shrink:0;">Analisar</button>` : ''}
+      ${showBtn ? `<button onclick="almAbrirReview('${r.id}')" class="btn-create" style="width:auto;padding:8px 18px;font-size:12px;white-space:nowrap;flex-shrink:0;background:#1a6bb5;">✏️ Editar / Aprovar</button>` : ''}
     </div>`;
   }
 
