@@ -1308,7 +1308,7 @@ Deno.serve(async (req) => {
       .select('id, nome, descricao, escola_id, preco_atualizado_em')
       .eq('ativo', true)
       .order('preco_atualizado_em', { ascending: true, nullsFirst: true })
-      .limit(3)
+      .limit(2)
     if (!insumos?.length) return json({ ok: true, count: 0, msg: 'Nenhum insumo ativo' })
     const queries = insumos.map((i: any) => (i.descricao ? `${i.nome.trim()} ${i.descricao.trim()}` : i.nome.trim()))
     try {
@@ -3909,6 +3909,80 @@ Deno.serve(async (req) => {
       .eq('turma_id', turmaId || '').gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
     const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + ((r.copias || 0) * (r.num_paginas || 1)), 0)
     return json({ data: refreshed, usado: totalUsado, limite })
+  }
+
+  if (action === 'impressao_editar') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    const { id, copias, tipo_papel, para_dia, observacao } = body as any
+    if (!id) return json({ error: 'ID obrigatório.' }, 400)
+    const { data: imp, error: errFind } = await sb.from('impressoes')
+      .select('id, professora_id, status, num_paginas, turma_id, escola_id')
+      .eq('id', id).maybeSingle()
+    if (errFind || !imp) return json({ error: 'Solicitação não encontrada.' }, 404)
+    if ((imp as any).professora_id !== prof.id) return json({ error: 'Sem permissão.' }, 403)
+    if ((imp as any).status !== 'pendente') return json({ error: 'Só é possível editar solicitações pendentes. Esta já foi processada pelo gerente.' }, 400)
+    const upd: Record<string, unknown> = {}
+    if (copias !== undefined) {
+      const n = parseInt(copias)
+      if (!n || n < 1) return json({ error: 'Quantidade de cópias inválida.' }, 400)
+      if (n > 500) return json({ error: 'Quantidade de cópias acima do limite (500).' }, 400)
+      upd.copias = n
+    }
+    if (tipo_papel !== undefined) {
+      const allowed = ['sulfite', 'desenho', 'cartolina', 'foto', 'adesivo']
+      if (!allowed.includes(tipo_papel)) return json({ error: 'Tipo de papel inválido.' }, 400)
+      upd.tipo_papel = tipo_papel
+    }
+    if (para_dia !== undefined) upd.para_dia = para_dia || null
+    if (observacao !== undefined) upd.observacao = observacao || null
+    if (Object.keys(upd).length === 0) return json({ error: 'Nada para atualizar.' }, 400)
+    // Revalida limite mensal se cópias mudou e turma existe (modo lançamento ignora)
+    if (upd.copias !== undefined && (imp as any).turma_id) {
+      const escolaId = (imp as any).escola_id
+      const { data: cfgL } = await sb.from('escola_config').select('valor')
+        .eq('escola_id', escolaId).eq('chave', 'impressao_lancamento').maybeSingle()
+      const modoLancamento = cfgL ? Boolean((cfgL as any).valor) : true
+      if (!modoLancamento) {
+        const mes = new Date().toISOString().slice(0, 7)
+        const { data: orc } = await sb.from('impressoes_orcamento').select('limite').eq('turma_id', (imp as any).turma_id).eq('mes', mes).maybeSingle()
+        const limite = (orc as any)?.limite ?? 50
+        const { data: usadas } = await sb.from('impressoes').select('id, copias, num_paginas')
+          .eq('turma_id', (imp as any).turma_id).gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
+        const totalUsado = (usadas ?? []).reduce((s: number, r: any) => {
+          const cop = r.id === id ? (upd.copias as number) : (r.copias || 0)
+          return s + (cop * (r.num_paginas || 1))
+        }, 0)
+        if (totalUsado > limite) return json({ error: `Limite mensal de ${limite} folhas seria excedido (${totalUsado} com esta alteração).` }, 400)
+      }
+    }
+    const { error } = await sb.from('impressoes').update(upd)
+      .eq('id', id).eq('professora_id', prof.id).eq('status', 'pendente')
+    if (error) return json({ error: error.message }, 400)
+    return json({ ok: true })
+  }
+
+  if (action === 'impressao_excluir') {
+    const token = (body._token as string) || (body._prof_token as string)
+    const prof = await getProfessora(sb, token)
+    if (!prof) return json({ error: 'Sessao invalida.' }, 401)
+    const { id } = body as any
+    if (!id) return json({ error: 'ID obrigatório.' }, 400)
+    const { data: imp, error: errFind } = await sb.from('impressoes')
+      .select('id, professora_id, status, arquivo_path')
+      .eq('id', id).maybeSingle()
+    if (errFind || !imp) return json({ error: 'Solicitação não encontrada.' }, 404)
+    if ((imp as any).professora_id !== prof.id) return json({ error: 'Sem permissão.' }, 403)
+    if ((imp as any).status !== 'pendente') return json({ error: 'Só é possível excluir solicitações pendentes. Esta já foi processada pelo gerente.' }, 400)
+    const path = (imp as any).arquivo_path
+    if (path) {
+      try { await sb.storage.from('impressoes').remove([path]) } catch { /* best-effort */ }
+    }
+    const { error } = await sb.from('impressoes').delete()
+      .eq('id', id).eq('professora_id', prof.id).eq('status', 'pendente')
+    if (error) return json({ error: error.message }, 400)
+    return json({ ok: true })
   }
 
   // ━━ ALTERAR SENHA PROFESSORA ━━━━━━━━━━━━━━━━━━━━━━━━━━

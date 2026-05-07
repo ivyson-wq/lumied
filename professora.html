@@ -1204,6 +1204,43 @@ body.dash-clean #greetingBar{display:none;}
       <!-- Lista -->
       <div class="sec-title" style="margin-bottom:8px;">Minhas Solicitações</div>
       <div id="impLista"><div class="empty-state">Carregando...</div></div>
+
+      <!-- Modal Editar Impressão -->
+      <div id="impEditarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;padding:16px;">
+        <div style="background:#fff;border-radius:12px;max-width:480px;width:100%;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+          <h3 style="font-size:15px;font-weight:600;margin:0 0 12px;">Editar Solicitação</h3>
+          <input type="hidden" id="impEditId">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="ff" style="margin:0;">
+              <label>Cópias *</label>
+              <input type="number" id="impEditCopias" min="1" max="200" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            </div>
+            <div class="ff" style="margin:0;">
+              <label>Tipo de papel</label>
+              <select id="impEditPapel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+                <option value="sulfite">Papel Sulfite A4</option>
+                <option value="desenho">Papel Desenho</option>
+                <option value="cartolina">Cartolina</option>
+                <option value="foto">Papel Fotográfico</option>
+                <option value="adesivo">Papel Adesivo</option>
+              </select>
+            </div>
+            <div class="ff" style="margin:0;grid-column:1/-1;">
+              <label>Para qual dia</label>
+              <input type="date" id="impEditDia" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            </div>
+            <div class="ff" style="margin:0;grid-column:1/-1;">
+              <label>Observação</label>
+              <input type="text" id="impEditObs" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            </div>
+          </div>
+          <div class="f-alert error" id="impEditErr" style="margin-top:8px;display:none;"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+            <button onclick="fecharEditarImp()" class="btn-submit" style="background:#e2dbd1;color:#333;font-size:13px;">Cancelar</button>
+            <button onclick="salvarEditarImp()" id="impEditBtn" class="btn-submit" style="font-size:13px;">Salvar</button>
+          </div>
+        </div>
+      </div>
     </div><!-- /pageImpressoes -->
 
     <!-- PÁGINA: AGENDA DIGITAL -->
@@ -4544,10 +4581,17 @@ body.dash-clean #greetingBar{display:none;}
       barEl.style.background = pct >= 90 ? '#e53e3e' : pct >= 70 ? '#f6a623' : '#48bb78';
     }
     if (!el) return;
+    window._impCache = { items };
     if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma solicitação.</div>'; return; }
     el.innerHTML = items.map(it => {
       const dt = it.criado_em ? new Date(it.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }) : '—';
       const paraDia = it.para_dia ? new Date(it.para_dia+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) : null;
+      const acoes = it.status === 'pendente'
+        ? `<div style="display:flex;gap:6px;margin-top:8px;">
+             <button onclick="abrirEditarImp('${it.id}')" style="flex:1;padding:6px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;">✏️ Editar</button>
+             <button onclick="excluirImpressao('${it.id}')" style="flex:1;padding:6px 10px;border:1px solid #fdd;background:#fff5f6;color:#a00d24;border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;">🗑️ Excluir</button>
+           </div>`
+        : '';
       return `<div class="upload-card" style="margin-bottom:8px;padding:12px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <a href="${esc(it.arquivo_url)}" target="_blank" style="font-weight:600;font-size:13px;color:var(--blue);text-decoration:none;">📎 ${esc(it.arquivo_nome||'Arquivo')}</a>
@@ -4557,6 +4601,7 @@ body.dash-clean #greetingBar{display:none;}
         </div>
         ${it.nota_gerente ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">💬 ${esc(it.nota_gerente)}</div>` : ''}
         <div style="font-size:10px;color:var(--muted);margin-top:4px;">${dt}${it.turma_nome ? ' · ' + esc(it.turma_nome) : ''}</div>
+        ${acoes}
       </div>`;
     }).join('');
   }
@@ -4654,6 +4699,49 @@ body.dash-clean #greetingBar{display:none;}
     document.getElementById('impDia').value = '';
     loadImpressoes();
     btn.disabled = false; btn.textContent = 'Enviar Solicitação';
+  }
+
+  function abrirEditarImp(id) {
+    const it = (window._impCache?.items || []).find(x => x.id === id);
+    if (!it) { showToast('Solicitação não encontrada. Atualize a lista.', 'warning'); return; }
+    if (it.status !== 'pendente') { showToast('Esta solicitação já foi processada e não pode mais ser editada.', 'warning'); return; }
+    document.getElementById('impEditId').value = it.id;
+    document.getElementById('impEditCopias').value = it.copias || 1;
+    document.getElementById('impEditPapel').value = it.tipo_papel || 'sulfite';
+    document.getElementById('impEditDia').value = it.para_dia || '';
+    document.getElementById('impEditObs').value = it.observacao || '';
+    document.getElementById('impEditErr').style.display = 'none';
+    document.getElementById('impEditarModal').style.display = 'flex';
+  }
+  function fecharEditarImp() {
+    document.getElementById('impEditarModal').style.display = 'none';
+  }
+  async function salvarEditarImp() {
+    const id = document.getElementById('impEditId').value;
+    const copias = parseInt(document.getElementById('impEditCopias').value) || 0;
+    const tipo_papel = document.getElementById('impEditPapel').value;
+    const para_dia = document.getElementById('impEditDia').value || null;
+    const observacao = document.getElementById('impEditObs').value.trim() || null;
+    const errEl = document.getElementById('impEditErr');
+    errEl.style.display = 'none';
+    if (copias < 1 || copias > 200) { errEl.textContent = 'Quantidade de cópias deve ser entre 1 e 200.'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('impEditBtn');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    try {
+      const d = await callApi({ action: 'impressao_editar', id, copias, tipo_papel, para_dia, observacao });
+      if (d?.error) { errEl.textContent = d.error; errEl.style.display = 'block'; }
+      else { fecharEditarImp(); showToast('Solicitação atualizada.', 'success'); loadImpressoes(); }
+    } catch (e) {
+      errEl.textContent = 'Erro de conexão. Tente novamente.'; errEl.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
+  async function excluirImpressao(id) {
+    if (!confirm('Excluir esta solicitação? Esta ação não pode ser desfeita.')) return;
+    const d = await callApi({ action: 'impressao_excluir', id });
+    if (d?.error) { showToast('Erro: ' + d.error, 'warning'); return; }
+    showToast('Solicitação excluída.', 'success');
+    loadImpressoes();
   }
 
   checkSession();
