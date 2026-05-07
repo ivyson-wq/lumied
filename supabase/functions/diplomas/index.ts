@@ -1460,12 +1460,20 @@ Deno.serve(async (req) => {
               )
               if (!itemsRes.ok) continue // 404 "No winners found" é comum, ignora
               const itemsData = await itemsRes.json()
+              // /products/{id}/items retorna campos parciais — geralmente só
+              // item_id + price + algumas flags. title/permalink vêm como
+              // string vazia. Usamos `||` (não `??`) pra tratar vazio como
+              // ausente, e construímos a URL no formato oficial MLB-{num}.
+              // Endpoints /items e /items?ids= estão 403 (restritos a apps
+              // parceiras desde 2026), então não dá pra hidratar mais.
               for (const it of (itemsData.results ?? [])) {
                 if (!(it.price > 0)) continue
-                if (it.condition && it.condition !== 'new') continue // só novos
-                const title = it.title ?? prod.name ?? ''
+                if (it.condition && it.condition !== 'new') continue
+                const title = (it.title || prod.name || '').trim()
+                if (!title) continue
                 const m = matchPct(query, title)
-                const mlId = it.item_id ?? it.id ?? null
+                const mlId: string | null = it.item_id || it.id || null
+                const numericId = mlId ? mlId.replace(/^MLB/, '') : null
                 const freteGratis = it?.shipping?.free_shipping === true
                 const isFull = it?.shipping?.logistic_type === 'fulfillment'
                 const cond = it.condition === 'new' ? 'novo' : null
@@ -1476,13 +1484,16 @@ Deno.serve(async (req) => {
                   precoNorm = it.price / pack.qty
                   precoNormFmt = fmtUnitPrice(precoNorm, pack.unidade)
                 }
+                const itemUrl = (it.permalink && it.permalink.length > 0)
+                  ? it.permalink
+                  : (numericId ? `https://produto.mercadolivre.com.br/MLB-${numericId}` : `https://www.mercadolivre.com.br/p/${prod.id}`)
                 results.push({
                   plataforma: 'Mercado Livre',
                   nome: title,
                   preco: it.price,
                   preco_fmt: `R$ ${parseFloat(it.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-                  url_produto: it.permalink ?? (mlId ? `https://produto.mercadolivre.com.br/${mlId}` : `https://www.mercadolivre.com.br/p/${prod.id}`),
-                  url_carrinho: mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null,
+                  url_produto: itemUrl,
+                  url_carrinho: null,
                   item_id: mlId,
                   match: m,
                   tipo: 'produto',
