@@ -3106,7 +3106,9 @@ Deno.serve(async (req) => {
     if (!escolaId) return json({ error: 'Não foi possível identificar a escola. Faça login novamente.' }, 400)
     const { copias, tipo_papel, para_dia, observacao, base64, mime, arquivo_nome } = body as any
     if (!base64) return json({ error: 'Arquivo obrigatório (selecione um PDF ou imagem).' }, 400)
-    if (!copias || copias < 1) return json({ error: 'Informe a quantidade de cópias.' }, 400)
+    const nCopiasIn = parseInt(copias)
+    if (!nCopiasIn || nCopiasIn < 1) return json({ error: 'Informe a quantidade de cópias.' }, 400)
+    if (nCopiasIn > 500) return json({ error: 'Quantidade de cópias acima do limite permitido (500).' }, 400)
     const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
     if (mime && !allowedMimes.includes(mime)) return json({ error: 'Tipo de arquivo não permitido. Envie PDF, JPEG, PNG ou WebP.' }, 400)
     // Upload arquivo
@@ -3145,7 +3147,7 @@ Deno.serve(async (req) => {
         }
       } catch { numPaginas = 1 }
     }
-    const nCopias = parseInt(copias)
+    const nCopias = nCopiasIn
     const totalFolhas = nCopias * numPaginas
     // Buscar turma da professora
     const { data: profData } = await sb.from('professoras').select('serie_id, series(id, nome)').eq('id', prof.id).maybeSingle()
