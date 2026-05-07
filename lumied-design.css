@@ -350,6 +350,35 @@
 /* Defesa final: botão com background:#fff explícito não pode ter texto branco */
 button[style*="background:#fff"][style*="color:#fff"],
 button[style*="background:white"][style*="color:#fff"],
-button[style*="background:#fff"][style*="color:white"] {
+button[style*="background:#fff"][style*="color:white"],
+button[style*="background: #fff"][style*="color:#fff"],
+button[style*="background: #fff"][style*="color: #fff"],
+button[style*="background:#fff"][style*="color: #fff"] {
   color: #1a1a1a !important;
+}
+/* Defesa: botão com background transparente + texto branco fica invisível
+   em qualquer container claro. Forçamos texto escuro. */
+button[style*="background:transparent"][style*="color:#fff"],
+button[style*="background: transparent"][style*="color:#fff"],
+button[style*="background:transparent"][style*="color: #fff"],
+button[style*="background: transparent"][style*="color: #fff"],
+button[style*="background:transparent"][style*="color:white"],
+button[style*="background: transparent"][style*="color:white"] {
+  color: var(--text, #1a1a1a) !important;
+}
+/* Defesa: span/badge com texto branco em fundo transparente. Comum em
+   pílulas de status onde o background depende de uma classe de tema
+   que pode não ter sido aplicada. */
+:where(span, div)[style*="background:transparent"][style*="color:#fff"],
+:where(span, div)[style*="background: transparent"][style*="color:#fff"],
+:where(span, div)[style*="background:transparent"][style*="color: #fff"] {
+  color: var(--text, #1a1a1a) !important;
+}
+/* Defesa: <a> estilizado como botão com texto branco em fundo
+   transparente/branco. */
+a[style*="background:transparent"][style*="color:#fff"],
+a[style*="background: transparent"][style*="color:#fff"],
+a[style*="background:#fff"][style*="color:#fff"],
+a[style*="background:white"][style*="color:#fff"] {
+  color: var(--blue, #1a6bb5) !important;
 }
