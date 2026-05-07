@@ -3791,8 +3791,29 @@ body.dash-clean #greetingBar{display:none;}
         <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" oninput="almRenderCartTotal()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
         <div><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" oninput="almRenderCartTotal()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
         <div style="grid-column:1/-1;"><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional — ex: tinta guache 250ml)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div style="grid-column:1/-1;">
+          <input type="url" class="alm-novo-link" required placeholder="Link de referência * (Mercado Livre, site do fornecedor…)" oninput="almRenderLinkPreview(this)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <div class="alm-novo-link-preview" style="font-size:11px;color:var(--muted);margin-top:4px;min-height:14px;"></div>
+        </div>
       </div>`;
     el.appendChild(div);
+  }
+
+  function almRenderLinkPreview(input) {
+    const wrap = input.parentElement.querySelector('.alm-novo-link-preview');
+    const v = (input.value || '').trim();
+    if (!v) { wrap.textContent = ''; input.style.borderColor = 'var(--border)'; return; }
+    try {
+      const u = new URL(v);
+      if (u.protocol !== 'https:') { wrap.textContent = '⚠️ O link precisa começar com https://'; wrap.style.color = '#b5591a'; input.style.borderColor = '#fdba74'; return; }
+      wrap.textContent = '🔗 ' + u.hostname.replace(/^www\./, '');
+      wrap.style.color = '#2d7a3a';
+      input.style.borderColor = '#bbf7d0';
+    } catch {
+      wrap.textContent = '⚠️ Link inválido';
+      wrap.style.color = '#b5591a';
+      input.style.borderColor = '#fdba74';
+    }
   }
 
   async function almSubmitReq() {
@@ -3800,6 +3821,7 @@ body.dash-clean #greetingBar{display:none;}
     errEl.classList.remove('show');
     // Collect structured new items (não cadastrados)
     const itensLivres = [];
+    let linkErr = null;
     document.querySelectorAll('[id^="almNovoItem_"]').forEach(div => {
       const nome = div.querySelector('.alm-novo-nome')?.value?.trim();
       const unidade = div.querySelector('.alm-novo-unidade')?.value || 'unidade';
@@ -3807,8 +3829,16 @@ body.dash-clean #greetingBar{display:none;}
       const qty = parseInt(div.querySelector('.alm-novo-qty')?.value) || 1;
       const preco = parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0;
       const descricao = div.querySelector('.alm-novo-descricao')?.value?.trim() || null;
-      if (nome) itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, preco_unit: preco, qty_solicitado: qty });
+      const link = div.querySelector('.alm-novo-link')?.value?.trim() || '';
+      if (!nome) return;
+      if (!link) { linkErr = `Inclua o link do produto (Mercado Livre, site do fornecedor, etc.) para o setor de compras conferir o preço — material "${nome}".`; return; }
+      try {
+        const u = new URL(link);
+        if (u.protocol !== 'https:') { linkErr = `O link de "${nome}" precisa começar com https://`; return; }
+      } catch { linkErr = `O link de "${nome}" é inválido.`; return; }
+      itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, link_referencia: link, preco_unit: preco, qty_solicitado: qty });
     });
+    if (linkErr) { errEl.textContent = linkErr; errEl.classList.add('show'); return; }
     const todosItens = [...almCart, ...itensLivres];
     if (!todosItens.length) { errEl.textContent = 'Adicione pelo menos um item.'; errEl.classList.add('show'); return; }
     const btn = document.getElementById('almBtnEnviar');

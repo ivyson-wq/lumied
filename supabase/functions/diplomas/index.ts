@@ -1630,6 +1630,18 @@ Deno.serve(async (req) => {
     const { professora_id, itens, observacao } = body
     if (!professora_id) return json({ error: 'professora_id obrigatório.' }, 400)
     if (!itens?.length)  return json({ error: 'Adicione pelo menos um item.' }, 400)
+    for (const it of itens as any[]) {
+      const semId = !it.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
+      if (!semId) continue
+      const link = String(it.link_referencia || '').trim()
+      if (!link) return json({ error: `Inclua o link do produto para o setor de compras conferir o preço — material "${it.nome || '?'}".` }, 400)
+      try {
+        const u = new URL(link)
+        if (u.protocol !== 'https:') return json({ error: `O link de "${it.nome || '?'}" precisa começar com https://` }, 400)
+      } catch {
+        return json({ error: `O link de "${it.nome || '?'}" é inválido.` }, 400)
+      }
+    }
     const mes = new Date().toISOString().slice(0, 7)
     const { data: profData } = await sb
       .from('professoras').select('serie_id').eq('id', professora_id).maybeSingle()
@@ -1797,6 +1809,19 @@ Deno.serve(async (req) => {
       const itens: any[] = body.itens || []
       const observacao: string = body.observacao || ''
       if (!itens.length) return json({ error: 'Adicione pelo menos um item.' }, 400)
+      // Itens novos (sem insumo_id) precisam de link_referencia https válido
+      for (const it of itens) {
+        const semId = !it.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
+        if (!semId) continue
+        const link = String(it.link_referencia || '').trim()
+        if (!link) return json({ error: `Inclua o link do produto (Mercado Livre, site do fornecedor, etc.) para o setor de compras conferir o preço — material "${it.nome || '?'}".` }, 400)
+        try {
+          const u = new URL(link)
+          if (u.protocol !== 'https:') return json({ error: `O link de "${it.nome || '?'}" precisa começar com https://` }, 400)
+        } catch {
+          return json({ error: `O link de "${it.nome || '?'}" é inválido.` }, 400)
+        }
+      }
       const mes = (body.mes as string) || new Date().toISOString().slice(0, 7)
       // Turma: aceita turma_id do frontend (multi-turma) ou fallback para serie_id
       let turma_id = (body.turma_id as string) || null
@@ -2354,6 +2379,8 @@ Deno.serve(async (req) => {
             preco: parseFloat(it.preco_unit) || 0,
             estoque_qty: 0,
             categoria: it.categoria || null,
+            referencia_url: it.link_referencia || null,
+            referencia_fonte: it.link_referencia ? 'professora' : null,
             escola_id: (gerente as any).escola_id,
           }).select('id').single()
           if (errIns) {
