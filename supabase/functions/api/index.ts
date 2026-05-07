@@ -1374,8 +1374,10 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
   if (action === "series_update") {
-    const { id, nome, ordem, ativo } = body as { id: string; nome: string; ordem: number; ativo: boolean };
-    const { error } = await admin.from("series").update({ nome, ordem, ativo }).eq("id", id).eq("escola_id", sessionEscolaId);
+    const { id, nome, ordem, ativo, aviso_requisicao_mensal } = body as { id: string; nome: string; ordem: number; ativo: boolean; aviso_requisicao_mensal?: boolean };
+    const update: Record<string, unknown> = { nome, ordem, ativo };
+    if (aviso_requisicao_mensal !== undefined) update.aviso_requisicao_mensal = aviso_requisicao_mensal;
+    const { error } = await admin.from("series").update(update).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -1383,6 +1385,67 @@ serve(async (req: Request) => {
     const { id } = body as { id: string };
     await admin.from("series").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
+  }
+
+  // ── Saúde do cadastro: detecta inconsistências de famílias/alunos/turmas
+  if (action === "cadastro_saude") {
+    const [seriesRes, alunosRes, profsRes] = await Promise.all([
+      admin.from("series").select("id, nome").eq("escola_id", sessionEscolaId),
+      admin.from("alunos").select("id, nome, serie_id, ativo, familia_email").eq("escola_id", sessionEscolaId),
+      admin.from("professoras").select("id, nome, serie_id, series_monitoras").eq("escola_id", sessionEscolaId),
+    ]);
+    const series = (seriesRes.data ?? []) as Array<{ id: string; nome: string }>;
+    const alunos = (alunosRes.data ?? []) as Array<{ id: string; nome: string; serie_id: string | null; ativo: boolean; familia_email: string }>;
+    const profs = (profsRes.data ?? []) as Array<{ id: string; nome: string; serie_id: string | null; series_monitoras: string[] | null }>;
+
+    const ativos = alunos.filter(a => a.ativo !== false);
+    const semTurma = ativos.filter(a => !a.serie_id);
+
+    const alunosPorSerie: Record<string, number> = {};
+    for (const a of ativos) if (a.serie_id) alunosPorSerie[a.serie_id] = (alunosPorSerie[a.serie_id] || 0) + 1;
+
+    const profsPorSerie: Record<string, string[]> = {};
+    for (const p of profs) {
+      const ids = new Set<string>();
+      if (p.serie_id) ids.add(p.serie_id);
+      for (const sid of (p.series_monitoras || [])) if (sid) ids.add(sid);
+      for (const sid of ids) (profsPorSerie[sid] = profsPorSerie[sid] || []).push(p.nome);
+    }
+
+    const turmasSemAluno = series.filter(s => !alunosPorSerie[s.id]).map(s => ({ id: s.id, nome: s.nome }));
+    const turmasSemProf = series.filter(s => !(profsPorSerie[s.id]?.length)).map(s => ({ id: s.id, nome: s.nome }));
+
+    const nomeCount: Record<string, Array<{ id: string; nome: string }>> = {};
+    for (const s of series) {
+      const k = (s.nome || "").trim().toLowerCase();
+      if (!k) continue;
+      (nomeCount[k] = nomeCount[k] || []).push(s);
+    }
+    const nomesDuplicados = Object.values(nomeCount).filter(arr => arr.length > 1).map(arr => ({
+      nome: arr[0].nome,
+      ids: arr.map(s => s.id),
+      count: arr.length,
+    }));
+
+    const semFamiliaEmail = ativos.filter(a => !a.familia_email).map(a => ({ id: a.id, nome: a.nome }));
+
+    return ok({
+      resumo: {
+        total_series: series.length,
+        total_alunos_ativos: ativos.length,
+        total_professoras: profs.length,
+        alunos_sem_turma: semTurma.length,
+        turmas_sem_aluno: turmasSemAluno.length,
+        turmas_sem_professor: turmasSemProf.length,
+        nomes_duplicados: nomesDuplicados.length,
+        alunos_sem_familia_email: semFamiliaEmail.length,
+      },
+      alunos_sem_turma: semTurma.slice(0, 50).map(a => ({ id: a.id, nome: a.nome })),
+      turmas_sem_aluno: turmasSemAluno.slice(0, 50),
+      turmas_sem_professor: turmasSemProf.slice(0, 50),
+      nomes_duplicados: nomesDuplicados.slice(0, 20),
+      alunos_sem_familia_email: semFamiliaEmail.slice(0, 50),
+    });
   }
 
   // ── Gerentes ──────────────────────────────────────────────────

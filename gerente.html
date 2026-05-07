@@ -1588,6 +1588,15 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div class="f-alert error" id="serieErr"></div><div class="f-alert success" id="serieOk"></div>
           </div>
         </div>
+
+        <!-- SAÚDE DO CADASTRO -->
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+            <div class="sec-title" style="margin:0;">🩺 Saúde do cadastro</div>
+            <button onclick="loadCadastroSaude()" class="btn-create" style="width:auto;padding:7px 16px;">↻ Atualizar</button>
+          </div>
+          <div id="cadastroSaudeContent" style="font-size:13px;color:var(--muted);">Clique em "Atualizar" para verificar inconsistências.</div>
+        </div>
       </div>
 
       <!-- ATIVIDADES -->
@@ -3844,6 +3853,10 @@ docker compose up -d --build</pre>
     <h3>Editar Série</h3>
     <div class="ff" style="margin-top:16px;"><label>Nome</label><input type="text" id="editSerieNome"></div>
     <div class="ff"><label>Ordem</label><input type="number" id="editSerieOrdem" min="1"></div>
+    <div class="ff"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;">
+      <input type="checkbox" id="editSerieAvisoMensal" style="width:16px;height:16px;cursor:pointer;">
+      Avisar quando turma ficar sem requisição no mês
+    </label></div>
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn-cancel" onclick="closeSerieModal()">Cancelar</button>
       <button class="btn-save" onclick="saveSerieEdit()">Salvar</button>
@@ -5601,7 +5614,7 @@ docker compose up -d --build</pre>
       `<div class="list-row">
         <div class="list-avatar" style="border-radius:8px;width:32px;height:32px;font-size:12px;">${s.ordem}</div>
         <div class="lr-main"><strong>${esc(s.nome)}</strong><span>${s.ativo?'Ativa':'Inativa'}</span></div>
-        <button class="action-btn" onclick="openSerieEdit('${s.id}','${esc(s.nome)}',${s.ordem},${s.ativo})">✎</button>
+        <button class="action-btn" onclick="openSerieEdit('${s.id}','${esc(s.nome)}',${s.ordem},${s.aviso_requisicao_mensal !== false})">✎</button>
         <button class="action-btn del" onclick="deleteSerie('${s.id}','${esc(s.nome)}')">🗑</button>
       </div>`
     ).join('');
@@ -5614,15 +5627,59 @@ docker compose up -d --build</pre>
     document.getElementById('newSerieNome').value=''; document.getElementById('newSerieOrdem').value='';
     showAlert('serie','success','✅ Série "'+nome+'" criada!'); loadSeries();
   }
-  function openSerieEdit(id,nome,ordem){ editingSerieId=id; document.getElementById('editSerieNome').value=nome; document.getElementById('editSerieOrdem').value=ordem; document.getElementById('serieModal').classList.add('show'); }
+  function openSerieEdit(id,nome,ordem,avisoMensal){
+    editingSerieId=id;
+    document.getElementById('editSerieNome').value=nome;
+    document.getElementById('editSerieOrdem').value=ordem;
+    document.getElementById('editSerieAvisoMensal').checked = avisoMensal !== false;
+    document.getElementById('serieModal').classList.add('show');
+  }
   function closeSerieModal(){ document.getElementById('serieModal').classList.remove('show'); editingSerieId=null; }
   async function saveSerieEdit() {
     const nome=document.getElementById('editSerieNome').value.trim(), ordem=parseInt(document.getElementById('editSerieOrdem').value)||99;
+    const avisoMensal = document.getElementById('editSerieAvisoMensal').checked;
     if(!nome||!editingSerieId) return;
-    await api({ action:'series_update', id:editingSerieId, nome, ordem, ativo:true });
+    await api({ action:'series_update', id:editingSerieId, nome, ordem, ativo:true, aviso_requisicao_mensal: avisoMensal });
     closeSerieModal(); loadSeries();
   }
   async function deleteSerie(id,nome){ if(!await _lumiedConfirm('Remover "'+nome+'"?')) return; await api({ action:'series_delete', id }); loadSeries(); }
+
+  // ── Saúde do cadastro ──────────────────────────────────
+  async function loadCadastroSaude() {
+    const wrap = document.getElementById('cadastroSaudeContent');
+    wrap.innerHTML = '⏳ Verificando…';
+    const d = await api({ action: 'cadastro_saude' });
+    if (d.error) { wrap.innerHTML = `<div class="f-alert error show">${esc(d.error)}</div>`; return; }
+    const r = d.resumo || {};
+    const cardKpi = (label, val, alert) => `<div style="background:${alert?'#fff7ed':'#f0fdf4'};border:1px solid ${alert?'#fed7aa':'#bbf7d0'};border-radius:10px;padding:12px 14px;flex:1;min-width:140px;">
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">${label}</div>
+      <div style="font-size:22px;font-weight:700;color:${alert?'#c2410c':'#15803d'};margin-top:4px;">${val}</div>
+    </div>`;
+    const issueList = (titulo, items, render) => !items?.length ? '' : `
+      <div style="margin-top:16px;background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:14px 16px;">
+        <div style="font-weight:600;font-size:13px;color:#9a3412;margin-bottom:8px;">⚠️ ${titulo} (${items.length})</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">${items.map(render).join('')}</div>
+      </div>`;
+    wrap.innerHTML = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+        ${cardKpi('Turmas', r.total_series ?? 0, false)}
+        ${cardKpi('Alunos ativos', r.total_alunos_ativos ?? 0, false)}
+        ${cardKpi('Professoras', r.total_professoras ?? 0, false)}
+        ${cardKpi('Alunos sem turma', r.alunos_sem_turma ?? 0, (r.alunos_sem_turma ?? 0) > 0)}
+        ${cardKpi('Turmas sem aluno', r.turmas_sem_aluno ?? 0, (r.turmas_sem_aluno ?? 0) > 0)}
+        ${cardKpi('Turmas sem professora', r.turmas_sem_professor ?? 0, (r.turmas_sem_professor ?? 0) > 0)}
+        ${cardKpi('Nomes duplicados', r.nomes_duplicados ?? 0, (r.nomes_duplicados ?? 0) > 0)}
+        ${cardKpi('Sem e-mail família', r.alunos_sem_familia_email ?? 0, (r.alunos_sem_familia_email ?? 0) > 0)}
+      </div>
+      ${issueList('Alunos sem turma', d.alunos_sem_turma, a => `<div>• ${esc(a.nome)} <button onclick="showPanel('alunos')" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:11px;font-family:inherit;">→ corrigir</button></div>`)}
+      ${issueList('Turmas sem aluno', d.turmas_sem_aluno, t => `<div>• ${esc(t.nome)}</div>`)}
+      ${issueList('Turmas sem professora', d.turmas_sem_professor, t => `<div>• ${esc(t.nome)}</div>`)}
+      ${issueList('Nomes de turma duplicados', d.nomes_duplicados, n => `<div>• "${esc(n.nome)}" aparece ${n.count}× — revisar e mesclar</div>`)}
+      ${issueList('Alunos sem e-mail da família', d.alunos_sem_familia_email, a => `<div>• ${esc(a.nome)}</div>`)}
+      ${(r.alunos_sem_turma + r.turmas_sem_aluno + r.turmas_sem_professor + r.nomes_duplicados + r.alunos_sem_familia_email) === 0
+        ? '<div style="margin-top:12px;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#15803d;font-weight:600;">✅ Cadastro saudável — nenhuma inconsistência detectada.</div>' : ''}
+    `;
+  }
 
   // ── LOGO ──────────────────────────────────────────────
   // ── Módulos habilitados (feature gating) ──
