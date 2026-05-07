@@ -478,14 +478,21 @@
         const d = await api.api({ action: 'config_publica' }, { cache: true, cacheTTL: 60000 });
         if (!d || d.error) return;
 
-        // Custom primary color
-        if (d.cor_primaria && d.cor_primaria !== '#C8102E') {
-          document.documentElement.style.setProperty('--red', d.cor_primaria);
-          document.documentElement.style.setProperty('--red-dark', darken(d.cor_primaria, 20));
-          document.documentElement.style.setProperty('--red-light', d.cor_primaria + '14');
+        // Custom primary color. escola_config.valor é jsonb — strings ficam
+        // armazenadas com aspas ("#C8102E"). Strip antes de injetar como CSS
+        // var (caso contrário var(--red) recebe valor inválido e o browser
+        // cai no estilo nativo de <button> = cinza).
+        let corPrim = d.cor_primaria;
+        if (typeof corPrim === 'string') corPrim = corPrim.replace(/^"|"$/g, '').trim();
+        // Aceita só hex válido (#RGB | #RRGGBB | #RRGGBBAA)
+        const hexValido = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(corPrim || '');
+        if (hexValido && corPrim !== '#C8102E') {
+          document.documentElement.style.setProperty('--red', corPrim);
+          document.documentElement.style.setProperty('--red-dark', darken(corPrim, 20));
+          document.documentElement.style.setProperty('--red-light', corPrim + '14');
           // Update meta theme-color
           const meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.content = d.cor_primaria;
+          if (meta) meta.content = corPrim;
         }
 
         // Custom favicon from logo
