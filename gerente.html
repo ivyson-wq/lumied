@@ -1597,6 +1597,22 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
           <div id="cadastroSaudeContent" style="font-size:13px;color:var(--muted);">Clique em "Atualizar" para verificar inconsistências.</div>
         </div>
+
+        <!-- AUDIT LOG -->
+        <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+            <div class="sec-title" style="margin:0;">📜 Histórico de mudanças (turmas + atividades)</div>
+            <div style="display:flex;gap:6px;">
+              <select id="auditEntidade" onchange="loadAuditLog()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;">
+                <option value="">Todas</option>
+                <option value="series">Turmas</option>
+                <option value="atividades">Atividades</option>
+              </select>
+              <button onclick="loadAuditLog()" class="btn-create" style="width:auto;padding:7px 16px;">↻</button>
+            </div>
+          </div>
+          <div id="auditLogContent" style="font-size:12px;color:var(--muted);">Clique em ↻ para carregar.</div>
+        </div>
       </div>
 
       <!-- ATIVIDADES -->
@@ -5687,7 +5703,51 @@ docker compose up -d --build</pre>
     await api({ action:'series_update', id:editingSerieId, nome, ordem, ativo:true, aviso_requisicao_mensal: avisoMensal });
     closeSerieModal(); loadSeries();
   }
-  async function deleteSerie(id,nome){ if(!await _lumiedConfirm('Remover "'+nome+'"?')) return; await api({ action:'series_delete', id }); loadSeries(); }
+  async function deleteSerie(id,nome){
+    if(!await _lumiedConfirm('Remover "'+nome+'"?')) return;
+    let r = await api({ action:'series_delete', id });
+    if (r?.error && /aluno\(s\) vinculado/i.test(r.error)) {
+      if (!await _lumiedConfirm(r.error + '\n\nDeseja excluir mesmo assim?')) { loadSeries(); return; }
+      r = await api({ action:'series_delete', id, force: true });
+    }
+    if (r?.error) showToast('Erro: ' + r.error, 'error');
+    loadSeries();
+  }
+
+  // ── Audit log ──────────────────────────────────────────
+  async function loadAuditLog() {
+    const wrap = document.getElementById('auditLogContent');
+    wrap.innerHTML = '⏳ Carregando…';
+    const ent = document.getElementById('auditEntidade').value;
+    const d = await api({ action: 'audit_log_list', entidade: ent || null, limit: 100 });
+    if (d.error) { wrap.innerHTML = `<div class="f-alert error show">${esc(d.error)}</div>`; return; }
+    const list = d.data || [];
+    if (!list.length) { wrap.innerHTML = '<div style="padding:14px;text-align:center;">Nenhuma mudança registrada.</div>'; return; }
+    const acaoIcon = { insert:'➕', update:'✏️', delete:'🗑️' };
+    const entLbl = { series:'Turma', atividades:'Atividade' };
+    wrap.innerHTML = '<div style="max-height:320px;overflow-y:auto;">' + list.map(r => {
+      const data = new Date(r.criado_em).toLocaleString('pt-BR');
+      const nome = r.depois?.nome || r.antes?.nome || r.entidade_id;
+      let detalhes = '';
+      if (r.acao === 'update' && r.antes && r.depois) {
+        const diffs = [];
+        for (const k of new Set([...Object.keys(r.antes), ...Object.keys(r.depois)])) {
+          if (k === 'atualizado_em' || k === 'criado_em') continue;
+          if (JSON.stringify(r.antes[k]) !== JSON.stringify(r.depois[k])) {
+            diffs.push(`${k}: ${esc(JSON.stringify(r.antes[k]))} → ${esc(JSON.stringify(r.depois[k]))}`);
+          }
+        }
+        if (diffs.length) detalhes = '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + diffs.slice(0,3).join('; ') + '</div>';
+      }
+      return `<div style="padding:8px 10px;border-bottom:1px solid #f0ece6;">
+        <div style="display:flex;justify-content:space-between;gap:8px;">
+          <span><strong>${acaoIcon[r.acao] || ''} ${entLbl[r.entidade] || r.entidade}</strong> · ${esc(nome)}</span>
+          <span style="color:var(--muted);font-size:10px;">${data}</span>
+        </div>
+        ${detalhes}
+      </div>`;
+    }).join('') + '</div>';
+  }
 
   // ── Saúde do cadastro ──────────────────────────────────
   async function loadCadastroSaude() {

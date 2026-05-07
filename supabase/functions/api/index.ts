@@ -1465,9 +1465,27 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
   if (action === "series_delete") {
-    const { id } = body as { id: string };
+    const { id, force } = body as { id: string; force?: boolean };
+    const { count } = await admin.from("alunos").select("id", { count: "exact", head: true })
+      .eq("serie_id", id).eq("escola_id", sessionEscolaId).neq("ativo", false);
+    if ((count ?? 0) > 0 && !force) {
+      return err(`Esta turma tem ${count} aluno(s) vinculado(s). Confirme novamente para excluir mesmo assim.`, 409);
+    }
     await admin.from("series").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
+  }
+
+  // Audit log do cadastro — listar últimas mudanças
+  if (action === "audit_log_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { entidade, limit } = body as { entidade?: string; limit?: number };
+    let q = admin.from("audit_log_cadastro").select("*")
+      .eq("escola_id", gerente.escola_id)
+      .order("criado_em", { ascending: false })
+      .limit(Math.min(limit || 100, 500));
+    if (entidade) q = q.eq("entidade", entidade);
+    const { data } = await q;
+    return ok({ data: data ?? [] });
   }
 
   // ── Saúde do cadastro: detecta inconsistências de famílias/alunos/turmas
