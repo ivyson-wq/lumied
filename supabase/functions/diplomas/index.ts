@@ -3105,15 +3105,29 @@ Deno.serve(async (req) => {
     }
     if (!escolaId) return json({ error: 'Não foi possível identificar a escola. Faça login novamente.' }, 400)
     const { copias, tipo_papel, para_dia, observacao, base64, mime, arquivo_nome } = body as any
-    if (!base64) return json({ error: 'Arquivo obrigatorio.' }, 400)
-    if (!copias || copias < 1) return json({ error: 'Informe a quantidade de copias.' }, 400)
+    if (!base64) return json({ error: 'Arquivo obrigatório (selecione um PDF ou imagem).' }, 400)
+    if (!copias || copias < 1) return json({ error: 'Informe a quantidade de cópias.' }, 400)
     const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
     if (mime && !allowedMimes.includes(mime)) return json({ error: 'Tipo de arquivo não permitido. Envie PDF, JPEG, PNG ou WebP.' }, 400)
     // Upload arquivo
     const ext = (mime || 'application/pdf').includes('pdf') ? 'pdf' : (mime || '').includes('png') ? 'png' : 'jpg'
     const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`
     const buf = Uint8Array.from(atob(base64 as string), c => c.charCodeAt(0))
-    await sb.storage.from('impressoes').upload(path, buf, { contentType: mime || 'application/pdf' })
+    // Limite 30MB (mesmo do client-side)
+    if (buf.length > 30 * 1024 * 1024) {
+      return json({ error: `Arquivo muito grande (${(buf.length / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 30 MB.` }, 400)
+    }
+    // Hash SHA-256 para deduplicação
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf)
+    const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
+    // Detecta duplicidade nos últimos 7d (mesma escola)
+    const { data: dup } = await sb.from('impressoes')
+      .select('id, criado_em, professora_nome, copias').eq('escola_id', escolaId)
+      .eq('arquivo_hash', hashHex).gte('criado_em', new Date(Date.now() - 7 * 86400000).toISOString())
+      .order('criado_em', { ascending: false }).limit(1).maybeSingle()
+    const duplicadoAviso = dup ? `Atenção: arquivo idêntico já enviado em ${new Date((dup as any).criado_em).toLocaleString('pt-BR')} por ${(dup as any).professora_nome || '?'} (${(dup as any).copias} cópias). Continuamos com este novo pedido.` : null
+    const { error: errUp } = await sb.storage.from('impressoes').upload(path, buf, { contentType: mime || 'application/pdf' })
+    if (errUp) return json({ error: 'Falha no upload: ' + errUp.message }, 400)
     const { data: pub } = sb.storage.from('impressoes').getPublicUrl(path)
     // Contar páginas do PDF
     let numPaginas = 1
@@ -3137,20 +3151,26 @@ Deno.serve(async (req) => {
     const { data: profData } = await sb.from('professoras').select('serie_id, series(id, nome)').eq('id', prof.id).maybeSingle()
     const turma = (profData as any)?.series ?? null
     // Verificar limite mensal (baseado em folhas: copias × paginas)
+    // Modo lançamento: escola_config.impressao_lancamento=true → sem limite (default true ao adotar)
     const mes = new Date().toISOString().slice(0, 7)
+    const { data: cfgL } = await sb.from('escola_config').select('valor')
+      .eq('escola_id', escolaId).eq('chave', 'impressao_lancamento').maybeSingle()
+    const modoLancamento = cfgL ? Boolean((cfgL as any).valor) : true
     const { data: orc } = await sb.from('impressoes_orcamento').select('limite').eq('turma_id', turma?.id || '').eq('mes', mes).maybeSingle()
     const limite = orc?.limite ?? 50
     const { data: usadas } = await sb.from('impressoes').select('copias, num_paginas')
       .eq('turma_id', turma?.id || '').gte('criado_em', mes + '-01').in('status', ['pendente', 'aprovado', 'impresso', 'entregue'])
     const totalUsado = (usadas ?? []).reduce((s: number, r: any) => s + ((r.copias || 0) * (r.num_paginas || 1)), 0)
-    if (totalUsado + totalFolhas > limite) {
-      return json({ error: `Limite mensal de ${limite} folhas excedido. Ja utilizado: ${totalUsado}. Disponivel: ${limite - totalUsado}. Este arquivo: ${numPaginas} pag × ${nCopias} copias = ${totalFolhas} folhas.` }, 400)
+    if (!modoLancamento && totalUsado + totalFolhas > limite) {
+      return json({ error: `Limite mensal de ${limite} folhas excedido. Já utilizado: ${totalUsado}. Disponível: ${limite - totalUsado}. Este arquivo: ${numPaginas} pag × ${nCopias} cópias = ${totalFolhas} folhas.` }, 400)
     }
     const { error } = await sb.from('impressoes').insert({
       escola_id: escolaId,
       professora_id: prof.id, professora_nome: prof.nome,
       turma_id: turma?.id || null, turma_nome: turma?.nome || null,
       arquivo_url: pub.publicUrl, arquivo_nome: arquivo_nome || path,
+      arquivo_hash: hashHex, arquivo_tamanho: buf.length,
+      expira_em: new Date(Date.now() + 7 * 86400000).toISOString(),
       copias: nCopias, num_paginas: numPaginas, tipo_papel: tipo_papel || 'sulfite',
       para_dia: para_dia || null, observacao: observacao || null,
     })
@@ -3164,7 +3184,7 @@ Deno.serve(async (req) => {
     for (const g of gerentes ?? []) {
       await criarNotif(sb, 'gerente', g.email, 'Nova impressao', `${prof.nome} solicitou ${nCopias} copias × ${numPaginas} pag = ${totalFolhas} folhas (${tipo_papel}).`, 'info', escolaId)
     }
-    return json({ ok: true, usado: totalUsado + totalFolhas, limite, num_paginas: numPaginas })
+    return json({ ok: true, usado: totalUsado + totalFolhas, limite, num_paginas: numPaginas, modo_lancamento: modoLancamento, duplicado: !!dup, aviso: duplicadoAviso })
   }
 
   if (action === 'impressao_minhas') {

@@ -4571,10 +4571,25 @@ body.dash-clean #greetingBar{display:none;}
     const errEl = document.getElementById('impErr');
     errEl.style.display = 'none';
     if (!files.length) { errEl.textContent = 'Selecione ao menos um arquivo.'; errEl.style.display = 'block'; return; }
+    // Valida tamanho 30MB ANTES de tentar upload (evita timeout/erro do servidor)
+    const muitoGrande = files.find(f => f.size > 30 * 1024 * 1024);
+    if (muitoGrande) {
+      errEl.textContent = `"${muitoGrande.name}" tem ${(muitoGrande.size / 1024 / 1024).toFixed(1)} MB. Tamanho máximo permitido: 30 MB.`;
+      errEl.style.display = 'block';
+      return;
+    }
+    // Valida tipo (mensagem real, não "undefined")
+    const tiposOk = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    const tipoRuim = files.find(f => f.type && !tiposOk.includes(f.type));
+    if (tipoRuim) {
+      errEl.textContent = `"${tipoRuim.name}" tem formato não suportado (${tipoRuim.type || 'desconhecido'}). Envie PDF, JPEG, PNG ou WebP.`;
+      errEl.style.display = 'block';
+      return;
+    }
     const btn = document.getElementById('impBtn');
     btn.disabled = true;
     const total = files.length;
-    let enviados = 0, erros = [];
+    let enviados = 0, erros = [], avisos = [];
     let ultimoResult = null;
     for (const file of files) {
       btn.textContent = 'Enviando ' + (enviados + 1) + '/' + total + '...';
@@ -4587,10 +4602,16 @@ body.dash-clean #greetingBar{display:none;}
           action: 'impressao_enviar', copias, tipo_papel, para_dia: para_dia || null,
           observacao: observacao || null, base64, mime: file.type, arquivo_nome: file.name,
         });
-        if (d.error) { erros.push(file.name + ': ' + d.error); }
-        else { enviados++; ultimoResult = d; }
-      } catch(e) { erros.push(file.name + ': Erro ao enviar.'); }
+        // Erro real (nunca "undefined" — sempre mensagem com fallback explícito)
+        if (d?.error) { erros.push(file.name + ': ' + d.error); }
+        else if (!d || typeof d !== 'object') { erros.push(file.name + ': Resposta inválida do servidor (verifique a conexão).'); }
+        else { enviados++; ultimoResult = d; if (d.aviso) avisos.push(file.name + ': ' + d.aviso); }
+      } catch(e) {
+        const msg = (e && e.message) || 'Falha de rede ou tempo esgotado';
+        erros.push(file.name + ': ' + msg);
+      }
     }
+    if (avisos.length) showToast(avisos.join('\n'), 'warning', 6000);
     if (enviados > 0 && ultimoResult) {
       showToast(enviados + ' arquivo' + (enviados > 1 ? 's enviados' : ' enviado') + (ultimoResult.num_paginas > 1 ? ' (' + ultimoResult.num_paginas + ' pag)' : '') + '! ' + ultimoResult.usado + '/' + ultimoResult.limite + ' folhas usadas.', 'success', 5000);
     }
