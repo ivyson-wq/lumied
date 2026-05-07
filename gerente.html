@@ -10978,16 +10978,19 @@ docker compose up -d --build</pre>
         <strong>${req.professoras?.nome||'—'}</strong> · ${req.series?.nome||'—'} · ${almMesBR(req.mes)} · ${new Date(req.criado_em).toLocaleDateString('pt-BR')}
       </div>
       ${almReviewItens.map((it, i) => `
-        <div class="alm-insumo-row" id="alm-row-${i}" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <div class="alm-insumo-row" id="alm-row-${i}" data-rejeitado="0" style="flex-direction:column;align-items:stretch;gap:8px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <div style="flex:1;min-width:160px;">
-              <div style="font-weight:600;">${it.nome}</div>
+              <div style="font-weight:600;" class="alm-item-titulo">${it.nome}</div>
               <div style="font-size:11px;color:var(--muted);">${almFmtBRL(it.preco_unit)} / ${it.unidade}</div>
             </div>
             <div style="font-size:12px;color:var(--muted);flex-shrink:0;">Pedido: <strong>${it.qty_solicitado}</strong></div>
             <div style="font-size:12px;flex-shrink:0;display:flex;align-items:center;gap:4px;">Aprovar:
-              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id || ''}" value="${it.qty_solicitado}" min="0" step="0.5" style="width:64px;">
+              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id || ''}" data-original="${it.qty_solicitado}" value="${it.qty_solicitado}" min="0" step="0.5" style="width:64px;">
             </div>
+            <button type="button" id="alm-rej-btn-${i}" onclick="almToggleRejeitarItem(${i})"
+              style="padding:5px 10px;background:none;border:1.5px solid #fecaca;color:#b91c1c;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;"
+              title="Rejeitar este item (mantém os demais)">❌ Rejeitar</button>
           </div>
           <div id="alm-price-${i}" class="alm-price-results" style="display:block;">
             <div class="alm-price-skeleton">⏳ Buscando melhor preço em Mercado Livre, Shopee e Amazon…</div>
@@ -11106,18 +11109,69 @@ docker compose up -d --build</pre>
     almReviewItens = [];
   }
 
+  // Rejeita ou restaura um item individual da requisição. Item rejeitado
+  // tem qty_aprovado=0 (não vai pro estoque nem pra compra) e fica marcado
+  // visualmente. Outros itens da mesma requisição seguem o fluxo normal.
+  function almToggleRejeitarItem(idx) {
+    const row = document.getElementById('alm-row-' + idx);
+    const inp = document.querySelector(`#almReviewContent .alm-item-qty[data-idx="${idx}"]`);
+    const btn = document.getElementById('alm-rej-btn-' + idx);
+    const titulo = row?.querySelector('.alm-item-titulo');
+    const precos = document.getElementById('alm-price-' + idx);
+    if (!row || !inp || !btn) return;
+    const isRej = row.dataset.rejeitado === '1';
+    if (isRej) {
+      row.dataset.rejeitado = '0';
+      inp.value = inp.dataset.original || '1';
+      inp.disabled = false;
+      row.style.background = '';
+      if (titulo) titulo.style.textDecoration = '';
+      if (precos) precos.style.opacity = '1';
+      btn.textContent = '❌ Rejeitar';
+      btn.style.borderColor = '#fecaca';
+      btn.style.color = '#b91c1c';
+      btn.style.background = 'none';
+    } else {
+      row.dataset.rejeitado = '1';
+      inp.dataset.original = inp.value;
+      inp.value = 0;
+      inp.disabled = true;
+      row.style.background = '#fef2f2';
+      if (titulo) titulo.style.textDecoration = 'line-through';
+      if (precos) precos.style.opacity = '0.45';
+      btn.textContent = '↩️ Restaurar';
+      btn.style.borderColor = '#86efac';
+      btn.style.color = '#166534';
+      btn.style.background = '#f0fdf4';
+      delete almSelectedPrices[idx]; // não tenta encaminhar compra de item rejeitado
+    }
+  }
+
   async function almAprovar() {
     if (!almReviewId) return;
     const nota = document.getElementById('almReviewNota').value.trim();
     const errEl = document.getElementById('almReviewErr');
     errEl.classList.remove('show');
 
-    // Collect qty overrides per item
+    // Collect qty overrides per item — qty_aprovado=0 e flag rejeitado=true
+    // pra itens marcados (backend grava no JSON e usa pra mensagem da prof).
     const inputs = document.querySelectorAll('#almReviewContent .alm-item-qty');
-    const itens_aprovados = Array.from(inputs).map(inp => ({
-      insumo_id: inp.dataset.id,
-      qty_aprovado: parseFloat(inp.value) || 0,
-    }));
+    const itens_aprovados = Array.from(inputs).map(inp => {
+      const idx = parseInt(inp.dataset.idx);
+      const row = document.getElementById('alm-row-' + idx);
+      const rejeitado = row?.dataset.rejeitado === '1';
+      return {
+        insumo_id: inp.dataset.id,
+        qty_aprovado: rejeitado ? 0 : (parseFloat(inp.value) || 0),
+        rejeitado,
+      };
+    });
+
+    // Aborta se TODOS foram rejeitados — nesse caso usar o botão "Rejeitar"
+    if (itens_aprovados.every(x => x.rejeitado || x.qty_aprovado <= 0)) {
+      errEl.textContent = 'Todos os itens estão rejeitados. Use o botão "Rejeitar" pra negar a requisição inteira.';
+      errEl.classList.add('show'); return;
+    }
 
     // Sync qtys into selectedPrices (manager may have changed qty after prices loaded)
     inputs.forEach(inp => {

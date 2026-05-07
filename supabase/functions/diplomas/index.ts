@@ -1623,7 +1623,20 @@ Deno.serve(async (req) => {
       })
     }
 
-    // (Reval removido — domínio rfreval.com.br fora do ar desde 2026)
+    // ── 3. Reval (atacado reval.net) — só link de busca.
+    // O scraping de /produtos?q= não funciona do edge function: o servidor
+    // retorna HTML "vazio" (~434KB sem produtos, sem campo hddB1Prv1) para os
+    // IPs de DC do Supabase, provavelmente geofencing/anti-bot. De um IP
+    // residencial brasileiro o mesmo endpoint retorna ~780KB com produtos
+    // completos. Mantemos o link pra o usuário cotar manualmente.
+    fontes['Reval'] = { status: 'apenas link', produtos: 0 }
+    results.push({
+      plataforma: 'Reval',
+      nome: `Buscar "${query}" na Reval`,
+      preco: null, preco_fmt: 'Ver na Reval',
+      url_produto: `https://www.reval.net/produtos?q=${encoded}`,
+      url_carrinho: null, item_id: null, match: 0, tipo: 'busca',
+    })
 
     // ── 4. Amazon Brasil (no free API — search link only) ────
     results.push({
@@ -2409,7 +2422,7 @@ Deno.serve(async (req) => {
         for (const r of (reqs ?? []) as any[]) {
           const tNome = r.series?.nome || 'Sem turma'
           for (const it of (r.itens || [])) {
-            const aprov = Number(it.qty_aprovado || it.qty_solicitado || 0)
+            const aprov = Number((it.qty_aprovado ?? it.qty_solicitado ?? 0))
             const jaEntregue = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
             const aReceber = aprov - jaEntregue
             if (aReceber <= 0) continue
@@ -2482,7 +2495,7 @@ Deno.serve(async (req) => {
         const bucket = (porTurma[t] ||= { profs: new Set(), items: [] })
         bucket.profs.add(p)
         for (const it of (r.itens || [])) {
-          const aprov = Number(it.qty_aprovado || it.qty_solicitado || 0)
+          const aprov = Number((it.qty_aprovado ?? it.qty_solicitado ?? 0))
           const ja = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
           const pend = aprov - ja
           if (pend > 0) bucket.items.push({ ...it, pend, prof: p, req: r.id })
@@ -2555,7 +2568,7 @@ Deno.serve(async (req) => {
             qty_solicitado: parseFloat(it.qty_solicitado || 0),
             qty_aprovado: parseFloat(it.qty_aprovado || 0),
             preco_unit: parseFloat(it.preco_unit || 0),
-            valor: parseFloat(it.qty_aprovado || it.qty_solicitado || 0) * parseFloat(it.preco_unit || 0),
+            valor: parseFloat((it.qty_aprovado ?? it.qty_solicitado ?? 0)) * parseFloat(it.preco_unit || 0),
             link: it.link_referencia || null,
           })
         }
@@ -2578,7 +2591,7 @@ Deno.serve(async (req) => {
           )
           if (!map[key]) map[key] = { chave: key, itens: 0, qty: 0, valor: 0, linhas: [] }
           map[key].itens++
-          map[key].qty += l.qty_aprovado || l.qty_solicitado
+          map[key].qty += l.qty_aprovado ?? l.qty_solicitado
           map[key].valor += l.valor
           map[key].linhas.push(l)
         }
@@ -2619,9 +2632,9 @@ Deno.serve(async (req) => {
             nome: it.nome,
             unidade: it.unidade,
             categoria: it.categoria || '',
-            qty: parseFloat(it.qty_aprovado || it.qty_solicitado || 0),
+            qty: parseFloat((it.qty_aprovado ?? it.qty_solicitado ?? 0)),
             preco: parseFloat(it.preco_unit || 0),
-            valor: parseFloat(it.qty_aprovado || it.qty_solicitado || 0) * parseFloat(it.preco_unit || 0),
+            valor: parseFloat((it.qty_aprovado ?? it.qty_solicitado ?? 0)) * parseFloat(it.preco_unit || 0),
             link: it.link_referencia || '',
           })
         }
@@ -2720,15 +2733,18 @@ Deno.serve(async (req) => {
     if (action === 'alm_aprovar') {
       const { id, nota_gerente, itens_aprovados } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      // itens_aprovados: optional override of qty_aprovado per item
+      // itens_aprovados: optional override of qty_aprovado per item; pode trazer
+      // rejeitado:true (gerente rejeitou item específico mantendo os demais).
       const { data: req } = await sb.from('alm_requisicoes').select('*')
         .eq('id', id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
       if (!req) return json({ error: 'Requisição não encontrada.' }, 404)
       if (req.status !== 'pendente') return json({ error: 'Requisição já processada.' }, 400)
-      // Merge approved quantities into items
+      // Merge approved quantities into items + flag rejeitado (qty=0 → rejeitado)
       const itens = (req.itens as any[]).map((it: any) => {
         const override = itens_aprovados?.find((x: any) => x.insumo_id === it.insumo_id)
-        return { ...it, qty_aprovado: override?.qty_aprovado ?? it.qty_solicitado }
+        const qtyAprov = override?.qty_aprovado ?? it.qty_solicitado
+        const rejeitado = override?.rejeitado === true || Number(qtyAprov) <= 0
+        return { ...it, qty_aprovado: rejeitado ? 0 : qtyAprov, rejeitado }
       })
       const total = itens.reduce((s: number, it: any) =>
         s + (parseFloat(it.qty_aprovado) * parseFloat(it.preco_unit || 0)), 0)
@@ -2802,11 +2818,17 @@ Deno.serve(async (req) => {
       // Update items with new insumo_ids
       await sb.from('alm_requisicoes').update({ itens }).eq('id', id)
 
-      // Notify the teacher
+      // Notify the teacher — destaca itens rejeitados se houver
+      const rejeitados = itens.filter((it: any) => it.rejeitado).map((it: any) => it.nome)
+      const aprovParcial = rejeitados.length > 0
+      const dataReq = new Date(req.criado_em).toLocaleDateString('pt-BR')
+      const msg = aprovParcial
+        ? `Sua requisição de ${dataReq} foi ⚠️ aprovada parcialmente. ${rejeitados.length} ${rejeitados.length === 1 ? 'item rejeitado' : 'itens rejeitados'}: ${rejeitados.join(', ')}.${nota_gerente ? ' Nota: ' + nota_gerente : ''}`
+        : `Sua requisição de ${dataReq} foi ✅ aprovada.${nota_gerente ? ' Nota: ' + nota_gerente : ''}`
       await sb.from('alm_notificacoes').insert({
         professora_id: req.professora_id,
         requisicao_id: id,
-        mensagem: `Sua requisição de ${new Date(req.criado_em).toLocaleDateString('pt-BR')} foi ✅ aprovada.${nota_gerente ? ' Nota: ' + nota_gerente : ''}`,
+        mensagem: msg,
       })
       const resp: Record<string, unknown> = { ok: true }
       if (insumoWarnings.length) resp.insumos_warnings = insumoWarnings
