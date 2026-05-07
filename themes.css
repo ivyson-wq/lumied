@@ -185,11 +185,14 @@ body.theme-corporativo {
    backgrounds da identidade visual mas trocamos o texto pelo
    --text do tema (escuro nos temas claros, claro no dark).
    ────────────────────────────────────────────────────────── */
+/* !important pra ganhar do reset !important em lumied-design.css que
+   força .btn-create/_submit/_aprovar coloridos por padrão (defesa
+   contra var(--red) não-resolvido — precedência: tema > defesa > local). */
 body.theme-ludico :where(.btn-aprovar, .btn-pdi-aprovar, .btn-revisar, .btn-pdi-encerrar, .btn-orange, .btn-save, .btn-magic, .btn-create, .btn-submit, .btn-primary, .login-btn, .btn-whatsapp) {
-  color: var(--text, #2D1B69);
+  color: var(--text, #2D1B69) !important;
 }
 body.theme-interativo :where(.btn-aprovar, .btn-pdi-aprovar, .btn-revisar, .btn-pdi-encerrar, .btn-orange, .btn-save, .btn-whatsapp) {
-  color: var(--text, #1E1146);
+  color: var(--text, #1E1146) !important;
 }
 /* Tema interativo: .btn-primary usa gradient roxo→ciano. Roxo claro +
    texto roxo escuro fica baixo contraste, então mantemos o texto
@@ -199,8 +202,8 @@ body.theme-interativo .btn-create,
 body.theme-interativo .btn-submit,
 body.theme-interativo .btn-magic,
 body.theme-interativo .login-btn {
-  background: linear-gradient(135deg, #6D28D9, #155E75);
-  color: #fff;
+  background: linear-gradient(135deg, #6D28D9, #155E75) !important;
+  color: #fff !important;
 }
 /* Tema sério (dark): botões coloridos sobre fundo escuro são padrão
    estético em dark themes. Garantimos só que .btn-orange (sem override

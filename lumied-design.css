@@ -332,14 +332,20 @@
    branco". Specificity baixa via :where() pra não brigar com
    regras locais explícitas dos portais.
    ──────────────────────────────────────────── */
-:where(.btn-create, .btn-submit, .btn-aprovar, .btn-rejeitar) {
-  color: #fff;
+/* Specificity reforçada (não mais :where) pra ganhar de cascata herdada
+   que estava deixando button cinza nativo + texto branco em alguns
+   panels (caso "Novo Recurso" e "Nova Reserva" 2026-05). */
+.btn-create, .btn-submit, .btn-aprovar {
+  color: #fff !important;
 }
-:where(.btn-create, .btn-submit) {
-  background: var(--red, #C8102E);
+.btn-rejeitar {
+  color: var(--red, #C8102E) !important;
 }
-:where(.btn-aprovar) {
-  background: var(--green, #2d7a3a);
+.btn-create, .btn-submit {
+  background: var(--red, #C8102E) !important;
+}
+.btn-aprovar {
+  background: var(--green, #2d7a3a) !important;
 }
 /* btn-rejeitar histórico = transparente com border vermelho — NUNCA texto branco */
 :where(.btn-rejeitar) {
