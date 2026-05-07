@@ -876,6 +876,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" data-modulo="turno" onclick="showPanel('dashboard',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.turnosHorarios">Turnos & Horários</span></a>
         <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('dashAtiv',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.atividadesExtra">Atividades Extra</span></a>
         <a class="nav-item" href="#" data-modulo="atividades" onclick="showPanel('atividades',this)"><span class="ic">🎯</span> <span data-i18n="gerente.nav.gerenciarAtividades">Gerenciar Atividades</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('recursos',this)"><span class="ic">🔌</span> Recursos &amp; Reservas</a>
       </div>
       </div>
 
@@ -1616,6 +1617,62 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <!-- ATIVIDADES -->
+      <!-- RECURSOS & RESERVAS -->
+      <div id="panelRecursos" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div class="sec-title" style="margin:0;">🔌 Recursos &amp; Reservas</div>
+          <button onclick="abrirModalNovoRecurso()" class="btn-create" style="width:auto;padding:8px 18px;">+ Novo Recurso</button>
+        </div>
+        <div id="recursosList" style="margin-bottom:24px;"></div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div class="sec-title" style="margin:0;font-size:16px;">📅 Reservas próximas</div>
+          <button onclick="abrirModalNovaReserva()" class="btn-create" style="width:auto;padding:7px 16px;">+ Nova Reserva</button>
+        </div>
+        <div id="reservasList"></div>
+
+        <!-- Modal: Novo / Editar recurso -->
+        <div id="recursoModal" class="modal-overlay" role="dialog" onclick="if(event.target===this)fecharRecursoModal()">
+          <div class="modal" style="max-width:480px;">
+            <h3 id="recursoModalTitle">Novo Recurso</h3>
+            <input type="hidden" id="recursoId">
+            <div class="ff" style="margin-top:12px;"><label>Tipo *</label><select id="recursoTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="tablet">Tablet</option><option value="projetor">Projetor</option><option value="sala">Sala</option><option value="impressora">Impressora</option><option value="outro">Outro</option>
+            </select></div>
+            <div class="ff"><label>Identificação (patrimônio/nome) *</label><input type="text" id="recursoIdent" placeholder="Ex: TAB-001"></div>
+            <div class="ff"><label>Modelo</label><input type="text" id="recursoModelo" placeholder="Ex: iPad 9ª geração"></div>
+            <div class="ff"><label>Localização</label><input type="text" id="recursoLocal" placeholder="Ex: Sala dos professores"></div>
+            <div class="ff"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;">
+              <input type="checkbox" id="recursoFixo" style="width:16px;height:16px;"> Fixo na sala (não-móvel)
+            </label></div>
+            <div class="ff"><label>Observação</label><textarea id="recursoObs" rows="2"></textarea></div>
+            <div class="modal-actions">
+              <button class="btn-cancel" onclick="fecharRecursoModal()">Cancelar</button>
+              <button class="btn-save" onclick="salvarRecurso()">Salvar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal: Nova reserva -->
+        <div id="reservaModal" class="modal-overlay" role="dialog" onclick="if(event.target===this)fecharReservaModal()">
+          <div class="modal" style="max-width:520px;">
+            <h3>📅 Nova reserva</h3>
+            <div class="ff" style="margin-top:12px;"><label>Recurso *</label><select id="reservaRecurso" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></select></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="ff"><label>Início *</label><input type="datetime-local" id="reservaInicio"></div>
+              <div class="ff"><label>Fim *</label><input type="datetime-local" id="reservaFim"></div>
+            </div>
+            <div class="ff"><label>Turma</label><select id="reservaTurma" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option></select></div>
+            <div class="ff"><label>Observação</label><textarea id="reservaObs" rows="2"></textarea></div>
+            <div class="f-alert error" id="reservaErr" style="display:none;"></div>
+            <div class="modal-actions">
+              <button class="btn-cancel" onclick="fecharReservaModal()">Cancelar</button>
+              <button class="btn-save" onclick="salvarReserva()">Reservar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="panelAtividades" class="panel">
 
         <!-- Importar inscricoes -->
@@ -4553,6 +4610,7 @@ docker compose up -d --build</pre>
     if(id==='cozReceitas') loadCozReceitas();
     if(id==='cozAlimentos') loadCozAlimentos();
     if(id==='cozCompras')  loadCozCompras();
+    if(id==='recursos')    loadRecursos();
     if(id==='cozSanitario'){ loadTempHist(); loadHigList(); loadAmostras(); }
     if(id==='cozDesperd')  loadDesperd();
     if(id==='cozConfig')   loadCozConfig();
@@ -5712,6 +5770,151 @@ docker compose up -d --build</pre>
     }
     if (r?.error) showToast('Erro: ' + r.error, 'error');
     loadSeries();
+  }
+
+  // ── Recursos & Reservas ────────────────────────────────
+  var _recursosCache = [];
+
+  async function loadRecursos() {
+    const dRec = await api({ action: 'recursos_list' });
+    _recursosCache = dRec.data || [];
+    const list = _recursosCache;
+    const el = document.getElementById('recursosList');
+    if (!list.length) { el.innerHTML = '<div class="empty-state">Nenhum recurso cadastrado.</div>'; }
+    else {
+      el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">' + list.map(r => `
+        <div style="background:#fff;border:1px solid ${r.ativo ? 'var(--border)' : '#e5e7eb'};border-radius:10px;padding:12px;${!r.ativo ? 'opacity:.55;' : ''}">
+          <div style="font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:600;">${esc(r.tipo)}${r.fixo ? ' · fixo' : ''}</div>
+          <div style="font-weight:600;font-size:14px;margin:4px 0;">${esc(r.identificacao)}</div>
+          <div style="font-size:11px;color:var(--muted);">${esc(r.modelo || '—')} · ${esc(r.localizacao || '—')}</div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="abrirModalEditarRecurso('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
+            <button onclick="deletarRecurso('${r.id}','${esc(r.identificacao)}')" style="background:none;border:1px solid #fed7aa;color:#b5591a;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Remover</button>
+          </div>
+        </div>`).join('') + '</div>';
+    }
+    loadReservas();
+  }
+
+  async function loadReservas() {
+    const desde = new Date().toISOString();
+    const ate = new Date(Date.now() + 30 * 86400000).toISOString();
+    const d = await api({ action: 'reservas_list', desde, ate });
+    const list = (d.data || []).filter(r => r.status === 'ativa');
+    const el = document.getElementById('reservasList');
+    if (!list.length) { el.innerHTML = '<div class="empty-state">Nenhuma reserva próxima.</div>'; return; }
+    el.innerHTML = list.map(r => {
+      const ini = new Date(r.inicio).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
+      const fim = new Date(r.fim).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
+      return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-weight:600;font-size:13px;">${esc(r.recursos?.identificacao || '—')} <span style="font-size:11px;color:var(--muted);">· ${esc(r.recursos?.tipo || '')}</span></div>
+          <div style="font-size:11px;color:var(--muted);">${ini} → ${fim}${r.series ? ' · turma ' + esc(r.series.nome) : ''}${r.observacao ? ' · ' + esc(r.observacao) : ''}</div>
+        </div>
+        <button onclick="cancelarReserva('${r.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+      </div>`;
+    }).join('');
+  }
+
+  function abrirModalNovoRecurso() {
+    document.getElementById('recursoId').value = '';
+    document.getElementById('recursoTipo').value = 'tablet';
+    document.getElementById('recursoIdent').value = '';
+    document.getElementById('recursoModelo').value = '';
+    document.getElementById('recursoLocal').value = '';
+    document.getElementById('recursoFixo').checked = false;
+    document.getElementById('recursoObs').value = '';
+    document.getElementById('recursoModalTitle').textContent = 'Novo Recurso';
+    document.getElementById('recursoModal').classList.add('show');
+  }
+  function abrirModalEditarRecurso(id) {
+    const r = _recursosCache.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('recursoId').value = r.id;
+    document.getElementById('recursoTipo').value = r.tipo;
+    document.getElementById('recursoIdent').value = r.identificacao;
+    document.getElementById('recursoModelo').value = r.modelo || '';
+    document.getElementById('recursoLocal').value = r.localizacao || '';
+    document.getElementById('recursoFixo').checked = !!r.fixo;
+    document.getElementById('recursoObs').value = r.observacao || '';
+    document.getElementById('recursoModalTitle').textContent = 'Editar Recurso';
+    document.getElementById('recursoModal').classList.add('show');
+  }
+  function fecharRecursoModal() { document.getElementById('recursoModal').classList.remove('show'); }
+
+  async function salvarRecurso() {
+    const id = document.getElementById('recursoId').value || null;
+    const payload = {
+      action: 'recursos_save', id,
+      tipo: document.getElementById('recursoTipo').value,
+      identificacao: document.getElementById('recursoIdent').value.trim(),
+      modelo: document.getElementById('recursoModelo').value.trim() || null,
+      localizacao: document.getElementById('recursoLocal').value.trim() || null,
+      fixo: document.getElementById('recursoFixo').checked,
+      observacao: document.getElementById('recursoObs').value.trim() || null,
+    };
+    if (!payload.identificacao) { showToast('Informe a identificação.', 'warning'); return; }
+    const d = await api(payload);
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    fecharRecursoModal();
+    loadRecursos();
+  }
+
+  async function deletarRecurso(id, ident) {
+    if (!await _lumiedConfirm(`Remover recurso "${ident}"? Reservas ativas associadas serão apagadas em cascata.`)) return;
+    const d = await api({ action: 'recursos_delete', id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    loadRecursos();
+  }
+
+  async function abrirModalNovaReserva() {
+    if (!_recursosCache.length) await loadRecursos();
+    const sel = document.getElementById('reservaRecurso');
+    sel.innerHTML = _recursosCache.filter(r => r.ativo).map(r => `<option value="${r.id}">${esc(r.tipo)} · ${esc(r.identificacao)}${r.localizacao ? ' (' + esc(r.localizacao) + ')' : ''}</option>`).join('');
+    const turmaSel = document.getElementById('reservaTurma');
+    if (turmaSel.options.length <= 1) {
+      const t = await api({ action: 'series_list_all' });
+      (Array.isArray(t) ? t : []).forEach(s => turmaSel.add(new Option(s.nome, s.id)));
+    }
+    document.getElementById('reservaInicio').value = '';
+    document.getElementById('reservaFim').value = '';
+    document.getElementById('reservaObs').value = '';
+    document.getElementById('reservaErr').style.display = 'none';
+    document.getElementById('reservaModal').classList.add('show');
+  }
+  function fecharReservaModal() { document.getElementById('reservaModal').classList.remove('show'); }
+
+  async function salvarReserva() {
+    const errEl = document.getElementById('reservaErr');
+    errEl.style.display = 'none';
+    const payload = {
+      action: 'reservas_criar',
+      recurso_id: document.getElementById('reservaRecurso').value,
+      turma_id: document.getElementById('reservaTurma').value || null,
+      inicio: document.getElementById('reservaInicio').value,
+      fim: document.getElementById('reservaFim').value,
+      observacao: document.getElementById('reservaObs').value.trim() || null,
+    };
+    if (!payload.recurso_id || !payload.inicio || !payload.fim) {
+      errEl.textContent = 'Recurso, início e fim obrigatórios.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const d = await api(payload);
+    if (d.error) {
+      errEl.textContent = d.error;
+      errEl.style.display = 'block';
+      return;
+    }
+    fecharReservaModal();
+    loadReservas();
+  }
+
+  async function cancelarReserva(id) {
+    if (!await _lumiedConfirm('Cancelar esta reserva?')) return;
+    const d = await api({ action: 'reservas_cancelar', id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    loadReservas();
   }
 
   // ── Audit log ──────────────────────────────────────────

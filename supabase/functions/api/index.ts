@@ -1475,6 +1475,71 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Recursos compartilhados (tablets etc) ──────────────
+  if (action === "recursos_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("recursos").select("*")
+      .eq("escola_id", gerente.escola_id).order("tipo").order("identificacao");
+    return ok({ data: data ?? [] });
+  }
+  if (action === "recursos_save") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id, tipo, identificacao, modelo, localizacao, fixo, ativo, observacao } = body as Record<string, unknown>;
+    if (!tipo || !identificacao) return err("Tipo e identificação obrigatórios.");
+    const data: Record<string, unknown> = { tipo, identificacao, modelo: modelo || null, localizacao: localizacao || null, fixo: !!fixo, ativo: ativo !== false, observacao: observacao || null };
+    if (id) {
+      const { error } = await admin.from("recursos").update(data).eq("id", id).eq("escola_id", gerente.escola_id);
+      if (error) return err(sanitizePgError(error));
+      return ok({ success: true, id });
+    }
+    const { data: novo, error } = await admin.from("recursos").insert({ ...data, escola_id: gerente.escola_id }).select("id").single();
+    if (error) return err(sanitizePgError(error));
+    return ok({ success: true, id: (novo as any).id });
+  }
+  if (action === "recursos_delete") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id } = body as { id: string };
+    await admin.from("recursos").delete().eq("id", id).eq("escola_id", gerente.escola_id);
+    return ok({ success: true });
+  }
+  if (action === "reservas_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { recurso_id, desde, ate } = body as Record<string, string>;
+    let q = admin.from("reservas_recursos")
+      .select("*, recursos(tipo, identificacao, localizacao), series(nome), professoras(nome)")
+      .eq("escola_id", gerente.escola_id).order("inicio", { ascending: true }).limit(500);
+    if (recurso_id) q = q.eq("recurso_id", recurso_id);
+    if (desde) q = q.gte("inicio", desde);
+    if (ate) q = q.lte("fim", ate);
+    const { data } = await q;
+    return ok({ data: data ?? [] });
+  }
+  if (action === "reservas_criar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { recurso_id, turma_id, professora_id, inicio, fim, observacao } = body as Record<string, string>;
+    if (!recurso_id || !inicio || !fim) return err("Recurso, início e fim obrigatórios.");
+    if (new Date(fim) <= new Date(inicio)) return err("O fim deve ser posterior ao início.");
+    const { data: nova, error } = await admin.from("reservas_recursos").insert({
+      escola_id: gerente.escola_id, recurso_id,
+      turma_id: turma_id || null, professora_id: professora_id || null,
+      inicio, fim, observacao: observacao || null,
+    }).select("id").single();
+    if (error) {
+      if (/Conflito de reserva/i.test(error.message)) return err(error.message, 409);
+      return err(sanitizePgError(error));
+    }
+    return ok({ success: true, id: (nova as any).id });
+  }
+  if (action === "reservas_cancelar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatório.");
+    const { error } = await admin.from("reservas_recursos").update({ status: "cancelada" })
+      .eq("id", id).eq("escola_id", gerente.escola_id);
+    if (error) return err(sanitizePgError(error));
+    return ok({ success: true });
+  }
+
   // Audit log do cadastro — listar últimas mudanças
   if (action === "audit_log_list") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
