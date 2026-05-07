@@ -2207,6 +2207,46 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     await admin.from("manutencoes").delete().eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
+  if (action === "manutencao_tirar_duvida") {
+    const { id, pergunta } = body as { id: string; pergunta: string };
+    if (!id || !pergunta?.trim()) return err("ID e pergunta são obrigatórios.");
+    const { data: chamado } = await admin
+      .from("manutencoes")
+      .select("id, descricao, usuario_id, escola_id")
+      .eq("id", id)
+      .eq("escola_id", sessionEscolaId)
+      .maybeSingle();
+    if (!chamado) return err("Chamado não encontrado.", 404);
+    const { error } = await admin.from("manutencoes").update({
+      pergunta_coordenacao: pergunta.trim(),
+      pergunta_em: new Date().toISOString(),
+      pergunta_por: gerente?.nome ?? null,
+      pergunta_resposta: null,
+      pergunta_respondida_em: null,
+    }).eq("id", id).eq("escola_id", sessionEscolaId);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+    if (chamado.usuario_id) {
+      await admin.from("notificacoes").insert({
+        portal: "professora",
+        destinatario: chamado.usuario_id,
+        titulo: "Coordenação tem uma dúvida sobre seu chamado",
+        mensagem: `${gerente?.nome || "Coordenação"} pediu esclarecimento: "${pergunta.trim().slice(0, 200)}"`,
+        tipo: "info",
+        escola_id: sessionEscolaId,
+      });
+    }
+    return ok({ success: true });
+  }
+  if (action === "manutencao_responder_pergunta") {
+    const { id, resposta } = body as { id: string; resposta: string };
+    if (!id || !resposta?.trim()) return err("ID e resposta são obrigatórios.");
+    const { error } = await admin.from("manutencoes").update({
+      pergunta_resposta: resposta.trim(),
+      pergunta_respondida_em: new Date().toISOString(),
+    }).eq("id", id).eq("escola_id", sessionEscolaId);
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+    return ok({ success: true });
+  }
 
   // ── Famílias (CRUD) ─────────────────────────────────────
   if (action === "familias_list") {
