@@ -1035,6 +1035,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     <div class="sb-footer">
       <div class="user-info"><strong id="userNome">Gerente</strong><span id="userEmail"></span></div>
       <button class="logout-btn" onclick="doLogout()">↩ <span data-i18n="nav.logout">Sair</span></button>
+      <button onclick="_resetApp()" title="Limpa cache e dados locais. Use se a tela travar ou ficar com layout quebrado." style="width:100%;margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;">⟲ Resetar app</button>
     </div>
   </div>
 
@@ -15542,6 +15543,7 @@ docker compose up -d --build</pre>
 <!-- dia-tabs agora inline no renderDiasSemana -->
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
+<script src="/reset-app.js"></script>
 <!-- MOBILE BOTTOM BAR — outside #appShell to avoid stacking context issues -->
 <nav class="ger-bottom-bar" id="gerBottomBar" role="navigation" aria-label="Menu principal"></nav>
 </body>

@@ -113,6 +113,7 @@ td{padding:10px 8px;border-bottom:1px solid #f0ece6;}
     </div>
     <div class="topbar-user">
       <span class="user-name" id="alunoNome"></span>
+      <button onclick="_resetApp()" title="Limpa cache e dados locais. Use se a tela travar ou ficar com layout quebrado." style="background:transparent;border:1px dashed rgba(255,255,255,.2);color:rgba(255,255,255,.55);padding:5px 10px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">⟲ Resetar</button>
       <button class="logout-btn" onclick="doLogout()" data-i18n="nav.logout">↩ Sair</button>
     </div>
   </div>
@@ -288,5 +289,6 @@ document.addEventListener('keydown', e => {
 <script src="/lumied-pro.js" defer></script>
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
+<script src="/reset-app.js"></script>
 </body>
 </html>

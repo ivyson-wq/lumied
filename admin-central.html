@@ -267,6 +267,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         <button class="logout-btn" onclick="abrirAlterarSenha()" style="flex:1;" title="Alterar Senha">&#128274; Senha</button>
         <button class="logout-btn" onclick="doLogout()" style="flex:1;">&#8617; Sair</button>
       </div>
+      <button onclick="_resetApp()" title="Limpa cache e dados locais. Use se a tela travar ou ficar com layout quebrado." style="width:100%;margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;">⟲ Resetar app</button>
     </div>
   </nav>
 
@@ -2923,5 +2924,6 @@ function novaCategoria() {
 // ═══════════════════════════════════════════════════════════
 checkSession();
 </script>
+<script src="/reset-app.js"></script>
 </body>
 </html>

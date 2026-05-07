@@ -707,6 +707,7 @@ body.dash-clean #greetingBar{display:none;}
       <button class="notif-bell" onclick="toggleNotifPanel()" aria-label="Notificações">🔔<span class="notif-dot" id="notifDot"></span></button>
       <span class="user-name" id="userNome"></span>
       <button class="logout-btn" onclick="switchProfPage('perfil',this)" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">👤 Perfil</button>
+      <button onclick="_resetApp()" title="Limpa cache e dados locais. Use se a tela travar ou ficar com layout quebrado." style="background:transparent;border:1px dashed rgba(255,255,255,.2);color:rgba(255,255,255,.55);padding:5px 10px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">⟲ Resetar</button>
       <button class="logout-btn" onclick="doLogout()">↩ Sair</button>
     </div>
     <div class="notif-panel" id="notifPanel">
@@ -4655,6 +4656,7 @@ body.dash-clean #greetingBar{display:none;}
 <script src="/lumied-pro.js" defer></script>
 <script src="/ticket-widget.js"></script>
 <script src="/lumi-assistant.js" defer></script>
+<script src="/reset-app.js"></script>
 </body>
 </html>
 <!-- deploy-1777722380 -->

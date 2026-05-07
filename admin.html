@@ -214,6 +214,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <div class="sb-footer">
       <div class="user-info"><strong id="adminNome">Admin</strong><span id="adminEmail">admin@escola.com</span></div>
       <button class="logout-btn" onclick="doLogout()" data-i18n="nav.logout">↩ Sair</button>
+      <button onclick="_resetApp()" title="Limpa cache e dados locais. Use se a tela travar ou ficar com layout quebrado." style="width:100%;margin-top:6px;padding:6px 10px;background:transparent;border:1px dashed rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;">⟲ Resetar app</button>
     </div>
   </nav>
 
@@ -871,5 +872,6 @@ checkSession();
 <script src="/lumied-a11y.js" defer></script>
 <script src="/lumied-delight.js" defer></script>
 <script src="/lumied-pro.js" defer></script>
+<script src="/reset-app.js"></script>
 </body>
 </html>
