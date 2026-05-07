@@ -17,5 +17,6 @@ ALTER TABLE acesso_eventos             ADD COLUMN IF NOT EXISTS foto_captura_pat
 -- Buckets privados
 UPDATE storage.buckets SET public=false WHERE name IN ('documentos','wa-documentos');
 
--- Limpa órfão único de wa-documentos (1 obj sem registro relacionado)
-DELETE FROM storage.objects WHERE bucket_id='wa-documentos';
+-- Órfão de wa-documentos (1 obj sem registro relacionado): será limpo
+-- via Storage API após esta migração (DELETE direto em storage.objects
+-- é bloqueado por trigger storage.protect_delete()).

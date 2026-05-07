@@ -74,6 +74,23 @@ function sugerirTier(alunos: number | null | undefined): keyof typeof TIER_INFO 
 }
 
 // ── Resend email helper ──
+function htmlToText(h: string): string {
+  return h
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>|<\/div>|<\/tr>|<\/li>|<\/h[1-6]>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 async function enviarEmail(
   to: string,
   subject: string,
@@ -84,12 +101,16 @@ async function enviarEmail(
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key) { log.warn("[gtm] RESEND_API_KEY não configurada"); return null; }
   try {
+    // Sempre incluir `text` (fallback plain). Quando há anexo, Resend monta
+    // multipart/mixed → sem multipart/alternative, Gmail às vezes mostra HTML cru.
+    // Com `text` + `html`, vira multipart/alternative dentro do mixed → renderiza certo.
     const body: Record<string, unknown> = {
       from: "Lumied <noreply@lumied.com.br>",
       to: [to],
       reply_to: replyTo || "ivyson@gmail.com",
       subject,
       html,
+      text: htmlToText(html),
     };
     if (attachments && attachments.length > 0) body.attachments = attachments;
     const res = await fetch("https://api.resend.com/emails", {

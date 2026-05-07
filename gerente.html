@@ -11000,14 +11000,23 @@ docker compose up -d --build</pre>
     const isBusca = r.tipo === 'busca';
     const cartUrl = almCartUrl(r, qty || 1);
     const radioName = 'almPriceSel_' + idx;
+    const badges = [];
+    if (r.frete_gratis) badges.push('<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;">🚚 Grátis</span>');
+    if (r.full)         badges.push('<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;">⚡ FULL</span>');
+    if (r.condicao === 'usado') badges.push('<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;">USADO</span>');
+    const badgesHtml = badges.length ? ` · ${badges.join(' ')}` : '';
+    const unitHtml = r.preco_unit_norm_fmt ? `<div style="font-size:10px;color:#1a6bb5;font-weight:700;">${r.preco_unit_norm_fmt}</div>` : '';
     return `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid ${selected?'#2d7a2d':'transparent'};background:${selected?'#f0fdf4':'transparent'};transition:all .15s;margin-bottom:4px;" onclick="almSelectPrice(${idx},${rIdx})">
       <input type="radio" name="${radioName}" ${selected?'checked':''} style="accent-color:#2d7a2d;flex-shrink:0;">
       <span style="font-size:14px;flex-shrink:0;">${platIcon[r.plataforma]||'🔗'}</span>
       <div style="flex:1;min-width:0;overflow:hidden;">
         <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(r.nome||'').replace(/"/g,'&quot;')}">${r.nome||r.plataforma}</div>
-        <div style="font-size:10px;color:var(--muted);">${r.plataforma}${!isBusca && r.match > 0 ? ` · <span style="color:${matchColor(r.match)};font-weight:700;">${r.match}%</span>` : ''}</div>
+        <div style="font-size:10px;color:var(--muted);">${r.plataforma}${!isBusca && r.match > 0 ? ` · <span style="color:${matchColor(r.match)};font-weight:700;">${r.match}%</span>` : ''}${badgesHtml}</div>
       </div>
-      <div style="font-size:14px;font-weight:700;white-space:nowrap;color:${r.preco!=null?'#2d7a2d':'var(--muted)'};flex-shrink:0;">${r.preco_fmt}</div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:14px;font-weight:700;white-space:nowrap;color:${r.preco!=null?'#2d7a2d':'var(--muted)'};">${r.preco_fmt}</div>
+        ${unitHtml}
+      </div>
       <a href="${cartUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
         style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;white-space:nowrap;font-family:'DM Sans',sans-serif;flex-shrink:0;">
         ${almCartLabel(r)}

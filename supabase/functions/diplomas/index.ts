@@ -1419,52 +1419,59 @@ Deno.serve(async (req) => {
       results.push({ plataforma: 'Zoom', nome: `Buscar "${query}" no Zoom`, preco: null, preco_fmt: 'Ver no Zoom', url_produto: `https://www.zoom.com.br/search?q=${encoded}`, url_carrinho: null, item_id: null, match: 0, tipo: 'busca' })
     }
 
-    // ── 1. Mercado Livre (API: products/search → products/{id}/items) ──────
+    // ── 1. Mercado Livre — endpoint público de anúncios, ordenado por preço ─
+    // Antes usávamos /products/search + /products/{id}/items?limit=1, que retorna o
+    // "vencedor da BuyBox" (reputação + frete + envio rápido), NÃO o mais barato.
+    // Trocamos para /sites/MLB/search?sort=price_asc — mesmo endpoint que ordena
+    // a busca pública na web por menor preço. Filtra `condition=new` para evitar
+    // usados misturados; mantemos a flag `condicao` no resultado caso queiram exibir.
     try {
       const mlToken = await getMLToken(sb)
       const mlHeaders: Record<string, string> = { 'Accept': 'application/json' }
       if (mlToken) mlHeaders['Authorization'] = `Bearer ${mlToken}`
 
-      // Step 1: Search products
       const mlSearchRes = await fetch(
-        `https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=${encoded}&limit=5`,
+        `https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&condition=new&sort=price_asc&limit=15`,
         { headers: mlHeaders }
       )
       let mlCount = 0
       if (mlSearchRes.ok) {
         const mlSearchData = await mlSearchRes.json()
-        const products = mlSearchData.results ?? []
-
-        // Step 2: For each product, get items with prices
-        for (const prod of products.slice(0, 5)) {
-          try {
-            const itemsRes = await fetch(
-              `https://api.mercadolibre.com/products/${prod.id}/items?limit=1`,
-              { headers: mlHeaders }
-            )
-            if (itemsRes.ok) {
-              const itemsData = await itemsRes.json()
-              for (const it of (itemsData.results ?? []).slice(0, 1)) {
-                if (it.price > 0) {
-                  const title = it.title ?? prod.name ?? ''
-                  const m = matchPct(query, title)
-                  const mlId = it.item_id ?? null
-                  results.push({
-                    plataforma: 'Mercado Livre',
-                    nome: title,
-                    preco: it.price,
-                    preco_fmt: `R$ ${parseFloat(it.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-                    url_produto: it.permalink ?? `https://www.mercadolivre.com.br/p/${prod.id}`,
-                    url_carrinho: mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null,
-                    item_id: mlId,
-                    match: m,
-                    tipo: 'produto',
-                  })
-                  mlCount++
-                }
-              }
-            }
-          } catch (e) { console.warn('[diplomas] ML product parse skipped:', (e as Error).message) }
+        const items: any[] = mlSearchData.results ?? []
+        for (const it of items) {
+          if (!(it.price > 0)) continue
+          const title = it.title ?? ''
+          const m = matchPct(query, title)
+          const mlId = it.id ?? null
+          const freteGratis = it?.shipping?.free_shipping === true
+          const isFull = it?.shipping?.logistic_type === 'fulfillment'
+          const cond = it.condition === 'new' ? 'novo' : (it.condition === 'used' ? 'usado' : null)
+          const pack = parsePackQty(title)
+          let precoNorm: number | null = null
+          let precoNormFmt: string | null = null
+          if (pack && pack.qty > 0) {
+            precoNorm = it.price / pack.qty
+            precoNormFmt = fmtUnitPrice(precoNorm, pack.unidade)
+          }
+          results.push({
+            plataforma: 'Mercado Livre',
+            nome: title,
+            preco: it.price,
+            preco_fmt: `R$ ${parseFloat(it.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+            url_produto: it.permalink ?? (mlId ? `https://www.mercadolivre.com.br/p/${mlId}` : `https://lista.mercadolivre.com.br/${query.replace(/\s+/g, '-')}`),
+            url_carrinho: mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null,
+            item_id: mlId,
+            match: m,
+            tipo: 'produto',
+            frete_gratis: freteGratis,
+            full: isFull,
+            condicao: cond,
+            qty_pacote: pack?.qty ?? null,
+            unidade_pacote: pack?.unidade ?? null,
+            preco_unit_norm: precoNorm,
+            preco_unit_norm_fmt: precoNormFmt,
+          })
+          mlCount++
         }
         fontes['Mercado Livre'] = { status: mlCount > 0 ? 'ok' : 'sem resultados', produtos: mlCount }
       } else {
@@ -1598,16 +1605,34 @@ Deno.serve(async (req) => {
       tipo: 'busca',
     })
 
-    // Sort: cheapest real products first, search links last
-    const produtos = results
-      .filter(r => r.tipo === 'produto' && r.preco != null)
-      .sort((a, b) => (a.preco ?? 0) - (b.preco ?? 0))
+    // Sort: produtos com preço, mais barato primeiro. Quando há preço unitário
+    // normalizado (R$/fl, R$/g, R$/ml, R$/un), agrupamos por unidade e ranqueamos
+    // os com a unidade mais frequente pelo preço unitário (compara pacotes de
+    // tamanhos diferentes). O resto cai pro sort por preço total.
+    const produtosTodos = results.filter(r => r.tipo === 'produto' && r.preco != null)
+    const unidadeFreq: Record<string, number> = {}
+    for (const r of produtosTodos) {
+      if (r.preco_unit_norm != null && r.unidade_pacote) {
+        unidadeFreq[r.unidade_pacote] = (unidadeFreq[r.unidade_pacote] || 0) + 1
+      }
+    }
+    const unidadeRef = Object.entries(unidadeFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || null
+    const produtos = produtosTodos.sort((a, b) => {
+      if (unidadeRef) {
+        const aRef = a.unidade_pacote === unidadeRef && a.preco_unit_norm != null
+        const bRef = b.unidade_pacote === unidadeRef && b.preco_unit_norm != null
+        if (aRef && bRef) return (a.preco_unit_norm ?? 0) - (b.preco_unit_norm ?? 0)
+        if (aRef) return -1
+        if (bRef) return 1
+      }
+      return (a.preco ?? 0) - (b.preco ?? 0)
+    })
     const semPreco = results.filter(r => r.tipo === 'produto' && r.preco == null)
     const links    = results.filter(r => r.tipo === 'busca')
 
     fontes['Amazon'] = { status: 'apenas link', produtos: 0 }
 
-    return json({ data: [...produtos, ...semPreco, ...links], query, fontes })
+    return json({ data: [...produtos, ...semPreco, ...links], query, fontes, unidade_ref: unidadeRef })
   }
 
   // ── ATUALIZAÇÃO AUTOMÁTICA DE PREÇOS ────────────────────
