@@ -332,6 +332,24 @@ async function devicePing(sb: Any, device: Any): Promise<DeviceOpResult> {
   }
 }
 
+async function deviceUnregisterUser(sb: Any, device: Any, deviceUserId: number): Promise<DeviceOpResult> {
+  if (device.via_bridge) {
+    const r = await bridgeDispatch(sb, device, "delete_user", { user_id: deviceUserId });
+    return { ok: r.ok, status: r.status, error: r.error };
+  }
+  try {
+    const session = await getDeviceSession(sb, device);
+    const res = await deviceFetch(device.ip, device.porta, `/destroy_objects.fcgi?session=${session}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ object: "users", where: { users: { id: deviceUserId } } }),
+    });
+    return { ok: res.ok, status: res.status };
+  } catch (e) {
+    return { ok: false, status: 0, error: String(e) };
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  DEVICE MANAGEMENT (authGerente)
 // ═══════════════════════════════════════════════════════════════
@@ -1639,14 +1657,102 @@ router.on("acesso_pai_autorizar_revogar", async (ctx) => {
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
 
   const { data: perm } = await ctx.sb.from("acesso_permissoes_retirada")
-    .select("id, criado_por_pai_email, autorizado").eq("id", id).maybeSingle();
+    .select("id, criado_por_pai_email, autorizado, responsavel_id, escola_id").eq("id", id).maybeSingle();
   if (!perm) throw new AppError("NOT_FOUND", "Autorização não encontrada.");
   if (perm.criado_por_pai_email !== email) {
     throw new AppError("FORBIDDEN", "Você só pode revogar autorizações criadas por você. Outras devem ser revogadas pela escola.");
   }
 
   await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
+
+  // Se o responsável NÃO tiver mais nenhuma autorização ativa, marca face pra remoção
+  if (perm.responsavel_id) {
+    const { count: outrasAtivas } = await ctx.sb.from("acesso_permissoes_retirada")
+      .select("id", { count: "exact", head: true })
+      .eq("responsavel_id", perm.responsavel_id)
+      .eq("autorizado", true);
+    if ((outrasAtivas ?? 0) === 0) {
+      await ctx.sb.from("acesso_faces").update({
+        sync_status: "aguardando_remocao",
+        atualizado_em: new Date().toISOString(),
+      })
+        .eq("escola_id", perm.escola_id)
+        .eq("pessoa_tipo", "responsavel")
+        .eq("pessoa_id", perm.responsavel_id)
+        .eq("ativo", true);
+    }
+  }
+
   return successResponse({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  Worker: processa fila de remoção de faces (cron a cada 15min)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acesso_processar_remocoes_face", async (ctx) => {
+  // Auth: cron internal key OU service role
+  const auth = ctx.req.headers.get("authorization") || ctx.req.headers.get("Authorization") || "";
+  const cronKey = Deno.env.get("CRON_INTERNAL_KEY");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  const tk = m ? m[1].trim() : "";
+  const valid = (cronKey && tk === cronKey) || (serviceKey && tk === serviceKey);
+  if (!valid) throw new AppError("AUTH_INVALID", "Internal call only.");
+
+  const { data: faces } = await ctx.sb.from("acesso_faces")
+    .select("id, escola_id, device_user_id, pessoa_nome, pessoa_id")
+    .eq("sync_status", "aguardando_remocao")
+    .eq("ativo", true)
+    .limit(50);
+
+  if (!faces?.length) return successResponse({ processadas: 0, ok: 0, err: 0 });
+
+  // Cache devices por escola
+  const devicesByEscola = new Map<string, Any[]>();
+  let okCount = 0; let errCount = 0;
+  const erros: Any[] = [];
+
+  for (const f of faces) {
+    let devices = devicesByEscola.get(f.escola_id);
+    if (!devices) {
+      const { data: ds } = await ctx.sb.from("acesso_dispositivos")
+        .select("*").eq("escola_id", f.escola_id).eq("ativo", true);
+      devices = ds || [];
+      devicesByEscola.set(f.escola_id, devices);
+    }
+
+    let allOk = true;
+    const devResults: Any[] = [];
+    for (const dev of devices) {
+      try {
+        const r = await deviceUnregisterUser(ctx.sb, dev, f.device_user_id);
+        if (!r.ok) { allOk = false; devResults.push({ device: dev.nome, ok: false, error: r.error || `HTTP ${r.status}` }); }
+        else devResults.push({ device: dev.nome, ok: true });
+      } catch (e) {
+        allOk = false; devResults.push({ device: dev.nome, ok: false, error: String(e) });
+      }
+    }
+
+    if (allOk) {
+      await ctx.sb.from("acesso_faces").update({
+        sync_status: "removido",
+        ativo: false,
+        sync_erro: null,
+        atualizado_em: new Date().toISOString(),
+      }).eq("id", f.id);
+      okCount++;
+    } else {
+      await ctx.sb.from("acesso_faces").update({
+        sync_erro: devResults.filter((r: Any) => !r.ok).map((r: Any) => `${r.device}: ${r.error}`).join("; "),
+        atualizado_em: new Date().toISOString(),
+      }).eq("id", f.id);
+      errCount++;
+      erros.push({ face_id: f.id, devices: devResults });
+    }
+  }
+
+  return successResponse({ processadas: faces.length, ok: okCount, err: errCount, erros: erros.slice(0, 5) });
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -2610,6 +2716,24 @@ router.on("acesso_setup_checklist", authGerenteOrSecretaria, async (ctx) => {
       severity: "muted",
     },
     {
+      id: "autorizacoes_pais_mes",
+      label: "Autorizações criadas pelos pais (mês)",
+      ok: true, // sempre ok — é informativo
+      detail: "—",
+      action: null,
+      blocking: false,
+      severity: "muted",
+    },
+    {
+      id: "remocoes_pendentes",
+      label: "Remoções de face pendentes",
+      ok: true,
+      detail: "—",
+      action: null,
+      blocking: false,
+      severity: "muted",
+    },
+    {
       id: "eventos",
       label: "Eventos nas últimas 24h",
       ok: (eventos24h ?? 0) > 0,
@@ -2657,6 +2781,53 @@ router.on("acesso_setup_checklist", authGerenteOrSecretaria, async (ctx) => {
       respItem.detail = "Nenhum aluno ativo.";
       respItem.severity = "muted";
       respItem.ok = true;
+    }
+  }
+
+  // Compute autorizacoes_pais_mes — informativo (sempre ok)
+  const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+  const { count: autPaisMes } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid)
+    .eq("criado_por_familia", true)
+    .gte("criado_em", inicioMes.toISOString());
+  const { count: autPaisAtivas } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid)
+    .eq("criado_por_familia", true)
+    .eq("autorizado", true);
+  const autItem = items.find((i) => i.id === "autorizacoes_pais_mes");
+  if (autItem) {
+    if ((autPaisMes ?? 0) === 0 && (autPaisAtivas ?? 0) === 0) {
+      autItem.detail = "Nenhuma autorização de pai criada ainda este mês.";
+      autItem.severity = "muted";
+    } else {
+      autItem.detail = `${autPaisMes || 0} criada(s) este mês • ${autPaisAtivas || 0} ativa(s) no total.`;
+      autItem.severity = "ok";
+    }
+  }
+
+  // Compute remocoes_pendentes — alerta se acumulou
+  const { count: remPend } = await ctx.sb.from("acesso_faces")
+    .select("id", { count: "exact", head: true })
+    .eq("escola_id", eid)
+    .eq("sync_status", "aguardando_remocao")
+    .eq("ativo", true);
+  const remItem = items.find((i) => i.id === "remocoes_pendentes");
+  if (remItem) {
+    const n = remPend ?? 0;
+    if (n === 0) {
+      remItem.detail = "Nenhuma remoção pendente.";
+      remItem.severity = "ok";
+      remItem.ok = true;
+    } else if (n < 5) {
+      remItem.detail = `${n} face(s) na fila pra remover do iDFace (cron processa a cada 15min).`;
+      remItem.severity = "warn";
+      remItem.ok = false;
+    } else {
+      remItem.detail = `${n} face(s) acumuladas — possível erro no Bridge. Verificar logs do daemon.`;
+      remItem.severity = "error";
+      remItem.ok = false;
     }
   }
 
