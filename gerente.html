@@ -10853,11 +10853,12 @@ docker compose up -d --build</pre>
     const badge = document.getElementById('almPendBadge');
     if (d.pendentes > 0) { badge.textContent = d.pendentes; badge.style.display = 'inline'; }
     else badge.style.display = 'none';
-    // Integrações (Mercado Livre, etc.)
+    // Integrações (Mercado Livre, etc.) — checa OAuth real via ml_status
     const intEl = document.getElementById('almIntegracoes');
-    const mlId = localStorage.getItem('ml_client_id');
+    const mlS = await callDiplomas({ action: 'ml_status' });
+    const mlConectado = !!mlS?.connected;
     const integracoes = [
-      { nome: 'Mercado Livre', icon: '🛒', conectado: !!mlId, desc: mlId ? 'Conectado — preços automáticos' : 'Desconectado — configure ML_CLIENT_ID para atualização automática de preços' },
+      { nome: 'Mercado Livre', icon: '🛒', conectado: mlConectado, desc: mlConectado ? 'Conectado — preços automáticos' : 'Desconectado — clique em 🛒 ML em Configuração → Catálogo para autorizar' },
       { nome: 'Banco Inter', icon: '🏦', conectado: false, desc: 'Não configurado — boletos de compra manual' },
     ];
     const desconectados = integracoes.filter(i => !i.conectado);

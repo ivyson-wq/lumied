@@ -1332,13 +1332,17 @@ Deno.serve(async (req) => {
 
     function parsePackQty(title: string): { qty: number; unidade: string } | null {
       const t = (title || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      // Ordem importa: padrões mais específicos/contextuais primeiro.
+      // "folhas" antes de "g" porque títulos de papel costumam ter "75g 500 folhas"
+      // — folhas representa o conteúdo do pacote, g é só a gramatura.
+      // "c/X un" antes de "X un" pra capturar contexto de pacote.
       const patterns: Array<{ rx: RegExp; un: string; mul?: number }> = [
-        { rx: /(\d+(?:[.,]\d+)?)\s*(?:kg|kilos?|quilos?)\b/, un: 'g', mul: 1000 },
-        { rx: /(\d+(?:[.,]\d+)?)\s*(?:gr|gramas?|g)\b/, un: 'g' },
-        { rx: /(\d+(?:[.,]\d+)?)\s*(?:litros?|lt|l)\b/, un: 'ml', mul: 1000 },
-        { rx: /(\d+(?:[.,]\d+)?)\s*(?:ml|mililitros?)\b/, un: 'ml' },
         { rx: /(\d+)\s*(?:folhas?|fls?|fl)\b/, un: 'fl' },
         { rx: /(?:c\/|com|contendo|pacote\s*c\/|pct\s*c\/|caixa\s*c\/|cx\s*c\/)\s*(\d+)\s*(?:un|unid|unidades?|pe[çc]as?|pcs?)?\b/, un: 'un' },
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:litros?|lt|l)\b/, un: 'ml', mul: 1000 },
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:ml|mililitros?)\b/, un: 'ml' },
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:kg|kilos?|quilos?)\b/, un: 'g', mul: 1000 },
+        { rx: /(\d+(?:[.,]\d+)?)\s*(?:gr|gramas?|g)\b/, un: 'g' },
         { rx: /(\d+)\s*(?:un|unid|unidades?|pe[çc]as?|pcs?)\b/, un: 'un' },
       ]
       for (const p of patterns) {
@@ -1425,57 +1429,79 @@ Deno.serve(async (req) => {
     // Trocamos para /sites/MLB/search?sort=price_asc — mesmo endpoint que ordena
     // a busca pública na web por menor preço. Filtra `condition=new` para evitar
     // usados misturados; mantemos a flag `condicao` no resultado caso queiram exibir.
+    // /sites/MLB/search foi restringido a apps parceiras em 2026 (retorna 403
+    // mesmo com OAuth). Usamos /products/search (catálogo canônico) +
+    // /products/{id}/items?limit=8 — pega vários anúncios por produto e
+    // mescla. Antes pegávamos limit=1 (BuyBox winner, raramente o mais
+    // barato); agora coletamos até 8 por produto canônico e 3 produtos.
     try {
       const mlToken = await getMLToken(sb)
-      const mlHeaders: Record<string, string> = { 'Accept': 'application/json' }
-      if (mlToken) mlHeaders['Authorization'] = `Bearer ${mlToken}`
-
-      const mlSearchRes = await fetch(
-        `https://api.mercadolibre.com/sites/MLB/search?q=${encoded}&condition=new&sort=price_asc&limit=15`,
-        { headers: mlHeaders }
-      )
-      let mlCount = 0
-      if (mlSearchRes.ok) {
-        const mlSearchData = await mlSearchRes.json()
-        const items: any[] = mlSearchData.results ?? []
-        for (const it of items) {
-          if (!(it.price > 0)) continue
-          const title = it.title ?? ''
-          const m = matchPct(query, title)
-          const mlId = it.id ?? null
-          const freteGratis = it?.shipping?.free_shipping === true
-          const isFull = it?.shipping?.logistic_type === 'fulfillment'
-          const cond = it.condition === 'new' ? 'novo' : (it.condition === 'used' ? 'usado' : null)
-          const pack = parsePackQty(title)
-          let precoNorm: number | null = null
-          let precoNormFmt: string | null = null
-          if (pack && pack.qty > 0) {
-            precoNorm = it.price / pack.qty
-            precoNormFmt = fmtUnitPrice(precoNorm, pack.unidade)
-          }
-          results.push({
-            plataforma: 'Mercado Livre',
-            nome: title,
-            preco: it.price,
-            preco_fmt: `R$ ${parseFloat(it.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-            url_produto: it.permalink ?? (mlId ? `https://www.mercadolivre.com.br/p/${mlId}` : `https://lista.mercadolivre.com.br/${query.replace(/\s+/g, '-')}`),
-            url_carrinho: mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null,
-            item_id: mlId,
-            match: m,
-            tipo: 'produto',
-            frete_gratis: freteGratis,
-            full: isFull,
-            condicao: cond,
-            qty_pacote: pack?.qty ?? null,
-            unidade_pacote: pack?.unidade ?? null,
-            preco_unit_norm: precoNorm,
-            preco_unit_norm_fmt: precoNormFmt,
-          })
-          mlCount++
-        }
-        fontes['Mercado Livre'] = { status: mlCount > 0 ? 'ok' : 'sem resultados', produtos: mlCount }
+      if (!mlToken) {
+        fontes['Mercado Livre'] = { status: 'sem token', produtos: 0, erro: 'OAuth ML não conectado' }
       } else {
-        fontes['Mercado Livre'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${mlSearchRes.status}` }
+        const mlHeaders: Record<string, string> = {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${mlToken}`,
+        }
+        const mlSearchRes = await fetch(
+          `https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=${encoded}&limit=3`,
+          { headers: mlHeaders }
+        )
+        let mlCount = 0
+        if (mlSearchRes.ok) {
+          const mlSearchData = await mlSearchRes.json()
+          const products = mlSearchData.results ?? []
+
+          for (const prod of products.slice(0, 3)) {
+            try {
+              const itemsRes = await fetch(
+                `https://api.mercadolibre.com/products/${prod.id}/items?limit=8`,
+                { headers: mlHeaders }
+              )
+              if (!itemsRes.ok) continue // 404 "No winners found" é comum, ignora
+              const itemsData = await itemsRes.json()
+              for (const it of (itemsData.results ?? [])) {
+                if (!(it.price > 0)) continue
+                if (it.condition && it.condition !== 'new') continue // só novos
+                const title = it.title ?? prod.name ?? ''
+                const m = matchPct(query, title)
+                const mlId = it.item_id ?? it.id ?? null
+                const freteGratis = it?.shipping?.free_shipping === true
+                const isFull = it?.shipping?.logistic_type === 'fulfillment'
+                const cond = it.condition === 'new' ? 'novo' : null
+                const pack = parsePackQty(title)
+                let precoNorm: number | null = null
+                let precoNormFmt: string | null = null
+                if (pack && pack.qty > 0) {
+                  precoNorm = it.price / pack.qty
+                  precoNormFmt = fmtUnitPrice(precoNorm, pack.unidade)
+                }
+                results.push({
+                  plataforma: 'Mercado Livre',
+                  nome: title,
+                  preco: it.price,
+                  preco_fmt: `R$ ${parseFloat(it.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                  url_produto: it.permalink ?? (mlId ? `https://produto.mercadolivre.com.br/${mlId}` : `https://www.mercadolivre.com.br/p/${prod.id}`),
+                  url_carrinho: mlId ? `https://www.mercadolivre.com.br/checkout/buy?item.id=${mlId}&item.quantity=1` : null,
+                  item_id: mlId,
+                  match: m,
+                  tipo: 'produto',
+                  frete_gratis: freteGratis,
+                  full: isFull,
+                  condicao: cond,
+                  qty_pacote: pack?.qty ?? null,
+                  unidade_pacote: pack?.unidade ?? null,
+                  preco_unit_norm: precoNorm,
+                  preco_unit_norm_fmt: precoNormFmt,
+                })
+                mlCount++
+              }
+            } catch (e) { console.warn('[diplomas] ML product items skipped:', (e as Error).message) }
+          }
+          fontes['Mercado Livre'] = { status: mlCount > 0 ? 'ok' : 'sem resultados', produtos: mlCount }
+        } else {
+          fontes['Mercado Livre'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${mlSearchRes.status}` }
+        }
       }
     } catch (e) { fontes['Mercado Livre'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
