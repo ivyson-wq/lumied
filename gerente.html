@@ -10949,7 +10949,19 @@ docker compose up -d --build</pre>
     if (!req) { showToast('Requisição não encontrada.', 'warning'); return; }
     almReviewItens = req.itens || [];
 
+    // Checa status do ML para alertar a coordenadora se estiver desconectado
+    callDiplomas({ action: 'ml_status' }).then(s => {
+      const banner = document.getElementById('almReviewMlBanner');
+      if (banner) banner.style.display = s.connected ? 'none' : 'flex';
+    });
+
     document.getElementById('almReviewContent').innerHTML = `
+      <div id="almReviewMlBanner" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;color:#991b1b;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;align-items:center;gap:10px;">
+        <span style="font-size:16px;">⚠️</span>
+        <div style="flex:1;">
+          <strong>Mercado Livre desconectado.</strong> Os preços do ML não estão sendo buscados — só Zoom/Shopee/Reval. Peça pro gerente clicar em <strong>🛒 ML</strong> em <em>Almoxarifado → Configuração → Catálogo</em> para reautorizar.
+        </div>
+      </div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
         <strong>${req.professoras?.nome||'—'}</strong> · ${req.series?.nome||'—'} · ${almMesBR(req.mes)} · ${new Date(req.criado_em).toLocaleDateString('pt-BR')}
       </div>
