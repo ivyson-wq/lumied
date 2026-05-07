@@ -1623,20 +1623,89 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── 3. Reval (atacado reval.net) — só link de busca.
-    // O scraping de /produtos?q= não funciona do edge function: o servidor
-    // retorna HTML "vazio" (~434KB sem produtos, sem campo hddB1Prv1) para os
-    // IPs de DC do Supabase, provavelmente geofencing/anti-bot. De um IP
-    // residencial brasileiro o mesmo endpoint retorna ~780KB com produtos
-    // completos. Mantemos o link pra o usuário cotar manualmente.
-    fontes['Reval'] = { status: 'apenas link', produtos: 0 }
-    results.push({
-      plataforma: 'Reval',
-      nome: `Buscar "${query}" na Reval`,
-      preco: null, preco_fmt: 'Ver na Reval',
-      url_produto: `https://www.reval.net/produtos?q=${encoded}`,
-      url_carrinho: null, item_id: null, match: 0, tipo: 'busca',
-    })
+    // ── 3. Reval (atacado reval.net) — via Cloudflare Worker (reval-proxy).
+    // O servidor Reval entrega HTML "vazio" (~434KB) pra IPs de DC; o worker
+    // roda em PoP Cloudflare BR e recebe a versão completa (~780KB).
+    // Estrutura Magento + ASP.NET: preço no <input ... hddB1Prv1 ... value="X,XX">,
+    // qty da caixa em <span class="product-cod">CX.C/N</span>. Como é atacado,
+    // o preço listado é da caixa — dividimos por N pra ter R$/un.
+    const revalProxyUrl = Deno.env.get('REVAL_PROXY_URL') || ''
+    const revalProxySecret = Deno.env.get('REVAL_PROXY_SECRET') || ''
+    if (!revalProxyUrl || !revalProxySecret) {
+      fontes['Reval'] = { status: 'apenas link', produtos: 0 }
+    } else {
+      try {
+        const proxyRes = await fetch(
+          `${revalProxyUrl.replace(/\/$/, '')}/produtos?q=${encoded}`,
+          { headers: { 'x-secret': revalProxySecret }, signal: AbortSignal.timeout(10000) }
+        )
+        if (proxyRes.ok) {
+          const proxyData = await proxyRes.json() as { ok: boolean; html: string; len: number; hasItems: boolean }
+          const html = proxyData.html || ''
+          const blocks = html.split('<li class="item">').slice(1)
+          let revalCount = 0
+          ;(fontes as any)['_reval_debug'] = {
+            proxy_len: proxyData.len, proxy_hasItems: proxyData.hasItems,
+            html_recv: html.length, blocks: blocks.length,
+            sample: blocks[0]?.substring(0, 400) ?? '(no blocks)',
+          }
+          for (const blk of blocks) {
+            if (revalCount >= 6) break
+            const hrefM = /<a href="(\/produto\/[^"]+)"[^>]*title="([^"]+)"\s*class="product-image"/.exec(blk)
+            const cxM = /<span class="product-cod">CX\.C\/(\d+)<\/span>/.exec(blk)
+            const precoM = /hddB1Prv1[^"]*"\s+value="([\d.,]+)"/.exec(blk)
+            const dispM = /hddB1Disponivel[^"]*"\s+value="(\d+)"/.exec(blk)
+            if (!hrefM || !precoM) continue
+            const precoCaixa = parseFloat(precoM[1].replace(/\./g, '').replace(',', '.'))
+            if (!precoCaixa || precoCaixa <= 0) continue
+            if (dispM && dispM[1] === '0') continue
+            const cxQty = cxM ? parseInt(cxM[1], 10) : 1
+            const precoUnit = cxQty > 1 ? precoCaixa / cxQty : precoCaixa
+            const titleRaw = hrefM[2].replace(/^\d+-/, '').trim()
+            const m = matchPct(query, titleRaw)
+            const cxLabel = cxQty > 1 ? `Caixa c/${cxQty}` : null
+            const pack = parsePackQty(titleRaw)
+            let precoNorm: number | null = null
+            let precoNormFmt: string | null = null
+            if (pack && pack.qty > 0) {
+              precoNorm = precoUnit / pack.qty
+              precoNormFmt = fmtUnitPrice(precoNorm, pack.unidade)
+            }
+            results.push({
+              plataforma: 'Reval',
+              nome: titleRaw,
+              preco: precoUnit,
+              preco_fmt: `R$ ${precoUnit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+              url_produto: `https://www.reval.net${hrefM[1]}`,
+              url_carrinho: null,
+              item_id: null,
+              match: m,
+              tipo: 'produto',
+              qty_pacote: pack?.qty ?? null,
+              unidade_pacote: pack?.unidade ?? null,
+              preco_unit_norm: precoNorm,
+              preco_unit_norm_fmt: precoNormFmt,
+              pack_mult: cxQty,
+              pack_label: cxLabel,
+              qty_total: pack ? pack.qty * cxQty : null,
+            })
+            revalCount++
+          }
+          fontes['Reval'] = { status: revalCount > 0 ? 'ok' : 'sem resultados', produtos: revalCount }
+        } else {
+          fontes['Reval'] = { status: 'bloqueado', produtos: 0, erro: `proxy HTTP ${proxyRes.status}` }
+        }
+      } catch (e) { fontes['Reval'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
+    }
+    if (!results.some(r => r.plataforma === 'Reval')) {
+      results.push({
+        plataforma: 'Reval',
+        nome: `Buscar "${query}" na Reval`,
+        preco: null, preco_fmt: 'Ver na Reval',
+        url_produto: `https://www.reval.net/produtos?q=${encoded}`,
+        url_carrinho: null, item_id: null, match: 0, tipo: 'busca',
+      })
+    }
 
     // ── 4. Amazon Brasil (no free API — search link only) ────
     results.push({
@@ -1783,6 +1852,7 @@ Deno.serve(async (req) => {
   const isAlmCompraAction = [
     'alm_encaminhar_compra', 'alm_compras_pendentes',
     'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
+    'alm_compras_compilado',
   ].includes(action)
 
   if (isAlmCompraAction) {
@@ -1829,6 +1899,115 @@ Deno.serve(async (req) => {
         .eq('status', 'pendente')
         .order('encaminhado_em', { ascending: false })
       return json({ data: data ?? [] })
+    }
+
+    // Compras compiladas: agrega itens iguais entre requisições de turmas
+    // distintas. Critério de agrupamento:
+    //   - Se insumo_id existe (item catalogado): chave = insumo_id
+    //   - Senão (item livre da professora): chave = nome normalizado
+    // Resultado: 1 linha por item agregado com qty_total, turmas, IDs filhos.
+    if (action === 'alm_compras_compilado') {
+      const escolaId = (gerente as any).escola_id
+      const { data: linhas } = await sb.from('alm_compras')
+        .select('id, insumo_id, insumo_nome, qty, plataforma, produto_nome, preco_unit, match_pct, url_produto, url_carrinho, status, encaminhado_em, alm_requisicoes(mes, professoras(nome), series(nome))')
+        .eq('escola_id', escolaId)
+        .eq('status', 'pendente')
+        .order('encaminhado_em', { ascending: false })
+
+      const norm = (s: string) => (s || '').toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+
+      type Grupo = {
+        chave: string;
+        insumo_id: string | null;
+        nome: string;
+        qty_total: number;
+        ids: string[];
+        turmas: Set<string>;
+        professoras: Set<string>;
+        meses: Set<string>;
+        precos: number[];
+        plataformas: Record<string, number>;
+        produto_nome_sugestao: string | null;
+        match_pct_max: number;
+        url_produto: string | null;
+        url_carrinho: string | null;
+      }
+      const grupos: Record<string, Grupo> = {}
+      for (const l of (linhas ?? []) as any[]) {
+        const chave = l.insumo_id ? `id:${l.insumo_id}` : `nome:${norm(l.insumo_nome)}`
+        if (!grupos[chave]) {
+          grupos[chave] = {
+            chave, insumo_id: l.insumo_id, nome: l.insumo_nome,
+            qty_total: 0, ids: [], turmas: new Set(), professoras: new Set(), meses: new Set(),
+            precos: [], plataformas: {},
+            produto_nome_sugestao: null, match_pct_max: 0,
+            url_produto: null, url_carrinho: null,
+          }
+        }
+        const g = grupos[chave]
+        g.qty_total += parseFloat(l.qty || 0)
+        g.ids.push(l.id)
+        if (l.alm_requisicoes?.series?.nome) g.turmas.add(l.alm_requisicoes.series.nome)
+        if (l.alm_requisicoes?.professoras?.nome) g.professoras.add(l.alm_requisicoes.professoras.nome)
+        if (l.alm_requisicoes?.mes) g.meses.add(l.alm_requisicoes.mes)
+        if (l.preco_unit != null) g.precos.push(parseFloat(l.preco_unit))
+        if (l.plataforma) g.plataformas[l.plataforma] = (g.plataformas[l.plataforma] || 0) + 1
+        // Mantém a melhor sugestão de produto (maior match_pct)
+        if ((l.match_pct ?? 0) > g.match_pct_max) {
+          g.match_pct_max = l.match_pct ?? 0
+          g.produto_nome_sugestao = l.produto_nome
+          g.url_produto = l.url_produto
+          g.url_carrinho = l.url_carrinho
+        }
+      }
+
+      // Para itens cataloged sem produto sugerido, busca referencia_url do insumo
+      const semSugestao = Object.values(grupos).filter(g => g.insumo_id && !g.url_produto).map(g => g.insumo_id!)
+      if (semSugestao.length) {
+        const { data: insumos } = await sb.from('alm_insumos')
+          .select('id, referencia_url, referencia_nome, preco_referencia')
+          .in('id', semSugestao).eq('escola_id', escolaId)
+        for (const ins of (insumos ?? []) as any[]) {
+          const g = Object.values(grupos).find(x => x.insumo_id === ins.id)
+          if (g) {
+            if (!g.url_produto && ins.referencia_url) g.url_produto = ins.referencia_url
+            if (!g.produto_nome_sugestao && ins.referencia_nome) g.produto_nome_sugestao = ins.referencia_nome
+            if (g.precos.length === 0 && ins.preco_referencia != null) g.precos.push(parseFloat(ins.preco_referencia))
+          }
+        }
+      }
+
+      const out = Object.values(grupos).map(g => {
+        const precoMedio = g.precos.length ? g.precos.reduce((s, p) => s + p, 0) / g.precos.length : null
+        const plataformaMaisComum = Object.entries(g.plataformas).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+        return {
+          chave: g.chave,
+          insumo_id: g.insumo_id,
+          nome: g.nome,
+          qty_total: g.qty_total,
+          n_requisicoes: g.ids.length,
+          ids: g.ids,
+          turmas: Array.from(g.turmas).sort(),
+          professoras: Array.from(g.professoras).sort(),
+          meses: Array.from(g.meses).sort(),
+          preco_unit_medio: precoMedio,
+          preco_total_estimado: precoMedio != null ? precoMedio * g.qty_total : null,
+          plataforma_sugerida: plataformaMaisComum,
+          produto_nome_sugestao: g.produto_nome_sugestao,
+          match_pct_max: g.match_pct_max || null,
+          url_produto: g.url_produto,
+          url_carrinho: g.url_carrinho,
+        }
+      }).sort((a, b) => b.qty_total - a.qty_total)
+
+      return json({
+        data: out,
+        total_grupos: out.length,
+        total_linhas: (linhas ?? []).length,
+        valor_estimado: out.reduce((s, g) => s + (g.preco_total_estimado || 0), 0),
+      })
     }
 
     if (action === 'alm_compras_todas') {

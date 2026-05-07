@@ -1947,8 +1947,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
         <!-- Tab: Compras -->
         <div id="almReqTabCompras" style="display:none;">
-          <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Itens aprovados aguardando compra. Selecione os checkboxes dos itens comprados e clique em "Marcar como Comprado".</p>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:0;background:#f0ece6;border-radius:9px;padding:3px;margin-bottom:12px;width:fit-content;">
+            <button id="almComprasModoCompilado" onclick="almSetModoCompras('compilado')" style="padding:6px 16px;background:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.05);">📋 Compilado por item</button>
+            <button id="almComprasModoDetalhado" onclick="almSetModoCompras('detalhado')" style="padding:6px 16px;background:none;border:none;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);font-family:inherit;">🔎 Detalhado por requisição</button>
+          </div>
+          <p id="almComprasHelp" style="font-size:12px;color:var(--muted);margin-bottom:12px;">Itens iguais entre turmas agregados em um único pedido — pesquisa + compra de cada item uma vez só.</p>
+          <div id="almComprasFiltrosDetalhado" style="display:none;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <select id="almComprasStatus" onchange="almLoadCompras()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
               <option value="pendente">⏳ Pendentes de compra</option>
               <option value="comprado">✅ Já comprados</option>
@@ -1957,6 +1961,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado" title="Selecione os checkboxes na lista abaixo e clique aqui">✅ Marcar Selecionados como Comprado</button>
             <input type="text" id="almComprasSearch" placeholder="🔍 Buscar item, professora, turma, fornecedor…" oninput="debouncedAlmComprasSearch()" style="flex:1;min-width:240px;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
           </div>
+          <div id="almComprasCompiladoBox" style="margin-bottom:14px;"></div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
             <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Documentos PDF:</span>
             <button onclick="almBaixarPdf('alm_pdf_aprovados')" class="btn-create" style="padding:6px 14px;background:#0b7a4b;font-size:11px;" title="Lista de itens aprovados para enviar ao fornecedor">📄 Ordem de Compra</button>
@@ -10986,7 +10991,7 @@ docker compose up -d --build</pre>
     if (tab === 'turmas')     almLoadTurmas();
     if (tab === 'orcamentos') almLoadOrcamentos();
     if (tab === 'relatorio')  almLoadRelatorio();
-    if (tab === 'compras')    almLoadCompras();
+    if (tab === 'compras')    almSetModoCompras(almComprasModo || 'compilado');
   }
 
   // ── MONTH NAV HELPERS ──────────────────────────────────
@@ -11035,7 +11040,7 @@ docker compose up -d --build</pre>
     document.getElementById('almReqTabRelat').style.display = tab === 'relat' ? '' : 'none';
     if (tab === 'pend') almLoadPendentes();
     if (tab === 'hist') { almInitMonths(); almLoadTodas(); }
-    if (tab === 'compras') almLoadCompras();
+    if (tab === 'compras') almSetModoCompras(almComprasModo || 'compilado');
     if (tab === 'relat') almRelatInit();
   }
 
@@ -11537,7 +11542,85 @@ docker compose up -d --build</pre>
 
   // ── Aba Compras ───────────────────────────────────────────
   var almComprasItems = [];
+  var almComprasModo = 'compilado'; // 'compilado' | 'detalhado'
   var debouncedAlmComprasSearch = debounce(() => almRenderCompras());
+
+  function almSetModoCompras(modo) {
+    almComprasModo = modo;
+    const btnC = document.getElementById('almComprasModoCompilado');
+    const btnD = document.getElementById('almComprasModoDetalhado');
+    const help = document.getElementById('almComprasHelp');
+    const filtros = document.getElementById('almComprasFiltrosDetalhado');
+    const compiladoBox = document.getElementById('almComprasCompiladoBox');
+    const lista = document.getElementById('almComprasList');
+    const ativo = 'background:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.05);padding:6px 16px;color:#000';
+    const inativo = 'background:none;border:none;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted);font-family:inherit;padding:6px 16px;';
+    if (modo === 'compilado') {
+      btnC.style.cssText = ativo; btnD.style.cssText = inativo;
+      filtros.style.display = 'none';
+      compiladoBox.style.display = '';
+      if (lista) lista.style.display = 'none';
+      help.textContent = 'Itens iguais entre turmas agregados em um único pedido — pesquisa + compra de cada item uma vez só.';
+      almLoadCompiladoCompras();
+    } else {
+      btnD.style.cssText = ativo; btnC.style.cssText = inativo;
+      filtros.style.display = 'flex';
+      compiladoBox.style.display = 'none';
+      if (lista) lista.style.display = '';
+      help.textContent = 'Cada linha é um item de uma requisição (turma específica). Use checkboxes pra marcar comprado.';
+      almLoadCompras();
+    }
+  }
+
+  async function almLoadCompiladoCompras() {
+    const box = document.getElementById('almComprasCompiladoBox');
+    box.innerHTML = '⏳ Compilando…';
+    const d = await callDiplomas({ action: 'alm_compras_compilado' });
+    const grupos = d.data || [];
+    if (!grupos.length) { box.innerHTML = '<div class="empty-state">✅ Nenhum item pendente pra comprar.</div>'; return; }
+
+    const platIcons = { 'Mercado Livre':'🛒', 'Amazon':'📦', 'Shopee':'🛍️', 'Reval':'🏬' };
+    const fmt = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const header = `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:13px;"><strong>${d.total_grupos}</strong> item(ns) únicos · ${d.total_linhas} linha(s) de ${grupos.reduce((s,g)=>s+g.turmas.length,0)} pedidos de turma</div>
+      <div style="font-size:13px;font-weight:700;">Total estimado: ${fmt(d.valor_estimado)}</div>
+    </div>`;
+
+    box.innerHTML = header + grupos.map(g => {
+      const linkBusca = g.url_carrinho || g.url_produto;
+      const buscarNome = encodeURIComponent(g.nome);
+      return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:240px;">
+            <div style="font-weight:700;font-size:14px;">${esc(g.nome)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+              ${g.n_requisicoes} requisição(ões) · ${g.turmas.length} turma(s): ${g.turmas.map(t => `<span style="background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:1px 8px;font-size:10px;font-weight:600;display:inline-block;margin:1px;">${esc(t)}</span>`).join('')}
+              ${g.meses.length ? ' · mês: ' + g.meses.map(m=>almMesBR(m)).join(', ') : ''}
+            </div>
+            ${g.produto_nome_sugestao ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">💡 sugestão: ${esc(g.produto_nome_sugestao)} ${g.match_pct_max ? `<span style="color:${matchColor(g.match_pct_max)};font-weight:600;">(${g.match_pct_max}%)</span>` : ''}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:18px;font-weight:800;">×${g.qty_total}</div>
+            ${g.preco_unit_medio != null ? `<div style="font-size:11px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un. · total ${fmt(g.preco_total_estimado)}</div>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+          ${linkBusca ? `<a href="${esc(linkBusca)}" target="_blank" rel="noopener" style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;">${platIcons[g.plataforma_sugerida]||'🛒'} ${g.url_carrinho?'Abrir carrinho':'Ver produto'}</a>` : ''}
+          <a href="https://www.mercadolivre.com.br/jms/search?as_word=${buscarNome}" target="_blank" rel="noopener" style="background:#fff;border:1px solid var(--border);color:var(--text);text-decoration:none;border-radius:7px;padding:6px 12px;font-size:11px;font-family:'DM Sans',sans-serif;">🔍 Buscar no ML</a>
+          <button onclick="almMarcarGrupoComprado(${JSON.stringify(g.ids).replace(/"/g,'&quot;')}, '${esc(g.nome)}')" style="background:#2d7a3a;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto;">✅ Marcar grupo comprado</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function almMarcarGrupoComprado(ids, nome) {
+    if (!await _lumiedConfirm(`Marcar todas as ${ids.length} reservas de "${nome}" como compradas?`)) return;
+    const d = await callDiplomas({ action: 'alm_marcar_comprado', ids });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast(`✅ ${d.marcados ?? ids.length} item(ns) de "${nome}" marcado(s) como comprado(s).`, 'success');
+    almLoadCompiladoCompras();
+  }
 
   async function almLoadCompras() {
     const status = document.getElementById('almComprasStatus').value;
