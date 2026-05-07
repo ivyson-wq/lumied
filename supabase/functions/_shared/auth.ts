@@ -306,8 +306,9 @@ export async function uploadArquivo(
   bucket: string,
   ownerId: string,
   base64: string,
-  mime: string
-): Promise<{ url: string } | { error: string }> {
+  mime: string,
+  opts?: { private?: boolean; ttlSeconds?: number }
+): Promise<{ url: string; path: string } | { error: string }> {
   // Validate file size before decoding (max 10MB)
   const estimatedBytes = (base64.length * 3) / 4;
   if (estimatedBytes > 10 * 1024 * 1024) {
@@ -318,6 +319,30 @@ export async function uploadArquivo(
   const fileName = `${ownerId}/${Date.now()}.${ext}`;
   const { error } = await sb.storage.from(bucket).upload(fileName, bytes, { contentType: mime, upsert: false });
   if (error) return { error: error.message };
+  // Bucket privado: retorna signed URL com TTL configurável (default 7 dias).
+  // Caller deve guardar o `path` e regenerar URL via getSignedFileUrl quando expirar.
+  if (opts?.private) {
+    const ttl = opts.ttlSeconds ?? 60 * 60 * 24 * 7;
+    const { data: signed, error: errSign } = await sb.storage.from(bucket).createSignedUrl(fileName, ttl);
+    if (errSign) return { error: errSign.message };
+    return { url: signed.signedUrl, path: fileName };
+  }
   const { data: { publicUrl } } = sb.storage.from(bucket).getPublicUrl(fileName);
-  return { url: publicUrl };
+  return { url: publicUrl, path: fileName };
+}
+
+/**
+ * Gera signed URL fresh para um arquivo em bucket privado.
+ * Use no read-side (handlers que listam) pra que UI sempre receba URL válida.
+ */
+export async function getSignedFileUrl(
+  sb: SupabaseClient,
+  bucket: string,
+  path: string,
+  ttlSeconds = 60 * 60 * 24 * 7,
+): Promise<string | null> {
+  if (!path) return null;
+  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, ttlSeconds);
+  if (error) return null;
+  return data?.signedUrl ?? null;
 }

@@ -43,6 +43,7 @@ export {
   criarSessao,
   validarSessao,
   uploadArquivo,
+  getSignedFileUrl,
   // Consolidated session resolvers
   resolveUsuario,
   resolveAnySession,

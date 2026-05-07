@@ -7,7 +7,7 @@ import {
   checkRateLimit, getClientIP,
   sanitizeBody,
   createLogger,
-  hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken, uploadArquivo,
+  hashSenha, verificarSenhaAuto as verificarSenha, gerarToken as randomToken, uploadArquivo, getSignedFileUrl,
   resolveUsuario,
   logAudit,
   generatePdf, pdfResponse, generateXlsx, xlsxResponse,
@@ -396,7 +396,15 @@ Deno.serve(async (req) => {
       const { data } = await sb
         .from('atestados_professoras').select('*')
         .eq('professora_id', prof.id).order('criado_em', { ascending: false })
-      return json({ data: data ?? [] })
+      // Bucket atestados é privado (mig 278) — gera signed URL fresh
+      const out = await Promise.all((data ?? []).map(async (r: any) => {
+        if (r.arquivo_path) {
+          const fresh = await getSignedFileUrl(sb, 'atestados', r.arquivo_path, 60 * 60)
+          if (fresh) r.arquivo_url = fresh
+        }
+        return r
+      }))
+      return json({ data: out })
     }
 
     if (action === 'atestado_submit') {
@@ -410,12 +418,12 @@ Deno.serve(async (req) => {
       if (!base64) return json({ error: 'Selecione o arquivo do atestado.' }, 400)
       const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
       if (!allowedMimes.includes(mime)) return json({ error: 'Tipo de arquivo não permitido. Envie PDF, JPEG, PNG ou WebP.' }, 400)
-      const up = await uploadArquivo(sb, 'atestados', prof.id, base64, mime)
+      const up = await uploadArquivo(sb, 'atestados', prof.id, base64, mime, { private: true })
       if ('error' in up) return json({ error: 'Erro ao fazer upload: ' + up.error }, 400)
       if (!(prof as any).escola_id) return json({ error: 'Professora sem escola associada.' }, 403)
       const { error } = await sb.from('atestados_professoras').insert({
         professora_id: prof.id, data_inicio, data_fim,
-        motivo: motivo || null, arquivo_url: up.url, status: 'pendente',
+        motivo: motivo || null, arquivo_url: up.url, arquivo_path: up.path, status: 'pendente',
         escola_id: (prof as any).escola_id,
       })
       if (error) return json({ error: error.message }, 400)
@@ -616,11 +624,20 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
 
+    // Helper local: troca arquivo_url por signed URL fresh quando o atestado tem path
+    const refreshAtestUrls = async (rows: any[]) => Promise.all(rows.map(async (r) => {
+      if (r.arquivo_path) {
+        const fresh = await getSignedFileUrl(sb, 'atestados', r.arquivo_path, 60 * 60)
+        if (fresh) r.arquivo_url = fresh
+      }
+      return r
+    }))
+
     if (action === 'atestados_pendentes') {
       const { data } = await sb
         .from('atestados_professoras').select('*, professoras(nome, email)')
         .eq('escola_id', (sec as any).escola_id).eq('status', 'pendente').order('criado_em', { ascending: true })
-      return json({ data: data ?? [] })
+      return json({ data: await refreshAtestUrls(data ?? []) })
     }
 
     if (action === 'atestados_all') {
@@ -630,7 +647,7 @@ Deno.serve(async (req) => {
         .eq('escola_id', (sec as any).escola_id).order('data_inicio', { ascending: false })
       if (filterStatus && filterStatus !== 'todos') query = query.eq('status', filterStatus)
       const { data } = await query
-      return json({ data: data ?? [] })
+      return json({ data: await refreshAtestUrls(data ?? []) })
     }
 
     if (action === 'atestado_aprovar') {
