@@ -706,6 +706,89 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
+  // ── Comunicados dos pais (saída antecipada / atraso) ────
+  if (action === "comunicado_justificativas_list") {
+    const escolaIdC = await resolveEscolaId(req, admin, null, body);
+    if (!escolaIdC) return err("Escola não identificada.", 400);
+    const { data } = await admin.from("comunicados_justificativas")
+      .select("id, label, requer_aprovacao, ordem")
+      .eq("escola_id", escolaIdC).eq("ativa", true).order("ordem");
+    return ok({ data: data ?? [] });
+  }
+
+  if (action === "comunicado_criar") {
+    const { aluno_id, aluno_nome, responsavel_email, tipo, horario, justificativa_id, justificativa_livre } = body as Record<string, string>;
+    if (!aluno_nome || !responsavel_email || !tipo || !horario) return err("Aluno, responsável, tipo e horário são obrigatórios.");
+    if (!["saida_antecipada", "atraso"].includes(tipo)) return err("Tipo inválido.");
+    const escolaIdC = await resolveEscolaId(req, admin, null, body);
+    if (!escolaIdC) return err("Escola não identificada.", 400);
+    // Decide status: se tem justificativa pré-cadastrada que NÃO requer aprovação, vai direto;
+    // senão (justificativa livre OU justificativa que requer aprovação), fica pendente.
+    let status = "aprovado";
+    if (justificativa_id) {
+      const { data: j } = await admin.from("comunicados_justificativas")
+        .select("requer_aprovacao").eq("id", justificativa_id).eq("escola_id", escolaIdC).maybeSingle();
+      if (!j) return err("Justificativa inválida.");
+      if ((j as any).requer_aprovacao) status = "pendente";
+    } else if (justificativa_livre) {
+      status = "pendente";
+    } else {
+      return err("Selecione uma justificativa ou descreva o motivo.");
+    }
+    const ins: Record<string, unknown> = {
+      escola_id: escolaIdC, aluno_id: aluno_id || null, aluno_nome, responsavel_email,
+      tipo, horario, justificativa_id: justificativa_id || null,
+      justificativa_livre: justificativa_livre || null, status,
+    };
+    if (status === "aprovado") ins.aprovado_em = new Date().toISOString();
+    const { data: criado, error } = await admin.from("comunicados_pais").insert(ins).select("id").single();
+    if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
+    // Notifica secretaria + (se aprovado) professora
+    const titulo = status === "pendente" ? "📨 Comunicado pendente de aprovação" : "📢 Novo comunicado dos pais";
+    const msg = `${aluno_nome} — ${tipo === "saida_antecipada" ? "saída antecipada" : "atraso"} às ${horario}.`;
+    await admin.from("notificacoes").insert({
+      portal: "secretaria", destinatario: "*", titulo, mensagem: msg, tipo: "info", escola_id: escolaIdC,
+    });
+    if (status === "aprovado") {
+      await admin.from("notificacoes").insert({
+        portal: "professora", destinatario: "*", titulo: "📢 Comunicado dos pais", mensagem: msg, tipo: "info", escola_id: escolaIdC,
+      });
+    }
+    return ok({ success: true, id: (criado as any).id, status });
+  }
+
+  if (action === "comunicado_listar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const status = (body as { status?: string }).status || null;
+    let q = admin.from("comunicados_pais").select("*")
+      .eq("escola_id", gerente.escola_id).order("criado_em", { ascending: false }).limit(200);
+    if (status) q = q.eq("status", status);
+    const { data } = await q;
+    return ok({ data: data ?? [] });
+  }
+
+  if (action === "comunicado_aprovar" || action === "comunicado_rejeitar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id, nota } = body as { id: string; nota?: string };
+    if (!id) return err("ID obrigatório.");
+    const novoStatus = action === "comunicado_aprovar" ? "aprovado" : "rejeitado";
+    const { data: com, error } = await admin.from("comunicados_pais").update({
+      status: novoStatus, nota_aprovador: nota || null,
+      aprovado_em: novoStatus === "aprovado" ? new Date().toISOString() : null,
+      aprovador_id: gerente.id,
+    }).eq("id", id).eq("escola_id", gerente.escola_id).select().maybeSingle();
+    if (error) return err(sanitizePgError(error));
+    if (novoStatus === "aprovado" && com) {
+      await admin.from("notificacoes").insert({
+        portal: "professora", destinatario: "*",
+        titulo: "📢 Comunicado dos pais aprovado",
+        mensagem: `${(com as any).aluno_nome} — ${(com as any).tipo === "saida_antecipada" ? "saída antecipada" : "atraso"} às ${(com as any).horario}.`,
+        tipo: "info", escola_id: gerente.escola_id,
+      });
+    }
+    return ok({ success: true });
+  }
+
   // Remover ausência (criança vai comparecer afinal)
   if (action === "ausencia_delete") {
     const { id, email_resp } = body as { id: string; email_resp: string };

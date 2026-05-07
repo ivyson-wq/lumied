@@ -348,11 +348,124 @@ body.has-bottomnav{padding-bottom:56px;}
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
+      <button class="ub-signout" onclick="abrirComunicadoModal()" style="color:#fff;background:#0b7a4b;border-color:#0b7a4b;font-weight:500;" title="Avisar saída antecipada ou atraso do seu filho hoje">📨 Avisar saída/atraso</button>
       <button class="ub-signout" onclick="switchTab('perfil')" style="color:var(--text);font-weight:500;">⚙ Perfil</button>
       <button class="ub-signout" onclick="doSignOut()">Sair ↩</button>
     </div>
   </div>
 </div>
+
+<!-- MODAL: Comunicado dos pais -->
+<div id="comunicadoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1100;padding:20px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;max-width:520px;margin:40px auto;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-family:'Lora',serif;font-size:18px;">📨 Avisar saída antecipada / atraso</h3>
+      <button onclick="document.getElementById('comunicadoModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">×</button>
+    </div>
+    <div class="ff" style="margin-bottom:12px;">
+      <label>Aluno *</label>
+      <select id="comAluno" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;"></select>
+    </div>
+    <div class="ff" style="margin-bottom:12px;">
+      <label>Tipo *</label>
+      <div style="display:flex;gap:12px;">
+        <label style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="comTipo" value="saida_antecipada" checked> 🚪 Saída antecipada
+        </label>
+        <label style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="comTipo" value="atraso"> ⏰ Atraso
+        </label>
+      </div>
+    </div>
+    <div class="ff" style="margin-bottom:12px;">
+      <label>Horário previsto *</label>
+      <input type="time" id="comHorario" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;">
+    </div>
+    <div class="ff" style="margin-bottom:12px;">
+      <label>Justificativa *</label>
+      <select id="comJust" onchange="comOnJustChange()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;">
+        <option value="">Selecione…</option>
+        <option value="__livre__">📝 Outros (descrever)</option>
+      </select>
+    </div>
+    <div class="ff" style="margin-bottom:16px;display:none;" id="comLivreWrap">
+      <label>Descreva o motivo *</label>
+      <textarea id="comLivre" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></textarea>
+      <div style="font-size:11px;color:#9a3412;margin-top:4px;">⚠️ Esta opção precisa ser aprovada pela secretaria antes do professor receber.</div>
+    </div>
+    <button onclick="enviarComunicado()" id="comBtnEnviar" style="width:100%;padding:12px;background:#0b7a4b;color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">✉️ Enviar aviso</button>
+    <div id="comErr" style="margin-top:10px;color:#c2410c;font-size:12px;display:none;"></div>
+    <div id="comOk" style="margin-top:10px;color:#15803d;font-size:12px;display:none;"></div>
+  </div>
+</div>
+<script>
+  async function abrirComunicadoModal() {
+    if (!window.currentUser) { alert('Faça login primeiro.'); return; }
+    const sel = document.getElementById('comAluno');
+    const filhos = window._filhosData || [];
+    sel.innerHTML = filhos.length
+      ? filhos.map(f => `<option value="${f.nome_aluno}">${f.nome_aluno}${f.serie ? ' — ' + f.serie : ''}</option>`).join('')
+      : '<option value="">Nenhum aluno encontrado</option>';
+    // Carrega justificativas da escola
+    const jSel = document.getElementById('comJust');
+    jSel.innerHTML = '<option value="">Selecione…</option>';
+    try {
+      const r = await fetch(SUPABASE_URL + '/functions/v1/api', {
+        method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
+        body: JSON.stringify({ action: 'comunicado_justificativas_list' }),
+      });
+      const d = await r.json();
+      (d.data || []).forEach(j => {
+        const opt = document.createElement('option');
+        opt.value = j.id; opt.textContent = j.label + (j.requer_aprovacao ? ' (precisa aprovação)' : '');
+        jSel.appendChild(opt);
+      });
+    } catch {}
+    jSel.appendChild(Object.assign(document.createElement('option'), { value: '__livre__', textContent: '📝 Outros (descrever)' }));
+    document.getElementById('comLivreWrap').style.display = 'none';
+    document.getElementById('comLivre').value = '';
+    document.getElementById('comErr').style.display = 'none';
+    document.getElementById('comOk').style.display = 'none';
+    document.getElementById('comunicadoModal').style.display = 'block';
+  }
+  function comOnJustChange() {
+    document.getElementById('comLivreWrap').style.display = document.getElementById('comJust').value === '__livre__' ? 'block' : 'none';
+  }
+  async function enviarComunicado() {
+    const erro = document.getElementById('comErr');
+    const ok = document.getElementById('comOk');
+    erro.style.display = 'none'; ok.style.display = 'none';
+    const aluno = document.getElementById('comAluno').value;
+    const tipo = document.querySelector('input[name="comTipo"]:checked')?.value;
+    const horario = document.getElementById('comHorario').value;
+    const justRaw = document.getElementById('comJust').value;
+    const livre = document.getElementById('comLivre').value.trim();
+    if (!aluno || !horario) { erro.textContent = 'Aluno e horário obrigatórios.'; erro.style.display = 'block'; return; }
+    if (!justRaw) { erro.textContent = 'Selecione uma justificativa.'; erro.style.display = 'block'; return; }
+    if (justRaw === '__livre__' && !livre) { erro.textContent = 'Descreva o motivo.'; erro.style.display = 'block'; return; }
+    const btn = document.getElementById('comBtnEnviar');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const payload = {
+      action: 'comunicado_criar',
+      aluno_nome: aluno, responsavel_email: window.currentUser.email,
+      tipo, horario,
+      justificativa_id: justRaw === '__livre__' ? null : justRaw,
+      justificativa_livre: justRaw === '__livre__' ? livre : null,
+    };
+    const r = await fetch(SUPABASE_URL + '/functions/v1/api', {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON},
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    btn.disabled = false; btn.textContent = '✉️ Enviar aviso';
+    if (d.error) { erro.textContent = d.error; erro.style.display = 'block'; return; }
+    ok.textContent = d.status === 'pendente'
+      ? '✅ Aviso enviado! Aguardando aprovação da secretaria antes de notificar o professor.'
+      : '✅ Aviso enviado! Secretaria e professor foram notificados.';
+    ok.style.display = 'block';
+    setTimeout(() => document.getElementById('comunicadoModal').style.display = 'none', 2200);
+  }
+</script>
 
 <!-- TELA DE LOGIN -->
 <div id="loginScreenWrap" style="min-height:100vh;display:flex;">
