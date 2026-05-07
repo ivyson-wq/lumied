@@ -1326,16 +1326,17 @@ Deno.serve(async (req) => {
       unidade_pacote?: string | null
       preco_unit_norm?: number | null
       preco_unit_norm_fmt?: string | null
+      pack_mult?: number             // multiplicador (Kit 4 / 3x / Pack 10)
+      pack_label?: string | null     // ex: "Kit 4" — pra exibir badge
+      qty_total?: number | null      // pack_mult × qty_pacote (total efetivo)
     }
     const results: PriceResult[] = []
     const fontes: Record<string, { status: string; produtos: number; erro?: string }> = {}
 
     function parsePackQty(title: string): { qty: number; unidade: string } | null {
       const t = (title || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-      // Ordem importa: padrões mais específicos/contextuais primeiro.
-      // "folhas" antes de "g" porque títulos de papel costumam ter "75g 500 folhas"
-      // — folhas representa o conteúdo do pacote, g é só a gramatura.
-      // "c/X un" antes de "X un" pra capturar contexto de pacote.
+      // "folhas" antes de "g" porque "75g 500 folhas" deve normalizar por folha.
+      // "c/X un" antes de "X un" — segundo casaria "Kit 4" como 4 unidades.
       const patterns: Array<{ rx: RegExp; un: string; mul?: number }> = [
         { rx: /(\d+)\s*(?:folhas?|fls?|fl)\b/, un: 'fl' },
         { rx: /(?:c\/|com|contendo|pacote\s*c\/|pct\s*c\/|caixa\s*c\/|cx\s*c\/)\s*(\d+)\s*(?:un|unid|unidades?|pe[çc]as?|pcs?)?\b/, un: 'un' },
@@ -1354,6 +1355,31 @@ Deno.serve(async (req) => {
       }
       return null
     }
+
+    // Detecta multiplicador de pacote no título: "Kit 4 ...", "3x ...", "Pack 10 ...",
+    // "Combo 5 ...", "4 unidades de ..." (formato kit, não conteúdo). Captura no
+    // INÍCIO do título, antes de qualquer "Resma 500fls" — pra distinguir
+    // multiplicador de embalagem (Kit 4) do conteúdo (500 folhas).
+    function parsePackMultiplier(title: string): { mult: number; label: string } | null {
+      const t = (title || '').trim()
+      // Padrões só no começo do título (até ~30 chars iniciais)
+      const head = t.slice(0, 60).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      const patterns: Array<{ rx: RegExp; lbl: (n: number) => string }> = [
+        { rx: /^(?:kit|combo|conjunto|conj|jogo)\s+(\d+)\b/i, lbl: n => `Kit ${n}` },
+        { rx: /^(?:pack|pacote)\s+(\d+)\b/i, lbl: n => `Pack ${n}` },
+        { rx: /^(\d+)\s*x\s+(?!\d)/i, lbl: n => `${n}x` },     // "3x ..." (não "3x500ml")
+        { rx: /^(\d+)\s+unidades?\b/i, lbl: n => `${n} un` },  // "4 unidades"
+      ]
+      for (const p of patterns) {
+        const m = p.rx.exec(head)
+        if (m) {
+          const n = parseInt(m[1], 10)
+          if (n >= 2 && n <= 100) return { mult: n, label: p.lbl(n) }
+        }
+      }
+      return null
+    }
+
     function fmtUnitPrice(n: number, un: string): string {
       const v = n.toLocaleString('pt-BR', { minimumFractionDigits: n < 1 ? 4 : 2, maximumFractionDigits: 4 })
       return `R$ ${v}/${un}`
@@ -1444,7 +1470,7 @@ Deno.serve(async (req) => {
           'Authorization': `Bearer ${mlToken}`,
         }
         const mlSearchRes = await fetch(
-          `https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=${encoded}&limit=3`,
+          `https://api.mercadolibre.com/products/search?status=active&site_id=MLB&q=${encoded}&limit=8`,
           { headers: mlHeaders }
         )
         let mlCount = 0
@@ -1452,7 +1478,7 @@ Deno.serve(async (req) => {
           const mlSearchData = await mlSearchRes.json()
           const products = mlSearchData.results ?? []
 
-          for (const prod of products.slice(0, 3)) {
+          for (const prod of products.slice(0, 6)) {
             try {
               const itemsRes = await fetch(
                 `https://api.mercadolibre.com/products/${prod.id}/items?limit=8`,
@@ -1478,11 +1504,14 @@ Deno.serve(async (req) => {
                 const isFull = it?.shipping?.logistic_type === 'fulfillment'
                 const cond = it.condition === 'new' ? 'novo' : null
                 const pack = parsePackQty(title)
+                const mult = parsePackMultiplier(title)
+                const packMult = mult?.mult || 1
+                const qtyTotal = pack ? pack.qty * packMult : null
                 let precoNorm: number | null = null
                 let precoNormFmt: string | null = null
-                if (pack && pack.qty > 0) {
-                  precoNorm = it.price / pack.qty
-                  precoNormFmt = fmtUnitPrice(precoNorm, pack.unidade)
+                if (qtyTotal && qtyTotal > 0) {
+                  precoNorm = it.price / qtyTotal
+                  precoNormFmt = fmtUnitPrice(precoNorm, pack!.unidade)
                 }
                 const itemUrl = (it.permalink && it.permalink.length > 0)
                   ? it.permalink
@@ -1504,6 +1533,9 @@ Deno.serve(async (req) => {
                   unidade_pacote: pack?.unidade ?? null,
                   preco_unit_norm: precoNorm,
                   preco_unit_norm_fmt: precoNormFmt,
+                  pack_mult: packMult,
+                  pack_label: mult?.label ?? null,
+                  qty_total: qtyTotal,
                 })
                 mlCount++
               }
@@ -1526,17 +1558,24 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── 2. Shopee Brasil (unofficial endpoint, real prices) ──
+    // ── 2. Shopee Brasil — best-effort. API interna v4 é não documentada e
+    // bloqueia frequentemente (403). Mantemos com timeout curto pra não
+    // travar a UI quando estiver fora; UI mostra link de busca como fallback.
     try {
       const shopeeRes = await fetch(
         `https://shopee.com.br/api/v4/search/search_items?keyword=${encoded}&limit=5&newest=0&by=price&order=asc&page_type=search&scenario=PAGE_GLOBAL_SEARCH`,
         {
           headers: {
             'Accept': 'application/json',
-            'Referer': 'https://shopee.com.br/',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'Referer': `https://shopee.com.br/search?keyword=${encoded}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
             'x-shopee-language': 'pt-BR',
+            'x-requested-with': 'XMLHttpRequest',
+            'x-api-source': 'pc',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
           },
+          signal: AbortSignal.timeout(5000),
         }
       )
       if (shopeeRes.ok) {
@@ -1573,61 +1612,18 @@ Deno.serve(async (req) => {
       }
     } catch (e) { fontes['Shopee'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
 
-    // ── 3. Reval (loja escolar — scraping da busca) ──────
-    try {
-      const revalRes = await fetch(
-        `https://www.rfreval.com.br/busca?q=${encoded}`,
-        { headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }
-      )
-      if (revalRes.ok) {
-        const html = await revalRes.text()
-        // Parse products from search results HTML
-        const productRegex = /<div[^>]*class="[^"]*product-item[^"]*"[\s\S]*?<\/div>\s*<\/div>/g
-        const nameRegex = /class="[^"]*product-name[^"]*"[^>]*>([^<]+)/
-        const priceRegex = /class="[^"]*product-price[^"]*"[^>]*>[^R]*R\$\s*([\d.,]+)/
-        const linkRegex = /href="(https?:\/\/www\.rfreval\.com\.br\/[^"]+)"/
-        let match
-        let count = 0
-        while ((match = productRegex.exec(html)) !== null && count < 5) {
-          const block = match[0]
-          const nameMatch = nameRegex.exec(block)
-          const priceMatch = priceRegex.exec(block)
-          const linkMatch = linkRegex.exec(block)
-          if (nameMatch) {
-            const nome = nameMatch[1].trim()
-            const precoStr = priceMatch?.[1]?.replace('.','').replace(',','.') ?? null
-            const preco = precoStr ? parseFloat(precoStr) : null
-            const m = matchPct(query, nome)
-            results.push({
-              plataforma: 'Reval',
-              nome,
-              preco,
-              preco_fmt: preco != null ? `R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—',
-              url_produto: linkMatch?.[1] ?? `https://www.rfreval.com.br/busca?q=${encoded}`,
-              url_carrinho: null,
-              item_id: null,
-              match: m,
-              tipo: 'produto',
-            })
-            count++
-          }
-        }
-        fontes['Reval'] = { status: 'ok', produtos: count }
-      } else {
-        fontes['Reval'] = { status: 'bloqueado', produtos: 0, erro: `HTTP ${revalRes.status}` }
-      }
-    } catch (e) { fontes['Reval'] = { status: 'erro', produtos: 0, erro: (e as Error).message?.substring(0, 50) } }
-
-    // Fallback Reval: link de busca se não retornou produtos
-    if (!results.some(r => r.plataforma === 'Reval')) {
+    // Fallback Shopee: link de busca quando API bloquear
+    if (!results.some(r => r.plataforma === 'Shopee' && r.tipo === 'produto')) {
       results.push({
-        plataforma: 'Reval',
-        nome: `Buscar "${query}" na Reval`,
-        preco: null, preco_fmt: 'Ver na Reval',
-        url_produto: `https://www.rfreval.com.br/busca?q=${encoded}`,
+        plataforma: 'Shopee',
+        nome: `Buscar "${query}" na Shopee`,
+        preco: null, preco_fmt: 'Ver na Shopee',
+        url_produto: `https://shopee.com.br/search?keyword=${encoded}`,
         url_carrinho: null, item_id: null, match: 0, tipo: 'busca',
       })
     }
+
+    // (Reval removido — domínio rfreval.com.br fora do ar desde 2026)
 
     // ── 4. Amazon Brasil (no free API — search link only) ────
     results.push({

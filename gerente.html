@@ -11024,6 +11024,7 @@ docker compose up -d --build</pre>
     const cartUrl = almCartUrl(r, qty || 1);
     const radioName = 'almPriceSel_' + idx;
     const badges = [];
+    if (r.pack_label)   badges.push(`<span style="background:#fde68a;color:#78350f;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;" title="Pacote com múltiplas unidades">📦 ${r.pack_label}</span>`);
     if (r.frete_gratis) badges.push('<span style="background:#dcfce7;color:#166534;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;">🚚 Grátis</span>');
     if (r.full)         badges.push('<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;">⚡ FULL</span>');
     if (r.condicao === 'usado') badges.push('<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;">USADO</span>');
