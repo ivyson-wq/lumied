@@ -1387,6 +1387,225 @@ router.on("acesso_cancelar_autorizado", async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  Portal dos pais — autorização de retirada provisória
+// ═══════════════════════════════════════════════════════════════
+
+function _onlyDigits(s: string): string { return String(s || "").replace(/\D/g, ""); }
+function _isValidCpf(cpf: string): boolean {
+  const d = _onlyDigits(cpf);
+  if (d.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false; // todos iguais
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i);
+  let v1 = (sum * 10) % 11; if (v1 === 10) v1 = 0;
+  if (v1 !== parseInt(d[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i);
+  let v2 = (sum * 10) % 11; if (v2 === 10) v2 = 0;
+  return v2 === parseInt(d[10]);
+}
+
+async function _resolveFamiliasDoPai(ctx: Any, email: string): Promise<Any[]> {
+  const escolaId = await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body);
+  let q = ctx.sb.from("familias").select("id, nome_aluno, nome_responsavel, email, escola_id").eq("email", email);
+  if (escolaId) q = q.eq("escola_id", escolaId);
+  const { data } = await q;
+  return data || [];
+}
+
+// ─── Lista filhos + autorizados existentes
+router.on("acesso_pai_meus_autorizados", async (ctx) => {
+  const email = await getAuthenticatedPaiEmail(ctx);
+  const familias = await _resolveFamiliasDoPai(ctx, email);
+  if (!familias.length) return successResponse({ filhos: [] });
+
+  // Cada familia.id é o aluno (mig 109 sincroniza). Buscar alunos com mesmo nome+escola pra cobrir caso de id divergente
+  const alunoIds: string[] = [];
+  const familiaByAlunoId = new Map<string, Any>();
+  const escolasIds = new Set<string>();
+  for (const f of familias) {
+    if (f.escola_id) escolasIds.add(f.escola_id);
+    if (f.id) { alunoIds.push(f.id); familiaByAlunoId.set(f.id, f); }
+  }
+
+  // Buscar alunos por nome também (defensivo)
+  let alunosPorNome: Any[] = [];
+  if (escolasIds.size && familias.length) {
+    const nomes = familias.map((f: Any) => f.nome_aluno).filter(Boolean);
+    const { data } = await ctx.sb.from("alunos").select("id, nome, escola_id").in("escola_id", Array.from(escolasIds)).in("nome", nomes);
+    alunosPorNome = data || [];
+  }
+  for (const a of alunosPorNome) {
+    if (!alunoIds.includes(a.id)) alunoIds.push(a.id);
+  }
+
+  if (!alunoIds.length) return successResponse({ filhos: [] });
+
+  const { data: perms } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id, aluno_id, aluno_nome, responsavel_id, responsavel_nome, responsavel_email, responsavel_cpf, responsavel_foto_url, parentesco, validade, autorizado, criado_por_familia, criado_em")
+    .in("aluno_id", alunoIds)
+    .order("criado_em", { ascending: false });
+
+  // Faces dos responsáveis
+  const respIds = (perms ?? []).map((p: Any) => p.responsavel_id).filter(Boolean);
+  const facesMap = new Map<string, Any>();
+  if (respIds.length) {
+    const { data: faces } = await ctx.sb.from("acesso_faces")
+      .select("pessoa_id, sync_status").eq("ativo", true).eq("pessoa_tipo", "responsavel").in("pessoa_id", respIds);
+    for (const f of faces || []) facesMap.set(f.pessoa_id, f);
+  }
+
+  // Tokens ativos
+  const { data: tokens } = await ctx.sb.from("acesso_cadastro_tokens")
+    .select("pessoa_id, expira_em, usado").eq("pessoa_tipo", "responsavel").in("pessoa_id", respIds);
+  const tokenMap = new Map<string, Any>();
+  for (const t of tokens || []) tokenMap.set(t.pessoa_id, t);
+
+  // Agrupa por aluno
+  const filhosOut: Any = {};
+  for (const aid of alunoIds) {
+    const fam = familiaByAlunoId.get(aid) || familias[0];
+    filhosOut[aid] = { aluno_id: aid, aluno_nome: fam?.nome_aluno || "—", autorizados: [] };
+  }
+  for (const p of perms || []) {
+    if (!filhosOut[p.aluno_id]) continue;
+    const face = p.responsavel_id ? facesMap.get(p.responsavel_id) : null;
+    const tk = p.responsavel_id ? tokenMap.get(p.responsavel_id) : null;
+    let face_status = "sem_face";
+    if (face?.sync_status === "sincronizado") face_status = "cadastrada";
+    else if (face?.sync_status === "aguardando_aprovacao") face_status = "aguardando_aprovacao";
+    else if (face?.sync_status === "erro") face_status = "erro";
+    else if (tk && !tk.usado && new Date(tk.expira_em) > new Date()) face_status = "link_enviado";
+    filhosOut[p.aluno_id].autorizados.push({
+      id: p.id,
+      responsavel_id: p.responsavel_id,
+      nome: p.responsavel_nome,
+      cpf: p.responsavel_cpf,
+      email: p.responsavel_email,
+      parentesco: p.parentesco,
+      foto_url: p.responsavel_foto_url,
+      validade: p.validade,
+      ativo: !!p.autorizado,
+      criado_por_familia: !!p.criado_por_familia,
+      face_status,
+    });
+  }
+
+  return successResponse({ filhos: Object.values(filhosOut) });
+});
+
+// ─── Cria autorização provisória (pelo pai)
+router.on("acesso_pai_autorizar_create", async (ctx) => {
+  const email = await getAuthenticatedPaiEmail(ctx);
+  const { aluno_id, responsavel_nome, responsavel_cpf, responsavel_email, parentesco, validade } = ctx.body as Any;
+
+  if (!aluno_id || !responsavel_nome || !responsavel_cpf || !responsavel_email) {
+    throw new AppError("VALIDATION_FAILED", "aluno_id, responsavel_nome, responsavel_cpf e responsavel_email são obrigatórios.");
+  }
+  const cpfDigits = _onlyDigits(responsavel_cpf);
+  if (!_isValidCpf(cpfDigits)) throw new AppError("VALIDATION_FAILED", "CPF inválido.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(responsavel_email)) throw new AppError("VALIDATION_FAILED", "Email inválido.");
+  if (validade && new Date(validade) < new Date(new Date().toDateString())) {
+    throw new AppError("VALIDATION_FAILED", "Validade não pode ser no passado.");
+  }
+
+  // OWNERSHIP: o pai só autoriza pra filhos da sua família
+  const familias = await _resolveFamiliasDoPai(ctx, email);
+  const escolaId = familias[0]?.escola_id;
+  if (!escolaId) throw new AppError("FORBIDDEN", "Família não encontrada para esse email.");
+
+  // Confirma que o aluno_id pertence a essa família
+  const { data: aluno } = await ctx.sb.from("alunos").select("id, nome, escola_id, familia_email").eq("id", aluno_id).maybeSingle();
+  if (!aluno) throw new AppError("NOT_FOUND", "Aluno não encontrado.");
+  if (aluno.escola_id !== escolaId) throw new AppError("FORBIDDEN", "Esse aluno não pertence à sua família.");
+  // Aluno deve ter familia_email ou nome batendo
+  const matchPorEmail = String(aluno.familia_email || "").toLowerCase() === email;
+  const matchPorNome = familias.some((f: Any) => String(f.nome_aluno || "").trim() === String(aluno.nome || "").trim());
+  if (!matchPorEmail && !matchPorNome) throw new AppError("FORBIDDEN", "Esse aluno não pertence à sua família.");
+
+  // Cria autorização
+  const responsavel_id = crypto.randomUUID();
+  const { data: perm, error } = await ctx.sb.from("acesso_permissoes_retirada").insert({
+    escola_id: escolaId,
+    aluno_id,
+    aluno_nome: aluno.nome,
+    responsavel_id,
+    responsavel_nome,
+    responsavel_email,
+    responsavel_cpf: cpfDigits,
+    parentesco: parentesco || "outro",
+    validade: validade || null,
+    autorizado: true,
+    autorizado_por: `Pai/Mãe (${email})`,
+    criado_por_familia: true,
+    criado_por_pai_email: email,
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  // Gera link + envia email automaticamente
+  const tokenBytes = new Uint8Array(32);
+  crypto.getRandomValues(tokenBytes);
+  const token = Array.from(tokenBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  await ctx.sb.from("acesso_cadastro_tokens").insert({
+    escola_id: escolaId,
+    token,
+    pessoa_tipo: "responsavel",
+    pessoa_id: responsavel_id,
+    pessoa_nome: responsavel_nome,
+    email: responsavel_email,
+    gerado_por: `pai:${email}`,
+    expira_em: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+  });
+
+  const appUrl = Deno.env.get("APP_URL") || "https://maplebearcaxias.lumied.com.br";
+  const link = `${appUrl}/cadastro-face.html?token=${token}`;
+
+  // Envia email
+  let emailSent = false; let emailReason: string | null = null;
+  try {
+    const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`;
+    const sr = await fetch(sendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        tipo: "cadastro_face",
+        escola_id: escolaId,
+        to: responsavel_email,
+        pessoa_nome: responsavel_nome,
+        pessoa_tipo: "responsavel",
+        link,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const sb: Any = await sr.json().catch(() => ({}));
+    emailSent = !!sb?.sent;
+    if (!emailSent) emailReason = sb?.reason || `HTTP ${sr.status}`;
+  } catch (e) { emailReason = String(e); }
+
+  return successResponse({ ok: true, permissao_id: perm.id, responsavel_id, link, email_enviado: emailSent, email_reason: emailReason });
+});
+
+// ─── Revoga autorização (pelo pai, somente se ele criou)
+router.on("acesso_pai_autorizar_revogar", async (ctx) => {
+  const email = await getAuthenticatedPaiEmail(ctx);
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+
+  const { data: perm } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id, criado_por_pai_email, autorizado").eq("id", id).maybeSingle();
+  if (!perm) throw new AppError("NOT_FOUND", "Autorização não encontrada.");
+  if (perm.criado_por_pai_email !== email) {
+    throw new AppError("FORBIDDEN", "Você só pode revogar autorizações criadas por você. Outras devem ser revogadas pela escola.");
+  }
+
+  await ctx.sb.from("acesso_permissoes_retirada").update({ autorizado: false }).eq("id", id);
+  return successResponse({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Validação de qualidade de foto (Control iD)
 // ═══════════════════════════════════════════════════════════════
 

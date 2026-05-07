@@ -828,7 +828,17 @@ body.has-bottomnav{padding-bottom:56px;}
       <div id="autorizadosLista" style="margin-bottom:16px;"></div>
 
       <div id="formNovoAutorizado" style="background:#f8f5f0;border-radius:12px;padding:16px;">
-        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">+ Adicionar pessoa autorizada</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px;">+ Adicionar pessoa autorizada</div>
+
+        <!-- Toggle entre 2 modos -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+          <button id="autModeLink" onclick="autSetMode('link')" style="flex:1;padding:10px;border:1.5px solid #1a1a1a;background:#1a1a1a;color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📧 Enviar link por email</button>
+          <button id="autModeFoto" onclick="autSetMode('foto')" style="flex:1;padding:10px;border:1.5px solid var(--border);background:#fff;color:#1a1a1a;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Tirar foto agora</button>
+        </div>
+        <div id="autModeHint" style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.4;">
+          A pessoa recebe um email com link pra cadastrar a própria foto pelo celular dela. Mais prático quando a pessoa não tá presente agora.
+        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Nome completo *</label><input type="text" id="autNome" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
           <div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Parentesco *</label>
@@ -837,11 +847,20 @@ body.has-bottomnav{padding-bottom:56px;}
             </select>
           </div>
         </div>
+
+        <!-- Campos extras do modo LINK -->
+        <div id="autFieldsLink" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+          <div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">CPF *</label><input type="text" id="autCpf" placeholder="000.000.000-00" maxlength="14" oninput="autMaskCpf(event)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+          <div><label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Email *</label><input type="email" id="autEmail" placeholder="email@exemplo.com" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        </div>
+
         <div style="margin-top:10px;">
           <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Selecione o(s) filho(s) *</label>
           <div id="autFilhosCheck" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
         </div>
-        <div style="margin-top:10px;">
+
+        <!-- Campos extras do modo FOTO -->
+        <div id="autFieldsFoto" style="margin-top:10px;display:none;">
           <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Foto do rosto (para reconhecimento facial) *</label>
           <div style="display:flex;gap:8px;">
             <button onclick="autAbrirCamera()" style="padding:8px 14px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Câmera</button>
@@ -854,18 +873,20 @@ body.has-bottomnav{padding-bottom:56px;}
           </div>
           <div id="autQualidade" style="display:none;margin-top:8px;font-size:12px;padding:8px 12px;border-radius:8px;"></div>
         </div>
+
         <div style="margin-top:12px;">
           <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Período de autorização</label>
           <div style="display:flex;flex-wrap:wrap;gap:6px;" id="autValidadeOpts">
-            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="7" onchange="calcAutValidade()"> 7 dias</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="1" onchange="calcAutValidade()"> 1 dia</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="7" checked onchange="calcAutValidade()"> 7 dias</label>
             <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="30" onchange="calcAutValidade()"> 30 dias</label>
             <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="60" onchange="calcAutValidade()"> 60 dias</label>
-            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="0" checked onchange="calcAutValidade()"> Indefinido</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;"><input type="radio" name="autValidadePeriodo" value="0" onchange="calcAutValidade()"> Indefinido</label>
           </div>
           <input type="hidden" id="autValidade">
           <div id="autValidadeInfo" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
         </div>
-        <button onclick="salvarAutorizado()" id="autSalvarBtn" style="margin-top:14px;width:100%;padding:12px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Adicionar Autorizado</button>
+        <button onclick="salvarAutorizado()" id="autSalvarBtn" style="margin-top:14px;width:100%;padding:12px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Enviar link por email</button>
         <div id="autFeedback" style="display:none;margin-top:8px;font-size:13px;padding:10px;border-radius:8px;"></div>
       </div>
     </div>
@@ -3098,6 +3119,42 @@ body.has-bottomnav{padding-bottom:56px;}
   }
   calcAutValidade(); // inicializar
 
+  // ── Toggle de modo: link (default) vs foto ─────────
+  let _autMode = 'link';
+
+  function autSetMode(m) {
+    _autMode = m;
+    const linkBtn = document.getElementById('autModeLink');
+    const fotoBtn = document.getElementById('autModeFoto');
+    const fieldsLink = document.getElementById('autFieldsLink');
+    const fieldsFoto = document.getElementById('autFieldsFoto');
+    const hint = document.getElementById('autModeHint');
+    const saveBtn = document.getElementById('autSalvarBtn');
+    if (m === 'link') {
+      linkBtn.style.background = '#1a1a1a'; linkBtn.style.color = '#fff'; linkBtn.style.borderColor = '#1a1a1a';
+      fotoBtn.style.background = '#fff'; fotoBtn.style.color = '#1a1a1a'; fotoBtn.style.borderColor = 'var(--border)';
+      fieldsLink.style.display = 'grid';
+      fieldsFoto.style.display = 'none';
+      hint.textContent = 'A pessoa recebe um email com link pra cadastrar a própria foto pelo celular dela. Mais prático quando a pessoa não tá presente agora.';
+      saveBtn.textContent = 'Enviar link por email';
+    } else {
+      fotoBtn.style.background = '#1a1a1a'; fotoBtn.style.color = '#fff'; fotoBtn.style.borderColor = '#1a1a1a';
+      linkBtn.style.background = '#fff'; linkBtn.style.color = '#1a1a1a'; linkBtn.style.borderColor = 'var(--border)';
+      fieldsLink.style.display = 'none';
+      fieldsFoto.style.display = 'block';
+      hint.textContent = 'Tire uma foto da pessoa agora. Use quando ela está presente fisicamente.';
+      saveBtn.textContent = 'Adicionar Autorizado';
+    }
+  }
+
+  function autMaskCpf(ev) {
+    let v = ev.target.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+    else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+    ev.target.value = v;
+  }
+
   async function salvarAutorizado() {
     const nome = document.getElementById('autNome').value.trim();
     const parentesco = document.getElementById('autParentesco').value;
@@ -3111,15 +3168,71 @@ body.has-bottomnav{padding-bottom:56px;}
       fb.textContent = 'Preencha nome, parentesco e selecione pelo menos um filho.';
       return;
     }
+
+    const btn = document.getElementById('autSalvarBtn');
+    const btnLabel = btn.textContent;
+
+    if (_autMode === 'link') {
+      const cpf = document.getElementById('autCpf').value.replace(/\D/g, '');
+      const email = document.getElementById('autEmail').value.trim();
+      if (cpf.length !== 11) {
+        fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+        fb.textContent = 'CPF inválido.';
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+        fb.textContent = 'Email inválido.';
+        return;
+      }
+
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      try {
+        let okCount = 0; let lastError = '';
+        for (const alunoId of filhos) {
+          const r = await callAcesso({
+            action: 'acesso_pai_autorizar_create',
+            aluno_id: alunoId,
+            responsavel_nome: nome,
+            responsavel_cpf: cpf,
+            responsavel_email: email,
+            parentesco,
+            validade,
+          });
+          if (r.error) { lastError = r.error; continue; }
+          okCount++;
+        }
+        if (okCount > 0) {
+          fb.style.display = 'block'; fb.style.background = '#edf7ef'; fb.style.color = '#2d7a3a';
+          fb.innerHTML = `✅ Autorização criada para ${okCount} filho(s)! Email com link de cadastro facial enviado para <strong>${email}</strong>. Validade: ${validade ? new Date(validade).toLocaleDateString('pt-BR') : 'permanente'}.`;
+          document.getElementById('autNome').value = '';
+          document.getElementById('autCpf').value = '';
+          document.getElementById('autEmail').value = '';
+          document.getElementById('autParentesco').value = '';
+          document.querySelectorAll('input[name="autFilho"]').forEach(c => c.checked = false);
+          document.querySelector('input[name="autValidadePeriodo"][value="7"]').checked = true;
+          calcAutValidade();
+          carregarAutorizados();
+        } else {
+          fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+          fb.textContent = lastError || 'Erro ao criar autorização.';
+        }
+      } catch (e) {
+        fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
+        fb.textContent = 'Erro de conexão. Tente novamente.';
+      }
+      btn.disabled = false; btn.textContent = btnLabel;
+      return;
+    }
+
+    // Modo foto (legado)
     if (!autFotoBase64) {
       fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
       fb.textContent = 'A foto é obrigatória para o reconhecimento facial.';
       return;
     }
 
-    const btn = document.getElementById('autSalvarBtn');
     btn.disabled = true; btn.textContent = 'Salvando...';
-
     try {
       for (const alunoId of filhos) {
         const aluno = meusFilhosData.find(f => (f.aluno_id || f.id) === alunoId);
@@ -3136,18 +3249,16 @@ body.has-bottomnav{padding-bottom:56px;}
         if (d.error) {
           fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
           fb.textContent = d.error;
-          btn.disabled = false; btn.textContent = 'Adicionar Autorizado';
+          btn.disabled = false; btn.textContent = btnLabel;
           return;
         }
       }
-
       fb.style.display = 'block'; fb.style.background = '#edf7ef'; fb.style.color = '#2d7a3a';
       fb.textContent = '✅ Autorizado adicionado! A escola irá aprovar o cadastro facial.';
       document.getElementById('autNome').value = '';
       document.getElementById('autParentesco').value = '';
       document.querySelectorAll('input[name="autFilho"]').forEach(c => c.checked = false);
-      document.getElementById('autValidade').value = '';
-      document.querySelector('input[name="autValidadePeriodo"][value="0"]').checked = true;
+      document.querySelector('input[name="autValidadePeriodo"][value="7"]').checked = true;
       calcAutValidade();
       autLimparFoto();
       carregarAutorizados();
@@ -3155,7 +3266,7 @@ body.has-bottomnav{padding-bottom:56px;}
       fb.style.display = 'block'; fb.style.background = '#fdf0f2'; fb.style.color = '#C8102E';
       fb.textContent = 'Erro ao salvar. Tente novamente.';
     }
-    btn.disabled = false; btn.textContent = 'Adicionar Autorizado';
+    btn.disabled = false; btn.textContent = btnLabel;
   }
 
 
