@@ -10995,17 +10995,16 @@ docker compose up -d --build</pre>
   var matchColor = m => m >= 80 ? '#2d7a2d' : m >= 50 ? '#b07d00' : '#c0392b';
   var matchLabel = m => m >= 80 ? 'Alta precisão' : m >= 50 ? 'Precisão média' : 'Baixa precisão';
 
-  // Cart links: ML has a real pre-filled checkout URL; Shopee/Amazon go to product/search page
-  function almCartUrl(r, qty) {
-    if (r.plataforma === 'Mercado Livre' && r.url_carrinho) {
-      // Replace quantity=1 with actual approved qty
-      return r.url_carrinho.replace('item.quantity=1', `item.quantity=${Math.max(1, Math.round(qty))}`);
-    }
-    return r.url_produto; // Shopee/Amazon: product or search page
+  // Sempre vai pra página do produto (permalink). A "magic cart link" do ML
+  // (/checkout/buy?item.id=...) é não-documentada e quebra com 'RequestHeaderSectionTooLarge'
+  // em navegadores que têm muitos cookies acumulados no mercadolivre.com.br.
+  // Página do produto tem botão "Comprar agora" e funciona universalmente.
+  function almCartUrl(r, _qty) {
+    return r.url_produto;
   }
   function almCartLabel(r) {
-    if (r.plataforma === 'Mercado Livre' && r.url_carrinho) return '🛒 Abrir carrinho';
     if (r.tipo === 'busca') return '🔍 Buscar';
+    if (r.plataforma === 'Mercado Livre') return '🛒 Comprar no ML';
     return '🔗 Ver produto';
   }
 
