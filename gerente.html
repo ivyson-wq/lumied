@@ -1716,6 +1716,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
         <!-- Importar inscricoes -->
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+          <button onclick="abrirInscricaoAtivModal()" class="btn-create" style="width:auto;padding:8px 18px;">+ Nova inscrição</button>
           <button onclick="gerarModeloAtividades()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📥 Modelo Inscricoes Excel</button>
           <button onclick="document.getElementById('ativXlsxFile').click()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">📂 Importar Inscricoes</button>
           <input type="file" id="ativXlsxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarAtividadesXlsx(this)">
@@ -4005,6 +4006,55 @@ docker compose up -d --build</pre>
 </div>
 
 <!-- SÉRIE EDIT MODAL -->
+<!-- Modal: Nova inscrição em atividade -->
+<div id="inscricaoAtivModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;padding:20px;overflow-y:auto;" onclick="if(event.target===this)fecharInscricaoAtivModal()">
+  <div style="background:#fff;border-radius:14px;max-width:560px;margin:30px auto;padding:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h3 style="font-family:'Lora',serif;font-size:18px;">+ Nova inscrição em atividade</h3>
+      <button onclick="fecharInscricaoAtivModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+    </div>
+
+    <div class="ff" style="margin-bottom:10px;">
+      <label style="font-weight:600;">Aluno *</label>
+      <div style="display:flex;gap:14px;margin-top:6px;font-size:13px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="radio" name="iaAlunoModo" value="existente" checked onchange="iaAlunoModoChange()"> Selecionar existente
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="radio" name="iaAlunoModo" value="novo" onchange="iaAlunoModoChange()"> Cadastrar novo
+        </label>
+      </div>
+    </div>
+
+    <div id="iaBlocoExistente" style="margin-bottom:12px;">
+      <input type="text" id="iaAlunoBusca" oninput="iaFiltrarAlunos()" placeholder="🔍 buscar pelo nome…" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:6px;">
+      <select id="iaAlunoSelect" size="6" style="width:100%;padding:6px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fff;"></select>
+    </div>
+
+    <div id="iaBlocoNovo" style="display:none;margin-bottom:12px;background:#f9f7f4;border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div class="ff" style="margin-bottom:8px;"><label>Nome do aluno *</label><input type="text" id="iaNovoNome" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="ff" style="margin:0;"><label>Responsável</label><input type="text" id="iaNovoResp" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;"></div>
+        <div class="ff" style="margin:0;"><label>Série/turma</label><select id="iaNovoSerie" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option></select></div>
+      </div>
+      <div class="ff" style="margin-top:8px;margin-bottom:0;"><label>E-mail família (opcional)</label><input type="email" id="iaNovoEmail" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;"></div>
+    </div>
+
+    <div class="ff" style="margin-bottom:12px;">
+      <label style="font-weight:600;">Atividades *</label>
+      <div id="iaAtividadesList" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:6px;background:#fff;"></div>
+    </div>
+
+    <div class="f-alert error" id="iaErr" style="display:none;"></div>
+    <div id="iaOk" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;margin-top:8px;"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+      <button onclick="fecharInscricaoAtivModal()" style="padding:8px 16px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+      <button onclick="salvarInscricaoAtiv()" class="btn-create" style="width:auto;padding:8px 18px;">Salvar inscrição</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Itens Pendentes (drill-down do dashboard) -->
 <div id="pendenciasModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;padding:20px;overflow-y:auto;" onclick="if(event.target===this)fecharPendenciasModal()">
   <div style="background:#fff;border-radius:14px;max-width:780px;margin:30px auto;padding:24px;">
@@ -7758,6 +7808,88 @@ docker compose up -d --build</pre>
         <button class="action-btn del" onclick="deleteAtividade('${a.id}','${esc(a.nome)}')">🗑</button>
       </div>`;
     }).join('');
+  }
+
+  // ── Modal: Nova inscrição em atividade ──────────────
+  var _iaAlunosCache = [];
+  var _iaAtivCache = [];
+
+  async function abrirInscricaoAtivModal() {
+    document.getElementById('iaAlunoBusca').value = '';
+    document.getElementById('iaNovoNome').value = '';
+    document.getElementById('iaNovoResp').value = '';
+    document.getElementById('iaNovoEmail').value = '';
+    document.querySelector('input[name="iaAlunoModo"][value="existente"]').checked = true;
+    iaAlunoModoChange();
+    document.getElementById('iaErr').style.display = 'none';
+    document.getElementById('iaOk').style.display = 'none';
+
+    // Carrega alunos + atividades + séries em paralelo
+    const [a, at, s] = await Promise.all([
+      api({ action: 'alunos_list', somente_ativos: true }),
+      api({ action: 'atividades_list_all' }),
+      api({ action: 'series_list_all' }),
+    ]);
+    _iaAlunosCache = (Array.isArray(a) ? a : (a?.data || [])).filter(x => x.ativo !== false);
+    _iaAtivCache = (Array.isArray(at) ? at : (at?.data || [])).filter(x => x.ativo !== false);
+    iaFiltrarAlunos();
+    // Séries no select de aluno novo
+    const sSel = document.getElementById('iaNovoSerie');
+    sSel.innerHTML = '<option value="">—</option>' + (Array.isArray(s) ? s : []).map(x => `<option value="${esc(x.nome)}">${esc(x.nome)}</option>`).join('');
+    // Atividades como checkboxes
+    const ativEl = document.getElementById('iaAtividadesList');
+    if (!_iaAtivCache.length) {
+      ativEl.innerHTML = '<div style="padding:10px;text-align:center;color:var(--muted);font-size:12px;">Nenhuma atividade cadastrada.</div>';
+    } else {
+      ativEl.innerHTML = _iaAtivCache.map(at => `
+        <label style="display:flex;align-items:center;gap:8px;padding:6px;cursor:pointer;border-bottom:1px solid #f5f0ea;">
+          <input type="checkbox" class="ia-ativ-chk" value="${at.id}" data-nome="${esc(at.nome)}" style="width:16px;height:16px;">
+          <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${at.cor || '#C8102E'};"></span>
+          <span style="flex:1;font-size:13px;">${esc(at.nome)}</span>
+          <span style="font-size:11px;color:var(--muted);">${at.preco ? 'R$ ' + Number(at.preco).toFixed(2) : ''}</span>
+        </label>
+      `).join('');
+    }
+    document.getElementById('inscricaoAtivModal').style.display = 'block';
+  }
+  function fecharInscricaoAtivModal() { document.getElementById('inscricaoAtivModal').style.display = 'none'; }
+  function iaAlunoModoChange() {
+    const modo = document.querySelector('input[name="iaAlunoModo"]:checked').value;
+    document.getElementById('iaBlocoExistente').style.display = modo === 'existente' ? '' : 'none';
+    document.getElementById('iaBlocoNovo').style.display = modo === 'novo' ? '' : 'none';
+  }
+  function iaFiltrarAlunos() {
+    const q = (document.getElementById('iaAlunoBusca').value || '').toLowerCase();
+    const sel = document.getElementById('iaAlunoSelect');
+    const lista = !q ? _iaAlunosCache : _iaAlunosCache.filter(a => (a.nome || '').toLowerCase().includes(q));
+    sel.innerHTML = lista.slice(0, 100).map(a => `<option value="${a.id}">${esc(a.nome)}${a.serie || a.turma ? ' — ' + esc(a.serie || a.turma) : ''}${a.responsavel_nome || a.resp_nome ? ' (' + esc(a.responsavel_nome || a.resp_nome) + ')' : ''}</option>`).join('');
+  }
+  async function salvarInscricaoAtiv() {
+    const errEl = document.getElementById('iaErr'); const okEl = document.getElementById('iaOk');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    const modo = document.querySelector('input[name="iaAlunoModo"]:checked').value;
+    const ativIds = Array.from(document.querySelectorAll('.ia-ativ-chk:checked')).map(c => c.value);
+    if (!ativIds.length) { errEl.textContent = 'Selecione ao menos uma atividade.'; errEl.style.display = 'block'; return; }
+    const payload = { action: 'inscricao_atividade_admin', atividades_ids: ativIds, turmas_selecionadas: [] };
+    if (modo === 'existente') {
+      const id = document.getElementById('iaAlunoSelect').value;
+      if (!id) { errEl.textContent = 'Selecione um aluno.'; errEl.style.display = 'block'; return; }
+      payload.aluno_id = id;
+    } else {
+      const nome = document.getElementById('iaNovoNome').value.trim();
+      if (!nome) { errEl.textContent = 'Informe o nome do aluno.'; errEl.style.display = 'block'; return; }
+      payload.novo_aluno = {
+        nome,
+        responsavel_nome: document.getElementById('iaNovoResp').value.trim() || undefined,
+        email: document.getElementById('iaNovoEmail').value.trim() || undefined,
+        serie: document.getElementById('iaNovoSerie').value || undefined,
+      };
+    }
+    const d = await api(payload);
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+    okEl.textContent = '✅ Inscrição salva.';
+    okEl.style.display = 'block';
+    setTimeout(() => { fecharInscricaoAtivModal(); loadInscricoesAtividades(); }, 1500);
   }
 
   async function loadInscricoesAtividades() {

@@ -828,6 +828,61 @@ serve(async (req: Request) => {
   }
 
   // Inscrição pública em atividades — grava na tabela alunos
+  // Inscrição em atividade — versão STAFF (gerente/secretaria), permite
+  // selecionar aluno existente ou criar um novo no mesmo fluxo. Bypass do
+  // requisito de família pré-cadastrada (a versão pública continua exigindo).
+  if (action === "inscricao_atividade_admin") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { aluno_id, novo_aluno, atividades_ids, turmas_selecionadas } = body as {
+      aluno_id?: string;
+      novo_aluno?: { nome: string; responsavel_nome?: string; email?: string; serie?: string };
+      atividades_ids: string[];
+      turmas_selecionadas?: any[];
+    };
+    if (!Array.isArray(atividades_ids)) return err("atividades_ids obrigatório.");
+
+    let alvoAlunoId = aluno_id;
+    let antes: any = null;
+    if (alvoAlunoId) {
+      const { data: existente } = await admin.from("alunos")
+        .select("id, nome, atividades_ids, turmas_selecionadas")
+        .eq("id", alvoAlunoId).eq("escola_id", gerente.escola_id).maybeSingle();
+      if (!existente) return err("Aluno não encontrado nesta escola.", 404);
+      antes = existente;
+    } else {
+      if (!novo_aluno?.nome) return err("Forneça aluno_id ou novo_aluno.nome.");
+      const { data: criado, error: errCria } = await admin.from("alunos").insert({
+        escola_id: gerente.escola_id,
+        nome: novo_aluno.nome.trim(),
+        responsavel_nome: novo_aluno.responsavel_nome?.trim() || null,
+        email: novo_aluno.email?.trim() || null,
+        serie: novo_aluno.serie || null,
+        ativo: true,
+      }).select("id").single();
+      if (errCria) return err(sanitizePgError(errCria));
+      alvoAlunoId = (criado as any).id;
+    }
+
+    const { error: errUpd } = await admin.from("alunos").update({
+      atividades_ids,
+      turmas_selecionadas: turmas_selecionadas ?? [],
+    }).eq("id", alvoAlunoId).eq("escola_id", gerente.escola_id);
+    if (errUpd) return err(sanitizePgError(errUpd));
+
+    // Audit
+    await admin.from("audit_log_cadastro").insert({
+      escola_id: gerente.escola_id,
+      entidade: "inscricao_atividade",
+      entidade_id: alvoAlunoId!,
+      acao: aluno_id ? "update" : "insert",
+      antes: antes ? { atividades_ids: antes.atividades_ids, turmas_selecionadas: antes.turmas_selecionadas } : null,
+      depois: { atividades_ids, turmas_selecionadas: turmas_selecionadas ?? [] },
+      autor: gerente.nome || gerente.email || "staff",
+    }).then(() => {}, () => {}); // best-effort
+
+    return ok({ success: true, aluno_id: alvoAlunoId });
+  }
+
   if (action === "inscricao_atividade_submit") {
     const { email, nome_resp, nome_crianca, serie, atividades_ids, atividades_detalhe, turmas_selecionadas } = body as Record<string, unknown>;
     if (!email || !nome_resp || !nome_crianca || !atividades_ids) return err("Campos obrigatórios ausentes.");
