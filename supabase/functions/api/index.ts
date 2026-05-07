@@ -1874,7 +1874,17 @@ serve(async (req: Request) => {
     const gerente = await validarSessao(admin, token);
     if (!gerente) return err("Sessão inválida.", 401);
     if (!gerente.escola_id) return err("Sessão sem escola associada.", 403);
-    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, turno, dias_semana, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").eq("escola_id", gerente.escola_id).order("nome");
+    // Filtros opcionais: { somente_ativos?: bool, limit?: number }
+    // Mantém default todos (compatibilidade); caller opt-in passando
+    // somente_ativos=true bate idx_alunos_escola_ativo_nome (mig 273).
+    const { somente_ativos, limit } = body as { somente_ativos?: boolean; limit?: number };
+    const lim = Math.min(Math.max(parseInt(String(limit || 2000)) || 2000, 1), 5000);
+    let q = admin.from("alunos")
+      .select("id, nome, email, serie, turma, data_nascimento, responsavel_nome, resp_nome, cpf, ativo, turno, dias_semana, atividades_ids, turmas_selecionadas, almoco_dias, criado_em")
+      .eq("escola_id", gerente.escola_id)
+      .order("nome").limit(lim);
+    if (somente_ativos === true) q = q.neq("ativo", false);
+    const { data } = await q;
     return ok(data ?? []);
   }
 
@@ -2212,8 +2222,15 @@ serve(async (req: Request) => {
   }
 
   // ── Inscrições em atividades (autenticado) ────────────────────
+  // Usa idx_alunos_atividades_partial (mig 273) para varredura O(matches).
   if (action === "inscricoes_atividades_list") {
-    const { data } = await admin.from("alunos").select("id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em").eq("escola_id", sessionEscolaId).not("atividades_ids", "is", null).order("nome");
+    const { data } = await admin
+      .from("alunos")
+      .select("id, nome, email, serie, turma, responsavel_nome, resp_nome, atividades_ids, turmas_selecionadas, almoco_dias, criado_em")
+      .eq("escola_id", sessionEscolaId)
+      .not("atividades_ids", "is", null)
+      .order("nome")
+      .limit(2000);
     // Map to expected frontend fields
     const mapped = (data ?? []).map(a => ({
       id: a.id,
@@ -2374,12 +2391,20 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
 
   // ── Manutenção CRUD (autenticado — gerente) ─────────────────
+  // Filtros: { somente_abertas?: bool, limit?: number }
+  // Default sem args: últimos 500 chamados (qualquer status). Com somente_abertas=true,
+  // bate o índice parcial idx_manutencoes_abertas (mig 273) e responde instantâneo.
   if (action === "manutencao_list") {
-    const { data, error } = await admin
+    const { somente_abertas, limit } = body as { somente_abertas?: boolean; limit?: number };
+    const lim = Math.min(Math.max(parseInt(String(limit || 500)) || 500, 1), 2000);
+    let q = admin
       .from("manutencoes")
-      .select("*, usuarios(nome, email)")
+      .select("id, descricao, localizacao, urgencia, status, equipe_responsavel, foto_url, observacao, observacao_gerente, data_conclusao, criado_em, atualizado_em, usuario_id, escola_id, pergunta_coordenacao, pergunta_em, pergunta_por, pergunta_resposta, pergunta_respondida_em, usuarios(nome, email)")
       .eq("escola_id", sessionEscolaId)
-      .order("criado_em", { ascending: false });
+      .order("criado_em", { ascending: false })
+      .limit(lim);
+    if (somente_abertas) q = q.not("status", "in", "(concluida,rejeitada)");
+    const { data, error } = await q;
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     // Sort by urgencia priority: critica > alta > media > baixa, then by criado_em desc
     const prioridade: Record<string, number> = { critica: 0, alta: 1, media: 2, baixa: 3 };

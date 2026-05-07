@@ -5376,7 +5376,10 @@ docker compose up -d --build</pre>
 
   // ── DATA ──────────────────────────────────────────────
   async function loadData() {
-    const data = await api({ action:'alunos_list' });
+    // Tela de turnos só usa alunos ativos — pede filtro server-side pra
+    // bater idx_alunos_escola_ativo_nome (mig 273) e evitar transferir
+    // alunos inativos pelo wire.
+    const data = await api({ action:'alunos_list', somente_ativos: true });
     const raw = Array.isArray(data) ? data : (data.data || []);
     const list = raw.filter(a => a.ativo !== false);
     allData = list; updateStats(); renderTable();
