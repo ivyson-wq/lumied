@@ -2630,16 +2630,39 @@ Deno.serve(async (req) => {
         itens, total, aprovado_em: new Date().toISOString(),
       }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
       if (errUpdate) return json({ error: errUpdate.message }, 400)
-      // Deduct from stock
+      // Deduz estoque (regra: estoque cobre → retira; se cobre parcial,
+      // retira o que tem e marca qty_a_comprar com o saldo faltante)
       for (const it of itens) {
-        if (it.insumo_id && it.qty_aprovado > 0) {
+        if (it.insumo_id && parseFloat(it.qty_aprovado) > 0) {
+          const aprov = parseFloat(it.qty_aprovado)
           const { data: ins } = await sb.from('alm_insumos')
-            .select('estoque_qty').eq('id', it.insumo_id).maybeSingle()
-          if (ins) {
+            .select('estoque_qty').eq('id', it.insumo_id)
+            .eq('escola_id', (gerente as any).escola_id).maybeSingle()
+          const estoqueAtual = ins ? Number((ins as any).estoque_qty || 0) : 0
+          const saidaEstoque = Math.min(estoqueAtual, aprov)
+          const aComprar = aprov - saidaEstoque
+          if (saidaEstoque > 0) {
             await sb.from('alm_insumos').update({
-              estoque_qty: Math.max(0, (ins as any).estoque_qty - parseFloat(it.qty_aprovado))
+              estoque_qty: estoqueAtual - saidaEstoque
             }).eq('id', it.insumo_id).eq('escola_id', (gerente as any).escola_id)
+            await sb.from('alm_movimentacoes').insert({
+              escola_id: (gerente as any).escola_id,
+              insumo_id: it.insumo_id,
+              tipo: 'saida',
+              qty: saidaEstoque,
+              requisicao_id: id,
+              motivo: `Atendido do estoque (req aprovada)`,
+              saldo_antes: estoqueAtual,
+              saldo_depois: estoqueAtual - saidaEstoque,
+            })
           }
+          it.qty_do_estoque = saidaEstoque
+          it.qty_a_comprar = aComprar
+        } else if (it.qty_aprovado > 0) {
+          // Item novo (sem id ainda) — auto-criação acontece logo abaixo;
+          // Para esse caso, qty_a_comprar = qty_aprovado integral
+          it.qty_do_estoque = 0
+          it.qty_a_comprar = parseFloat(it.qty_aprovado)
         }
       }
       // Auto-create insumos for non-cataloged items
@@ -2701,6 +2724,64 @@ Deno.serve(async (req) => {
         mensagem: `Sua requisição de ${new Date(req.criado_em).toLocaleDateString('pt-BR')} foi ❌ rejeitada.${nota_gerente ? ' Motivo: ' + nota_gerente : ''}`,
       })
       return json({ ok: true })
+    }
+
+    // Lista movimentações de um insumo (ou todas, com paginação)
+    if (action === 'alm_movimentacoes_list') {
+      const insumoId = body.insumo_id || null
+      let q = sb.from('alm_movimentacoes')
+        .select('*, alm_insumos(nome, unidade)')
+        .eq('escola_id', (gerente as any).escola_id)
+        .order('criado_em', { ascending: false }).limit(200)
+      if (insumoId) q = q.eq('insumo_id', insumoId)
+      const { data } = await q
+      return json({ data: data ?? [] })
+    }
+
+    // Conferência física: registra ajuste com motivo
+    if (action === 'alm_conferencia_inventario') {
+      const { insumo_id, saldo_real, motivo } = body
+      if (!insumo_id || saldo_real == null) return json({ error: 'insumo_id e saldo_real obrigatórios.' }, 400)
+      const novo = parseFloat(saldo_real)
+      if (Number.isNaN(novo) || novo < 0) return json({ error: 'saldo_real inválido.' }, 400)
+      const { data: ins } = await sb.from('alm_insumos').select('estoque_qty')
+        .eq('id', insumo_id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
+      if (!ins) return json({ error: 'Insumo não encontrado.' }, 404)
+      const antes = Number((ins as any).estoque_qty || 0)
+      const diff = novo - antes
+      const { error: errUpd } = await sb.from('alm_insumos').update({ estoque_qty: novo })
+        .eq('id', insumo_id).eq('escola_id', (gerente as any).escola_id)
+      if (errUpd) return json({ error: errUpd.message }, 400)
+      await sb.from('alm_movimentacoes').insert({
+        escola_id: (gerente as any).escola_id,
+        insumo_id,
+        tipo: 'ajuste',
+        qty: Math.abs(diff),
+        motivo: motivo || `Conferência física: ${antes} → ${novo}`,
+        saldo_antes: antes,
+        saldo_depois: novo,
+      })
+      return json({ ok: true, antes, depois: novo, diff })
+    }
+
+    // Entrada de estoque manual (recebimento de compra)
+    if (action === 'alm_entrada_estoque') {
+      const { insumo_id, qty, motivo } = body
+      if (!insumo_id || !qty || qty <= 0) return json({ error: 'insumo_id e qty>0 obrigatórios.' }, 400)
+      const { data: ins } = await sb.from('alm_insumos').select('estoque_qty')
+        .eq('id', insumo_id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
+      if (!ins) return json({ error: 'Insumo não encontrado.' }, 404)
+      const antes = Number((ins as any).estoque_qty || 0)
+      const depois = antes + parseFloat(qty)
+      await sb.from('alm_insumos').update({ estoque_qty: depois })
+        .eq('id', insumo_id).eq('escola_id', (gerente as any).escola_id)
+      await sb.from('alm_movimentacoes').insert({
+        escola_id: (gerente as any).escola_id,
+        insumo_id, tipo: 'entrada', qty: parseFloat(qty),
+        motivo: motivo || 'Entrada de estoque',
+        saldo_antes: antes, saldo_depois: depois,
+      })
+      return json({ ok: true, antes, depois })
     }
 
     if (action === 'alm_insumos_list') {

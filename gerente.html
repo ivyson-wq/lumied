@@ -11231,10 +11231,53 @@ docker compose up -d --build</pre>
           </div>
           <button onclick="almEditarInsumoById('${it.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Editar</button>
           <button onclick="almVerHistorico('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;${it.preco_atualizado_em?'color:#1a6bb5;':''}">📊${it.preco_atualizado_em?' '+new Date(it.preco_atualizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):''}</button>
+          <button onclick="almConferenciaModal('${it.id}','${esc(it.nome)}',${it.estoque_qty})" style="background:none;border:1px solid #d97706;color:#9a3412;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;" title="Conferência física do estoque">📦</button>
+          <button onclick="almMovimentacoesModal('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;" title="Movimentações de estoque">↕️</button>
           ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
         </div>
       </div>`;
     }).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
+  }
+
+  async function almConferenciaModal(id, nome, saldoAtual) {
+    const real = window.prompt(`Conferência física: "${nome}"\n\nSaldo atual no sistema: ${saldoAtual}\nDigite o saldo real contado:`);
+    if (real == null || real === '') return;
+    const saldo_real = parseFloat(String(real).replace(',', '.'));
+    if (Number.isNaN(saldo_real) || saldo_real < 0) { showToast('Saldo inválido.', 'error'); return; }
+    if (saldo_real === Number(saldoAtual)) { showToast('Saldos iguais — sem ajuste.', 'info'); return; }
+    const motivo = window.prompt('Motivo do ajuste (ex: contagem mensal, perda, doação):') || 'Conferência física';
+    const d = await callDiplomas({ action: 'alm_conferencia_inventario', insumo_id: id, saldo_real, motivo });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast(`✅ Ajuste aplicado: ${d.antes} → ${d.depois} (${d.diff > 0 ? '+' : ''}${d.diff})`, 'success');
+    almLoadInsumos();
+  }
+
+  async function almMovimentacoesModal(id, nome) {
+    const d = await callDiplomas({ action: 'alm_movimentacoes_list', insumo_id: id });
+    const movs = d.data || [];
+    let html = `<h3 style="font-family:'Lora',serif;font-size:16px;margin-bottom:12px;">↕️ Movimentações: ${esc(nome)}</h3>`;
+    if (!movs.length) html += '<div class="empty-state">Nenhuma movimentação registrada.</div>';
+    else {
+      html += '<div style="max-height:400px;overflow-y:auto;font-size:12px;">';
+      const tipoLbl = { entrada:'⬆️ Entrada', saida:'⬇️ Saída', ajuste:'⚖️ Ajuste' };
+      html += movs.map(m => `<div style="padding:8px 0;border-bottom:1px solid #f0ece6;">
+        <div style="display:flex;justify-content:space-between;font-weight:600;">
+          <span>${tipoLbl[m.tipo] || m.tipo}</span>
+          <span>${m.qty} · ${new Date(m.criado_em).toLocaleString('pt-BR')}</span>
+        </div>
+        <div style="color:var(--muted);font-size:11px;">${esc(m.motivo || '')} · saldo ${m.saldo_antes ?? '?'} → ${m.saldo_depois ?? '?'}</div>
+      </div>`).join('');
+      html += '</div>';
+    }
+    html += '<div style="text-align:right;margin-top:12px;"><button onclick="document.getElementById(\'almMovModal\').remove()" class="btn-create" style="width:auto;padding:7px 18px;">Fechar</button></div>';
+    let modal = document.getElementById('almMovModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'almMovModal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1100;display:flex;align-items:center;justify-content:center;padding:20px;';
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML = `<div style="background:#fff;border-radius:14px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;">${html}</div>`;
   }
 
   async function almEditarInsumoById(id) {
