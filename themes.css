@@ -177,3 +177,35 @@ body.theme-interativo .sb-brand span { color: rgba(6,182,212,.6); }
 body.theme-corporativo {
   /* Sem alterações — usa o CSS padrão do app */
 }
+
+/* ──────────────────────────────────────────────────────────
+   CONTRAST FIX — texto branco em botões coloridos dos temas
+   SaaS opcionais (lúdico/sério/interativo) falha WCAG AA
+   (cores vibrantes claras + #fff < 4.5:1). Mantemos os
+   backgrounds da identidade visual mas trocamos o texto pelo
+   --text do tema (escuro nos temas claros, claro no dark).
+   ────────────────────────────────────────────────────────── */
+body.theme-ludico :where(.btn-aprovar, .btn-pdi-aprovar, .btn-revisar, .btn-pdi-encerrar, .btn-orange, .btn-save, .btn-magic, .btn-create, .btn-submit, .btn-primary, .login-btn, .btn-whatsapp) {
+  color: var(--text, #2D1B69);
+}
+body.theme-interativo :where(.btn-aprovar, .btn-pdi-aprovar, .btn-revisar, .btn-pdi-encerrar, .btn-orange, .btn-save, .btn-whatsapp) {
+  color: var(--text, #1E1146);
+}
+/* Tema interativo: .btn-primary usa gradient roxo→ciano. Roxo claro +
+   texto roxo escuro fica baixo contraste, então mantemos o texto
+   branco e escurecemos o gradient para passar contraste. */
+body.theme-interativo .btn-primary,
+body.theme-interativo .btn-create,
+body.theme-interativo .btn-submit,
+body.theme-interativo .btn-magic,
+body.theme-interativo .login-btn {
+  background: linear-gradient(135deg, #6D28D9, #155E75);
+  color: #fff;
+}
+/* Tema sério (dark): botões coloridos sobre fundo escuro são padrão
+   estético em dark themes. Garantimos só que .btn-orange (sem override
+   no :root do tema) não sobreviva como #e67e22 + #fff (2.6:1). */
+body.theme-serio .btn-orange {
+  background: #b85b00;
+  color: #fff;
+}
