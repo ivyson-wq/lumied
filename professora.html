@@ -1453,9 +1453,12 @@ body.dash-clean #greetingBar{display:none;}
 <!-- MODAL: Nova Requisição -->
 <div id="almModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;overflow-y:auto;padding:16px;">
   <div style="background:#f8f6f3;border-radius:16px;max-width:960px;margin:0 auto;padding:28px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-      <h3 style="font-family:'Lora',serif;font-size:17px;">Nova Requisição de Insumos</h3>
-      <button onclick="almFecharModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:10px;flex-wrap:wrap;">
+      <h3 style="font-family:'Lora',serif;font-size:17px;" id="almModalTitle">Nova Requisição de Insumos</h3>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="almSaveStatus" style="font-size:11px;color:var(--muted);min-width:120px;text-align:right;"></span>
+        <button onclick="almFecharModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+      </div>
     </div>
 
     <!-- Layout 2 colunas -->
@@ -1480,6 +1483,19 @@ body.dash-clean #greetingBar{display:none;}
           </div>
           <div id="almNovosItens"></div>
           <button onclick="almAddNovoItem()" type="button" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--muted);cursor:pointer;width:100%;font-family:'DM Sans',sans-serif;">+ Adicionar material não cadastrado</button>
+        </div>
+
+        <!-- Painel histórico -->
+        <div style="margin-top:18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);">Requisições anteriores</div>
+            <select id="almHistDias" onchange="almLoadHistorico()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;">
+              <option value="30">Últimos 30 dias</option>
+              <option value="60">Últimos 60 dias</option>
+              <option value="90" selected>Últimos 90 dias</option>
+            </select>
+          </div>
+          <div id="almHistList" style="max-height:180px;overflow-y:auto;font-size:12px;"></div>
         </div>
       </div>
 
@@ -3364,7 +3380,10 @@ body.dash-clean #greetingBar{display:none;}
       const turma = esc(r.series?.nome || '—');
       const nota = r.nota_gerente ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">💬 ${esc(r.nota_gerente)}</div>` : '';
       const cancelBtn = r.status === 'pendente'
-        ? `<button onclick="almCancelarReq('${r.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>` : '';
+        ? `<button onclick="almEditarReq('${r.id}')" style="background:none;border:1px solid #1a6bb5;color:#1a6bb5;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-right:4px;">Editar</button>
+           <button onclick="almCancelarReq('${r.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+           <button onclick="almClonarReq('${r.id}')" style="background:none;border:1px solid #6b7280;color:#6b7280;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:4px;" title="Cria nova requisição com esses itens">Clonar</button>`
+        : `<button onclick="almClonarReq('${r.id}')" style="background:none;border:1px solid #6b7280;color:#6b7280;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;" title="Cria nova requisição com esses itens">Clonar</button>`;
       const itensHtml = itens.slice(0,3).map((it) =>
         `<span style="display:inline-block;background:#f0ece6;border-radius:4px;padding:2px 8px;font-size:11px;margin-right:4px;">${esc(it.nome)} ×${it.qty_solicitado}</span>`
       ).join('') + (itens.length > 3 ? `<span style="font-size:11px;color:var(--muted);">+${itens.length-3} mais</span>` : '');
@@ -3610,13 +3629,74 @@ body.dash-clean #greetingBar{display:none;}
   }
 
   // ── Modal: Nova Requisição ─────────────────────────────
-  async function almAbrirNovaReq() {
+  var almRascunhoId = null;
+  var almEditandoId = null;          // se editando req pendente, guarda o ID
+  var almSaveTimer = null;
+  var almLastSaveAt = null;
+
+  function almSetSaveStatus(t) {
+    const el = document.getElementById('almSaveStatus');
+    if (el) el.textContent = t || '';
+  }
+
+  function almScheduleAutoSave() {
+    if (almEditandoId) return; // editando req existente, não cria rascunho
+    clearTimeout(almSaveTimer);
+    almSetSaveStatus('💭 não salvo');
+    almSaveTimer = setTimeout(almAutoSaveAgora, 3000);
+  }
+
+  async function almAutoSaveAgora() {
+    if (almEditandoId) return;
+    const itens = almColetarItensAtuais();
+    if (!itens.length) return;
+    almSetSaveStatus('💾 salvando…');
+    const turmaId = document.getElementById('almTurmaSelect')?.value || null;
+    const d = await callApi({
+      action: 'alm_rascunho_salvar',
+      id: almRascunhoId,
+      itens,
+      mes: almGetMes(),
+      turma_id: turmaId,
+      observacao: document.getElementById('almObservacao').value.trim(),
+    });
+    if (d.error) { almSetSaveStatus('⚠️ falha ao salvar'); return; }
+    almRascunhoId = d.id || almRascunhoId;
+    almLastSaveAt = new Date();
+    almSetSaveStatus('✅ salvo às ' + almLastSaveAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  }
+
+  function almColetarItensAtuais() {
+    const itensLivres = [];
+    document.querySelectorAll('[id^="almNovoItem_"]').forEach(div => {
+      const nome = div.querySelector('.alm-novo-nome')?.value?.trim();
+      if (!nome) return;
+      itensLivres.push({
+        insumo_id: null,
+        nome,
+        unidade: div.querySelector('.alm-novo-unidade')?.value || 'unidade',
+        categoria: div.querySelector('.alm-novo-categoria')?.value || null,
+        descricao: div.querySelector('.alm-novo-descricao')?.value?.trim() || null,
+        link_referencia: div.querySelector('.alm-novo-link')?.value?.trim() || null,
+        preco_unit: parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0,
+        qty_solicitado: parseInt(div.querySelector('.alm-novo-qty')?.value) || 1,
+      });
+    });
+    return [...almCart, ...itensLivres];
+  }
+
+  async function almAbrirNovaReq(opts = {}) {
     almCart = [];
+    almRascunhoId = null;
+    almEditandoId = null;
+    almSetSaveStatus('');
     document.getElementById('almObservacao').value = '';
     document.getElementById('almModalErr').classList.remove('show');
     document.getElementById('almSearchInput').value = '';
     document.getElementById('almNovosItens').innerHTML = '';
     almNovoItemCount = 0;
+    document.getElementById('almModalTitle').textContent = opts.titulo || 'Nova Requisição de Insumos';
+    document.getElementById('almBtnEnviar').innerHTML = opts.editando ? '💾 Salvar alterações' : '📋 Enviar Requisição';
     document.getElementById('almModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
     // Load catalog
@@ -3625,14 +3705,127 @@ body.dash-clean #greetingBar{display:none;}
       almCatalogo = d.data || [];
     }
     almFiltrarCatalogo();
+
+    // Itens pré-carregados (clonar / editar)
+    if (Array.isArray(opts.itens)) {
+      for (const it of opts.itens) {
+        if (it.insumo_id) {
+          almCart.push({ ...it });
+        } else {
+          almAddNovoItem();
+          const div = document.querySelector('#almNovosItens [id^="almNovoItem_"]:last-child');
+          if (div) {
+            div.querySelector('.alm-novo-nome').value = it.nome || '';
+            div.querySelector('.alm-novo-unidade').value = it.unidade || 'unidade';
+            if (it.categoria) div.querySelector('.alm-novo-categoria').value = it.categoria;
+            div.querySelector('.alm-novo-qty').value = it.qty_solicitado || 1;
+            div.querySelector('.alm-novo-preco').value = it.preco_unit || 0;
+            if (it.descricao) div.querySelector('.alm-novo-descricao').value = it.descricao;
+            if (it.link_referencia) {
+              const linkEl = div.querySelector('.alm-novo-link');
+              linkEl.value = it.link_referencia;
+              if (typeof almRenderLinkPreview === 'function') almRenderLinkPreview(linkEl);
+            }
+          }
+        }
+      }
+      if (opts.observacao) document.getElementById('almObservacao').value = opts.observacao;
+      if (opts.editando) {
+        almEditandoId = opts.editando;
+      }
+    } else {
+      // Sem itens passados: tenta restaurar rascunho da professora
+      const d = await callApi({ action: 'alm_rascunho_get' });
+      if (d.rascunho) {
+        almRascunhoId = d.rascunho.id;
+        const ts = d.rascunho.atualizado_em || d.rascunho.criado_em;
+        if (ts) almSetSaveStatus('💾 rascunho de ' + new Date(ts).toLocaleString('pt-BR'));
+        for (const it of (d.rascunho.itens || [])) {
+          if (it.insumo_id) almCart.push({ ...it });
+          else {
+            almAddNovoItem();
+            const div = document.querySelector('#almNovosItens [id^="almNovoItem_"]:last-child');
+            if (div) {
+              div.querySelector('.alm-novo-nome').value = it.nome || '';
+              div.querySelector('.alm-novo-unidade').value = it.unidade || 'unidade';
+              if (it.categoria) div.querySelector('.alm-novo-categoria').value = it.categoria;
+              div.querySelector('.alm-novo-qty').value = it.qty_solicitado || 1;
+              div.querySelector('.alm-novo-preco').value = it.preco_unit || 0;
+              if (it.descricao) div.querySelector('.alm-novo-descricao').value = it.descricao;
+              if (it.link_referencia) {
+                const linkEl = div.querySelector('.alm-novo-link');
+                linkEl.value = it.link_referencia;
+                if (typeof almRenderLinkPreview === 'function') almRenderLinkPreview(linkEl);
+              }
+            }
+          }
+        }
+        if (d.rascunho.observacao) document.getElementById('almObservacao').value = d.rascunho.observacao;
+      }
+    }
     almRenderCart();
+    almLoadHistorico();
+    // Engata auto-save em mudanças
+    document.getElementById('almObservacao').oninput = almScheduleAutoSave;
   }
 
   function almFecharModal() {
+    clearTimeout(almSaveTimer);
     document.getElementById('almModal').style.display = 'none';
     document.body.style.overflow = '';
     document.getElementById('almNovosItens').innerHTML = '';
     almNovoItemCount = 0;
+    almRascunhoId = null;
+    almEditandoId = null;
+    almSetSaveStatus('');
+  }
+
+  async function almLoadHistorico() {
+    const dias = parseInt(document.getElementById('almHistDias')?.value || 90);
+    const turmaId = document.getElementById('almTurmaSelect')?.value || null;
+    const d = await callApi({ action: 'alm_historico_turma', dias, turma_id: turmaId });
+    const list = d.data || [];
+    const el = document.getElementById('almHistList');
+    if (!el) return;
+    if (!list.length) { el.innerHTML = '<div style="color:var(--muted);padding:8px;font-size:11px;">Nenhuma requisição neste período.</div>'; return; }
+    el.innerHTML = list.map(r => {
+      const data = new Date(r.criado_em).toLocaleDateString('pt-BR');
+      const itens = (r.itens || []).slice(0,2).map(i => esc(i.nome)).join(', ') + ((r.itens?.length || 0) > 2 ? `, +${r.itens.length-2}` : '');
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #f0ece6;gap:8px;">
+        <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${data} · ${esc(r.series?.nome || '')}</div>
+          <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${itens}</div>
+        </div>
+        <button onclick="almClonarItensDoHist('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;color:#6b7280;">Clonar</button>
+      </div>`;
+    }).join('');
+    // Cache pra clonagem rápida
+    window._almHistCache = Object.fromEntries(list.map(r => [r.id, r]));
+  }
+
+  async function almClonarItensDoHist(id) {
+    const r = window._almHistCache?.[id];
+    if (!r) return;
+    almFecharModal();
+    setTimeout(() => almAbrirNovaReq({ titulo: 'Nova Requisição (clonada)', itens: r.itens || [], observacao: r.observacao }), 200);
+  }
+
+  async function almEditarReq(id) {
+    // Carrega req e abre modal em modo edição
+    const d = await callApi({ action: 'alm_minhas_reqs' });
+    const r = (d.data || []).find(x => x.id === id);
+    if (!r) { showToast?.('Requisição não encontrada.', 'error'); return; }
+    if (r.status !== 'pendente') { alert('Só é possível editar requisições pendentes.'); return; }
+    almFecharModal();
+    setTimeout(() => almAbrirNovaReq({ titulo: 'Editar Requisição', itens: r.itens || [], observacao: r.observacao, editando: id }), 200);
+  }
+
+  async function almClonarReq(id) {
+    const d = await callApi({ action: 'alm_minhas_reqs' });
+    const r = (d.data || []).find(x => x.id === id);
+    if (!r) return;
+    almFecharModal();
+    setTimeout(() => almAbrirNovaReq({ titulo: 'Nova Requisição (clonada)', itens: r.itens || [], observacao: r.observacao }), 200);
   }
 
   function almFiltrarCatalogo() {
@@ -3685,17 +3878,19 @@ body.dash-clean #greetingBar{display:none;}
     almCart.push({ insumo_id: it.id, nome: it.nome, unidade: it.unidade, preco_unit: precoUnit, qty_solicitado: 1, qtd_por_embalagem: qtdEmb, preco_embalagem: it.preco, unidade_compra: it.unidade_compra || '' });
     almRenderCart();
     almFiltrarCatalogo();
+    almScheduleAutoSave?.();
   }
 
   function almRemoveCart(insumoId) {
     almCart = almCart.filter(c => c.insumo_id !== insumoId);
     almRenderCart();
     almFiltrarCatalogo();
+    almScheduleAutoSave?.();
   }
 
   function almUpdateQty(insumoId, val) {
     const it = almCart.find(c => c.insumo_id === insumoId);
-    if (it) { it.qty_solicitado = Math.max(1, parseFloat(val) || 1); almRenderCart(); }
+    if (it) { it.qty_solicitado = Math.max(1, parseFloat(val) || 1); almRenderCart(); almScheduleAutoSave?.(); }
   }
 
   function almRenderCart() {
@@ -3788,8 +3983,8 @@ body.dash-clean #greetingBar{display:none;}
         <div><select class="alm-novo-categoria" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           <option value="">Categoria</option><option value="Papelaria">Papelaria</option><option value="Artes">Artes</option><option value="Escritório">Escritório</option><option value="Limpeza">Limpeza</option><option value="Decoração">Decoração</option><option value="Pedagógico">Pedagógico</option><option value="Outro">Outro</option>
         </select></div>
-        <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" oninput="almRenderCartTotal()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-        <div><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" oninput="almRenderCartTotal()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" oninput="almRenderCartTotal();almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" oninput="almRenderCartTotal();almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
         <div style="grid-column:1/-1;"><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional — ex: tinta guache 250ml)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
         <div style="grid-column:1/-1;">
           <input type="url" class="alm-novo-link" required placeholder="Link de referência * (Mercado Livre, site do fornecedor…)" oninput="almRenderLinkPreview(this)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
@@ -3844,14 +4039,29 @@ body.dash-clean #greetingBar{display:none;}
     const btn = document.getElementById('almBtnEnviar');
     btn.disabled = true; btn.textContent = 'Enviando…';
     const turmaId = document.getElementById('almTurmaSelect')?.value || null;
-    const d = await callApi({
-      action: 'alm_criar_req',
-      itens: todosItens,
-      mes: almGetMes(),
-      turma_id: turmaId,
-      observacao: document.getElementById('almObservacao').value.trim(),
-    });
-    btn.disabled = false; btn.innerHTML = '📋 Enviar Requisição';
+
+    let d;
+    if (almEditandoId) {
+      d = await callApi({
+        action: 'alm_editar_req',
+        id: almEditandoId,
+        itens: todosItens,
+        observacao: document.getElementById('almObservacao').value.trim(),
+      });
+    } else {
+      d = await callApi({
+        action: 'alm_criar_req',
+        itens: todosItens,
+        mes: almGetMes(),
+        turma_id: turmaId,
+        observacao: document.getElementById('almObservacao').value.trim(),
+      });
+      // Após enviar com sucesso, descarta o rascunho atual
+      if (!d.error && almRascunhoId) {
+        await callApi({ action: 'alm_rascunho_descartar', id: almRascunhoId });
+      }
+    }
+    btn.disabled = false; btn.innerHTML = almEditandoId ? '💾 Salvar alterações' : '📋 Enviar Requisição';
     if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
     almFecharModal();
     almLoadReqs();
