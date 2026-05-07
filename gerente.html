@@ -3437,17 +3437,53 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
       <!-- Modal Cadastrar Face -->
       <div class="modal-overlay" id="faceModal">
-        <div class="modal" style="max-width:500px;">
+        <div class="modal" style="max-width:520px;">
           <h3>Cadastrar Face</h3>
-          <div class="msub">Vincule uma foto facial a um aluno, responsavel ou funcionario.</div>
-          <div class="ff"><label>Tipo</label><select id="faceTipo" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;" onchange="searchFacePessoa()"><option value="aluno">Aluno</option><option value="responsavel">Responsavel</option><option value="funcionario">Funcionario</option></select></div>
+          <div class="msub">Vincule uma foto facial a um aluno, responsável ou funcionário.</div>
+          <div class="ff"><label>Tipo</label><select id="faceTipo" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;" onchange="searchFacePessoa()"><option value="aluno">Aluno</option><option value="responsavel">Responsável</option><option value="funcionario">Funcionário</option></select></div>
           <div class="ff"><label>Buscar Pessoa</label><input id="faceBusca" placeholder="Digite o nome..." oninput="searchFacePessoa()"></div>
           <div id="faceResultados" style="max-height:150px;overflow-y:auto;margin-bottom:12px;"></div>
           <input type="hidden" id="facePessoaId">
-          <div class="ff"><label>Foto</label><input type="file" id="faceFoto" accept="image/*" style="padding:8px;"></div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;">
+            <button type="button" id="faceModeUpload" onclick="setFaceMode('upload')" style="flex:1;padding:8px;border:1.5px solid var(--border);background:#1a1a1a;color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📁 Arquivo</button>
+            <button type="button" id="faceModeWebcam" onclick="setFaceMode('webcam')" style="flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;color:#1a1a1a;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📷 Webcam</button>
+          </div>
+          <div id="faceUploadWrap">
+            <div class="ff"><label>Foto</label><input type="file" id="faceFoto" accept="image/*" style="padding:8px;"></div>
+          </div>
+          <div id="faceWebcamWrap" style="display:none;">
+            <div style="background:#1c1712;border-radius:10px;overflow:hidden;aspect-ratio:4/3;margin-bottom:10px;position:relative;">
+              <video id="faceWebcamVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+              <img id="faceWebcamPreview" style="width:100%;height:100%;object-fit:cover;display:none;">
+              <div id="faceWebcamPlaceholder" style="height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);font-size:48px;">📷</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="button" id="faceWebcamStart" onclick="faceWebcamStart()" style="flex:1;padding:10px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Abrir câmera</button>
+              <button type="button" id="faceWebcamCapture" onclick="faceWebcamCapture()" style="display:none;flex:1;padding:10px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">📸 Tirar foto</button>
+              <button type="button" id="faceWebcamRetry" onclick="faceWebcamRetry()" style="display:none;flex:1;padding:10px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">↻ Recapturar</button>
+            </div>
+          </div>
           <div class="modal-actions">
             <button class="btn-cancel" onclick="closeFaceModal()">Cancelar</button>
             <button class="btn-save" onclick="salvarFace()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Import em massa de fotos com auto-match -->
+      <div class="modal-overlay" id="importFotosModal">
+        <div class="modal" style="max-width:720px;">
+          <h3>📦 Import em massa de fotos</h3>
+          <div class="msub">Selecione várias fotos de uma vez. O sistema tenta casar pelo nome do arquivo (ex.: <code>joao_silva.jpg</code> → aluno "João Silva"). Você revisa antes de subir.</div>
+          <div class="ff">
+            <label>Selecione as fotos</label>
+            <input type="file" id="importFotosInput" accept="image/*" multiple onchange="importFotosLoaded(event)" style="padding:8px;">
+          </div>
+          <div id="importFotosStatus" style="font-size:13px;color:var(--muted);margin:8px 0;"></div>
+          <div id="importFotosTable" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;display:none;"></div>
+          <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
+            <button class="btn-cancel" onclick="closeImportFotosModal()">Cancelar</button>
+            <button id="importFotosSubmit" class="btn-save" onclick="submitImportFotos()" style="display:none;">Subir todas</button>
           </div>
         </div>
       </div>
@@ -3516,6 +3552,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </p>
         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
           <input class="search-input" id="permBuscaAluno" placeholder="Buscar aluno..." oninput="loadAcessoPermissoes()" style="margin:0;flex:1;max-width:400px;">
+          <button onclick="convidarTodasFamilias()" style="padding:10px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;" title="Cria responsável principal e envia email pra todas as famílias pendentes com email">📧 Convidar todas as famílias</button>
+          <button onclick="abrirImportFotosModal()" style="padding:10px 16px;background:#fff;color:#1a1a1a;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;" title="Sobe múltiplas fotos de uma vez, auto-match por nome">📦 Import fotos em massa</button>
           <div id="permResumo" style="font-size:13px;color:var(--muted);"></div>
         </div>
         <div id="acessoPermissoesWrap"><div class="empty-state"><span class="spinner-sm"></span> Carregando...</div></div>
@@ -8799,8 +8837,17 @@ docker compose up -d --build</pre>
     loadAcessoFaces();
   }
 
-  function openFaceModal() { document.getElementById('faceModal').classList.add('show'); }
-  function closeFaceModal() { document.getElementById('faceModal').classList.remove('show'); document.getElementById('faceBusca').value = ''; document.getElementById('faceResultados').innerHTML = ''; document.getElementById('facePessoaId').value = ''; }
+  function openFaceModal() {
+    document.getElementById('faceModal').classList.add('show');
+    if (typeof setFaceMode === 'function') setFaceMode('upload');
+  }
+  function closeFaceModal() {
+    document.getElementById('faceModal').classList.remove('show');
+    document.getElementById('faceBusca').value = '';
+    document.getElementById('faceResultados').innerHTML = '';
+    document.getElementById('facePessoaId').value = '';
+    if (typeof faceWebcamStop === 'function') faceWebcamStop();
+  }
 
   // ── ENVIAR LINK DE CADASTRO FACIAL ─────────────────────
   let _linkResultData = null; // {link, pessoa_tipo, pessoa_id, pessoa_nome, email}
@@ -8927,21 +8974,88 @@ docker compose up -d --build</pre>
       </div>`).join('');
   }
 
+  // ── Webcam ───────────────────────────────────────────
+  let _faceMode = 'upload';
+  let _faceWebcamStream = null;
+  let _faceWebcamBase64 = null;
+
+  function setFaceMode(m) {
+    _faceMode = m;
+    document.getElementById('faceModeUpload').style.background = m === 'upload' ? '#1a1a1a' : '#fff';
+    document.getElementById('faceModeUpload').style.color = m === 'upload' ? '#fff' : '#1a1a1a';
+    document.getElementById('faceModeWebcam').style.background = m === 'webcam' ? '#1a1a1a' : '#fff';
+    document.getElementById('faceModeWebcam').style.color = m === 'webcam' ? '#fff' : '#1a1a1a';
+    document.getElementById('faceUploadWrap').style.display = m === 'upload' ? 'block' : 'none';
+    document.getElementById('faceWebcamWrap').style.display = m === 'webcam' ? 'block' : 'none';
+    if (m !== 'webcam') faceWebcamStop();
+  }
+
+  async function faceWebcamStart() {
+    try {
+      _faceWebcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:1280}, height:{ideal:960} } });
+      const v = document.getElementById('faceWebcamVideo');
+      v.srcObject = _faceWebcamStream;
+      v.style.display = 'block';
+      document.getElementById('faceWebcamPlaceholder').style.display = 'none';
+      document.getElementById('faceWebcamPreview').style.display = 'none';
+      document.getElementById('faceWebcamStart').style.display = 'none';
+      document.getElementById('faceWebcamCapture').style.display = 'block';
+      document.getElementById('faceWebcamRetry').style.display = 'none';
+      _faceWebcamBase64 = null;
+    } catch (e) {
+      showToast('Não foi possível acessar a câmera: ' + e.message, 'error');
+    }
+  }
+
+  function faceWebcamCapture() {
+    const v = document.getElementById('faceWebcamVideo');
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    _faceWebcamBase64 = c.toDataURL('image/jpeg', 0.85);
+
+    const img = document.getElementById('faceWebcamPreview');
+    img.src = _faceWebcamBase64;
+    img.style.display = 'block';
+    v.style.display = 'none';
+    if (_faceWebcamStream) { _faceWebcamStream.getTracks().forEach(t => t.stop()); _faceWebcamStream = null; }
+    document.getElementById('faceWebcamCapture').style.display = 'none';
+    document.getElementById('faceWebcamRetry').style.display = 'block';
+  }
+
+  function faceWebcamRetry() {
+    _faceWebcamBase64 = null;
+    document.getElementById('faceWebcamPreview').style.display = 'none';
+    document.getElementById('faceWebcamRetry').style.display = 'none';
+    faceWebcamStart();
+  }
+
+  function faceWebcamStop() {
+    if (_faceWebcamStream) { _faceWebcamStream.getTracks().forEach(t => t.stop()); _faceWebcamStream = null; }
+    const v = document.getElementById('faceWebcamVideo'); if (v) v.style.display = 'none';
+  }
+
   async function salvarFace() {
     const pessoaId = document.getElementById('facePessoaId').value;
     const tipo = document.getElementById('faceTipo').value;
-    const fileInput = document.getElementById('faceFoto');
     if (!pessoaId) { showToast('Selecione uma pessoa.', 'error'); return; }
-    if (!fileInput.files.length) { showToast('Selecione uma foto.', 'error'); return; }
-    const reader = new FileReader();
-    reader.onload = async function() {
-      const d = await callAcesso({ action: 'acesso_face_cadastrar', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64: reader.result });
-      if (d.error) { showToast(d.error, 'error'); return; }
-      showToast('Face cadastrada!', 'success');
-      closeFaceModal();
-      loadAcessoFaces();
-    };
-    reader.readAsDataURL(fileInput.files[0]);
+
+    let foto_base64 = null;
+    if (_faceMode === 'webcam') {
+      if (!_faceWebcamBase64) { showToast('Tire uma foto antes.', 'error'); return; }
+      foto_base64 = _faceWebcamBase64;
+    } else {
+      const fileInput = document.getElementById('faceFoto');
+      if (!fileInput.files.length) { showToast('Selecione uma foto.', 'error'); return; }
+      foto_base64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(fileInput.files[0]); });
+    }
+
+    const d = await callAcesso({ action: 'acesso_face_create', pessoa_id: pessoaId, pessoa_tipo: tipo, foto_base64 });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Face cadastrada!', 'success');
+    closeFaceModal();
+    faceWebcamStop();
+    if (typeof loadAcessoFaces === 'function') loadAcessoFaces();
   }
 
   async function removerFace(id) {
@@ -9049,19 +9163,231 @@ docker compose up -d --build</pre>
       else if (aluno.atende_minimo) { badgeBg = '#fff8e1'; badgeColor = '#b07d10'; badgeIcon = '🟡'; badgeText = `${total}/${recom} cadastrados`; }
       else { badgeText = `${total}/${recom} — falta o obrigatório`; }
 
+      const btnConvidar = aluno.familia_email
+        ? `<button onclick="convidarFamilia('${aluno.id}','${escAttr(aluno.nome)}','${escAttr(aluno.familia_email)}')" style="padding:6px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;" title="Cria responsável obrigatório e envia email pra família tirar a foto">📧 Convidar família</button>`
+        : `<button disabled style="padding:6px 12px;background:#eee;color:#999;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:not-allowed;white-space:nowrap;" title="Sem email família — cadastre antes">📧 Sem email</button>`;
+
       return `<div style="background:var(--white);border-radius:14px;border:1px solid var(--border);padding:16px 20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
           <div>
             <div style="font-weight:600;font-size:15px;">${escHtml(aluno.nome||'—')}</div>
             ${aluno.familia_email ? `<div style="font-size:11px;color:var(--muted);">${escHtml(aluno.familia_email)}</div>` : '<div style="font-size:11px;color:#c0392b;">⚠️ sem email família</div>'}
           </div>
-          <span style="background:${badgeBg};color:${badgeColor};padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600;">${badgeIcon} ${escHtml(badgeText)}</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="background:${badgeBg};color:${badgeColor};padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600;">${badgeIcon} ${escHtml(badgeText)}</span>
+            ${btnConvidar}
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
           ${slots}
         </div>
       </div>`;
     }).join('');
+  }
+
+  // ── Import em massa de fotos ──────────────────────────
+  let _importFotosData = []; // [{file, base64, filename, normalized, matchAlunoId, matchAlunoNome, status}]
+  let _importAlunos = [];
+
+  function abrirImportFotosModal() {
+    document.getElementById('importFotosModal').classList.add('show');
+    document.getElementById('importFotosInput').value = '';
+    document.getElementById('importFotosTable').innerHTML = '';
+    document.getElementById('importFotosTable').style.display = 'none';
+    document.getElementById('importFotosStatus').textContent = '';
+    document.getElementById('importFotosSubmit').style.display = 'none';
+    _importFotosData = [];
+  }
+  function closeImportFotosModal() {
+    document.getElementById('importFotosModal').classList.remove('show');
+  }
+
+  function _normNome(s) {
+    return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  }
+
+  async function importFotosLoaded(ev) {
+    const files = Array.from(ev.target.files || []);
+    if (!files.length) return;
+    document.getElementById('importFotosStatus').textContent = `Carregando ${files.length} foto(s)…`;
+
+    // Buscar alunos da escola se ainda não temos
+    if (!_importAlunos.length) {
+      const r = await callAcesso({ action: 'acesso_alunos_responsaveis_status' });
+      _importAlunos = (r?.data?.alunos || r?.alunos || []).map(a => ({ id: a.id, nome: a.nome, norm: _normNome(a.nome) }));
+    }
+
+    _importFotosData = [];
+    for (const f of files) {
+      const filename = f.name;
+      const base = filename.replace(/\.[^.]+$/, '');
+      const norm = _normNome(base);
+      // Match: best fit por palavras em comum
+      let best = null, bestScore = 0;
+      for (const a of _importAlunos) {
+        const score = _matchScore(norm, a.norm);
+        if (score > bestScore) { bestScore = score; best = a; }
+      }
+      const base64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f); });
+      _importFotosData.push({
+        filename, base64,
+        matchAlunoId: bestScore >= 0.5 ? best?.id : null,
+        matchAlunoNome: bestScore >= 0.5 ? best?.nome : null,
+        score: bestScore,
+        status: 'pending',
+      });
+    }
+
+    document.getElementById('importFotosStatus').textContent = `${_importFotosData.length} foto(s) prontas. Revise e ajuste antes de subir.`;
+    renderImportFotosTable();
+    document.getElementById('importFotosTable').style.display = 'block';
+    document.getElementById('importFotosSubmit').style.display = 'inline-block';
+  }
+
+  function _matchScore(a, b) {
+    if (!a || !b) return 0;
+    const wa = new Set(a.split(' ').filter(w => w.length >= 3));
+    const wb = new Set(b.split(' ').filter(w => w.length >= 3));
+    if (!wa.size || !wb.size) return 0;
+    let common = 0;
+    wa.forEach(w => { if (wb.has(w)) common++; });
+    return common / Math.max(wa.size, wb.size);
+  }
+
+  function renderImportFotosTable() {
+    const opts = _importAlunos.map(a => `<option value="${a.id}">${escHtml(a.nome)}</option>`).join('');
+    const rows = _importFotosData.map((row, idx) => {
+      const previewSrc = row.base64;
+      const statusBadge = {
+        pending: '<span style="color:#888;">aguardando</span>',
+        uploading: '<span style="color:#1976d2;">enviando…</span>',
+        ok: '<span style="color:#2d7a3a;font-weight:600;">✓ OK</span>',
+        skip: '<span style="color:#888;">pulado</span>',
+        error: '<span style="color:#c0392b;font-weight:600;">✗ erro</span>',
+      }[row.status] || '';
+      const conf = row.score > 0.7 ? '🟢' : (row.score >= 0.5 ? '🟡' : '🔴');
+      return `<tr>
+        <td style="padding:6px;"><img src="${previewSrc}" style="width:48px;height:48px;border-radius:6px;object-fit:cover;"></td>
+        <td style="padding:6px;font-size:12px;font-family:monospace;color:#5a5249;">${escHtml(row.filename)}</td>
+        <td style="padding:6px;">
+          <select onchange="_importSetMatch(${idx}, this.value)" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;font-family:'DM Sans',sans-serif;">
+            <option value="">— pular —</option>
+            ${_importAlunos.map(a => `<option value="${a.id}" ${a.id === row.matchAlunoId ? 'selected' : ''}>${escHtml(a.nome)}</option>`).join('')}
+          </select>
+        </td>
+        <td style="padding:6px;font-size:14px;text-align:center;" title="confiança match">${conf}</td>
+        <td style="padding:6px;font-size:12px;">${statusBadge}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('importFotosTable').innerHTML = `<table style="width:100%;border-collapse:collapse;">
+      <thead style="background:#f8f5f0;position:sticky;top:0;"><tr><th style="padding:8px;text-align:left;font-size:11px;text-transform:uppercase;">Foto</th><th style="padding:8px;text-align:left;font-size:11px;text-transform:uppercase;">Arquivo</th><th style="padding:8px;text-align:left;font-size:11px;text-transform:uppercase;">Aluno</th><th style="padding:8px;font-size:11px;">Match</th><th style="padding:8px;text-align:left;font-size:11px;text-transform:uppercase;">Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  function _importSetMatch(idx, alunoId) {
+    if (!_importFotosData[idx]) return;
+    _importFotosData[idx].matchAlunoId = alunoId || null;
+    const a = _importAlunos.find(x => x.id === alunoId);
+    _importFotosData[idx].matchAlunoNome = a?.nome || null;
+  }
+
+  async function submitImportFotos() {
+    const toUpload = _importFotosData.filter(r => r.matchAlunoId);
+    if (!toUpload.length) { showToast('Nenhuma foto vinculada a aluno.', 'error'); return; }
+    if (!await _lumiedConfirm(`Subir ${toUpload.length} foto(s)? As que estão sem aluno (${_importFotosData.length - toUpload.length}) serão puladas.`)) return;
+    document.getElementById('importFotosSubmit').disabled = true;
+    let ok = 0, fail = 0;
+    for (let i = 0; i < _importFotosData.length; i++) {
+      const row = _importFotosData[i];
+      if (!row.matchAlunoId) { row.status = 'skip'; renderImportFotosTable(); continue; }
+      row.status = 'uploading'; renderImportFotosTable();
+      try {
+        const r = await callAcesso({
+          action: 'acesso_face_create',
+          pessoa_tipo: 'aluno', pessoa_id: row.matchAlunoId,
+          foto_base64: row.base64,
+        });
+        if (r?.error) { row.status = 'error'; fail++; }
+        else { row.status = 'ok'; ok++; }
+      } catch (e) { row.status = 'error'; fail++; }
+      renderImportFotosTable();
+    }
+    document.getElementById('importFotosSubmit').disabled = false;
+    document.getElementById('importFotosStatus').textContent = `✅ ${ok} sucesso, ✗ ${fail} falha(s)`;
+    showToast(`Concluído: ${ok} OK, ${fail} erro(s)`, ok > 0 ? 'success' : 'error');
+    if (typeof loadAcessoPermissoes === 'function') loadAcessoPermissoes();
+  }
+
+  // Bulk: convidar todas famílias com email cadastrado e sem responsável principal
+  async function convidarTodasFamilias() {
+    showToast('Carregando alunos pendentes…', 'info');
+    const r = await callAcesso({ action: 'acesso_alunos_responsaveis_status' });
+    const d = r?.data || r || {};
+    const list = (d.alunos || []).filter(a => !a.atende_minimo && a.familia_email);
+    if (!list.length) {
+      showToast('Nenhum aluno pendente com email — nada a fazer.', 'info');
+      return;
+    }
+    const semEmail = (d.alunos || []).filter(a => !a.atende_minimo && !a.familia_email).length;
+    const msg = `${list.length} email(s) serão enviados${semEmail ? ` (${semEmail} sem email — pulados)` : ''}.\n\nIsso vai criar um "Responsável principal" pra cada um e enviar o link. Continuar?`;
+    if (!await _lumiedConfirm(msg)) return;
+
+    let ok = 0, fail = 0;
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      showToast(`Enviando ${i+1}/${list.length}: ${a.nome}…`, 'info');
+      try {
+        const cr = await callAcesso({
+          action: 'acesso_responsavel_create',
+          aluno_id: a.id, responsavel_nome: 'Responsável principal',
+          parentesco: 'responsavel', responsavel_email: a.familia_email, gerar_link: true,
+        });
+        const cd = cr?.data || cr;
+        if (cr?.error || !cd?.responsavel_id) { fail++; continue; }
+        const er = await callAcesso({
+          action: 'acesso_enviar_link_email',
+          pessoa_tipo: 'responsavel', pessoa_id: cd.responsavel_id,
+          pessoa_nome: 'Responsável principal', email: a.familia_email,
+        });
+        const ed = er?.data || er;
+        if (ed?.sent) ok++; else fail++;
+      } catch (e) { fail++; }
+    }
+    showToast(`✅ ${ok} enviado(s), ${fail} falha(s) de ${list.length} total.`, ok > 0 ? 'success' : 'error');
+    loadAcessoPermissoes();
+  }
+
+  // Convidar família individual: cria responsável "Responsável principal" + envia email automático
+  async function convidarFamilia(alunoId, alunoNome, email) {
+    if (!await _lumiedConfirm(`Convidar a família de ${alunoNome} por email?\n\nVai criar um responsável "Responsável principal" e enviar pra ${email} um link pra tirar a foto. A família pode renomear depois ou completar com outros responsáveis (até 3).`)) return;
+    showToast('Criando responsável e enviando email…', 'info');
+    const r = await callAcesso({
+      action: 'acesso_responsavel_create',
+      aluno_id: alunoId,
+      responsavel_nome: 'Responsável principal',
+      parentesco: 'responsavel',
+      responsavel_email: email,
+      gerar_link: true,
+    });
+    const d = r?.data || r;
+    if (r?.error) { showToast('Erro: ' + r.error, 'error'); return; }
+    const link = d?.link?.link;
+    if (!link) { showToast('Falha ao gerar link.', 'error'); return; }
+
+    // Envia email
+    const er = await callAcesso({
+      action: 'acesso_enviar_link_email',
+      pessoa_tipo: 'responsavel',
+      pessoa_id: d.responsavel_id,
+      pessoa_nome: 'Responsável principal',
+      email,
+    });
+    const ed = er?.data || er;
+    if (ed?.sent) showToast(`✅ Email enviado para ${email}`, 'success');
+    else showToast('Responsável criado, mas email falhou: ' + (ed?.reason || 'erro'), 'error');
+
+    loadAcessoPermissoes();
   }
 
   function renderResponsavelSlots(aluno) {
