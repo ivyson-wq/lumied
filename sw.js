@@ -1,5 +1,5 @@
-// Lumied — Service Worker v8 (SWR em JS/CSS, Network-First HTML, Push)
-const CACHE_NAME = 'lumied-v8';
+// Lumied — Service Worker v9 (SWR em JS/CSS, Network-First HTML, Push)
+const CACHE_NAME = 'lumied-v9';
 const OFFLINE_ASSETS = [
   '/themes.css',
   '/webauthn-client.js',
@@ -59,8 +59,10 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // JS files: stale-while-revalidate — entrega cache imediato, atualiza em background.
-  if (url.pathname.endsWith('.js')) {
+  // JS e CSS: stale-while-revalidate — entrega cache imediato, atualiza
+  // em background. Mudança de CSS estilo "ontem cinza, hoje vermelho"
+  // chega no próximo refresh sem precisar Ctrl+Shift+R.
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
     e.respondWith(
       caches.match(e.request).then(cached => {
         const networkPromise = fetch(e.request).then(res => {
@@ -76,7 +78,7 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Other static assets (CSS, images, fonts): cache-first (ok to cache)
+  // Imagens, fonts e outros estáticos: cache-first (mudam raramente)
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
