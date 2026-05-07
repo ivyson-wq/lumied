@@ -2108,6 +2108,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
                   </select>
                 </div>
               </div>
+              <div style="margin-top:10px;">
+                <div class="ff" style="margin:0;"><label>📍 Localização física (sala/armário/prateleira)</label>
+                  <input type="text" id="almInsumoLocalizacao" placeholder="Ex: Sala 3 · Armário superior · Prateleira 2" list="almLocalizacoesList" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fdfbf8;">
+                  <datalist id="almLocalizacoesList"></datalist>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px;">Onde fica fisicamente — usado pra contar por setor no inventário.</div>
+                </div>
+              </div>
               <div style="display:flex;gap:8px;margin-top:14px;">
                 <button class="btn-create" onclick="almSalvarInsumo()">Salvar</button>
                 <button onclick="almLimparInsumoForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Limpar</button>
@@ -4784,6 +4791,7 @@ docker compose up -d --build</pre>
     if(id==='atestados')     loadAtestadosPanel?.();
     if(id==='almDash')     { almInitPanel(); almInitMonths(); almLoadRelatorio(); }
     if(id==='almReqs')     { almLoadPendentes(); }
+    if(id==='almInventario'){ document.getElementById('almInvListView').style.display='block'; document.getElementById('almInvCountView').style.display='none'; almInvCarregarLista(); }
     if(id==='almConfig')   { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); }
     // Legacy redirects
     if(id==='almPend')     { showPanel('almReqs'); return; }
@@ -11715,8 +11723,8 @@ docker compose up -d --build</pre>
         </div>
         <div style="text-align:right;white-space:nowrap;">
           ${g.preco_unit_medio != null
-            ? `<div style="font-size:10px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un.${g.preco_origem === 'referencia' ? ' <span title="preço de referência cadastrado" style="font-size:9px;">📌</span>' : g.preco_origem === 'cadastro' ? ' <span title="preço do cadastro do insumo" style="font-size:9px;">📋</span>' : ''}</div><div style="font-size:12px;font-weight:700;">${fmt(g.preco_total_estimado)}</div>`
-            : `<span title="${g.preco_baixa_confianca ? 'Busca retornou produto incerto (match baixo). Pesquise manualmente.' : 'Sem preço cadastrado'}" style="font-size:10px;color:#b45309;">⚠️ verificar</span>`}
+            ? `<div style="font-size:10px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un.${g.preco_origem === 'referencia' ? ` <span title="preço de referência cadastrado — clique pra editar" style="font-size:9px;cursor:pointer;" onclick='almAbrirSetRef(${JSON.stringify(g.chave)})'>📌</span>` : g.preco_origem === 'cadastro' ? ` <span title="preço do cadastro do insumo — clique pra cadastrar referência" style="font-size:9px;cursor:pointer;" onclick='almAbrirSetRef(${JSON.stringify(g.chave)})'>📋</span>` : ''}</div><div style="font-size:12px;font-weight:700;">${fmt(g.preco_total_estimado)}</div>`
+            : `<button onclick='almAbrirSetRef(${JSON.stringify(g.chave)})' title="${g.preco_baixa_confianca ? 'Busca retornou produto incerto. Clique pra cadastrar preço de referência.' : 'Cadastre preço de referência'}" style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">⚠️ Cadastrar preço</button>`}
         </div>
         <div style="display:flex;gap:4px;align-items:center;">${acoesCol}</div>
       </div>`;
@@ -11728,6 +11736,48 @@ docker compose up -d --build</pre>
   function almExportCompilado(formato) {
     const action = formato === 'xlsx' ? 'alm_compras_compilado_xlsx' : 'alm_compras_compilado_pdf';
     almBaixarPdf(action, 'status_filtro=' + encodeURIComponent(almComprasCompiladoStatus));
+  }
+
+  // Abre prompt pra cadastrar/editar preco_referencia. Se item não está
+  // catalogado, cria o insumo automaticamente antes de setar a referência.
+  async function almAbrirSetRef(chave) {
+    const g = _almGruposCache[chave];
+    if (!g) return;
+    const valorAtual = g.preco_origem === 'referencia' && g.preco_unit_medio != null
+      ? g.preco_unit_medio.toFixed(2).replace('.', ',') : '';
+    const txt = window.prompt(
+      `Preço de referência por unidade de "${g.nome}":\n\n` +
+      `Use o preço REAL por unidade de consumo (ex: 1 folha, 1 frasco).\n` +
+      `Use vírgula ou ponto como separador decimal.`,
+      valorAtual
+    );
+    if (txt == null || txt === '') return;
+    const preco = parseFloat(String(txt).replace(',', '.').replace(/[^\d.]/g, ''));
+    if (Number.isNaN(preco) || preco < 0) { showToast('Preço inválido.', 'error'); return; }
+
+    let insumoId = g.insumo_id;
+    // Se item livre (sem cataloged), cria o insumo agora
+    if (!insumoId) {
+      const dCria = await callDiplomas({
+        action: 'alm_insumo_save',
+        nome: g.nome,
+        unidade: 'unidade',
+        estoque_qty: 0,
+        preco: 0,
+        categoria: null,
+      });
+      if (dCria.error) { showToast('Erro ao criar insumo: ' + dCria.error, 'error'); return; }
+      insumoId = dCria.id;
+    }
+    const dRef = await callDiplomas({
+      action: 'alm_insumo_set_referencia',
+      id: insumoId,
+      preco_referencia: preco,
+      referencia_fonte: 'manual',
+    });
+    if (dRef.error) { showToast('Erro: ' + dRef.error, 'error'); return; }
+    showToast(`✅ Preço de referência cadastrado: R$ ${preco.toFixed(2).replace('.', ',')}/un.`, 'success');
+    almLoadCompiladoCompras();
   }
 
   async function almMarcarGrupoComprado(ids, nome) {
@@ -12172,7 +12222,14 @@ docker compose up -d --build</pre>
   async function almLoadInsumos() {
     const d = await callDiplomas({ action: 'alm_insumos_list' });
     const insumos = d.data || [];
+    _almInvCatalogoCache = insumos;  // reaproveitado pelo modal de inventário
     document.getElementById('almInsumosCount').textContent = insumos.filter((i)=>i.ativo).length;
+    // Popula datalist de localizações já cadastradas
+    const dataList = document.getElementById('almLocalizacoesList');
+    if (dataList) {
+      const locs = [...new Set(insumos.map(i=>i.localizacao).filter(Boolean))].sort();
+      dataList.innerHTML = locs.map(l=>`<option value="${esc(l)}">`).join('');
+    }
     document.getElementById('almInsumosList').innerHTML = insumos.map((it) => {
       return `<div class="alm-insumo-row" style="${!it.ativo ? 'opacity:.5;' : ''}">
         <div style="display:flex;align-items:center;gap:10px;flex:1;">
@@ -12181,6 +12238,7 @@ docker compose up -d --build</pre>
             <div style="font-size:11px;color:var(--muted);">
               ${it.categoria||'Geral'} · Estoque: ${it.estoque_qty} ${it.unidade}
               ${it.qtd_por_embalagem > 1 ? ` · Embalagem: ${it.unidade_compra||'cx'} c/ ${it.qtd_por_embalagem} ${it.unidade}` : ''}
+              ${it.localizacao ? ` · 📍 ${esc(it.localizacao)}` : ''}
             </div>
             <div style="font-size:11px;">
               <strong>${almFmtBRL(it.preco)}</strong>${it.qtd_por_embalagem > 1 ? `/${it.unidade_compra||'emb'} <span style="color:#2d7a3a;font-weight:600;">(${almFmtBRL(it.preco/it.qtd_por_embalagem)}/${it.unidade})</span>` : `/${it.unidade}`}
@@ -12237,6 +12295,283 @@ docker compose up -d --build</pre>
     modal.innerHTML = `<div style="background:#fff;border-radius:14px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;">${html}</div>`;
   }
 
+  // ═══ INVENTÁRIO FÍSICO (sessão persistida) ═══════════════════════
+  let _almInvSessao = null;
+  let _almInvItens  = [];
+  let _almInvCatalogoCache = null;
+
+  async function almInvCarregarLista() {
+    const d = await callDiplomas({ action: 'alm_inventario_list' });
+    const sessoes = d.data || [];
+    const box = document.getElementById('almInvLista');
+    if (!sessoes.length) {
+      box.innerHTML = '<div class="empty-state">Nenhuma sessão de inventário ainda. Clique em "Nova Contagem" para começar.</div>';
+      return;
+    }
+    box.innerHTML = sessoes.map(s => {
+      const statusBadge = s.status === 'rascunho'
+        ? '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">📝 Em andamento</span>'
+        : s.status === 'finalizado'
+          ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">✅ Finalizado</span>'
+          : '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">❌ Cancelado</span>';
+      const data = new Date(s.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const filtros = [];
+      if (s.filtro_localizacao) filtros.push('📍 ' + s.filtro_localizacao);
+      if (s.filtro_categoria) filtros.push('🏷️ ' + s.filtro_categoria);
+      const acao = s.status === 'rascunho'
+        ? `<button onclick="almInvAbrirSessao('${s.id}')" class="btn-create" style="padding:6px 14px;background:#1a6bb5;">▶️ Continuar</button>`
+        : `<button onclick="almInvAbrirSessao('${s.id}')" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">🔎 Ver relatório</button>`;
+      return `
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              ${esc(s.nome)} ${statusBadge}
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+              ${data} · ${s.total_contados}/${s.total_itens} contados${s.total_divergencias>0?` · <b style="color:#d97706;">${s.total_divergencias} divergências</b>`:''}
+              ${filtros.length?' · '+filtros.join(' '):''}
+            </div>
+          </div>
+          ${acao}
+        </div>`;
+    }).join('');
+  }
+
+  async function almInvAbrirNovo() {
+    if (!_almInvCatalogoCache) {
+      const d = await callDiplomas({ action: 'alm_insumos_list' });
+      _almInvCatalogoCache = d.data || [];
+    }
+    const cats = [...new Set(_almInvCatalogoCache.map(i=>i.categoria).filter(Boolean))].sort();
+    const locs = [...new Set(_almInvCatalogoCache.map(i=>i.localizacao).filter(Boolean))].sort();
+    const html = `
+      <div style="background:#fff;border-radius:14px;padding:24px;max-width:520px;width:100%;">
+        <h3 style="font-family:'Lora',serif;font-size:17px;margin-bottom:14px;">📋 Nova Sessão de Inventário</h3>
+        <div class="ff" style="margin-bottom:12px;">
+          <label>Nome da contagem *</label>
+          <input id="almInvNovoNome" type="text" placeholder="Ex: Inventário inicial Maio/2026" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;">
+        </div>
+        <div class="ff" style="margin-bottom:12px;">
+          <label>Descrição (opcional)</label>
+          <input id="almInvNovoDesc" type="text" placeholder="Ex: Conferência completa pós-recesso" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;">
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div class="ff" style="flex:1;">
+            <label>Filtrar por localização</label>
+            <select id="almInvNovoLoc" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;">
+              <option value="">Todas</option>
+              ${locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="ff" style="flex:1;">
+            <label>Filtrar por categoria</label>
+            <select id="almInvNovoCat" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;">
+              <option value="">Todas</option>
+              ${cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:16px;">💡 Dica: deixe sem filtros para um inventário completo. Filtre por localização (sala/armário) para contar por setor.</p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button onclick="document.getElementById('almInvNovoModal').remove()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+          <button onclick="almInvCriarSessao()" class="btn-create" style="padding:8px 18px;background:#1a6bb5;">📋 Criar e começar</button>
+        </div>
+      </div>`;
+    let modal = document.getElementById('almInvNovoModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'almInvNovoModal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;display:flex;align-items:center;justify-content:center;padding:20px;';
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML = html;
+  }
+
+  async function almInvCriarSessao() {
+    const nome = document.getElementById('almInvNovoNome').value.trim();
+    if (!nome) { showToast('Nome obrigatório.', 'error'); return; }
+    const descricao = document.getElementById('almInvNovoDesc').value.trim();
+    const filtro_localizacao = document.getElementById('almInvNovoLoc').value || null;
+    const filtro_categoria = document.getElementById('almInvNovoCat').value || null;
+    const d = await callDiplomas({ action: 'alm_inventario_criar', nome, descricao, filtro_categoria, filtro_localizacao });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    document.getElementById('almInvNovoModal').remove();
+    showToast(`✅ Sessão criada com ${d.total} itens`, 'success');
+    almInvAbrirSessao(d.id);
+  }
+
+  async function almInvAbrirSessao(id) {
+    const d = await callDiplomas({ action: 'alm_inventario_get', id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    _almInvSessao = d.inventario;
+    _almInvItens  = d.itens || [];
+    document.getElementById('almInvListView').style.display = 'none';
+    document.getElementById('almInvCountView').style.display = 'block';
+    document.getElementById('almInvNomeHeader').textContent = _almInvSessao.nome + (_almInvSessao.status !== 'rascunho' ? ' · ' + _almInvSessao.status : '');
+    const locs = [...new Set(_almInvItens.map(i=>i.localizacao_snapshot).filter(Boolean))].sort();
+    const cats = [...new Set(_almInvItens.map(i=>i.categoria_snapshot).filter(Boolean))].sort();
+    document.getElementById('almInvFiltroLoc').innerHTML = '<option value="">Toda localização</option>' + locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
+    document.getElementById('almInvFiltroCat').innerHTML = '<option value="">Toda categoria</option>' + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    if (_almInvSessao.status !== 'rascunho') {
+      document.getElementById('almInvFiltroStatus').value = 'todos';
+    }
+    almInvRender();
+  }
+
+  function almInvVoltar() {
+    _almInvSessao = null;
+    _almInvItens = [];
+    document.getElementById('almInvCountView').style.display = 'none';
+    document.getElementById('almInvListView').style.display = 'block';
+    almInvCarregarLista();
+  }
+
+  function almInvRender() {
+    if (!_almInvSessao) return;
+    const search = (document.getElementById('almInvSearch').value || '').toLowerCase().trim();
+    const fLoc = document.getElementById('almInvFiltroLoc').value;
+    const fCat = document.getElementById('almInvFiltroCat').value;
+    const fStatus = document.getElementById('almInvFiltroStatus').value;
+
+    const lista = _almInvItens.filter(it => {
+      if (search && !(it.nome_snapshot||'').toLowerCase().includes(search)) return false;
+      if (fLoc && it.localizacao_snapshot !== fLoc) return false;
+      if (fCat && it.categoria_snapshot !== fCat) return false;
+      if (fStatus === 'pendente' && it.contado) return false;
+      if (fStatus === 'contado' && !it.contado) return false;
+      if (fStatus === 'divergente') {
+        if (!it.contado) return false;
+        if (Number(it.saldo_contado) === Number(it.saldo_sistema)) return false;
+      }
+      return true;
+    });
+
+    const total = _almInvItens.length;
+    const contados = _almInvItens.filter(i=>i.contado).length;
+    const divs = _almInvItens.filter(i=>i.contado && Number(i.saldo_contado)!==Number(i.saldo_sistema)).length;
+    document.getElementById('almInvProgLabel').textContent = `${contados} / ${total}`;
+    document.getElementById('almInvDivLabel').textContent = divs;
+    document.getElementById('almInvProgBar').style.width = total ? Math.round(contados/total*100) + '%' : '0%';
+
+    const box = document.getElementById('almInvItens');
+    if (!lista.length) {
+      box.innerHTML = '<div class="empty-state">Nenhum item neste filtro.</div>';
+      return;
+    }
+
+    const grupos = {};
+    lista.forEach(it => {
+      const k = it.localizacao_snapshot || '— Sem localização —';
+      if (!grupos[k]) grupos[k] = [];
+      grupos[k].push(it);
+    });
+
+    const readonly = _almInvSessao.status !== 'rascunho';
+
+    box.innerHTML = Object.keys(grupos).sort().map(loc => {
+      const itens = grupos[loc];
+      return `
+        <div style="margin-bottom:18px;">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;border-bottom:1.5px solid var(--border);padding-bottom:6px;">📍 ${esc(loc)} <span style="font-weight:500;color:#999;">(${itens.length})</span></div>
+          ${itens.map(it => {
+            const diff = it.contado && Number(it.saldo_contado) !== Number(it.saldo_sistema);
+            const corBorda = !it.contado ? 'var(--border)' : (diff ? '#d97706' : '#16a34a');
+            const corFundo = !it.contado ? '#fff' : (diff ? '#fffbeb' : '#f0fdf4');
+            const diffVal = it.contado ? (Number(it.saldo_contado) - Number(it.saldo_sistema)) : 0;
+            return `
+              <div style="background:${corFundo};border:1.5px solid ${corBorda};border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:180px;">
+                  <div style="font-weight:600;font-size:14px;">${esc(it.nome_snapshot)}</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+                    ${esc(it.categoria_snapshot||'Geral')} · Sistema: <b>${it.saldo_sistema}</b> ${esc(it.unidade_snapshot||'')}
+                    ${it.contado ? ` · Contado: <b style="color:${diff?'#d97706':'#16a34a'};">${it.saldo_contado}</b>` : ''}
+                    ${diff ? ` · Diff: <b style="color:#d97706;">${diffVal>0?'+':''}${diffVal}</b>` : ''}
+                  </div>
+                  ${it.observacao ? `<div style="font-size:11px;color:#92400e;margin-top:2px;">📝 ${esc(it.observacao)}</div>` : ''}
+                </div>
+                ${readonly ? '' : `
+                  <input type="number" inputmode="decimal" step="any" min="0" placeholder="Contar..."
+                    value="${it.contado ? it.saldo_contado : ''}"
+                    data-item-id="${it.id}"
+                    onchange="almInvSalvarContagem('${it.id}', this.value, this)"
+                    style="width:110px;padding:9px 10px;border:1.5px solid ${corBorda};border-radius:8px;font-family:inherit;font-size:14px;text-align:right;font-weight:600;">
+                  <button onclick="almInvAddObs('${it.id}')" title="Adicionar observação" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;cursor:pointer;">📝</button>
+                  ${it.contado ? `<button onclick="almInvLimparContagem('${it.id}')" title="Limpar contagem" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;color:var(--muted);">↺</button>` : ''}
+                `}
+              </div>`;
+          }).join('')}
+        </div>`;
+    }).join('');
+  }
+
+  async function almInvSalvarContagem(itemId, valor, inputEl) {
+    if (valor === '' || valor === null || valor === undefined) return;
+    const d = await callDiplomas({ action: 'alm_inventario_contar', item_id: itemId, saldo_contado: valor });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    const it = _almInvItens.find(x => x.id === itemId);
+    if (it) {
+      it.saldo_contado = parseFloat(String(valor).replace(',','.'));
+      it.contado = true;
+      it.contado_em = new Date().toISOString();
+    }
+    almInvRender();
+    if (inputEl) inputEl.blur();
+  }
+
+  async function almInvLimparContagem(itemId) {
+    const d = await callDiplomas({ action: 'alm_inventario_contar', item_id: itemId, saldo_contado: null });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    const it = _almInvItens.find(x => x.id === itemId);
+    if (it) { it.saldo_contado = null; it.contado = false; it.observacao = null; }
+    almInvRender();
+  }
+
+  async function almInvAddObs(itemId) {
+    const it = _almInvItens.find(x => x.id === itemId);
+    if (!it) return;
+    const obs = window.prompt('Observação (motivo da divergência, validade, lote, etc):', it.observacao || '');
+    if (obs === null) return;
+    const d = await callDiplomas({
+      action: 'alm_inventario_contar', item_id: itemId,
+      saldo_contado: it.contado ? it.saldo_contado : null,
+      observacao: obs.trim() || null,
+    });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    it.observacao = obs.trim() || null;
+    almInvRender();
+  }
+
+  async function almInvCancelarSessao() {
+    if (!_almInvSessao || _almInvSessao.status !== 'rascunho') return;
+    if (!window.confirm(`Cancelar a sessão "${_almInvSessao.nome}"? Os ajustes NÃO serão aplicados.`)) return;
+    const d = await callDiplomas({ action: 'alm_inventario_cancelar', id: _almInvSessao.id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Sessão cancelada.', 'info');
+    almInvVoltar();
+  }
+
+  async function almInvFinalizarSessao() {
+    if (!_almInvSessao || _almInvSessao.status !== 'rascunho') return;
+    const total = _almInvItens.length;
+    const contados = _almInvItens.filter(i=>i.contado).length;
+    const naoContados = total - contados;
+    const divs = _almInvItens.filter(i=>i.contado && Number(i.saldo_contado)!==Number(i.saldo_sistema)).length;
+
+    let aplicar_nao_contados = false;
+    let msg = `Finalizar inventário?\n\n• ${contados}/${total} itens contados\n• ${divs} divergências serão aplicadas como ajuste de estoque`;
+    if (naoContados > 0) {
+      msg += `\n\n⚠️ ${naoContados} itens NÃO foram contados. Eles permanecerão com o saldo atual (sem ajuste).`;
+      if (!window.confirm(msg + '\n\nFinalizar mesmo assim?')) return;
+      aplicar_nao_contados = true;
+    } else {
+      if (!window.confirm(msg)) return;
+    }
+    const d = await callDiplomas({ action: 'alm_inventario_finalizar', id: _almInvSessao.id, aplicar_nao_contados });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast(`✅ Inventário finalizado · ${d.aplicados} ajustes aplicados`, 'success');
+    almInvVoltar();
+  }
+
   async function almEditarInsumoById(id) {
     const d = await callDiplomas({ action: 'alm_insumos_list' });
     const it = (d.data || []).find(i => i.id === id);
@@ -12253,13 +12588,14 @@ docker compose up -d --build</pre>
     document.getElementById('almInsumoCategoria').value= it.categoria||'';
     document.getElementById('almInsumoUnidadeCompra').value = it.unidade_compra||'';
     document.getElementById('almInsumoQtdEmb').value   = it.qtd_por_embalagem||1;
+    document.getElementById('almInsumoLocalizacao').value = it.localizacao||'';
     almAtualizarPrecoUnit();
     document.getElementById('almInsumoFormTitle').textContent = '✏️ Editar Insumo';
     document.getElementById('almInsumoFormCard').scrollIntoView({ behavior:'smooth' });
   }
 
   function almLimparInsumoForm() {
-    ['almInsumoId','almInsumoNome','almInsumoDesc','almInsumoEstoque','almInsumoPreco','almInsumoCategoria','almInsumoUnidadeCompra'].forEach(id => document.getElementById(id).value='');
+    ['almInsumoId','almInsumoNome','almInsumoDesc','almInsumoEstoque','almInsumoPreco','almInsumoCategoria','almInsumoUnidadeCompra','almInsumoLocalizacao'].forEach(id => document.getElementById(id).value='');
     document.getElementById('almInsumoUnidade').value = 'unidade';
     document.getElementById('almInsumoQtdEmb').value = '1';
     document.getElementById('almPrecoUnitInfo').textContent = '';
@@ -12294,6 +12630,7 @@ docker compose up -d --build</pre>
       categoria:        document.getElementById('almInsumoCategoria').value.trim(),
       unidade_compra:   document.getElementById('almInsumoUnidadeCompra').value.trim() || null,
       qtd_por_embalagem: parseFloat(document.getElementById('almInsumoQtdEmb').value) || 1,
+      localizacao:      document.getElementById('almInsumoLocalizacao').value.trim() || null,
     });
     if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
     okEl.textContent = '✅ Insumo salvo!'; okEl.classList.add('show');

@@ -1,0 +1,13 @@
+name = "reval-proxy"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Smart Placement: CF detecta que o backend (reval.net) está no Brasil e
+# migra o worker pra rodar de PoP próximo, em vez do PoP mais perto do caller.
+# Necessário porque o Reval só entrega HTML completo pra IPs brasileiros.
+[placement]
+mode = "smart"
+
+[[kv_namespaces]]
+binding = "REVAL_CACHE"
+id = "9afb0054ba8f4eb2bbb46966fe1f6e6b"

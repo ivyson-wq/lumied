@@ -1685,11 +1685,6 @@ Deno.serve(async (req) => {
           const html = proxyData.html || ''
           const blocks = html.split('<li class="item">').slice(1)
           let revalCount = 0
-          ;(fontes as any)['_reval_debug'] = {
-            proxy_len: proxyData.len, proxy_hasItems: proxyData.hasItems,
-            html_recv: html.length, blocks: blocks.length,
-            sample: blocks[0]?.substring(0, 400) ?? '(no blocks)',
-          }
           for (const blk of blocks) {
             if (revalCount >= 6) break
             const hrefM = /<a href="(\/produto\/[^"]+)"[^>]*title="([^"]+)"\s*class="product-image"/.exec(blk)
