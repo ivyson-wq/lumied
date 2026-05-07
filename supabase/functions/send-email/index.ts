@@ -122,6 +122,46 @@ function emailCadastroFace(body: Record<string, unknown>, escolaNome: string, co
   }
 }
 
+function emailNotifPaiAutorizou(body: Record<string, unknown>, escolaNome: string, cor: string, icone: string): { subject: string; html: string } {
+  const { aluno_nome, responsavel_nome, responsavel_cpf, responsavel_email, parentesco, validade, pai_email } = body
+  const validadeFmt = validade ? new Date(String(validade)).toLocaleDateString('pt-BR') : '<em>permanente</em>'
+  const cpfFmt = String(responsavel_cpf || '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+  return {
+    subject: `🔔 Nova autorização de retirada — ${aluno_nome}`,
+    html: `
+      <div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
+        <h2 style="color:${cor};margin:0 0 8px 0;">${icone} ${escolaNome}</h2>
+        <p style="font-size:15px;line-height:1.6;margin:16px 0;">
+          O responsável legal <strong>${pai_email}</strong> cadastrou uma nova pessoa autorizada para retirar
+          o(a) aluno(a) <strong>${aluno_nome}</strong>.
+        </p>
+        <div style="background:#f8f5f0;border-left:4px solid ${cor};border-radius:8px;padding:16px 18px;margin:16px 0;">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="padding:6px 0;color:#5a5249;width:130px;">Autorizado:</td><td style="padding:6px 0;font-weight:600;">${responsavel_nome}</td></tr>
+            <tr><td style="padding:6px 0;color:#5a5249;">CPF:</td><td style="padding:6px 0;font-family:'DM Mono',monospace;">${cpfFmt}</td></tr>
+            <tr><td style="padding:6px 0;color:#5a5249;">Email:</td><td style="padding:6px 0;">${responsavel_email}</td></tr>
+            <tr><td style="padding:6px 0;color:#5a5249;">Parentesco:</td><td style="padding:6px 0;">${parentesco || '—'}</td></tr>
+            <tr><td style="padding:6px 0;color:#5a5249;">Validade:</td><td style="padding:6px 0;font-weight:600;">${validadeFmt}</td></tr>
+          </table>
+        </div>
+        <p style="font-size:13px;color:#5a5249;line-height:1.6;margin:16px 0;">
+          ✉️ Um link de cadastro facial foi enviado automaticamente para <strong>${responsavel_email}</strong>.
+          Após a foto chegar, vocês precisam <strong>aprovar manualmente</strong> no painel do gerente
+          (Controle de Acesso → Faces Cadastradas → Pendentes Aprovação).
+        </p>
+        <p style="font-size:12px;color:#999;margin:24px 0 0 0;">
+          Esta autorização foi criada pelo próprio responsável legal pelo portal dos pais. Para revogar,
+          ele mesmo pode fazer pelo portal — ou vocês podem desativar manualmente em Permissões de Retirada.
+        </p>
+        <hr style="border:none;border-top:1px solid #e2dbd1;margin:32px 0 16px;">
+        <p style="font-size:11px;color:#999;text-align:center;margin:0;">
+          Notificação automática — ${escolaNome}
+        </p>
+      </div>
+    `,
+  }
+}
+
 // ── Handler ──────────────────────────────────────────────────
 Deno.serve(async (req) => {
   CORS = getCorsHeaders(req)
@@ -156,6 +196,7 @@ Deno.serve(async (req) => {
     case 'turno':     email = emailTurno(body, escolaNome, cor, icone); break
     case 'atividade': email = emailAtividade(body, escolaNome, cor, icone); break
     case 'cadastro_face': email = emailCadastroFace(body, escolaNome, cor, icone); break
+    case 'notif_pai_autorizou': email = emailNotifPaiAutorizou(body, escolaNome, cor, icone); break
     default: return err('Tipo de e-mail não reconhecido: ' + tipo)
   }
 

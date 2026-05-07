@@ -1523,6 +1523,26 @@ router.on("acesso_pai_autorizar_create", async (ctx) => {
   const matchPorNome = familias.some((f: Any) => String(f.nome_aluno || "").trim() === String(aluno.nome || "").trim());
   if (!matchPorEmail && !matchPorNome) throw new AppError("FORBIDDEN", "Esse aluno não pertence à sua família.");
 
+  // LIMITE: max autorizações ativas por aluno (configurável em escola_config)
+  const { data: cfgRows } = await ctx.sb.from("escola_config")
+    .select("chave, valor").eq("escola_id", escolaId).eq("chave", "max_autorizados_por_aluno");
+  const maxAutorizados = Number(cfgRows?.[0]?.valor ?? 10) || 10;
+  const { count: ativosCount } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id", { count: "exact", head: true })
+    .eq("aluno_id", aluno_id)
+    .eq("autorizado", true);
+  if ((ativosCount ?? 0) >= maxAutorizados) {
+    throw new AppError("VALIDATION_FAILED", `Limite de ${maxAutorizados} autorizações ativas atingido para esse aluno. Revogue alguma antes de adicionar.`);
+  }
+
+  // Anti-duplicação: bloqueia se já existe autorização ativa com mesmo CPF + aluno
+  const { data: dupCheck } = await ctx.sb.from("acesso_permissoes_retirada")
+    .select("id").eq("aluno_id", aluno_id).eq("autorizado", true)
+    .eq("responsavel_cpf", cpfDigits).maybeSingle();
+  if (dupCheck?.id) {
+    throw new AppError("VALIDATION_FAILED", "Já existe uma autorização ativa para essa pessoa. Revogue antes de criar nova.");
+  }
+
   // Cria autorização
   const responsavel_id = crypto.randomUUID();
   const { data: perm, error } = await ctx.sb.from("acesso_permissoes_retirada").insert({
@@ -1584,6 +1604,30 @@ router.on("acesso_pai_autorizar_create", async (ctx) => {
     emailSent = !!sb?.sent;
     if (!emailSent) emailReason = sb?.reason || `HTTP ${sr.status}`;
   } catch (e) { emailReason = String(e); }
+
+  // Fire-and-forget: notifica a secretaria/gerente
+  try {
+    const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`;
+    fetch(sendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        tipo: "notif_pai_autorizou",
+        escola_id: escolaId,
+        aluno_nome: aluno.nome,
+        responsavel_nome,
+        responsavel_cpf: cpfDigits,
+        responsavel_email,
+        parentesco: parentesco || "outro",
+        validade,
+        pai_email: email,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    }).catch((e) => console.warn("[notif_pai_autorizou] Falhou:", String(e)));
+  } catch (_) { /* ignore */ }
 
   return successResponse({ ok: true, permissao_id: perm.id, responsavel_id, link, email_enviado: emailSent, email_reason: emailReason });
 });
