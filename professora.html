@@ -2825,7 +2825,7 @@ body.dash-clean #greetingBar{display:none;}
     }).join('');
   }
 
-  function fmtDate(iso) { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
+  function fmtDate(iso) { if (!iso) return '—'; const [y,m,d] = String(iso).slice(0,10).split('-'); return (d && m && y) ? `${d}/${m}/${y}` : '—'; }
 
   function esc(s) {
     return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
