@@ -1795,6 +1795,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <button class="alm-utab active" onclick="almReqsSetTab('pend',this)">Pendentes <span id="almPendBadge" style="background:#e67e22;color:#fff;font-size:10px;border-radius:10px;padding:1px 7px;margin-left:4px;"></span></button>
           <button class="alm-utab" onclick="almReqsSetTab('hist',this)">Histórico</button>
           <button class="alm-utab" onclick="almReqsSetTab('compras',this)">Compras</button>
+          <button class="alm-utab" onclick="almReqsSetTab('relat',this)">📊 Relatórios</button>
         </div>
         <!-- Tab: Pendentes -->
         <div id="almReqTabPend">
@@ -1860,6 +1861,50 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div id="almComprasLoading" class="empty-state">⏳ Carregando…</div>
           <div id="almComprasList"></div>
           <div class="f-alert success" id="almComprasOk" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- Tab: Relatórios -->
+        <div id="almReqTabRelat" style="display:none;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:end;">
+            <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;">Status</label><br>
+              <select id="almRelatStatus" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+                <option value="">Todos</option><option value="pendente">⏳ Pendente</option><option value="aprovado">✅ Aprovado</option><option value="rejeitado">❌ Rejeitado</option>
+              </select>
+            </div>
+            <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;">Turma</label><br>
+              <select id="almRelatTurma" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;min-width:140px;"><option value="">Todas</option></select>
+            </div>
+            <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;">De</label><br>
+              <input type="date" id="almRelatDataDe" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            </div>
+            <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;">Até</label><br>
+              <input type="date" id="almRelatDataAte" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            </div>
+            <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;">Fornecedor (link)</label><br>
+              <input type="text" id="almRelatFornecedor" placeholder="ex: mercadolivre" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            </div>
+            <div><label style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600;">Agrupar por</label><br>
+              <select id="almRelatAgrup" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+                <option value="">— sem agrupamento —</option>
+                <option value="turma">Turma</option><option value="professora">Professora</option>
+                <option value="categoria">Categoria</option><option value="mes">Mês</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+            <button onclick="almRelatRodar()" class="btn-create" style="padding:8px 18px;">▶️ Rodar</button>
+            <button onclick="almRelatExport('xlsx')" class="btn-create" style="padding:8px 14px;background:#0b7a4b;">📊 XLSX</button>
+            <button onclick="almRelatExport('pdf')" class="btn-create" style="padding:8px 14px;background:#b5591a;">📄 PDF</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+            <select id="almRelatVis" onchange="almRelatAplicarVis(this.value)" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;">
+              <option value="">— minhas visualizações salvas —</option>
+            </select>
+            <input type="text" id="almRelatVisNome" placeholder="Nome da visualização" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;">
+            <button onclick="almRelatSalvarVis()" style="padding:6px 12px;background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;">💾 Salvar</button>
+            <button onclick="almRelatExcluirVis()" style="padding:6px 12px;background:none;border:1px solid #fed7aa;color:#b5591a;border-radius:8px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;">🗑️ Excluir</button>
+          </div>
+          <div id="almRelatTotais" style="margin-bottom:8px;font-size:12px;color:var(--muted);"></div>
+          <div id="almRelatResultado" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;min-height:160px;font-size:12px;">Configure os filtros e clique em "Rodar".</div>
         </div>
       </div>
 
@@ -10388,9 +10433,129 @@ docker compose up -d --build</pre>
     document.getElementById('almReqTabPend').style.display = tab === 'pend' ? '' : 'none';
     document.getElementById('almReqTabHist').style.display = tab === 'hist' ? '' : 'none';
     document.getElementById('almReqTabCompras').style.display = tab === 'compras' ? '' : 'none';
+    document.getElementById('almReqTabRelat').style.display = tab === 'relat' ? '' : 'none';
     if (tab === 'pend') almLoadPendentes();
     if (tab === 'hist') { almInitMonths(); almLoadTodas(); }
     if (tab === 'compras') almLoadCompras();
+    if (tab === 'relat') almRelatInit();
+  }
+
+  // ── Relatórios dinâmicos ──────────────────────────────
+  var almRelatLastResult = null;
+  var almRelatVisCache = [];
+
+  async function almRelatInit() {
+    // Popula turmas no filtro
+    const sel = document.getElementById('almRelatTurma');
+    if (sel.options.length <= 1) {
+      const d = await api({ action: 'series_list_all' });
+      (Array.isArray(d) ? d : []).forEach(s => sel.add(new Option(s.nome, s.id)));
+    }
+    almRelatLoadVisualizacoes();
+  }
+
+  async function almRelatLoadVisualizacoes() {
+    const d = await callDiplomas({ action: 'alm_relatorio_visualizacoes_list' });
+    almRelatVisCache = d.data || [];
+    const sel = document.getElementById('almRelatVis');
+    sel.innerHTML = '<option value="">— minhas visualizações salvas —</option>' +
+      almRelatVisCache.map(v => `<option value="${v.id}">${esc(v.nome)}</option>`).join('');
+  }
+
+  function almRelatColetar() {
+    return {
+      filtros: {
+        status: document.getElementById('almRelatStatus').value || null,
+        turma_id: document.getElementById('almRelatTurma').value || null,
+        data_de: document.getElementById('almRelatDataDe').value || null,
+        data_ate: document.getElementById('almRelatDataAte').value || null,
+        fornecedor: document.getElementById('almRelatFornecedor').value.trim() || null,
+      },
+      agrupamento: document.getElementById('almRelatAgrup').value || null,
+    };
+  }
+
+  async function almRelatRodar() {
+    const wrap = document.getElementById('almRelatResultado');
+    wrap.innerHTML = '⏳ Consultando…';
+    const cfg = almRelatColetar();
+    const d = await callDiplomas({ action: 'alm_relatorio_query', ...cfg });
+    if (d.error) { wrap.innerHTML = `<div class="f-alert error show">${esc(d.error)}</div>`; return; }
+    almRelatLastResult = d;
+    document.getElementById('almRelatTotais').textContent =
+      `${d.total_linhas} item(ns) · Total ${almFmtBRL(d.total_valor || 0)}` +
+      (d.agrupamento ? ` · agrupado por ${d.agrupamento}` : '');
+    if (d.agrupamento && d.grupos?.length) {
+      wrap.innerHTML = d.grupos.map((g, i) => `
+        <div style="border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="document.getElementById('almRelatGrp_${i}').style.display = document.getElementById('almRelatGrp_${i}').style.display==='none'?'block':'none'">
+            <strong>${esc(g.chave)}</strong>
+            <span style="font-size:11px;color:var(--muted);">${g.itens} itens · ${almFmtBRL(g.valor)} · ▾</span>
+          </div>
+          <div id="almRelatGrp_${i}" style="display:none;margin-top:8px;font-size:11px;">
+            ${g.linhas.slice(0,30).map(l => `<div style="padding:4px 0;border-bottom:1px solid #f0ece6;">${new Date(l.data).toLocaleDateString('pt-BR')} · ${esc(l.nome)} ×${l.qty_aprovado || l.qty_solicitado} · ${almFmtBRL(l.valor)} · ${esc(l.status)}</div>`).join('')}
+            ${g.linhas.length > 30 ? `<div style="color:var(--muted);font-size:10px;padding:4px 0;">+${g.linhas.length-30} linha(s)…</div>` : ''}
+          </div>
+        </div>`).join('');
+    } else {
+      const linhas = d.linhas || [];
+      wrap.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;font-size:11px;border-collapse:collapse;">
+        <tr style="background:#f9f7f4;text-align:left;"><th style="padding:6px 8px;">Data</th><th>Status</th><th>Turma</th><th>Professora</th><th>Item</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Valor</th></tr>
+        ${linhas.map(l => `<tr style="border-bottom:1px solid #f0ece6;">
+          <td style="padding:5px 8px;">${new Date(l.data).toLocaleDateString('pt-BR')}</td>
+          <td>${esc(l.status)}</td><td>${esc(l.turma)}</td><td>${esc(l.professora)}</td><td>${esc(l.nome)}</td>
+          <td style="text-align:right;">${l.qty_aprovado || l.qty_solicitado}</td>
+          <td style="text-align:right;">${almFmtBRL(l.valor)}</td>
+        </tr>`).join('')}
+      </table></div>`;
+    }
+  }
+
+  function almRelatExport(formato) {
+    if (!almRelatLastResult) { showToast('Rode o relatório antes de exportar.', 'warning'); return; }
+    // Reusa endpoint de relatório completo; passa filtros como query
+    const cfg = almRelatColetar();
+    const params = new URLSearchParams();
+    if (cfg.filtros.status) params.set('status', cfg.filtros.status);
+    if (cfg.filtros.turma_id) params.set('turma_id', cfg.filtros.turma_id);
+    if (cfg.filtros.data_de) params.set('data_de', cfg.filtros.data_de);
+    if (cfg.filtros.data_ate) params.set('data_ate', cfg.filtros.data_ate);
+    if (cfg.agrupamento) params.set('agrupamento', cfg.agrupamento);
+    almBaixarPdf(formato === 'xlsx' ? 'alm_relatorio_export_xlsx' : 'alm_relatorio_export_pdf', params.toString());
+  }
+
+  async function almRelatSalvarVis() {
+    const nome = document.getElementById('almRelatVisNome').value.trim();
+    if (!nome) { showToast('Dê um nome à visualização.', 'warning'); return; }
+    const cfg = almRelatColetar();
+    const d = await callDiplomas({ action: 'alm_relatorio_visualizacao_save', nome, config: cfg });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    document.getElementById('almRelatVisNome').value = '';
+    showToast('Visualização salva.', 'success');
+    almRelatLoadVisualizacoes();
+  }
+
+  async function almRelatExcluirVis() {
+    const id = document.getElementById('almRelatVis').value;
+    if (!id) { showToast('Selecione uma visualização salva primeiro.', 'warning'); return; }
+    if (!await _lumiedConfirm('Excluir visualização?')) return;
+    const d = await callDiplomas({ action: 'alm_relatorio_visualizacao_delete', id });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    almRelatLoadVisualizacoes();
+  }
+
+  function almRelatAplicarVis(id) {
+    if (!id) return;
+    const v = almRelatVisCache.find(x => x.id === id);
+    if (!v?.config) return;
+    const f = v.config.filtros || {};
+    document.getElementById('almRelatStatus').value = f.status || '';
+    document.getElementById('almRelatTurma').value = f.turma_id || '';
+    document.getElementById('almRelatDataDe').value = f.data_de || '';
+    document.getElementById('almRelatDataAte').value = f.data_ate || '';
+    document.getElementById('almRelatFornecedor').value = f.fornecedor || '';
+    document.getElementById('almRelatAgrup').value = v.config.agrupamento || '';
+    almRelatRodar();
   }
   function almConfigSetTab(tab, btn) {
     document.querySelectorAll('#almConfigTabs .alm-utab').forEach(b => b.classList.remove('active'));

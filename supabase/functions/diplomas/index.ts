@@ -2410,6 +2410,193 @@ Deno.serve(async (req) => {
       return pdfResponse(bytes, `romaneio-${new Date().toISOString().slice(0,10)}.pdf`)
     }
 
+    // ── Relatórios dinâmicos ─────────────────────────────────
+    // Aceita: { filtros: {status?, turma_id?, professora_id?, data_de?, data_ate?, fornecedor?}, agrupamento? }
+    // Retorna: linhas detalhadas (já filtradas) + grupos agregados
+    if (action === 'alm_relatorio_query') {
+      const escolaId = (gerente as any).escola_id
+      const f = body.filtros || {}
+      const agrup: string = body.agrupamento || ''
+      let q = sb.from('alm_requisicoes')
+        .select('*, professoras(nome), series(nome)')
+        .eq('escola_id', escolaId)
+        .neq('is_draft', true)
+        .order('criado_em', { ascending: false })
+        .limit(2000)
+      if (f.status) q = q.eq('status', f.status)
+      if (f.turma_id) q = q.eq('turma_id', f.turma_id)
+      if (f.professora_id) q = q.eq('professora_id', f.professora_id)
+      if (f.data_de) q = q.gte('criado_em', f.data_de)
+      if (f.data_ate) q = q.lte('criado_em', f.data_ate)
+      const { data: reqs } = await q
+      let linhas: any[] = []
+      for (const r of (reqs ?? []) as any[]) {
+        for (const it of (r.itens || [])) {
+          linhas.push({
+            req_id: r.id,
+            data: r.criado_em,
+            mes: r.mes,
+            status: r.status,
+            turma_id: r.turma_id,
+            turma: r.series?.nome || '—',
+            professora_id: r.professora_id,
+            professora: r.professoras?.nome || '—',
+            insumo_id: it.insumo_id || null,
+            nome: it.nome,
+            unidade: it.unidade,
+            categoria: it.categoria || null,
+            qty_solicitado: parseFloat(it.qty_solicitado || 0),
+            qty_aprovado: parseFloat(it.qty_aprovado || 0),
+            preco_unit: parseFloat(it.preco_unit || 0),
+            valor: parseFloat(it.qty_aprovado || it.qty_solicitado || 0) * parseFloat(it.preco_unit || 0),
+            link: it.link_referencia || null,
+          })
+        }
+      }
+      if (f.fornecedor) {
+        const term = String(f.fornecedor).toLowerCase()
+        linhas = linhas.filter(l => (l.link || '').toLowerCase().includes(term))
+      }
+      // Agrupamento opcional
+      let grupos: any[] = []
+      if (agrup) {
+        const map: Record<string, any> = {}
+        for (const l of linhas) {
+          const key = String(
+            agrup === 'turma' ? l.turma :
+            agrup === 'professora' ? l.professora :
+            agrup === 'categoria' ? (l.categoria || 'Sem categoria') :
+            agrup === 'mes' ? l.mes :
+            agrup === 'status' ? l.status : 'Outros'
+          )
+          if (!map[key]) map[key] = { chave: key, itens: 0, qty: 0, valor: 0, linhas: [] }
+          map[key].itens++
+          map[key].qty += l.qty_aprovado || l.qty_solicitado
+          map[key].valor += l.valor
+          map[key].linhas.push(l)
+        }
+        grupos = Object.values(map).sort((a: any, b: any) => b.valor - a.valor)
+      }
+      return json({
+        total_linhas: linhas.length,
+        total_valor: linhas.reduce((s, l) => s + l.valor, 0),
+        agrupamento: agrup || null,
+        grupos,
+        linhas: agrup ? [] : linhas.slice(0, 500),
+      })
+    }
+
+    if (action === 'alm_relatorio_export_xlsx' || action === 'alm_relatorio_export_pdf') {
+      // Reusa a query do relatório
+      const escolaId = (gerente as any).escola_id
+      const f = body.filtros || body
+      const agrup: string = body.agrupamento || ''
+      let q = sb.from('alm_requisicoes')
+        .select('*, professoras(nome), series(nome)')
+        .eq('escola_id', escolaId).neq('is_draft', true)
+        .order('criado_em', { ascending: false }).limit(2000)
+      if (f.status) q = q.eq('status', f.status)
+      if (f.turma_id) q = q.eq('turma_id', f.turma_id)
+      if (f.data_de) q = q.gte('criado_em', f.data_de)
+      if (f.data_ate) q = q.lte('criado_em', f.data_ate)
+      const { data: reqs } = await q
+      const linhas: any[] = []
+      for (const r of (reqs ?? []) as any[]) {
+        for (const it of (r.itens || [])) {
+          linhas.push({
+            data: new Date(r.criado_em).toLocaleDateString('pt-BR'),
+            mes: r.mes,
+            status: r.status,
+            turma: r.series?.nome || '—',
+            professora: r.professoras?.nome || '—',
+            nome: it.nome,
+            unidade: it.unidade,
+            categoria: it.categoria || '',
+            qty: parseFloat(it.qty_aprovado || it.qty_solicitado || 0),
+            preco: parseFloat(it.preco_unit || 0),
+            valor: parseFloat(it.qty_aprovado || it.qty_solicitado || 0) * parseFloat(it.preco_unit || 0),
+            link: it.link_referencia || '',
+          })
+        }
+      }
+      if (action === 'alm_relatorio_export_xlsx') {
+        const headers = ['Data', 'Mês', 'Status', 'Turma', 'Professora', 'Item', 'Categoria', 'Qty', 'Unid.', 'Preço', 'Valor', 'Link']
+        const rows = linhas.map(l => [l.data, l.mes, l.status, l.turma, l.professora, l.nome, l.categoria, String(l.qty), l.unidade, l.preco.toFixed(2), l.valor.toFixed(2), l.link])
+        const xlsx = generateXlsx(headers, rows)
+        return xlsxResponse(xlsx, `relatorio-requisicoes-${new Date().toISOString().slice(0,10)}.xlsx`)
+      }
+      // PDF: agrupa se vier, senão lista
+      const sections: any[] = []
+      if (agrup) {
+        const map: Record<string, any> = {}
+        for (const l of linhas) {
+          const key = String(
+            agrup === 'turma' ? l.turma :
+            agrup === 'professora' ? l.professora :
+            agrup === 'categoria' ? (l.categoria || 'Sem categoria') :
+            agrup === 'mes' ? l.mes : agrup === 'status' ? l.status : 'Outros'
+          )
+          if (!map[key]) map[key] = { itens: 0, valor: 0, linhas: [] as any[] }
+          map[key].itens++
+          map[key].valor += l.valor
+          map[key].linhas.push(l)
+        }
+        for (const [k, g] of Object.entries(map).sort(([,a]:any, [,b]:any) => b.valor - a.valor)) {
+          sections.push({
+            heading: `${k} — ${(g as any).itens} item(ns), R$ ${(g as any).valor.toFixed(2)}`,
+            lines: (g as any).linhas.slice(0, 50).map((l: any) =>
+              `${l.data} · ${l.nome} ×${l.qty} ${l.unidade} · R$ ${l.valor.toFixed(2)} · ${l.status}`),
+          })
+        }
+      } else {
+        sections.push({
+          heading: `${linhas.length} item(ns) — Total R$ ${linhas.reduce((s, l) => s + l.valor, 0).toFixed(2)}`,
+          lines: linhas.slice(0, 200).map(l =>
+            `${l.data} · ${l.turma} · ${l.professora} · ${l.nome} ×${l.qty} ${l.unidade} · R$ ${l.valor.toFixed(2)} · ${l.status}`),
+        })
+      }
+      const bytes = await generatePdf({
+        title: 'Relatório dinâmico — Requisições',
+        subtitle: `Filtros: ${[f.status && 'status='+f.status, f.turma_id && 'turma=…', f.data_de && 'de='+f.data_de, f.data_ate && 'até='+f.data_ate, agrup && 'agrup='+agrup].filter(Boolean).join('  ·  ') || 'sem filtros'}`,
+        sections,
+      })
+      return pdfResponse(bytes, `relatorio-requisicoes-${new Date().toISOString().slice(0,10)}.pdf`)
+    }
+
+    if (action === 'alm_relatorio_visualizacoes_list') {
+      const { data } = await sb.from('alm_relatorio_visualizacoes')
+        .select('*').eq('escola_id', (gerente as any).escola_id)
+        .order('atualizado_em', { ascending: false })
+      return json({ data: data ?? [] })
+    }
+
+    if (action === 'alm_relatorio_visualizacao_save') {
+      const { id, nome, config } = body
+      if (!nome) return json({ error: 'Nome obrigatório.' }, 400)
+      if (id) {
+        const { error } = await sb.from('alm_relatorio_visualizacoes').update({
+          nome, config, atualizado_em: new Date().toISOString(),
+        }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
+        if (error) return json({ error: error.message }, 400)
+        return json({ ok: true, id })
+      }
+      const { data: nova, error } = await sb.from('alm_relatorio_visualizacoes').insert({
+        nome, config: config || {}, criado_por: gerente.nome,
+        escola_id: (gerente as any).escola_id,
+      }).select('id').single()
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true, id: nova.id })
+    }
+
+    if (action === 'alm_relatorio_visualizacao_delete') {
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      const { error } = await sb.from('alm_relatorio_visualizacoes').delete()
+        .eq('id', id).eq('escola_id', (gerente as any).escola_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
     if (action === 'alm_todas_reqs') {
       const mes: string = body.mes || ''
       const status: string = body.status || ''
