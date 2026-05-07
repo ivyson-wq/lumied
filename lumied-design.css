@@ -324,3 +324,32 @@
   .stat-item { padding: var(--sp-md); }
   .stat-item .stat-value { font-size: 22px; }
 }
+
+/* ────────────────────────────────────────────
+   REDE DE SEGURANÇA — botões coloridos (regressão de variantes)
+   Garante fallback hardcoded quando --red não está definido em
+   algum :root e o tema não foi aplicado, evitando "branco em
+   branco". Specificity baixa via :where() pra não brigar com
+   regras locais explícitas dos portais.
+   ──────────────────────────────────────────── */
+:where(.btn-create, .btn-submit, .btn-aprovar, .btn-rejeitar) {
+  color: #fff;
+}
+:where(.btn-create, .btn-submit) {
+  background: var(--red, #C8102E);
+}
+:where(.btn-aprovar) {
+  background: var(--green, #2d7a3a);
+}
+/* btn-rejeitar histórico = transparente com border vermelho — NUNCA texto branco */
+:where(.btn-rejeitar) {
+  background: transparent;
+  color: var(--red, #C8102E);
+  border: 1px solid color-mix(in srgb, var(--red, #C8102E) 35%, transparent);
+}
+/* Defesa final: botão com background:#fff explícito não pode ter texto branco */
+button[style*="background:#fff"][style*="color:#fff"],
+button[style*="background:white"][style*="color:#fff"],
+button[style*="background:#fff"][style*="color:white"] {
+  color: #1a1a1a !important;
+}

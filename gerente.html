@@ -14104,6 +14104,7 @@ docker compose up -d --build</pre>
       ? await api({ action: 'impressoes_pendentes' })
       : await api({ action: 'impressoes_todas', mes: new Date().toISOString().slice(0,7) });
     const items = Array.isArray(d) ? d : [];
+    window._impItemsCache = Object.fromEntries(items.map(x => [x.id, x]));
     if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhuma solicitacao.</div>'; return; }
     el.innerHTML = items.map(it => {
       const dt = new Date(it.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
@@ -14134,14 +14135,61 @@ docker compose up -d --build</pre>
   }
 
   async function impAprovar(id) {
-    await api({ action: 'impressao_aprovar', id });
-    showToast('Impressao aprovada!', 'success');
-    loadImpressoesGerente();
+    const it = (window._impItemsCache || {})[id];
+    if (!it) { showToast('Solicitação não encontrada.', 'error'); return; }
+    impAbrirReviewModal(it, 'aprovar');
   }
   async function impRejeitar(id) {
-    const nota = prompt('Motivo da rejeicao (opcional):');
-    await api({ action: 'impressao_rejeitar', id, nota: nota || '' });
-    loadImpressoesGerente();
+    const it = (window._impItemsCache || {})[id];
+    if (!it) { showToast('Solicitação não encontrada.', 'error'); return; }
+    impAbrirReviewModal(it, 'rejeitar');
+  }
+  function impAbrirReviewModal(it, modo) {
+    const isPdf = (it.arquivo_url || '').toLowerCase().endsWith('.pdf');
+    const preview = isPdf
+      ? `<iframe src="${esc(it.arquivo_url)}" style="width:100%;height:540px;border:1px solid var(--border);border-radius:8px;background:#f5f5f5;"></iframe>`
+      : `<img src="${esc(it.arquivo_url)}" style="max-width:100%;max-height:540px;border:1px solid var(--border);border-radius:8px;display:block;margin:0 auto;background:#f5f5f5;">`;
+    const totalFolhas = (it.copias || 1) * (it.num_paginas || 1);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `<div style="background:#fff;border-radius:14px;padding:22px;max-width:760px;width:100%;max-height:92vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="font-family:'Lora',serif;font-size:17px;">${modo === 'aprovar' ? '✅ Aprovar impressão' : '❌ Rejeitar impressão'}</h3>
+        <button onclick="this.closest('div[style]').parentElement.remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+      </div>
+      <div style="font-size:13px;margin-bottom:10px;">
+        <strong>${esc(it.arquivo_nome || 'Arquivo')}</strong><br>
+        <span style="color:var(--muted);">${esc(it.professora_nome || '?')} · ${esc(it.turma_nome || '?')} · ${it.copias || 1} cópias × ${it.num_paginas || 1} pág = <strong>${totalFolhas} folhas</strong></span>
+      </div>
+      ${preview}
+      ${modo === 'rejeitar' ? `<div style="margin-top:12px;"><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">Motivo (opcional)</label><textarea id="impRejNota" rows="2" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;"></textarea></div>` : ''}
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+        <button onclick="this.closest('div[style]').parentElement.remove()" style="padding:9px 18px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button id="impConfirma1" style="padding:9px 18px;background:${modo === 'aprovar' ? '#2d7a3a' : '#e53e3e'};color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">${modo === 'aprovar' ? '✅ Aprovar' : '❌ Rejeitar'}</button>
+      </div>
+      <div id="impConfirma2Wrap" style="display:none;margin-top:14px;padding:14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;color:#9a3412;margin-bottom:10px;">⚠️ Tem certeza? Esta ação ${modo === 'aprovar' ? 'dispara a impressão imediatamente' : 'rejeita o pedido e a professora será notificada'}.</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onclick="document.getElementById('impConfirma2Wrap').style.display='none'" style="padding:8px 14px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">Voltar</button>
+          <button id="impConfirma2" style="padding:8px 14px;background:${modo === 'aprovar' ? '#2d7a3a' : '#e53e3e'};color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Sim, ${modo === 'aprovar' ? 'aprovar' : 'rejeitar'}</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#impConfirma1').onclick = () => {
+      overlay.querySelector('#impConfirma2Wrap').style.display = 'block';
+    };
+    overlay.querySelector('#impConfirma2').onclick = async () => {
+      overlay.querySelector('#impConfirma2').disabled = true;
+      overlay.querySelector('#impConfirma2').textContent = 'Enviando…';
+      const action = modo === 'aprovar' ? 'impressao_aprovar' : 'impressao_rejeitar';
+      const nota = modo === 'rejeitar' ? (overlay.querySelector('#impRejNota')?.value?.trim() || '') : undefined;
+      const r = await api({ action, id: it.id, ...(nota !== undefined ? { nota } : {}) });
+      if (r?.error) { alert('Erro: ' + r.error); overlay.querySelector('#impConfirma2').disabled = false; return; }
+      overlay.remove();
+      showToast(modo === 'aprovar' ? '✅ Impressão aprovada e em fila' : '❌ Impressão rejeitada', 'success');
+      loadImpressoesGerente();
+    };
   }
   async function impMarcarImpresso(id) {
     // Buscar turmas
