@@ -1650,6 +1650,19 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div class="ff"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;">
               <input type="checkbox" id="recursoFixo" style="width:16px;height:16px;"> Fixo na sala (não-móvel)
             </label></div>
+            <div style="background:#f9f7f4;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Margens de segurança</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div><label style="font-size:12px;font-weight:500;">Carga / preparo (min antes)</label>
+                  <input type="number" id="recursoCarga" min="0" max="240" step="5" placeholder="0" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;margin-top:4px;">
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px;">Ex: tablet recarregar</div>
+                </div>
+                <div><label style="font-size:12px;font-weight:500;">Margem após uso (min)</label>
+                  <input type="number" id="recursoBuffer" min="0" max="240" step="5" placeholder="15" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;margin-top:4px;">
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px;">Cobre atraso de aula</div>
+                </div>
+              </div>
+            </div>
             <div class="ff"><label>Observação</label><textarea id="recursoObs" rows="2"></textarea></div>
             <div class="modal-actions">
               <button class="btn-cancel" onclick="fecharRecursoModal()">Cancelar</button>
@@ -1662,7 +1675,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div id="reservaModal" class="modal-overlay" role="dialog" onclick="if(event.target===this)fecharReservaModal()">
           <div class="modal" style="max-width:520px;">
             <h3>📅 Nova reserva</h3>
-            <div class="ff" style="margin-top:12px;"><label>Recurso *</label><select id="reservaRecurso" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></select></div>
+            <div class="ff" style="margin-top:12px;"><label>Recurso *</label>
+              <select id="reservaRecurso" onchange="reservaAtualizarInfoRecurso()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></select>
+              <div id="reservaInfoRecurso" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;"></div>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="ff"><label>Início *</label><input type="datetime-local" id="reservaInicio"></div>
               <div class="ff"><label>Fim *</label><input type="datetime-local" id="reservaFim"></div>
@@ -5825,6 +5841,7 @@ docker compose up -d --build</pre>
           <div style="font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:600;">${esc(r.tipo)}${r.fixo ? ' · fixo' : ''}</div>
           <div style="font-weight:600;font-size:14px;margin:4px 0;">${esc(r.identificacao)}</div>
           <div style="font-size:11px;color:var(--muted);">${esc(r.modelo || '—')} · ${esc(r.localizacao || '—')}</div>
+          ${(r.tempo_carga_min || r.buffer_pos_uso_min) ? `<div style="font-size:10px;color:#6b7280;margin-top:4px;">⏱ ${r.tempo_carga_min ? r.tempo_carga_min + 'min carga · ' : ''}${r.buffer_pos_uso_min || 0}min margem</div>` : ''}
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
             <button onclick="abrirModalEditarRecurso('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
             <button onclick="deletarRecurso('${r.id}','${esc(r.identificacao)}')" style="background:none;border:1px solid #fed7aa;color:#b5591a;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Remover</button>
@@ -5857,6 +5874,23 @@ docker compose up -d --build</pre>
     }).join('');
   }
 
+  // Defaults sugeridos por tipo (alinhados com mig 287)
+  const _RECURSO_DEFAULTS = {
+    tablet:     { carga: 30, buffer: 15 },
+    projetor:   { carga: 5,  buffer: 10 },
+    sala:       { carga: 10, buffer: 15 },
+    impressora: { carga: 0,  buffer: 5  },
+    outro:      { carga: 0,  buffer: 15 },
+  };
+  function _aplicaDefaultsRecurso() {
+    const tipo = document.getElementById('recursoTipo').value;
+    const cargaEl = document.getElementById('recursoCarga');
+    const bufEl = document.getElementById('recursoBuffer');
+    const def = _RECURSO_DEFAULTS[tipo] || _RECURSO_DEFAULTS.outro;
+    if (!cargaEl.value) cargaEl.value = def.carga;
+    if (!bufEl.value) bufEl.value = def.buffer;
+  }
+
   function abrirModalNovoRecurso() {
     document.getElementById('recursoId').value = '';
     document.getElementById('recursoTipo').value = 'tablet';
@@ -5864,9 +5898,14 @@ docker compose up -d --build</pre>
     document.getElementById('recursoModelo').value = '';
     document.getElementById('recursoLocal').value = '';
     document.getElementById('recursoFixo').checked = false;
+    document.getElementById('recursoCarga').value = '';
+    document.getElementById('recursoBuffer').value = '';
     document.getElementById('recursoObs').value = '';
     document.getElementById('recursoModalTitle').textContent = 'Novo Recurso';
     document.getElementById('recursoModal').classList.add('show');
+    _aplicaDefaultsRecurso();
+    // Preenche defaults quando troca tipo (só se vazio — não sobrescreve user)
+    document.getElementById('recursoTipo').onchange = _aplicaDefaultsRecurso;
   }
   function abrirModalEditarRecurso(id) {
     const r = _recursosCache.find(x => x.id === id);
@@ -5877,14 +5916,19 @@ docker compose up -d --build</pre>
     document.getElementById('recursoModelo').value = r.modelo || '';
     document.getElementById('recursoLocal').value = r.localizacao || '';
     document.getElementById('recursoFixo').checked = !!r.fixo;
+    document.getElementById('recursoCarga').value = r.tempo_carga_min ?? '';
+    document.getElementById('recursoBuffer').value = r.buffer_pos_uso_min ?? '';
     document.getElementById('recursoObs').value = r.observacao || '';
     document.getElementById('recursoModalTitle').textContent = 'Editar Recurso';
     document.getElementById('recursoModal').classList.add('show');
+    document.getElementById('recursoTipo').onchange = _aplicaDefaultsRecurso;
   }
   function fecharRecursoModal() { document.getElementById('recursoModal').classList.remove('show'); }
 
   async function salvarRecurso() {
     const id = document.getElementById('recursoId').value || null;
+    const carga = document.getElementById('recursoCarga').value;
+    const buffer = document.getElementById('recursoBuffer').value;
     const payload = {
       action: 'recursos_save', id,
       tipo: document.getElementById('recursoTipo').value,
@@ -5893,6 +5937,8 @@ docker compose up -d --build</pre>
       localizacao: document.getElementById('recursoLocal').value.trim() || null,
       fixo: document.getElementById('recursoFixo').checked,
       observacao: document.getElementById('recursoObs').value.trim() || null,
+      tempo_carga_min: carga !== '' ? parseInt(carga) : undefined,
+      buffer_pos_uso_min: buffer !== '' ? parseInt(buffer) : undefined,
     };
     if (!payload.identificacao) { showToast('Informe a identificação.', 'warning'); return; }
     const d = await api(payload);
@@ -5908,10 +5954,24 @@ docker compose up -d --build</pre>
     loadRecursos();
   }
 
+  function reservaAtualizarInfoRecurso() {
+    const id = document.getElementById('reservaRecurso').value;
+    const r = _recursosCache.find(x => x.id === id);
+    const info = document.getElementById('reservaInfoRecurso');
+    if (!r) { info.innerHTML = ''; return; }
+    const partes = [];
+    if (r.tempo_carga_min > 0) partes.push(`🔌 <strong>${r.tempo_carga_min} min</strong> de preparo antes (carga)`);
+    if (r.buffer_pos_uso_min > 0) partes.push(`⏱️ <strong>${r.buffer_pos_uso_min} min</strong> de margem após (atraso de aula)`);
+    info.innerHTML = partes.length
+      ? `Este recurso reserva ${partes.join(' + ')}. Outras reservas só podem usar fora dessa janela.`
+      : '';
+  }
+
   async function abrirModalNovaReserva() {
     if (!_recursosCache.length) await loadRecursos();
     const sel = document.getElementById('reservaRecurso');
     sel.innerHTML = _recursosCache.filter(r => r.ativo).map(r => `<option value="${r.id}">${esc(r.tipo)} · ${esc(r.identificacao)}${r.localizacao ? ' (' + esc(r.localizacao) + ')' : ''}</option>`).join('');
+    reservaAtualizarInfoRecurso();
     const turmaSel = document.getElementById('reservaTurma');
     if (turmaSel.options.length <= 1) {
       const t = await api({ action: 'series_list_all' });

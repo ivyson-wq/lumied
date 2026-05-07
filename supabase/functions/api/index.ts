@@ -1487,9 +1487,18 @@ serve(async (req: Request) => {
   }
   if (action === "recursos_save") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    const { id, tipo, identificacao, modelo, localizacao, fixo, ativo, observacao } = body as Record<string, unknown>;
+    const { id, tipo, identificacao, modelo, localizacao, fixo, ativo, observacao,
+            buffer_pos_uso_min, tempo_carga_min } = body as Record<string, unknown>;
     if (!tipo || !identificacao) return err("Tipo e identificação obrigatórios.");
     const data: Record<string, unknown> = { tipo, identificacao, modelo: modelo || null, localizacao: localizacao || null, fixo: !!fixo, ativo: ativo !== false, observacao: observacao || null };
+    if (buffer_pos_uso_min !== undefined && buffer_pos_uso_min !== null && buffer_pos_uso_min !== "") {
+      const v = parseInt(String(buffer_pos_uso_min));
+      if (!Number.isNaN(v) && v >= 0 && v <= 240) data.buffer_pos_uso_min = v;
+    }
+    if (tempo_carga_min !== undefined && tempo_carga_min !== null && tempo_carga_min !== "") {
+      const v = parseInt(String(tempo_carga_min));
+      if (!Number.isNaN(v) && v >= 0 && v <= 240) data.tempo_carga_min = v;
+    }
     if (id) {
       const { error } = await admin.from("recursos").update(data).eq("id", id).eq("escola_id", gerente.escola_id);
       if (error) return err(sanitizePgError(error));
@@ -1605,13 +1614,14 @@ serve(async (req: Request) => {
   }
 
   // ── Analytics: ocupação dos recursos + recomendação de capacidade ──
+  // Considera buffer pós-uso e tempo de carga: ocupação efetiva é
+  // (fim + buffer) - (inicio - tempo_carga) por reserva. Reflete o
+  // tempo que o recurso de fato fica indisponível (não só o slot da aula).
   if (action === "recursos_analytics") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const { data: recursos } = await admin.from("recursos")
-      .select("id, tipo, identificacao, ativo")
+      .select("id, tipo, identificacao, ativo, buffer_pos_uso_min, tempo_carga_min")
       .eq("escola_id", gerente.escola_id).eq("ativo", true);
-    // Janela: 14 dias a partir de hoje (suficiente pra capturar 2 semanas de
-    // padrão recorrente). Horário escolar configurável (default 7h-18h × seg-sex).
     const horasEscolaPorSemana = 11 * 5; // 7h-18h × seg-sex
     const desde = new Date(); desde.setHours(0, 0, 0, 0);
     const ate = new Date(desde); ate.setDate(ate.getDate() + 14);
@@ -1620,43 +1630,61 @@ serve(async (req: Request) => {
       .eq("escola_id", gerente.escola_id).eq("status", "ativa")
       .gte("inicio", desde.toISOString()).lt("inicio", ate.toISOString());
 
-    type Acc = { recurso_id: string; tipo: string; identificacao: string; horasReservadas: number };
+    type Acc = {
+      recurso_id: string; tipo: string; identificacao: string;
+      buffer_min: number; carga_min: number;
+      horasReservadasPuras: number; horasOcupadasEfetivas: number;
+    };
     const porRecurso: Record<string, Acc> = {};
     for (const r of (recursos ?? []) as any[]) {
-      porRecurso[r.id] = { recurso_id: r.id, tipo: r.tipo, identificacao: r.identificacao, horasReservadas: 0 };
+      porRecurso[r.id] = {
+        recurso_id: r.id, tipo: r.tipo, identificacao: r.identificacao,
+        buffer_min: r.buffer_pos_uso_min ?? 0, carga_min: r.tempo_carga_min ?? 0,
+        horasReservadasPuras: 0, horasOcupadasEfetivas: 0,
+      };
     }
     for (const rv of (reservas ?? []) as any[]) {
-      const horas = (new Date(rv.fim).getTime() - new Date(rv.inicio).getTime()) / 3600000;
-      if (porRecurso[rv.recurso_id]) porRecurso[rv.recurso_id].horasReservadas += horas;
+      const acc = porRecurso[rv.recurso_id];
+      if (!acc) continue;
+      const horasPuras = (new Date(rv.fim).getTime() - new Date(rv.inicio).getTime()) / 3600000;
+      const horasEfetivas = horasPuras + (acc.buffer_min + acc.carga_min) / 60;
+      acc.horasReservadasPuras += horasPuras;
+      acc.horasOcupadasEfetivas += horasEfetivas;
     }
-    // 14 dias = 2 × horas/semana
-    const capacidadeUnitaria = horasEscolaPorSemana * 2;
+    const capacidadeUnitaria = horasEscolaPorSemana * 2; // 14 dias
     const recursosAnalise = Object.values(porRecurso).map(r => ({
       ...r,
       horas_capacidade: capacidadeUnitaria,
-      taxa_ocupacao_pct: capacidadeUnitaria ? Math.round((r.horasReservadas / capacidadeUnitaria) * 100) : 0,
+      taxa_ocupacao_pct: capacidadeUnitaria ? Math.round((r.horasOcupadasEfetivas / capacidadeUnitaria) * 100) : 0,
     })).sort((a, b) => b.taxa_ocupacao_pct - a.taxa_ocupacao_pct);
 
-    // Por tipo: quanto cada tipo está saturado?
-    type AccTipo = { tipo: string; qtd: number; horasReservadas: number; horas_capacidade: number };
+    type AccTipo = { tipo: string; qtd: number; horasOcupadasEfetivas: number; horas_capacidade: number; buffer_medio: number; carga_media: number };
     const porTipo: Record<string, AccTipo> = {};
     for (const r of recursosAnalise) {
-      if (!porTipo[r.tipo]) porTipo[r.tipo] = { tipo: r.tipo, qtd: 0, horasReservadas: 0, horas_capacidade: 0 };
+      if (!porTipo[r.tipo]) porTipo[r.tipo] = { tipo: r.tipo, qtd: 0, horasOcupadasEfetivas: 0, horas_capacidade: 0, buffer_medio: 0, carga_media: 0 };
       porTipo[r.tipo].qtd++;
-      porTipo[r.tipo].horasReservadas += r.horasReservadas;
+      porTipo[r.tipo].horasOcupadasEfetivas += r.horasOcupadasEfetivas;
       porTipo[r.tipo].horas_capacidade += capacidadeUnitaria;
+      porTipo[r.tipo].buffer_medio += r.buffer_min;
+      porTipo[r.tipo].carga_media += r.carga_min;
     }
     const tiposAnalise = Object.values(porTipo).map(t => {
-      const taxa = t.horas_capacidade ? t.horasReservadas / t.horas_capacidade : 0;
-      // Recomendação: se taxa > 80%, sugere recursos extras pra trazer pra ~70%
+      const taxa = t.horas_capacidade ? t.horasOcupadasEfetivas / t.horas_capacidade : 0;
       const taxaPct = Math.round(taxa * 100);
       let sugestao = 0;
       if (taxa > 0.8) {
-        const horasIdeais = t.horasReservadas / 0.7;
+        const horasIdeais = t.horasOcupadasEfetivas / 0.7;
         const qtdIdeal = Math.ceil(horasIdeais / capacidadeUnitaria);
         sugestao = Math.max(0, qtdIdeal - t.qtd);
       }
-      return { ...t, taxa_pct: taxaPct, sugestao_extras: sugestao };
+      return {
+        tipo: t.tipo, qtd: t.qtd,
+        horas_ocupadas_efetivas: Math.round(t.horasOcupadasEfetivas * 10) / 10,
+        horas_capacidade: t.horas_capacidade,
+        taxa_pct: taxaPct, sugestao_extras: sugestao,
+        buffer_medio_min: t.qtd ? Math.round(t.buffer_medio / t.qtd) : 0,
+        carga_media_min: t.qtd ? Math.round(t.carga_media / t.qtd) : 0,
+      };
     }).sort((a, b) => b.taxa_pct - a.taxa_pct);
 
     return ok({
