@@ -1203,12 +1203,19 @@ body.dash-clean #greetingBar{display:none;}
 
       <!-- Lista -->
       <div class="sec-title" style="margin-bottom:8px;">Minhas Solicitações</div>
+      <div style="font-size:11px;color:var(--muted);margin:-4px 0 8px;line-height:1.4;">
+        ℹ️ Você pode <b>editar</b> ou <b>excluir</b> solicitações enquanto estiverem <b>pendentes</b>.
+        Depois que o gerente aprovar, rejeitar ou imprimir, não é mais possível alterar — nesse caso, envie uma nova solicitação.
+      </div>
       <div id="impLista"><div class="empty-state">Carregando...</div></div>
 
       <!-- Modal Editar Impressão -->
       <div id="impEditarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;padding:16px;">
         <div style="background:#fff;border-radius:12px;max-width:480px;width:100%;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
-          <h3 style="font-size:15px;font-weight:600;margin:0 0 12px;">Editar Solicitação</h3>
+          <h3 style="font-size:15px;font-weight:600;margin:0 0 6px;">Editar Solicitação</h3>
+          <div style="font-size:11px;color:var(--muted);background:#fff8e1;border:1px solid #f6e0a0;padding:8px 10px;border-radius:6px;margin-bottom:12px;line-height:1.4;">
+            ⚠️ <b>O arquivo não pode ser trocado por aqui.</b> Para enviar uma versão diferente, exclua esta solicitação e envie de novo (a cota mensal será recalculada). Se o gerente já tiver aprovado, rejeitado ou impresso, a edição falha e você precisará abrir uma nova solicitação.
+          </div>
           <input type="hidden" id="impEditId">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div class="ff" style="margin:0;">
@@ -4591,7 +4598,7 @@ body.dash-clean #greetingBar{display:none;}
              <button onclick="abrirEditarImp('${it.id}')" style="flex:1;padding:6px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;">✏️ Editar</button>
              <button onclick="excluirImpressao('${it.id}')" style="flex:1;padding:6px 10px;border:1px solid #fdd;background:#fff5f6;color:#a00d24;border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;">🗑️ Excluir</button>
            </div>`
-        : '';
+        : `<div style="margin-top:8px;font-size:10px;color:var(--muted);background:#f5f1eb;padding:4px 8px;border-radius:6px;display:inline-block;">🔒 Já ${it.status === 'rejeitado' ? 'rejeitada' : 'processada'} pelo gerente — não pode mais ser editada nem excluída. Para mudar algo, envie uma nova solicitação.</div>`;
       return `<div class="upload-card" style="margin-bottom:8px;padding:12px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <a href="${esc(it.arquivo_url)}" target="_blank" style="font-weight:600;font-size:13px;color:var(--blue);text-decoration:none;">📎 ${esc(it.arquivo_nome||'Arquivo')}</a>
@@ -4729,19 +4736,34 @@ body.dash-clean #greetingBar{display:none;}
     btn.disabled = true; btn.textContent = 'Salvando…';
     try {
       const d = await callApi({ action: 'impressao_editar', id, copias, tipo_papel, para_dia, observacao });
-      if (d?.error) { errEl.textContent = d.error; errEl.style.display = 'block'; }
-      else { fecharEditarImp(); showToast('Solicitação atualizada.', 'success'); loadImpressoes(); }
+      if (d?.error) {
+        errEl.textContent = d.error;
+        errEl.style.display = 'block';
+        // Se o gerente processou no meio do caminho, sincroniza a lista
+        if (/pendente/i.test(d.error) || /processada/i.test(d.error)) {
+          setTimeout(() => { fecharEditarImp(); loadImpressoes(); }, 2500);
+        }
+      } else { fecharEditarImp(); showToast('Solicitação atualizada.', 'success'); loadImpressoes(); }
     } catch (e) {
-      errEl.textContent = 'Erro de conexão. Tente novamente.'; errEl.style.display = 'block';
+      errEl.textContent = 'Erro de conexão. Verifique sua internet e tente de novo.'; errEl.style.display = 'block';
     }
     btn.disabled = false; btn.textContent = 'Salvar';
   }
   async function excluirImpressao(id) {
-    if (!confirm('Excluir esta solicitação? Esta ação não pode ser desfeita.')) return;
-    const d = await callApi({ action: 'impressao_excluir', id });
-    if (d?.error) { showToast('Erro: ' + d.error, 'warning'); return; }
-    showToast('Solicitação excluída.', 'success');
-    loadImpressoes();
+    if (!confirm('Excluir esta solicitação?\n\nO arquivo enviado também será removido. Esta ação não pode ser desfeita.\n\nObs.: só dá pra excluir enquanto a solicitação estiver pendente.')) return;
+    try {
+      const d = await callApi({ action: 'impressao_excluir', id });
+      if (d?.error) {
+        // Mostra mensagem clara e atualiza a lista pra refletir o estado real
+        showToast('Não foi possível excluir: ' + d.error, 'warning', 6000);
+        loadImpressoes();
+        return;
+      }
+      showToast('Solicitação excluída. A cota mensal foi liberada.', 'success');
+      loadImpressoes();
+    } catch (e) {
+      showToast('Erro de conexão ao excluir. Verifique sua internet e tente de novo.', 'warning', 5000);
+    }
   }
 
   checkSession();
