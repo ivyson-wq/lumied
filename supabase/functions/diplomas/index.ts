@@ -1289,6 +1289,49 @@ Deno.serve(async (req) => {
 
   // ━━ ALMOXARIFADO: PRICE SEARCH (public, no auth required) ━━━━━━
 
+  // Aquecimento do cache do Reval: itera por insumos do catálogo e dispara
+  // pré-busca via worker. Chamado por pg_cron 1×/h. Autenticado via
+  // CRON_INTERNAL_KEY ou staff. Processa 3 itens por chamada (limite do
+  // worker) → ~72 itens/dia, suficiente pro catálogo escolar típico.
+  if (action === 'alm_reval_warmup') {
+    const internalKey = req.headers.get('x-cron-key') || ''
+    const expectedKey = Deno.env.get('CRON_INTERNAL_KEY') || ''
+    if (!expectedKey || internalKey !== expectedKey) {
+      return json({ error: 'forbidden' }, 403)
+    }
+    const proxyUrl = Deno.env.get('REVAL_PROXY_URL') || ''
+    const proxySecret = Deno.env.get('REVAL_PROXY_SECRET') || ''
+    if (!proxyUrl || !proxySecret) return json({ error: 'REVAL_PROXY_* não configurados' }, 500)
+    // Pega 3 insumos ativos cujo preço esteja desatualizado há mais tempo
+    // (preco_atualizado_em ASC; nulls primeiro). Cada execução do cron
+    // avança naturalmente porque preco_atualizado_em é atualizado via
+    // outras flows; pra warmup força atualização do timestamp aqui.
+    const { data: insumos } = await sb.from('alm_insumos')
+      .select('id, nome, descricao, escola_id, preco_atualizado_em')
+      .eq('ativo', true)
+      .order('preco_atualizado_em', { ascending: true, nullsFirst: true })
+      .limit(3)
+    if (!insumos?.length) return json({ ok: true, count: 0, msg: 'Nenhum insumo ativo' })
+    const queries = insumos.map((i: any) => (i.descricao ? `${i.nome.trim()} ${i.descricao.trim()}` : i.nome.trim()))
+    try {
+      const r = await fetch(`${proxyUrl.replace(/\/$/, '')}/warmup`, {
+        method: 'POST',
+        headers: { 'x-secret': proxySecret, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ queries }),
+        signal: AbortSignal.timeout(30000),
+      })
+      if (!r.ok) return json({ error: `worker HTTP ${r.status}` }, 502)
+      const data = await r.json()
+      // Avança round-robin — bate timestamp em todos os 3 processados
+      for (const ins of insumos) {
+        await sb.from('alm_insumos').update({ preco_atualizado_em: new Date().toISOString() }).eq('id', ins.id)
+      }
+      return json({ ok: true, ...data })
+    } catch (e) {
+      return json({ error: (e as Error).message }, 500)
+    }
+  }
+
   if (action === 'alm_buscar_precos') {
     const { nome, unidade, descricao } = body as any
     if (!nome) return json({ error: 'Nome do item não informado.' }, 400)
@@ -1924,6 +1967,18 @@ Deno.serve(async (req) => {
         produto_nome_sugestao: string | null; match_pct_max: number;
         url_produto: string | null; url_carrinho: string | null; statuses: Set<string>;
       }
+      // Pre-fetch insumos catalogados pra ter qtd_por_embalagem ANTES do
+      // loop. alm_compras.preco_unit é o preço da EMBALAGEM da plataforma
+      // (resma de 50, caixa c/3, cento), NÃO da unidade de consumo. Precisa
+      // dividir por qtd_por_embalagem antes de usar como preço/un.
+      const idsCat = Array.from(new Set((linhas ?? []).map((l: any) => l.insumo_id).filter(Boolean)))
+      const insumoMap: Record<string, any> = {}
+      if (idsCat.length) {
+        const { data: insumos } = await sb.from('alm_insumos')
+          .select('id, referencia_url, referencia_nome, preco_referencia, preco, qtd_por_embalagem, unidade, unidade_compra')
+          .in('id', idsCat as string[]).eq('escola_id', escolaId)
+        for (const ins of (insumos ?? []) as any[]) insumoMap[ins.id] = ins
+      }
       const grupos: Record<string, Grupo> = {}
       for (const l of (linhas ?? []) as any[]) {
         const chave = l.insumo_id ? `id:${l.insumo_id}` : `nome:${norm(l.insumo_nome)}`
@@ -1949,7 +2004,13 @@ Deno.serve(async (req) => {
         if (l.alm_requisicoes?.series?.nome) g.turmas.add(l.alm_requisicoes.series.nome)
         if (l.alm_requisicoes?.professoras?.nome) g.professoras.add(l.alm_requisicoes.professoras.nome)
         if (l.alm_requisicoes?.mes) g.meses.add(l.alm_requisicoes.mes)
-        if (l.preco_unit != null) g.precos.push(parseFloat(l.preco_unit))
+        if (l.preco_unit != null) {
+          // Divide pelo tamanho da embalagem pra obter preço por unidade
+          // de consumo (folha, frasco, etc.) — bate com a unidade de qty.
+          const ins = l.insumo_id ? insumoMap[l.insumo_id] : null
+          const qtdEmb = parseFloat(ins?.qtd_por_embalagem) || 1
+          g.precos.push(parseFloat(l.preco_unit) / qtdEmb)
+        }
         if (l.plataforma) g.plataformas[l.plataforma] = (g.plataformas[l.plataforma] || 0) + 1
         if ((l.match_pct ?? 0) > g.match_pct_max) {
           g.match_pct_max = l.match_pct ?? 0
@@ -1958,22 +2019,18 @@ Deno.serve(async (req) => {
           g.url_carrinho = l.url_carrinho
         }
       }
-      // Fallback de preço/url via alm_insumos (catalogados)
-      const idsCatalogados = Object.values(grupos).filter(g => g.insumo_id).map(g => g.insumo_id!)
-      if (idsCatalogados.length) {
-        const { data: insumos } = await sb.from('alm_insumos')
-          .select('id, referencia_url, referencia_nome, preco_referencia, preco, qtd_por_embalagem')
-          .in('id', idsCatalogados).eq('escola_id', escolaId)
-        for (const ins of (insumos ?? []) as any[]) {
-          const g = Object.values(grupos).find(x => x.insumo_id === ins.id)
-          if (!g) continue
-          if (!g.url_produto && ins.referencia_url) g.url_produto = ins.referencia_url
-          if (!g.produto_nome_sugestao && ins.referencia_nome) g.produto_nome_sugestao = ins.referencia_nome
-          if (g.precos.length === 0) {
-            const qtdEmb = parseFloat(ins.qtd_por_embalagem) || 1
-            if (ins.preco_referencia != null) g.precos.push(parseFloat(ins.preco_referencia))
-            else if (ins.preco != null) g.precos.push(parseFloat(ins.preco) / qtdEmb)
-          }
+      // Fallback de preço/url via insumoMap já carregado acima
+      for (const id of Object.keys(insumoMap)) {
+        const ins = insumoMap[id]
+        const g = Object.values(grupos).find(x => x.insumo_id === id)
+        if (!g) continue
+        if (!g.url_produto && ins.referencia_url) g.url_produto = ins.referencia_url
+        if (!g.produto_nome_sugestao && ins.referencia_nome) g.produto_nome_sugestao = ins.referencia_nome
+        if (g.precos.length === 0) {
+          const qtdEmb = parseFloat(ins.qtd_por_embalagem) || 1
+          // preco_referencia já é por unidade de consumo (UI alm_insumo_set_referencia)
+          if (ins.preco_referencia != null) g.precos.push(parseFloat(ins.preco_referencia))
+          else if (ins.preco != null) g.precos.push(parseFloat(ins.preco) / qtdEmb)
         }
       }
       const out = Object.values(grupos).map(g => {
