@@ -65,4 +65,26 @@ SELECT cron.schedule(
 
 -- 4) cleanup-rate-limits-deep: coluna correta é 'bucket_start'
 DO $$ BEGIN PERFORM cron.unschedule('cleanup-rate-limits-deep'); EXCEPTION WHEN OTHERS THEN NULL; END $$;
-SELECT
+SELECT cron.schedule(
+  'cleanup-rate-limits-deep',
+  '0 5 * * 0',
+  $$DELETE FROM rate_limits WHERE bucket_start < now() - interval '7 days'$$
+);
+
+-- 5) atualizar-precos-insumos: hardcoding URL + key (mesmo motivo)
+DO $$ BEGIN PERFORM cron.unschedule('atualizar-precos-insumos'); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+SELECT cron.schedule(
+  'atualizar-precos-insumos',
+  '0 6 1 * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://brgorknbrjlfwvrrlwxj.supabase.co/functions/v1/diplomas',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer lumied_cron_dbb4070f6b5601bb23bd2cb38d373bea'
+    ),
+    body := '{"action":"alm_atualizar_precos"}'::jsonb,
+    timeout_milliseconds := 5000
+  )
+  $$
+);
