@@ -1890,6 +1890,7 @@ Deno.serve(async (req) => {
     'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
     'alm_compras_compilado', 'alm_distribuir_grupo',
     'alm_compras_compilado_pdf', 'alm_compras_compilado_xlsx',
+    'alm_insumos_referencia_suspeita', 'alm_insumos_corrigir_referencia_suspeita',
   ].includes(action)
 
   if (isAlmCompraAction) {
@@ -1905,27 +1906,52 @@ Deno.serve(async (req) => {
     if (action === 'alm_encaminhar_compra') {
       // itens: [{insumo_nome, insumo_id, qty, plataforma, produto_nome, preco_unit,
       //          match_pct, url_produto, url_carrinho}]
+      // qty é tratado como TETO (qty_aprovado) — backend cruza com qty_a_comprar
+      // do alm_aprovar pra excluir o que já foi atendido pelo estoque.
       const { requisicao_id, itens } = body
       if (!requisicao_id || !itens?.length)
         return json({ error: 'requisicao_id e itens são obrigatórios.' }, 400)
-      const rows = (itens as any[]).map((it: any) => ({
-        requisicao_id,
-        insumo_nome:     it.insumo_nome,
-        insumo_id:       it.insumo_id   || null,
-        qty:             it.qty         || 1,
-        plataforma:      it.plataforma,
-        produto_nome:    it.produto_nome || null,
-        preco_unit:      it.preco_unit  ?? null,
-        preco_total:     it.preco_unit != null ? it.preco_unit * (it.qty || 1) : null,
-        match_pct:       it.match_pct   ?? null,
-        url_produto:     it.url_produto || null,
-        url_carrinho:    it.url_carrinho|| null,
-        encaminhado_por: gerente.nome,
-        escola_id: (gerente as any).escola_id,
-      }))
+
+      // Lê itens da requisição pra pegar qty_a_comprar (calculado em alm_aprovar)
+      const { data: req } = await sb.from('alm_requisicoes').select('itens')
+        .eq('id', requisicao_id).eq('escola_id', (gerente as any).escola_id).maybeSingle()
+      const reqItens: any[] = ((req as any)?.itens as any[]) || []
+
+      const rows = (itens as any[]).map((it: any) => {
+        // Encontra item correspondente na req — match por insumo_id ou nome
+        const reqIt = reqItens.find((r: any) =>
+          (it.insumo_id && r.insumo_id === it.insumo_id) ||
+          (!it.insumo_id && r.nome === it.insumo_nome)
+        )
+        const qtyAComprar = reqIt && reqIt.qty_a_comprar != null
+          ? Number(reqIt.qty_a_comprar)
+          : Number(it.qty || 0)
+        const qtyFinal = Math.min(Number(it.qty || qtyAComprar), qtyAComprar)
+        return {
+          requisicao_id,
+          insumo_nome:     it.insumo_nome,
+          insumo_id:       it.insumo_id   || null,
+          qty:             qtyFinal,
+          plataforma:      it.plataforma,
+          produto_nome:    it.produto_nome || null,
+          preco_unit:      it.preco_unit  ?? null,
+          preco_total:     it.preco_unit != null ? it.preco_unit * qtyFinal : null,
+          match_pct:       it.match_pct   ?? null,
+          url_produto:     it.url_produto || null,
+          url_carrinho:    it.url_carrinho|| null,
+          encaminhado_por: gerente.nome,
+          escola_id: (gerente as any).escola_id,
+          _skip: qtyFinal <= 0,
+        }
+      }).filter((r: any) => !r._skip).map(({ _skip, ...rest }: any) => rest)
+
+      const skipped = (itens as any[]).length - rows.length
+      if (rows.length === 0) {
+        return json({ ok: true, encaminhados: 0, atendidos_estoque: skipped })
+      }
       const { error } = await sb.from('alm_compras').insert(rows)
       if (error) return json({ error: error.message }, 400)
-      return json({ ok: true, encaminhados: rows.length })
+      return json({ ok: true, encaminhados: rows.length, atendidos_estoque: skipped })
     }
 
     if (action === 'alm_compras_pendentes') {
@@ -2022,7 +2048,11 @@ Deno.serve(async (req) => {
       for (const k of Object.keys(grupos)) {
         precoOrigemMap[k] = grupos[k].precos.length > 0 ? 'scraper' : 'nenhuma'
       }
-      // Fallback de preço/url via insumoMap já carregado acima
+      // Fallback via insumoMap. Lógica defensiva contra dados ruins:
+      // muitos preco_referencia foram cadastrados como preço da EMBALAGEM
+      // inteira (ex: Cartolina ref=R$226,55 com qemb=20 → na verdade ~R$11/un).
+      // Se a referência é >= 5x maior que (preco/qtd_emb), suspeitamos
+      // que é preço da embalagem por engano — preferimos o cadastro.
       for (const id of Object.keys(insumoMap)) {
         const ins = insumoMap[id]
         const g = Object.values(grupos).find(x => x.insumo_id === id)
@@ -2031,13 +2061,21 @@ Deno.serve(async (req) => {
         if (!g.produto_nome_sugestao && ins.referencia_nome) g.produto_nome_sugestao = ins.referencia_nome
         if (g.precos.length === 0) {
           const qtdEmb = parseFloat(ins.qtd_por_embalagem) || 1
-          // preco_referencia já é por unidade de consumo (UI alm_insumo_set_referencia)
-          if (ins.preco_referencia != null) {
-            g.precos.push(parseFloat(ins.preco_referencia))
+          const ref = ins.preco_referencia != null ? parseFloat(ins.preco_referencia) : null
+          const precoCad = ins.preco != null ? parseFloat(ins.preco) / qtdEmb : null
+          // Detecta referência suspeita: qemb > 1 e ref >= 5x preço/qemb
+          // → ref é provavelmente da embalagem inteira, não da unidade.
+          const refSuspeita = ref != null && precoCad != null && qtdEmb > 1 && ref >= precoCad * 5
+          if (ref != null && !refSuspeita) {
+            g.precos.push(ref)
             precoOrigemMap[g.chave] = 'referencia'
-          } else if (ins.preco != null) {
-            g.precos.push(parseFloat(ins.preco) / qtdEmb)
-            precoOrigemMap[g.chave] = 'cadastro'
+          } else if (precoCad != null) {
+            g.precos.push(precoCad)
+            precoOrigemMap[g.chave] = refSuspeita ? 'cadastro_ref_suspeita' : 'cadastro'
+          } else if (ref != null) {
+            // Sem preco/qemb pra comparar — confia na referência
+            g.precos.push(ref)
+            precoOrigemMap[g.chave] = 'referencia'
           }
         }
       }
@@ -2128,6 +2166,60 @@ Deno.serve(async (req) => {
     if (action === 'alm_compras_compilado') {
       const r = await compilarCompras(body.status_filtro || 'pendente')
       return json(r)
+    }
+
+    // Lista insumos onde preco_referencia parece estar errado (provavelmente
+    // foi cadastrado como preço da embalagem em vez de preço unitário).
+    if (action === 'alm_insumos_referencia_suspeita') {
+      const escolaId = (gerente as any).escola_id
+      const { data } = await sb.from('alm_insumos')
+        .select('id, nome, unidade, unidade_compra, preco, preco_referencia, qtd_por_embalagem, ativo')
+        .eq('escola_id', escolaId).eq('ativo', true)
+        .not('preco_referencia', 'is', null)
+        .gt('qtd_por_embalagem', 1)
+      const suspeitos = (data ?? []).filter((i: any) => {
+        const ref = parseFloat(i.preco_referencia)
+        const preco = parseFloat(i.preco || 0)
+        const qemb = parseFloat(i.qtd_por_embalagem || 1)
+        if (!preco || !qemb) return false
+        const cadastro = preco / qemb
+        return ref >= cadastro * 5
+      }).map((i: any) => ({
+        id: i.id, nome: i.nome, unidade: i.unidade, unidade_compra: i.unidade_compra,
+        preco_atual: parseFloat(i.preco),
+        qtd_por_embalagem: parseFloat(i.qtd_por_embalagem),
+        preco_referencia_atual: parseFloat(i.preco_referencia),
+        preco_referencia_sugerido: parseFloat(i.preco) / parseFloat(i.qtd_por_embalagem),
+      }))
+      return json({ data: suspeitos, total: suspeitos.length })
+    }
+
+    // Corrige em batch: zera preco_referencia em insumos onde está claramente
+    // errado (>5x o preço/qtd_emb), forçando o sistema a usar preco/qtd_emb.
+    // Idempotente. ids opcional pra corrigir só os escolhidos pelo gerente.
+    if (action === 'alm_insumos_corrigir_referencia_suspeita') {
+      const escolaId = (gerente as any).escola_id
+      const idsAlvo: string[] | null = body.ids || null
+      const { data } = await sb.from('alm_insumos')
+        .select('id, preco, preco_referencia, qtd_por_embalagem')
+        .eq('escola_id', escolaId).eq('ativo', true)
+        .not('preco_referencia', 'is', null)
+        .gt('qtd_por_embalagem', 1)
+      const aCorrigir = (data ?? []).filter((i: any) => {
+        if (idsAlvo && !idsAlvo.includes(i.id)) return false
+        const ref = parseFloat(i.preco_referencia)
+        const preco = parseFloat(i.preco || 0)
+        const qemb = parseFloat(i.qtd_por_embalagem || 1)
+        if (!preco || !qemb) return false
+        return ref >= (preco / qemb) * 5
+      }).map((i: any) => i.id)
+      if (!aCorrigir.length) return json({ ok: true, corrigidos: 0 })
+      const { error } = await sb.from('alm_insumos').update({
+        preco_referencia: null,
+        referencia_fonte: null,
+      }).in('id', aCorrigir).eq('escola_id', escolaId)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true, corrigidos: aCorrigir.length })
     }
 
 
@@ -2448,7 +2540,8 @@ Deno.serve(async (req) => {
     'alm_turma_save', 'alm_turma_del',
     'alm_atualizar_precos', 'alm_prof_set_turma',
     'alm_criar_req_gerente',
-    'alm_inventario_criar', 'alm_inventario_finalizar', 'alm_inventario_cancelar',
+    // alm_inventario_* removido daqui — almoxarifado pode operar de ponta a ponta
+    // (criar/contar/finalizar/cancelar) pra ser autônomo na função designada.
   ].includes(action)
 
   const isAlmGerenteAction = [
@@ -3178,6 +3271,13 @@ Deno.serve(async (req) => {
       // Update items with new insumo_ids
       await sb.from('alm_requisicoes').update({ itens }).eq('id', id)
 
+      // Calcula resumo de estoque pro frontend (toast)
+      const totalDoEstoque = itens.reduce((s: number, it: any) => s + Number(it.qty_do_estoque || 0), 0)
+      const totalAComprar  = itens.reduce((s: number, it: any) => s + Number(it.qty_a_comprar  || 0), 0)
+      const itensAtendidosTotalmente = itens.filter((it: any) =>
+        Number(it.qty_aprovado) > 0 && Number(it.qty_a_comprar || 0) === 0
+      ).length
+
       // Notify the teacher — destaca itens rejeitados se houver
       const rejeitados = itens.filter((it: any) => it.rejeitado).map((it: any) => it.nome)
       const aprovParcial = rejeitados.length > 0
@@ -3190,7 +3290,12 @@ Deno.serve(async (req) => {
         requisicao_id: id,
         mensagem: msg,
       })
-      const resp: Record<string, unknown> = { ok: true }
+      const resp: Record<string, unknown> = {
+        ok: true,
+        total_do_estoque: totalDoEstoque,
+        total_a_comprar: totalAComprar,
+        itens_atendidos_totalmente: itensAtendidosTotalmente,
+      }
       if (insumoWarnings.length) resp.insumos_warnings = insumoWarnings
       return json(resp)
     }

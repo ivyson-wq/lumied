@@ -11346,10 +11346,19 @@ docker compose up -d --build</pre>
     document.getElementById('almReviewNota').value = '';
     document.getElementById('almReviewErr').classList.remove('show');
     document.getElementById('almAprovInfo').style.display = 'none';
-    const d = await callDiplomas({ action: 'alm_pendentes' });
+    const [d, dCat] = await Promise.all([
+      callDiplomas({ action: 'alm_pendentes' }),
+      callDiplomas({ action: 'alm_insumos_list' }),
+    ]);
     const req = (d.data||[]).find(r => r.id === id);
     if (!req) { showToast('Requisição não encontrada.', 'warning'); return; }
     almReviewItens = req.itens || [];
+    // Map insumo_id → estoque_qty pra mostrar saldo na revisão
+    const estoqueMap = {};
+    (dCat.data || []).forEach(i => { estoqueMap[i.id] = Number(i.estoque_qty || 0); });
+    almReviewItens.forEach(it => {
+      it._estoque_disponivel = it.insumo_id ? (estoqueMap[it.insumo_id] || 0) : 0;
+    });
 
     // Checa status do ML para alertar a coordenadora se estiver desconectado
     callDiplomas({ action: 'ml_status' }).then(s => {
@@ -11375,9 +11384,14 @@ docker compose up -d --build</pre>
               <div style="font-size:11px;color:var(--muted);">${almFmtBRL(it.preco_unit)} / ${it.unidade}</div>
             </div>
             <div style="font-size:12px;color:var(--muted);flex-shrink:0;">Pedido: <strong>${it.qty_solicitado}</strong></div>
+            ${it._estoque_disponivel > 0 ? `
+              <div id="alm-est-${i}" style="font-size:11px;flex-shrink:0;background:#dcfce7;color:#166534;padding:3px 8px;border-radius:10px;font-weight:600;" title="Disponível no estoque/inventário — será deduzido em vez de comprar">
+                📦 ${it._estoque_disponivel} em estoque
+              </div>` : ''}
             <div style="font-size:12px;flex-shrink:0;display:flex;align-items:center;gap:4px;">Aprovar:
-              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id || ''}" data-original="${it.qty_solicitado}" value="${it.qty_solicitado}" min="0" step="0.5" style="width:64px;">
+              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id || ''}" data-original="${it.qty_solicitado}" data-estoque="${it._estoque_disponivel || 0}" value="${it.qty_solicitado}" min="0" step="0.5" oninput="almReviewAtualizarBalanco(${i})" style="width:64px;">
             </div>
+            <div id="alm-balanco-${i}" style="font-size:11px;flex-shrink:0;color:var(--muted);"></div>
             <button type="button" id="alm-rej-btn-${i}" onclick="almToggleRejeitarItem(${i})"
               style="padding:5px 10px;background:none;border:1.5px solid #fecaca;color:#b91c1c;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;"
               title="Rejeitar este item (mantém os demais)">❌ Rejeitar</button>
@@ -11391,8 +11405,27 @@ docker compose up -d --build</pre>
 
     document.getElementById('almReviewModal').style.display = 'block';
 
+    // Inicializa balanço estoque/compra por linha
+    almReviewItens.forEach((_, i) => almReviewAtualizarBalanco(i));
+
     // Buscar preços em paralelo sem bloquear o modal
     almReviewItens.forEach((it, i) => almFetchPrecos(it.nome, it.unidade, i, it));
+  }
+
+  function almReviewAtualizarBalanco(i) {
+    const inp = document.querySelector(`#almReviewContent .alm-item-qty[data-idx="${i}"]`);
+    const target = document.getElementById(`alm-balanco-${i}`);
+    if (!inp || !target) return;
+    const qty = parseFloat(inp.value) || 0;
+    const estoque = parseFloat(inp.dataset.estoque) || 0;
+    if (qty <= 0 || estoque <= 0) { target.innerHTML = ''; return; }
+    const doEstoque = Math.min(estoque, qty);
+    const aComprar  = Math.max(0, qty - estoque);
+    if (aComprar === 0) {
+      target.innerHTML = `<span style="color:#166534;font-weight:600;">✅ ${doEstoque} do estoque · 0 a comprar</span>`;
+    } else {
+      target.innerHTML = `<span style="color:#92400e;font-weight:600;">📦 ${doEstoque} do estoque · 🛒 ${aComprar} a comprar</span>`;
+    }
   }
 
   var platIcon  = { 'Zoom': '🔎', 'Mercado Livre': '🛒', 'Shopee': '🧡', 'Amazon': '📦', 'Reval': '🏪' };
@@ -11580,11 +11613,20 @@ docker compose up -d --build</pre>
     const dAprov = await callDiplomas({ action: 'alm_aprovar', id: almReviewId, nota_gerente: nota, itens_aprovados });
     if (dAprov.error) { errEl.textContent = dAprov.error; errEl.classList.add('show'); return; }
 
-    // 2. Encaminhar compras (for items where price was found)
+    // 2. Encaminhar compras (for items where price was found) — backend filtra
+    // qty já atendida pelo estoque (qty_a_comprar = 0 → não vira linha de compra)
     const itensCompra = Object.values(almSelectedPrices).filter(it => it.plataforma);
+    let dEnc = { encaminhados: 0, atendidos_estoque: 0 };
     if (itensCompra.length) {
-      await callDiplomas({ action: 'alm_encaminhar_compra', requisicao_id: almReviewId, itens: itensCompra });
+      dEnc = await callDiplomas({ action: 'alm_encaminhar_compra', requisicao_id: almReviewId, itens: itensCompra });
     }
+
+    // Resumo: estoque atendido + compras encaminhadas
+    const partes = [];
+    if ((dAprov.total_do_estoque || 0) > 0) partes.push(`📦 ${dAprov.total_do_estoque} do estoque`);
+    if ((dEnc.encaminhados || 0) > 0) partes.push(`🛒 ${dEnc.encaminhados} encaminhado${dEnc.encaminhados>1?'s':''} pra compra`);
+    if (dAprov.itens_atendidos_totalmente > 0) partes.push(`${dAprov.itens_atendidos_totalmente} 100% pelo estoque`);
+    showToast(`✅ Requisição aprovada${partes.length?' · '+partes.join(' · '):''}`, 'success');
 
     almFecharReview();
     almLoadPendentes();
@@ -11687,8 +11729,9 @@ docker compose up -d --build</pre>
       ${chip('entregue', '✅ Entregue', (ent.data||[]).length)}
     </div>`;
 
-    // Botões de export sempre visíveis (mesmo quando vazio)
-    const exportBtns = `<div style="display:flex;gap:6px;margin-bottom:12px;justify-content:flex-end;">
+    // Botões de export + auditoria de referência
+    const exportBtns = `<div style="display:flex;gap:6px;margin-bottom:12px;justify-content:flex-end;flex-wrap:wrap;">
+      <button onclick="almAuditarRefSuspeita()" title="Detecta insumos com preço de referência cadastrado errado (provavelmente da embalagem inteira)" style="padding:6px 14px;background:#fff;border:1px solid #fcd34d;color:#92400e;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🔍 Auditar referências</button>
       <button onclick="almExportCompilado('xlsx')" style="padding:6px 14px;background:#0b7a4b;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📊 Excel</button>
       <button onclick="almExportCompilado('pdf')" style="padding:6px 14px;background:#b5591a;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📄 PDF</button>
     </div>`;
@@ -11723,7 +11766,7 @@ docker compose up -d --build</pre>
         </div>
         <div style="text-align:right;white-space:nowrap;">
           ${g.preco_unit_medio != null
-            ? `<div style="font-size:10px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un.${g.preco_origem === 'referencia' ? ` <span title="preço de referência cadastrado — clique pra editar" style="font-size:9px;cursor:pointer;" onclick='almAbrirSetRef(${JSON.stringify(g.chave)})'>📌</span>` : g.preco_origem === 'cadastro' ? ` <span title="preço do cadastro do insumo — clique pra cadastrar referência" style="font-size:9px;cursor:pointer;" onclick='almAbrirSetRef(${JSON.stringify(g.chave)})'>📋</span>` : ''}</div><div style="font-size:12px;font-weight:700;">${fmt(g.preco_total_estimado)}</div>`
+            ? `<div style="font-size:10px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un.${g.preco_origem === 'referencia' ? ` <span title="preço de referência cadastrado — clique pra editar" style="font-size:9px;cursor:pointer;" onclick='almAbrirSetRef(${JSON.stringify(g.chave)})'>📌</span>` : g.preco_origem === 'cadastro_ref_suspeita' ? ` <span title="referência cadastrada parece errada — usando preço do cadastro ÷ embalagem. Clique pra corrigir." style="font-size:9px;cursor:pointer;color:#b45309;" onclick='almAbrirSetRef(${JSON.stringify(g.chave)})'>⚠️📋</span>` : g.preco_origem === 'cadastro' ? ` <span title="preço do cadastro do insumo — clique pra cadastrar referência" style="font-size:9px;cursor:pointer;" onclick='almAbrirSetRef(${JSON.stringify(g.chave)})'>📋</span>` : ''}</div><div style="font-size:12px;font-weight:700;">${fmt(g.preco_total_estimado)}</div>`
             : `<button onclick='almAbrirSetRef(${JSON.stringify(g.chave)})' title="${g.preco_baixa_confianca ? 'Busca retornou produto incerto. Clique pra cadastrar preço de referência.' : 'Cadastre preço de referência'}" style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:6px;padding:4px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">⚠️ Cadastrar preço</button>`}
         </div>
         <div style="display:flex;gap:4px;align-items:center;">${acoesCol}</div>
@@ -11736,6 +11779,38 @@ docker compose up -d --build</pre>
   function almExportCompilado(formato) {
     const action = formato === 'xlsx' ? 'alm_compras_compilado_xlsx' : 'alm_compras_compilado_pdf';
     almBaixarPdf(action, 'status_filtro=' + encodeURIComponent(almComprasCompiladoStatus));
+  }
+
+  // Detecta e corrige insumos com preco_referencia cadastrado errado
+  // (geralmente preço da embalagem inteira em vez da unidade de consumo).
+  async function almAuditarRefSuspeita() {
+    const d = await callDiplomas({ action: 'alm_insumos_referencia_suspeita' });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    if (!d.total) { showToast('✅ Nenhuma referência suspeita.', 'success'); return; }
+    const fmt = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
+    const lista = d.data.map((i, idx) => `${idx+1}. <strong>${esc(i.nome)}</strong> — atual: ${fmt(i.preco_referencia_atual)}/un · sugerido: ${fmt(i.preco_referencia_sugerido)}/un (preço cadastro ÷ ${i.qtd_por_embalagem})`).join('<br>');
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;padding:20px;overflow-y:auto;';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `<div style="background:#fff;border-radius:14px;max-width:680px;margin:30px auto;padding:24px;">
+      <h3 style="font-family:'Lora',serif;font-size:17px;margin-bottom:10px;">🔍 ${d.total} referência(s) suspeita(s)</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Os preços abaixo foram cadastrados como preço da unidade mas parecem ser o preço da <strong>embalagem inteira</strong> (≥5× maior que o preço/qtd_por_embalagem). Você pode zerar todas pra que o sistema use o preço calculado automaticamente.</p>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:11px;max-height:340px;overflow-y:auto;line-height:1.7;">${lista}</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+        <button id="almAuditCancel" style="padding:8px 16px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Fechar</button>
+        <button id="almAuditFix" class="btn-create" style="width:auto;padding:8px 18px;background:#b5591a;">🧹 Limpar todas referências suspeitas</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#almAuditCancel').onclick = () => overlay.remove();
+    overlay.querySelector('#almAuditFix').onclick = async () => {
+      if (!await _lumiedConfirm(`Limpar ${d.total} preço(s) de referência suspeitos? O sistema voltará a calcular preço pela divisão preço cadastrado ÷ embalagem.`)) return;
+      const r = await callDiplomas({ action: 'alm_insumos_corrigir_referencia_suspeita' });
+      if (r.error) { showToast('Erro: ' + r.error, 'error'); return; }
+      overlay.remove();
+      showToast(`✅ ${r.corrigidos} referência(s) limpa(s).`, 'success');
+      almLoadCompiladoCompras();
+    };
   }
 
   // Abre prompt pra cadastrar/editar preco_referencia. Se item não está
