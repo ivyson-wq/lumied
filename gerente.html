@@ -2367,7 +2367,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <div class="bm-label">Receita do mês</div>
               <span class="bm-trend flat" id="bmReceitaTrend" style="display:none;"></span>
             </button>
-            <button class="briefing-metric" id="bmPendentesCard" title="Pendências">
+            <button class="briefing-metric" id="bmPendentesCard" onclick="abrirPendenciasModal()" title="Ver itens pendentes">
               <span class="bm-icon">⚠️</span>
               <div class="bm-value" id="bmPendentes">—</div>
               <div class="bm-label">Itens pendentes</div>
@@ -3967,6 +3967,17 @@ docker compose up -d --build</pre>
 </div>
 
 <!-- SÉRIE EDIT MODAL -->
+<!-- Modal: Itens Pendentes (drill-down do dashboard) -->
+<div id="pendenciasModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;padding:20px;overflow-y:auto;" onclick="if(event.target===this)fecharPendenciasModal()">
+  <div style="background:#fff;border-radius:14px;max-width:780px;margin:30px auto;padding:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h3 style="font-family:'Lora',serif;font-size:18px;">⚠️ Itens pendentes</h3>
+      <button onclick="fecharPendenciasModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+    </div>
+    <div id="pendenciasContent" style="font-size:13px;">⏳ Carregando…</div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="serieModal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeSerieModal()">
   <div class="modal">
     <h3>Editar Série</h3>
@@ -15084,6 +15095,106 @@ docker compose up -d --build</pre>
     if (Math.abs(pct) < 2) { el.className = 'bm-trend flat'; el.textContent = '≈ ' + Math.abs(pct) + '%'; }
     else if (isGood) { el.className = 'bm-trend up'; el.textContent = (isUp?'↑ ':'↓ ') + Math.abs(pct) + '%'; }
     else { el.className = 'bm-trend down'; el.textContent = (isUp?'↑ ':'↓ ') + Math.abs(pct) + '%'; }
+  }
+
+  // ── Modal de drill-down dos itens pendentes ────────────────
+  function fecharPendenciasModal() {
+    document.getElementById('pendenciasModal').style.display = 'none';
+  }
+
+  async function abrirPendenciasModal() {
+    const wrap = document.getElementById('pendenciasContent');
+    wrap.innerHTML = '⏳ Carregando…';
+    document.getElementById('pendenciasModal').style.display = 'block';
+
+    // Resumo + listas em paralelo (cada uma falha isoladamente)
+    const [resumo, manut, almox, mens, leads] = await Promise.all([
+      api({ action: 'dashboard_resumo_gerente' }).catch(() => ({})),
+      api({ action: 'manutencao_list', somente_abertas: true, limit: 50 }).catch(() => []),
+      callDiplomas({ action: 'alm_pendentes' }).catch(() => ({ data: [] })),
+      api({ action: 'fin_mensalidades_list', mes: new Date().toISOString().slice(0,7) }).catch(() => []),
+      api({ action: 'crm_leads_list' }).catch(() => []),
+    ]);
+    const pend = (resumo?.pendencias) || {};
+
+    const arrManut = Array.isArray(manut) ? manut : (manut?.data || []);
+    const arrAlmox = (almox?.data) || (Array.isArray(almox) ? almox : []);
+    const arrMens = Array.isArray(mens) ? mens : (mens?.data || []);
+    const arrMensAtr = arrMens.filter(m => m.status === 'atrasado');
+    const arrLeads = Array.isArray(leads) ? leads : (leads?.data || []);
+    // Leads parados: sem atualização em mais de 7 dias e ainda em estágio aberto
+    const corteLead = Date.now() - 7 * 86400000;
+    const arrLeadsParados = arrLeads.filter(l => {
+      const ts = l.atualizado_em ? new Date(l.atualizado_em).getTime() : 0;
+      return ts && ts < corteLead && !['ganho','perdido','cancelado','matriculado'].includes(l.estagio_nome || '');
+    });
+
+    const totalUrgentes = (pend.manutencao_urgentes || 0)
+      + (pend.mensalidades_atrasadas || arrMensAtr.length || 0)
+      + (pend.tickets_abertos || 0);
+    const totalGeral = pend.total ?? (arrManut.length + arrAlmox.length + arrMensAtr.length + arrLeadsParados.length);
+
+    const sec = (icone, titulo, panelAlvo, items, renderItem) => {
+      const top = items.slice(0, 5);
+      const restante = items.length - top.length;
+      return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${items.length?'8px':'0'};">
+          <div><strong>${icone} ${titulo}</strong> <span style="color:var(--muted);font-size:12px;">(${items.length})</span></div>
+          ${panelAlvo ? `<button onclick="fecharPendenciasModal();showPanel('${panelAlvo}')" style="background:#1a6bb5;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;">Ver tudo →</button>` : ''}
+        </div>
+        ${items.length === 0 ? '' : '<div style="display:flex;flex-direction:column;gap:6px;">' + top.map(renderItem).join('') + (restante > 0 ? `<div style="font-size:11px;color:var(--muted);text-align:center;padding:4px;">+${restante} item(ns) — clique em "Ver tudo →"</div>` : '') + '</div>'}
+      </div>`;
+    };
+
+    const URG = { critica:'🔴', alta:'🟠', media:'🟡', baixa:'⚪' };
+    wrap.innerHTML = `
+      <div style="background:linear-gradient(135deg,#fef3f2,#fff);border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+        <strong style="color:#9a3412;">${totalGeral} item(ns) pendentes</strong>
+        ${totalUrgentes > 0 ? ` · <span style="color:#b91c1c;font-weight:600;">${totalUrgentes} urgente(s)</span>` : ''}
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Clique em qualquer item pra abrir os detalhes no painel.</div>
+      </div>
+      ${sec('🔧', 'Manutenções pendentes', 'manutencao', arrManut, (m) =>
+        `<button onclick="fecharPendenciasModal();showPanel('manutencao');setTimeout(()=>typeof openManutModal==='function'&&openManutModal('${m.id}'),100)" style="background:#fafafa;border:1px solid #f0ece6;border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;justify-content:space-between;gap:10px;">
+          <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">
+            <span style="font-weight:600;">${URG[m.urgencia]||''} ${esc((m.descricao||'').slice(0,80))}</span>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${esc(m.localizacao||'—')} · ${m.criado_em?new Date(m.criado_em).toLocaleDateString('pt-BR'):'—'}</div>
+          </div>
+          <span style="color:#1a6bb5;font-weight:600;align-self:center;">→</span>
+        </button>`
+      )}
+      ${sec('📦', 'Requisições almoxarifado', 'almPend', arrAlmox, (r) =>
+        `<button onclick="fecharPendenciasModal();showPanel('almPend');setTimeout(()=>typeof almAbrirReview==='function'&&almAbrirReview('${r.id}'),100)" style="background:#fafafa;border:1px solid #f0ece6;border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;justify-content:space-between;gap:10px;">
+          <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">
+            <span style="font-weight:600;">${esc(r.professoras?.nome||'?')}</span> · ${esc(r.series?.nome||'—')}
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${(r.itens||[]).length} item(ns) · ${almFmtBRL?almFmtBRL(r.total||0):'R$ '+(r.total||0)} · ${r.criado_em?new Date(r.criado_em).toLocaleDateString('pt-BR'):'—'}</div>
+          </div>
+          <span style="color:#1a6bb5;font-weight:600;align-self:center;">→</span>
+        </button>`
+      )}
+      ${sec('💸', 'Mensalidades atrasadas', 'finMens', arrMensAtr, (m) =>
+        `<button onclick="fecharPendenciasModal();showPanel('finMens')" style="background:#fafafa;border:1px solid #f0ece6;border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;justify-content:space-between;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <span style="font-weight:600;">${esc(m.crianca_nome||m.familia_nome||'?')}</span>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${esc(m.familia_email||'')} · venc. ${m.data_vencimento?new Date(m.data_vencimento+'T12:00').toLocaleDateString('pt-BR'):'—'} · R$ ${Number(m.valor_total||0).toFixed(2)}</div>
+          </div>
+          <span style="color:#1a6bb5;font-weight:600;align-self:center;">→</span>
+        </button>`
+      )}
+      ${sec('📋', 'Leads parados +7d', 'crmKanban', arrLeadsParados, (l) =>
+        `<button onclick="fecharPendenciasModal();showPanel('crmKanban')" style="background:#fafafa;border:1px solid #f0ece6;border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;justify-content:space-between;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <span style="font-weight:600;">${esc(l.nome_responsavel||l.nome_crianca||'?')}</span>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${esc(l.estagio_nome||'')} · sem update há ${Math.round((Date.now()-new Date(l.atualizado_em).getTime())/86400000)}d</div>
+          </div>
+          <span style="color:#1a6bb5;font-weight:600;align-self:center;">→</span>
+        </button>`
+      )}
+      ${(pend.tickets_abertos||0) > 0 ? `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+        <strong>🎫 Tickets abertos</strong> <span style="color:var(--muted);font-size:12px;">(${pend.tickets_abertos})</span>
+        <button onclick="fecharPendenciasModal();showPanel('tickets')" style="float:right;background:#1a6bb5;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;">Ver tudo →</button>
+      </div>` : ''}
+      ${totalGeral === 0 ? '<div style="padding:30px;text-align:center;color:#15803d;font-weight:600;">✨ Tudo em dia — nenhuma pendência.</div>' : ''}
+    `;
   }
 
   async function loadDashboardResumo() {
