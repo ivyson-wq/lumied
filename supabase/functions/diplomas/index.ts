@@ -1852,7 +1852,7 @@ Deno.serve(async (req) => {
   const isAlmCompraAction = [
     'alm_encaminhar_compra', 'alm_compras_pendentes',
     'alm_compras_todas', 'alm_marcar_comprado', 'alm_cancelar_compra',
-    'alm_compras_compilado',
+    'alm_compras_compilado', 'alm_distribuir_grupo',
   ].includes(action)
 
   if (isAlmCompraAction) {
@@ -1908,22 +1908,26 @@ Deno.serve(async (req) => {
     // Resultado: 1 linha por item agregado com qty_total, turmas, IDs filhos.
     if (action === 'alm_compras_compilado') {
       const escolaId = (gerente as any).escola_id
-      const { data: linhas } = await sb.from('alm_compras')
-        .select('id, insumo_id, insumo_nome, qty, plataforma, produto_nome, preco_unit, match_pct, url_produto, url_carrinho, status, encaminhado_em, alm_requisicoes(mes, professoras(nome), series(nome))')
+      const statusFiltro: string = body.status_filtro || 'pendente' // pendente | comprado | entregue | todos
+      let q = sb.from('alm_compras')
+        .select('id, insumo_id, insumo_nome, qty, plataforma, produto_nome, preco_unit, match_pct, url_produto, url_carrinho, status, encaminhado_em, requisicao_id, alm_requisicoes(mes, professoras(nome), series(nome))')
         .eq('escola_id', escolaId)
-        .eq('status', 'pendente')
         .order('encaminhado_em', { ascending: false })
+      if (statusFiltro !== 'todos') q = q.eq('status', statusFiltro)
+      const { data: linhas } = await q
 
       const norm = (s: string) => (s || '').toLowerCase()
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
         .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 
+      type FilhaInfo = { compra_id: string; requisicao_id: string; turma: string; professora: string; qty: number; status: string };
       type Grupo = {
         chave: string;
         insumo_id: string | null;
         nome: string;
         qty_total: number;
         ids: string[];
+        filhas: FilhaInfo[];
         turmas: Set<string>;
         professoras: Set<string>;
         meses: Set<string>;
@@ -1933,6 +1937,7 @@ Deno.serve(async (req) => {
         match_pct_max: number;
         url_produto: string | null;
         url_carrinho: string | null;
+        statuses: Set<string>;
       }
       const grupos: Record<string, Grupo> = {}
       for (const l of (linhas ?? []) as any[]) {
@@ -1940,21 +1945,30 @@ Deno.serve(async (req) => {
         if (!grupos[chave]) {
           grupos[chave] = {
             chave, insumo_id: l.insumo_id, nome: l.insumo_nome,
-            qty_total: 0, ids: [], turmas: new Set(), professoras: new Set(), meses: new Set(),
+            qty_total: 0, ids: [], filhas: [], turmas: new Set(), professoras: new Set(), meses: new Set(),
             precos: [], plataformas: {},
             produto_nome_sugestao: null, match_pct_max: 0,
-            url_produto: null, url_carrinho: null,
+            url_produto: null, url_carrinho: null, statuses: new Set(),
           }
         }
         const g = grupos[chave]
-        g.qty_total += parseFloat(l.qty || 0)
+        const qty = parseFloat(l.qty || 0)
+        g.qty_total += qty
         g.ids.push(l.id)
+        g.filhas.push({
+          compra_id: l.id,
+          requisicao_id: l.requisicao_id,
+          turma: l.alm_requisicoes?.series?.nome || '—',
+          professora: l.alm_requisicoes?.professoras?.nome || '—',
+          qty,
+          status: l.status,
+        })
+        g.statuses.add(l.status)
         if (l.alm_requisicoes?.series?.nome) g.turmas.add(l.alm_requisicoes.series.nome)
         if (l.alm_requisicoes?.professoras?.nome) g.professoras.add(l.alm_requisicoes.professoras.nome)
         if (l.alm_requisicoes?.mes) g.meses.add(l.alm_requisicoes.mes)
         if (l.preco_unit != null) g.precos.push(parseFloat(l.preco_unit))
         if (l.plataforma) g.plataformas[l.plataforma] = (g.plataformas[l.plataforma] || 0) + 1
-        // Mantém a melhor sugestão de produto (maior match_pct)
         if ((l.match_pct ?? 0) > g.match_pct_max) {
           g.match_pct_max = l.match_pct ?? 0
           g.produto_nome_sugestao = l.produto_nome
@@ -1982,6 +1996,9 @@ Deno.serve(async (req) => {
       const out = Object.values(grupos).map(g => {
         const precoMedio = g.precos.length ? g.precos.reduce((s, p) => s + p, 0) / g.precos.length : null
         const plataformaMaisComum = Object.entries(g.plataformas).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+        // Status agregado: se todas filhas mesmo status, retorna esse; senão 'misto'
+        const statusArr = Array.from(g.statuses)
+        const statusGrupo = statusArr.length === 1 ? statusArr[0] : 'misto'
         return {
           chave: g.chave,
           insumo_id: g.insumo_id,
@@ -1989,6 +2006,8 @@ Deno.serve(async (req) => {
           qty_total: g.qty_total,
           n_requisicoes: g.ids.length,
           ids: g.ids,
+          filhas: g.filhas,
+          status_grupo: statusGrupo,
           turmas: Array.from(g.turmas).sort(),
           professoras: Array.from(g.professoras).sort(),
           meses: Array.from(g.meses).sort(),
@@ -2008,6 +2027,63 @@ Deno.serve(async (req) => {
         total_linhas: (linhas ?? []).length,
         valor_estimado: out.reduce((s, g) => s + (g.preco_total_estimado || 0), 0),
       })
+    }
+
+    // Distribuir grupo recebido pelas turmas que pediram. Recebe array de
+    // { compra_id, requisicao_id, insumo_id, qty_entregue }. Cria registros em
+    // alm_entregas + marca alm_compras.status='entregue' nos compra_id afetados.
+    // Excedente (qty_entregue > qty pedida) vai pro estoque do insumo se
+    // catalogado.
+    if (action === 'alm_distribuir_grupo') {
+      const escolaId = (gerente as any).escola_id
+      const distribuicao: any[] = body.distribuicao || []
+      const compraIds: string[] = body.compra_ids || []
+      const insumoIdGrupo: string | null = body.insumo_id || null
+      const excedente: number = parseFloat(body.excedente_estoque || 0) || 0
+      if (!distribuicao.length) return json({ error: 'Nenhuma turma para distribuir.' }, 400)
+
+      const entregas = distribuicao
+        .filter(d => parseFloat(d.qty_entregue) > 0)
+        .map(d => ({
+          requisicao_id: d.requisicao_id,
+          insumo_id: d.insumo_id || insumoIdGrupo || null,
+          qty_entregue: parseFloat(d.qty_entregue),
+          entregue_por: gerente.nome,
+          escola_id: escolaId,
+        }))
+      if (entregas.length) {
+        const { error: errEnt } = await sb.from('alm_entregas').insert(entregas)
+        if (errEnt) return json({ error: 'Falha ao registrar entrega: ' + errEnt.message }, 400)
+      }
+
+      // Atualiza alm_compras → status entregue (todas linhas do grupo)
+      if (compraIds.length) {
+        await sb.from('alm_compras').update({
+          status: 'entregue',
+          entregue_em: new Date().toISOString(),
+          entregue_por: gerente.nome,
+        }).in('id', compraIds).eq('escola_id', escolaId)
+      }
+
+      // Excedente entra no estoque (se item catalogado)
+      if (excedente > 0 && insumoIdGrupo) {
+        const { data: ins } = await sb.from('alm_insumos')
+          .select('estoque_qty').eq('id', insumoIdGrupo).eq('escola_id', escolaId).maybeSingle()
+        if (ins) {
+          const antes = Number((ins as any).estoque_qty || 0)
+          const depois = antes + excedente
+          await sb.from('alm_insumos').update({ estoque_qty: depois })
+            .eq('id', insumoIdGrupo).eq('escola_id', escolaId)
+          await sb.from('alm_movimentacoes').insert({
+            escola_id: escolaId, insumo_id: insumoIdGrupo,
+            tipo: 'entrada', qty: excedente,
+            motivo: 'Excedente da compra distribuída',
+            saldo_antes: antes, saldo_depois: depois,
+          })
+        }
+      }
+
+      return json({ ok: true, entregas_criadas: entregas.length, excedente_para_estoque: excedente })
     }
 
     if (action === 'alm_compras_todas') {

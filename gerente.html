@@ -11572,53 +11572,186 @@ docker compose up -d --build</pre>
     }
   }
 
+  var almComprasCompiladoStatus = 'pendente';
+  var _almGruposCache = {};
+
   async function almLoadCompiladoCompras() {
     const box = document.getElementById('almComprasCompiladoBox');
-    box.innerHTML = '⏳ Compilando…';
-    const d = await callDiplomas({ action: 'alm_compras_compilado' });
-    const grupos = d.data || [];
-    if (!grupos.length) { box.innerHTML = '<div class="empty-state">✅ Nenhum item pendente pra comprar.</div>'; return; }
+    box.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);">⏳ Compilando…</div>';
+
+    // Carrega contadores de cada status em paralelo
+    const [pend, comp, ent] = await Promise.all([
+      callDiplomas({ action: 'alm_compras_compilado', status_filtro: 'pendente' }),
+      callDiplomas({ action: 'alm_compras_compilado', status_filtro: 'comprado' }),
+      callDiplomas({ action: 'alm_compras_compilado', status_filtro: 'entregue' }),
+    ]);
+    const escolha = almComprasCompiladoStatus === 'pendente' ? pend : almComprasCompiladoStatus === 'comprado' ? comp : ent;
+    const grupos = escolha.data || [];
+    _almGruposCache = Object.fromEntries(grupos.map(g => [g.chave, g]));
 
     const platIcons = { 'Mercado Livre':'🛒', 'Amazon':'📦', 'Shopee':'🛍️', 'Reval':'🏬' };
     const fmt = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const header = `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:13px;"><strong>${d.total_grupos}</strong> item(ns) únicos · ${d.total_linhas} linha(s) de ${grupos.reduce((s,g)=>s+g.turmas.length,0)} pedidos de turma</div>
-      <div style="font-size:13px;font-weight:700;">Total estimado: ${fmt(d.valor_estimado)}</div>
+    // ── KPIs hero ──
+    const turmasUnicas = new Set();
+    grupos.forEach(g => g.turmas.forEach(t => turmasUnicas.add(t)));
+    const hero = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px;">
+      <div style="background:linear-gradient(135deg,#fef3c7,#fff);border:1px solid #fcd34d;border-radius:12px;padding:12px 16px;">
+        <div style="font-size:10px;text-transform:uppercase;color:#92400e;font-weight:700;letter-spacing:.5px;">Itens únicos</div>
+        <div style="font-size:24px;font-weight:800;color:#78350f;font-family:'Lora',serif;">${escolha.total_grupos || 0}</div>
+        <div style="font-size:10px;color:#92400e;">${escolha.total_linhas || 0} pedido(s) de turma</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#dbeafe,#fff);border:1px solid #93c5fd;border-radius:12px;padding:12px 16px;">
+        <div style="font-size:10px;text-transform:uppercase;color:#1e40af;font-weight:700;letter-spacing:.5px;">Turmas atendidas</div>
+        <div style="font-size:24px;font-weight:800;color:#1e3a8a;font-family:'Lora',serif;">${turmasUnicas.size}</div>
+        <div style="font-size:10px;color:#1e40af;">${grupos.reduce((s,g)=>s+g.qty_total,0)} unidades</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#dcfce7,#fff);border:1px solid #86efac;border-radius:12px;padding:12px 16px;">
+        <div style="font-size:10px;text-transform:uppercase;color:#166534;font-weight:700;letter-spacing:.5px;">Valor estimado</div>
+        <div style="font-size:20px;font-weight:800;color:#14532d;font-family:'Lora',serif;">${fmt(escolha.valor_estimado || 0)}</div>
+        <div style="font-size:10px;color:#166534;">soma das sugestões</div>
+      </div>
     </div>`;
 
-    box.innerHTML = header + grupos.map(g => {
+    // ── Filtros por status ──
+    const chip = (key, label, count) => `<button onclick="almComprasCompiladoStatus='${key}';almLoadCompiladoCompras()" style="padding:8px 16px;background:${almComprasCompiladoStatus===key?'#1c1712':'#fff'};color:${almComprasCompiladoStatus===key?'#fff':'var(--text)'};border:1px solid ${almComprasCompiladoStatus===key?'#1c1712':'var(--border)'};border-radius:100px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      ${label} <span style="display:inline-block;background:${almComprasCompiladoStatus===key?'rgba(255,255,255,.2)':'#f0ece6'};border-radius:100px;padding:1px 7px;font-size:10px;margin-left:4px;">${count}</span>
+    </button>`;
+    const filtros = `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      ${chip('pendente', '⏳ A comprar', (pend.data||[]).length)}
+      ${chip('comprado', '📦 Comprado · receber', (comp.data||[]).length)}
+      ${chip('entregue', '✅ Entregue', (ent.data||[]).length)}
+    </div>`;
+
+    if (!grupos.length) { box.innerHTML = hero + filtros + '<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:36px;text-align:center;color:var(--muted);">✨ Nada por aqui.</div>'; return; }
+
+    // ── Cards ──
+    const cardsHtml = grupos.map(g => {
       const linkBusca = g.url_carrinho || g.url_produto;
       const buscarNome = encodeURIComponent(g.nome);
-      return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:240px;">
-            <div style="font-weight:700;font-size:14px;">${esc(g.nome)}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-              ${g.n_requisicoes} requisição(ões) · ${g.turmas.length} turma(s): ${g.turmas.map(t => `<span style="background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:1px 8px;font-size:10px;font-weight:600;display:inline-block;margin:1px;">${esc(t)}</span>`).join('')}
-              ${g.meses.length ? ' · mês: ' + g.meses.map(m=>almMesBR(m)).join(', ') : ''}
-            </div>
-            ${g.produto_nome_sugestao ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">💡 sugestão: ${esc(g.produto_nome_sugestao)} ${g.match_pct_max ? `<span style="color:${matchColor(g.match_pct_max)};font-weight:600;">(${g.match_pct_max}%)</span>` : ''}</div>` : ''}
+      const turmasChips = g.filhas.map(f => `<span style="background:rgba(200,16,46,.08);color:#C8102E;border-radius:100px;padding:2px 9px;font-size:10px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">${esc(f.turma)} <span style="background:rgba(200,16,46,.18);border-radius:100px;padding:0 5px;">×${f.qty}</span></span>`).join(' ');
+
+      let acoes = '';
+      if (almComprasCompiladoStatus === 'pendente') {
+        acoes = `${linkBusca ? `<a href="${esc(linkBusca)}" target="_blank" rel="noopener" style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;">${platIcons[g.plataforma_sugerida]||'🛒'} ${g.url_carrinho?'Abrir carrinho':'Ver produto'}</a>` : ''}
+          <a href="https://www.mercadolivre.com.br/jms/search?as_word=${buscarNome}" target="_blank" rel="noopener" style="background:#fff;border:1px solid var(--border);color:var(--text);text-decoration:none;border-radius:8px;padding:7px 14px;font-size:12px;font-family:'DM Sans',sans-serif;">🔍 Buscar no ML</a>
+          <button onclick='almMarcarGrupoComprado(${JSON.stringify(g.ids)}, ${JSON.stringify(g.nome)})' class="btn-create" style="width:auto;padding:7px 16px;font-size:12px;background:#2d7a3a;margin-left:auto;">✅ Marcar grupo comprado</button>`;
+      } else if (almComprasCompiladoStatus === 'comprado') {
+        acoes = `<button onclick='almAbrirDistribuir(${JSON.stringify(g.chave)})' class="btn-create" style="width:auto;padding:7px 16px;font-size:12px;background:#0b7a4b;margin-left:auto;">📥 Receber e distribuir</button>`;
+      } else {
+        acoes = `<span style="font-size:11px;color:var(--muted);margin-left:auto;align-self:center;">✅ Entregue</span>`;
+      }
+
+      return `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
+        <div style="display:grid;grid-template-columns:64px 1fr auto;gap:14px;align-items:flex-start;">
+          <div style="background:#f0ece6;border-radius:10px;padding:8px 10px;text-align:center;">
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600;">qty</div>
+            <div style="font-size:24px;font-weight:800;line-height:1;color:var(--text);font-family:'Lora',serif;">${g.qty_total}</div>
+          </div>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:15px;line-height:1.3;">${esc(g.nome)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${turmasChips}</div>
+            ${g.produto_nome_sugestao ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;padding:5px 9px;background:#f9f7f4;border-radius:6px;display:inline-block;">💡 ${esc(g.produto_nome_sugestao)} ${g.match_pct_max ? `<span style="color:${matchColor(g.match_pct_max)};font-weight:600;">(${g.match_pct_max}%)</span>` : ''}</div>` : ''}
           </div>
           <div style="text-align:right;flex-shrink:0;">
-            <div style="font-size:18px;font-weight:800;">×${g.qty_total}</div>
-            ${g.preco_unit_medio != null ? `<div style="font-size:11px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un. · total ${fmt(g.preco_total_estimado)}</div>` : ''}
+            ${g.preco_unit_medio != null ? `<div style="font-size:11px;color:var(--muted);">${fmt(g.preco_unit_medio)}/un.</div><div style="font-size:14px;font-weight:700;color:var(--text);">${fmt(g.preco_total_estimado)}</div>` : ''}
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
-          ${linkBusca ? `<a href="${esc(linkBusca)}" target="_blank" rel="noopener" style="background:#1a6bb5;color:#fff;text-decoration:none;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;">${platIcons[g.plataforma_sugerida]||'🛒'} ${g.url_carrinho?'Abrir carrinho':'Ver produto'}</a>` : ''}
-          <a href="https://www.mercadolivre.com.br/jms/search?as_word=${buscarNome}" target="_blank" rel="noopener" style="background:#fff;border:1px solid var(--border);color:var(--text);text-decoration:none;border-radius:7px;padding:6px 12px;font-size:11px;font-family:'DM Sans',sans-serif;">🔍 Buscar no ML</a>
-          <button onclick="almMarcarGrupoComprado(${JSON.stringify(g.ids).replace(/"/g,'&quot;')}, '${esc(g.nome)}')" style="background:#2d7a3a;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:auto;">✅ Marcar grupo comprado</button>
-        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid #f0ece6;">${acoes}</div>
       </div>`;
     }).join('');
+
+    box.innerHTML = hero + filtros + cardsHtml;
   }
 
   async function almMarcarGrupoComprado(ids, nome) {
     if (!await _lumiedConfirm(`Marcar todas as ${ids.length} reservas de "${nome}" como compradas?`)) return;
     const d = await callDiplomas({ action: 'alm_marcar_comprado', ids });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
-    showToast(`✅ ${d.marcados ?? ids.length} item(ns) de "${nome}" marcado(s) como comprado(s).`, 'success');
+    showToast(`✅ ${d.marcados ?? ids.length} item(ns) marcado(s) como comprado(s).`, 'success');
+    almLoadCompiladoCompras();
+  }
+
+  // ── Distribuição ao receber ──────────────────
+  function almAbrirDistribuir(chave) {
+    const g = _almGruposCache[chave];
+    if (!g) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'almDistribuirOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;padding:20px;overflow-y:auto;';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `<div style="background:#fff;border-radius:14px;max-width:640px;margin:30px auto;padding:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="font-family:'Lora',serif;font-size:17px;">📥 Receber e distribuir: ${esc(g.nome)}</h3>
+        <button onclick="document.getElementById('almDistribuirOverlay').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">×</button>
+      </div>
+      <div style="background:#f9f7f4;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);">
+        <strong style="color:var(--text);">${g.qty_total}</strong> unidades pedidas no total. Confirme o que cada turma vai receber. Se chegou mais que o pedido, o excedente entra no estoque.
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#f9f7f4;">
+          <th style="padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Turma / Professora</th>
+          <th style="padding:8px 10px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--muted);">Pediu</th>
+          <th style="padding:8px 10px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--muted);">Entregar</th>
+        </tr></thead>
+        <tbody>${g.filhas.map((f, idx) => `
+          <tr style="border-bottom:1px solid #f0ece6;">
+            <td style="padding:8px 10px;">${esc(f.turma)} <span style="font-size:11px;color:var(--muted);">· ${esc(f.professora)}</span></td>
+            <td style="padding:8px 10px;text-align:right;color:var(--muted);">${f.qty}</td>
+            <td style="padding:8px 10px;text-align:right;">
+              <input type="number" class="alm-dist-qty" data-req="${f.requisicao_id}" data-compra="${f.compra_id}" data-pedido="${f.qty}" value="${f.qty}" min="0" step="0.5" oninput="almDistribuirRecalc()" style="width:80px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;text-align:right;font-size:13px;font-family:'DM Sans',sans-serif;">
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div id="almDistribuirResumo" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-top:14px;font-size:12px;color:#166534;"></div>
+      <div class="f-alert error" id="almDistribuirErr" style="display:none;margin-top:8px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+        <button onclick="document.getElementById('almDistribuirOverlay').remove()" style="padding:8px 16px;background:#f0ece6;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+        <button onclick='almConfirmarDistribuir(${JSON.stringify(chave)})' class="btn-create" style="width:auto;padding:8px 18px;background:#0b7a4b;">✅ Confirmar distribuição</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    almDistribuirRecalc();
+  }
+  function almDistribuirRecalc() {
+    const inputs = document.querySelectorAll('.alm-dist-qty');
+    let total = 0, totalPedido = 0;
+    inputs.forEach(i => { total += parseFloat(i.value) || 0; totalPedido += parseFloat(i.dataset.pedido) || 0; });
+    const resumo = document.getElementById('almDistribuirResumo');
+    const excedente = total - totalPedido;
+    resumo.innerHTML = `Distribuído: <strong>${total}</strong> · Pedido: ${totalPedido} ${excedente > 0 ? `· Excedente pro estoque: <strong style="color:#d97706;">+${excedente}</strong>` : excedente < 0 ? `· Faltando: <strong style="color:#b91c1c;">${Math.abs(excedente)}</strong>` : ''}`;
+  }
+  async function almConfirmarDistribuir(chave) {
+    const g = _almGruposCache[chave];
+    if (!g) return;
+    const inputs = document.querySelectorAll('.alm-dist-qty');
+    const distribuicao = [];
+    let totalDist = 0;
+    inputs.forEach(i => {
+      const qty = parseFloat(i.value) || 0;
+      totalDist += qty;
+      if (qty > 0) distribuicao.push({
+        compra_id: i.dataset.compra,
+        requisicao_id: i.dataset.req,
+        insumo_id: g.insumo_id || null,
+        qty_entregue: qty,
+      });
+    });
+    const errEl = document.getElementById('almDistribuirErr');
+    errEl.style.display = 'none';
+    if (!distribuicao.length) { errEl.textContent = 'Informe pelo menos uma quantidade > 0.'; errEl.style.display = 'block'; return; }
+    const excedente = Math.max(0, totalDist - g.qty_total);
+    const d = await callDiplomas({
+      action: 'alm_distribuir_grupo',
+      compra_ids: g.ids,
+      insumo_id: g.insumo_id,
+      distribuicao,
+      excedente_estoque: excedente,
+    });
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+    document.getElementById('almDistribuirOverlay').remove();
+    showToast(`✅ Distribuição registrada: ${d.entregas_criadas} entrega(s)${d.excedente_para_estoque ? ` + ${d.excedente_para_estoque} pro estoque` : ''}.`, 'success');
     almLoadCompiladoCompras();
   }
 
