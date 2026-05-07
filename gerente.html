@@ -1624,6 +1624,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <div class="sec-title" style="margin:0;">🔌 Recursos &amp; Reservas</div>
           <button onclick="abrirModalNovoRecurso()" class="btn-create" style="width:auto;padding:8px 18px;">+ Novo Recurso</button>
         </div>
+
+        <!-- Analytics: ocupação + sugestão de capacidade -->
+        <div id="recursosAnalytics" style="margin-bottom:20px;"></div>
+
         <div id="recursosList" style="margin-bottom:24px;"></div>
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
@@ -1664,8 +1668,26 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <div class="ff"><label>Fim *</label><input type="datetime-local" id="reservaFim"></div>
             </div>
             <div class="ff"><label>Turma</label><select id="reservaTurma" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option></select></div>
+            <div class="ff" style="background:#f9f7f4;border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;">
+                <input type="checkbox" id="reservaRecorrencia" onchange="document.getElementById('reservaRecorrenciaWrap').style.display=this.checked?'grid':'none'" style="width:16px;height:16px;cursor:pointer;">
+                🔁 Repetir esta reserva
+              </label>
+              <div id="reservaRecorrenciaWrap" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+                <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">Frequência</label>
+                  <select id="reservaRecorrenciaTipo" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'DM Sans',sans-serif;">
+                    <option value="semanal">Semanal (mesmo dia/hora)</option>
+                    <option value="diaria">Diária (todos os dias úteis)</option>
+                  </select>
+                </div>
+                <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;">Até *</label>
+                  <input type="date" id="reservaRecorrenciaAte" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:'DM Sans',sans-serif;">
+                </div>
+              </div>
+            </div>
             <div class="ff"><label>Observação</label><textarea id="reservaObs" rows="2"></textarea></div>
             <div class="f-alert error" id="reservaErr" style="display:none;"></div>
+            <div id="reservaResultadoOk" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;margin-top:8px;"></div>
             <div class="modal-actions">
               <button class="btn-cancel" onclick="fecharReservaModal()">Cancelar</button>
               <button class="btn-save" onclick="salvarReserva()">Reservar</button>
@@ -5794,6 +5816,7 @@ docker compose up -d --build</pre>
     const dRec = await api({ action: 'recursos_list' });
     _recursosCache = dRec.data || [];
     const list = _recursosCache;
+    loadRecursosAnalytics();
     const el = document.getElementById('recursosList');
     if (!list.length) { el.innerHTML = '<div class="empty-state">Nenhum recurso cadastrado.</div>'; }
     else {
@@ -5821,12 +5844,15 @@ docker compose up -d --build</pre>
     el.innerHTML = list.map(r => {
       const ini = new Date(r.inicio).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
       const fim = new Date(r.fim).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
+      const ehSerie = r.serie_id || ['semanal','diaria'].includes(r.recorrencia);
+      const idCancelar = r.serie_id || r.id; // cancela a partir do parent (cobre todas filhas)
+      const badge = ehSerie ? '<span style="background:#dbeafe;color:#1e40af;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600;">🔁 série</span>' : '';
       return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>
-          <div style="font-weight:600;font-size:13px;">${esc(r.recursos?.identificacao || '—')} <span style="font-size:11px;color:var(--muted);">· ${esc(r.recursos?.tipo || '')}</span></div>
+          <div style="font-weight:600;font-size:13px;">${esc(r.recursos?.identificacao || '—')} <span style="font-size:11px;color:var(--muted);">· ${esc(r.recursos?.tipo || '')}</span>${badge}</div>
           <div style="font-size:11px;color:var(--muted);">${ini} → ${fim}${r.series ? ' · turma ' + esc(r.series.nome) : ''}${r.observacao ? ' · ' + esc(r.observacao) : ''}</div>
         </div>
-        <button onclick="cancelarReserva('${r.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+        <button onclick="cancelarReserva('${r.id}', ${ehSerie})" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
       </div>`;
     }).join('');
   }
@@ -5901,7 +5927,10 @@ docker compose up -d --build</pre>
 
   async function salvarReserva() {
     const errEl = document.getElementById('reservaErr');
+    const okEl = document.getElementById('reservaResultadoOk');
     errEl.style.display = 'none';
+    if (okEl) okEl.style.display = 'none';
+    const recorrente = document.getElementById('reservaRecorrencia').checked;
     const payload = {
       action: 'reservas_criar',
       recurso_id: document.getElementById('reservaRecurso').value,
@@ -5910,6 +5939,15 @@ docker compose up -d --build</pre>
       fim: document.getElementById('reservaFim').value,
       observacao: document.getElementById('reservaObs').value.trim() || null,
     };
+    if (recorrente) {
+      payload.recorrencia = document.getElementById('reservaRecorrenciaTipo').value;
+      payload.recorrencia_ate = document.getElementById('reservaRecorrenciaAte').value;
+      if (!payload.recorrencia_ate) {
+        errEl.textContent = 'Defina até quando a reserva se repete.';
+        errEl.style.display = 'block';
+        return;
+      }
+    }
     if (!payload.recurso_id || !payload.inicio || !payload.fim) {
       errEl.textContent = 'Recurso, início e fim obrigatórios.';
       errEl.style.display = 'block';
@@ -5921,15 +5959,106 @@ docker compose up -d --build</pre>
       errEl.style.display = 'block';
       return;
     }
-    fecharReservaModal();
-    loadReservas();
+    if (recorrente && okEl) {
+      okEl.textContent = `✅ ${d.criadas} reserva(s) criada(s)${d.puladas ? ` · ${d.puladas} pulada(s) por conflito` : ''}.`;
+      okEl.style.display = 'block';
+      setTimeout(() => { fecharReservaModal(); loadReservas(); }, 2200);
+    } else {
+      fecharReservaModal();
+      loadReservas();
+    }
   }
 
-  async function cancelarReserva(id) {
-    if (!await _lumiedConfirm('Cancelar esta reserva?')) return;
-    const d = await api({ action: 'reservas_cancelar', id });
+  async function cancelarReserva(id, temSerie) {
+    let modo = 'unica';
+    if (temSerie) {
+      const escolha = await new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:20px;';
+        overlay.innerHTML = `<div style="background:#fff;border-radius:14px;padding:22px;max-width:420px;width:100%;">
+          <h3 style="font-family:'Lora',serif;font-size:16px;margin-bottom:12px;">Cancelar reserva recorrente</h3>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Esta reserva faz parte de uma série. O que cancelar?</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button onclick="this.closest('div[style]').parentElement.dispatchEvent(new CustomEvent('escolha',{detail:'unica'}))" style="padding:10px 16px;background:#fff;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;font-size:13px;">Apenas esta ocorrência</button>
+            <button onclick="this.closest('div[style]').parentElement.dispatchEvent(new CustomEvent('escolha',{detail:'serie'}))" style="padding:10px 16px;background:#e53e3e;color:#fff;border:none;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;font-size:13px;font-weight:600;">Toda a série (todas ocorrências futuras)</button>
+            <button onclick="this.closest('div[style]').parentElement.dispatchEvent(new CustomEvent('escolha',{detail:null}))" style="padding:8px 16px;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">Voltar</button>
+          </div>
+        </div>`;
+        overlay.addEventListener('escolha', e => { overlay.remove(); resolve(e.detail); });
+        document.body.appendChild(overlay);
+      });
+      if (!escolha) return;
+      modo = escolha;
+    } else {
+      if (!await _lumiedConfirm('Cancelar esta reserva?')) return;
+    }
+    const d = await api({ action: 'reservas_cancelar', id, serie: modo === 'serie' });
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast(modo === 'serie' ? 'Série cancelada.' : 'Reserva cancelada.', 'success');
     loadReservas();
+    loadRecursosAnalytics();
+  }
+
+  // ── Analytics: ocupação + sugestão de capacidade ─────────────
+  async function loadRecursosAnalytics() {
+    const wrap = document.getElementById('recursosAnalytics');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px;">⏳ Calculando ocupação…</div>';
+    const d = await api({ action: 'recursos_analytics' });
+    if (d.error) { wrap.innerHTML = ''; return; }
+    if (!d.total_recursos) { wrap.innerHTML = ''; return; }
+
+    const corTaxa = (pct) => pct >= 80 ? '#b91c1c' : pct >= 60 ? '#d97706' : '#15803d';
+    const tipoLbl = { tablet:'📱 Tablet', projetor:'📽️ Projetor', sala:'🚪 Sala', impressora:'🖨️ Impressora', outro:'📦 Outro' };
+
+    const sugestoes = (d.por_tipo || []).filter(t => t.sugestao_extras > 0);
+    const heroSug = sugestoes.length
+      ? `<div style="background:linear-gradient(135deg,#fef3c7,#fef9e7);border:1px solid #fcd34d;border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+          <strong style="color:#92400e;">📊 Recomendação de capacidade</strong>
+          <div style="font-size:12px;color:#78350f;margin-top:4px;">
+            ${sugestoes.map(s => `Adicionar <strong>${s.sugestao_extras} ${tipoLbl[s.tipo] || s.tipo}</strong> a mais (uso atual: ${s.taxa_pct}% — saturado).`).join(' · ')}
+          </div>
+        </div>`
+      : `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#166534;">
+          ✅ Capacidade adequada — nenhum tipo de recurso saturado nas próximas 2 semanas.
+        </div>`;
+
+    const tabelaRecursos = (d.por_recurso || []).slice(0, 12).map(r => {
+      const pct = r.taxa_ocupacao_pct;
+      const cor = corTaxa(pct);
+      return `<tr style="border-bottom:1px solid #f0ece6;">
+        <td style="padding:6px 10px;font-size:12px;">${tipoLbl[r.tipo] || r.tipo}</td>
+        <td style="padding:6px 10px;font-size:12px;font-weight:600;">${esc(r.identificacao)}</td>
+        <td style="padding:6px 10px;font-size:11px;color:var(--muted);text-align:right;">${r.horasReservadas.toFixed(1)}h / ${r.horas_capacidade}h</td>
+        <td style="padding:6px 10px;font-size:11px;text-align:right;">
+          <div style="display:inline-block;width:90px;background:#f0ece6;border-radius:4px;height:6px;overflow:hidden;vertical-align:middle;margin-right:6px;">
+            <div style="height:100%;width:${Math.min(100,pct)}%;background:${cor};"></div>
+          </div>
+          <span style="color:${cor};font-weight:600;">${pct}%</span>
+        </td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `
+      ${heroSug}
+      <details style="background:#fff;border:1px solid var(--border);border-radius:10px;">
+        <summary style="cursor:pointer;padding:10px 14px;font-weight:600;font-size:13px;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          <span>📈 Ocupação por recurso (próx. 14 dias)</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:400;">${d.total_recursos} recurso(s) · ${d.total_reservas_periodo} reserva(s) ▾</span>
+        </summary>
+        <div style="padding:0 14px 12px;">
+          <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+            <thead><tr style="background:#f9f7f4;">
+              <th style="padding:6px 10px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Tipo</th>
+              <th style="padding:6px 10px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Recurso</th>
+              <th style="padding:6px 10px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--muted);">Horas</th>
+              <th style="padding:6px 10px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--muted);">Ocupação</th>
+            </tr></thead>
+            <tbody>${tabelaRecursos || '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--muted);font-size:12px;">Nenhuma reserva no período.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </details>
+    `;
   }
 
   // ── Audit log ──────────────────────────────────────────

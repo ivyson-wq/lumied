@@ -1519,28 +1519,154 @@ serve(async (req: Request) => {
   }
   if (action === "reservas_criar") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    const { recurso_id, turma_id, professora_id, inicio, fim, observacao } = body as Record<string, string>;
+    const { recurso_id, turma_id, professora_id, inicio, fim, observacao,
+            recorrencia, recorrencia_ate } = body as Record<string, string | null>;
     if (!recurso_id || !inicio || !fim) return err("Recurso, início e fim obrigatórios.");
-    if (new Date(fim) <= new Date(inicio)) return err("O fim deve ser posterior ao início.");
-    const { data: nova, error } = await admin.from("reservas_recursos").insert({
+    if (new Date(fim as string) <= new Date(inicio as string)) return err("O fim deve ser posterior ao início.");
+
+    // Pontual: insere 1 row e fim
+    if (!recorrencia || recorrencia === "unica") {
+      const { data: nova, error } = await admin.from("reservas_recursos").insert({
+        escola_id: gerente.escola_id, recurso_id,
+        turma_id: turma_id || null, professora_id: professora_id || null,
+        inicio, fim, observacao: observacao || null,
+        recorrencia: "unica",
+      }).select("id").single();
+      if (error) {
+        if (/Conflito de reserva/i.test(error.message)) return err(error.message, 409);
+        return err(sanitizePgError(error));
+      }
+      return ok({ success: true, id: (nova as any).id, criadas: 1 });
+    }
+
+    if (!["semanal", "diaria"].includes(recorrencia)) return err("recorrencia inválida (use unica/semanal/diaria).");
+    if (!recorrencia_ate) return err("recorrencia_ate obrigatório (data limite).");
+
+    const ini = new Date(inicio as string);
+    const fimD = new Date(fim as string);
+    const limite = new Date((recorrencia_ate as string) + "T23:59:59");
+    if (limite <= ini) return err("recorrencia_ate deve ser posterior ao início.");
+
+    const stepDias = recorrencia === "semanal" ? 7 : 1;
+    const maxIter = recorrencia === "semanal" ? 53 : 366;
+
+    // Cria parent (a primeira ocorrência) — filhas apontam pra ela
+    const { data: parent, error: errP } = await admin.from("reservas_recursos").insert({
       escola_id: gerente.escola_id, recurso_id,
       turma_id: turma_id || null, professora_id: professora_id || null,
       inicio, fim, observacao: observacao || null,
+      recorrencia, recorrencia_ate,
     }).select("id").single();
-    if (error) {
-      if (/Conflito de reserva/i.test(error.message)) return err(error.message, 409);
-      return err(sanitizePgError(error));
+    if (errP) {
+      if (/Conflito de reserva/i.test(errP.message)) return err(errP.message, 409);
+      return err(sanitizePgError(errP));
     }
-    return ok({ success: true, id: (nova as any).id });
+    const parentId = (parent as any).id;
+
+    // Gera as filhas; conflitos pulam (não bloqueiam toda a série)
+    let criadas = 1;
+    let puladas = 0;
+    const rows: any[] = [];
+    for (let i = 1; i < maxIter; i++) {
+      const novoIni = new Date(ini); novoIni.setUTCDate(novoIni.getUTCDate() + stepDias * i);
+      if (novoIni > limite) break;
+      const novoFim = new Date(fimD); novoFim.setUTCDate(novoFim.getUTCDate() + stepDias * i);
+      rows.push({
+        escola_id: gerente.escola_id, recurso_id,
+        turma_id: turma_id || null, professora_id: professora_id || null,
+        inicio: novoIni.toISOString(), fim: novoFim.toISOString(),
+        observacao: observacao || null,
+        recorrencia: "unica", serie_id: parentId,
+      });
+    }
+    // Insere uma a uma pra capturar conflitos individuais
+    for (const r of rows) {
+      const { error: e2 } = await admin.from("reservas_recursos").insert(r);
+      if (e2) { puladas++; continue; }
+      criadas++;
+    }
+    return ok({ success: true, id: parentId, criadas, puladas, total_planejadas: rows.length + 1 });
   }
   if (action === "reservas_cancelar") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    const { id } = body as { id: string };
+    const { id, serie } = body as { id: string; serie?: boolean };
     if (!id) return err("ID obrigatório.");
+    // Se serie=true, cancela todas filhas + parent
+    if (serie) {
+      const { error: e1 } = await admin.from("reservas_recursos").update({ status: "cancelada" })
+        .eq("escola_id", gerente.escola_id).or(`id.eq.${id},serie_id.eq.${id}`);
+      if (e1) return err(sanitizePgError(e1));
+      return ok({ success: true, modo: "serie" });
+    }
     const { error } = await admin.from("reservas_recursos").update({ status: "cancelada" })
       .eq("id", id).eq("escola_id", gerente.escola_id);
     if (error) return err(sanitizePgError(error));
     return ok({ success: true });
+  }
+
+  // ── Analytics: ocupação dos recursos + recomendação de capacidade ──
+  if (action === "recursos_analytics") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data: recursos } = await admin.from("recursos")
+      .select("id, tipo, identificacao, ativo")
+      .eq("escola_id", gerente.escola_id).eq("ativo", true);
+    // Janela: 14 dias a partir de hoje (suficiente pra capturar 2 semanas de
+    // padrão recorrente). Horário escolar configurável (default 7h-18h × seg-sex).
+    const horasEscolaPorSemana = 11 * 5; // 7h-18h × seg-sex
+    const desde = new Date(); desde.setHours(0, 0, 0, 0);
+    const ate = new Date(desde); ate.setDate(ate.getDate() + 14);
+    const { data: reservas } = await admin.from("reservas_recursos")
+      .select("recurso_id, inicio, fim, status")
+      .eq("escola_id", gerente.escola_id).eq("status", "ativa")
+      .gte("inicio", desde.toISOString()).lt("inicio", ate.toISOString());
+
+    type Acc = { recurso_id: string; tipo: string; identificacao: string; horasReservadas: number };
+    const porRecurso: Record<string, Acc> = {};
+    for (const r of (recursos ?? []) as any[]) {
+      porRecurso[r.id] = { recurso_id: r.id, tipo: r.tipo, identificacao: r.identificacao, horasReservadas: 0 };
+    }
+    for (const rv of (reservas ?? []) as any[]) {
+      const horas = (new Date(rv.fim).getTime() - new Date(rv.inicio).getTime()) / 3600000;
+      if (porRecurso[rv.recurso_id]) porRecurso[rv.recurso_id].horasReservadas += horas;
+    }
+    // 14 dias = 2 × horas/semana
+    const capacidadeUnitaria = horasEscolaPorSemana * 2;
+    const recursosAnalise = Object.values(porRecurso).map(r => ({
+      ...r,
+      horas_capacidade: capacidadeUnitaria,
+      taxa_ocupacao_pct: capacidadeUnitaria ? Math.round((r.horasReservadas / capacidadeUnitaria) * 100) : 0,
+    })).sort((a, b) => b.taxa_ocupacao_pct - a.taxa_ocupacao_pct);
+
+    // Por tipo: quanto cada tipo está saturado?
+    type AccTipo = { tipo: string; qtd: number; horasReservadas: number; horas_capacidade: number };
+    const porTipo: Record<string, AccTipo> = {};
+    for (const r of recursosAnalise) {
+      if (!porTipo[r.tipo]) porTipo[r.tipo] = { tipo: r.tipo, qtd: 0, horasReservadas: 0, horas_capacidade: 0 };
+      porTipo[r.tipo].qtd++;
+      porTipo[r.tipo].horasReservadas += r.horasReservadas;
+      porTipo[r.tipo].horas_capacidade += capacidadeUnitaria;
+    }
+    const tiposAnalise = Object.values(porTipo).map(t => {
+      const taxa = t.horas_capacidade ? t.horasReservadas / t.horas_capacidade : 0;
+      // Recomendação: se taxa > 80%, sugere recursos extras pra trazer pra ~70%
+      const taxaPct = Math.round(taxa * 100);
+      let sugestao = 0;
+      if (taxa > 0.8) {
+        const horasIdeais = t.horasReservadas / 0.7;
+        const qtdIdeal = Math.ceil(horasIdeais / capacidadeUnitaria);
+        sugestao = Math.max(0, qtdIdeal - t.qtd);
+      }
+      return { ...t, taxa_pct: taxaPct, sugestao_extras: sugestao };
+    }).sort((a, b) => b.taxa_pct - a.taxa_pct);
+
+    return ok({
+      janela_dias: 14,
+      horas_escola_semana: horasEscolaPorSemana,
+      total_recursos: recursosAnalise.length,
+      total_reservas_periodo: (reservas ?? []).length,
+      por_recurso: recursosAnalise,
+      por_tipo: tiposAnalise,
+    });
   }
 
   // Audit log do cadastro — listar últimas mudanças
