@@ -1832,6 +1832,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <option value="">Todos</option>
             </select>
             <button onclick="almMarcarSelecionados()" class="btn-create" style="padding:7px 16px;background:#2d7a2d;" id="almBtnMarcarComprado" title="Selecione os checkboxes na lista abaixo e clique aqui">✅ Marcar Selecionados como Comprado</button>
+            <input type="text" id="almComprasSearch" placeholder="🔍 Buscar item, professora, turma, fornecedor…" oninput="debouncedAlmComprasSearch()" style="flex:1;min-width:240px;padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;">
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
             <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Documentos PDF:</span>
@@ -8229,9 +8230,15 @@ docker compose up -d --build</pre>
       <div class="ff"><label>Observação</label>
         <textarea id="manutObs" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;min-height:60px;resize:vertical;">${esc(m.observacao_gerente||'')}</textarea>
       </div>
+      ${m.pergunta_coordenacao ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;">
+        <div style="font-weight:600;color:#9a3412;margin-bottom:4px;">❓ Pergunta enviada${m.pergunta_em ? ' em ' + new Date(m.pergunta_em).toLocaleString('pt-BR') : ''}${m.pergunta_por ? ' por ' + esc(m.pergunta_por) : ''}</div>
+        <div style="color:#7c2d12;">${esc(m.pergunta_coordenacao)}</div>
+        ${m.pergunta_resposta ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #fed7aa;"><span style="font-weight:600;color:#166534;">Resposta:</span> ${esc(m.pergunta_resposta)}</div>` : '<div style="margin-top:6px;font-size:11px;color:#9a3412;font-style:italic;">Aguardando resposta do solicitante.</div>'}
+      </div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-aprovar" onclick="updateManutStatus('${id}','em_execucao')">🔧 Iniciar Execução</button>
         <button class="btn-aprovar" style="background:var(--green);" onclick="updateManutStatus('${id}','concluida')">✅ Concluir</button>
+        <button class="btn-aprovar" style="background:#d97706;" onclick="abrirManutDuvida('${id}')">❓ Tirar dúvida</button>
         <button class="btn-rejeitar" onclick="updateManutStatus('${id}','rejeitada')">✕ Rejeitar</button>
       </div>
     `;
@@ -8251,6 +8258,15 @@ docker compose up -d --build</pre>
     if (!await _lumiedConfirm('Remover este chamado?')) return;
     const d = await api({ action:'manutencao_delete', id });
     if (d.error) { showToast(d.error, 'error'); return; }
+    loadManutPanel();
+  }
+  async function abrirManutDuvida(id) {
+    const pergunta = window.prompt('Qual a dúvida sobre este chamado?\n(O solicitante recebe uma notificação com sua pergunta.)');
+    if (!pergunta || !pergunta.trim()) return;
+    const d = await api({ action: 'manutencao_tirar_duvida', id, pergunta: pergunta.trim() });
+    if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Pergunta enviada ao solicitante.', 'success');
+    closeManutModal();
     loadManutPanel();
   }
 
@@ -10457,7 +10473,7 @@ docker compose up -d --build</pre>
             </div>
             <div style="font-size:12px;color:var(--muted);flex-shrink:0;">Pedido: <strong>${it.qty_solicitado}</strong></div>
             <div style="font-size:12px;flex-shrink:0;display:flex;align-items:center;gap:4px;">Aprovar:
-              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id}" value="${it.qty_solicitado}" min="0" step="0.5" style="width:64px;">
+              <input type="number" class="alm-item-qty" data-idx="${i}" data-id="${it.insumo_id || ''}" value="${it.qty_solicitado}" min="0" step="0.5" style="width:64px;">
             </div>
           </div>
           <div id="alm-price-${i}" class="alm-price-results" style="display:block;">
@@ -10623,22 +10639,39 @@ docker compose up -d --build</pre>
   }
 
   // ── Aba Compras ───────────────────────────────────────────
+  var almComprasItems = [];
+  var debouncedAlmComprasSearch = debounce(() => almRenderCompras());
+
   async function almLoadCompras() {
     const status = document.getElementById('almComprasStatus').value;
     document.getElementById('almComprasLoading').style.display = 'block';
     document.getElementById('almComprasList').innerHTML = '';
     const d = await callDiplomas({ action: 'alm_compras_todas', status });
     document.getElementById('almComprasLoading').style.display = 'none';
-    const items = d.data || [];
+    almComprasItems = d.data || [];
 
-    // Update badge (pending count)
-    const pendentes = items.filter(c => c.status === 'pendente').length;
+    // Update badge (pending count) — sempre baseado no total carregado
+    const pendentes = almComprasItems.filter(c => c.status === 'pendente').length;
     const badge = document.getElementById('almComprasBadge');
     badge.textContent = pendentes;
     badge.style.display = pendentes > 0 ? 'inline' : 'none';
 
+    almRenderCompras();
+  }
+
+  function almRenderCompras() {
+    const q = (document.getElementById('almComprasSearch')?.value || '').toLowerCase().trim();
+    const items = !q ? almComprasItems : almComprasItems.filter(c => {
+      const req = c.alm_requisicoes || {};
+      const hay = [
+        c.insumo_nome, c.produto_nome, c.plataforma,
+        req.professoras?.nome, req.series?.nome,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+
     if (!items.length) {
-      document.getElementById('almComprasList').innerHTML = '<div class="empty-state">Nenhum item encontrado.</div>';
+      document.getElementById('almComprasList').innerHTML = `<div class="empty-state">${q ? 'Nenhum item bate com a busca.' : 'Nenhum item encontrado.'}</div>`;
       return;
     }
 
@@ -10695,13 +10728,18 @@ docker compose up -d --build</pre>
   async function almMarcarComprado(ids) {
     if (!ids?.length) return;
     const d = await callDiplomas({ action: 'alm_marcar_comprado', ids });
-    if (!d.error) {
-      const okEl = document.getElementById('almComprasOk');
-      okEl.textContent = `✅ ${ids.length} item(ns) marcado(s) como comprado.`;
-      okEl.classList.add('show');
-      setTimeout(() => okEl.classList.remove('show'), 3000);
-      almLoadCompras();
+    if (d.error) {
+      showToast('Erro: ' + d.error, 'error');
+      return;
     }
+    const marcados = d.marcados ?? ids.length;
+    const okEl = document.getElementById('almComprasOk');
+    okEl.textContent = marcados > 0
+      ? `✅ ${marcados} item(ns) marcado(s) como comprado.`
+      : '⚠️ Nenhum item foi marcado (verifique se você tem permissão).';
+    okEl.classList.add('show');
+    setTimeout(() => okEl.classList.remove('show'), 3000);
+    almLoadCompras();
   }
 
   async function almMarcarSelecionados() {

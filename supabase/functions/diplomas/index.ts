@@ -1693,6 +1693,7 @@ Deno.serve(async (req) => {
       const { data } = await sb
         .from('alm_compras')
         .select('*, alm_requisicoes(mes, professoras(nome), series(nome))')
+        .eq('escola_id', (gerente as any).escola_id)
         .eq('status', 'pendente')
         .order('encaminhado_em', { ascending: false })
       return json({ data: data ?? [] })
@@ -1702,6 +1703,7 @@ Deno.serve(async (req) => {
       const status: string = body.status || ''
       let q = sb.from('alm_compras')
         .select('*, alm_requisicoes(mes, professoras(nome), series(nome))')
+        .eq('escola_id', (gerente as any).escola_id)
         .order('encaminhado_em', { ascending: false })
         .limit(200)
       if (status) q = q.eq('status', status)
@@ -1712,19 +1714,25 @@ Deno.serve(async (req) => {
     if (action === 'alm_marcar_comprado') {
       const { ids } = body   // array of alm_compras IDs
       if (!ids?.length) return json({ error: 'IDs não informados.' }, 400)
-      const { error } = await sb.from('alm_compras').update({
+      const { data: updated, error } = await sb.from('alm_compras').update({
         status:      'comprado',
         comprado_em:  new Date().toISOString(),
         comprado_por: gerente.nome,
-      }).in('id', ids)
+      })
+        .in('id', ids)
+        .eq('escola_id', (gerente as any).escola_id)
+        .select('id')
       if (error) return json({ error: error.message }, 400)
-      return json({ ok: true })
+      return json({ ok: true, marcados: updated?.length ?? 0 })
     }
 
     if (action === 'alm_cancelar_compra') {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
-      const { error } = await sb.from('alm_compras').update({ status: 'cancelado' }).eq('id', id)
+      const { error } = await sb.from('alm_compras')
+        .update({ status: 'cancelado' })
+        .eq('id', id)
+        .eq('escola_id', (gerente as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
@@ -2136,59 +2144,101 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'alm_pdf_guia_recebimento') {
-      // Itens aprovados e AINDA não entregues — com descrição completa p/ identificar quando chegar pelos correios
-      const { data: reqs } = await sb.from('alm_requisicoes')
-        .select('*, professoras(nome), series(nome)')
-        .eq('status', 'aprovado').eq('escola_id', gerente.escola_id).order('aprovado_em', { ascending: true })
-      // Quantidade já entregue por (requisicao, insumo)
-      const { data: entregasTodas } = await sb.from('alm_entregas')
-        .select('requisicao_id, insumo_id, qty_entregue')
-      const entregueMap: Record<string, number> = {}
-      for (const e of (entregasTodas ?? []) as any[]) {
-        const k = `${e.requisicao_id}|${e.insumo_id || ''}`
-        entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
-      }
-      // Catálogo p/ descrição/categoria
-      const insumoIds = Array.from(new Set(
-        (reqs ?? []).flatMap((r: any) => (r.itens || []).map((it: any) => it.insumo_id).filter(Boolean))
-      ))
-      const catMap: Record<string, any> = {}
-      if (insumoIds.length) {
-        const { data: ins } = await sb.from('alm_insumos').select('id, descricao, categoria, unidade').in('id', insumoIds as string[])
-        for (const i of ins ?? []) catMap[i.id] = i
-      }
+      try {
+        const escolaId = (gerente as any).escola_id
+        if (!escolaId) return json({ error: 'Sessão sem escola associada.' }, 403)
+        // Itens aprovados e AINDA não entregues — com descrição completa p/ identificar quando chegar pelos correios
+        const { data: reqs, error: errReqs } = await sb.from('alm_requisicoes')
+          .select('*, professoras(nome), series(nome)')
+          .eq('status', 'aprovado').eq('escola_id', escolaId).order('aprovado_em', { ascending: true })
+        if (errReqs) {
+          log.error(`alm_pdf_guia_recebimento: erro ao listar requisições: ${errReqs.message}`)
+          return json({ error: 'Erro ao carregar requisições: ' + errReqs.message }, 500)
+        }
+        // Quantidade já entregue por (requisicao, insumo) — filtra por requisições da escola
+        const reqIds = (reqs ?? []).map((r: any) => r.id)
+        const entregueMap: Record<string, number> = {}
+        if (reqIds.length) {
+          const { data: entregasTodas } = await sb.from('alm_entregas')
+            .select('requisicao_id, insumo_id, qty_entregue')
+            .in('requisicao_id', reqIds)
+          for (const e of (entregasTodas ?? []) as any[]) {
+            const k = `${e.requisicao_id}|${e.insumo_id || ''}`
+            entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
+          }
+        }
+        // Catálogo p/ descrição/categoria
+        const insumoIds = Array.from(new Set(
+          (reqs ?? []).flatMap((r: any) => (r.itens || []).map((it: any) => it.insumo_id).filter(Boolean))
+        ))
+        const catMap: Record<string, any> = {}
+        if (insumoIds.length) {
+          const { data: ins } = await sb.from('alm_insumos')
+            .select('id, descricao, categoria, unidade')
+            .in('id', insumoIds as string[])
+            .eq('escola_id', escolaId)
+          for (const i of ins ?? []) catMap[i.id] = i
+        }
 
-      const sections: any[] = []
-      let count = 0
-      for (const r of (reqs ?? []) as any[]) {
-        for (const it of (r.itens || [])) {
-          const aprov = Number(it.qty_aprovado || it.qty_solicitado || 0)
-          const jaEntregue = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
-          const aReceber = aprov - jaEntregue
-          if (aReceber <= 0) continue
-          count++
-          const cat = it.insumo_id ? catMap[it.insumo_id] : null
+        // Agrupa por turma — facilita conferência por sala (pedido do usuário)
+        const turmas: Record<string, { nome: string; itens: any[] }> = {}
+        let count = 0
+        for (const r of (reqs ?? []) as any[]) {
+          const tNome = r.series?.nome || 'Sem turma'
+          for (const it of (r.itens || [])) {
+            const aprov = Number(it.qty_aprovado || it.qty_solicitado || 0)
+            const jaEntregue = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
+            const aReceber = aprov - jaEntregue
+            if (aReceber <= 0) continue
+            count++
+            const cat = it.insumo_id ? catMap[it.insumo_id] : null
+            if (!turmas[tNome]) turmas[tNome] = { nome: tNome, itens: [] }
+            turmas[tNome].itens.push({
+              nome: it.nome,
+              aReceber,
+              unidade: it.unidade || cat?.unidade || 'un',
+              professora: r.professoras?.nome || '—',
+              descricao: cat?.descricao || it.descricao || '',
+              categoria: cat?.categoria || '',
+              reqId: String(r.id).slice(0, 8),
+              aprovadoEm: new Date(r.aprovado_em || r.criado_em).toLocaleDateString('pt-BR'),
+              jaEntregue,
+            })
+          }
+        }
+        const sections: any[] = []
+        for (const t of Object.values(turmas)) {
           sections.push({
-            heading: `▢  ${it.nome}  —  ${aReceber} ${it.unidade || cat?.unidade || 'un'}`,
-            lines: [
-              `Destino: Turma ${r.series?.nome || '—'}  ·  Professora: ${r.professoras?.nome || '—'}`,
-              `Descrição: ${cat?.descricao || it.descricao || '(sem descrição cadastrada)'}`,
-              `Categoria: ${cat?.categoria || '—'}  ·  Requisição #${String(r.id).slice(0,8)}  ·  Aprovado em ${new Date(r.aprovado_em || r.criado_em).toLocaleDateString('pt-BR')}`,
-              `Preço estimado: R$ ${Number(it.preco_unit || 0).toFixed(2)} / ${it.unidade || 'un'}`,
-              `Já recebido: ${jaEntregue}  ·  A receber: ${aReceber}`,
+            heading: `Turma ${t.nome}  —  ${t.itens.length} item(ns)`,
+            lines: t.itens.flatMap(it => [
+              `▢  ${it.nome}  —  ${it.aReceber} ${it.unidade}  ·  Prof. ${it.professora}`,
+              `   ${it.descricao || '(sem descrição)'}${it.categoria ? '  ·  ' + it.categoria : ''}  ·  Req #${it.reqId}  ·  ${it.aprovadoEm}`,
+              it.jaEntregue > 0 ? `   Já recebido: ${it.jaEntregue}` : '',
               '─────────────────────────────────────────────',
+            ].filter(Boolean)),
+          })
+          // Espaço para assinatura ao final de cada turma
+          sections.push({
+            heading: '',
+            lines: [
+              `Recebido por (responsável da turma ${t.nome}): ____________________________`,
+              `Data: ____/____/______      Assinatura: ____________________________`,
+              '',
             ],
           })
         }
+        if (!sections.length) sections.push({ heading: 'Tudo em dia', lines: ['Nenhum item aprovado aguardando chegada.'] })
+        const bytes = await generatePdf({
+          title: 'Guia de Recebimento por Turma',
+          subtitle: `${count} item(ns) aguardando chegada dos fornecedores, agrupados por turma.\n` +
+            'Use este guia ao abrir as caixas: marque o ▢ e peça assinatura do responsável de cada turma.',
+          sections,
+        })
+        return pdfResponse(bytes, `guia-recebimento-${new Date().toISOString().slice(0,10)}.pdf`)
+      } catch (e: any) {
+        log.error(`alm_pdf_guia_recebimento: ${e?.message || e}`)
+        return json({ error: 'Falha ao gerar PDF: ' + (e?.message || e) }, 500)
       }
-      if (!sections.length) sections.push({ heading: 'Tudo em dia', lines: ['Nenhum item aprovado aguardando chegada.'] })
-      const bytes = await generatePdf({
-        title: 'Guia de Recebimento — Itens aguardando chegada',
-        subtitle: `${count} item(ns) aguardando chegada dos fornecedores.\n` +
-          'Use este guia ao abrir as caixas dos correios: localize o item pela descrição, marque o ▢ e veja para qual turma/professora ele vai.',
-        sections,
-      })
-      return pdfResponse(bytes, `guia-recebimento-${new Date().toISOString().slice(0,10)}.pdf`)
     }
 
     if (action === 'alm_pdf_romaneio_turma') {
@@ -2290,17 +2340,28 @@ Deno.serve(async (req) => {
         }
       }
       // Auto-create insumos for non-cataloged items
+      // Trata insumo_id="null"/"undefined" (string vinda do frontend via dataset.id)
+      // como ausente, e captura erros do INSERT (antes silenciados).
+      const insumoWarnings: Array<{ nome: string; error: string }> = []
       for (const it of itens) {
-        if (!it.insumo_id && it.nome && it.qty_aprovado > 0) {
-          const { data: novo } = await sb.from('alm_insumos').insert({
+        const semId = !it.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
+        if (semId && it.nome && parseFloat(it.qty_aprovado) > 0) {
+          it.insumo_id = null
+          const { data: novo, error: errIns } = await sb.from('alm_insumos').insert({
             nome: it.nome,
+            descricao: it.descricao || null,
             unidade: it.unidade || 'unidade',
             preco: parseFloat(it.preco_unit) || 0,
             estoque_qty: 0,
             categoria: it.categoria || null,
             escola_id: (gerente as any).escola_id,
-          }).select('id').maybeSingle()
-          if (novo) it.insumo_id = novo.id
+          }).select('id').single()
+          if (errIns) {
+            log.error(`alm_aprovar: falha ao criar insumo "${it.nome}" (req ${id}): ${errIns.message}`)
+            insumoWarnings.push({ nome: it.nome, error: errIns.message })
+          } else if (novo) {
+            it.insumo_id = novo.id
+          }
         }
       }
       // Update items with new insumo_ids
@@ -2312,7 +2373,9 @@ Deno.serve(async (req) => {
         requisicao_id: id,
         mensagem: `Sua requisição de ${new Date(req.criado_em).toLocaleDateString('pt-BR')} foi ✅ aprovada.${nota_gerente ? ' Nota: ' + nota_gerente : ''}`,
       })
-      return json({ ok: true })
+      const resp: Record<string, unknown> = { ok: true }
+      if (insumoWarnings.length) resp.insumos_warnings = insumoWarnings
+      return json(resp)
     }
 
     if (action === 'alm_rejeitar') {
