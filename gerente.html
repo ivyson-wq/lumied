@@ -1019,6 +1019,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div data-modulo="ponto">
       <div class="sb-label" onclick="toggleSbSection(this)">Ponto AFD <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('pontoSetup',this); loadPontoSetup()"><span class="ic">✅</span> <strong>Setup do Relógio</strong></a>
         <a class="nav-item" href="#" onclick="showPanel('pontoDash',this)"><span class="ic">📊</span> Dashboard</a>
         <a class="nav-item" href="#" onclick="showPanel('pontoEmployees',this)"><span class="ic">👥</span> Funcionários</a>
         <a class="nav-item" href="#" onclick="showPanel('pontoImport',this)"><span class="ic">📥</span> Importar AFD</a>
@@ -3186,6 +3187,99 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div id="compConfigForm" class="form-card">
           <div class="empty-state">Carregando configuracoes...</div>
         </div>
+      </div>
+
+      <!-- ═══ PONTO AFD — Setup do Relógio (wizard amigável) ═══ -->
+      <div id="panelPontoSetup" class="panel">
+        <div class="sec-title" style="margin-bottom:6px;">✅ Setup do Relógio Ponto</div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;">
+          Tudo o que precisa estar configurado pra escola usar o relógio ponto eletrônico (REP) integrado ao Lumied — com cálculo de horas, espelho mensal e justificativas de acordo com a Portaria MTP 671/2021. Itens vermelhos bloqueiam o uso; amarelos não bloqueiam mas é bom resolver.
+        </p>
+
+        <!-- Status header -->
+        <div id="pontoSetupHeader" style="background:linear-gradient(135deg,#1a1a1a,#333);color:#fff;border-radius:14px;padding:24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div style="font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;">Status geral</div>
+            <div id="pontoSetupStatus" style="font-size:28px;font-weight:700;margin-top:4px;">Carregando…</div>
+            <div id="pontoSetupBlockers" style="font-size:13px;opacity:.85;margin-top:6px;"></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;">Cobertura</div>
+            <div id="pontoSetupScore" style="font-size:42px;font-weight:700;line-height:1;">—</div>
+            <div style="font-size:11px;opacity:.6;">% de itens prontos</div>
+          </div>
+        </div>
+
+        <!-- Como funciona — explicação amigável -->
+        <div style="background:#fdfbf8;border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;">
+          <div style="font-family:'Lora',serif;font-size:16px;font-weight:600;margin-bottom:12px;">Como funciona o ponto eletrônico no Lumied</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:13px;line-height:1.5;">
+            <div>
+              <div style="font-size:24px;margin-bottom:4px;">👨‍🏫</div>
+              <strong>1. Funcionário bate o ponto</strong><br>
+              <span style="color:var(--muted);">Funcionário aproxima o crachá ou usa biometria no relógio físico (REP) na portaria/secretaria.</span>
+            </div>
+            <div>
+              <div style="font-size:24px;margin-bottom:4px;">📡</div>
+              <strong>2. Lumied Bridge baixa o AFD</strong><br>
+              <span style="color:var(--muted);">Todo dia <strong>03:30 da manhã</strong>, o daemon na escola conecta no REP pela rede e baixa o arquivo AFD do dia anterior. Sem ação humana.</span>
+            </div>
+            <div>
+              <div style="font-size:24px;margin-bottom:4px;">⚙️</div>
+              <strong>3. Lumied processa</strong><br>
+              <span style="color:var(--muted);">Parser AFD (Portaria 671) cruza cada batida com o funcionário pelo PIS, calcula horas trabalhadas e saldo (HE/débito).</span>
+            </div>
+            <div>
+              <div style="font-size:24px;margin-bottom:4px;">📊</div>
+              <strong>4. Você confere</strong><br>
+              <span style="color:var(--muted);">Acesse o <em>Espelho de Ponto</em> mensal por funcionário. Aprove justificativas. Imprime tudo na hora pra fechar a folha.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checklist passo-a-passo -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div class="sec-title" style="margin:0;font-size:15px;">📋 Passos para ativar</div>
+          <button onclick="loadPontoSetup()" style="padding:6px 14px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Recarregar status</button>
+        </div>
+        <div id="pontoSetupItems" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+        <!-- Resumo coleta automática -->
+        <div style="margin-top:24px;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;">
+          <div class="sec-title" style="font-size:14px;margin:0 0 12px 0;">🤖 Coleta automática agendada</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;font-size:13px;">
+            <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;">Horário</div><div style="font-weight:600;margin-top:2px;">03:30 BRT — todo dia</div></div>
+            <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;">Lumied Bridge</div><div id="pontoSetupBridgeStatus" style="font-weight:600;margin-top:2px;">—</div></div>
+            <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;">REPs ativos</div><div id="pontoSetupRepsCount" style="font-weight:600;margin-top:2px;">—</div></div>
+          </div>
+          <div style="margin-top:12px;padding:10px 14px;background:#fdfbf8;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);">
+            Não quer esperar até 03:30? Use o botão <strong>▶ Buscar agora</strong> em cada REP cadastrado, ou faça <strong>upload manual</strong> do .txt exportado do REP — as duas formas convivem.
+          </div>
+        </div>
+
+        <!-- FAQ rápido -->
+        <details style="margin-top:18px;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px 20px;">
+          <summary style="cursor:pointer;font-weight:600;font-size:14px;">❓ Perguntas frequentes</summary>
+          <div style="margin-top:14px;font-size:13px;line-height:1.6;color:var(--text);">
+            <p style="margin:0 0 12px 0;"><strong>Preciso de internet pro relógio funcionar?</strong><br>
+            <span style="color:var(--muted);">Não. O REP funciona offline e armazena as batidas localmente. O Lumied Bridge só precisa de internet (e acesso ao REP pela rede local) pra baixar o AFD uma vez por dia.</span></p>
+
+            <p style="margin:0 0 12px 0;"><strong>O que é PIS e por que cada funcionário precisa de um?</strong><br>
+            <span style="color:var(--muted);">PIS é o número de cadastro do funcionário no INSS (12 dígitos). É a chave que liga a batida no REP ao funcionário no Lumied. O PIS aqui precisa ser <em>exatamente</em> o que está cadastrado no REP — incluindo zeros à esquerda.</span></p>
+
+            <p style="margin:0 0 12px 0;"><strong>O que é o "Lumied Bridge"?</strong><br>
+            <span style="color:var(--muted);">É um pequeno programa que roda num mini-PC ou Raspberry Pi dentro da escola. Ele conecta o REP (que está atrás do roteador, sem IP público) com o Lumied (na nuvem). Mesmo programa que já controla o reconhecimento facial — você instala uma vez e vale pros dois.</span></p>
+
+            <p style="margin:0 0 12px 0;"><strong>E se a coleta automática falhar um dia?</strong><br>
+            <span style="color:var(--muted);">No dia seguinte ela tenta de novo automaticamente. Você sempre pode forçar pelo botão <strong>▶ Buscar agora</strong>, ou fazer upload manual do AFD que o REP gera. Erros aparecem no <em>Setup</em> em vermelho.</span></p>
+
+            <p style="margin:0 0 12px 0;"><strong>Posso usar sem o Bridge instalado?</strong><br>
+            <span style="color:var(--muted);">Sim. O Bridge só automatiza o processo. Sem ele, você exporta o AFD do REP num pen drive (ou pela tela admin do REP) e faz upload manual em <em>Importar AFD → Upload Manual</em> uma vez por mês.</span></p>
+
+            <p style="margin:0;"><strong>Funciona com qual relógio ponto?</strong><br>
+            <span style="color:var(--muted);">Nativamente com Control iD (iDClass Bio Prox, iDFace) e com presets prontos pra Henry (Hexa, Prima, Vega), Topdata e Madis. Outras marcas funcionam configurando manualmente a URL do AFD.</span></p>
+          </div>
+        </details>
       </div>
 
       <!-- ═══ PONTO AFD — Dashboard ═══ -->
@@ -5607,7 +5701,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
@@ -5626,7 +5720,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
     if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -5727,6 +5821,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='acessoPermissoes') loadAcessoPermissoes();
     if(id==='acessoEventos') loadAcessoEventos();
     if(id==='engajamento') loadEngajamentoPanel();
+    if(id==='pontoSetup')     loadPontoSetup();
     if(id==='pontoDash')      loadPontoDash();
     if(id==='pontoEmployees') loadPontoEmployees();
     if(id==='pontoImport')    { loadPontoImports(); }
@@ -6135,7 +6230,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     compCalendario:{icon:'📅',label:'Cal. Regulatório'},compAlertas:{icon:'📧',label:'Alertas'},compFeriados:{icon:'📅',label:'Feriados'},compConfig:{icon:'⚙️',label:'Config. Ponto'},
     contaFinanceiro:{icon:'💳',label:'Conta & Plano'},roi:{icon:'📈',label:'ROI'},
     emergencia:{icon:'🚨',label:'Emergência'},
-    pontoDash:{icon:'🕐',label:'Ponto AFD'},pontoEmployees:{icon:'👥',label:'Funcionários'},
+    pontoSetup:{icon:'✅',label:'Setup Relógio'},pontoDash:{icon:'🕐',label:'Ponto AFD'},pontoEmployees:{icon:'👥',label:'Funcionários'},
     pontoImport:{icon:'📥',label:'Importar AFD'},pontoMirror:{icon:'🪞',label:'Espelho'},pontoJustif:{icon:'📝',label:'Justificativas'}
   };
 
@@ -18876,6 +18971,70 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d.error) return showToast(d.error, 'error');
     showToast(status === 'aprovado' ? 'Justificativa aprovada.' : 'Justificativa rejeitada.', 'success');
     loadPontoJustifTable();
+  }
+
+  // ── Setup do Relógio (página de boas-vindas/wizard) ───────────
+  async function loadPontoSetup() {
+    const ids = ['pontoSetupStatus','pontoSetupBlockers','pontoSetupScore','pontoSetupBridgeStatus','pontoSetupRepsCount'];
+    document.getElementById('pontoSetupStatus').textContent = 'Carregando…';
+    document.getElementById('pontoSetupItems').innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Verificando configurações…</div>';
+    const r = await pontoApi({ action: 'ponto_setup_checklist' });
+    if (r.error) {
+      document.getElementById('pontoSetupStatus').textContent = '⚠️ Erro';
+      document.getElementById('pontoSetupBlockers').textContent = r.error;
+      document.getElementById('pontoSetupItems').innerHTML = `<div style="background:#fdf0f2;color:#C8102E;padding:14px;border-radius:8px;font-size:13px;">${pontoEsc(r.error)}</div>`;
+      return;
+    }
+    const d = r.data || r;
+    const score = Number(d.score || 0);
+    document.getElementById('pontoSetupScore').textContent = score + '%';
+    if (d.pode_operar) {
+      document.getElementById('pontoSetupStatus').textContent = score === 100 ? '🟢 Tudo configurado' : '🟢 Pronto pra operar';
+      document.getElementById('pontoSetupBlockers').textContent = score === 100 ? 'Parabéns — relógio ponto 100% integrado.' : `${100 - score}% do checklist em aberto, mas nada bloqueia o uso.`;
+    } else {
+      document.getElementById('pontoSetupStatus').textContent = '🔴 Faltam itens essenciais';
+      document.getElementById('pontoSetupBlockers').textContent = `${d.blockers} item(ns) bloqueante(s) — resolva antes de fechar a folha.`;
+    }
+    // Bridge / REPs status
+    const bridge = d.bridge || {};
+    const bSt = document.getElementById('pontoSetupBridgeStatus');
+    if (bridge.online) bSt.innerHTML = `<span style="color:#2d7a3a;">🟢 online</span> <small style="color:var(--muted);font-weight:400;">(há ${bridge.min_atras} min)</small>`;
+    else if (bridge.ultimo_heartbeat) bSt.innerHTML = `<span style="color:#C8102E;">🔴 offline</span> <small style="color:var(--muted);font-weight:400;">(há ${bridge.min_atras} min)</small>`;
+    else bSt.innerHTML = `<span style="color:#7a7169;">○ não instalado</span>`;
+    document.getElementById('pontoSetupRepsCount').textContent = (d.reps_count || 0) + ' REP(s)';
+
+    // Itens do checklist
+    const cont = document.getElementById('pontoSetupItems');
+    const items = d.items || [];
+    const COR = { ok: '#2d7a3a', warn: '#b07d10', error: '#c0392b', muted: '#888' };
+    const ICO = { ok: '✅', warn: '⚠️', error: '❌', muted: '○' };
+    cont.innerHTML = items.map((it, i) => {
+      const c = COR[it.severity] || '#666';
+      const ic = ICO[it.severity] || '○';
+      const blk = it.blocking && !it.ok
+        ? '<span style="background:#c0392b;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:8px;text-transform:uppercase;font-weight:600;">Bloqueante</span>'
+        : '';
+      const action = it.action
+        ? `<button onclick="pontoSetupGoto('${it.action.panel}')" style="margin-left:auto;padding:8px 16px;background:${it.ok ? '#fff' : '#1a1a1a'};color:${it.ok ? '#1a1a1a' : '#fff'};border:1px solid ${it.ok ? 'var(--border)' : '#1a1a1a'};border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;font-weight:600;">${pontoEsc(it.action.label)} →</button>`
+        : '';
+      return `<div style="display:flex;align-items:center;gap:14px;background:#fff;border:1px solid ${c}33;border-left:4px solid ${c};border-radius:10px;padding:16px 20px;">
+        <div style="font-size:22px;color:#7a7169;font-weight:600;min-width:24px;">${i + 1}</div>
+        <div style="font-size:22px;">${ic}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;color:${c};font-size:14px;">${pontoEsc(it.label)}${blk}</div>
+          <div style="color:var(--muted);font-size:12px;margin-top:3px;line-height:1.4;">${pontoEsc(it.detail || '')}</div>
+        </div>
+        ${action}
+      </div>`;
+    }).join('');
+  }
+
+  function pontoSetupGoto(panel) {
+    const navItems = document.querySelectorAll('.nav-item');
+    let target = null;
+    navItems.forEach(n => { if (n.getAttribute('onclick')?.includes(`'${panel}'`)) target = n; });
+    if (target) target.click();
+    else showPanel(panel);
   }
 
   // ── REPs (coleta automática via Lumied Bridge) ─────────────────

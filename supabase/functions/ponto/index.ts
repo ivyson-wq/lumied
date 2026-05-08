@@ -734,6 +734,142 @@ router.on("ponto_rep_devices_pull_now", authGerente, feat, async (ctx) => {
   return successResponse(result);
 });
 
+// ── Setup Checklist — usado pela página "Setup do Relógio" ──
+router.on("ponto_setup_checklist", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const escolaId = ctx.escola_id;
+
+  const now = new Date();
+  const mesIni = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const mesFim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${lastDay}`;
+
+  const [emps, escolas, reps, importsAll, importsMes, summariesMes] = await Promise.all([
+    ctx.sb.from("ponto_employees").select("id", { count: "exact", head: true }).eq("escola_id", escolaId).eq("ativo", true),
+    ctx.sb.from("escolas").select("bridge_ultimo_heartbeat, bridge_token").eq("id", escolaId).maybeSingle(),
+    ctx.sb.from("ponto_rep_devices").select("id, nome, ultimo_pull_status, ultimo_pull_em, ultimo_pull_erro").eq("escola_id", escolaId).eq("ativo", true),
+    ctx.sb.from("afd_imports").select("id, status, pis_nao_encontrados, criado_em").eq("escola_id", escolaId).order("criado_em", { ascending: false }).limit(1),
+    ctx.sb.from("afd_imports").select("id", { count: "exact", head: true }).eq("escola_id", escolaId).gte("criado_em", mesIni).lte("criado_em", `${mesFim}T23:59:59`),
+    ctx.sb.from("ponto_daily_summary").select("id", { count: "exact", head: true }).eq("escola_id", escolaId).gte("data_resumo", mesIni).lte("data_resumo", mesFim),
+  ]);
+
+  const empsCount = emps.count ?? 0;
+  const repsList = (reps.data ?? []) as any[];
+  const lastImport = importsAll.data?.[0] as any;
+  const escola = (escolas.data ?? null) as any;
+
+  const bridgeHb = escola?.bridge_ultimo_heartbeat ? new Date(escola.bridge_ultimo_heartbeat).getTime() : 0;
+  const bridgeMinAgo = bridgeHb ? Math.floor((Date.now() - bridgeHb) / 60000) : -1;
+  const bridgeOnline = bridgeHb && bridgeMinAgo >= 0 && bridgeMinAgo < 5;
+
+  const repOk = repsList.some((r) => r.ultimo_pull_status === "ok");
+  const repAny = repsList.length > 0;
+  const repWithError = repsList.find((r) => r.ultimo_pull_status && r.ultimo_pull_status !== "ok");
+
+  const items = [
+    {
+      key: "funcionarios",
+      label: "Cadastrar funcionários com PIS",
+      detail: empsCount > 0
+        ? `${empsCount} funcionário(s) cadastrado(s).`
+        : "Nenhum funcionário cadastrado. O PIS de cada um precisa ser exatamente o que está no AFD do REP — sem PIS cadastrado, as batidas chegam mas não casam com ninguém.",
+      ok: empsCount > 0,
+      severity: empsCount > 0 ? "ok" : "error",
+      blocking: true,
+      action: { panel: "pontoEmployees", label: "Cadastrar" },
+    },
+    {
+      key: "bridge_instalado",
+      label: "Instalar o Lumied Bridge na escola",
+      detail: bridgeOnline
+        ? `Bridge online — último sinal há ${bridgeMinAgo} min.`
+        : (bridgeHb
+          ? `Bridge ficou offline há ${bridgeMinAgo} min. Reinicie o daemon no mini-PC da escola.`
+          : "Daemon nunca conectou. Instale o Lumied Bridge num mini-PC/Pi da rede da escola — sem ele a coleta automática do AFD não funciona (mas você ainda pode importar manual)."),
+      ok: !!bridgeOnline,
+      severity: bridgeOnline ? "ok" : "warn",
+      blocking: false,
+      action: { panel: "acessoBridge", label: "Instalar Bridge" },
+    },
+    {
+      key: "rep_cadastrado",
+      label: "Cadastrar o REP físico (ponto eletrônico)",
+      detail: repAny
+        ? `${repsList.length} REP(s) cadastrado(s).`
+        : "Cadastre IP, usuário e senha do seu REP (Control iD, Henry, etc) pra coleta automática do AFD às 03:30 BRT todo dia.",
+      ok: repAny,
+      severity: repAny ? "ok" : "warn",
+      blocking: false,
+      action: { panel: "pontoImport", label: "Cadastrar REP" },
+    },
+    {
+      key: "rep_testado",
+      label: "Testar a coleta do AFD",
+      detail: !repAny
+        ? "Cadastre um REP antes de testar."
+        : (repOk
+          ? "Coleta automática funcionando. Próximas batidas chegam sozinhas todo dia às 03:30 BRT."
+          : (repWithError
+            ? `Última coleta falhou: ${repWithError.ultimo_pull_status} — ${repWithError.ultimo_pull_erro || "verifique IP/senha"}.`
+            : "REP cadastrado mas nunca foi testado. Use o botão '🧪 Testar agora' no cadastro.")),
+      ok: repOk,
+      severity: repOk ? "ok" : (repWithError ? "error" : "warn"),
+      blocking: false,
+      action: { panel: "pontoImport", label: "Testar coleta" },
+    },
+    {
+      key: "primeira_importacao",
+      label: "Importar o primeiro AFD",
+      detail: lastImport
+        ? `Última importação em ${new Date(lastImport.criado_em).toLocaleString("pt-BR")} — status "${lastImport.status}"${lastImport.pis_nao_encontrados ? `, ${lastImport.pis_nao_encontrados} PIS sem funcionário` : ""}.`
+        : "Nenhuma importação ainda. Faça upload manual do AFD ou aguarde a coleta automática (se REP estiver cadastrado).",
+      ok: !!lastImport && lastImport.status === "concluido",
+      severity: lastImport && lastImport.status === "concluido" ? "ok" : "error",
+      blocking: true,
+      action: { panel: "pontoImport", label: "Importar agora" },
+    },
+    {
+      key: "espelho_gerado",
+      label: "Conferir o espelho de ponto",
+      detail: (summariesMes.count ?? 0) > 0
+        ? `${summariesMes.count} dia(s) com batidas processadas no mês atual.`
+        : "Sem batidas processadas no mês atual. Importe o AFD primeiro.",
+      ok: (summariesMes.count ?? 0) > 0,
+      severity: (summariesMes.count ?? 0) > 0 ? "ok" : "warn",
+      blocking: false,
+      action: { panel: "pontoMirror", label: "Ver espelho" },
+    },
+    {
+      key: "cobertura_pis",
+      label: "Cobertura de funcionários no AFD",
+      detail: lastImport && lastImport.pis_nao_encontrados > 0
+        ? `Última importação tem ${lastImport.pis_nao_encontrados} PIS sem funcionário cadastrado — essas batidas ficam órfãs.`
+        : (lastImport ? "Todos os PIS da última importação casaram com funcionários." : "Sem importações para avaliar."),
+      ok: !lastImport || (lastImport.pis_nao_encontrados ?? 0) === 0,
+      severity: !lastImport ? "muted" : (lastImport.pis_nao_encontrados > 0 ? "warn" : "ok"),
+      blocking: false,
+      action: { panel: "pontoEmployees", label: "Cadastrar PIS" },
+    },
+  ];
+
+  const okCount = items.filter((i) => i.ok).length;
+  const total = items.length;
+  const score = total > 0 ? Math.round((okCount / total) * 100) : 0;
+  const blockers = items.filter((i) => i.blocking && !i.ok).length;
+  const podeOperar = blockers === 0;
+
+  return successResponse({
+    score,
+    blockers,
+    pode_operar: podeOperar,
+    items,
+    bridge: { online: !!bridgeOnline, ultimo_heartbeat: escola?.bridge_ultimo_heartbeat ?? null, min_atras: bridgeMinAgo },
+    funcionarios_count: empsCount,
+    reps_count: repsList.length,
+    cron_horario: "03:30 BRT (todo dia)",
+  });
+});
+
 // ── Cron diário às 03:30 BRT (06:30 UTC) — chama com Bearer cron_internal_key ──
 router.on("ponto_pull_afd_diario_cron", async (ctx) => {
   const expected = Deno.env.get("CRON_INTERNAL_KEY");
