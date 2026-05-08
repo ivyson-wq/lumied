@@ -3255,30 +3255,108 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelPontoImport" class="panel">
         <div class="sec-title" style="margin-bottom:6px;">📥 Importar AFD (Portaria 671)</div>
         <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;">
-          Faça upload do arquivo <code>.txt</code> exportado do REP (Registrador Eletrônico de Ponto). O sistema detecta header (tipo 1), funcionários (tipo 5), batidas (tipo 3) e trailer (tipo 9), valida o checksum e gera o resumo diário automaticamente.
+          Importe o arquivo do REP (Registrador Eletrônico de Ponto) de duas formas: <strong>manual</strong> (upload do .txt exportado) ou <strong>automática diária</strong> (Lumied Bridge busca pela rede Wi-Fi/LAN da escola).
         </p>
 
-        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:20px;">
-          <div class="ff" style="margin:0;">
-            <label>Arquivo AFD (.txt)</label>
-            <input type="file" id="pontoAfdFile" accept=".txt,text/plain" onchange="pontoAfdPreview()" style="padding:10px;border:1.5px dashed var(--border);border-radius:8px;background:#fdfbf8;width:100%;font-family:inherit;font-size:13px;">
-          </div>
-          <div id="pontoAfdInfo" style="display:none;margin-top:14px;padding:14px;background:#fdfbf8;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;"></div>
-          <div id="pontoAfdActions" style="display:none;margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
-            <button onclick="pontoAfdLimpar()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Limpar</button>
-            <button id="pontoAfdEnviarBtn" class="btn-create" style="width:auto;padding:8px 22px;" onclick="pontoAfdEnviar()">Importar para o Lumied</button>
-          </div>
-          <div id="pontoAfdStatus" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+        <!-- ── Tabs ── -->
+        <div class="filter-bar" style="margin-bottom:16px;">
+          <button class="fb active" id="pontoTabManual" onclick="pontoTabSwitch('manual',this)">📤 Upload Manual</button>
+          <button class="fb" id="pontoTabAuto" onclick="pontoTabSwitch('auto',this)">🤖 Coleta Automática</button>
         </div>
 
+        <!-- ── Tab Manual ── -->
+        <div id="pontoTabContentManual">
+          <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:20px;">
+            <div class="ff" style="margin:0;">
+              <label>Arquivo AFD (.txt)</label>
+              <input type="file" id="pontoAfdFile" accept=".txt,text/plain" onchange="pontoAfdPreview()" style="padding:10px;border:1.5px dashed var(--border);border-radius:8px;background:#fdfbf8;width:100%;font-family:inherit;font-size:13px;">
+            </div>
+            <div id="pontoAfdInfo" style="display:none;margin-top:14px;padding:14px;background:#fdfbf8;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;"></div>
+            <div id="pontoAfdActions" style="display:none;margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
+              <button onclick="pontoAfdLimpar()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Limpar</button>
+              <button id="pontoAfdEnviarBtn" class="btn-create" style="width:auto;padding:8px 22px;" onclick="pontoAfdEnviar()">Importar para o Lumied</button>
+            </div>
+            <div id="pontoAfdStatus" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+          </div>
+        </div>
+
+        <!-- ── Tab Automática (REP via Lumied Bridge) ── -->
+        <div id="pontoTabContentAuto" style="display:none;">
+          <div style="background:#fff7e6;border:1px solid #d4830a;border-radius:10px;padding:14px 16px;font-size:12px;color:#7a5208;margin-bottom:18px;line-height:1.6;">
+            <strong>Como funciona:</strong> o <em>Lumied Bridge</em> (daemon que roda no mini-PC da escola) acessa o REP pelo IP da LAN, faz login com usuário/senha e baixa o AFD do dia anterior automaticamente, todo dia às <strong>03:30 BRT</strong>. Sem ação manual. Funciona nativamente com <strong>Control iD</strong> (iDClass Bio Prox, iDFace) e também com Henry, Topdata e similares por interface web.
+            Pré-requisito: o Bridge precisa estar instalado e online — veja em <em>Controle de Acesso → Lumied Bridge</em>.
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div class="sec-title" style="margin:0;font-size:14px;">REPs cadastrados <span class="count-badge" id="pontoRepsCount">0</span></div>
+            <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="pontoToggleRepForm()">+ Cadastrar REP</button>
+          </div>
+
+          <div id="pontoRepForm" style="display:none;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
+              <div class="ff"><label>Nome (apelido) *</label><input id="pontoRepNome" placeholder="REP Recepção"></div>
+              <div class="ff"><label>Marca *</label>
+                <select id="pontoRepMarca" onchange="pontoRepPreset(this.value)" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;">
+                  <option value="controlid" selected>Control iD</option>
+                  <option value="henry">Henry</option>
+                  <option value="topdata">Topdata</option>
+                  <option value="madis">Madis</option>
+                  <option value="outro">Outro (config manual)</option>
+                </select>
+              </div>
+              <div class="ff"><label>Modelo</label><input id="pontoRepModelo" placeholder="iDClass Bio Prox"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 100px 100px;gap:12px;margin-top:8px;">
+              <div class="ff"><label>IP do REP na LAN *</label><input id="pontoRepIp" placeholder="192.168.1.100"></div>
+              <div class="ff"><label>Porta</label><input id="pontoRepPorta" type="number" value="443"></div>
+              <div class="ff"><label>Protocolo</label>
+                <select id="pontoRepProto" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;">
+                  <option value="http">HTTP</option><option value="https" selected>HTTPS</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px;">
+              <div class="ff"><label>Modo de Auth</label>
+                <select id="pontoRepAuthModo" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;">
+                  <option value="controlid_session" selected>Control iD (login.fcgi → session)</option>
+                  <option value="form_login">Formulário + cookie (Henry/genérico)</option>
+                  <option value="basic">HTTP Basic</option>
+                  <option value="none">Sem autenticação</option>
+                </select>
+              </div>
+              <div class="ff"><label>Usuário</label><input id="pontoRepUsuario" placeholder="admin" value="admin"></div>
+              <div class="ff"><label>Senha</label><input id="pontoRepSenha" type="password" placeholder="senha do REP"></div>
+            </div>
+            <div class="ff" style="margin-top:8px;"><label>URL de login (path) — só se Auth=form_login</label><input id="pontoRepUrlLogin" placeholder="/cgi-bin/login.cgi"></div>
+            <div class="ff" style="margin-top:8px;"><label>URL do AFD (path com {DATAINI}/{DATAFIM}) *</label><input id="pontoRepUrlAfd" placeholder="/get_afd.fcgi?initial_date={DATAINI}&final_date={DATAFIM}"></div>
+            <div style="margin-top:6px;color:var(--muted);font-size:11px;">
+              Os marcadores <code>{DATAINI}</code> e <code>{DATAFIM}</code> são substituídos pelo daemon no formato DDMMAAAA (ex: 07052026). No modo Control iD a sessão é injetada automaticamente como query <code>session=…</code>.
+            </div>
+            <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+              <button onclick="pontoToggleRepForm()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
+              <button id="pontoRepTestBtn" onclick="pontoRepTestar()" style="padding:8px 16px;background:#fff;color:#1a6bb5;border:1px solid #1a6bb5;border-radius:8px;font-size:12px;cursor:pointer;">🧪 Testar agora (ontem)</button>
+              <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoRepSalvar()">Salvar</button>
+            </div>
+            <div id="pontoRepFormStatus" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:12px;"></div>
+          </div>
+
+          <div class="table-wrap" style="margin-bottom:24px;">
+            <table>
+              <thead><tr><th>Nome</th><th>Marca/Modelo</th><th>Endereço</th><th>Última coleta</th><th>Status</th><th>Ativo</th><th>Ações</th></tr></thead>
+              <tbody id="pontoRepsTable"><tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Importações recentes (compartilhada entre as duas tabs) ── -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div class="sec-title" style="margin:0;font-size:14px;">Importações recentes</div>
           <button onclick="loadPontoImports()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Data</th><th>Arquivo</th><th>Período</th><th>CNPJ</th><th>Eventos</th><th>PIS s/ match</th><th>Status</th></tr></thead>
-            <tbody id="pontoImportsTable"><tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
+            <thead><tr><th>Data</th><th>Origem</th><th>Arquivo</th><th>Período</th><th>CNPJ</th><th>Eventos</th><th>PIS s/ match</th><th>Status</th></tr></thead>
+            <tbody id="pontoImportsTable"><tr><td colspan="8" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -4490,7 +4568,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         <!-- Modal câmera -->
         <div id="lprCameraModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
           <div style="background:#fff;border-radius:12px;padding:24px;width:560px;max-width:94vw;max-height:92vh;overflow-y:auto;">
-            <div style="font-weight:700;font-size:16px;margin-bottom:16px;">📷 <span id="lprCamModalTitle">Nova câmera</span></div>
+            <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+              <div style="font-weight:700;font-size:16px;">📷 <span id="lprCamModalTitle">Nova câmera</span></div>
+              <div id="lprCamSaveStatus" style="font-size:11px;color:#888;display:none;"></div>
+            </div>
             <input type="hidden" id="lprCamId">
             <div style="display:grid;gap:12px;">
               <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Nome *</div>
@@ -4523,8 +4604,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
             <div style="display:flex;justify-content:space-between;gap:8px;margin-top:20px;">
               <button id="lprCamRoiBtn" onclick="lprOpenRoiEditor()" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;display:none;">🎯 Editar ROI</button>
               <div style="display:flex;gap:8px;margin-left:auto;">
-                <button onclick="document.getElementById('lprCameraModal').style.display='none'" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
-                <button onclick="lprCameraSave()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">Salvar</button>
+                <button onclick="_lprCamAutosaveOn=false;_lprCamCancelAutosave();document.getElementById('lprCameraModal').style.display='none';" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">Fechar</button>
+                <button onclick="lprCameraSave()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">Salvar e fechar</button>
               </div>
             </div>
           </div>
@@ -4554,7 +4635,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         <!-- Modal cadastro -->
         <div id="lprPlacaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
           <div style="background:#fff;border-radius:12px;padding:24px;width:480px;max-width:92vw;max-height:90vh;overflow-y:auto;">
-            <div style="font-weight:700;font-size:16px;margin-bottom:16px;">🚗 <span id="lprModalTitle">Nova placa</span></div>
+            <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+              <div style="font-weight:700;font-size:16px;">🚗 <span id="lprModalTitle">Nova placa</span></div>
+              <div id="lprPlacaSaveStatus" style="font-size:11px;color:#888;display:none;"></div>
+            </div>
             <input type="hidden" id="lprPlacaId">
             <div style="display:grid;gap:12px;">
               <label style="display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Placa *</div>
@@ -4580,8 +4664,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
               <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="lprAtivoInput" checked> Ativa</label>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
-              <button onclick="document.getElementById('lprPlacaModal').style.display='none'" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
-              <button onclick="lprPlacaSave()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">Salvar</button>
+              <button onclick="_lprPlacaAutosaveOn=false;_lprPlacaCancelAutosave();document.getElementById('lprPlacaModal').style.display='none';" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">Fechar</button>
+              <button onclick="lprPlacaSave()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">Salvar e fechar</button>
             </div>
           </div>
         </div>
@@ -11631,6 +11715,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
 
   function lprCameraNova() {
+    _lprCamAutosaveOn = false; _lprCamCancelAutosave(); _lprCamSetStatus('', '');
     document.getElementById('lprCamModalTitle').textContent = 'Nova câmera';
     document.getElementById('lprCamId').value = '';
     document.getElementById('lprCamNome').value = '';
@@ -11650,6 +11735,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   function lprCameraEdit(id, openRoi) {
     const c = _lprCameras.find(x => x.id === id);
     if (!c) return;
+    _lprCamAutosaveOn = false; _lprCamCancelAutosave();  // off enquanto preenche
     document.getElementById('lprCamModalTitle').textContent = 'Editar câmera';
     document.getElementById('lprCamId').value = c.id;
     document.getElementById('lprCamNome').value = c.nome;
@@ -11663,6 +11749,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('lprCamGpioPulse').value = c.gpio_pulse_ms || 500;
     document.getElementById('lprCamAtiva').checked = !!c.ativa;
     document.getElementById('lprCamRoiBtn').style.display = '';
+    _lprCamWireAutosave();
+    _lprCamSetStatus('💾 auto-save ativo (2s após a última edição)', '#1976d2');
+    setTimeout(() => { _lprCamAutosaveOn = true; }, 200);  // evita disparar com os inputs do edit()
     if (openRoi) {
       document.getElementById('lprCameraModal').style.display = 'none';
       lprOpenRoiEditor();
@@ -11671,8 +11760,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     }
   }
 
-  async function lprCameraSave() {
-    const body = {
+  function _lprCamReadForm() {
+    return {
       action: 'acesso_lpr_camera_save',
       id: document.getElementById('lprCamId').value || undefined,
       nome: document.getElementById('lprCamNome').value.trim(),
@@ -11686,11 +11775,62 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       gpio_pulse_ms: Number(document.getElementById('lprCamGpioPulse').value),
       ativa: document.getElementById('lprCamAtiva').checked,
     };
+  }
+
+  async function lprCameraSave() {
+    _lprCamCancelAutosave();
+    const body = _lprCamReadForm();
     if (!body.nome || !body.rtsp_url) { alert('Nome e RTSP URL são obrigatórios.'); return; }
     const r = await callAcesso(body);
     if (r?.error) { alert('Erro: ' + r.error); return; }
     document.getElementById('lprCameraModal').style.display = 'none';
     loadLprCameras();
+  }
+
+  // ── Auto-save modal câmera (debounced 1.5s, só pra edição) ───
+  let _lprCamAutosaveTimer = null;
+  let _lprCamAutosaveOn = false;
+
+  function _lprCamSetStatus(text, color) {
+    const el = document.getElementById('lprCamSaveStatus');
+    el.textContent = text;
+    el.style.color = color || '#888';
+    el.style.display = text ? '' : 'none';
+  }
+  function _lprCamCancelAutosave() {
+    if (_lprCamAutosaveTimer) { clearTimeout(_lprCamAutosaveTimer); _lprCamAutosaveTimer = null; }
+  }
+  function _lprCamArmAutosave() {
+    if (!_lprCamAutosaveOn) return;
+    _lprCamCancelAutosave();
+    _lprCamSetStatus('digitando…', '#888');
+    _lprCamAutosaveTimer = setTimeout(async () => {
+      const body = _lprCamReadForm();
+      if (!body.id || !body.nome || !body.rtsp_url) {
+        _lprCamSetStatus('⚠️ nome/RTSP obrigatórios', '#c0392b');
+        return;
+      }
+      _lprCamSetStatus('💾 salvando…', '#1976d2');
+      const r = await callAcesso(body);
+      if (r?.error) {
+        _lprCamSetStatus('⚠️ erro: ' + r.error, '#c0392b');
+        return;
+      }
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2,'0'), mm = String(t.getMinutes()).padStart(2,'0');
+      _lprCamSetStatus(`✓ salvo às ${hh}:${mm}`, '#2d7a3a');
+      // Atualiza a lista de fundo (sem fechar modal)
+      loadLprCameras();
+    }, 1500);
+  }
+  function _lprCamWireAutosave() {
+    ['lprCamNome','lprCamRtsp','lprCamAlpr','lprCamScan','lprCamConf','lprCamGateUrl','lprCamGateTok','lprCamGpioPin','lprCamGpioPulse','lprCamAtiva'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.dataset.autosaveWired === '1') return;
+      el.dataset.autosaveWired = '1';
+      el.addEventListener('input', _lprCamArmAutosave);
+      el.addEventListener('change', _lprCamArmAutosave);
+    });
   }
 
   async function lprCameraDelete(id, nome) {
@@ -11847,6 +11987,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
 
   function lprPlacaNova() {
+    _lprPlacaAutosaveOn = false; _lprPlacaCancelAutosave(); _lprPlacaSetStatus('', '');
     document.getElementById('lprModalTitle').textContent = 'Nova placa';
     document.getElementById('lprPlacaId').value = '';
     document.getElementById('lprPlacaInput').value = '';
@@ -11862,6 +12003,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   function lprPlacaEdit(id) {
     const p = _lprPlacas.find(x => x.id === id);
     if (!p) return;
+    _lprPlacaAutosaveOn = false; _lprPlacaCancelAutosave();
     document.getElementById('lprModalTitle').textContent = 'Editar placa';
     document.getElementById('lprPlacaId').value = p.id;
     document.getElementById('lprPlacaInput').value = p.placa;
@@ -11871,13 +12013,15 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('lprValFim').value = p.validade_fim || '';
     document.getElementById('lprObsInput').value = p.observacao || '';
     document.getElementById('lprAtivoInput').checked = !!p.ativo;
+    _lprPlacaWireAutosave();
+    _lprPlacaSetStatus('💾 auto-save ativo (2s após a última edição)', '#1976d2');
+    setTimeout(() => { _lprPlacaAutosaveOn = true; }, 200);
     document.getElementById('lprPlacaModal').style.display = 'flex';
   }
 
-  async function lprPlacaSave() {
+  function _lprPlacaReadForm() {
     const placa = document.getElementById('lprPlacaInput').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (placa.length < 4) { alert('Placa inválida.'); return; }
-    const body = {
+    return {
       action: 'acesso_lpr_placa_save',
       id: document.getElementById('lprPlacaId').value || undefined,
       placa,
@@ -11888,10 +12032,61 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       observacao: document.getElementById('lprObsInput').value.trim() || null,
       ativo: document.getElementById('lprAtivoInput').checked,
     };
+  }
+
+  async function lprPlacaSave() {
+    _lprPlacaCancelAutosave();
+    const body = _lprPlacaReadForm();
+    if (body.placa.length < 4) { alert('Placa inválida.'); return; }
     const r = await callAcesso(body);
     if (r?.error) { alert('Erro: ' + r.error); return; }
     document.getElementById('lprPlacaModal').style.display = 'none';
     loadAcessoLpr();
+  }
+
+  // ── Auto-save modal placa ────────────────────────────
+  let _lprPlacaAutosaveTimer = null;
+  let _lprPlacaAutosaveOn = false;
+
+  function _lprPlacaSetStatus(text, color) {
+    const el = document.getElementById('lprPlacaSaveStatus');
+    el.textContent = text;
+    el.style.color = color || '#888';
+    el.style.display = text ? '' : 'none';
+  }
+  function _lprPlacaCancelAutosave() {
+    if (_lprPlacaAutosaveTimer) { clearTimeout(_lprPlacaAutosaveTimer); _lprPlacaAutosaveTimer = null; }
+  }
+  function _lprPlacaArmAutosave() {
+    if (!_lprPlacaAutosaveOn) return;
+    _lprPlacaCancelAutosave();
+    _lprPlacaSetStatus('digitando…', '#888');
+    _lprPlacaAutosaveTimer = setTimeout(async () => {
+      const body = _lprPlacaReadForm();
+      if (!body.id || body.placa.length < 4) {
+        _lprPlacaSetStatus('⚠️ placa inválida', '#c0392b');
+        return;
+      }
+      _lprPlacaSetStatus('💾 salvando…', '#1976d2');
+      const r = await callAcesso(body);
+      if (r?.error) {
+        _lprPlacaSetStatus('⚠️ erro: ' + r.error, '#c0392b');
+        return;
+      }
+      const t = new Date();
+      const hh = String(t.getHours()).padStart(2,'0'), mm = String(t.getMinutes()).padStart(2,'0');
+      _lprPlacaSetStatus(`✓ salvo às ${hh}:${mm}`, '#2d7a3a');
+      loadAcessoLpr();
+    }, 1500);
+  }
+  function _lprPlacaWireAutosave() {
+    ['lprPlacaInput','lprApelidoInput','lprOwnerTipo','lprValIni','lprValFim','lprObsInput','lprAtivoInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.dataset.autosaveWired === '1') return;
+      el.dataset.autosaveWired = '1';
+      el.addEventListener('input', _lprPlacaArmAutosave);
+      el.addEventListener('change', _lprPlacaArmAutosave);
+    });
   }
 
   async function lprPlacaDelete(id, placa) {
@@ -18453,15 +18648,15 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   async function loadPontoImports() {
     const tb = document.getElementById('pontoImportsTable');
     if (!tb) return;
-    tb.innerHTML = '<tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr>';
+    tb.innerHTML = '<tr><td colspan="8" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr>';
     const d = await pontoApi({ action: 'ponto_imports_list' });
     if (d.error) {
-      tb.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:#C8102E;">${pontoEsc(d.error)}</td></tr>`;
+      tb.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:#C8102E;">${pontoEsc(d.error)}</td></tr>`;
       return;
     }
     const list = d.data || [];
     if (!list.length) {
-      tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhuma importação ainda.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma importação ainda.</td></tr>';
       return;
     }
     tb.innerHTML = list.map(i => {
@@ -18473,8 +18668,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         ? new Date(i.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
         : '—';
       const badge = i.status === 'concluido' ? 'badge-green' : i.status === 'erro' ? 'badge-red' : 'badge-orange';
+      const origem = i.origem === 'bridge_auto'
+        ? '<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:#eef4ff;color:#1a6bb5;">🤖 auto</span>'
+        : '<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:#f5f1ec;color:#7a7169;">📤 manual</span>';
       return `<tr>
         <td style="font-size:12px;">${dt}</td>
+        <td>${origem}</td>
         <td>${pontoEsc(i.nome_arquivo || '—')}</td>
         <td style="font-size:12px;">${periodo}</td>
         <td style="font-size:11px;">${cnpj}</td>
@@ -18677,6 +18876,192 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d.error) return showToast(d.error, 'error');
     showToast(status === 'aprovado' ? 'Justificativa aprovada.' : 'Justificativa rejeitada.', 'success');
     loadPontoJustifTable();
+  }
+
+  // ── REPs (coleta automática via Lumied Bridge) ─────────────────
+  function pontoTabSwitch(tab, btn) {
+    document.querySelectorAll('#panelPontoImport .filter-bar .fb').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('pontoTabContentManual').style.display = tab === 'manual' ? 'block' : 'none';
+    document.getElementById('pontoTabContentAuto').style.display = tab === 'auto' ? 'block' : 'none';
+    if (tab === 'auto') loadPontoReps();
+  }
+
+  function pontoToggleRepForm() {
+    const el = document.getElementById('pontoRepForm');
+    const open = el.style.display === 'none';
+    el.style.display = open ? 'block' : 'none';
+    if (open) {
+      ['pontoRepNome','pontoRepModelo','pontoRepIp','pontoRepUsuario','pontoRepSenha','pontoRepUrlLogin'].forEach(i => {
+        const e = document.getElementById(i); if (e) e.value = '';
+      });
+      document.getElementById('pontoRepMarca').value = 'controlid';
+      pontoRepPreset('controlid');
+      document.getElementById('pontoRepUsuario').value = 'admin';
+      document.getElementById('pontoRepFormStatus').style.display = 'none';
+    }
+  }
+
+  function pontoRepPreset(marca) {
+    const presets = {
+      controlid: { porta:443, proto:'https', auth:'controlid_session', urlLogin:'/login.fcgi',     urlAfd:'/get_afd.fcgi?initial_date={DATAINI}&final_date={DATAFIM}', modeloPh:'iDClass Bio Prox' },
+      henry:     { porta:80,  proto:'http',  auth:'form_login',        urlLogin:'/cgi-bin/login.cgi', urlAfd:'/cgi-bin/afd.cgi?dataini={DATAINI}&datafim={DATAFIM}',     modeloPh:'Hexa / Prima / Vega' },
+      topdata:   { porta:80,  proto:'http',  auth:'basic',             urlLogin:'',                  urlAfd:'/AFD?inicio={DATAINI}&fim={DATAFIM}',                       modeloPh:'Inner Rep / Plus' },
+      madis:     { porta:80,  proto:'http',  auth:'form_login',        urlLogin:'/login',            urlAfd:'/relatorio/afd?ini={DATAINI}&fim={DATAFIM}',                modeloPh:'MD706 / MDX' },
+      outro:     { porta:80,  proto:'http',  auth:'form_login',        urlLogin:'',                  urlAfd:'',                                                          modeloPh:'(seu modelo)' }
+    };
+    const p = presets[marca] || presets.outro;
+    document.getElementById('pontoRepPorta').value = p.porta;
+    document.getElementById('pontoRepProto').value = p.proto;
+    document.getElementById('pontoRepAuthModo').value = p.auth;
+    document.getElementById('pontoRepUrlLogin').value = p.urlLogin;
+    document.getElementById('pontoRepUrlAfd').value = p.urlAfd;
+    document.getElementById('pontoRepModelo').placeholder = p.modeloPh;
+  }
+
+  async function loadPontoReps() {
+    const tb = document.getElementById('pontoRepsTable');
+    tb.innerHTML = '<tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr>';
+    const d = await pontoApi({ action: 'ponto_rep_devices_list' });
+    if (d.error) {
+      tb.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:#C8102E;">${pontoEsc(d.error)}</td></tr>`;
+      return;
+    }
+    const list = d.data || [];
+    document.getElementById('pontoRepsCount').textContent = list.length;
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum REP cadastrado. Clique em <strong>+ Cadastrar REP</strong>.</td></tr>';
+      return;
+    }
+    tb.innerHTML = list.map(r => {
+      const ult = r.ultimo_pull_em ? new Date(r.ultimo_pull_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+      const stMap = { ok:['#edf7ef','#2d7a3a','✓ ok'], erro_login:['#fdf0f2','#C8102E','login falhou'], erro_download:['#fdf0f2','#C8102E','download falhou'], erro_parse:['#fdf0f2','#C8102E','parse falhou'], sem_dados:['#fff7e6','#a06400','sem batidas'] };
+      const st = stMap[r.ultimo_pull_status] || (r.ultimo_pull_status ? ['#f5f1ec','#7a7169', r.ultimo_pull_status] : ['#f5f1ec','#7a7169','aguardando']);
+      const eventosLast = r.ultimo_pull_eventos != null ? ` <small style="color:var(--muted);">(${r.ultimo_pull_eventos} ev.)</small>` : '';
+      const erroTooltip = r.ultimo_pull_erro ? ` title="${pontoEsc(r.ultimo_pull_erro)}"` : '';
+      return `<tr>
+        <td><strong>${pontoEsc(r.nome)}</strong></td>
+        <td>${pontoEsc(r.marca)} ${pontoEsc(r.modelo || '')}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;">${pontoEsc(r.protocolo)}://${pontoEsc(r.ip)}:${r.porta}</td>
+        <td style="font-size:12px;">${ult}${eventosLast}</td>
+        <td><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:${st[0]};color:${st[1]};"${erroTooltip}>${st[2]}</span></td>
+        <td>${r.ativo ? '<span style="color:#2d7a3a;font-weight:600;">●</span>' : '<span style="color:#888;">○</span>'}</td>
+        <td>
+          <button onclick="pontoRepPullNow('${r.id}')" style="padding:4px 10px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">▶ Buscar agora</button>
+          <button onclick="pontoRepEditar('${r.id}')" style="padding:4px 10px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">Editar</button>
+          <button onclick="pontoRepDeletar('${r.id}','${pontoEsc(r.nome)}')" style="padding:4px 10px;background:#fff;color:#C8102E;border:1px solid #C8102E;border-radius:6px;font-size:11px;cursor:pointer;">Excluir</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function _pontoRepFormPayload() {
+    return {
+      nome: document.getElementById('pontoRepNome').value.trim(),
+      marca: document.getElementById('pontoRepMarca').value,
+      modelo: document.getElementById('pontoRepModelo').value.trim(),
+      ip: document.getElementById('pontoRepIp').value.trim(),
+      porta: parseInt(document.getElementById('pontoRepPorta').value) || 80,
+      protocolo: document.getElementById('pontoRepProto').value,
+      auth_modo: document.getElementById('pontoRepAuthModo').value,
+      usuario: document.getElementById('pontoRepUsuario').value.trim(),
+      senha: document.getElementById('pontoRepSenha').value,
+      url_login: document.getElementById('pontoRepUrlLogin').value.trim(),
+      url_afd_template: document.getElementById('pontoRepUrlAfd').value.trim()
+    };
+  }
+
+  function _pontoRepValidate(p) {
+    if (!p.nome) return 'Nome obrigatório';
+    if (!p.ip) return 'IP obrigatório';
+    if (!p.url_afd_template) return 'URL do AFD obrigatória';
+    if (p.auth_modo === 'form_login' && !p.url_login) return 'URL de login obrigatória para Auth=form_login';
+    if (p.auth_modo !== 'none' && (!p.usuario || !p.senha)) return 'Usuário e senha obrigatórios';
+    return null;
+  }
+
+  async function pontoRepSalvar() {
+    const p = _pontoRepFormPayload();
+    const err = _pontoRepValidate(p);
+    if (err) return showToast(err, 'error');
+    const editing = document.getElementById('pontoRepForm').dataset.editingId;
+    const action = editing ? 'ponto_rep_devices_update' : 'ponto_rep_devices_create';
+    const body = editing ? { action, id: editing, ...p } : { action, ...p };
+    const d = await pontoApi(body);
+    if (d.error) return showToast(d.error, 'error');
+    showToast(editing ? 'REP atualizado.' : 'REP cadastrado. Próxima coleta automática às 03:30 BRT.', 'success');
+    delete document.getElementById('pontoRepForm').dataset.editingId;
+    pontoToggleRepForm();
+    loadPontoReps();
+  }
+
+  async function pontoRepTestar() {
+    const p = _pontoRepFormPayload();
+    const err = _pontoRepValidate(p);
+    if (err) return showToast(err, 'error');
+    const st = document.getElementById('pontoRepFormStatus');
+    const btn = document.getElementById('pontoRepTestBtn');
+    btn.disabled = true; btn.textContent = '🧪 Testando…';
+    st.style.display = 'block';
+    st.style.background = '#eef4ff'; st.style.color = '#1a6bb5';
+    st.textContent = 'Pedindo ao Lumied Bridge para buscar o AFD de ontem… isso pode levar até 30s.';
+    const d = await pontoApi({ action: 'ponto_rep_devices_test', ...p });
+    btn.disabled = false; btn.textContent = '🧪 Testar agora (ontem)';
+    if (d.error) {
+      st.style.background = '#fdf0f2'; st.style.color = '#C8102E';
+      st.innerHTML = '<strong>Falhou.</strong> ' + pontoEsc(d.error);
+      return;
+    }
+    const r = d.data || d;
+    if (r.status === 'ok') {
+      st.style.background = '#edf7ef'; st.style.color = '#2d7a3a';
+      st.innerHTML = `<strong>✓ Funcionou.</strong> ${r.eventos || 0} batidas baixadas. Pode salvar — coletas diárias automáticas a partir de amanhã às 03:30 BRT.`;
+    } else {
+      st.style.background = '#fdf0f2'; st.style.color = '#C8102E';
+      st.innerHTML = `<strong>✗ ${pontoEsc(r.status)}.</strong> ${pontoEsc(r.erro || '')}`;
+    }
+  }
+
+  async function pontoRepEditar(id) {
+    const d = await pontoApi({ action: 'ponto_rep_devices_list' });
+    const rep = (d.data || []).find(r => r.id === id);
+    if (!rep) return showToast('REP não encontrado.', 'error');
+    pontoToggleRepForm(); // abre o form
+    document.getElementById('pontoRepForm').dataset.editingId = id;
+    document.getElementById('pontoRepNome').value = rep.nome || '';
+    document.getElementById('pontoRepMarca').value = rep.marca || 'controlid';
+    document.getElementById('pontoRepModelo').value = rep.modelo || '';
+    document.getElementById('pontoRepIp').value = rep.ip || '';
+    document.getElementById('pontoRepPorta').value = rep.porta || 80;
+    document.getElementById('pontoRepProto').value = rep.protocolo || 'http';
+    document.getElementById('pontoRepAuthModo').value = rep.auth_modo || 'controlid_session';
+    document.getElementById('pontoRepUsuario').value = rep.usuario || '';
+    document.getElementById('pontoRepSenha').value = ''; // nunca pré-preenche senha
+    document.getElementById('pontoRepUrlLogin').value = rep.url_login || '';
+    document.getElementById('pontoRepUrlAfd').value = rep.url_afd_template || '';
+    document.getElementById('pontoRepSenha').placeholder = 'deixe vazio para manter senha atual';
+  }
+
+  async function pontoRepDeletar(id, nome) {
+    if (!await _lumiedConfirm(`Excluir REP "${nome}"? As importações já feitas continuam.`)) return;
+    const d = await pontoApi({ action: 'ponto_rep_devices_delete', id });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('REP excluído.', 'success');
+    loadPontoReps();
+  }
+
+  async function pontoRepPullNow(id) {
+    showToast('Pedindo coleta agora ao Bridge…', 'info');
+    const d = await pontoApi({ action: 'ponto_rep_devices_pull_now', id });
+    if (d.error) return showToast(d.error, 'error');
+    const r = d.data || d;
+    if (r.status === 'ok') {
+      showToast(`✓ ${r.eventos || 0} batidas coletadas.`, 'success');
+    } else {
+      showToast(`✗ ${r.status}: ${r.erro || ''}`, 'error');
+    }
+    loadPontoReps();
+    loadPontoImports();
   }
 </script>
 <script src="/lumied-ux.js" defer></script>
