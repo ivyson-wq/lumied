@@ -831,6 +831,25 @@ router.on("acesso_evento_callback", async (ctx) => {
     if (!placa) throw new AppError("VALIDATION_FAILED", "placa_lida vazia");
     const motivosValidos = ["autorizado","nao_cadastrada","fora_validade","fora_horario","inativa","baixa_confianca"];
     const motivo = motivosValidos.includes(body.motivo) ? body.motivo : "nao_cadastrada";
+
+    // Upload foto se daemon enviou (best-effort — não bloqueia evento)
+    let fotoPath: string | null = null;
+    if (body.foto_b64 && typeof body.foto_b64 === "string" && body.foto_b64.length < 600_000) {
+      try {
+        const raw = atob(body.foto_b64);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        const path = `${lprEscolaId}/eventos/${Date.now()}_${placa}.jpg`;
+        const { error: upErr } = await ctx.sb.storage.from("lpr-fotos").upload(path, bytes, {
+          contentType: "image/jpeg", upsert: false,
+        });
+        if (!upErr) fotoPath = path;
+        else console.warn("[lpr] upload foto falhou:", upErr.message);
+      } catch (e) {
+        console.warn("[lpr] decode foto_b64 falhou:", String(e));
+      }
+    }
+
     await ctx.sb.from("acesso_lpr_eventos").insert({
       escola_id: lprEscolaId,
       placa_lida: placa,
@@ -839,6 +858,7 @@ router.on("acesso_evento_callback", async (ctx) => {
       autorizado: !!body.autorizado,
       motivo,
       acao_tomada: body.autorizado ? "log_apenas" : null,
+      foto_path: fotoPath,
     });
     return successResponse({ ok: true });
   }
@@ -3380,6 +3400,209 @@ router.on("acesso_lpr_sync_now", authGerente, async (ctx) => {
   const plates = data ?? [];
   const r = await bridgeDispatchEphemeral(ctx.escola_id, "lpr_sync", { plates }, 5000);
   return successResponse({ ok: r.ok, count: plates.length, error: r.error, body: r.body });
+});
+
+// ─── acesso_lpr_evento_foto_url: signed URL pra foto de um evento (gerente/secretaria) ───
+router.on("acesso_lpr_evento_foto_url", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { evento_id } = ctx.body as Any;
+  if (!evento_id) throw new AppError("VALIDATION_FAILED", "evento_id obrigatório");
+  const { data: evt } = await ctx.sb.from("acesso_lpr_eventos")
+    .select("foto_path, escola_id")
+    .eq("id", evento_id).eq("escola_id", ctx.escola_id).maybeSingle();
+  if (!evt || !evt.foto_path) return successResponse({ url: null });
+  const { data: signed } = await ctx.sb.storage.from("lpr-fotos").createSignedUrl(evt.foto_path, 60 * 10);
+  return successResponse({ url: signed?.signedUrl || null });
+});
+
+// Lookup família + auth check; retorna {cpf, escola_id, nome_responsavel, email} ou null.
+// Usa o cpf como chave natural (familias não tem PK uuid).
+async function lprGetFamiliaByEmail(ctx: Any, email: string): Promise<Any> {
+  const authedEmail = await getAuthenticatedPaiEmail(ctx);
+  if (authedEmail !== String(email || "").toLowerCase()) {
+    throw new AppError("FORBIDDEN", "Você não tem permissão para acessar dados desta família.");
+  }
+  const { data } = await ctx.sb.from("familias")
+    .select("cpf, escola_id, nome_responsavel, email")
+    .eq("email", authedEmail).maybeSingle();
+  return data;
+}
+
+// ─── Portal família: minhas placas (aprovadas + solicitações pendentes/rejeitadas) ───
+router.on("acesso_lpr_minhas_placas", async (ctx) => {
+  const { email } = ctx.body as Any;
+  if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
+  const familia = await lprGetFamiliaByEmail(ctx, email);
+  if (!familia) return successResponse({ placas: [], solicitacoes: [] });
+
+  const [{ data: placas }, { data: solicitacoes }] = await Promise.all([
+    ctx.sb.from("acesso_lpr_placas")
+      .select("id, placa, apelido, ativo, validade_inicio, validade_fim, criado_em")
+      .eq("escola_id", familia.escola_id)
+      .eq("owner_tipo", "familia").eq("owner_cpf", familia.cpf)
+      .order("criado_em", { ascending: false }),
+    ctx.sb.from("acesso_lpr_solicitacoes")
+      .select("id, placa, apelido, status, motivo_rejeicao, observacao, foto_path, criado_em")
+      .eq("escola_id", familia.escola_id).eq("familia_cpf", familia.cpf)
+      .order("criado_em", { ascending: false }).limit(20),
+  ]);
+  return successResponse({ placas: placas ?? [], solicitacoes: solicitacoes ?? [] });
+});
+
+// ─── Portal família: solicitar cadastro de placa (com foto opcional) ───
+router.on("acesso_lpr_solicitar_placa", async (ctx) => {
+  const { email, placa: placaRaw, apelido, observacao, foto_b64 } = ctx.body as Any;
+  if (!email) throw new AppError("VALIDATION_FAILED", "Email obrigatório.");
+  const familia = await lprGetFamiliaByEmail(ctx, email);
+  if (!familia) throw new AppError("NOT_FOUND", "Família não encontrada.");
+
+  const placa = normalizarPlaca(placaRaw);
+  if (placa.length < 4) throw new AppError("VALIDATION_FAILED", "Placa inválida.");
+
+  // Se já existe placa cadastrada (de qualquer dono) com essa string na escola, bloqueia
+  const { data: existente } = await ctx.sb.from("acesso_lpr_placas")
+    .select("id").eq("escola_id", familia.escola_id).eq("placa", placa).maybeSingle();
+  if (existente) throw new AppError("CONFLICT", "Essa placa já está cadastrada na escola.");
+
+  // Bloqueia múltiplas solicitações pendentes pra mesma placa pela mesma família
+  const { data: jaPendente } = await ctx.sb.from("acesso_lpr_solicitacoes")
+    .select("id").eq("escola_id", familia.escola_id).eq("familia_cpf", familia.cpf)
+    .eq("placa", placa).eq("status", "pendente").maybeSingle();
+  if (jaPendente) throw new AppError("CONFLICT", "Você já tem uma solicitação pendente pra essa placa.");
+
+  const { data: sol, error: insErr } = await ctx.sb.from("acesso_lpr_solicitacoes").insert({
+    escola_id: familia.escola_id,
+    familia_cpf: familia.cpf,
+    familia_email: familia.email,
+    familia_nome: familia.nome_responsavel,
+    placa,
+    apelido: apelido || null,
+    observacao: observacao || null,
+  }).select().single();
+  if (insErr || !sol) throw new AppError("BAD_REQUEST", insErr?.message || "Erro ao criar solicitação.");
+
+  // Upload foto (best-effort — solicitação fica criada mesmo se upload falhar)
+  if (foto_b64 && typeof foto_b64 === "string" && foto_b64.length < 800_000) {
+    try {
+      const cleanB64 = foto_b64.replace(/^data:image\/\w+;base64,/, "");
+      const raw = atob(cleanB64);
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      const path = `${familia.escola_id}/solicitacoes/${sol.id}.jpg`;
+      const { error: upErr } = await ctx.sb.storage.from("lpr-fotos").upload(path, bytes, {
+        contentType: "image/jpeg", upsert: true,
+      });
+      if (!upErr) {
+        await ctx.sb.from("acesso_lpr_solicitacoes").update({ foto_path: path }).eq("id", sol.id);
+        sol.foto_path = path;
+      }
+    } catch (e) {
+      console.warn("[lpr] foto solicitação falhou:", String(e));
+    }
+  }
+
+  return successResponse(sol);
+});
+
+// ─── Portal família: signed URL pra foto de uma solicitação própria ───
+router.on("acesso_lpr_minha_solicitacao_foto", async (ctx) => {
+  const { email, solicitacao_id } = ctx.body as Any;
+  if (!email || !solicitacao_id) throw new AppError("VALIDATION_FAILED", "email e solicitacao_id obrigatórios.");
+  const familia = await lprGetFamiliaByEmail(ctx, email);
+  if (!familia) return successResponse({ url: null });
+  const { data: sol } = await ctx.sb.from("acesso_lpr_solicitacoes")
+    .select("foto_path").eq("id", solicitacao_id)
+    .eq("escola_id", familia.escola_id).eq("familia_cpf", familia.cpf).maybeSingle();
+  if (!sol?.foto_path) return successResponse({ url: null });
+  const { data: signed } = await ctx.sb.storage.from("lpr-fotos").createSignedUrl(sol.foto_path, 60 * 10);
+  return successResponse({ url: signed?.signedUrl || null });
+});
+
+// ─── Gerente: lista solicitações ───
+router.on("acesso_lpr_solicitacoes_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { status_filter } = ctx.body as Any;
+  let q = ctx.sb.from("acesso_lpr_solicitacoes")
+    .select("*")
+    .eq("escola_id", ctx.escola_id)
+    .order("criado_em", { ascending: false }).limit(100);
+  if (status_filter && ["pendente","aprovada","rejeitada"].includes(status_filter)) {
+    q = q.eq("status", status_filter);
+  }
+  const { data: sols } = await q;
+  // familia_nome/familia_email já são snapshots na própria solicitação — sem N+1.
+  const enriched = (sols ?? []).map((s: Any) => ({
+    ...s,
+    familia: { responsavel_nome: s.familia_nome, email: s.familia_email, cpf: s.familia_cpf },
+  }));
+  return successResponse(enriched);
+});
+
+// ─── Gerente: signed URL pra foto de solicitação ───
+router.on("acesso_lpr_solicitacao_foto_url", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { solicitacao_id } = ctx.body as Any;
+  if (!solicitacao_id) throw new AppError("VALIDATION_FAILED", "solicitacao_id obrigatório.");
+  const { data: sol } = await ctx.sb.from("acesso_lpr_solicitacoes")
+    .select("foto_path").eq("id", solicitacao_id).eq("escola_id", ctx.escola_id).maybeSingle();
+  if (!sol?.foto_path) return successResponse({ url: null });
+  const { data: signed } = await ctx.sb.storage.from("lpr-fotos").createSignedUrl(sol.foto_path, 60 * 10);
+  return successResponse({ url: signed?.signedUrl || null });
+});
+
+// ─── Gerente: aprovar solicitação (cria placa + sync daemon) ───
+router.on("acesso_lpr_solicitacao_aprovar", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { solicitacao_id, validade_inicio, validade_fim } = ctx.body as Any;
+  if (!solicitacao_id) throw new AppError("VALIDATION_FAILED", "solicitacao_id obrigatório.");
+
+  const { data: sol } = await ctx.sb.from("acesso_lpr_solicitacoes")
+    .select("*").eq("id", solicitacao_id).eq("escola_id", ctx.escola_id).maybeSingle();
+  if (!sol) throw new AppError("NOT_FOUND", "Solicitação não encontrada.");
+  if (sol.status !== "pendente") throw new AppError("CONFLICT", `Solicitação já está ${sol.status}.`);
+
+  const { data: placa, error: placaErr } = await ctx.sb.from("acesso_lpr_placas").insert({
+    escola_id: ctx.escola_id,
+    placa: sol.placa,
+    owner_tipo: "familia",
+    owner_cpf: sol.familia_cpf,
+    apelido: sol.apelido,
+    ativo: true,
+    validade_inicio: validade_inicio || null,
+    validade_fim: validade_fim || null,
+    observacao: sol.observacao,
+    criado_por: ctx.user_id || null,
+  }).select().single();
+  if (placaErr) {
+    if (placaErr.code === "23505") throw new AppError("CONFLICT", "Placa já cadastrada.");
+    throw new AppError("BAD_REQUEST", placaErr.message);
+  }
+
+  // Atualiza solicitação
+  await ctx.sb.from("acesso_lpr_solicitacoes").update({
+    status: "aprovada",
+    placa_id: placa.id,
+    aprovada_por: ctx.user_id || null,
+    aprovada_em: new Date().toISOString(),
+  }).eq("id", solicitacao_id);
+
+  // Sync daemon
+  syncLprPlatesToBridge(ctx.sb, ctx.escola_id).catch(() => {});
+  return successResponse({ ok: true, placa });
+});
+
+// ─── Gerente: rejeitar solicitação ───
+router.on("acesso_lpr_solicitacao_rejeitar", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { solicitacao_id, motivo } = ctx.body as Any;
+  if (!solicitacao_id) throw new AppError("VALIDATION_FAILED", "solicitacao_id obrigatório.");
+  await ctx.sb.from("acesso_lpr_solicitacoes").update({
+    status: "rejeitada",
+    motivo_rejeicao: motivo || "Não informado",
+    aprovada_por: ctx.user_id || null,
+    aprovada_em: new Date().toISOString(),
+  }).eq("id", solicitacao_id).eq("escola_id", ctx.escola_id).eq("status", "pendente");
+  return successResponse({ ok: true });
 });
 
 // ═══════════════════════════════════════════════════════════════

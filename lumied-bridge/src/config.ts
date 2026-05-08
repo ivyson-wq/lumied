@@ -41,6 +41,10 @@ export interface Config {
   lprAlprUrl: string;            // ex: http://localhost:32168/v1/vision/alpr (CodeProject.AI)
   lprScanIntervalMs: number;     // ex: 2000
   lprConfidenceMin: number;      // 0..1 (default 0.85)
+  lprFotoIncluir: boolean;       // anexa foto base64 nos eventos (default true)
+  lprFotoMaxBytes: number;       // se jpeg > N, skip inclusão (default 250KB)
+  lprGateWebhookUrl: string;     // POST quando placa autorizada (relé/Sonoff/ESP-Home)
+  lprGateWebhookToken: string;   // Bearer opcional
 }
 
 let passwordsMap: Record<string, string> = {};
@@ -66,6 +70,10 @@ export const config: Config = {
   lprAlprUrl: process.env.LPR_ALPR_URL || "",
   lprScanIntervalMs: Number(process.env.LPR_SCAN_INTERVAL_MS || 2000),
   lprConfidenceMin: Number(process.env.LPR_CONFIDENCE_MIN || 0.85),
+  lprFotoIncluir: process.env.LPR_FOTO_INCLUIR !== "false",
+  lprFotoMaxBytes: Number(process.env.LPR_FOTO_MAX_BYTES || 250 * 1024),
+  lprGateWebhookUrl: process.env.LPR_GATE_WEBHOOK_URL || "",
+  lprGateWebhookToken: process.env.LPR_GATE_WEBHOOK_TOKEN || "",
 };
 
 export function passwordFor(ip: string): string {

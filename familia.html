@@ -1074,6 +1074,41 @@ body.has-bottomnav{padding-bottom:56px;}
         <div id="autFeedback" style="display:none;margin-top:8px;font-size:13px;padding:10px;border-radius:8px;"></div>
       </div>
     </div>
+
+    <!-- Meus Veículos -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title" style="margin-bottom:4px;">🚗 Meus Veículos</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+        Cadastre as placas dos carros autorizados a entrar na escola. Após sua solicitação, a direção aprova
+        e a câmera de leitura de placas passa a reconhecer.
+      </p>
+      <div id="lprMinhasListaContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando…</div></div>
+
+      <div id="lprFormVeiculo" style="background:#f8f5f0;border-radius:12px;padding:16px;margin-top:16px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px;">+ Cadastrar veículo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Placa *</label>
+            <input type="text" id="lprNovaPlaca" placeholder="ABC1D23" maxlength="8" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:14px;text-transform:uppercase;letter-spacing:1.5px;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Apelido</label>
+            <input type="text" id="lprNovoApelido" placeholder="Ex: Carro do papai" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Observação (opcional)</label>
+          <textarea id="lprNovaObs" rows="2" placeholder="Ex: carro alugado da minha mãe que vai trazer no dia do passeio" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Foto da placa (opcional, ajuda a direção a confirmar)</label>
+          <input type="file" id="lprNovaFoto" accept="image/*" capture="environment" onchange="lprPreviewFoto(event)" style="width:100%;font-size:12px;">
+          <img id="lprNovaFotoPreview" style="display:none;margin-top:8px;max-width:200px;max-height:140px;border-radius:8px;border:1px solid var(--border);">
+        </div>
+        <button onclick="lprSolicitarVeiculo()" id="lprSolicitarBtn" style="margin-top:14px;width:100%;padding:12px;background:#C8102E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Enviar solicitação pra direção</button>
+        <div id="lprFormFeedback" style="display:none;margin-top:8px;font-size:13px;padding:10px;border-radius:8px;"></div>
+      </div>
+    </div>
   </div>
 
   <!-- TAB: MEU PERFIL -->
@@ -3326,7 +3361,102 @@ body.has-bottomnav{padding-bottom:56px;}
 
   async function carregarAcesso() {
     if (!currentUser?.email) return;
-    await Promise.all([carregarMinhaFace(), carregarPresencaFilhos(), carregarAutorizados()]);
+    await Promise.all([carregarMinhaFace(), carregarPresencaFilhos(), carregarAutorizados(), carregarMeusVeiculos()]);
+  }
+
+  // Meus Veículos (LPR)
+  let _lprNovaFotoB64 = null;
+
+  function lprPreviewFoto(ev) {
+    const f = ev.target.files?.[0];
+    if (!f) return;
+    if (f.size > 4 * 1024 * 1024) { alert('Foto muito grande (máx 4MB).'); ev.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      _lprNovaFotoB64 = String(reader.result || '');
+      const img = document.getElementById('lprNovaFotoPreview');
+      img.src = _lprNovaFotoB64; img.style.display = '';
+    };
+    reader.readAsDataURL(f);
+  }
+
+  async function carregarMeusVeiculos() {
+    if (!currentUser?.email) return;
+    const el = document.getElementById('lprMinhasListaContent');
+    try {
+      const d = await callAcesso({ action: 'acesso_lpr_minhas_placas', email: currentUser.email });
+      const r = d?.data || d || {};
+      const placas = r.placas || [];
+      const sols = r.solicitacoes || [];
+
+      const aprovadas = placas.map(p => `
+        <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+          <div style="font-family:'DM Mono',monospace;font-weight:700;font-size:18px;letter-spacing:1.5px;">${escHtml(p.placa)}</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;color:#1a1a1a;">${escHtml(p.apelido || '—')}</div>
+            <div style="font-size:11px;color:var(--muted);">${p.ativo ? '✅ Aprovada e ativa' : '⏸️ Inativa'}</div>
+          </div>
+        </div>`).join('');
+
+      const naoAprovadas = sols.filter(s => s.status !== 'aprovada');
+      const pendentes = naoAprovadas.map(s => {
+        const cor = s.status === 'pendente' ? '#b07d10' : '#c0392b';
+        const label = s.status === 'pendente' ? '⏳ Aguardando aprovação' : '❌ Rejeitada';
+        return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="font-family:'DM Mono',monospace;font-weight:700;font-size:18px;letter-spacing:1.5px;color:#666;">${escHtml(s.placa)}</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;color:#666;">${escHtml(s.apelido || '—')}</div>
+              <div style="font-size:11px;color:${cor};font-weight:600;">${label}</div>
+            </div>
+          </div>
+          ${s.status === 'rejeitada' && s.motivo_rejeicao ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);padding:8px;background:#fdf3f2;border-radius:6px;"><strong>Motivo:</strong> ${escHtml(s.motivo_rejeicao)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      if (!aprovadas && !pendentes) {
+        el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Nenhum veículo cadastrado ainda.</div>';
+      } else {
+        el.innerHTML = aprovadas + pendentes;
+      }
+    } catch (e) {
+      el.innerHTML = '<div style="color:#c0392b;font-size:12px;">Erro ao carregar.</div>';
+    }
+  }
+
+  async function lprSolicitarVeiculo() {
+    const placa = document.getElementById('lprNovaPlaca').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (placa.length < 4) { alert('Informe uma placa válida.'); return; }
+    const apelido = document.getElementById('lprNovoApelido').value.trim();
+    const obs = document.getElementById('lprNovaObs').value.trim();
+    const fb = document.getElementById('lprFormFeedback');
+    const btn = document.getElementById('lprSolicitarBtn');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    fb.style.display = 'none';
+    try {
+      const r = await callAcesso({
+        action: 'acesso_lpr_solicitar_placa',
+        email: currentUser.email,
+        placa, apelido: apelido || null, observacao: obs || null,
+        foto_b64: _lprNovaFotoB64 || null,
+      });
+      if (r?.error) {
+        fb.textContent = '⚠️ ' + r.error;
+        fb.style.background = '#fdf3f2'; fb.style.color = '#c0392b'; fb.style.display = '';
+      } else {
+        fb.textContent = '✅ Solicitação enviada. A direção vai aprovar ou rejeitar em breve.';
+        fb.style.background = '#f0f8f1'; fb.style.color = '#2d7a3a'; fb.style.display = '';
+        document.getElementById('lprNovaPlaca').value = '';
+        document.getElementById('lprNovoApelido').value = '';
+        document.getElementById('lprNovaObs').value = '';
+        document.getElementById('lprNovaFoto').value = '';
+        document.getElementById('lprNovaFotoPreview').style.display = 'none';
+        _lprNovaFotoB64 = null;
+        carregarMeusVeiculos();
+      }
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enviar solicitação pra direção';
+    }
   }
 
   // Minha face

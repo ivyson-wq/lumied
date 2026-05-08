@@ -143,6 +143,35 @@ function matchPlate(placa: string): MatchResult {
   return { autorizado: true, motivo: "autorizado", placa_id: cached.id };
 }
 
+// ── webhook cancela ──────────────────────────────────────────────
+async function fireGateWebhook(placa: string, placaId: string | null): Promise<void> {
+  if (!config.lprGateWebhookUrl) return;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (config.lprGateWebhookToken) headers.Authorization = `Bearer ${config.lprGateWebhookToken}`;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    const res = await fetch(config.lprGateWebhookUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ placa, placa_id: placaId, ts: new Date().toISOString() }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    log.info(`gate webhook → ${res.status} (placa=${placa})`);
+  } catch (e) {
+    log.warn(`gate webhook falhou: ${String(e)}`);
+  }
+}
+
+// ── emite evento para o gateway (com foto opcional) ──────────────
+function emitEvent(jpeg: Buffer | null, evt: Record<string, unknown>): void {
+  if (config.lprFotoIncluir && jpeg && jpeg.length <= config.lprFotoMaxBytes) {
+    evt.foto_b64 = jpeg.toString("base64");
+  }
+  forwardEvent(evt);
+}
+
 // ── tick do loop ─────────────────────────────────────────────────
 async function tick(): Promise<void> {
   if (inFlight) return;
@@ -154,8 +183,7 @@ async function tick(): Promise<void> {
     if (!det) return;
 
     if (det.confidence < config.lprConfidenceMin) {
-      // Baixa confiança: ainda emite evento (visibilidade) mas marca
-      forwardEvent({
+      emitEvent(jpeg, {
         kind: "lpr",
         placa_lida: det.plate,
         placa_id: null,
@@ -179,7 +207,7 @@ async function tick(): Promise<void> {
     const m = matchPlate(det.plate);
     log.info(`LPR ${det.plate} conf=${det.confidence.toFixed(2)} → ${m.motivo}`);
 
-    forwardEvent({
+    emitEvent(jpeg, {
       kind: "lpr",
       placa_lida: det.plate,
       placa_id: m.placa_id,
@@ -188,6 +216,10 @@ async function tick(): Promise<void> {
       motivo: m.motivo,
       ts: new Date().toISOString(),
     });
+
+    if (m.autorizado) {
+      void fireGateWebhook(det.plate, m.placa_id);
+    }
   } finally {
     inFlight = false;
   }
@@ -203,7 +235,8 @@ export function startLpr(): void {
     return;
   }
   const safeUrl = config.lprRtspUrl.replace(/:\/\/[^@]+@/, "://***@");
-  log.info(`LPR ativo: rtsp=${safeUrl} interval=${config.lprScanIntervalMs}ms conf>=${config.lprConfidenceMin}`);
+  const gateOn = !!config.lprGateWebhookUrl;
+  log.info(`LPR ativo: rtsp=${safeUrl} interval=${config.lprScanIntervalMs}ms conf>=${config.lprConfidenceMin} foto=${config.lprFotoIncluir} gate=${gateOn?"ON":"off"}`);
   scanTimer = setInterval(() => {
     tick().catch((e) => log.error("lpr tick crashed", String(e)));
   }, config.lprScanIntervalMs);

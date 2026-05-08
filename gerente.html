@@ -3959,6 +3959,7 @@ docker compose up -d --build</pre>
         <div class="filter-bar" style="margin-bottom:16px;">
           <button class="fb active" onclick="lprTab('placas',this)">🅿️ Placas Cadastradas</button>
           <button class="fb" onclick="lprTab('eventos',this)">📋 Eventos Recentes</button>
+          <button class="fb" onclick="lprTab('solicitacoes',this)">📨 Solicitações <span id="lprSolBadge" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px;font-weight:600;">0</span></button>
         </div>
 
         <!-- Tab: Placas -->
@@ -3997,11 +3998,34 @@ docker compose up -d --build</pre>
           <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Quando</th><th>Placa lida</th><th>Confiança</th><th>Resultado</th><th>Vinculada a</th></tr></thead>
-                <tbody id="lprEventosTable"><tr><td colspan="5" class="empty-state">—</td></tr></tbody>
+                <thead><tr><th style="width:80px;">Foto</th><th>Quando</th><th>Placa lida</th><th>Confiança</th><th>Resultado</th><th>Vinculada a</th></tr></thead>
+                <tbody id="lprEventosTable"><tr><td colspan="6" class="empty-state">—</td></tr></tbody>
               </table>
             </div>
           </div>
+        </div>
+
+        <!-- Tab: Solicitações -->
+        <div id="lprTabSolicitacoes" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:13px;color:var(--muted);">
+              Solicitações de cadastro feitas pelos pais via portal. <strong>Aprovar</strong> cria a placa e sincroniza com o daemon.
+            </div>
+            <select id="lprSolFiltroStatus" onchange="loadLprSolicitacoes()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
+              <option value="pendente">Pendentes</option>
+              <option value="aprovada">Aprovadas</option>
+              <option value="rejeitada">Rejeitadas</option>
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div id="lprSolList" style="display:flex;flex-direction:column;gap:12px;">
+            <div class="empty-state">Carregando…</div>
+          </div>
+        </div>
+
+        <!-- Lightbox foto -->
+        <div id="lprLightbox" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;cursor:zoom-out;">
+          <img id="lprLightboxImg" src="" style="max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,.5);">
         </div>
 
         <!-- Modal cadastro -->
@@ -10859,7 +10883,22 @@ docker compose up -d --build</pre>
     btnEl.classList.add('active');
     document.getElementById('lprTabPlacas').style.display = which === 'placas' ? '' : 'none';
     document.getElementById('lprTabEventos').style.display = which === 'eventos' ? '' : 'none';
+    document.getElementById('lprTabSolicitacoes').style.display = which === 'solicitacoes' ? '' : 'none';
     if (which === 'eventos') loadAcessoLpr();
+    if (which === 'solicitacoes') loadLprSolicitacoes();
+  }
+
+  function lprOpenLightbox(url) {
+    document.getElementById('lprLightboxImg').src = url;
+    document.getElementById('lprLightbox').style.display = 'flex';
+  }
+
+  async function lprFetchEventoFoto(eventoId, imgEl) {
+    if (imgEl.dataset.loading === '1') return;
+    imgEl.dataset.loading = '1';
+    const r = await callAcesso({ action: 'acesso_lpr_evento_foto_url', evento_id: eventoId });
+    const url = r?.data?.url || r?.url;
+    if (url) { imgEl.src = url; imgEl.dataset.url = url; imgEl.style.cursor = 'zoom-in'; imgEl.onclick = () => lprOpenLightbox(url); }
   }
 
   async function loadAcessoLpr() {
@@ -10899,14 +10938,18 @@ docker compose up -d --build</pre>
 
     const tb2 = document.getElementById('lprEventosTable');
     if (!eventos.length) {
-      tb2.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum evento ainda. Eventos aparecem quando a câmera lê uma placa.</td></tr>';
+      tb2.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum evento ainda. Eventos aparecem quando a câmera lê uma placa.</td></tr>';
     } else {
       tb2.innerHTML = eventos.map(e => {
         const conf = e.confidence != null ? `${(e.confidence * 100).toFixed(1)}%` : '—';
         const motivoLabel = ({autorizado:'✅ Autorizado',nao_cadastrada:'⚠️ Não cadastrada',fora_validade:'⛔ Fora da validade',fora_horario:'🕐 Fora do horário',inativa:'⏸️ Placa inativa',baixa_confianca:'❓ Baixa confiança'})[e.motivo] || e.motivo;
         const cor = e.autorizado ? '#2d7a3a' : '#c0392b';
         const vinculo = e.placa_info ? `${escHtml(e.placa_info.apelido || '—')} <span style="color:var(--muted);font-size:11px;">(${escHtml(({familia:'Família',funcionario:'Funcionário',aluno:'Aluno',visitante:'Visitante',outro:'Outro'})[e.placa_info.owner_tipo] || '')})</span>` : '<span style="color:var(--muted);">—</span>';
+        const fotoCell = e.foto_path
+          ? `<img data-evento-id="${e.id}" src="" alt="thumb" style="width:64px;height:48px;object-fit:cover;border-radius:4px;background:#f0f0f0;border:1px solid var(--border);">`
+          : '<span style="color:var(--muted);font-size:11px;">—</span>';
         return `<tr>
+          <td>${fotoCell}</td>
           <td style="font-size:12px;white-space:nowrap;">${_bridgeFmtDate(e.ts)}</td>
           <td style="font-family:'DM Mono',monospace;font-weight:600;letter-spacing:1px;">${escHtml(e.placa_lida)}</td>
           <td style="font-size:12px;">${conf}</td>
@@ -10914,7 +10957,79 @@ docker compose up -d --build</pre>
           <td style="font-size:13px;">${vinculo}</td>
         </tr>`;
       }).join('');
+      // Lazy-load thumbnails (signed URLs) — uma chamada por evento, async
+      tb2.querySelectorAll('img[data-evento-id]').forEach(img => {
+        lprFetchEventoFoto(img.dataset.eventoId, img);
+      });
     }
+
+    // Atualiza badge de pendentes (sem bloquear)
+    callAcesso({ action: 'acesso_lpr_solicitacoes_list', status_filter: 'pendente' }).then(r => {
+      const n = (r?.data || r || []).length;
+      const badge = document.getElementById('lprSolBadge');
+      if (n > 0) { badge.textContent = n; badge.style.display = ''; }
+      else badge.style.display = 'none';
+    }).catch(() => {});
+  }
+
+  async function loadLprSolicitacoes() {
+    const status = document.getElementById('lprSolFiltroStatus').value;
+    const r = await callAcesso({ action: 'acesso_lpr_solicitacoes_list', status_filter: status || undefined });
+    const sols = r?.data || r || [];
+    const list = document.getElementById('lprSolList');
+    if (!sols.length) {
+      list.innerHTML = '<div class="empty-state">Nenhuma solicitação ' + (status ? `com status "${status}"` : '') + '.</div>';
+      return;
+    }
+    list.innerHTML = sols.map(s => {
+      const stCor = s.status === 'pendente' ? '#b07d10' : (s.status === 'aprovada' ? '#2d7a3a' : '#c0392b');
+      const stLabel = s.status === 'pendente' ? '⏳ Pendente' : (s.status === 'aprovada' ? '✅ Aprovada' : '❌ Rejeitada');
+      const fam = s.familia || {};
+      const fotoBtn = s.foto_path
+        ? `<img data-sol-id="${s.id}" src="" alt="" style="width:120px;height:90px;object-fit:cover;border-radius:6px;background:#f0f0f0;border:1px solid var(--border);cursor:zoom-in;">`
+        : '<div style="width:120px;height:90px;background:#f5f5f5;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">sem foto</div>';
+      const acoes = s.status === 'pendente' ? `
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button onclick="lprSolAprovar('${s.id}','${escHtml(s.placa)}')" style="background:#2d7a3a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-weight:600;">✅ Aprovar</button>
+          <button onclick="lprSolRejeitar('${s.id}','${escHtml(s.placa)}')" style="background:#fff;color:#c0392b;border:1px solid #c0392b;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;">❌ Rejeitar</button>
+        </div>` : (s.motivo_rejeicao ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);"><strong>Motivo da rejeição:</strong> ${escHtml(s.motivo_rejeicao)}</div>` : '');
+      return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px;display:grid;grid-template-columns:120px 1fr auto;gap:16px;align-items:start;">
+        <div>${fotoBtn}</div>
+        <div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">
+            <div style="font-family:'DM Mono',monospace;font-weight:700;font-size:18px;letter-spacing:1.5px;">${escHtml(s.placa)}</div>
+            <div style="color:var(--muted);font-size:13px;">${escHtml(s.apelido || '')}</div>
+          </div>
+          <div style="font-size:13px;margin-bottom:6px;"><strong>${escHtml(fam.responsavel_nome || 'Família')}</strong> <span style="color:var(--muted);font-size:12px;">${escHtml(fam.email || '')}</span></div>
+          ${s.observacao ? `<div style="font-size:13px;color:var(--muted);margin-bottom:6px;font-style:italic;">"${escHtml(s.observacao)}"</div>` : ''}
+          <div style="font-size:11px;color:var(--muted);">Enviada ${_bridgeFmtDate(s.criado_em)} ${_bridgeAgo(s.criado_em)}</div>
+          ${acoes}
+        </div>
+        <div style="color:${stCor};font-weight:600;font-size:12px;">${stLabel}</div>
+      </div>`;
+    }).join('');
+    // Lazy-load das fotos
+    list.querySelectorAll('img[data-sol-id]').forEach(async img => {
+      const r2 = await callAcesso({ action: 'acesso_lpr_solicitacao_foto_url', solicitacao_id: img.dataset.solId });
+      const url = r2?.data?.url || r2?.url;
+      if (url) { img.src = url; img.onclick = () => lprOpenLightbox(url); }
+    });
+  }
+
+  async function lprSolAprovar(id, placa) {
+    if (!confirm(`Aprovar a placa ${placa}? Ela será adicionada às placas autorizadas e sincronizada com o daemon.`)) return;
+    const r = await callAcesso({ action: 'acesso_lpr_solicitacao_aprovar', solicitacao_id: id });
+    if (r?.error) { alert('Erro: ' + r.error); return; }
+    loadLprSolicitacoes();
+    loadAcessoLpr();
+  }
+
+  async function lprSolRejeitar(id, placa) {
+    const motivo = prompt(`Rejeitar a placa ${placa} — motivo (mostrado pra família):`);
+    if (motivo === null) return;
+    const r = await callAcesso({ action: 'acesso_lpr_solicitacao_rejeitar', solicitacao_id: id, motivo: motivo.trim() || 'Não informado' });
+    if (r?.error) { alert('Erro: ' + r.error); return; }
+    loadLprSolicitacoes();
   }
 
   function lprPlacaNova() {
