@@ -9,6 +9,7 @@ import { checkRateLimit, checkRateLimitDb, getClientIP, RateLimitConfig } from "
 import { validate, sanitizeBody, Schema } from "./validation.ts";
 import { createLogger } from "./logger.ts";
 import { getModulosHabilitados, getEscolaPadrao } from "./modulos.ts";
+import { resolveEscolaId } from "./tenant.ts";
 import { captureException } from "./sentry.ts";
 
 export type Context = {
@@ -403,12 +404,25 @@ export function authAluno(): Middleware {
       }
     }
 
-    // 2. Try Supabase Auth JWT
+    // 2. Try Supabase Auth JWT (magic link path — unificado com portal família)
     try {
       const { data: { user } } = await ctx.sb.auth.getUser(alunoToken);
       if (user?.email) {
-        ctx.user = { id: user.id, nome: (user.user_metadata as Record<string, string>)?.full_name || user.email, email: user.email.toLowerCase().trim(), tipo: "aluno" };
-        return next();
+        const email = user.email.toLowerCase().trim();
+        // Confirma que é aluno em usuarios.papeis (Mig 294). Se não tem papel 'aluno',
+        // bloqueia — responsável que cair aqui deve usar endpoints de família.
+        const { data: u } = await ctx.sb
+          .from("usuarios").select("id, nome, papeis, escola_id")
+          .eq("email", email).maybeSingle();
+        // deno-lint-ignore no-explicit-any
+        const usr = u as any;
+        if (usr && Array.isArray(usr.papeis) && usr.papeis.includes("aluno")) {
+          ctx.user = { id: usr.id, nome: usr.nome || email, email, tipo: "aluno" };
+          if (!ctx.escola_id) {
+            ctx.escola_id = usr.escola_id || (await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body)) || undefined;
+          }
+          return next();
+        }
       }
     } catch { /* JWT invalid — fall through */ }
 

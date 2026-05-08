@@ -897,14 +897,36 @@ body.has-bottomnav{padding-bottom:56px;}
     </div>
   </div>
 
-  <!-- TAB: BOLETIM -->
-  <div class="tab-panel" id="tabBoletim">
-    <div class="card">
+  <!-- TAB: ALUNO (Boletim + Frequência + Provas + Calendário acadêmico) -->
+  <div class="tab-panel" id="tabAluno">
+    <div class="card" style="margin-bottom:16px;">
       <div class="card-title" style="margin-bottom:12px;">
         📝 Boletim Digital
         <button onclick="carregarBoletim()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
       </div>
       <div id="boletimContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando boletim...</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:12px;">
+        📊 Frequência
+        <button onclick="carregarFrequenciaAcademica()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <div id="freqAcademicaContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" style="margin-bottom:12px;">
+        📋 Provas disponíveis
+        <button onclick="carregarProvasAluno()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border:1px solid var(--border);border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <div id="provasAlunoContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">📅 Calendário acadêmico</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:8px;">Datas de provas, entregas e eventos pedagógicos.</p>
+      <div id="calendarioAcademicoContent"><div style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">Carregando...</div></div>
     </div>
   </div>
 
@@ -1052,9 +1074,9 @@ body.has-bottomnav{padding-bottom:56px;}
     <span class="bnav-icon">📅</span>
     <span class="bnav-label" data-i18n="pais.bnav.diaADia">Dia a Dia</span>
   </button>
-  <button class="bnav-item" onclick="switchTab('boletim')" data-tab="boletim" data-modulo="notas">
-    <span class="bnav-icon">📝</span>
-    <span class="bnav-label" data-i18n="pais.nav.boletim">Boletim</span>
+  <button class="bnav-item" onclick="switchTab('aluno')" data-tab="aluno" data-modulo="notas">
+    <span class="bnav-icon">🎓</span>
+    <span class="bnav-label" data-i18n="pais.nav.aluno">Aluno</span>
   </button>
   <button class="bnav-item" onclick="switchTab('boletos')" data-tab="boletos" data-modulo="financeiro">
     <span class="bnav-icon">💰</span>
@@ -1140,7 +1162,26 @@ body.has-bottomnav{padding-bottom:56px;}
 
   // ── TAB NAVIGATION ──────────────────────────────────────
   var currentTab = 'inicio';
+  // Aluno-only: esconde abas/cards exclusivas de responsável.
+  // Mantém: Início (greet), Aluno (boletim+freq+provas+calendário), Dia a Dia.
+  function aplicarRBACAlunoOnly() {
+    if (!window._alunoOnly) return;
+    var alunoTabs = ['inicio', 'aluno', 'diaadia'];
+    document.querySelectorAll('[data-tab]').forEach(function (b) {
+      if (alunoTabs.indexOf(b.dataset.tab) === -1) b.style.display = 'none';
+    });
+    document.querySelectorAll('.bnav-more-item').forEach(function (b) { b.style.display = 'none'; });
+    var paisMoreBtn = document.getElementById('paisMoreBtn');
+    if (paisMoreBtn) paisMoreBtn.style.display = 'none';
+    // Esconde cards do home que dependem de responsável.
+    ['boletosCard', 'paisShortcuts'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+
   function switchTab(tab) {
+    if (tab === 'boletim') tab = 'aluno'; // alias retrocompatível
     currentTab = tab;
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     const panel = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
@@ -1152,7 +1193,7 @@ body.has-bottomnav{padding-bottom:56px;}
     if (tab === 'boletos') carregarBoletos();
     closePaisMore();
     if (tab === 'diaadia') carregarDiaADia();
-    if (tab === 'boletim') carregarBoletim();
+    if (tab === 'aluno') carregarAluno();
     if (tab === 'achados') carregarAchados();
     if (tab === 'acesso') carregarAcesso();
     if (tab === 'perfil') carregarPerfil();
@@ -1210,7 +1251,7 @@ body.has-bottomnav{padding-bottom:56px;}
   var paisTabMeta = {
     inicio: { icon: '🏠', label: 'Início' },
     diaadia: { icon: '📅', label: 'Dia a Dia' },
-    boletim: { icon: '📝', label: 'Boletim' },
+    aluno: { icon: '🎓', label: 'Aluno' },
     boletos: { icon: '💰', label: 'Boletos' },
     solicitar: { icon: '🕐', label: 'Turno' },
     atividades: { icon: '🎯', label: 'Atividades' },
@@ -1220,8 +1261,8 @@ body.has-bottomnav{padding-bottom:56px;}
   var paisEditMode = false;
 
   function getPaisFavorites() {
-    try { return JSON.parse(localStorage.getItem(PAIS_FAV_KEY)) || ['boletos','diaadia','boletim']; }
-    catch { return ['boletos','diaadia','boletim']; }
+    try { return JSON.parse(localStorage.getItem(PAIS_FAV_KEY)) || ['boletos','diaadia','aluno']; }
+    catch { return ['boletos','diaadia','aluno']; }
   }
 
   function renderPaisShortcuts() {
@@ -1669,8 +1710,28 @@ body.has-bottomnav{padding-bottom:56px;}
     const name  = meta.full_name || meta.name || '';
     const email = user.email || '';
 
-    // Verifica se o email está cadastrado como família
+    // Resolve papéis do usuário (Mig 294 + edge api me_papeis). Se for aluno-only,
+    // pula a verificação de familias (aluno entra com email próprio) e prepara RBAC.
+    window._alunoOnly = false;
+    window._papeis = [];
     try {
+      const sess = (await sb.auth.getSession()).data?.session;
+      const tk = sess?.access_token;
+      if (tk) {
+        const rp = await fetch(SUPABASE_URL + '/functions/v1/api', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+          body: JSON.stringify({ action: 'me_papeis', _token: tk })
+        });
+        const pp = await rp.json();
+        const dt = pp?.data || pp;
+        window._papeis = Array.isArray(dt?.papeis) ? dt.papeis : [];
+        window._alunoOnly = !!dt?.aluno_only;
+      }
+    } catch (_) { /* segue fluxo normal de família */ }
+
+    // Verifica se o email está cadastrado como família — exceto pra aluno-only
+    if (!window._alunoOnly) try {
       const r = await fetch(SUPABASE_URL + '/rest/v1/familias?select=email&email=ilike.' + encodeURIComponent(email) + '&limit=1', {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1760,13 +1821,17 @@ body.has-bottomnav{padding-bottom:56px;}
     // Bottom nav
     document.getElementById('bottomNav').classList.add('visible');
     document.body.classList.add('has-bottomnav');
+
+    // RBAC: aluno-only esconde abas/cards de responsável e abre direto na aba Aluno.
+    aplicarRBACAlunoOnly();
+
     // Check if redirected from v2 portal with a specific tab
     var _gotoTab = sessionStorage.getItem('pais_goto_tab');
     if (_gotoTab) {
       sessionStorage.removeItem('pais_goto_tab');
       switchTab(_gotoTab);
     } else {
-      switchTab('inicio');
+      switchTab(window._alunoOnly ? 'aluno' : 'inicio');
     }
 
     loadPickupCard();
@@ -3003,13 +3068,96 @@ body.has-bottomnav{padding-bottom:56px;}
     return r.json();
   }
 
+  // Wrapper que injeta o JWT do user (Supabase Auth) em _token. Usado por endpoints
+  // que requerem authAluno (e que usam o JWT de magic link como sessão de aluno).
+  async function callAcademicoAuth(body) {
+    const sess = sb ? (await sb.auth.getSession()).data?.session : null;
+    return callAcademico({ ...body, _token: sess?.access_token || null });
+  }
+
+  // Aluno-only: papeis === ['aluno']. Definido após login em showForm via me_papeis.
+  window.paisIsAlunoOnly = function () { return !!window._alunoOnly; };
+
+  async function carregarAluno() {
+    await Promise.all([
+      carregarBoletim(),
+      carregarFrequenciaAcademica(),
+      carregarProvasAluno(),
+      carregarCalendarioAcademico(),
+    ]);
+  }
+
+  async function carregarFrequenciaAcademica() {
+    const el = document.getElementById('freqAcademicaContent');
+    if (!el) return;
+    if (!currentUser) { el.innerHTML = '<p style="color:var(--muted);">Faça login.</p>'; return; }
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
+    const d = window.paisIsAlunoOnly()
+      ? await callAcademicoAuth({ action: 'aluno_frequencia_get', ano: new Date().getFullYear() })
+      : await callAcademico({ action: 'frequencia_resumo_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
+    const r = (d && (d.data || d)) || {};
+    const total = r.total_aulas || 0;
+    const faltas = r.total_faltas || 0;
+    const pct = (typeof r.percent_presenca === 'number') ? r.percent_presenca : 100;
+    const cor = pct >= 75 ? 'var(--green)' : pct >= 60 ? '#c97a00' : 'var(--red)';
+    if (total === 0) {
+      el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:14px;font-size:13px;">Sem chamadas registradas neste ano.</p>';
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="font-size:38px;font-weight:700;color:${cor};font-family:'Lora',serif;">${pct.toFixed(1)}%</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;">
+          <div><strong>${total - faltas}</strong> presenças</div>
+          <div><strong>${faltas}</strong> faltas em <strong>${total}</strong> aulas</div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;">Frequência da chamada da professora — distinta do controle de acesso por face.</p>`;
+  }
+
+  async function carregarProvasAluno() {
+    const el = document.getElementById('provasAlunoContent');
+    if (!el) return;
+    if (!currentUser) { el.innerHTML = '<p style="color:var(--muted);">Faça login.</p>'; return; }
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
+    const d = window.paisIsAlunoOnly()
+      ? await callAcademicoAuth({ action: 'provas_disponiveis_aluno' })
+      : await callAcademico({ action: 'provas_disponiveis_familia', aluno_email: currentUser.email });
+    const provas = Array.isArray(d?.data) ? d.data : (Array.isArray(d) ? d : []);
+    if (!provas.length) {
+      el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:14px;font-size:13px;">Nenhuma prova disponível.</p>';
+      return;
+    }
+    el.innerHTML = provas.map(p => {
+      const disc = p.notas_disciplinas?.nome || '';
+      const fim = p.data_fim ? new Date(p.data_fim).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+      const tag = p.respondida
+        ? `<span style="background:#edf7f0;color:#2d7a3a;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">Respondida${typeof p.pontuacao === 'number' ? ' · ' + p.pontuacao.toFixed(1) : ''}</span>`
+        : `<span style="background:#fdf0f2;color:#a00d24;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">Pendente</span>`;
+      return `<div style="padding:10px 0;border-bottom:1px solid #f0ece6;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-weight:600;font-size:13px;">${esc2(p.titulo)}</div>${tag}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${esc2(disc)}${fim ? ' · até ' + fim : ''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function carregarCalendarioAcademico() {
+    const el = document.getElementById('calendarioAcademicoContent');
+    if (!el) return;
+    el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:14px;font-size:13px;">Sem eventos pedagógicos cadastrados para os próximos 30 dias.</p>';
+  }
+
   async function carregarBoletim() {
     const el = document.getElementById('boletimContent');
     if (!currentUser) { el.innerHTML = '<p style="color:var(--muted);">Faça login para ver o boletim.</p>'; return; }
     el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
 
-    const d = await callAcademico({ action:'boletim_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
-    const boletins = Array.isArray(d) ? d : [];
+    const d = window.paisIsAlunoOnly()
+      ? await callAcademicoAuth({ action: 'aluno_notas_get', ano: new Date().getFullYear() })
+      : await callAcademico({ action: 'boletim_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
+    const boletins = Array.isArray(d?.data) ? d.data : (Array.isArray(d) ? d : []);
 
     if (!boletins.length) {
       el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px;">Nenhum boletim disponível para este ano.</p>';

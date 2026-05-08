@@ -23,7 +23,7 @@ Plataforma SaaS de gestão escolar — 23 módulos, multi-tenancy, feature gatin
 | Equipe | `secretaria.html` | Sec+Com+Fin+Man+Nutri+Almox | Feature-gated sidebar. 8 grupos: Secretaria, Comercial, Financeiro, Almoxarifado, Infraestrutura, Cozinha, Compliance, Ponto CLT |
 | Admin Escola | `admin.html` | Staff+Admin | Dashboard, plano, módulos, tickets, LGPD, config, API |
 | Admin Central | `admin-central.html` | Staff Lumied | Dashboard SaaS, escolas, staff, audit log, tickets, onboarding |
-| Aluno | `aluno.html` | Alunos | Notas, frequência, provas, calendário |
+| Aluno | `familia.html` (aba Aluno) | Alunos | Boletim, frequência, provas, calendário. Magic link no email do aluno (Mig 294). `aluno.html` é stub redirect. |
 | Hub | `area-restrita.html` | Staff | Seletor de portais role-aware |
 
 ---
@@ -88,6 +88,7 @@ Plataforma SaaS de gestão escolar — 23 módulos, multi-tenancy, feature gatin
 ### Unificação de Dados
 - **Alunos ↔ Famílias** (Mig 109): trigger `trg_sync_familia_aluno` sincroniza `familias` → `alunos`
 - **Usuários unificados** (Mig 110): `usuarios` é fonte canônica, triggers bidirecionais para tabelas legadas (`gerentes`, `professoras`, `secretarias`). Sessão unificada `sessoes`.
+- **Portal aluno unificado** (Mig 294): aluno tem papel `'aluno'` em `usuarios.papeis` (sincronizado de `alunos_login`). Loga via magic link no `familia.html`; RBAC frontend mostra só aba Aluno. `authAluno` aceita JWT da Supabase Auth e valida papel.
 
 ---
 

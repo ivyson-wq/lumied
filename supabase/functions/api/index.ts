@@ -281,6 +281,29 @@ serve(async (req: Request) => {
     return ok({ sent: true });
   }
 
+  // ── Resolução de papéis do usuário autenticado (família/aluno) ──
+  // Usado pelo familia.html pra aplicar RBAC frontend (esconder abas quando aluno-only).
+  if (action === "me_papeis") {
+    const tk = (body._token as string) || "";
+    if (!tk) return ok({ papeis: [], aluno_only: false, logged: false });
+    try {
+      const { data: { user } } = await admin.auth.getUser(tk);
+      if (!user?.email) return ok({ papeis: [], aluno_only: false, logged: false });
+      const email = user.email.toLowerCase().trim();
+      const { data: u } = await admin.from("usuarios")
+        .select("papeis, escola_id, nome").eq("email", email).maybeSingle();
+      const papeis: string[] = Array.isArray((u as any)?.papeis) ? (u as any).papeis : [];
+      const aluno_only = papeis.includes("aluno") && papeis.length === 1;
+      return ok({
+        papeis, aluno_only, logged: true, email,
+        nome: (u as any)?.nome ?? null,
+        escola_id: (u as any)?.escola_id ?? null,
+      });
+    } catch {
+      return ok({ papeis: [], aluno_only: false, logged: false });
+    }
+  }
+
   // ── Bootstrap do hub (área-restrita): config + módulos + whoami em 1 request ──
   if (action === "hub_bootstrap") {
     const tokens: string[] = Array.isArray(body._tokens) ? (body._tokens as string[]).filter(Boolean) : [];

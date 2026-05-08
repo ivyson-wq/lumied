@@ -1412,7 +1412,7 @@ router.on("escola_api_info", authAdmin, async (ctx) => {
       gerente: `https://${escola.subdominio}.lumied.com.br/gerente.html`,
       professora: `https://${escola.subdominio}.lumied.com.br/professora.html`,
       pais: `https://${escola.subdominio}.lumied.com.br/`,
-      aluno: `https://${escola.subdominio}.lumied.com.br/aluno.html`,
+      aluno: `https://${escola.subdominio}.lumied.com.br/familia.html`,
     },
   });
 });

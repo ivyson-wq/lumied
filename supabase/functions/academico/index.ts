@@ -709,6 +709,26 @@ router.on("aluno_frequencia_get", authAl, featAluno, async (ctx) => {
   return successResponse({ total_aulas: totalAulas, total_faltas: totalFaltas, percent_presenca: percent });
 });
 
+// Espelho de aluno_frequencia_get para consulta da família (responsável passa aluno_email do filho).
+// Mesmo padrão de auth de boletim_get — sem token de aluno, escola via Origin.
+router.on("frequencia_resumo_get", loadEscola, featFreq, async (ctx) => {
+  const { aluno_email, ano } = ctx.body as any;
+  if (!aluno_email) throw new AppError("VALIDATION_FAILED", "aluno_email obrigatório.");
+  const anoFiltro = ano || new Date().getFullYear();
+  let qCham = ctx.sb.from("frequencia_chamadas").select("id").gte("data", `${anoFiltro}-01-01`).lte("data", `${anoFiltro}-12-31`);
+  if (ctx.escola_id) qCham = qCham.eq("escola_id", ctx.escola_id);
+  const { data: chamadas } = await qCham;
+  const totalAulas = chamadas?.length || 0;
+  let totalFaltas = 0;
+  if (totalAulas > 0) {
+    const ids = chamadas!.map((c: any) => c.id);
+    const { count } = await ctx.sb.from("frequencia_registros").select("*", { count: "exact", head: true }).eq("aluno_email", String(aluno_email).toLowerCase().trim()).in("chamada_id", ids).in("status", ["A", "F"]);
+    totalFaltas = count || 0;
+  }
+  const percent = totalAulas > 0 ? Math.round(((totalAulas - totalFaltas) / totalAulas) * 1000) / 10 : 100;
+  return successResponse({ total_aulas: totalAulas, total_faltas: totalFaltas, percent_presenca: percent });
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  BANCO DE PROVAS / AVALIAÇÕES ONLINE
 // ═══════════════════════════════════════════════════════════════
@@ -845,6 +865,27 @@ router.on("provas_disponiveis_aluno", authAl, featProvas, async (ctx) => {
   for (const p of provas || []) {
     const { data: resp } = await ctx.sb.from("provas_respostas").select("id, pontuacao, fim").eq("prova_id", p.id).eq("aluno_email", ctx.user!.email).single();
     result.push({ ...p, respondida: !!resp, pontuacao: resp?.pontuacao ?? null });
+  }
+  return successResponse(result);
+});
+
+// Espelho de provas_disponiveis_aluno para a família (responsável passa aluno_email).
+// Resolve serie_id automaticamente via tabela alunos.
+router.on("provas_disponiveis_familia", loadEscola, featProvas, async (ctx) => {
+  const { aluno_email } = ctx.body as any;
+  if (!aluno_email) throw new AppError("VALIDATION_FAILED", "aluno_email obrigatório.");
+  const emailNorm = String(aluno_email).toLowerCase().trim();
+  const { data: aluno } = await ctx.sb.from("alunos").select("serie_id").eq("email", emailNorm).maybeSingle();
+  const serie_id = (aluno as any)?.serie_id ?? null;
+  const agora = new Date().toISOString();
+  let q = ctx.sb.from("provas").select("id, titulo, notas_disciplinas(nome), data_inicio, data_fim, tempo_limite, pontuacao_total").eq("status", "publicada");
+  if (serie_id) q = q.eq("serie_id", serie_id);
+  q = q.lte("data_inicio", agora).gte("data_fim", agora);
+  const { data: provas } = await q;
+  const result = [];
+  for (const p of provas || []) {
+    const { data: resp } = await ctx.sb.from("provas_respostas").select("id, pontuacao, fim").eq("prova_id", p.id).eq("aluno_email", emailNorm).maybeSingle();
+    result.push({ ...p, respondida: !!resp, pontuacao: (resp as any)?.pontuacao ?? null });
   }
   return successResponse(result);
 });

@@ -77,13 +77,11 @@ test.describe('Portal da Secretaria', () => {
   });
 });
 
-// ═══ PORTAL DO ALUNO ═══
+// ═══ PORTAL DO ALUNO (unificado em familia.html — aluno.html é stub redirect) ═══
 test.describe('Portal do Aluno', () => {
-  test('tela de login carrega', async ({ page }) => {
+  test('aluno.html redireciona para familia.html', async ({ page }) => {
     await page.goto('/aluno.html');
-    // Qualquer elemento de login (input email ou heading aluno)
-    const emailField = page.locator('#loginEmail, input[type="email"]').first();
-    await expect(emailField).toBeVisible({ timeout: 10000 });
+    await page.waitForURL(/\/familia\.html/, { timeout: 5000 });
   });
 });
 
