@@ -840,6 +840,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div class="sb-label" onclick="toggleSbSection(this)" style="color:rgba(255,255,255,.45);"><span data-i18n="gerente.sidebar.diaADia">Dia a Dia</span> <span class="sb-arrow">▼</span></div>
       <div class="sb-section">
         <a class="nav-item" href="#" onclick="showPanel('alunos',this)"><span class="ic">🎓</span> <span data-i18n="gerente.nav.alunos">Alunos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('alunoSolicitacoes',this);loadAlunoSolicitacoes();"><span class="ic">📨</span> <span>Solicitações de Acesso</span> <span id="alunoSolBadge" style="display:none;background:#C8102E;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:auto;"></span></a>
         <div data-modulo="notas">
         <a class="nav-item" href="#" onclick="showPanel('notasVisao',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.notasBoletim">Notas & Boletim</span></a>
         </div>
@@ -984,6 +985,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('acessoPermissoes',this)"><span class="ic">🔐</span> <span data-i18n="gerente.nav.permissoesRetirada">Permissões de Retirada</span></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoEventos',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.logAcessos">Log de Acessos</span></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoBridge',this); loadAcessoBridge()"><span class="ic">🌐</span> Lumied Bridge</a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoLpr',this); loadAcessoLpr()"><span class="ic">🚗</span> Acesso Veicular</a>
       </div>
       </div>
 
@@ -1313,6 +1315,43 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <!-- ALUNOS -->
+      <!-- ─────────────── Solicitações de Acesso de Aluno (Mig 295) ─────────────── -->
+      <div id="panelAlunoSolicitacoes" class="panel">
+        <h2 class="panel-title">📨 Solicitações de Acesso de Aluno</h2>
+        <p class="panel-sub">Alunos pedindo acesso ao portal. Aprove para enviar o link por e-mail; rejeite com motivo.</p>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <button onclick="alunoSolFiltro='pendente';loadAlunoSolicitacoes()" id="alunoSolFiltroPendente"
+            style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#1a1a1a;color:#fff;font-family:inherit;">Pendentes</button>
+          <button onclick="alunoSolFiltro='aprovado';loadAlunoSolicitacoes()" id="alunoSolFiltroAprovado"
+            style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#1a1a1a;font-family:inherit;">Aprovadas</button>
+          <button onclick="alunoSolFiltro='rejeitado';loadAlunoSolicitacoes()" id="alunoSolFiltroRejeitado"
+            style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#1a1a1a;font-family:inherit;">Rejeitadas</button>
+          <button onclick="loadAlunoSolicitacoes()" style="margin-left:auto;padding:8px 12px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">↻ Atualizar</button>
+        </div>
+
+        <div id="alunoSolLista"><div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando…</div></div>
+      </div>
+
+      <!-- Modal de rejeição -->
+      <div id="alunoSolRejeitarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:14px;padding:24px;max-width:420px;width:92%;">
+          <h3 style="font-family:'Lora',serif;margin:0 0 8px;font-size:18px;">Rejeitar solicitação</h3>
+          <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">O aluno receberá um e-mail com este motivo.</p>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="alunoSolMotivo" value="email_em_uso"> E-mail já em uso</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="alunoSolMotivo" value="nao_pertence"> Aluno não pertence à escola</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="alunoSolMotivo" value="dados_inconsistentes"> Dados inconsistentes</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="alunoSolMotivo" value="outro"> Outro (especificar abaixo)</label>
+          </div>
+          <textarea id="alunoSolMotivoLivre" placeholder="Motivo livre (apenas se 'Outro')" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;min-height:60px;"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+            <button onclick="document.getElementById('alunoSolRejeitarModal').style.display='none'" style="padding:9px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            <button onclick="alunoSolConfirmarRejeicao()" id="alunoSolBtnConfirmarRejeicao" style="padding:9px 16px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Rejeitar</button>
+          </div>
+        </div>
+      </div>
+
       <div id="panelAlunos" class="panel">
         <h2 class="panel-title">🎓 Alunos</h2>
         <p class="panel-sub">Cadastro, documentação, atas e acompanhamento individual.</p>
@@ -3903,6 +3942,100 @@ docker compose up -d --build</pre>
           <div class="table-wrap">
             <table><thead><tr><th>Tipo</th><th>Status</th><th>Criado</th></tr></thead>
             <tbody id="bridgeCmdsTable"><tr><td colspan="3" class="empty-state">Nenhum comando em voo.</td></tr></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ACESSO VEICULAR (LPR) ── -->
+      <div id="panelAcessoLpr" class="panel">
+        <div class="sec-title" style="margin-bottom:6px;">🚗 Controle de Acesso Veicular (LPR)</div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;">
+          Câmera RTSP na entrada de carros + daemon do Lumied Bridge fazem leitura de placas e cruzam com a lista cadastrada.
+          <strong>Fase 1:</strong> apenas log de eventos (sem acionamento de cancela).
+          Requer FFmpeg + CodeProject.AI ALPR rodando junto ao daemon — vide <code>LPR_RTSP_URL</code> e <code>LPR_ALPR_URL</code> no .env.
+        </p>
+
+        <!-- Tabs -->
+        <div class="filter-bar" style="margin-bottom:16px;">
+          <button class="fb active" onclick="lprTab('placas',this)">🅿️ Placas Cadastradas</button>
+          <button class="fb" onclick="lprTab('eventos',this)">📋 Eventos Recentes</button>
+        </div>
+
+        <!-- Tab: Placas -->
+        <div id="lprTabPlacas">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:13px;color:var(--muted);">
+              <span id="lprPlacasCount">—</span> placa(s) cadastrada(s) ·
+              <span id="lprPlacasAtivas">—</span> ativa(s)
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="lprPlacaNova()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;">+ Nova placa</button>
+              <button onclick="lprSyncNow()" title="Empurra a lista atual pro daemon agora (em vez de esperar próximo save)" style="background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;">⟳ Sync agora</button>
+            </div>
+          </div>
+
+          <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Placa</th><th>Apelido</th><th>Tipo</th><th>Validade</th><th>Status</th><th></th></tr></thead>
+                <tbody id="lprPlacasTable"><tr><td colspan="6" class="empty-state">Carregando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Eventos -->
+        <div id="lprTabEventos" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:13px;color:var(--muted);">Últimas 50 leituras (autorizadas + rejeitadas)</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label style="font-size:12px;color:var(--muted);"><input type="checkbox" id="lprFiltroNaoAutorizadas" onchange="loadAcessoLpr()"> só não autorizadas</label>
+              <button onclick="loadAcessoLpr()" style="background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">↻ Recarregar</button>
+            </div>
+          </div>
+
+          <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);overflow:hidden;">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Quando</th><th>Placa lida</th><th>Confiança</th><th>Resultado</th><th>Vinculada a</th></tr></thead>
+                <tbody id="lprEventosTable"><tr><td colspan="5" class="empty-state">—</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal cadastro -->
+        <div id="lprPlacaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:12px;padding:24px;width:480px;max-width:92vw;max-height:90vh;overflow-y:auto;">
+            <div style="font-weight:700;font-size:16px;margin-bottom:16px;">🚗 <span id="lprModalTitle">Nova placa</span></div>
+            <input type="hidden" id="lprPlacaId">
+            <div style="display:grid;gap:12px;">
+              <label style="display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Placa *</div>
+                <input id="lprPlacaInput" placeholder="ABC1D23" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:14px;text-transform:uppercase;letter-spacing:1px;"></label>
+              <label style="display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Apelido</div>
+                <input id="lprApelidoInput" placeholder="Ex: Carro mãe Ana" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+              <label style="display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Tipo de dono *</div>
+                <select id="lprOwnerTipo" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+                  <option value="familia">Família (responsável)</option>
+                  <option value="funcionario">Funcionário</option>
+                  <option value="aluno">Aluno (van/uber)</option>
+                  <option value="visitante">Visitante</option>
+                  <option value="outro">Outro</option>
+                </select></label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <label style="display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Válida a partir de</div>
+                  <input type="date" id="lprValIni" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+                <label style="display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Válida até</div>
+                  <input type="date" id="lprValFim" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+              </div>
+              <label style="display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Observação</div>
+                <textarea id="lprObsInput" rows="2" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;"></textarea></label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="lprAtivoInput" checked> Ativa</label>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+              <button onclick="document.getElementById('lprPlacaModal').style.display='none'" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
+              <button onclick="lprPlacaSave()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">Salvar</button>
+            </div>
           </div>
         </div>
       </div>
@@ -10625,6 +10758,142 @@ docker compose up -d --build</pre>
     const panel = document.getElementById('panelAcessoBridge');
     if (panel && panel.classList.contains('active')) loadAcessoBridge();
   }, 15_000);
+
+  // ── LPR (Acesso Veicular) ─────────────────────────────
+  let _lprPlacas = [];
+
+  function lprTab(which, btnEl) {
+    document.querySelectorAll('#panelAcessoLpr .filter-bar .fb').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+    document.getElementById('lprTabPlacas').style.display = which === 'placas' ? '' : 'none';
+    document.getElementById('lprTabEventos').style.display = which === 'eventos' ? '' : 'none';
+    if (which === 'eventos') loadAcessoLpr();
+  }
+
+  async function loadAcessoLpr() {
+    // Carrega placas (sempre) e eventos (se aba ativa)
+    const [pr, er] = await Promise.all([
+      callAcesso({ action: 'acesso_lpr_placas_list' }),
+      callAcesso({ action: 'acesso_lpr_eventos_list', limit: 50, apenas_nao_autorizadas: !!document.getElementById('lprFiltroNaoAutorizadas')?.checked }),
+    ]);
+    _lprPlacas = pr?.data || pr || [];
+    const eventos = er?.data || er || [];
+
+    document.getElementById('lprPlacasCount').textContent = _lprPlacas.length;
+    document.getElementById('lprPlacasAtivas').textContent = _lprPlacas.filter(p => p.ativo).length;
+
+    const tb = document.getElementById('lprPlacasTable');
+    if (!_lprPlacas.length) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma placa cadastrada. Clique em + Nova placa.</td></tr>';
+    } else {
+      tb.innerHTML = _lprPlacas.map(p => {
+        const validade = (p.validade_inicio || p.validade_fim) ? `${p.validade_inicio || '—'} → ${p.validade_fim || '∞'}` : '—';
+        const statusCor = p.ativo ? '#2d7a3a' : '#999';
+        const statusTxt = p.ativo ? '✅ Ativa' : '⏸️ Inativa';
+        const tipoLabel = ({familia:'Família',funcionario:'Funcionário',aluno:'Aluno',visitante:'Visitante',outro:'Outro'})[p.owner_tipo] || p.owner_tipo;
+        return `<tr>
+          <td style="font-family:'DM Mono',monospace;font-weight:600;letter-spacing:1px;">${escHtml(p.placa)}</td>
+          <td style="font-size:13px;">${escHtml(p.apelido || '—')}</td>
+          <td style="font-size:12px;color:var(--muted);">${escHtml(tipoLabel)}</td>
+          <td style="font-size:12px;">${escHtml(validade)}</td>
+          <td style="font-size:12px;color:${statusCor};font-weight:600;">${statusTxt}</td>
+          <td style="text-align:right;">
+            <button onclick="lprPlacaEdit('${p.id}')" style="background:none;border:none;color:#1976d2;cursor:pointer;font-size:12px;">Editar</button>
+            <button onclick="lprPlacaDelete('${p.id}','${escHtml(p.placa)}')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:12px;margin-left:8px;">Excluir</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    const tb2 = document.getElementById('lprEventosTable');
+    if (!eventos.length) {
+      tb2.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum evento ainda. Eventos aparecem quando a câmera lê uma placa.</td></tr>';
+    } else {
+      tb2.innerHTML = eventos.map(e => {
+        const conf = e.confidence != null ? `${(e.confidence * 100).toFixed(1)}%` : '—';
+        const motivoLabel = ({autorizado:'✅ Autorizado',nao_cadastrada:'⚠️ Não cadastrada',fora_validade:'⛔ Fora da validade',fora_horario:'🕐 Fora do horário',inativa:'⏸️ Placa inativa',baixa_confianca:'❓ Baixa confiança'})[e.motivo] || e.motivo;
+        const cor = e.autorizado ? '#2d7a3a' : '#c0392b';
+        const vinculo = e.placa_info ? `${escHtml(e.placa_info.apelido || '—')} <span style="color:var(--muted);font-size:11px;">(${escHtml(({familia:'Família',funcionario:'Funcionário',aluno:'Aluno',visitante:'Visitante',outro:'Outro'})[e.placa_info.owner_tipo] || '')})</span>` : '<span style="color:var(--muted);">—</span>';
+        return `<tr>
+          <td style="font-size:12px;white-space:nowrap;">${_bridgeFmtDate(e.ts)}</td>
+          <td style="font-family:'DM Mono',monospace;font-weight:600;letter-spacing:1px;">${escHtml(e.placa_lida)}</td>
+          <td style="font-size:12px;">${conf}</td>
+          <td style="font-size:12px;color:${cor};font-weight:600;">${motivoLabel}</td>
+          <td style="font-size:13px;">${vinculo}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  function lprPlacaNova() {
+    document.getElementById('lprModalTitle').textContent = 'Nova placa';
+    document.getElementById('lprPlacaId').value = '';
+    document.getElementById('lprPlacaInput').value = '';
+    document.getElementById('lprApelidoInput').value = '';
+    document.getElementById('lprOwnerTipo').value = 'familia';
+    document.getElementById('lprValIni').value = '';
+    document.getElementById('lprValFim').value = '';
+    document.getElementById('lprObsInput').value = '';
+    document.getElementById('lprAtivoInput').checked = true;
+    document.getElementById('lprPlacaModal').style.display = 'flex';
+  }
+
+  function lprPlacaEdit(id) {
+    const p = _lprPlacas.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('lprModalTitle').textContent = 'Editar placa';
+    document.getElementById('lprPlacaId').value = p.id;
+    document.getElementById('lprPlacaInput').value = p.placa;
+    document.getElementById('lprApelidoInput').value = p.apelido || '';
+    document.getElementById('lprOwnerTipo').value = p.owner_tipo;
+    document.getElementById('lprValIni').value = p.validade_inicio || '';
+    document.getElementById('lprValFim').value = p.validade_fim || '';
+    document.getElementById('lprObsInput').value = p.observacao || '';
+    document.getElementById('lprAtivoInput').checked = !!p.ativo;
+    document.getElementById('lprPlacaModal').style.display = 'flex';
+  }
+
+  async function lprPlacaSave() {
+    const placa = document.getElementById('lprPlacaInput').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (placa.length < 4) { alert('Placa inválida.'); return; }
+    const body = {
+      action: 'acesso_lpr_placa_save',
+      id: document.getElementById('lprPlacaId').value || undefined,
+      placa,
+      apelido: document.getElementById('lprApelidoInput').value.trim() || null,
+      owner_tipo: document.getElementById('lprOwnerTipo').value,
+      validade_inicio: document.getElementById('lprValIni').value || null,
+      validade_fim: document.getElementById('lprValFim').value || null,
+      observacao: document.getElementById('lprObsInput').value.trim() || null,
+      ativo: document.getElementById('lprAtivoInput').checked,
+    };
+    const r = await callAcesso(body);
+    if (r?.error) { alert('Erro: ' + r.error); return; }
+    document.getElementById('lprPlacaModal').style.display = 'none';
+    loadAcessoLpr();
+  }
+
+  async function lprPlacaDelete(id, placa) {
+    if (!confirm(`Excluir placa ${placa}? Eventos antigos com essa placa permanecem no log.`)) return;
+    const r = await callAcesso({ action: 'acesso_lpr_placa_delete', id });
+    if (r?.error) { alert('Erro: ' + r.error); return; }
+    loadAcessoLpr();
+  }
+
+  async function lprSyncNow() {
+    const r = await callAcesso({ action: 'acesso_lpr_sync_now' });
+    const d = r?.data || r || {};
+    if (d.ok) {
+      alert(`Sync OK — ${d.count} placa(s) enviadas pro daemon.`);
+    } else {
+      alert(`Sync falhou: ${d.error || 'bridge offline?'}`);
+    }
+  }
+
+  setInterval(() => {
+    const panel = document.getElementById('panelAcessoLpr');
+    if (panel && panel.classList.contains('active')) loadAcessoLpr();
+  }, 30_000);
 
   // ── SECRETARIA ────────────────────────────────────────
   async function loadSecretarias() {

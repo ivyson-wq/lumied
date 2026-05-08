@@ -36,6 +36,11 @@ export interface Config {
   eventListenerPort: number;
   eventListenerHost: string;
   logLevel: "debug" | "info" | "warn" | "error";
+  // LPR (controle de acesso veicular) — opcional
+  lprRtspUrl: string;            // ex: rtsp://user:pass@192.168.1.50:554/cam/realmonitor?channel=1&subtype=0
+  lprAlprUrl: string;            // ex: http://localhost:32168/v1/vision/alpr (CodeProject.AI)
+  lprScanIntervalMs: number;     // ex: 2000
+  lprConfidenceMin: number;      // 0..1 (default 0.85)
 }
 
 let passwordsMap: Record<string, string> = {};
@@ -57,6 +62,10 @@ export const config: Config = {
   eventListenerPort: Number(process.env.EVENT_LISTENER_PORT || 8765),
   eventListenerHost: process.env.EVENT_LISTENER_HOST || "",
   logLevel: (process.env.LOG_LEVEL as Config["logLevel"]) || "info",
+  lprRtspUrl: process.env.LPR_RTSP_URL || "",
+  lprAlprUrl: process.env.LPR_ALPR_URL || "",
+  lprScanIntervalMs: Number(process.env.LPR_SCAN_INTERVAL_MS || 2000),
+  lprConfidenceMin: Number(process.env.LPR_CONFIDENCE_MIN || 0.85),
 };
 
 export function passwordFor(ip: string): string {

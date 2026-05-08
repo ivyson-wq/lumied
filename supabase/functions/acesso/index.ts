@@ -813,7 +813,37 @@ router.on("acesso_permissao_delete", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 
 router.on("acesso_evento_callback", async (ctx) => {
-  const { user_id, device_id, timestamp, method, card_value, direction, confidence, photo, escola_id: bodyEscolaId } = ctx.body as Any;
+  const body = ctx.body as Any;
+
+  // ── Branch LPR (controle de acesso veicular) ─────────────────
+  // Daemon emite { kind:'lpr', placa_lida, placa_id, confidence, autorizado, motivo, ts }
+  // via WS → gateway → POST acesso_evento_callback (Bearer = INTERNAL_SECRET).
+  if (body.kind === "lpr") {
+    const authHeader = ctx.req.headers.get("authorization") || ctx.req.headers.get("Authorization") || "";
+    const bridgeSecret = Deno.env.get("BRIDGE_GATEWAY_SECRET");
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    const fromBridge = !!(bridgeSecret && bearerMatch && bearerMatch[1].trim() === bridgeSecret);
+    const lprEscolaId = body.escola_id;
+    if (!fromBridge || !lprEscolaId) {
+      throw new AppError("FORBIDDEN", "Evento LPR rejeitado: precisa vir do bridge gateway.");
+    }
+    const placa = String(body.placa_lida || "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    if (!placa) throw new AppError("VALIDATION_FAILED", "placa_lida vazia");
+    const motivosValidos = ["autorizado","nao_cadastrada","fora_validade","fora_horario","inativa","baixa_confianca"];
+    const motivo = motivosValidos.includes(body.motivo) ? body.motivo : "nao_cadastrada";
+    await ctx.sb.from("acesso_lpr_eventos").insert({
+      escola_id: lprEscolaId,
+      placa_lida: placa,
+      placa_id: body.placa_id || null,
+      confidence: body.confidence != null ? Number(body.confidence) : null,
+      autorizado: !!body.autorizado,
+      motivo,
+      acao_tomada: body.autorizado ? "log_apenas" : null,
+    });
+    return successResponse({ ok: true });
+  }
+
+  const { user_id, device_id, timestamp, method, card_value, direction, confidence, photo, escola_id: bodyEscolaId } = body;
 
   // Bridge-authenticated path: gateway forwarded a `type:event` from a daemon
   const authHeader = ctx.req.headers.get("authorization") || ctx.req.headers.get("Authorization") || "";
@@ -3234,6 +3264,122 @@ router.on("acesso_bridge_token_rotate", authGerente, async (ctx) => {
     .eq("id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse({ bridge_token: token });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  LPR — Controle de Acesso Veicular (Fase 1)
+// ═══════════════════════════════════════════════════════════════
+
+function normalizarPlaca(p: string): string {
+  return String(p || "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+}
+
+// Push fire-and-forget de placas pro daemon. Falha silenciosamente
+// se bridge offline — daemon vai pegar no próximo lpr_sync ou no boot.
+async function syncLprPlatesToBridge(sb: Any, escolaId: string): Promise<void> {
+  const { data } = await sb.from("acesso_lpr_placas")
+    .select("id, placa, ativo, validade_inicio, validade_fim, janela_horaria, apelido")
+    .eq("escola_id", escolaId);
+  const plates = data ?? [];
+  await bridgeDispatchEphemeral(escolaId, "lpr_sync", { plates }, 3000).catch(() => { /* offline ok */ });
+}
+
+router.on("acesso_lpr_placas_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("acesso_lpr_placas")
+    .select("*")
+    .eq("escola_id", ctx.escola_id)
+    .order("criado_em", { ascending: false });
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_lpr_placa_save", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const b = ctx.body as Any;
+  const placa = normalizarPlaca(b.placa);
+  if (!placa || placa.length < 4) throw new AppError("VALIDATION_FAILED", "placa inválida");
+  const ownerTipos = ["familia","funcionario","aluno","visitante","outro"];
+  if (!ownerTipos.includes(b.owner_tipo)) throw new AppError("VALIDATION_FAILED", "owner_tipo inválido");
+
+  const row: Any = {
+    placa,
+    owner_tipo: b.owner_tipo,
+    owner_id: b.owner_id || null,
+    apelido: b.apelido || null,
+    ativo: b.ativo !== false,
+    validade_inicio: b.validade_inicio || null,
+    validade_fim: b.validade_fim || null,
+    janela_horaria: b.janela_horaria || null,
+    observacao: b.observacao || null,
+  };
+
+  let saved: Any;
+  if (b.id) {
+    const { data, error } = await ctx.sb.from("acesso_lpr_placas")
+      .update(row).eq("id", b.id).eq("escola_id", ctx.escola_id).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    saved = data;
+  } else {
+    const { data, error } = await ctx.sb.from("acesso_lpr_placas")
+      .insert({ ...row, escola_id: ctx.escola_id, criado_por: ctx.user_id || null }).select().single();
+    if (error) {
+      if (error.code === "23505") throw new AppError("CONFLICT", "Placa já cadastrada nessa escola.");
+      throw new AppError("BAD_REQUEST", error.message);
+    }
+    saved = data;
+  }
+
+  // Sincroniza cache do daemon (fire-and-forget)
+  syncLprPlatesToBridge(ctx.sb, ctx.escola_id).catch(() => {});
+  return successResponse(saved);
+});
+
+router.on("acesso_lpr_placa_delete", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório");
+  await ctx.sb.from("acesso_lpr_placas").delete().eq("id", id).eq("escola_id", ctx.escola_id);
+  syncLprPlatesToBridge(ctx.sb, ctx.escola_id).catch(() => {});
+  return successResponse({ ok: true });
+});
+
+router.on("acesso_lpr_eventos_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const b = ctx.body as Any;
+  const limit = Math.min(Number(b?.limit ?? 50), 200);
+  let q = ctx.sb.from("acesso_lpr_eventos")
+    .select("id, placa_lida, placa_id, confidence, autorizado, motivo, acao_tomada, ts")
+    .eq("escola_id", ctx.escola_id)
+    .order("ts", { ascending: false })
+    .limit(limit);
+  if (b?.apenas_nao_autorizadas === true) q = q.eq("autorizado", false);
+  const { data: eventos } = await q;
+
+  // Enriquece com info da placa (apelido, owner_tipo) — N+1 mas N pequeno
+  const placaIds = Array.from(new Set((eventos ?? []).map((e: Any) => e.placa_id).filter(Boolean)));
+  let placasMap: Record<string, Any> = {};
+  if (placaIds.length) {
+    const { data: placas } = await ctx.sb.from("acesso_lpr_placas")
+      .select("id, apelido, owner_tipo, owner_id")
+      .in("id", placaIds);
+    for (const p of (placas ?? [])) placasMap[p.id] = p;
+  }
+  const enriched = (eventos ?? []).map((e: Any) => ({
+    ...e,
+    placa_info: e.placa_id ? placasMap[e.placa_id] || null : null,
+  }));
+  return successResponse(enriched);
+});
+
+// Trigger manual de sync (útil após import em massa ou troubleshooting)
+router.on("acesso_lpr_sync_now", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("acesso_lpr_placas")
+    .select("id, placa, ativo, validade_inicio, validade_fim, janela_horaria, apelido")
+    .eq("escola_id", ctx.escola_id);
+  const plates = data ?? [];
+  const r = await bridgeDispatchEphemeral(ctx.escola_id, "lpr_sync", { plates }, 5000);
+  return successResponse({ ok: r.ok, count: plates.length, error: r.error, body: r.body });
 });
 
 // ═══════════════════════════════════════════════════════════════
