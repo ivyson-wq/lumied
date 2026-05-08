@@ -2931,16 +2931,41 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'alm_pdf_romaneio_turma') {
-      // Romaneio para entrega às professoras: itens aprovados prontos para entrega agrupados por turma
+      // Romaneio para entrega às professoras: itens APROVADOS + JÁ RECEBIDOS do fornecedor,
+      // agrupados por turma. Só inclui (req_id, insumo_id) com alm_compras.status IN
+      // ('comprado','entregue') — pendentes de compra ficam fora pra evitar assinatura
+      // de item que ainda não chegou na escola.
+      const escolaId = (gerente as any).escola_id
       const { data: reqs } = await sb.from('alm_requisicoes')
         .select('*, professoras(nome, email), series(nome)')
-        .eq('status', 'aprovado').eq('escola_id', gerente.escola_id).order('criado_em')
-      const { data: entregasTodas } = await sb.from('alm_entregas').select('requisicao_id, insumo_id, qty_entregue')
-      const entregueMap: Record<string, number> = {}
-      for (const e of (entregasTodas ?? []) as any[]) {
-        const k = `${e.requisicao_id}|${e.insumo_id || ''}`
-        entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
+        .eq('status', 'aprovado').eq('escola_id', escolaId).order('criado_em')
+      const reqIds = (reqs ?? []).map((r: any) => r.id)
+
+      // (req_id, insumo_id) que já chegaram (status comprado ou entregue)
+      const recebidoSet = new Set<string>()
+      if (reqIds.length) {
+        const { data: compras } = await sb.from('alm_compras')
+          .select('requisicao_id, insumo_id, status')
+          .eq('escola_id', escolaId)
+          .in('requisicao_id', reqIds)
+          .in('status', ['comprado', 'entregue'])
+        for (const c of (compras ?? []) as any[]) {
+          recebidoSet.add(`${c.requisicao_id}|${c.insumo_id || ''}`)
+        }
       }
+
+      // Entregas já registradas — escopo restrito às requisições da escola
+      const entregueMap: Record<string, number> = {}
+      if (reqIds.length) {
+        const { data: entregasTodas } = await sb.from('alm_entregas')
+          .select('requisicao_id, insumo_id, qty_entregue')
+          .in('requisicao_id', reqIds)
+        for (const e of (entregasTodas ?? []) as any[]) {
+          const k = `${e.requisicao_id}|${e.insumo_id || ''}`
+          entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
+        }
+      }
+
       const porTurma: Record<string, { profs: Set<string>; items: any[] }> = {}
       for (const r of (reqs ?? []) as any[]) {
         const t = r.series?.nome || '—'
@@ -2948,8 +2973,10 @@ Deno.serve(async (req) => {
         const bucket = (porTurma[t] ||= { profs: new Set(), items: [] })
         bucket.profs.add(p)
         for (const it of (r.itens || [])) {
+          const key = `${r.id}|${it.insumo_id || ''}`
+          if (!recebidoSet.has(key)) continue
           const aprov = Number((it.qty_aprovado ?? it.qty_solicitado ?? 0))
-          const ja = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
+          const ja = entregueMap[key] || 0
           const pend = aprov - ja
           if (pend > 0) bucket.items.push({ ...it, pend, prof: p, req: r.id })
         }
@@ -2974,10 +3001,10 @@ Deno.serve(async (req) => {
           ]),
           footer: ['', `Assinatura: ________________________________`, '', '', `Data: ___/___/____`],
         }))
-      if (!tables.length) tables.push({ columns: [{ label: 'Info', width: 515 }], rows: [['Nada a entregar no momento.']] })
+      if (!tables.length) tables.push({ columns: [{ label: 'Info', width: 515 }], rows: [['Nenhum item recebido aguardando distribuição. Marque a compra como "comprado" quando os produtos chegarem do fornecedor.']] })
       const bytes = await generatePdf({
         title: 'Romaneio de Entrega por Turma',
-        subtitle: 'Marque os itens entregues e peça a assinatura da professora ao final de cada turma.',
+        subtitle: 'Lista apenas itens já recebidos do fornecedor (status "comprado" ou "entregue"). Marque o ▢ ao entregar e peça a assinatura da professora ao final de cada turma.',
         tables,
       })
       return pdfResponse(bytes, `romaneio-${new Date().toISOString().slice(0,10)}.pdf`)
