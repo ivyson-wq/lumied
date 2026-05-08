@@ -943,9 +943,12 @@ body.dash-clean #greetingBar{display:none;}
       <!-- Autoavaliação form (rascunho) -->
       <div class="upload-card" id="pdiAutoavCard" style="display:none">
         <h3>✏️ Autoavaliação de Competências</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Avalie suas competências de <strong>1</strong> a <strong>4</strong>: &nbsp;<strong>1</strong> Em desenvolvimento · <strong>2</strong> Atende · <strong>3</strong> Supera · <strong>4</strong> Referência</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Avalie suas competências de <strong>1</strong> a <strong>4</strong>: &nbsp;<strong>1</strong> Em desenvolvimento · <strong>2</strong> Atende · <strong>3</strong> Supera · <strong>4</strong> Referência<br><em style="font-size:12px;color:var(--muted);">Suas respostas são salvas automaticamente — pode pausar e voltar quando quiser.</em></p>
         <div class="pdi-comp-form" id="pdiCompForm"></div>
-        <button class="btn-submit" style="margin-top:18px;" onclick="submitAutoavaliacao()">Salvar Autoavaliação</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;flex-wrap:wrap;">
+          <button class="btn-submit" onclick="submitAutoavaliacao()">Salvar Autoavaliação</button>
+          <span id="pdiAutoavSaveStatus" style="font-size:12px;color:var(--muted);"></span>
+        </div>
         <div class="f-alert error" id="pdiAutoErr"></div>
         <div class="f-alert success" id="pdiAutoOk"></div>
       </div>
@@ -953,10 +956,13 @@ body.dash-clean #greetingBar{display:none;}
       <!-- Metas form (rascunho) -->
       <div class="upload-card" id="pdiMetasFormCard" style="display:none">
         <h3>🎯 Minhas Metas SMART</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Defina entre 1 e 5 metas para este ciclo. Cada meta deve ser específica, mensurável e com prazo definido.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6;">Defina entre 1 e 5 metas para este ciclo. Cada meta deve ser específica, mensurável e com prazo definido.<br><em style="font-size:12px;color:var(--muted);">Rascunho salvo automaticamente — só envia pra aprovação quando você clicar no botão.</em></p>
         <div id="pdiMetasFormList"></div>
         <button class="add-meta-btn" onclick="addMetaForm()" id="btnAddMeta">+ Adicionar meta</button>
-        <button class="btn-submit" onclick="submitMetas()" id="btnSubmitMetas" disabled>Enviar para Aprovação</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;flex-wrap:wrap;">
+          <button class="btn-submit" onclick="submitMetas()" id="btnSubmitMetas" disabled>Enviar para Aprovação</button>
+          <span id="pdiMetasSaveStatus" style="font-size:12px;color:var(--muted);"></span>
+        </div>
         <div class="f-alert error" id="pdiMetasErr"></div>
         <div class="f-alert success" id="pdiMetasOk"></div>
       </div>
@@ -1285,6 +1291,9 @@ body.dash-clean #greetingBar{display:none;}
     <!-- PÁGINA: DIÁRIO DE CLASSE -->
     <div class="prof-page" id="pageDiario">
       <div class="sec-title">📖 Diário de Classe</div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.5;">
+        ⚠️ <strong>Em desenvolvimento.</strong> A persistência do diário está sendo finalizada — por enquanto o botão "Salvar Registro" <strong>não grava no sistema</strong>. Anote o conteúdo em outro lugar até a próxima atualização. Quando for liberado, autosave a cada 3s (mesmo padrão do almoxarifado).
+      </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input type="date" id="diarioData" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;">
         <select id="profDiarioDisc" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;"><option value="">Disciplina...</option></select>
@@ -2396,12 +2405,11 @@ body.dash-clean #greetingBar{display:none;}
   }
 
   async function salvarDiario() {
-    const texto = document.getElementById('diarioTexto')?.value?.trim();
-    if (!texto) {
-      if (typeof showToast === 'function') showToast('Escreva o registro antes de salvar.', 'warning');
-      return;
-    }
-    if (typeof showToast === 'function') showToast('Registro salvo!', 'success');
+    // Stub honesto: backend academico.diario_registros_create existe mas o fluxo
+    // completo (serie picker + load por dia/disciplina + autosave) ainda não foi
+    // plugado. A versão anterior mostrava "Registro salvo!" sem chamar API e
+    // descartava silenciosamente o conteúdo — pior que não ter botão.
+    if (typeof showToast === 'function') showToast('Diário ainda em desenvolvimento — anote os dados em outro lugar até a próxima atualização.', 'warning');
   }
 
   // ── DATA ──────────────────────────────────────────────────
@@ -2897,6 +2905,73 @@ body.dash-clean #greetingBar{display:none;}
 
   var pdiState = { ciclo: null, pdi: null };
   var pdiMetaCount = 0;
+  var pdiAutoavSaveTimer = null;
+  var pdiMetasSaveTimer  = null;
+
+  function pdiSetAutoavStatus(t) {
+    const el = document.getElementById('pdiAutoavSaveStatus');
+    if (el) el.textContent = t || '';
+  }
+  function pdiSetMetasStatus(t) {
+    const el = document.getElementById('pdiMetasSaveStatus');
+    if (el) el.textContent = t || '';
+  }
+  function pdiColetarAutoavParcial() {
+    const out = [];
+    for (const area of AREAS) {
+      const rg = document.getElementById(`rg_${area}`);
+      if (!rg) continue;
+      const nota = parseInt(rg.dataset.selected || '0') || undefined;
+      const comentario = (document.getElementById(`rc_${area}`)?.value || '').trim() || undefined;
+      if (nota || comentario) out.push({ area, nota_auto: nota, comentario });
+    }
+    return out;
+  }
+  function pdiColetarMetasParcial() {
+    const metas = [];
+    for (const block of document.querySelectorAll('.meta-form-block')) {
+      const idx = block.id.split('_')[1];
+      metas.push({
+        descricao:      (document.getElementById(`mDesc_${idx}`)?.value  || '').trim(),
+        indicador:      (document.getElementById(`mInd_${idx}`)?.value   || '').trim(),
+        prazo:           document.getElementById(`mPrazo_${idx}`)?.value || '',
+        area_vinculada:  document.getElementById(`mArea_${idx}`)?.value || '',
+      });
+    }
+    return metas;
+  }
+  function schedulePdiAutoavAutosave() {
+    if (pdiState.pdi && ['aguardando_aprovacao','em_andamento','encerrado'].includes(pdiState.pdi.status)) return;
+    clearTimeout(pdiAutoavSaveTimer);
+    pdiSetAutoavStatus('💭 não salvo');
+    pdiAutoavSaveTimer = setTimeout(pdiAutoavAutosaveNow, 3000);
+  }
+  async function pdiAutoavAutosaveNow() {
+    const competencias = pdiColetarAutoavParcial();
+    if (!competencias.length) { pdiSetAutoavStatus(''); return; }
+    pdiSetAutoavStatus('💾 salvando…');
+    const d = await callApi({ action: 'pdi_autoavaliacao_rascunho', competencias });
+    if (d.error) { pdiSetAutoavStatus('⚠️ falha: ' + d.error); return; }
+    if (d.pdi_id && !pdiState.pdi) pdiState.pdi = { id: d.pdi_id, status: 'rascunho' };
+    pdiSetAutoavStatus('✅ salvo às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}));
+    window.lumiedShowAutoSaved?.();
+  }
+  function schedulePdiMetasAutosave() {
+    if (!pdiState.pdi?.id) return;
+    if (['aguardando_aprovacao','em_andamento','encerrado'].includes(pdiState.pdi.status)) return;
+    clearTimeout(pdiMetasSaveTimer);
+    pdiSetMetasStatus('💭 não salvo');
+    pdiMetasSaveTimer = setTimeout(pdiMetasAutosaveNow, 3000);
+  }
+  async function pdiMetasAutosaveNow() {
+    if (!pdiState.pdi?.id) return;
+    const metas = pdiColetarMetasParcial();
+    pdiSetMetasStatus('💾 salvando…');
+    const d = await callApi({ action: 'pdi_metas_rascunho', pdi_id: pdiState.pdi.id, metas });
+    if (d.error) { pdiSetMetasStatus('⚠️ falha: ' + d.error); return; }
+    pdiSetMetasStatus('✅ salvo às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}));
+    window.lumiedShowAutoSaved?.();
+  }
 
   async function loadMeuPdi() {
     const d = await callApi({ action: 'pdi_meu_status' });
@@ -2958,7 +3033,7 @@ body.dash-clean #greetingBar{display:none;}
           ${[1,2,3,4].map(n => `<button class="rating-btn${vals[area]===n?' sel':''}" onclick="selectRating('${area}',${n})" title="${NOTA_LABEL[n]}">${n}</button>`).join('')}
           <span style="font-size:11px;color:var(--muted);" id="rl_${area}">${vals[area] ? NOTA_LABEL[vals[area]] : ''}</span>
         </div>
-        <div class="ff" style="margin:6px 0 0;"><input type="text" id="rc_${area}" placeholder="Comentário (opcional)" value="${esc(comments[area]||'')}" style="font-size:12px;"></div>
+        <div class="ff" style="margin:6px 0 0;"><input type="text" id="rc_${area}" placeholder="Comentário (opcional)" value="${esc(comments[area]||'')}" oninput="schedulePdiAutoavAutosave()" style="font-size:12px;"></div>
       </div>
     `).join('');
   }
@@ -2968,6 +3043,7 @@ body.dash-clean #greetingBar{display:none;}
     rg.querySelectorAll('.rating-btn').forEach((btn, i) => btn.classList.toggle('sel', i + 1 === nota));
     document.getElementById(`rl_${area}`).textContent = NOTA_LABEL[nota];
     rg.dataset.selected = nota;
+    schedulePdiAutoavAutosave();
   }
 
   async function submitAutoavaliacao() {
@@ -3011,12 +3087,12 @@ body.dash-clean #greetingBar{display:none;}
         <strong style="font-size:13px;" id="metaTitle_${idx}">Meta ${idx}</strong>
         ${idx > 1 ? `<button class="remove-meta-btn" onclick="removeMetaBlock(${idx})">✕</button>` : ''}
       </div>
-      <div class="ff"><label>O que quero alcançar *</label><input type="text" id="mDesc_${idx}" placeholder="Ex: Concluir o Cambridge Certificate" value="${esc(meta?.descricao||'')}"></div>
-      <div class="ff"><label>Como vou medir *</label><input type="text" id="mInd_${idx}" placeholder="Ex: Certificado emitido com nota ≥ 70%" value="${esc(meta?.indicador||'')}"></div>
+      <div class="ff"><label>O que quero alcançar *</label><input type="text" id="mDesc_${idx}" placeholder="Ex: Concluir o Cambridge Certificate" value="${esc(meta?.descricao||'')}" oninput="schedulePdiMetasAutosave()"></div>
+      <div class="ff"><label>Como vou medir *</label><input type="text" id="mInd_${idx}" placeholder="Ex: Certificado emitido com nota ≥ 70%" value="${esc(meta?.indicador||'')}" oninput="schedulePdiMetasAutosave()"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="ff" style="margin:0;"><label>Prazo *</label><input type="date" id="mPrazo_${idx}" value="${meta?.prazo||''}"></div>
+        <div class="ff" style="margin:0;"><label>Prazo *</label><input type="date" id="mPrazo_${idx}" value="${meta?.prazo||''}" onchange="schedulePdiMetasAutosave()"></div>
         <div class="ff" style="margin:0;"><label>Área vinculada</label>
-          <select id="mArea_${idx}"><option value="">Selecione…</option>
+          <select id="mArea_${idx}" onchange="schedulePdiMetasAutosave()"><option value="">Selecione…</option>
             ${AREAS.map(a=>`<option value="${a}"${meta?.area_vinculada===a?' selected':''}>${COMP_LABELS[a]}</option>`).join('')}
           </select>
         </div>
@@ -3024,6 +3100,8 @@ body.dash-clean #greetingBar{display:none;}
     `;
     document.getElementById('pdiMetasFormList').appendChild(div);
     updateBtnAddMeta();
+    if (meta) return; // restaurando — não dispara autosave
+    schedulePdiMetasAutosave();
   }
 
   function removeMetaBlock(idx) {
@@ -3033,6 +3111,7 @@ body.dash-clean #greetingBar{display:none;}
       const t = el.querySelector('[id^="metaTitle_"]'); if (t) t.textContent = `Meta ${i + 1}`;
     });
     updateBtnAddMeta();
+    schedulePdiMetasAutosave();
   }
 
   function updateBtnAddMeta() {

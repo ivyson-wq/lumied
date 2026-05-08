@@ -345,7 +345,8 @@ Deno.serve(async (req) => {
     'professora_logout', 'diploma_submit', 'meus_diplomas',
     'atestado_submit', 'meus_atestados',
     'minhas_impressoes',
-    'pdi_meu_status', 'pdi_autoavaliacao', 'pdi_metas_submit',
+    'pdi_meu_status', 'pdi_autoavaliacao', 'pdi_autoavaliacao_rascunho',
+    'pdi_metas_submit', 'pdi_metas_rascunho',
     'pdi_meta_progresso', 'pdi_checkin',
   ].includes(action)
 
@@ -503,6 +504,49 @@ Deno.serve(async (req) => {
       return json({ ok: true, pdi_id: pdiId })
     }
 
+    // Autosave da autoavaliação — aceita competências parciais. Não exige todas as 7
+    // áreas nem nota mínima. Não muda status; só persiste o que tiver. Idempotente.
+    if (action === 'pdi_autoavaliacao_rascunho') {
+      const competencias: Array<{ area: string; nota_auto?: number; comentario?: string }> =
+        body.competencias || []
+      const AREAS = [
+        'linguagem', 'metodologia', 'avaliacao',
+        'intercultural', 'colaboracao', 'inovacao', 'desenvolvimento',
+      ]
+      const validas = competencias.filter(c =>
+        AREAS.includes(c.area) &&
+        ((c.nota_auto !== undefined && c.nota_auto !== null) || (c.comentario && c.comentario.trim()))
+      )
+      const { data: ciclo } = await sb
+        .from('pdi_ciclos').select('id').eq('ativo', true).maybeSingle()
+      if (!ciclo) return json({ error: 'Não há ciclo de PDI ativo no momento.' }, 400)
+
+      let pdiId: string
+      const { data: pdiExist } = await sb
+        .from('pdis').select('id, status').eq('professora_id', prof.id).eq('ciclo_id', ciclo.id).maybeSingle()
+      if (pdiExist) {
+        if (['em_andamento', 'encerrado'].includes(pdiExist.status))
+          return json({ error: 'PDI já aprovado. Contate a gestora para alterações.' }, 400)
+        pdiId = pdiExist.id
+      } else {
+        if (!validas.length) return json({ ok: true, pdi_id: null, salvas: 0 })
+        const { data: novo, error: errCria } = await sb
+          .from('pdis').insert({ professora_id: prof.id, ciclo_id: ciclo.id, status: 'rascunho', escola_id: (prof as any).escola_id })
+          .select('id').single()
+        if (errCria) return json({ error: errCria.message }, 400)
+        pdiId = novo.id
+      }
+
+      for (const c of validas) {
+        const nota = c.nota_auto && c.nota_auto >= 1 && c.nota_auto <= 4 ? c.nota_auto : null
+        await sb.from('pdi_competencias').upsert(
+          { pdi_id: pdiId, area: c.area, nota_auto: nota, comentario: c.comentario ?? null, escola_id: (prof as any).escola_id },
+          { onConflict: 'pdi_id,area' }
+        )
+      }
+      return json({ ok: true, pdi_id: pdiId, salvas: validas.length })
+    }
+
     if (action === 'pdi_metas_submit') {
       // body: { pdi_id, metas: [{ descricao, indicador, prazo, area_vinculada? }] }
       const { pdi_id } = body
@@ -545,6 +589,47 @@ Deno.serve(async (req) => {
       }).eq('id', pdi_id).eq('escola_id', (prof as any).escola_id)
 
       return json({ ok: true })
+    }
+
+    // Autosave de metas — aceita metas parciais (campos vazios), não muda status do PDI.
+    // Sobrescreve o conjunto de metas em rascunho a cada chamada (delete + insert).
+    if (action === 'pdi_metas_rascunho') {
+      const { pdi_id } = body
+      const metas: Array<{ descricao?: string; indicador?: string; prazo?: string; area_vinculada?: string }> =
+        body.metas || []
+      if (!pdi_id) return json({ error: 'pdi_id obrigatório.' }, 400)
+      if (metas.length > 5) return json({ error: 'Máximo 5 metas.' }, 400)
+
+      const { data: pdi } = await sb
+        .from('pdis').select('id, status').eq('id', pdi_id).eq('professora_id', prof.id).maybeSingle()
+      if (!pdi) return json({ error: 'PDI não encontrado.' }, 404)
+      if (['em_andamento', 'encerrado'].includes(pdi.status))
+        return json({ error: 'PDI já aprovado. Contate a gestora para alterações.' }, 400)
+
+      const naoVazias = metas.filter(m =>
+        (m.descricao && m.descricao.trim()) ||
+        (m.indicador && m.indicador.trim()) ||
+        (m.prazo && m.prazo.trim()) ||
+        (m.area_vinculada && m.area_vinculada.trim())
+      )
+
+      await sb.from('pdi_metas').delete().eq('pdi_id', pdi_id).eq('escola_id', (prof as any).escola_id)
+      if (naoVazias.length) {
+        const { error } = await sb.from('pdi_metas').insert(
+          naoVazias.map(m => ({
+            pdi_id,
+            descricao: m.descricao ?? '',
+            indicador: m.indicador ?? '',
+            prazo: m.prazo || null,
+            area_vinculada: m.area_vinculada ?? null,
+            status: 'pendente',
+            progressao_pct: 0,
+            escola_id: (prof as any).escola_id,
+          }))
+        )
+        if (error) return json({ error: error.message }, 400)
+      }
+      return json({ ok: true, salvas: naoVazias.length })
     }
 
     if (action === 'pdi_meta_progresso') {

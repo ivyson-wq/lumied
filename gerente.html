@@ -12635,6 +12635,7 @@ docker compose up -d --build</pre>
     }
     almInvRender();
     if (inputEl) inputEl.blur();
+    window.lumiedShowAutoSaved?.();
   }
 
   async function almInvLimparContagem(itemId) {
@@ -12643,6 +12644,7 @@ docker compose up -d --build</pre>
     const it = _almInvItens.find(x => x.id === itemId);
     if (it) { it.saldo_contado = null; it.contado = false; it.observacao = null; }
     almInvRender();
+    window.lumiedShowAutoSaved?.();
   }
 
   async function almInvAddObs(itemId) {
@@ -12658,6 +12660,7 @@ docker compose up -d --build</pre>
     if (d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     it.observacao = obs.trim() || null;
     almInvRender();
+    window.lumiedShowAutoSaved?.();
   }
 
   async function almInvCancelarSessao() {
@@ -16542,23 +16545,18 @@ docker compose up -d --build</pre>
   });
   document.getElementById('searchInput')?.addEventListener('input', (e) => renderSearchResults(e.target.value));
 
-  // ═══ AUTO-SAVE ═══
+  // Indicador de autosave compartilhado (usado pelos handlers que de fato salvam)
+  // Cada feature que tem autosave real chama window.lumiedShowAutoSaved() depois
+  // de receber confirmação do servidor. NÃO existe handler global "todo input
+  // salva automaticamente" — isso mentia pro usuário sem persistir nada.
   var autoSaveIndicator = document.createElement('div');
   autoSaveIndicator.className = 'autosave-indicator';
   autoSaveIndicator.textContent = '✓ Salvo';
   document.body.appendChild(autoSaveIndicator);
-
-  function showAutoSaved() {
+  window.lumiedShowAutoSaved = function() {
     autoSaveIndicator.classList.add('show');
     setTimeout(() => autoSaveIndicator.classList.remove('show'), 1500);
-  }
-
-  // Auto-save on input blur for form fields
-  document.addEventListener('change', (e) => {
-    if (e.target.matches('input, select, textarea') && e.target.closest('.form-card, .ff')) {
-      showAutoSaved();
-    }
-  });
+  };
 
   // ═══ COMPLIANCE MODULE ═══
   var COMPLIANCE_API = SUPABASE_URL + '/functions/v1/compliance';
