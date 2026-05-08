@@ -2244,6 +2244,7 @@ Deno.serve(async (req) => {
           qty_entregue: parseFloat(d.qty_entregue),
           entregue_por: gerente.nome,
           escola_id: escolaId,
+          fonte: 'compra',
         }))
       if (entregas.length) {
         const { error: errEnt } = await sb.from('alm_entregas').insert(entregas)
@@ -2321,9 +2322,15 @@ Deno.serve(async (req) => {
 
   // ━━ ALMOXARIFADO: TEACHER ACTIONS ━━━━━━━━━━━━━━━━━━━━━━━━
 
+  // Allowlist de actions que entram no bloco da professora.
+  // ATENÇÃO: ao adicionar um novo handler `if (action === 'alm_xxx')` dentro do
+  // bloco `if (isAlmProfAction)` abaixo, INCLUA o nome aqui também — caso contrário
+  // o bloco é pulado e a request cai no fallback "Ação desconhecida".
   const isAlmProfAction = [
     'alm_catalogo', 'alm_minha_turma', 'alm_minhas_reqs',
-    'alm_criar_req', 'alm_cancelar_req',
+    'alm_criar_req', 'alm_editar_req', 'alm_cancelar_req',
+    'alm_rascunho_get', 'alm_rascunho_salvar', 'alm_rascunho_descartar',
+    'alm_historico_turma',
     'alm_notif_list', 'alm_notif_marcar_lida',
   ].includes(action)
 
@@ -2577,7 +2584,7 @@ Deno.serve(async (req) => {
       const [{ count: pendentes }, { data: reqsMes }, { data: turmas }, { data: orcamentos }] =
         await Promise.all([
           sb.from('alm_requisicoes').select('*', { count: 'exact', head: true }).eq('status', 'pendente').eq('escola_id', gerente.escola_id),
-          sb.from('alm_requisicoes').select('total, turma_id, status').eq('mes', mes).eq('escola_id', gerente.escola_id).in('status', ['aprovado', 'pendente']),
+          sb.from('alm_requisicoes').select('total, turma_id, status, itens').eq('mes', mes).eq('escola_id', gerente.escola_id).in('status', ['aprovado', 'pendente']),
           sb.from('series').select('id, nome').eq('ativo', true).eq('escola_id', gerente.escola_id),
           sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes).eq('escola_id', gerente.escola_id),
         ])
@@ -2586,17 +2593,42 @@ Deno.serve(async (req) => {
       for (const o of orcamentos ?? []) orcMap[o.turma_id] = o.valor
       const gastoAprovMap: Record<string, number> = {}
       const gastoPendMap: Record<string, number> = {}
+      const gastoEstoqueMap: Record<string, number> = {}
+      const gastoCompraMap:  Record<string, number> = {}
+      let totalEstoque = 0
+      let totalCompra  = 0
       for (const r of reqsMes ?? []) {
-        if (r.status === 'aprovado') gastoAprovMap[r.turma_id] = (gastoAprovMap[r.turma_id] ?? 0) + r.total
+        if (r.status === 'aprovado') {
+          gastoAprovMap[r.turma_id] = (gastoAprovMap[r.turma_id] ?? 0) + r.total
+          for (const it of (((r as any).itens as any[]) || [])) {
+            const pu = parseFloat(it.preco_unit || 0)
+            const e = parseFloat(it.qty_do_estoque || 0) * pu
+            const c = parseFloat(it.qty_a_comprar  || 0) * pu
+            gastoEstoqueMap[r.turma_id] = (gastoEstoqueMap[r.turma_id] ?? 0) + e
+            gastoCompraMap[r.turma_id]  = (gastoCompraMap[r.turma_id]  ?? 0) + c
+            totalEstoque += e
+            totalCompra  += c
+          }
+        }
         if (r.status === 'pendente') gastoPendMap[r.turma_id] = (gastoPendMap[r.turma_id] ?? 0) + r.total
       }
       const turmasStats = (turmas ?? []).map((t: any) => {
         const orc = orcMap[t.id] ?? 0
         const gastoAprov = gastoAprovMap[t.id] ?? 0
         const gastoPend = gastoPendMap[t.id] ?? 0
-        return { ...t, orcamento: orc, gasto: gastoAprov + gastoPend, gasto_aprovado: gastoAprov, gasto_pendente: gastoPend, disponivel: Math.max(0, orc - gastoAprov - gastoPend) }
+        return {
+          ...t, orcamento: orc, gasto: gastoAprov + gastoPend,
+          gasto_aprovado: gastoAprov, gasto_pendente: gastoPend,
+          gasto_estoque: gastoEstoqueMap[t.id] ?? 0,
+          gasto_compra:  gastoCompraMap[t.id]  ?? 0,
+          disponivel: Math.max(0, orc - gastoAprov - gastoPend),
+        }
       })
-      return json({ pendentes: pendentes ?? 0, totalAprovado, turmas: turmasStats, mes })
+      return json({
+        pendentes: pendentes ?? 0,
+        totalAprovado, total_estoque: totalEstoque, total_compra: totalCompra,
+        turmas: turmasStats, mes,
+      })
     }
 
     if (action === 'alm_pendentes') {
@@ -2844,13 +2876,15 @@ Deno.serve(async (req) => {
           log.error(`alm_pdf_guia_recebimento: erro ao listar requisições: ${errReqs.message}`)
           return json({ error: 'Erro ao carregar requisições: ' + errReqs.message }, 500)
         }
-        // Quantidade já entregue por (requisicao, insumo) — filtra por requisições da escola
+        // Quantidade já entregue de fonte=compra (estoque não conta aqui — não
+        // reduz o que ainda é esperado do fornecedor)
         const reqIds = (reqs ?? []).map((r: any) => r.id)
         const entregueMap: Record<string, number> = {}
         if (reqIds.length) {
           const { data: entregasTodas } = await sb.from('alm_entregas')
-            .select('requisicao_id, insumo_id, qty_entregue')
+            .select('requisicao_id, insumo_id, qty_entregue, fonte')
             .in('requisicao_id', reqIds)
+            .eq('fonte', 'compra')
           for (const e of (entregasTodas ?? []) as any[]) {
             const k = `${e.requisicao_id}|${e.insumo_id || ''}`
             entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
@@ -2869,15 +2903,32 @@ Deno.serve(async (req) => {
           for (const i of ins ?? []) catMap[i.id] = i
         }
 
+        // Pendências reais com fornecedor: alm_compras pendente/comprado
+        // (itens vindos do estoque NÃO entram aqui — já estão na escola).
+        const compraPendenteMap: Record<string, number> = {}
+        if (reqIds.length) {
+          const { data: comprasPend } = await sb.from('alm_compras')
+            .select('requisicao_id, insumo_id, qty, status')
+            .eq('escola_id', escolaId)
+            .in('requisicao_id', reqIds)
+            .in('status', ['pendente', 'comprado'])
+          for (const c of (comprasPend ?? []) as any[]) {
+            const k = `${c.requisicao_id}|${c.insumo_id || ''}`
+            compraPendenteMap[k] = (compraPendenteMap[k] || 0) + Number(c.qty || 0)
+          }
+        }
+
         // Agrupa por turma — facilita conferência por sala (pedido do usuário)
         const turmas: Record<string, { nome: string; itens: any[] }> = {}
         let count = 0
         for (const r of (reqs ?? []) as any[]) {
           const tNome = r.series?.nome || 'Sem turma'
           for (const it of (r.itens || [])) {
-            const aprov = Number((it.qty_aprovado ?? it.qty_solicitado ?? 0))
-            const jaEntregue = entregueMap[`${r.id}|${it.insumo_id || ''}`] || 0
-            const aReceber = aprov - jaEntregue
+            const k = `${r.id}|${it.insumo_id || ''}`
+            const aReceberTotal = compraPendenteMap[k] || 0
+            // Já recebido (alm_entregas fonte=compra, normalmente)
+            const jaEntregue = entregueMap[k] || 0
+            const aReceber = aReceberTotal - jaEntregue
             if (aReceber <= 0) continue
             count++
             const cat = it.insumo_id ? catMap[it.insumo_id] : null
@@ -2931,38 +2982,50 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'alm_pdf_romaneio_turma') {
-      // Romaneio para entrega às professoras: itens APROVADOS + JÁ RECEBIDOS do fornecedor,
-      // agrupados por turma. Só inclui (req_id, insumo_id) com alm_compras.status IN
-      // ('comprado','entregue') — pendentes de compra ficam fora pra evitar assinatura
-      // de item que ainda não chegou na escola.
+      // Romaneio: tudo que está PRONTO PRA ENTREGAR à turma — vem de duas fontes:
+      //  • estoque (alm_entregas.fonte='estoque', auto-criado em alm_aprovar)
+      //  • compra recebida (alm_entregas.fonte='compra', via alm_distribuir_grupo
+      //    OU alm_compras com status='comprado' aguardando distribuir).
       const escolaId = (gerente as any).escola_id
       const { data: reqs } = await sb.from('alm_requisicoes')
-        .select('*, professoras(nome, email), series(nome)')
+        .select('id, professora_id, professoras(nome, email), series(nome), itens')
         .eq('status', 'aprovado').eq('escola_id', escolaId).order('criado_em')
       const reqIds = (reqs ?? []).map((r: any) => r.id)
 
-      // (req_id, insumo_id) que já chegaram (status comprado ou entregue)
-      const recebidoSet = new Set<string>()
+      // Entregas já registradas (estoque + compra) — fonte pra mostrar origem
+      type Entrega = { req: string; insumo: string; qty: number; fonte: string }
+      const entregasPorChave: Record<string, Entrega[]> = {}
       if (reqIds.length) {
-        const { data: compras } = await sb.from('alm_compras')
-          .select('requisicao_id, insumo_id, status')
-          .eq('escola_id', escolaId)
+        const { data: entregas } = await sb.from('alm_entregas')
+          .select('requisicao_id, insumo_id, qty_entregue, fonte')
           .in('requisicao_id', reqIds)
-          .in('status', ['comprado', 'entregue'])
-        for (const c of (compras ?? []) as any[]) {
-          recebidoSet.add(`${c.requisicao_id}|${c.insumo_id || ''}`)
+        for (const e of (entregas ?? []) as any[]) {
+          const k = `${e.requisicao_id}|${e.insumo_id || ''}`
+          ;(entregasPorChave[k] ||= []).push({
+            req: e.requisicao_id, insumo: e.insumo_id, qty: Number(e.qty_entregue || 0), fonte: e.fonte || 'compra',
+          })
         }
       }
-
-      // Entregas já registradas — escopo restrito às requisições da escola
-      const entregueMap: Record<string, number> = {}
+      // Compras já comprado (mas ainda sem distribuir) também entram no romaneio
+      // como "pra entregar" — fonte=compra
       if (reqIds.length) {
-        const { data: entregasTodas } = await sb.from('alm_entregas')
-          .select('requisicao_id, insumo_id, qty_entregue')
+        const { data: comprasComp } = await sb.from('alm_compras')
+          .select('requisicao_id, insumo_id, qty')
+          .eq('escola_id', escolaId)
           .in('requisicao_id', reqIds)
-        for (const e of (entregasTodas ?? []) as any[]) {
-          const k = `${e.requisicao_id}|${e.insumo_id || ''}`
-          entregueMap[k] = (entregueMap[k] || 0) + Number(e.qty_entregue || 0)
+          .eq('status', 'comprado')
+        for (const c of (comprasComp ?? []) as any[]) {
+          const k = `${c.requisicao_id}|${c.insumo_id || ''}`
+          // Soma só o que ainda não foi registrado em alm_entregas fonte=compra
+          const jaRegistradoCompra = (entregasPorChave[k] || [])
+            .filter(e => e.fonte === 'compra')
+            .reduce((s, e) => s + e.qty, 0)
+          const aRegistrar = Number(c.qty || 0) - jaRegistradoCompra
+          if (aRegistrar > 0) {
+            ;(entregasPorChave[k] ||= []).push({
+              req: c.requisicao_id, insumo: c.insumo_id, qty: aRegistrar, fonte: 'compra',
+            })
+          }
         }
       }
 
@@ -2974,11 +3037,16 @@ Deno.serve(async (req) => {
         bucket.profs.add(p)
         for (const it of (r.itens || [])) {
           const key = `${r.id}|${it.insumo_id || ''}`
-          if (!recebidoSet.has(key)) continue
-          const aprov = Number((it.qty_aprovado ?? it.qty_solicitado ?? 0))
-          const ja = entregueMap[key] || 0
-          const pend = aprov - ja
-          if (pend > 0) bucket.items.push({ ...it, pend, prof: p, req: r.id })
+          const linhas = entregasPorChave[key] || []
+          if (!linhas.length) continue
+          const totalEstoque = linhas.filter(l => l.fonte === 'estoque').reduce((s, l) => s + l.qty, 0)
+          const totalCompra  = linhas.filter(l => l.fonte === 'compra').reduce((s, l) => s + l.qty, 0)
+          const total = totalEstoque + totalCompra
+          if (total <= 0) continue
+          const fonteLbl = totalEstoque > 0 && totalCompra > 0
+            ? `📦${totalEstoque} estoque · 🛒${totalCompra} comprado`
+            : totalEstoque > 0 ? '📦 estoque' : '🛒 comprado'
+          bucket.items.push({ ...it, total, fonteLbl, prof: p, req: r.id })
         }
       }
       const tables = Object.entries(porTurma)
@@ -2987,21 +3055,23 @@ Deno.serve(async (req) => {
           heading: `TURMA ${turma}  —  Professoras: ${[...b.profs].join(', ')}`,
           columns: [
             { label: '▢', width: 20, align: 'center' as const },
-            { label: 'Item', width: 220 },
-            { label: 'Qtd a entregar', width: 85, align: 'right' as const },
-            { label: 'Professora', width: 130 },
-            { label: 'Req', width: 60 },
+            { label: 'Item', width: 180 },
+            { label: 'Qtd', width: 50, align: 'right' as const },
+            { label: 'Origem', width: 120 },
+            { label: 'Professora', width: 110 },
+            { label: 'Req', width: 50 },
           ],
           rows: b.items.map((it: any) => [
             '',
             it.nome,
-            `${it.pend} ${it.unidade || 'un'}`,
+            `${it.total} ${it.unidade || 'un'}`,
+            it.fonteLbl,
             it.prof,
             `#${String(it.req).slice(0, 8)}`,
           ]),
-          footer: ['', `Assinatura: ________________________________`, '', '', `Data: ___/___/____`],
+          footer: ['', `Assinatura: ________________________________`, '', '', '', `Data: ___/___/____`],
         }))
-      if (!tables.length) tables.push({ columns: [{ label: 'Info', width: 515 }], rows: [['Nenhum item recebido aguardando distribuição. Marque a compra como "comprado" quando os produtos chegarem do fornecedor.']] })
+      if (!tables.length) tables.push({ columns: [{ label: 'Info', width: 515 }], rows: [['Nenhum item pronto pra entrega. Itens vindos do estoque entram automaticamente na aprovação; itens comprados entram quando marcados como "comprado".']] })
       const bytes = await generatePdf({
         title: 'Romaneio de Entrega por Turma',
         subtitle: 'Lista apenas itens já recebidos do fornecedor (status "comprado" ou "entregue"). Marque o ▢ ao entregar e peça a assinatura da professora ao final de cada turma.',
@@ -3257,6 +3327,16 @@ Deno.serve(async (req) => {
               motivo: `Atendido do estoque (req aprovada)`,
               saldo_antes: estoqueAtual,
               saldo_depois: estoqueAtual - saidaEstoque,
+            })
+            // Auto-entrega: itens vindos do estoque já são "alocados" pra turma
+            // ao aprovar — sem passo manual. Aparecem no romaneio direto.
+            await sb.from('alm_entregas').insert({
+              escola_id: (gerente as any).escola_id,
+              requisicao_id: id,
+              insumo_id: it.insumo_id,
+              qty_entregue: saidaEstoque,
+              entregue_por: gerente.nome,
+              fonte: 'estoque',
             })
           }
           it.qty_do_estoque = saidaEstoque
@@ -3835,16 +3915,25 @@ Deno.serve(async (req) => {
       const { data: orcs } = await sb.from('alm_orcamentos').select('turma_id, valor').eq('mes', mes).eq('escola_id', (gerente as any).escola_id)
       const orcMap: Record<string, number> = {}
       for (const o of orcs ?? []) orcMap[o.turma_id] = o.valor
-      // Group by turma
+      // Group by turma — separa gasto em fonte=estoque vs fonte=compra
       const turmaMap: Record<string, any> = {}
       for (const r of reqs ?? []) {
         const tid = r.turma_id ?? 'sem_turma'
         if (!turmaMap[tid]) turmaMap[tid] = {
           turma: (r as any).series ?? { nome: 'Sem turma' },
           orcamento: orcMap[tid] ?? 0,
-          gasto: 0, pendente: 0, rejeitado: 0, requisicoes: [],
+          gasto: 0, gasto_estoque: 0, gasto_compra: 0,
+          pendente: 0, rejeitado: 0, requisicoes: [],
         }
-        if (r.status === 'aprovado')  turmaMap[tid].gasto     += r.total
+        if (r.status === 'aprovado') {
+          turmaMap[tid].gasto += r.total
+          // Quebra por fonte usando jsonb itens (qty_do_estoque / qty_a_comprar gravados em alm_aprovar)
+          for (const it of ((r.itens as any[]) || [])) {
+            const pu = parseFloat(it.preco_unit || 0)
+            turmaMap[tid].gasto_estoque += parseFloat(it.qty_do_estoque || 0) * pu
+            turmaMap[tid].gasto_compra  += parseFloat(it.qty_a_comprar  || 0) * pu
+          }
+        }
         if (r.status === 'pendente')  turmaMap[tid].pendente  += r.total
         if (r.status === 'rejeitado') turmaMap[tid].rejeitado += r.total
         turmaMap[tid].requisicoes.push(r)
