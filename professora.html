@@ -722,6 +722,7 @@ body.dash-clean #greetingBar{display:none;}
     <div class="ps-label" data-i18n="prof.sidebar.rotina">Rotina</div>
     <button class="ps-item" onclick="switchProfPage('chamada',this)" data-page="chamada" data-modulo="frequencia"><span class="ps-icon">✅</span> <span data-i18n="prof.nav.chamada">Chamada</span></button>
     <button class="ps-item" onclick="switchProfPage('fila',this)" data-page="fila" data-modulo="pickup"><span class="ps-icon">🚗</span> <span data-i18n="prof.sidebar.filaRetirada">Fila de Retirada</span></button>
+    <button class="ps-item" onclick="switchProfPage('retirFace',this)" data-page="retirFace" data-modulo="controle_acesso"><span class="ps-icon">🚪</span> Retirada Face ID</button>
     <button class="ps-item" onclick="switchProfPage('agenda',this)" data-page="agenda" data-modulo="agenda_digital"><span class="ps-icon">📅</span> <span data-i18n="prof.nav.agendaDigital">Agenda Digital</span></button>
     <button class="ps-item" onclick="switchProfPage('notas',this)" data-page="notas" data-modulo="notas"><span class="ps-icon">📝</span> <span data-i18n="prof.nav.notas">Notas</span></button>
     <button class="ps-item" onclick="switchProfPage('diario',this)" data-page="diario" data-modulo="diario_classe"><span class="ps-icon">📖</span> <span data-i18n="prof.nav.diario">Diário</span></button>
@@ -815,6 +816,16 @@ body.dash-clean #greetingBar{display:none;}
     <div id="pickupFilaList"></div>
 
     </div><!-- /pageFila -->
+
+    <!-- ═══ PAGE: RETIRADA FACE ID ═══ -->
+    <div class="prof-page" id="pageRetirFace">
+      <div class="sec-title">🚪 Retirada Face ID — minhas turmas (hoje)
+        <button onclick="loadProfRetirFace()" style="margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px;">↻ Atualizar</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">Quando o responsável faz Face ID na portaria, a criança aparece aqui. Você clica em "Encaminhar" e ela vai pra portaria. Cards somem 5min depois da criança sair.</p>
+      <div id="profRetirContador" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;"></div>
+      <div id="profRetirCards"><div class="empty-state" style="padding:30px;text-align:center;color:var(--muted);">Carregando…</div></div>
+    </div><!-- /pageRetirFace -->
 
     <!-- ═══ PAGE: DIPLOMAS ═══ -->
     <div class="prof-page" id="pageDiplomas">
@@ -1864,6 +1875,125 @@ body.dash-clean #greetingBar{display:none;}
   }
 
   // ═══════════════════════════════════════════════════
+  //  RETIRADA FACE ID — Página dedicada (fila do dia da turma)
+  // ═══════════════════════════════════════════════════
+  let _profRetirPollTimer = null;
+
+  function _profRetirTempoDecorrido(iso) {
+    const ms = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(ms / 60000);
+    if (min < 1) return 'agora';
+    if (min < 60) return `há ${min}min`;
+    return new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+
+  function _profRetirStatusPill(a) {
+    if (a.status === 'concluido') {
+      const hh = a.concluido_em ? new Date(a.concluido_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+      return `<span style="background:#48bb78;color:#fff;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;">✅ saiu ${hh}</span>`;
+    }
+    if (a.status === 'encaminhado') {
+      return `<span style="background:#3182ce;color:#fff;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;">🚶 encaminhei</span>`;
+    }
+    if (a.status === 'cancelado') {
+      return `<span style="background:#a0aec0;color:#fff;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;">cancelado</span>`;
+    }
+    return `<span style="background:#f6a623;color:#fff;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;">🚗 aguardando</span>`;
+  }
+
+  function _profRetirRenderCard(a) {
+    const fotoAluno = a.aluno_foto_url
+      ? `<img src="${a.aluno_foto_url}" alt="" style="width:120px;height:120px;border-radius:12px;object-fit:cover;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.15);flex-shrink:0;">`
+      : `<div style="width:120px;height:120px;border-radius:12px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:48px;flex-shrink:0;">👶</div>`;
+    const fotoPai = a.pai_foto_captura_url
+      ? `<img src="${a.pai_foto_captura_url}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2);">`
+      : `<div style="width:40px;height:40px;border-radius:50%;background:#cbd5e0;display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>`;
+
+    const idadeMin = (Date.now() - new Date(a.criado_em).getTime()) / 60000;
+    const isAtrasado = a.status === 'aguardando' && idadeMin > 5;
+
+    let borderColor = '#f6a623';
+    if (a.status === 'concluido') borderColor = '#48bb78';
+    else if (a.status === 'encaminhado') borderColor = '#3182ce';
+    else if (a.status === 'cancelado') borderColor = '#cbd5e0';
+    if (isAtrasado) borderColor = '#e53e3e';
+
+    const bg = a.status === 'concluido' ? '#f0fff4' : '#fff';
+    const botao = a.status === 'aguardando'
+      ? `<button onclick="acessoEncaminhar('${a.id}', this); setTimeout(loadProfRetirFace, 800);" style="margin-top:10px;width:100%;background:#48bb78;color:#fff;border:none;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">✅ Encaminhar à portaria</button>`
+      : '';
+
+    const encaminhadoLine = (a.encaminhado_em && a.status !== 'concluido')
+      ? `<div style="font-size:11px;color:#3182ce;margin-top:4px;">🚶 encaminhei às ${new Date(a.encaminhado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>`
+      : '';
+
+    return `
+      <div style="background:${bg};border:2px solid ${borderColor};border-radius:14px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          ${fotoAluno}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:20px;font-weight:700;color:#1a1a1a;line-height:1.15;margin-bottom:2px;">${a.aluno_nome || '—'}</div>
+            <div style="font-size:12px;color:#666;margin-bottom:10px;">${a.turma || ''}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              ${fotoPai}
+              <div style="font-size:12px;color:#444;line-height:1.25;min-width:0;">
+                <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong>${a.pessoa_nome || ''}</strong></div>
+                <div style="color:#888;font-size:11px;">chegou ${_profRetirTempoDecorrido(a.criado_em)}</div>
+              </div>
+            </div>
+            ${_profRetirStatusPill(a)}
+            ${encaminhadoLine}
+          </div>
+        </div>
+        ${botao}
+      </div>
+    `;
+  }
+
+  async function loadProfRetirFace() {
+    if (_profRetirPollTimer) { clearInterval(_profRetirPollTimer); _profRetirPollTimer = null; }
+    async function fetchOnce() {
+      let arr = [];
+      try {
+        const d = await callApi({ action: 'acesso_alertas_professora', apenas_ativos: false });
+        arr = Array.isArray(d?.data) ? d.data : (Array.isArray(d) ? d : []);
+      } catch(e) {
+        document.getElementById('profRetirCards').innerHTML = `<div class="empty-state" style="padding:30px;color:#c53030;">Erro ao carregar: ${e?.message || e}</div>`;
+        return;
+      }
+
+      const aguardando = arr.filter(a => a.status === 'aguardando').length;
+      const encaminhadas = arr.filter(a => a.status === 'encaminhado').length;
+      const concluidas = arr.filter(a => a.status === 'concluido').length;
+
+      document.getElementById('profRetirContador').innerHTML = `
+        ${aguardando ? `<span style="background:#fff3e0;border:1px solid #f6a623;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600;color:#b07d10;">🚗 ${aguardando} aguardando</span>` : ''}
+        ${encaminhadas ? `<span style="background:#ebf5ff;border:1px solid #3182ce;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600;color:#2c5282;">🚶 ${encaminhadas} encaminhei</span>` : ''}
+        ${concluidas ? `<span style="background:#f0fff4;border:1px solid #48bb78;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600;color:#2d7a3a;">✅ ${concluidas} saíram</span>` : ''}
+      `;
+
+      const cards = document.getElementById('profRetirCards');
+      if (!arr.length) {
+        cards.innerHTML = `<div class="empty-state" style="padding:40px;text-align:center;color:var(--muted);">Nenhuma retirada hoje. Os cards aparecem quando o responsável faz Face ID na portaria.</div>`;
+        return;
+      }
+      const ordStatus = { aguardando: 1, encaminhado: 2, concluido: 3, cancelado: 4 };
+      arr.sort((a,b) => {
+        const ra = ordStatus[a.status] ?? 99;
+        const rb = ordStatus[b.status] ?? 99;
+        if (ra !== rb) return ra - rb;
+        return new Date(b.criado_em) - new Date(a.criado_em);
+      });
+      cards.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;">${arr.map(_profRetirRenderCard).join('')}</div>`;
+    }
+
+    fetchOnce();
+    _profRetirPollTimer = setInterval(() => {
+      if (document.getElementById('pageRetirFace')?.classList.contains('active') && !document.hidden) fetchOnce();
+    }, 15000);
+  }
+
+  // ═══════════════════════════════════════════════════
   //  QUIZ DE COMPLIANCE — Tela no portal da professora
   // ═══════════════════════════════════════════════════
   async function verificarQuizPendente() {
@@ -2267,6 +2397,7 @@ body.dash-clean #greetingBar{display:none;}
     if (page === 'ativExtras') loadProfAtivExtras();
     if (page === 'perfil') loadPerfil();
     if (page === 'cozinha') loadProfCozinha();
+    if (page === 'retirFace') loadProfRetirFace();
   }
 
   // ═══ COZINHA (Professora) ═══

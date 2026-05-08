@@ -1268,9 +1268,11 @@ router.on("acesso_alertas_professora", authProfessora, async (ctx) => {
   if (!professoraId) throw new AppError("AUTH_REQUIRED", "Professora ID não encontrado.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
 
+  const { apenas_ativos } = ctx.body as Any;
+  const apenasAtivos = apenas_ativos !== false; // default true (banner)
+
   const hojeIso = new Date().toISOString().split("T")[0];
 
-  // Alertas da professora: hoje, em fluxo aberto OU concluídos há menos de 5min
   const { data: alertas } = await ctx.sb.from("acesso_alertas")
     .select("*")
     .eq("escola_id", ctx.escola_id)
@@ -1279,17 +1281,20 @@ router.on("acesso_alertas_professora", authProfessora, async (ctx) => {
     .eq("tipo", "chegada_responsavel")
     .gte("criado_em", `${hojeIso}T00:00:00`)
     .order("criado_em", { ascending: false })
-    .limit(20);
+    .limit(apenasAtivos ? 20 : 200);
 
-  // Filtra: aguardando, encaminhado, ou concluído há <5min (pra mostrar ✓ saiu por um tempinho)
+  // apenas_ativos=true (banner): aguardando/encaminhado, ou concluído há <5min
+  // apenas_ativos=false (página dedicada): tudo do dia
   const cincoMinAtras = Date.now() - 5 * 60 * 1000;
-  const visiveis = (alertas ?? []).filter((a: Any) => {
-    if (a.status === "aguardando" || a.status === "encaminhado") return true;
-    if (a.status === "concluido" && a.concluido_em) {
-      return new Date(a.concluido_em).getTime() > cincoMinAtras;
-    }
-    return false;
-  });
+  const visiveis = apenasAtivos
+    ? (alertas ?? []).filter((a: Any) => {
+        if (a.status === "aguardando" || a.status === "encaminhado") return true;
+        if (a.status === "concluido" && a.concluido_em) {
+          return new Date(a.concluido_em).getTime() > cincoMinAtras;
+        }
+        return false;
+      })
+    : (alertas ?? []);
 
   // Enriquece com foto do aluno (cadastrada) + foto do pai (capturada no evento)
   const alunoIds = Array.from(new Set(visiveis.map((a: Any) => a.aluno_id).filter(Boolean)));
@@ -1368,27 +1373,31 @@ router.on("acesso_chegada_encaminhar", authProfessora, async (ctx) => {
 
 router.on("acesso_chegadas_portaria", authGerenteOrSecretaria, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { apenas_ativos } = ctx.body as Any;
+  const apenasAtivos = apenas_ativos !== false; // default true (banner)
+
   const hojeIso = new Date().toISOString().split("T")[0];
 
-  // Chegadas + tentativas de saída solo do dia, destinatário recepção
   const { data: alertas } = await ctx.sb.from("acesso_alertas")
     .select("*")
     .eq("escola_id", ctx.escola_id)
     .eq("destinatario_tipo", "recepcao")
     .in("tipo", ["chegada_responsavel", "tentativa_saida_solo"])
     .gte("criado_em", `${hojeIso}T00:00:00`)
-    .order("criado_em", { ascending: false });
+    .order("criado_em", { ascending: false })
+    .limit(apenasAtivos ? 50 : 500);
 
-  // Filtra: abertos OU concluídos há <5min OU urgentes não-lidos
   const cincoMinAtras = Date.now() - 5 * 60 * 1000;
-  const visiveis = (alertas ?? []).filter((a: Any) => {
-    if (a.status === "aguardando" || a.status === "encaminhado") return true;
-    if (a.urgente && !a.lido) return true;
-    if (a.status === "concluido" && a.concluido_em) {
-      return new Date(a.concluido_em).getTime() > cincoMinAtras;
-    }
-    return false;
-  });
+  const visiveis = apenasAtivos
+    ? (alertas ?? []).filter((a: Any) => {
+        if (a.status === "aguardando" || a.status === "encaminhado") return true;
+        if (a.urgente && !a.lido) return true;
+        if (a.status === "concluido" && a.concluido_em) {
+          return new Date(a.concluido_em).getTime() > cincoMinAtras;
+        }
+        return false;
+      })
+    : (alertas ?? []);
 
   const alunoIds = Array.from(new Set(visiveis.map((a: Any) => a.aluno_id).filter(Boolean)));
   const eventoIds = Array.from(new Set(visiveis.map((a: Any) => a.responsavel_evento_id).filter(Boolean)));
