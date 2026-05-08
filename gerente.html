@@ -1015,6 +1015,18 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
       </div>
 
+      <!-- ═══ PONTO AFD (Portaria 671) ═══ -->
+      <div data-modulo="ponto">
+      <div class="sb-label" onclick="toggleSbSection(this)">Ponto AFD <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-section collapsed">
+        <a class="nav-item" href="#" onclick="showPanel('pontoDash',this)"><span class="ic">📊</span> Dashboard</a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoEmployees',this)"><span class="ic">👥</span> Funcionários</a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoImport',this)"><span class="ic">📥</span> Importar AFD</a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoMirror',this)"><span class="ic">🪞</span> Espelho de Ponto</a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoJustif',this)"><span class="ic">📝</span> Justificativas</a>
+      </div>
+      </div>
+
       <!-- ROI & Economia e Logotipo movidos para admin.html (painel Admin da Escola).
            Panels 'roi' e 'logo' continuam existindo e acessíveis via gerente.html#roi / #logo. -->
 
@@ -3176,6 +3188,180 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
+      <!-- ═══ PONTO AFD — Dashboard ═══ -->
+      <div id="panelPontoDash" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <div class="sec-title" style="margin:0;">🕐 Ponto AFD — Dashboard</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="pontoDashMes" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
+            <select id="pontoDashAno" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
+            <button onclick="loadPontoDash()" style="padding:8px 16px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">Atualizar</button>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;">
+          Visão consolidada do mês: total de funcionários ativos, importações AFD realizadas, dias com presença, ausências, marcações ímpares e saldos.
+          Compatível com Portaria MTP 671/2021 (REP-A, REP-P e REP-C).
+        </p>
+        <div class="stats-grid" id="pontoDashStats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:24px;gap:14px;">
+          <div class="stat-card"><div class="stat-label">Funcionários ativos</div><div class="stat-value" id="pontoStEmps">—</div><div class="stat-sub">com PIS</div></div>
+          <div class="stat-card"><div class="stat-label">Importações AFD</div><div class="stat-value" id="pontoStImps">—</div><div class="stat-sub">total no histórico</div></div>
+          <div class="stat-card"><div class="stat-label">Dias presentes</div><div class="stat-value" id="pontoStPres" style="color:#2d7a3a;">—</div><div class="stat-sub">no mês</div></div>
+          <div class="stat-card"><div class="stat-label">Ausências</div><div class="stat-value" id="pontoStAus" style="color:#C8102E;">—</div><div class="stat-sub">dias úteis sem batida</div></div>
+          <div class="stat-card"><div class="stat-label">Marcações ímpares</div><div class="stat-value" id="pontoStImp" style="color:#d4830a;">—</div><div class="stat-sub">esqueceu de bater?</div></div>
+          <div class="stat-card"><div class="stat-label">Com hora extra</div><div class="stat-value" id="pontoStExt" style="color:#1a6bb5;">—</div><div class="stat-sub">saldo positivo</div></div>
+          <div class="stat-card"><div class="stat-label">Com débito</div><div class="stat-value" id="pontoStDeb" style="color:#a06400;">—</div><div class="stat-sub">saldo negativo</div></div>
+        </div>
+        <div style="background:#fff7e6;border:1px solid #d4830a;border-radius:10px;padding:14px 16px;font-size:12px;color:#7a5208;">
+          <strong>ℹ️ Importante:</strong> as estatísticas são baseadas nas batidas já importadas. Se faltar um arquivo AFD, importe em <em>Importar AFD</em> antes de fechar a folha.
+        </div>
+      </div>
+
+      <!-- ═══ PONTO AFD — Funcionários ═══ -->
+      <div id="panelPontoEmployees" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <div class="sec-title" style="margin:0;">👥 Funcionários do Ponto <span class="count-badge" id="pontoEmpsCount">0</span></div>
+          <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="pontoToggleEmpForm()">+ Novo Funcionário</button>
+        </div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5;">
+          Cadastre os funcionários que aparecem no AFD com o <strong>PIS exato (12 dígitos)</strong> usado pelo REP. Sem o PIS cadastrado as batidas chegam mas não casam com nenhum funcionário.
+        </p>
+
+        <div id="pontoEmpForm" style="display:none;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
+            <div class="ff"><label>Nome completo *</label><input id="pontoEmpNome" placeholder="Maria Silva"></div>
+            <div class="ff"><label>PIS (12 dígitos) *</label><input id="pontoEmpPis" placeholder="123.45678.90-1" maxlength="14"></div>
+            <div class="ff"><label>Cargo</label><input id="pontoEmpCargo" placeholder="Professora"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 140px;gap:12px;margin-top:8px;">
+            <div class="ff"><label>Departamento</label><input id="pontoEmpDept" placeholder="Pedagógico"></div>
+            <div class="ff"><label>Jornada (ex: 08:00-12:00,13:00-17:00)</label><input id="pontoEmpSched" placeholder="08:00-12:00,13:00-17:00"></div>
+            <div class="ff"><label>Horas/dia</label><input id="pontoEmpHoras" type="number" step="0.5" placeholder="8" value="8"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+            <button onclick="pontoToggleEmpForm()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
+            <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoEmpSalvar()">Salvar</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>PIS</th><th>Cargo</th><th>Departamento</th><th>Jornada</th><th>h/dia</th><th>Ações</th></tr></thead>
+            <tbody id="pontoEmpsTable"><tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ PONTO AFD — Importar AFD ═══ -->
+      <div id="panelPontoImport" class="panel">
+        <div class="sec-title" style="margin-bottom:6px;">📥 Importar AFD (Portaria 671)</div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.5;">
+          Faça upload do arquivo <code>.txt</code> exportado do REP (Registrador Eletrônico de Ponto). O sistema detecta header (tipo 1), funcionários (tipo 5), batidas (tipo 3) e trailer (tipo 9), valida o checksum e gera o resumo diário automaticamente.
+        </p>
+
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:20px;">
+          <div class="ff" style="margin:0;">
+            <label>Arquivo AFD (.txt)</label>
+            <input type="file" id="pontoAfdFile" accept=".txt,text/plain" onchange="pontoAfdPreview()" style="padding:10px;border:1.5px dashed var(--border);border-radius:8px;background:#fdfbf8;width:100%;font-family:inherit;font-size:13px;">
+          </div>
+          <div id="pontoAfdInfo" style="display:none;margin-top:14px;padding:14px;background:#fdfbf8;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;"></div>
+          <div id="pontoAfdActions" style="display:none;margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
+            <button onclick="pontoAfdLimpar()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Limpar</button>
+            <button id="pontoAfdEnviarBtn" class="btn-create" style="width:auto;padding:8px 22px;" onclick="pontoAfdEnviar()">Importar para o Lumied</button>
+          </div>
+          <div id="pontoAfdStatus" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="sec-title" style="margin:0;font-size:14px;">Importações recentes</div>
+          <button onclick="loadPontoImports()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data</th><th>Arquivo</th><th>Período</th><th>CNPJ</th><th>Eventos</th><th>PIS s/ match</th><th>Status</th></tr></thead>
+            <tbody id="pontoImportsTable"><tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ PONTO AFD — Espelho de Ponto ═══ -->
+      <div id="panelPontoMirror" class="panel">
+        <div class="sec-title" style="margin-bottom:6px;">🪞 Espelho de Ponto</div>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5;">
+          Visão mensal por funcionário com batidas, horas trabalhadas, saldo (HE/débito) e status do dia. Use para conferir antes de fechar a folha.
+        </p>
+
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+          <div class="ff" style="margin:0;flex:1;min-width:220px;">
+            <label>Funcionário</label>
+            <select id="pontoMirrorEmp" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;">
+              <option value="">Selecione…</option>
+            </select>
+          </div>
+          <div class="ff" style="margin:0;width:120px;">
+            <label>Mês</label>
+            <select id="pontoMirrorMes" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
+          </div>
+          <div class="ff" style="margin:0;width:110px;">
+            <label>Ano</label>
+            <select id="pontoMirrorAno" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
+          </div>
+          <button class="btn-create" style="width:auto;padding:9px 22px;" onclick="loadPontoMirror()">Gerar</button>
+          <button onclick="pontoMirrorPrint()" style="padding:9px 14px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">🖨️ Imprimir</button>
+        </div>
+
+        <div id="pontoMirrorContent" style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;min-height:200px;">
+          <div class="empty-state">Selecione funcionário, mês e ano e clique em <strong>Gerar</strong>.</div>
+        </div>
+      </div>
+
+      <!-- ═══ PONTO AFD — Justificativas ═══ -->
+      <div id="panelPontoJustif" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <div class="sec-title" style="margin:0;">📝 Justificativas de Ponto <span class="count-badge" id="pontoJustifCount">0</span></div>
+          <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="pontoToggleJustifForm()">+ Nova Justificativa</button>
+        </div>
+
+        <div id="pontoJustifForm" style="display:none;background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:2fr 140px 1fr;gap:12px;">
+            <div class="ff"><label>Funcionário *</label>
+              <select id="pontoJustifEmp" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"><option value="">Selecione…</option></select>
+            </div>
+            <div class="ff"><label>Data *</label><input type="date" id="pontoJustifData"></div>
+            <div class="ff"><label>Motivo *</label>
+              <select id="pontoJustifMotivo" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;">
+                <option value="atestado_medico">Atestado médico</option>
+                <option value="atestado_familiar">Atestado familiar</option>
+                <option value="ferias">Férias</option>
+                <option value="folga_compensatoria">Folga compensatória</option>
+                <option value="ponto_facultativo">Ponto facultativo</option>
+                <option value="esqueceu_bater">Esqueceu de bater</option>
+                <option value="problema_rep">Problema no REP</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </div>
+          <div class="ff" style="margin-top:8px;"><label>Descrição (opcional)</label><textarea id="pontoJustifDesc" rows="3" placeholder="Detalhes ou número do atestado…" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;background:#fdfbf8;"></textarea></div>
+          <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+            <button onclick="pontoToggleJustifForm()" style="padding:8px 16px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
+            <button class="btn-create" style="width:auto;padding:8px 20px;" onclick="pontoJustifSalvar()">Salvar</button>
+          </div>
+        </div>
+
+        <div class="filter-bar" style="margin-bottom:14px;">
+          <button class="fb active" onclick="pontoJustifFiltro('pendente',this)">⏳ Pendentes <span id="pontoJustifBadgePend"></span></button>
+          <button class="fb" onclick="pontoJustifFiltro('aprovado',this)">✅ Aprovadas</button>
+          <button class="fb" onclick="pontoJustifFiltro('rejeitado',this)">❌ Rejeitadas</button>
+          <button class="fb" onclick="pontoJustifFiltro('',this)">📋 Todas</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data</th><th>Funcionário</th><th>Motivo</th><th>Descrição</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="pontoJustifTable"><tr><td colspan="6" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ROI DASHBOARD -->
       <div id="panelRoi" class="panel">
         <div class="section-header-ai"><h2>📈 ROI — Retorno do Investimento</h2><span class="lumi-badge">✨ IA</span></div>
@@ -3956,10 +4142,12 @@ docker compose up -d --build</pre>
         </p>
 
         <!-- Tabs -->
-        <div class="filter-bar" style="margin-bottom:16px;">
-          <button class="fb active" onclick="lprTab('placas',this)">🅿️ Placas Cadastradas</button>
-          <button class="fb" onclick="lprTab('eventos',this)">📋 Eventos Recentes</button>
+        <div class="filter-bar" style="margin-bottom:16px;flex-wrap:wrap;">
+          <button class="fb active" onclick="lprTab('placas',this)">🅿️ Placas</button>
+          <button class="fb" onclick="lprTab('eventos',this)">📋 Eventos</button>
           <button class="fb" onclick="lprTab('solicitacoes',this)">📨 Solicitações <span id="lprSolBadge" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px;font-weight:600;">0</span></button>
+          <button class="fb" onclick="lprTab('cameras',this)">📷 Câmeras</button>
+          <button class="fb" onclick="lprTab('relatorio',this)">📊 Relatório</button>
         </div>
 
         <!-- Tab: Placas -->
@@ -4023,9 +4211,99 @@ docker compose up -d --build</pre>
           </div>
         </div>
 
+        <!-- Tab: Câmeras -->
+        <div id="lprTabCameras" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:13px;color:var(--muted);">
+              Múltiplas câmeras por escola. Substitui as variáveis <code>LPR_*</code> do .env (que continuam funcionando como fallback).
+            </div>
+            <button onclick="lprCameraNova()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;">+ Nova câmera</button>
+          </div>
+          <div id="lprCamerasList" style="display:flex;flex-direction:column;gap:12px;"><div class="empty-state">Carregando…</div></div>
+        </div>
+
+        <!-- Tab: Relatório -->
+        <div id="lprTabRelatorio" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:13px;color:var(--muted);">Volume diário de leituras agrupado por motivo.</div>
+            <select id="lprRelDias" onchange="loadLprRelatorio()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;">
+              <option value="7">Últimos 7 dias</option>
+              <option value="30" selected>Últimos 30 dias</option>
+              <option value="90">Últimos 90 dias</option>
+            </select>
+          </div>
+          <div id="lprRelContent" style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;">
+            <div class="empty-state">Carregando…</div>
+          </div>
+        </div>
+
         <!-- Lightbox foto -->
         <div id="lprLightbox" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;cursor:zoom-out;">
           <img id="lprLightboxImg" src="" style="max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 4px 32px rgba(0,0,0,.5);">
+        </div>
+
+        <!-- Modal câmera -->
+        <div id="lprCameraModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:12px;padding:24px;width:560px;max-width:94vw;max-height:92vh;overflow-y:auto;">
+            <div style="font-weight:700;font-size:16px;margin-bottom:16px;">📷 <span id="lprCamModalTitle">Nova câmera</span></div>
+            <input type="hidden" id="lprCamId">
+            <div style="display:grid;gap:12px;">
+              <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Nome *</div>
+                <input id="lprCamNome" placeholder="Ex: Portão de carros" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+              <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">RTSP URL *</div>
+                <input id="lprCamRtsp" placeholder="rtsp://user:pass@192.168.1.50:554/cam/realmonitor?channel=1&subtype=0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;"></label>
+              <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">ALPR endpoint</div>
+                <input id="lprCamAlpr" placeholder="http://localhost:32168/v1/vision/alpr" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;"></label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Intervalo scan (ms)</div>
+                  <input type="number" id="lprCamScan" value="2000" min="500" max="30000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+                <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Confiança mínima (0-1)</div>
+                  <input type="number" id="lprCamConf" value="0.85" step="0.01" min="0" max="1" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+              </div>
+              <div style="border-top:1px solid var(--border);padding-top:12px;">
+                <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Acionamento da cancela (escolha 1)</div>
+                <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Webhook URL (Sonoff/Tasmota/ESP-Home)</div>
+                  <input id="lprCamGateUrl" placeholder="http://192.168.1.100/relay/on" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:12px;"></label>
+                <label style="margin-top:8px;display:block;"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Webhook Bearer token (opcional)</div>
+                  <input id="lprCamGateTok" type="password" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+                  <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">— OU — GPIO pin (libgpiod)</div>
+                    <input type="number" id="lprCamGpioPin" placeholder="ex: 17" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+                  <label><div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Pulso GPIO (ms)</div>
+                    <input type="number" id="lprCamGpioPulse" value="500" min="50" max="5000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"></label>
+                </div>
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="lprCamAtiva" checked> Câmera ativa</label>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;margin-top:20px;">
+              <button id="lprCamRoiBtn" onclick="lprOpenRoiEditor()" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;display:none;">🎯 Editar ROI</button>
+              <div style="display:flex;gap:8px;margin-left:auto;">
+                <button onclick="document.getElementById('lprCameraModal').style.display='none'" style="padding:8px 16px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">Cancelar</button>
+                <button onclick="lprCameraSave()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal ROI editor (canvas) -->
+        <div id="lprRoiModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10001;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:12px;padding:20px;max-width:96vw;max-height:96vh;overflow:auto;">
+            <div style="font-weight:700;font-size:16px;margin-bottom:8px;">🎯 Editor de ROI — <span id="lprRoiCamNome"></span></div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Clique para adicionar pontos do polígono. Mínimo 3 pontos. Detecções fora da área serão descartadas.</div>
+            <div id="lprRoiCanvasWrap" style="position:relative;display:inline-block;background:#000;">
+              <img id="lprRoiSnap" src="" style="display:block;max-width:80vw;max-height:70vh;">
+              <canvas id="lprRoiCanvas" style="position:absolute;inset:0;cursor:crosshair;"></canvas>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:12px;gap:8px;">
+              <div style="font-size:12px;color:var(--muted);"><span id="lprRoiPtCount">0</span> ponto(s)</div>
+              <div style="display:flex;gap:8px;">
+                <button onclick="lprRoiClear()" style="padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Limpar</button>
+                <button onclick="lprRoiSnapshot()" style="padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar imagem</button>
+                <button onclick="document.getElementById('lprRoiModal').style.display='none'" style="padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Cancelar</button>
+                <button onclick="lprRoiSave()" style="padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;">Salvar ROI</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Modal cadastro -->
@@ -5000,7 +5278,7 @@ docker compose up -d --build</pre>
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
@@ -5019,7 +5297,7 @@ docker compose up -d --build</pre>
     var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
     if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -5120,6 +5398,11 @@ docker compose up -d --build</pre>
     if(id==='acessoPermissoes') loadAcessoPermissoes();
     if(id==='acessoEventos') loadAcessoEventos();
     if(id==='engajamento') loadEngajamentoPanel();
+    if(id==='pontoDash')      loadPontoDash();
+    if(id==='pontoEmployees') loadPontoEmployees();
+    if(id==='pontoImport')    { loadPontoImports(); }
+    if(id==='pontoMirror')    loadPontoMirrorPanel();
+    if(id==='pontoJustif')    loadPontoJustifPanel();
     // Track usage for recents & smart ordering
     if(id !== 'analytics') trackPanelUsage(id);
     updateBottomBarActive(id);
@@ -5522,7 +5805,9 @@ docker compose up -d --build</pre>
     compInspecoes:{icon:'📋',label:'Inspeções'},compPoliticas:{icon:'📄',label:'Políticas'},
     compCalendario:{icon:'📅',label:'Cal. Regulatório'},compAlertas:{icon:'📧',label:'Alertas'},compFeriados:{icon:'📅',label:'Feriados'},compConfig:{icon:'⚙️',label:'Config. Ponto'},
     contaFinanceiro:{icon:'💳',label:'Conta & Plano'},roi:{icon:'📈',label:'ROI'},
-    emergencia:{icon:'🚨',label:'Emergência'}
+    emergencia:{icon:'🚨',label:'Emergência'},
+    pontoDash:{icon:'🕐',label:'Ponto AFD'},pontoEmployees:{icon:'👥',label:'Funcionários'},
+    pontoImport:{icon:'📥',label:'Importar AFD'},pontoMirror:{icon:'🪞',label:'Espelho'},pontoJustif:{icon:'📝',label:'Justificativas'}
   };
 
   function getFavorites() {
@@ -10884,8 +11169,12 @@ docker compose up -d --build</pre>
     document.getElementById('lprTabPlacas').style.display = which === 'placas' ? '' : 'none';
     document.getElementById('lprTabEventos').style.display = which === 'eventos' ? '' : 'none';
     document.getElementById('lprTabSolicitacoes').style.display = which === 'solicitacoes' ? '' : 'none';
+    document.getElementById('lprTabCameras').style.display = which === 'cameras' ? '' : 'none';
+    document.getElementById('lprTabRelatorio').style.display = which === 'relatorio' ? '' : 'none';
     if (which === 'eventos') loadAcessoLpr();
     if (which === 'solicitacoes') loadLprSolicitacoes();
+    if (which === 'cameras') loadLprCameras();
+    if (which === 'relatorio') loadLprRelatorio();
   }
 
   function lprOpenLightbox(url) {
@@ -11030,6 +11319,259 @@ docker compose up -d --build</pre>
     const r = await callAcesso({ action: 'acesso_lpr_solicitacao_rejeitar', solicitacao_id: id, motivo: motivo.trim() || 'Não informado' });
     if (r?.error) { alert('Erro: ' + r.error); return; }
     loadLprSolicitacoes();
+  }
+
+  // ── Câmeras (Fase 3) ──────────────────────────────────
+  let _lprCameras = [];
+
+  async function loadLprCameras() {
+    const r = await callAcesso({ action: 'acesso_lpr_cameras_list' });
+    _lprCameras = r?.data || r || [];
+    const el = document.getElementById('lprCamerasList');
+    if (!_lprCameras.length) {
+      el.innerHTML = '<div class="empty-state">Nenhuma câmera cadastrada. Enquanto não houver, o daemon usa <code>LPR_RTSP_URL</code> do .env como fallback.</div>';
+      return;
+    }
+    el.innerHTML = _lprCameras.map(c => {
+      const safeRtsp = String(c.rtsp_url || '').replace(/:\/\/[^@]+@/, '://***@');
+      const stCor = c.ativa ? '#2d7a3a' : '#999';
+      const stTxt = c.ativa ? '✅ Ativa' : '⏸️ Inativa';
+      const acionamento = c.gpio_pin != null ? `🔌 GPIO ${c.gpio_pin} (${c.gpio_pulse_ms}ms)` : (c.gate_webhook_url ? '🌐 Webhook' : '— sem acionamento');
+      const roi = (c.roi_polygon && Array.isArray(c.roi_polygon) && c.roi_polygon.length >= 3) ? `🎯 ROI ${c.roi_polygon.length} pts` : 'sem ROI (frame inteiro)';
+      return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:15px;">${escHtml(c.nome)}</div>
+            <div style="color:${stCor};font-size:12px;font-weight:600;">${stTxt}</div>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-all;">${escHtml(safeRtsp)}</div>
+          <div style="font-size:12px;color:var(--muted);">
+            ${c.scan_interval_ms}ms · conf≥${c.confidence_min} · ${escHtml(roi)} · ${escHtml(acionamento)}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button onclick="lprCameraEdit('${c.id}')" style="background:#fff;color:#1976d2;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">Editar</button>
+          <button onclick="lprCameraEdit('${c.id}',true)" style="background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">🎯 ROI</button>
+          <button onclick="lprCameraDelete('${c.id}','${escHtml(c.nome)}')" style="background:#fff;color:#c0392b;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">Excluir</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function lprCameraNova() {
+    document.getElementById('lprCamModalTitle').textContent = 'Nova câmera';
+    document.getElementById('lprCamId').value = '';
+    document.getElementById('lprCamNome').value = '';
+    document.getElementById('lprCamRtsp').value = '';
+    document.getElementById('lprCamAlpr').value = 'http://localhost:32168/v1/vision/alpr';
+    document.getElementById('lprCamScan').value = 2000;
+    document.getElementById('lprCamConf').value = 0.85;
+    document.getElementById('lprCamGateUrl').value = '';
+    document.getElementById('lprCamGateTok').value = '';
+    document.getElementById('lprCamGpioPin').value = '';
+    document.getElementById('lprCamGpioPulse').value = 500;
+    document.getElementById('lprCamAtiva').checked = true;
+    document.getElementById('lprCamRoiBtn').style.display = 'none';
+    document.getElementById('lprCameraModal').style.display = 'flex';
+  }
+
+  function lprCameraEdit(id, openRoi) {
+    const c = _lprCameras.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('lprCamModalTitle').textContent = 'Editar câmera';
+    document.getElementById('lprCamId').value = c.id;
+    document.getElementById('lprCamNome').value = c.nome;
+    document.getElementById('lprCamRtsp').value = c.rtsp_url;
+    document.getElementById('lprCamAlpr').value = c.alpr_url;
+    document.getElementById('lprCamScan').value = c.scan_interval_ms;
+    document.getElementById('lprCamConf').value = c.confidence_min;
+    document.getElementById('lprCamGateUrl').value = c.gate_webhook_url || '';
+    document.getElementById('lprCamGateTok').value = c.gate_webhook_token || '';
+    document.getElementById('lprCamGpioPin').value = c.gpio_pin != null ? c.gpio_pin : '';
+    document.getElementById('lprCamGpioPulse').value = c.gpio_pulse_ms || 500;
+    document.getElementById('lprCamAtiva').checked = !!c.ativa;
+    document.getElementById('lprCamRoiBtn').style.display = '';
+    if (openRoi) {
+      document.getElementById('lprCameraModal').style.display = 'none';
+      lprOpenRoiEditor();
+    } else {
+      document.getElementById('lprCameraModal').style.display = 'flex';
+    }
+  }
+
+  async function lprCameraSave() {
+    const body = {
+      action: 'acesso_lpr_camera_save',
+      id: document.getElementById('lprCamId').value || undefined,
+      nome: document.getElementById('lprCamNome').value.trim(),
+      rtsp_url: document.getElementById('lprCamRtsp').value.trim(),
+      alpr_url: document.getElementById('lprCamAlpr').value.trim() || undefined,
+      scan_interval_ms: Number(document.getElementById('lprCamScan').value),
+      confidence_min: Number(document.getElementById('lprCamConf').value),
+      gate_webhook_url: document.getElementById('lprCamGateUrl').value.trim() || null,
+      gate_webhook_token: document.getElementById('lprCamGateTok').value.trim() || null,
+      gpio_pin: document.getElementById('lprCamGpioPin').value.trim() === '' ? null : Number(document.getElementById('lprCamGpioPin').value),
+      gpio_pulse_ms: Number(document.getElementById('lprCamGpioPulse').value),
+      ativa: document.getElementById('lprCamAtiva').checked,
+    };
+    if (!body.nome || !body.rtsp_url) { alert('Nome e RTSP URL são obrigatórios.'); return; }
+    const r = await callAcesso(body);
+    if (r?.error) { alert('Erro: ' + r.error); return; }
+    document.getElementById('lprCameraModal').style.display = 'none';
+    loadLprCameras();
+  }
+
+  async function lprCameraDelete(id, nome) {
+    if (!confirm(`Excluir câmera "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    const r = await callAcesso({ action: 'acesso_lpr_camera_delete', id });
+    if (r?.error) { alert('Erro: ' + r.error); return; }
+    loadLprCameras();
+  }
+
+  // ── ROI editor (canvas) ───────────────────────────────
+  let _lprRoiCamId = null;
+  let _lprRoiPoints = []; // {x:0..1, y:0..1}
+  let _lprRoiImgW = 1280;
+  let _lprRoiImgH = 720;
+
+  async function lprOpenRoiEditor() {
+    const id = document.getElementById('lprCamId').value;
+    if (!id) { alert('Salve a câmera primeiro.'); return; }
+    const c = _lprCameras.find(x => x.id === id);
+    if (!c) { alert('Câmera não encontrada.'); return; }
+    _lprRoiCamId = id;
+    _lprRoiPoints = (c.roi_polygon && Array.isArray(c.roi_polygon)) ? c.roi_polygon.slice() : [];
+    document.getElementById('lprRoiCamNome').textContent = c.nome;
+    document.getElementById('lprCameraModal').style.display = 'none';
+    document.getElementById('lprRoiModal').style.display = 'flex';
+    await lprRoiSnapshot();
+    lprRoiRedraw();
+  }
+
+  async function lprRoiSnapshot() {
+    const img = document.getElementById('lprRoiSnap');
+    img.removeAttribute('src');
+    const r = await callAcesso({ action: 'acesso_lpr_camera_snapshot', camera_id: _lprRoiCamId });
+    const d = r?.data || r || {};
+    if (!d.ok || !d.jpeg_b64) {
+      alert('Não consegui pegar snapshot da câmera. Erro: ' + (d.error || 'bridge offline?') + '\nVocê ainda pode definir o ROI sem visualizar a imagem.');
+      img.src = '';
+      _lprRoiImgW = 1280; _lprRoiImgH = 720;
+      lprRoiRedraw();
+      return;
+    }
+    _lprRoiImgW = d.width || 1280;
+    _lprRoiImgH = d.height || 720;
+    img.src = 'data:image/jpeg;base64,' + d.jpeg_b64;
+    img.onload = () => lprRoiRedraw();
+  }
+
+  function lprRoiRedraw() {
+    const img = document.getElementById('lprRoiSnap');
+    const canvas = document.getElementById('lprRoiCanvas');
+    const w = img.clientWidth || 800, h = img.clientHeight || 450;
+    canvas.width = w; canvas.height = h;
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+    if (!_lprRoiPoints.length) {
+      document.getElementById('lprRoiPtCount').textContent = '0';
+      return;
+    }
+    ctx.strokeStyle = '#39ff14'; ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(57,255,20,.2)';
+    ctx.beginPath();
+    _lprRoiPoints.forEach((p, i) => {
+      const x = p.x * w, y = p.y * h;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    if (_lprRoiPoints.length >= 3) { ctx.closePath(); ctx.fill(); }
+    ctx.stroke();
+    // Pontos
+    ctx.fillStyle = '#39ff14';
+    _lprRoiPoints.forEach(p => {
+      ctx.beginPath(); ctx.arc(p.x * w, p.y * h, 5, 0, Math.PI * 2); ctx.fill();
+    });
+    document.getElementById('lprRoiPtCount').textContent = _lprRoiPoints.length;
+  }
+
+  function lprRoiClear() { _lprRoiPoints = []; lprRoiRedraw(); }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('lprRoiCanvas');
+    if (canvas) {
+      canvas.addEventListener('click', (ev) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (ev.clientX - rect.left) / rect.width;
+        const y = (ev.clientY - rect.top) / rect.height;
+        _lprRoiPoints.push({ x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) });
+        lprRoiRedraw();
+      });
+    }
+    window.addEventListener('resize', () => {
+      if (document.getElementById('lprRoiModal').style.display === 'flex') lprRoiRedraw();
+    });
+  });
+
+  async function lprRoiSave() {
+    if (_lprRoiPoints.length > 0 && _lprRoiPoints.length < 3) { alert('Polígono precisa de pelo menos 3 pontos (ou 0 pra remover ROI).'); return; }
+    const r = await callAcesso({ action: 'acesso_lpr_camera_roi_save', id: _lprRoiCamId, roi_polygon: _lprRoiPoints.length === 0 ? null : _lprRoiPoints });
+    if (r?.error) { alert('Erro: ' + r.error); return; }
+    document.getElementById('lprRoiModal').style.display = 'none';
+    loadLprCameras();
+  }
+
+  // ── Relatório ─────────────────────────────────────────
+  async function loadLprRelatorio() {
+    const dias = Number(document.getElementById('lprRelDias').value);
+    const r = await callAcesso({ action: 'acesso_lpr_relatorio', dias });
+    const dados = r?.data || r || [];
+    const el = document.getElementById('lprRelContent');
+    if (!dados.length) {
+      el.innerHTML = '<div class="empty-state">Sem eventos no período. Eventos aparecem após câmera começar a ler placas.</div>';
+      return;
+    }
+    const totais = dados.reduce((acc, d) => {
+      acc.total += +d.total; acc.aut += +d.autorizadas; acc.nao += +d.nao_cadastradas;
+      acc.fh += +d.fora_horario; acc.fv += +d.fora_validade; acc.in += +d.inativas; acc.bc += +d.baixa_conf;
+      return acc;
+    }, { total: 0, aut: 0, nao: 0, fh: 0, fv: 0, in: 0, bc: 0 });
+    const max = Math.max(...dados.map(d => +d.total), 1);
+
+    const stats = `<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-label">Total leituras</div><div class="stat-value">${totais.total}</div></div>
+      <div class="stat-card"><div class="stat-label">Autorizadas</div><div class="stat-value" style="color:#2d7a3a;">${totais.aut}</div><div class="stat-sub">${(totais.aut/Math.max(totais.total,1)*100).toFixed(1)}%</div></div>
+      <div class="stat-card"><div class="stat-label">Não cadastradas</div><div class="stat-value" style="color:#c0392b;">${totais.nao}</div><div class="stat-sub">${(totais.nao/Math.max(totais.total,1)*100).toFixed(1)}%</div></div>
+      <div class="stat-card"><div class="stat-label">Outros (fora horário/validade/inativa/baixa conf)</div><div class="stat-value" style="color:#b07d10;">${totais.fh + totais.fv + totais.in + totais.bc}</div></div>
+    </div>`;
+
+    const rows = dados.map(d => {
+      const pct = +d.total / max * 100;
+      const partsW = (n) => `${(+n / +d.total * 100).toFixed(0)}%`;
+      const segs = [
+        { n: +d.autorizadas, c: '#2d7a3a' },
+        { n: +d.nao_cadastradas, c: '#c0392b' },
+        { n: +d.fora_horario + +d.fora_validade + +d.inativas, c: '#b07d10' },
+        { n: +d.baixa_conf, c: '#999' },
+      ].filter(s => s.n > 0);
+      const stack = segs.map(s => `<div style="background:${s.c};width:${partsW(s.n)};" title="${s.n}"></div>`).join('');
+      return `<tr>
+        <td style="font-size:12px;white-space:nowrap;">${escHtml(d.dia)}</td>
+        <td style="font-weight:600;font-size:13px;text-align:right;width:60px;">${d.total}</td>
+        <td>
+          <div style="display:flex;height:18px;border-radius:4px;overflow:hidden;background:#f0f0f0;width:${pct}%;min-width:20px;">${stack}</div>
+        </td>
+        <td style="font-size:11px;color:#2d7a3a;text-align:right;width:60px;">${d.autorizadas}</td>
+        <td style="font-size:11px;color:#c0392b;text-align:right;width:60px;">${d.nao_cadastradas}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = stats + `
+      <div style="font-size:13px;margin-bottom:8px;color:var(--muted);">Legenda: <span style="color:#2d7a3a;">●</span> autorizadas <span style="color:#c0392b;">●</span> não cadastradas <span style="color:#b07d10;">●</span> fora horário/validade/inativas <span style="color:#999;">●</span> baixa confiança</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Dia</th><th style="text-align:right;">Total</th><th>Distribuição</th><th style="text-align:right;color:#2d7a3a;">✅</th><th style="text-align:right;color:#c0392b;">⚠️</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
   }
 
   function lprPlacaNova() {

@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import os from "node:os";
 import { config, passwordFor } from "./config.js";
 import { log } from "./log.js";
-import { replacePlatesCache, getLprStats, type CachedPlate } from "./lpr.js";
+import { replacePlatesCache, getLprStats, syncCamerasFromDb, execLprSnapshot, type CachedPlate, type CameraConfig } from "./lpr.js";
 
 const pexec = promisify(exec);
 
@@ -213,7 +213,7 @@ export async function execHttpProxy(p: CommandPayload): Promise<unknown> {
   });
 }
 
-export type Tipo = "enroll_user" | "enroll_face" | "enroll_card" | "delete_user" | "ping" | "sync_all" | "http_proxy" | "hardware" | "lpr_sync" | "lpr_stats";
+export type Tipo = "enroll_user" | "enroll_face" | "enroll_card" | "delete_user" | "ping" | "sync_all" | "http_proxy" | "hardware" | "lpr_sync" | "lpr_stats" | "lpr_cameras_sync" | "lpr_snapshot";
 
 export async function dispatch(tipo: Tipo, payload: CommandPayload): Promise<unknown> {
   switch (tipo) {
@@ -230,6 +230,13 @@ export async function dispatch(tipo: Tipo, payload: CommandPayload): Promise<unk
       replacePlatesCache(plates);
       return { ok: true, count: plates.length };
     }
+    case "lpr_cameras_sync": {
+      const camerasList = (payload as unknown as { cameras?: CameraConfig[] }).cameras;
+      if (!Array.isArray(camerasList)) throw new Error("lpr_cameras_sync exige cameras array");
+      const r = syncCamerasFromDb(camerasList);
+      return { ok: true, ...r };
+    }
+    case "lpr_snapshot": return execLprSnapshot(payload as unknown as { camera_id?: string });
     case "lpr_stats": return getLprStats();
     case "sync_all": throw new Error("sync_all deve ser orquestrado pelo edge (envia enroll_user + enroll_face N vezes)");
     default: throw new Error(`tipo desconhecido: ${tipo}`);

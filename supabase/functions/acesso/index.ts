@@ -79,13 +79,16 @@ async function getAuthenticatedPaiEmail(ctx: { req: Request; sb: Any }): Promise
   return String(data.user.email).toLowerCase();
 }
 
-/** Verify the authenticated user owns the familia (by email). Returns the familia row. */
+/** Verify the authenticated user owns the familia (by email). Returns the familia row.
+ * mig 298 adicionou familias.id; antes esse select falhava silenciosamente. */
 async function assertFamiliaOwnership(ctx: { req: Request; sb: Any }, email: string): Promise<Any> {
   const authedEmail = await getAuthenticatedPaiEmail(ctx);
   if (authedEmail !== String(email || "").toLowerCase()) {
     throw new AppError("FORBIDDEN", "Você não tem permissão para acessar dados desta família.");
   }
-  const { data: familia } = await ctx.sb.from("familias").select("id, nome_responsavel, email").eq("email", authedEmail).maybeSingle();
+  const { data: familia } = await ctx.sb.from("familias")
+    .select("id, cpf, escola_id, nome_responsavel, email")
+    .eq("email", authedEmail).maybeSingle();
   return familia;
 }
 
@@ -850,8 +853,12 @@ router.on("acesso_evento_callback", async (ctx) => {
       }
     }
 
+    // camera_id pode ser uuid de DB ou "env-default" (ignorado em DB)
+    const cameraId = (typeof body.camera_id === "string" && body.camera_id.length === 36) ? body.camera_id : null;
+
     await ctx.sb.from("acesso_lpr_eventos").insert({
       escola_id: lprEscolaId,
+      camera_id: cameraId,
       placa_lida: placa,
       placa_id: body.placa_id || null,
       confidence: body.confidence != null ? Number(body.confidence) : null,
@@ -1628,11 +1635,11 @@ router.on("acesso_presenca_filhos", async (ctx) => {
   const familiaAuth = await assertFamiliaOwnership(ctx, email);
   if (!familiaAuth) return successResponse([]);
   const hoje = new Date().toISOString().split("T")[0];
-  // Buscar alunos vinculados a esta familia (inclui coluna `filhos` se disponível)
-  const { data: familia } = await ctx.sb.from("familias").select("id, filhos").eq("id", familiaAuth.id).maybeSingle();
-  if (!familia) return successResponse([]);
-  // filhos pode ser array de objetos com nome, ou buscar na tabela alunos
-  const { data: alunos } = await ctx.sb.from("alunos").select("id, nome, serie").eq("familia_id", familia.id);
+  // alunos não tem familia_id; vínculo é por email/familia_email + escola_id
+  const { data: alunos } = await ctx.sb.from("alunos")
+    .select("id, nome, serie")
+    .eq("escola_id", familiaAuth.escola_id)
+    .or(`familia_email.eq.${familiaAuth.email},email.eq.${familiaAuth.email}`);
   if (!alunos?.length) return successResponse([]);
   // Buscar presença de cada aluno hoje
   const result = [];
@@ -3400,6 +3407,112 @@ router.on("acesso_lpr_sync_now", authGerente, async (ctx) => {
   const plates = data ?? [];
   const r = await bridgeDispatchEphemeral(ctx.escola_id, "lpr_sync", { plates }, 5000);
   return successResponse({ ok: r.ok, count: plates.length, error: r.error, body: r.body });
+});
+
+// ─── Fase 3: câmeras + ROI + relatório ─────────────────────────
+
+// Empurra a lista de câmeras pro daemon (chamado após save/delete)
+async function syncCamerasToBridge(sb: Any, escolaId: string): Promise<void> {
+  const { data } = await sb.from("acesso_lpr_cameras")
+    .select("id, nome, rtsp_url, alpr_url, scan_interval_ms, confidence_min, roi_polygon, gate_webhook_url, gate_webhook_token, gpio_pin, gpio_pulse_ms, ativa")
+    .eq("escola_id", escolaId);
+  const cameras = data ?? [];
+  await bridgeDispatchEphemeral(escolaId, "lpr_cameras_sync", { cameras }, 5000).catch(() => { /* offline ok */ });
+}
+
+router.on("acesso_lpr_cameras_list", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("acesso_lpr_cameras")
+    .select("*").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false });
+  return successResponse(data ?? []);
+});
+
+router.on("acesso_lpr_camera_save", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const b = ctx.body as Any;
+  if (!b.nome || !b.rtsp_url) throw new AppError("VALIDATION_FAILED", "nome e rtsp_url são obrigatórios.");
+  const row: Any = {
+    nome: b.nome,
+    rtsp_url: b.rtsp_url,
+    alpr_url: b.alpr_url || "http://localhost:32168/v1/vision/alpr",
+    scan_interval_ms: Math.max(500, Math.min(Number(b.scan_interval_ms || 2000), 30000)),
+    confidence_min: Math.max(0, Math.min(Number(b.confidence_min || 0.85), 1)),
+    gate_webhook_url: b.gate_webhook_url || null,
+    gate_webhook_token: b.gate_webhook_token || null,
+    gpio_pin: (b.gpio_pin === null || b.gpio_pin === undefined || b.gpio_pin === "") ? null : Number(b.gpio_pin),
+    gpio_pulse_ms: Math.max(50, Math.min(Number(b.gpio_pulse_ms || 500), 5000)),
+    ativa: b.ativa !== false,
+  };
+  let saved: Any;
+  if (b.id) {
+    const { data, error } = await ctx.sb.from("acesso_lpr_cameras")
+      .update(row).eq("id", b.id).eq("escola_id", ctx.escola_id).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    saved = data;
+  } else {
+    const { data, error } = await ctx.sb.from("acesso_lpr_cameras")
+      .insert({ ...row, escola_id: ctx.escola_id }).select().single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    saved = data;
+  }
+  syncCamerasToBridge(ctx.sb, ctx.escola_id).catch(() => {});
+  return successResponse(saved);
+});
+
+router.on("acesso_lpr_camera_delete", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { id } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório");
+  await ctx.sb.from("acesso_lpr_cameras").delete().eq("id", id).eq("escola_id", ctx.escola_id);
+  syncCamerasToBridge(ctx.sb, ctx.escola_id).catch(() => {});
+  return successResponse({ ok: true });
+});
+
+// Salva apenas o polygon ROI (chamado pelo editor canvas)
+router.on("acesso_lpr_camera_roi_save", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { id, roi_polygon } = ctx.body as Any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório");
+  // valida formato: array de {x,y} 0..1
+  let poly: Any = null;
+  if (roi_polygon !== null && roi_polygon !== undefined) {
+    if (!Array.isArray(roi_polygon)) throw new AppError("VALIDATION_FAILED", "roi_polygon deve ser array");
+    if (roi_polygon.length > 0 && roi_polygon.length < 3) throw new AppError("VALIDATION_FAILED", "polygon precisa 0 ou ≥3 pontos");
+    poly = roi_polygon.map((p: Any) => ({
+      x: Math.max(0, Math.min(Number(p.x), 1)),
+      y: Math.max(0, Math.min(Number(p.y), 1)),
+    }));
+    if (poly.length === 0) poly = null;
+  }
+  const { error } = await ctx.sb.from("acesso_lpr_cameras")
+    .update({ roi_polygon: poly }).eq("id", id).eq("escola_id", ctx.escola_id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  syncCamerasToBridge(ctx.sb, ctx.escola_id).catch(() => {});
+  return successResponse({ ok: true });
+});
+
+// Pede um snapshot fresco da câmera (pra editor ROI)
+router.on("acesso_lpr_camera_snapshot", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { camera_id } = ctx.body as Any;
+  const r = await bridgeDispatchEphemeral(ctx.escola_id, "lpr_snapshot", { camera_id }, 12000);
+  if (!r.ok) return successResponse({ ok: false, error: r.error || "Falha no snapshot" });
+  const body: Any = r.body || {};
+  return successResponse({
+    ok: !!body.jpeg_b64,
+    jpeg_b64: body.jpeg_b64 || null,
+    width: body.width || null,
+    height: body.height || null,
+    error: body.error || null,
+  });
+});
+
+// Relatório agregado por dia (chama função SQL lpr_relatorio_diario)
+router.on("acesso_lpr_relatorio", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const dias = Math.max(1, Math.min(Number((ctx.body as Any)?.dias || 30), 90));
+  const { data } = await ctx.sb.rpc("lpr_relatorio_diario", { p_escola: ctx.escola_id, p_dias: dias });
+  return successResponse(data ?? []);
 });
 
 // ─── acesso_lpr_evento_foto_url: signed URL pra foto de um evento (gerente/secretaria) ───
