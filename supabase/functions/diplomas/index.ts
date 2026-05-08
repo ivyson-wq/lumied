@@ -2551,6 +2551,8 @@ Deno.serve(async (req) => {
     // (criar/contar/finalizar/cancelar) pra ser autônomo na função designada.
   ].includes(action)
 
+  // Mesma armadilha do isAlmProfAction: handler dentro do bloco abaixo só roda
+  // se o nome estiver aqui. Adicionou `if (action === '...')` novo? Inclua aqui.
   const isAlmGerenteAction = [
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
     'alm_aprovar', 'alm_rejeitar',
@@ -2558,9 +2560,13 @@ Deno.serve(async (req) => {
     'alm_insumo_atualizar_auto', 'alm_insumo_historico', 'alm_entrada_estoque',
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
-    'alm_relatorio', 'alm_prof_set_turma',
+    'alm_relatorio', 'alm_relatorio_query',
+    'alm_relatorio_export_xlsx', 'alm_relatorio_export_pdf',
+    'alm_relatorio_visualizacoes_list', 'alm_relatorio_visualizacao_save', 'alm_relatorio_visualizacao_delete',
+    'alm_prof_set_turma',
     'alm_pdf_pendentes', 'alm_pdf_aprovados', 'alm_pdf_observacoes', 'alm_excel_observacoes',
     'alm_pdf_entregues', 'alm_pdf_guia_recebimento', 'alm_pdf_romaneio_turma',
+    'alm_movimentacoes_list', 'alm_conferencia_inventario',
     'alm_inventario_criar', 'alm_inventario_list', 'alm_inventario_get',
     'alm_inventario_contar', 'alm_inventario_finalizar', 'alm_inventario_cancelar',
   ].includes(action)
