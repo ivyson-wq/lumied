@@ -11247,9 +11247,14 @@ docker compose up -d --build</pre>
     const mes = document.getElementById('almDashMes').value || new Date().toISOString().slice(0,7);
     const d = await callDiplomas({ action: 'alm_painel', mes });
     const stats = document.getElementById('almDashStats');
+    const totalEst = Number(d.total_estoque || 0);
+    const totalComp = Number(d.total_compra || 0);
+    const subAprov = totalEst > 0 || totalComp > 0
+      ? `📦 ${almFmtBRL(totalEst)} estoque · 🛒 ${almFmtBRL(totalComp)} compra`
+      : `em ${almMesBR(mes)}`;
     stats.innerHTML = `
       <div class="stat-card" data-g="total"><div class="stat-label">Pendentes</div><div class="stat-value" style="color:#f6a623;">${d.pendentes??0}</div><div class="stat-sub">aguardando análise</div></div>
-      <div class="stat-card" data-g="integral"><div class="stat-label">Total Aprovado</div><div class="stat-value">${almFmtBRL(d.totalAprovado)}</div><div class="stat-sub">em ${almMesBR(mes)}</div></div>
+      <div class="stat-card" data-g="integral"><div class="stat-label">Total Aprovado</div><div class="stat-value">${almFmtBRL(d.totalAprovado)}</div><div class="stat-sub" style="font-size:10px;">${subAprov}</div></div>
       <div class="stat-card" data-g="semi"><div class="stat-label">Turmas Ativas</div><div class="stat-value">${(d.turmas||[]).length}</div><div class="stat-sub">com orçamento</div></div>`;
     const badge = document.getElementById('almPendBadge');
     if (d.pendentes > 0) { badge.textContent = d.pendentes; badge.style.display = 'inline'; }
@@ -11279,20 +11284,38 @@ docker compose up -d --build</pre>
       const pct = t.orcamento > 0 ? Math.min(100, (t.gasto/t.orcamento)*100) : 0;
       const barColor = pct>=90 ? '#e53e3e' : pct>=70 ? '#f6a623' : '#48bb78';
       const pendLabel = t.gasto_pendente > 0 ? ` <span style="font-size:10px;color:#b07d00;">(${almFmtBRL(t.gasto_pendente)} pend.)</span>` : '';
+      const estoqueLbl = (t.gasto_estoque > 0 || t.gasto_compra > 0)
+        ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">📦 ${almFmtBRL(t.gasto_estoque||0)} estoque · 🛒 ${almFmtBRL(t.gasto_compra||0)} compra</div>`
+        : '';
       return `<div class="alm-budget-row">
         <div style="width:12px;height:12px;border-radius:50%;background:${t.cor||'#3B82F6'};flex-shrink:0;"></div>
-        <div style="min-width:120px;font-weight:600;font-size:13px;">${t.nome}</div>
+        <div style="min-width:120px;">
+          <div style="font-weight:600;font-size:13px;">${t.nome}</div>
+          ${estoqueLbl}
+        </div>
         <div class="alm-budget-bar-wrap"><div class="alm-budget-bar" style="width:${pct}%;background:${barColor};"></div></div>
         <div style="font-size:12px;color:var(--muted);white-space:nowrap;">${almFmtBRL(t.gasto)}${pendLabel} / ${almFmtBRL(t.orcamento)}</div>
       </div>`;
     }).join('');
   }
 
+  // Cache do estoque atual por insumo_id — atualizado a cada load
+  var _almEstoqueMap = {};
+
+  async function _almRefreshEstoqueMap() {
+    const dCat = await callDiplomas({ action: 'alm_insumos_list' });
+    _almEstoqueMap = {};
+    (dCat.data || []).forEach(i => { _almEstoqueMap[i.id] = Number(i.estoque_qty || 0); });
+  }
+
   async function almLoadPendentes() {
     document.getElementById('almPendLoading').style.display = 'block';
     document.getElementById('almPendEmpty').style.display = 'none';
     document.getElementById('almPendList').innerHTML = '';
-    const d = await callDiplomas({ action: 'alm_pendentes' });
+    const [d] = await Promise.all([
+      callDiplomas({ action: 'alm_pendentes' }),
+      _almRefreshEstoqueMap(),
+    ]);
     document.getElementById('almPendLoading').style.display = 'none';
     const reqs = d.data || [];
     const badge = document.getElementById('almPendBadge');
@@ -11306,7 +11329,10 @@ docker compose up -d --build</pre>
     const status = document.getElementById('almTodasStatus').value;
     document.getElementById('almTodasLoading').style.display = 'block';
     document.getElementById('almTodasList').innerHTML = '';
-    const d = await callDiplomas({ action: 'alm_todas_reqs', mes, status });
+    const [d] = await Promise.all([
+      callDiplomas({ action: 'alm_todas_reqs', mes, status }),
+      _almRefreshEstoqueMap(),
+    ]);
     document.getElementById('almTodasLoading').style.display = 'none';
     const reqs = d.data || [];
     if (!reqs.length) { document.getElementById('almTodasList').innerHTML = '<div class="empty-state">Nenhuma requisição encontrada.</div>'; return; }
@@ -11320,9 +11346,27 @@ docker compose up -d --build</pre>
     const turmaNome  = r.series?.nome || '—';
     const profNome   = r.professoras?.nome || r.professoras?.email || '—';
     const data = new Date(r.criado_em).toLocaleDateString('pt-BR');
-    const itensHtml = itens.map(it =>
-      `<span style="display:inline-block;background:#f0ece6;border-radius:4px;padding:2px 8px;font-size:11px;margin:2px;">${it.nome} ×${it.qty_solicitado}</span>`
-    ).join('');
+    const isAprovado = r.status === 'aprovado';
+    const itensHtml = itens.map(it => {
+      // Pendente: mostra estoque atual (preview do que poderá ser deduzido)
+      // Aprovado: mostra qty_do_estoque e qty_a_comprar (já fixados em alm_aprovar)
+      let badge = '';
+      if (isAprovado) {
+        const est = Number(it.qty_do_estoque || 0);
+        const buy = Number(it.qty_a_comprar  || 0);
+        if (est > 0 && buy > 0) {
+          badge = ` <span title="Atendido pelo estoque + compra" style="background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;">📦${est} · 🛒${buy}</span>`;
+        } else if (est > 0) {
+          badge = ` <span title="100% atendido pelo estoque" style="background:#dcfce7;color:#166534;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;">📦${est}</span>`;
+        } else if (buy > 0) {
+          badge = ` <span title="Comprado integralmente" style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;">🛒${buy}</span>`;
+        }
+      } else if (it.insumo_id && _almEstoqueMap[it.insumo_id] > 0) {
+        const est = _almEstoqueMap[it.insumo_id];
+        badge = ` <span title="Disponível no estoque — será deduzido na aprovação" style="background:#dcfce7;color:#166534;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;">📦${est}</span>`;
+      }
+      return `<span style="display:inline-block;background:#f0ece6;border-radius:4px;padding:2px 8px;font-size:11px;margin:2px;">${it.nome} ×${it.qty_solicitado}${badge}</span>`;
+    }).join('');
     return `<div class="alm-req-row ${r.status}">
       <div style="width:10px;align-self:stretch;border-radius:4px;background:${turmaColor};flex-shrink:0;"></div>
       <div style="flex:1;min-width:0;">
