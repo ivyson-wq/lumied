@@ -479,6 +479,229 @@ router.on("acesso_dispositivo_sync", authGerente, async (ctx) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  SIMPAX INVENTORY IMPORT + MAPA VISUAL (mig 304)
+//
+//  acesso_simpax_import: parseia o CSV exportado do Simpax/SiMPAX
+//    e faz UPSERT por serial_externo em acesso_dispositivos.
+//    O front decodifica latin1 → utf-8 e envia { csv_text }.
+//
+//  acesso_dispositivos_mapa: lê v_acesso_dispositivos_mapa e
+//    devolve devices agrupados por grupo_mapa pra grade visual.
+// ═══════════════════════════════════════════════════════════════
+
+function parseSimpaxLine(rawLine: string): Record<string, string> | null {
+  const cells = rawLine.split(";").map((c) => c.trim());
+  if (cells.length < 5 || !cells[0]) return null;
+  return {
+    identificacao: cells[0],
+    descricao: cells[1] ?? "",
+    contratante: cells[2] ?? "",
+    refeitorio: cells[3] ?? "",
+    coletor_671: cells[4] ?? "",
+    exige_bio: cells[5] ?? "",
+    local: cells[6] ?? "",
+    estado: cells[7] ?? "",
+    impressora: cells[8] ?? "",
+    ultima_comunicacao: cells[9] ?? "",
+    tipo_equipamento: cells[10] ?? "",
+    tipo_registro: cells[11] ?? "",
+    ultimo_registro: cells[12] ?? "",
+    data_ultimo_registro: cells[13] ?? "",
+    atestado: cells[14] ?? "",
+    tamanho_lbr: cells[15] ?? "",
+    ativo: cells[16] ?? "",
+    possui_atualizacao: cells[17] ?? "",
+  };
+}
+
+function parseSimpaxDate(s: string): string | null {
+  if (!s) return null;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const [, dd, mm, yyyy, hh, mi, ss] = m;
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss ?? "00"}-03:00`;
+}
+
+function classificarSimpax(descricao: string, modeloDetalhe: string): {
+  tipo: string;
+  grupo_mapa: string;
+  lado: "esquerdo" | "direito" | null;
+} {
+  const d = descricao.toLowerCase();
+  const m = modeloDetalhe.toLowerCase();
+
+  let lado: "esquerdo" | "direito" | null = null;
+  if (d.includes("esquerd")) lado = "esquerdo";
+  else if (d.includes("direit")) lado = "direito";
+
+  if (m.includes("simpax") && !m.includes("idface")) {
+    return { tipo: "terminal_bidirecional", grupo_mapa: "app_mobile", lado: null };
+  }
+  if (d.startsWith("catraca") && d.includes("sa")) {
+    return { tipo: "catraca_saida", grupo_mapa: "catraca_saida", lado };
+  }
+  if (d.startsWith("catraca") && d.includes("entrada")) {
+    return { tipo: "catraca_entrada", grupo_mapa: "catraca_entrada", lado };
+  }
+  if (d.includes("entrada respons")) {
+    return { tipo: "terminal_entrada", grupo_mapa: "entrada_resp", lado };
+  }
+  if (d.includes("sa") && d.includes("infantil")) {
+    return { tipo: "terminal_saida", grupo_mapa: "saida_infantil", lado };
+  }
+  if (d.includes("entrada fund")) {
+    return { tipo: "terminal_entrada", grupo_mapa: "entrada_fundamental", lado };
+  }
+  return { tipo: "terminal_bidirecional", grupo_mapa: "outros", lado };
+}
+
+router.on("acesso_simpax_import", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { csv_text, dry_run } = ctx.body as Any;
+  if (typeof csv_text !== "string" || csv_text.length < 50) {
+    throw new AppError("VALIDATION_FAILED", "csv_text obrigatório (CSV decodificado em UTF-8).");
+  }
+
+  const lines = csv_text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) throw new AppError("VALIDATION_FAILED", "CSV vazio ou sem dados.");
+
+  const rows: Record<string, string>[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const r = parseSimpaxLine(lines[i]);
+    if (r) rows.push(r);
+  }
+
+  const novos: Any[] = [];
+  const atualizados: Any[] = [];
+  const ignorados: Any[] = [];
+  const sincroniaTs = new Date().toISOString();
+
+  for (const r of rows) {
+    const serial = r.identificacao.trim();
+    if (!serial) {
+      ignorados.push({ identificacao: r.identificacao, motivo: "sem serial" });
+      continue;
+    }
+
+    const { tipo, grupo_mapa, lado } = classificarSimpax(r.descricao, r.tipo_equipamento);
+    const ativoFlag = r.ativo.toLowerCase() === "ativo";
+
+    const meta = {
+      ultima_comunicacao: parseSimpaxDate(r.ultima_comunicacao),
+      ultimo_registro: parseSimpaxDate(r.data_ultimo_registro),
+      total_registros: r.ultimo_registro && /^\d+$/.test(r.ultimo_registro) ? Number(r.ultimo_registro) : null,
+      atestado: r.atestado || null,
+      exige_bio: r.exige_bio === "Marcado",
+      coletor_671: r.coletor_671 === "Marcado",
+      contratante: r.contratante || null,
+      refeitorio: r.refeitorio === "Marcado",
+      estado: r.estado || null,
+      tipo_registro: r.tipo_registro || null,
+      tamanho_lbr: r.tamanho_lbr || null,
+      possui_atualizacao: r.possui_atualizacao || null,
+    };
+
+    const { data: existing } = await ctx.sb
+      .from("acesso_dispositivos")
+      .select("id, nome, tipo, lado, grupo_mapa")
+      .eq("escola_id", ctx.escola_id)
+      .eq("serial_externo", serial)
+      .maybeSingle();
+
+    if (dry_run) {
+      (existing ? atualizados : novos).push({ serial, descricao: r.descricao, tipo, grupo_mapa, lado, ativo: ativoFlag });
+      continue;
+    }
+
+    if (existing) {
+      const { error } = await ctx.sb
+        .from("acesso_dispositivos")
+        .update({
+          nome: r.descricao || existing.nome,
+          tipo,
+          grupo_mapa,
+          lado,
+          modelo_detalhe: r.tipo_equipamento || null,
+          simpax_meta: meta,
+          simpax_ultima_sincronia: sincroniaTs,
+          ativo: ativoFlag,
+        })
+        .eq("id", existing.id)
+        .eq("escola_id", ctx.escola_id);
+      if (error) {
+        ignorados.push({ serial, motivo: error.message });
+      } else {
+        atualizados.push({ serial, descricao: r.descricao });
+      }
+    } else {
+      const { error } = await ctx.sb.from("acesso_dispositivos").insert({
+        escola_id: ctx.escola_id,
+        serial_externo: serial,
+        nome: r.descricao || `Terminal ${serial}`,
+        ip: "",
+        porta: 443,
+        tipo,
+        grupo_mapa,
+        lado,
+        localizacao: r.local || null,
+        modelo: r.tipo_equipamento?.includes("idFace") ? "iDFace" : (r.tipo_equipamento || "Desconhecido"),
+        modelo_detalhe: r.tipo_equipamento || null,
+        simpax_meta: meta,
+        simpax_ultima_sincronia: sincroniaTs,
+        ativo: ativoFlag,
+        via_bridge: true,
+      });
+      if (error) {
+        ignorados.push({ serial, motivo: error.message });
+      } else {
+        novos.push({ serial, descricao: r.descricao });
+      }
+    }
+  }
+
+  return successResponse({
+    total: rows.length,
+    novos: novos.length,
+    atualizados: atualizados.length,
+    ignorados: ignorados.length,
+    detalhe: { novos, atualizados, ignorados },
+    dry_run: !!dry_run,
+  });
+});
+
+router.on("acesso_dispositivos_mapa", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data, error } = await ctx.sb
+    .from("v_acesso_dispositivos_mapa")
+    .select("*")
+    .eq("escola_id", ctx.escola_id)
+    .order("grupo_mapa", { ascending: true })
+    .order("lado", { ascending: true, nullsFirst: true })
+    .order("nome", { ascending: true });
+
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+
+  const grupos: Record<string, Any[]> = {};
+  for (const d of data ?? []) {
+    const g = d.grupo_mapa || "outros";
+    (grupos[g] ??= []).push(d);
+  }
+
+  return successResponse({
+    devices: data ?? [],
+    grupos,
+    resumo: {
+      total: data?.length ?? 0,
+      ok: data?.filter((d: Any) => d.status_mapa === "ok").length ?? 0,
+      lento: data?.filter((d: Any) => d.status_mapa === "lento").length ?? 0,
+      mudo: data?.filter((d: Any) => d.status_mapa === "mudo").length ?? 0,
+      sem_dados: data?.filter((d: Any) => d.status_mapa === "sem_dados").length ?? 0,
+      inativo: data?.filter((d: Any) => d.status_mapa === "inativo").length ?? 0,
+    },
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  FACE ENROLLMENT (authGerente)
 // ═══════════════════════════════════════════════════════════════
 

@@ -980,6 +980,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('acessoSetup',this); loadAcessoSetup()"><span class="ic">✅</span> <strong>Setup Face ID</strong></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoDash',this)"><span class="ic">🚪</span> <span data-i18n="gerente.nav.acessoDashboard">Dashboard</span></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoDispositivos',this)"><span class="ic">📡</span> <span data-i18n="gerente.nav.dispositivos">Dispositivos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoInventario',this); loadAcessoInventario()"><span class="ic">📋</span> Inventário Simpax</a>
+        <a class="nav-item" href="#" onclick="showPanel('acessoMapa',this); loadAcessoMapa()"><span class="ic">🗺️</span> Mapa de Terminais</a>
         <a class="nav-item" href="#" onclick="showPanel('acessoFaces',this)"><span class="ic">👤</span> <span data-i18n="gerente.nav.facesCadastradas">Faces Cadastradas</span></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoRfid',this)"><span class="ic">💳</span> <span data-i18n="gerente.nav.cartoesRfid">Cartões RFID</span></a>
         <a class="nav-item" href="#" onclick="showPanel('acessoPermissoes',this)"><span class="ic">🔐</span> <span data-i18n="gerente.nav.permissoesRetirada">Permissões de Retirada</span></a>
@@ -4045,6 +4047,44 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
+      <!-- ── CONTROLE DE ACESSO: INVENTÁRIO SIMPAX ── -->
+      <div id="panelAcessoInventario" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div class="sec-title" style="margin:0;">Inventário Simpax</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:4px;">Importe o CSV exportado do portal Simpax pra catalogar serial, último registro e estado de cada terminal Face/RFID.</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input type="file" id="simpaxFile" accept=".csv,text/csv" style="display:none;" onchange="onSimpaxFile(event)">
+            <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="document.getElementById('simpaxFile').click()">📥 Selecionar CSV</button>
+            <button id="simpaxImportBtn" disabled style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;opacity:.5;" onclick="importarSimpax(false)">Importar</button>
+            <button id="simpaxDryBtn" disabled style="padding:8px 16px;background:none;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;opacity:.5;" onclick="importarSimpax(true)">Pré-visualizar</button>
+          </div>
+        </div>
+        <div id="simpaxStatus" style="margin-bottom:12px;"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Serial</th><th>Descrição</th><th>Tipo / Modelo</th><th>Lado</th><th>Último Registro</th><th>Total Reg.</th><th>Status</th></tr></thead>
+            <tbody id="simpaxInventarioTable"><tr><td colspan="7" class="empty-state">Sem dados — importe o CSV do Simpax pra começar.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── CONTROLE DE ACESSO: MAPA DE TERMINAIS ── -->
+      <div id="panelAcessoMapa" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div class="sec-title" style="margin:0;">Mapa de Terminais</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:4px;">Visão por área. Verde: registro &lt;2d · Amarelo: 2-7d · Vermelho: &gt;7d · Cinza: inativo / sem dados.</div>
+          </div>
+          <button style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="loadAcessoMapa()">↻ Atualizar</button>
+        </div>
+        <div id="mapaResumo" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;"></div>
+        <div id="mapaGrid" style="display:flex;flex-direction:column;gap:18px;">
+          <div class="empty-state"><span class="spinner-sm"></span> Carregando mapa…</div>
+        </div>
+      </div>
+
       <!-- ── CONTROLE DE ACESSO: FACES ── -->
       <div id="panelAcessoFaces" class="panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -5701,7 +5741,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoInventario:'Controle de Acesso — Inventário Simpax',acessoMapa:'Controle de Acesso — Mapa de Terminais',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
@@ -5720,7 +5760,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
     if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -5816,6 +5856,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='workflows') loadWorkflows();
     if(id==='acessoDash') loadAcessoDash();
     if(id==='acessoDispositivos') loadAcessoDispositivos();
+    if(id==='acessoInventario') loadAcessoInventario();
+    if(id==='acessoMapa') loadAcessoMapa();
     if(id==='acessoFaces') loadAcessoFaces();
     if(id==='acessoRfid') loadAcessoRfid();
     if(id==='acessoPermissoes') loadAcessoPermissoes();
@@ -10468,6 +10510,143 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         </td>
       </tr>`;
     }).join('');
+  }
+
+  // ═══ Inventário Simpax (mig 304) ═══
+  let _simpaxCsvText = null;
+
+  async function onSimpaxFile(ev) {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    // CSV do Simpax vem em latin1 (ISO-8859-1) — decoder correto preserva acentos
+    _simpaxCsvText = new TextDecoder('iso-8859-1').decode(buf);
+    document.getElementById('simpaxImportBtn').disabled = false;
+    document.getElementById('simpaxImportBtn').style.opacity = '1';
+    document.getElementById('simpaxDryBtn').disabled = false;
+    document.getElementById('simpaxDryBtn').style.opacity = '1';
+    document.getElementById('simpaxStatus').innerHTML =
+      `<div style="padding:10px 12px;background:#fdfbf8;border:1px solid var(--border);border-radius:8px;font-size:13px;">📄 Arquivo carregado: <strong>${escHtml(file.name)}</strong> (${(file.size/1024).toFixed(1)} KB) — clique em "Pré-visualizar" pra ver o que vai mudar antes de importar.</div>`;
+  }
+
+  async function importarSimpax(dryRun) {
+    if (!_simpaxCsvText) return;
+    const status = document.getElementById('simpaxStatus');
+    status.innerHTML = '<div style="padding:10px 12px;background:#fdfbf8;border:1px solid var(--border);border-radius:8px;font-size:13px;"><span class="spinner-sm"></span> ' + (dryRun ? 'Analisando…' : 'Importando…') + '</div>';
+    try {
+      const r = await callAcesso({ action: 'acesso_simpax_import', csv_text: _simpaxCsvText, dry_run: !!dryRun });
+      if (!r || r.error) {
+        status.innerHTML = `<div style="padding:10px 12px;background:#fee;border:1px solid #fcc;border-radius:8px;font-size:13px;color:#a00;">❌ Erro: ${escHtml(r?.error || 'desconhecido')}</div>`;
+        return;
+      }
+      const verbo = dryRun ? 'Seriam ' : '';
+      status.innerHTML =
+        `<div style="padding:12px 14px;background:${dryRun?'#fff8e1':'#e8f5e9'};border:1px solid ${dryRun?'#fde68a':'#a5d6a7'};border-radius:8px;font-size:13px;">
+          ${dryRun?'👁️ Pré-visualização':'✅ Importação concluída'} —
+          <strong>${verbo}${r.novos} criado(s)</strong>,
+          <strong>${verbo}${r.atualizados} atualizado(s)</strong>,
+          ${r.ignorados} ignorado(s) de ${r.total} linhas.
+          ${r.detalhe?.ignorados?.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;color:#a00;">Ver ignorados</summary><pre style="margin-top:6px;font-size:11px;white-space:pre-wrap;">' + escHtml(JSON.stringify(r.detalhe.ignorados,null,2)) + '</pre></details>' : ''}
+         </div>`;
+      if (!dryRun) loadAcessoInventario();
+    } catch (e) {
+      status.innerHTML = `<div style="padding:10px 12px;background:#fee;border:1px solid #fcc;border-radius:8px;font-size:13px;color:#a00;">❌ ${escHtml(String(e))}</div>`;
+    }
+  }
+
+  async function loadAcessoInventario() {
+    const tb = document.getElementById('simpaxInventarioTable');
+    tb.innerHTML = '<tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando…</td></tr>';
+    const r = await callAcesso({ action: 'acesso_dispositivos_mapa' });
+    const list = r?.devices || [];
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="7" class="empty-state">Sem dispositivos catalogados. Importe o CSV do Simpax acima.</td></tr>';
+      return;
+    }
+    const statusPill = (s) => {
+      const map = {
+        ok: { bg:'#e8f5e9', fg:'#2e7d32', txt:'OK' },
+        lento: { bg:'#fff8e1', fg:'#a06200', txt:'Lento (2-7d)' },
+        mudo: { bg:'#fce4e4', fg:'#a02020', txt:'Mudo (>7d)' },
+        sem_dados: { bg:'#eee', fg:'#666', txt:'Sem dados' },
+        inativo: { bg:'#eee', fg:'#666', txt:'Inativo' },
+      };
+      const m = map[s] || map.sem_dados;
+      return `<span style="padding:3px 8px;background:${m.bg};color:${m.fg};border-radius:10px;font-size:11px;font-weight:600;">${m.txt}</span>`;
+    };
+    tb.innerHTML = list.map(d => `<tr>
+      <td style="font-family:ui-monospace,monospace;font-size:12px;">${escHtml(d.serial_externo||'—')}</td>
+      <td>${escHtml(d.nome||'—')}</td>
+      <td style="font-size:12px;color:var(--muted);">${escHtml(d.modelo_detalhe||d.modelo||'—')}</td>
+      <td>${d.lado ? (d.lado==='esquerdo'?'⬅ Esq':'➡ Dir') : '—'}</td>
+      <td style="font-size:12px;">${d.ultimo_registro ? new Date(d.ultimo_registro).toLocaleString('pt-BR') : '<span style="color:var(--muted);">—</span>'}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;">${d.total_registros||0}</td>
+      <td>${statusPill(d.status_mapa)}</td>
+    </tr>`).join('');
+  }
+
+  // ═══ Mapa de Terminais (grade CSS) ═══
+  const _mapaGrupoLabels = {
+    entrada_resp: '🚪 Entrada Responsáveis',
+    saida_infantil: '🧒 Saída Infantil',
+    catraca_entrada: '⏩ Catracas — Entrada Pais & Fundamental',
+    catraca_saida: '⏪ Catracas — Saída Pais & Fundamental',
+    entrada_fundamental: '🎒 Entrada Fundamental',
+    app_mobile: '📱 Apps Mobile (Simpax)',
+    outros: '❓ Outros',
+  };
+
+  async function loadAcessoMapa() {
+    const grid = document.getElementById('mapaGrid');
+    const resumo = document.getElementById('mapaResumo');
+    grid.innerHTML = '<div class="empty-state"><span class="spinner-sm"></span> Carregando mapa…</div>';
+    resumo.innerHTML = '';
+    const r = await callAcesso({ action: 'acesso_dispositivos_mapa' });
+    if (!r || !r.devices?.length) {
+      grid.innerHTML = '<div class="empty-state">Sem dispositivos catalogados — importe o CSV do Simpax na aba Inventário.</div>';
+      return;
+    }
+    const res = r.resumo || {};
+    const pill = (label, n, bg, fg) => `<div style="padding:8px 14px;background:${bg};color:${fg};border-radius:10px;font-size:13px;font-weight:600;">${label}: ${n}</div>`;
+    resumo.innerHTML =
+      pill('🟢 OK', res.ok||0, '#e8f5e9', '#2e7d32') +
+      pill('🟡 Lento', res.lento||0, '#fff8e1', '#a06200') +
+      pill('🔴 Mudo', res.mudo||0, '#fce4e4', '#a02020') +
+      pill('⚫ Inativo/Sem dados', (res.inativo||0)+(res.sem_dados||0), '#eee', '#444') +
+      `<div style="padding:8px 14px;background:#1a6bb5;color:#fff;border-radius:10px;font-size:13px;font-weight:600;">Total: ${res.total||0}</div>`;
+
+    const grupos = r.grupos || {};
+    const ordem = ['entrada_resp','entrada_fundamental','catraca_entrada','saida_infantil','catraca_saida','app_mobile','outros'];
+    const cardCor = (s) => ({
+      ok: { borda:'#a5d6a7', bg:'#f1f8e9', dot:'#2e7d32' },
+      lento: { borda:'#fde68a', bg:'#fffbeb', dot:'#a06200' },
+      mudo: { borda:'#fcc', bg:'#fef2f2', dot:'#a02020' },
+      sem_dados: { borda:'#ddd', bg:'#fafafa', dot:'#999' },
+      inativo: { borda:'#ddd', bg:'#fafafa', dot:'#999' },
+    }[s] || { borda:'#ddd', bg:'#fafafa', dot:'#999' });
+    const blocos = ordem.filter(g => grupos[g]?.length).map(g => {
+      const devs = grupos[g];
+      const cards = devs.map(d => {
+        const c = cardCor(d.status_mapa);
+        const hint = d.ultimo_registro
+          ? `Últ. registro: ${new Date(d.ultimo_registro).toLocaleString('pt-BR')}\nTotal: ${d.total_registros||0}`
+          : 'Sem registro recente';
+        return `<div title="${escHtml(hint)}" style="padding:14px;background:${c.bg};border:1.5px solid ${c.borda};border-radius:10px;min-width:220px;flex:1 1 220px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:${c.dot};display:inline-block;"></span>
+            <strong style="font-size:13px;">${escHtml(d.nome||d.serial_externo||'—')}</strong>
+          </div>
+          <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);margin-bottom:6px;">${escHtml(d.serial_externo||'')}</div>
+          <div style="font-size:11px;color:var(--muted);">${d.lado ? (d.lado==='esquerdo'?'⬅ Esquerdo':'➡ Direito')+' · ' : ''}${d.total_registros||0} reg</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">${d.ultimo_registro ? new Date(d.ultimo_registro).toLocaleDateString('pt-BR') : '<em>sem dados</em>'}</div>
+        </div>`;
+      }).join('');
+      return `<div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--ink);">${_mapaGrupoLabels[g]||g} <span style="color:var(--muted);font-weight:500;font-size:12px;">(${devs.length})</span></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">${cards}</div>
+      </div>`;
+    }).join('');
+    grid.innerHTML = blocos || '<div class="empty-state">Devices catalogados mas sem grupo de mapa atribuído.</div>';
   }
 
   async function salvarDispositivo() {
