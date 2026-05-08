@@ -235,6 +235,42 @@ async function bridgeDispatch(
   };
 }
 
+// Dispatch sem device-target — usado para diagnóstico do próprio daemon (ex.: hardware do Pi).
+// Não persiste em acesso_bridge_comandos (é one-shot, sem valor de auditoria).
+async function bridgeDispatchEphemeral(
+  escolaId: string,
+  tipo: string,
+  payload: Any = {},
+  waitMs = 8000,
+): Promise<BridgeResult> {
+  const gatewayUrl = Deno.env.get("BRIDGE_GATEWAY_URL");
+  const gatewaySecret = Deno.env.get("BRIDGE_GATEWAY_SECRET");
+  if (!gatewayUrl || !gatewaySecret) {
+    return { ok: false, status: 500, error: "Bridge gateway não configurado." };
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${gatewayUrl}/dispatch/${escolaId}`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${gatewaySecret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ req_id: crypto.randomUUID(), wait_ms: waitMs, tipo, payload }),
+      signal: AbortSignal.timeout(waitMs + 5000),
+    });
+  } catch (e) {
+    return { ok: false, status: 502, error: `Gateway unreachable: ${String(e)}` };
+  }
+  let data: Any = null;
+  try { data = await res.json(); } catch { /* ignore */ }
+  if (res.status === 503) return { ok: false, status: 503, error: "Bridge offline" };
+  if (data?.timeout) return { ok: false, status: 504, error: "Timeout aguardando bridge" };
+  return {
+    ok: !!data?.ok,
+    status: data?.ok ? 200 : 502,
+    error: data?.error,
+    body: data?.payload ?? data,
+  };
+}
+
 async function bridgeStatus(escolaId: string): Promise<{ connected: boolean; last_heartbeat: number | null; pending: number; error?: string }> {
   const gatewayUrl = Deno.env.get("BRIDGE_GATEWAY_URL");
   const gatewaySecret = Deno.env.get("BRIDGE_GATEWAY_SECRET");
@@ -3165,6 +3201,16 @@ router.on("acesso_bridge_status", authGerenteOrSecretaria, async (ctx) => {
     gateway: status,
     comandos_em_voo: pendentes ?? [],
   });
+});
+
+// ─── acesso_bridge_hardware: hardware do mini-PC/Pi onde o daemon roda (modelo, RAM, temp, uptime) ───
+router.on("acesso_bridge_hardware", authGerenteOrSecretaria, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const r = await bridgeDispatchEphemeral(ctx.escola_id, "hardware", {}, 8000);
+  if (!r.ok) {
+    return successResponse({ ok: false, error: r.error || "Falha ao consultar bridge", status: r.status });
+  }
+  return successResponse({ ok: true, hardware: r.body });
 });
 
 // ─── acesso_bridge_token_get: revela token (gerente apenas, para instalação do daemon) ───

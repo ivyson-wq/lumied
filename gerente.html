@@ -3888,6 +3888,15 @@ docker compose up -d --build</pre>
           </p>
         </div>
 
+        <!-- Hardware do mini-PC -->
+        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="sec-title" style="font-size:14px;margin:0;">🖥️ Hardware do mini-PC / Pi</div>
+            <button id="bridgeHwBtn" onclick="bridgeLoadHardware()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">Consultar</button>
+          </div>
+          <div id="bridgeHwBox" style="font-size:13px;color:var(--muted);">Clique em <em>Consultar</em> pra ler dados do daemon (modelo, RAM, temperatura, uptime).</div>
+        </div>
+
         <!-- Comandos em voo -->
         <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;">
           <div class="sec-title" style="font-size:14px;margin:0 0 12px 0;">📋 Comandos recentes</div>
@@ -10567,6 +10576,49 @@ docker compose up -d --build</pre>
     document.getElementById('bridgeTokenSt').textContent = '✅ Sim';
     document.getElementById('bridgeTokenSt').style.color = '#2d7a3a';
     alert('Novo token gerado. Atualize o .env do daemon e reinicie.');
+  }
+
+  function _fmtUptime(s) {
+    if (!s || !Number.isFinite(s)) return '—';
+    const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60);
+    if (d) return `${d}d ${h}h ${m}min`;
+    if (h) return `${h}h ${m}min`;
+    return `${m}min`;
+  }
+
+  async function bridgeLoadHardware() {
+    const btn = document.getElementById('bridgeHwBtn');
+    const box = document.getElementById('bridgeHwBox');
+    btn.disabled = true; btn.textContent = 'Consultando…';
+    box.textContent = 'Aguardando resposta do daemon (até 8s)…';
+    try {
+      const r = await callAcesso({ action: 'acesso_bridge_hardware' });
+      const d = r?.data || r || {};
+      if (!d.ok) {
+        box.innerHTML = `<span style="color:#c0392b;">⚠️ ${escHtml(d.error || 'Falha ao consultar')}</span>`;
+        return;
+      }
+      const h = d.hardware || {};
+      const tempStr = (h.temp_c != null) ? `${h.temp_c.toFixed(1)} °C` : '—';
+      const tempColor = (h.temp_c != null && h.temp_c >= 75) ? '#c0392b' : (h.temp_c != null && h.temp_c >= 65 ? '#b07d10' : '#2d7a3a');
+      const load = Array.isArray(h.load_avg) ? h.load_avg.map(n => n.toFixed(2)).join(' / ') : '—';
+      const memUsedPct = h.memory ? Math.round((h.memory.used_mb / Math.max(1, h.memory.total_mb)) * 100) : null;
+      box.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;font-size:13px;color:#1a1a1a;">
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Modelo</div><div style="font-weight:600;">${escHtml(h.pi_model || h.platform || '—')}</div></div>
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Hostname</div><div style="font-family:'DM Mono',monospace;font-size:12px;">${escHtml(h.hostname || '—')}</div></div>
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">CPU</div><div>${escHtml((h.cpu?.model || '—'))} <span style="color:var(--muted);">×${h.cpu?.count ?? '—'}</span></div></div>
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">RAM</div><div>${h.memory?.used_mb ?? '—'} / ${h.memory?.total_mb ?? '—'} MB ${memUsedPct != null ? `<span style="color:var(--muted);">(${memUsedPct}%)</span>` : ''}</div></div>
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Temperatura</div><div style="color:${tempColor};font-weight:600;">${tempStr}</div></div>
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Load avg (1/5/15)</div><div style="font-family:'DM Mono',monospace;font-size:12px;">${load}</div></div>
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Uptime do SO</div><div>${_fmtUptime(h.uptime_s)}</div></div>
+          <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Daemon (Node)</div><div>${escHtml(h.node_version || '—')} <span style="color:var(--muted);">(rodando ${_fmtUptime(h.daemon_uptime_s)})</span></div></div>
+        </div>`;
+    } catch (e) {
+      box.innerHTML = `<span style="color:#c0392b;">⚠️ ${escHtml(String(e?.message || e))}</span>`;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Consultar';
+    }
   }
 
   setInterval(() => {

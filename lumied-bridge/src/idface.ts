@@ -1,6 +1,12 @@
 import { Agent, fetch as undiciFetch } from "undici";
+import { readFile } from "node:fs/promises";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+import os from "node:os";
 import { config, passwordFor } from "./config.js";
 import { log } from "./log.js";
+
+const pexec = promisify(exec);
 
 // iDFace usa cert self-signed → ignora validação TLS
 const insecureAgent = new Agent({ connect: { rejectUnauthorized: false } });
@@ -136,6 +142,60 @@ export async function execPing(p: CommandPayload): Promise<unknown> {
   return { reachable: res.status < 500, status: res.status };
 }
 
+async function readTextOrNull(path: string): Promise<string | null> {
+  try {
+    const buf = await readFile(path, "utf8");
+    return buf.replace(/\0+$/, "").trim() || null;
+  } catch { return null; }
+}
+
+async function readVcgencmdTemp(): Promise<number | null> {
+  try {
+    const { stdout } = await pexec("vcgencmd measure_temp", { timeout: 2000 });
+    const m = stdout.match(/temp=(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : null;
+  } catch { return null; }
+}
+
+async function readThermalZoneTemp(): Promise<number | null> {
+  const txt = await readTextOrNull("/sys/class/thermal/thermal_zone0/temp");
+  if (!txt) return null;
+  const n = parseInt(txt, 10);
+  return Number.isFinite(n) ? n / 1000 : null;
+}
+
+export async function execHardware(): Promise<unknown> {
+  const [model, vcTemp, thermalTemp] = await Promise.all([
+    readTextOrNull("/proc/device-tree/model"),
+    readVcgencmdTemp(),
+    readThermalZoneTemp(),
+  ]);
+  const cpus = os.cpus();
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const tempC = vcTemp ?? thermalTemp;
+  return {
+    pi_model: model,
+    hostname: os.hostname(),
+    platform: os.platform(),
+    arch: os.arch(),
+    kernel: os.release(),
+    cpu: { model: cpus[0]?.model || null, count: cpus.length },
+    memory: {
+      total_mb: Math.round(totalMem / 1024 / 1024),
+      free_mb: Math.round(freeMem / 1024 / 1024),
+      used_mb: Math.round((totalMem - freeMem) / 1024 / 1024),
+    },
+    load_avg: os.loadavg(),
+    uptime_s: Math.round(os.uptime()),
+    temp_c: tempC,
+    temp_source: vcTemp != null ? "vcgencmd" : (thermalTemp != null ? "thermal_zone0" : null),
+    node_version: process.version,
+    daemon_uptime_s: Math.round(process.uptime()),
+    ts: Date.now(),
+  };
+}
+
 export async function execHttpProxy(p: CommandPayload): Promise<unknown> {
   if (!p.path || !p.method) throw new Error("http_proxy exige path e method");
   return withSession(p.device, async (session) => {
@@ -152,7 +212,7 @@ export async function execHttpProxy(p: CommandPayload): Promise<unknown> {
   });
 }
 
-export type Tipo = "enroll_user" | "enroll_face" | "enroll_card" | "delete_user" | "ping" | "sync_all" | "http_proxy";
+export type Tipo = "enroll_user" | "enroll_face" | "enroll_card" | "delete_user" | "ping" | "sync_all" | "http_proxy" | "hardware";
 
 export async function dispatch(tipo: Tipo, payload: CommandPayload): Promise<unknown> {
   switch (tipo) {
@@ -162,6 +222,7 @@ export async function dispatch(tipo: Tipo, payload: CommandPayload): Promise<unk
     case "delete_user": return execDeleteUser(payload);
     case "ping": return execPing(payload);
     case "http_proxy": return execHttpProxy(payload);
+    case "hardware": return execHardware();
     case "sync_all": throw new Error("sync_all deve ser orquestrado pelo edge (envia enroll_user + enroll_face N vezes)");
     default: throw new Error(`tipo desconhecido: ${tipo}`);
   }
