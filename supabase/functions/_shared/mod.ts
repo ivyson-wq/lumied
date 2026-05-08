@@ -15,6 +15,8 @@ export {
   authGerenteOrSecretaria,
   authProfOrGerente,
   authAluno,
+  authPaisOuAluno,
+  canReadAluno,
   requireFeature,
   validateInput,
   loadEscola,

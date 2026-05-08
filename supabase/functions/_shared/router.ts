@@ -430,6 +430,64 @@ export function authAluno(): Middleware {
   };
 }
 
+/**
+ * Auth para endpoints consultados tanto por responsável quanto por aluno
+ * (boletim, frequência, provas via portal família). Valida JWT do Supabase
+ * Auth (magic link), popula ctx.user e ctx.escola_id. NÃO impede leitura cruzada
+ * de outro aluno — para isso, a action deve chamar `canReadAluno(ctx, alvo)`.
+ */
+export function authPaisOuAluno(): Middleware {
+  return async (ctx, next) => {
+    const tk = (ctx.body._token as string)
+      || (ctx.req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+    if (!tk || tk.length < 20) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
+
+    try {
+      const { data: { user } } = await ctx.sb.auth.getUser(tk);
+      if (!user?.email) throw new AppError("AUTH_INVALID", "Sessão inválida.");
+      const email = user.email.toLowerCase().trim();
+      const { data: u } = await ctx.sb
+        .from("usuarios").select("id, nome, papeis, escola_id")
+        .eq("email", email).maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const usr = u as any;
+      const papeis: string[] = Array.isArray(usr?.papeis) ? usr.papeis : [];
+      const tipo = papeis.includes("aluno") && papeis.length === 1 ? "aluno" : "responsavel";
+      ctx.user = {
+        id: usr?.id || user.id,
+        nome: usr?.nome || email,
+        email,
+        tipo,
+      };
+      if (!ctx.escola_id) {
+        ctx.escola_id = usr?.escola_id || (await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body)) || undefined;
+      }
+      return next();
+    } catch (_) {
+      throw new AppError("AUTH_INVALID", "Sessão inválida.");
+    }
+  };
+}
+
+/**
+ * Valida se o usuário autenticado pode ler dados do aluno alvo.
+ *   - email do JWT == aluno_email  → permite (próprio aluno OU responsável que
+ *     usa o mesmo email do filho — modelo Lumied legado).
+ *   - alunos.email = alvo AND alunos.familia_email = email do JWT → responsável
+ *     com email distinto do aluno.
+ */
+export async function canReadAluno(ctx: Context, alunoEmail: string): Promise<boolean> {
+  if (!ctx.user?.email) return false;
+  const me = ctx.user.email;
+  const target = (alunoEmail || "").toLowerCase().trim();
+  if (!target) return false;
+  if (me === target) return true;
+  let q = ctx.sb.from("alunos").select("id").eq("email", target).eq("familia_email", me);
+  if (ctx.escola_id) q = q.eq("escola_id", ctx.escola_id);
+  const { data } = await q.maybeSingle();
+  return !!data;
+}
+
 /** Load escola_id into context */
 export const loadEscola: Middleware = async (ctx, next) => {
   if (!ctx.escola_id) {

@@ -12,6 +12,8 @@ import {
   authProfessora,
   authProfOrGerente,
   authAluno,
+  authPaisOuAluno,
+  canReadAluno,
   requireFeature,
   loadEscola,
   requireEscola,
@@ -38,6 +40,7 @@ const featProvas = requireFeature("banco_provas");
 
 const authPG = authProfOrGerente();
 const authAl = authAluno();
+const authPA = authPaisOuAluno();
 
 // ── Sanitiza termo de busca para filtros .or() do PostgREST ──
 function sanitizeBusca(s: unknown): string {
@@ -329,11 +332,14 @@ router.on("boletim_gerar", authGerente, featNotas, requireEscola, async (ctx) =>
   return successResponse(boletim);
 });
 
-router.on("boletim_get", loadEscola, featNotas, async (ctx) => {
+router.on("boletim_get", authPA, featNotas, async (ctx) => {
   const { aluno_email, ano } = ctx.body as any;
   if (!aluno_email) throw new AppError("VALIDATION_FAILED", "aluno_email obrigatório.");
+  if (!(await canReadAluno(ctx, String(aluno_email)))) {
+    throw new AppError("FORBIDDEN", "Sem acesso a este aluno.");
+  }
   const anoFiltro = ano || new Date().getFullYear();
-  const { data } = await ctx.sb.from("boletins").select("*, notas_periodos(nome, numero)").eq("aluno_email", aluno_email).eq("ano", anoFiltro).order("notas_periodos(numero)");
+  const { data } = await ctx.sb.from("boletins").select("*, notas_periodos(nome, numero)").eq("aluno_email", String(aluno_email).toLowerCase().trim()).eq("ano", anoFiltro).order("notas_periodos(numero)");
   return successResponse(data ?? []);
 });
 
@@ -710,10 +716,13 @@ router.on("aluno_frequencia_get", authAl, featAluno, async (ctx) => {
 });
 
 // Espelho de aluno_frequencia_get para consulta da família (responsável passa aluno_email do filho).
-// Mesmo padrão de auth de boletim_get — sem token de aluno, escola via Origin.
-router.on("frequencia_resumo_get", loadEscola, featFreq, async (ctx) => {
+// Auth: authPaisOuAluno + canReadAluno garante que o JWT pode ler o alvo.
+router.on("frequencia_resumo_get", authPA, featFreq, async (ctx) => {
   const { aluno_email, ano } = ctx.body as any;
   if (!aluno_email) throw new AppError("VALIDATION_FAILED", "aluno_email obrigatório.");
+  if (!(await canReadAluno(ctx, String(aluno_email)))) {
+    throw new AppError("FORBIDDEN", "Sem acesso a este aluno.");
+  }
   const anoFiltro = ano || new Date().getFullYear();
   let qCham = ctx.sb.from("frequencia_chamadas").select("id").gte("data", `${anoFiltro}-01-01`).lte("data", `${anoFiltro}-12-31`);
   if (ctx.escola_id) qCham = qCham.eq("escola_id", ctx.escola_id);
@@ -870,10 +879,13 @@ router.on("provas_disponiveis_aluno", authAl, featProvas, async (ctx) => {
 });
 
 // Espelho de provas_disponiveis_aluno para a família (responsável passa aluno_email).
-// Resolve serie_id automaticamente via tabela alunos.
-router.on("provas_disponiveis_familia", loadEscola, featProvas, async (ctx) => {
+// Resolve serie_id automaticamente via tabela alunos. Auth via authPaisOuAluno + canReadAluno.
+router.on("provas_disponiveis_familia", authPA, featProvas, async (ctx) => {
   const { aluno_email } = ctx.body as any;
   if (!aluno_email) throw new AppError("VALIDATION_FAILED", "aluno_email obrigatório.");
+  if (!(await canReadAluno(ctx, String(aluno_email)))) {
+    throw new AppError("FORBIDDEN", "Sem acesso a este aluno.");
+  }
   const emailNorm = String(aluno_email).toLowerCase().trim();
   const { data: aluno } = await ctx.sb.from("alunos").select("serie_id").eq("email", emailNorm).maybeSingle();
   const serie_id = (aluno as any)?.serie_id ?? null;

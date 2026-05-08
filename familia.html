@@ -3094,7 +3094,7 @@ body.has-bottomnav{padding-bottom:56px;}
     el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
     const d = window.paisIsAlunoOnly()
       ? await callAcademicoAuth({ action: 'aluno_frequencia_get', ano: new Date().getFullYear() })
-      : await callAcademico({ action: 'frequencia_resumo_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
+      : await callAcademicoAuth({ action: 'frequencia_resumo_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
     const r = (d && (d.data || d)) || {};
     const total = r.total_aulas || 0;
     const faltas = r.total_faltas || 0;
@@ -3122,7 +3122,7 @@ body.has-bottomnav{padding-bottom:56px;}
     el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);">Carregando...</div>';
     const d = window.paisIsAlunoOnly()
       ? await callAcademicoAuth({ action: 'provas_disponiveis_aluno' })
-      : await callAcademico({ action: 'provas_disponiveis_familia', aluno_email: currentUser.email });
+      : await callAcademicoAuth({ action: 'provas_disponiveis_familia', aluno_email: currentUser.email });
     const provas = Array.isArray(d?.data) ? d.data : (Array.isArray(d) ? d : []);
     if (!provas.length) {
       el.innerHTML = '<p style="color:var(--muted);text-align:center;padding:14px;font-size:13px;">Nenhuma prova disponível.</p>';
@@ -3156,7 +3156,7 @@ body.has-bottomnav{padding-bottom:56px;}
 
     const d = window.paisIsAlunoOnly()
       ? await callAcademicoAuth({ action: 'aluno_notas_get', ano: new Date().getFullYear() })
-      : await callAcademico({ action: 'boletim_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
+      : await callAcademicoAuth({ action: 'boletim_get', aluno_email: currentUser.email, ano: new Date().getFullYear() });
     const boletins = Array.isArray(d?.data) ? d.data : (Array.isArray(d) ? d : []);
 
     if (!boletins.length) {
