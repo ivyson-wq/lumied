@@ -459,9 +459,12 @@ router.on("diario_registros_list", loadEscola, featDiario, async (ctx) => {
 router.on("diario_registros_create", authPG, featDiario, requireEscola, async (ctx) => {
   const { serie_id, disciplina_id, data: dataStr, conteudo_planejado, conteudo_executado, observacoes, habilidades_bncc } = ctx.body as any;
   if (!serie_id || !dataStr) throw new AppError("VALIDATION_FAILED", "serie_id e data obrigatórios.");
+  // OBS: a coluna em diario_registros é `professor_id` (mig 051), não `professora_id`.
+  // Outras tabelas (frequencia_chamadas, notas_disciplinas, relatorios_pedagogicos)
+  // usam `professora_id`. Não confundir.
   const { data, error } = await ctx.sb.from("diario_registros").insert({
     serie_id, disciplina_id: disciplina_id || null, data: dataStr,
-    professora_id: ctx.user?.tipo === "professora" ? ctx.user.id : null,
+    professor_id: ctx.user?.tipo === "professora" ? ctx.user.id : null,
     conteudo_planejado: conteudo_planejado || null,
     conteudo_executado: conteudo_executado || null,
     observacoes: observacoes || null,

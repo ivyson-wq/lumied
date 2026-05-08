@@ -1182,11 +1182,11 @@ body.dash-clean #greetingBar{display:none;}
           </div>
           <div class="ff" style="margin:0;">
             <label>Quantidade de cópias *</label>
-            <input type="number" id="impCopias" value="1" min="1" max="200" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <input type="number" id="impCopias" value="1" min="1" max="200" oninput="impDraftSave()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           </div>
           <div class="ff" style="margin:0;">
             <label>Tipo de papel</label>
-            <select id="impPapel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <select id="impPapel" onchange="impDraftSave()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
               <option value="sulfite">Papel Sulfite A4</option>
               <option value="desenho">Papel Desenho</option>
               <option value="cartolina">Cartolina</option>
@@ -1196,14 +1196,17 @@ body.dash-clean #greetingBar{display:none;}
           </div>
           <div class="ff" style="margin:0;">
             <label>Para qual dia (mín. 2 dias úteis)</label>
-            <input type="date" id="impDia" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <input type="date" id="impDia" onchange="impDraftSave()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           </div>
           <div class="ff" style="margin:0;">
             <label>Observação</label>
-            <input type="text" id="impObs" placeholder="Ex: Colorido, frente e verso..." style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <input type="text" id="impObs" placeholder="Ex: Colorido, frente e verso..." oninput="impDraftSave()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           </div>
         </div>
-        <button onclick="enviarImpressao()" id="impBtn" class="btn-submit" style="margin-top:12px;font-size:13px;">Enviar Solicitação</button>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
+          <button onclick="enviarImpressao()" id="impBtn" class="btn-submit" style="font-size:13px;">Enviar Solicitação</button>
+          <span id="impDraftStatus" style="font-size:11px;color:var(--muted);"></span>
+        </div>
         <div class="f-alert error" id="impErr" style="margin-top:8px;display:none;"></div>
       </div>
 
@@ -4716,6 +4719,51 @@ body.dash-clean #greetingBar{display:none;}
       Array.from(files).map((f, i) => '📎 ' + esc(f.name) + ' <span style="color:#999;">(' + (f.size / 1024).toFixed(0) + ' KB)</span>').join('<br>');
   });
 
+  // ── Rascunho local do form de impressão ─────────────────
+  // Arquivos não dão pra preservar (file input), mas copias/papel/dia/obs sim.
+  const IMP_DRAFT_KEY = 'imp_draft_v1';
+  function impDraftSave() {
+    try {
+      const data = {
+        copias: document.getElementById('impCopias')?.value || '',
+        papel:  document.getElementById('impPapel')?.value || '',
+        dia:    document.getElementById('impDia')?.value || '',
+        obs:    document.getElementById('impObs')?.value || '',
+      };
+      const algumaCoisa = data.obs.trim() || (data.copias && data.copias !== '1') || data.dia;
+      if (!algumaCoisa) { localStorage.removeItem(IMP_DRAFT_KEY); document.getElementById('impDraftStatus').textContent = ''; return; }
+      localStorage.setItem(IMP_DRAFT_KEY, JSON.stringify(data));
+      const el = document.getElementById('impDraftStatus');
+      if (el) el.textContent = '💾 rascunho salvo';
+    } catch {}
+  }
+  function impDraftLoad() {
+    try {
+      const raw = localStorage.getItem(IMP_DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      const c = document.getElementById('impCopias');
+      const p = document.getElementById('impPapel');
+      const di = document.getElementById('impDia');
+      const o = document.getElementById('impObs');
+      if (c && d.copias) c.value = d.copias;
+      if (p && d.papel)  p.value = d.papel;
+      if (di && d.dia)   di.value = d.dia;
+      if (o && d.obs)    o.value = d.obs;
+      const stEl = document.getElementById('impDraftStatus');
+      if (stEl && d.obs) stEl.textContent = '↩️ rascunho recuperado';
+    } catch {}
+  }
+  function impDraftClear() {
+    try { localStorage.removeItem(IMP_DRAFT_KEY); } catch {}
+    const el = document.getElementById('impDraftStatus');
+    if (el) el.textContent = '';
+  }
+  window.impDraftSave = impDraftSave;
+  document.addEventListener('DOMContentLoaded', impDraftLoad);
+  // O DOMContentLoaded pode já ter rolado no momento do require; chama agora também.
+  impDraftLoad();
+
   async function enviarImpressao() {
     const files = Array.from(document.getElementById('impArquivo').files);
     const copias = parseInt(document.getElementById('impCopias').value) || 1;
@@ -4783,6 +4831,7 @@ body.dash-clean #greetingBar{display:none;}
     document.getElementById('impCopias').value = '1';
     document.getElementById('impObs').value = '';
     document.getElementById('impDia').value = '';
+    if (enviados > 0) impDraftClear();
     loadImpressoes();
     btn.disabled = false; btn.textContent = 'Enviar Solicitação';
   }

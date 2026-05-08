@@ -2265,7 +2265,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <!-- Professora selector -->
             <div class="ff" style="margin-bottom:16px;">
               <label>Professora *</label>
-              <select id="almNRProfessora" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;">
+              <select id="almNRProfessora" onchange="almNRDraftSave()" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;">
                 <option value="">— Selecione a professora —</option>
               </select>
             </div>
@@ -2315,11 +2315,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
 
             <div class="ff" style="margin-top:12px;">
               <label>Observação (opcional)</label>
-              <textarea id="almNRObs" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;"></textarea>
+              <textarea id="almNRObs" rows="2" oninput="almNRDraftSave()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;resize:vertical;"></textarea>
             </div>
 
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:8px;">
               <div style="font-size:14px;font-weight:600;">Total: <span id="almNRTotal">R$ 0,00</span></div>
+              <span id="almNRDraftStatus" style="font-size:11px;color:var(--muted);"></span>
               <button onclick="almSubmitNovaReq()" class="btn-create" id="almNRBtnEnviar">✅ Criar Requisição</button>
             </div>
             <div class="f-alert error" id="almNRErr" style="margin-top:8px;"></div>
@@ -12141,6 +12142,45 @@ docker compose up -d --build</pre>
     XLSX.writeFile(wb, 'modelo_requisicao_maple_bear.xlsx');
   }
 
+  // ── Rascunho local da requisição-em-nome-da-professora ──
+  // Server-side rascunho aqui complica (alm_rascunho_* é por professora_id da
+  // sessão dela, não do gerente). localStorage cobre o caso "fechei a aba e
+  // perdi o carrinho" sem inventar tabela paralela.
+  const ALMNR_DRAFT_KEY = 'almnr_draft_v1';
+  function almNRDraftSave() {
+    try {
+      const obs = document.getElementById('almNRObs')?.value || '';
+      const profId = document.getElementById('almNRProfessora')?.value || '';
+      if (!almNRCart.length && !obs.trim() && !profId) {
+        localStorage.removeItem(ALMNR_DRAFT_KEY);
+        const st = document.getElementById('almNRDraftStatus'); if (st) st.textContent = '';
+        return;
+      }
+      localStorage.setItem(ALMNR_DRAFT_KEY, JSON.stringify({ cart: almNRCart, obs, profId, savedAt: Date.now() }));
+      const st = document.getElementById('almNRDraftStatus');
+      if (st) st.textContent = '💾 rascunho salvo localmente';
+    } catch {}
+  }
+  function almNRDraftLoad() {
+    try {
+      const raw = localStorage.getItem(ALMNR_DRAFT_KEY);
+      if (!raw) return false;
+      const d = JSON.parse(raw);
+      if (Array.isArray(d.cart)) almNRCart = d.cart;
+      const obs = document.getElementById('almNRObs');
+      const sel = document.getElementById('almNRProfessora');
+      if (obs && d.obs) obs.value = d.obs;
+      if (sel && d.profId) sel.value = d.profId;
+      const st = document.getElementById('almNRDraftStatus');
+      if (st) st.textContent = '↩️ rascunho recuperado';
+      return true;
+    } catch { return false; }
+  }
+  function almNRDraftClear() {
+    try { localStorage.removeItem(ALMNR_DRAFT_KEY); } catch {}
+    const st = document.getElementById('almNRDraftStatus'); if (st) st.textContent = '';
+  }
+
   async function almAbrirNovaReq() {
     almNRCart = [];
     almNRXlsxParsed = [];
@@ -12149,7 +12189,6 @@ docker compose up -d --build</pre>
     document.getElementById('almNRSearchInput').value = '';
     document.getElementById('almNRXlsxResult').style.display = 'none';
     almNRSwitchTab('buscar');
-    almNRRenderCart();
 
     // Load catalog (use alm_insumos_list which is gerente-accessible)
     if (!almNRCatalogo.length) {
@@ -12165,13 +12204,17 @@ docker compose up -d --build</pre>
     sel.innerHTML = '<option value="">— Selecione a professora —</option>' +
       profs.map(p => `<option value="${p.id}">${p.nome}${p.email?' · '+p.email:''}</option>`).join('');
 
+    // Tenta recuperar rascunho do localStorage (carrinho/obs/professora)
+    almNRDraftLoad();
+    almNRRenderCart();
+
     document.getElementById('almNovaReqModal').style.display = 'block';
   }
 
   function almFecharNovaReq() {
     document.getElementById('almNovaReqModal').style.display = 'none';
-    almNRCart = [];
-    almNRXlsxParsed = [];
+    // Não limpa o rascunho aqui — só no submit OK. Se o gerente fechou sem
+    // querer, o carrinho volta na próxima abertura.
   }
 
   function almNRSwitchTab(tab) {
@@ -12214,12 +12257,14 @@ docker compose up -d --build</pre>
     almNRCart.push({ insumo_id: it.id, nome: it.nome, unidade: it.unidade, preco_unit: it.preco, qty_solicitado: 1 });
     almNRRenderCart();
     almNRFiltrarCatalogo();
+    almNRDraftSave();
   }
 
   function almNRRemoveCart(id) {
     almNRCart = almNRCart.filter(c => c.insumo_id !== id);
     almNRRenderCart();
     almNRFiltrarCatalogo();
+    almNRDraftSave();
   }
 
   function almNRRenderCart() {
@@ -12244,6 +12289,7 @@ docker compose up -d --build</pre>
     const it = almNRCart.find(c => c.insumo_id === id);
     if (it) it.qty_solicitado = Math.max(0.5, parseFloat(val)||1);
     almNRUpdateTotal();
+    almNRDraftSave();
   }
 
   function almNRUpdateTotal() {
@@ -12334,6 +12380,8 @@ docker compose up -d --build</pre>
     });
     btn.disabled = false; btn.textContent = '✅ Criar Requisição';
     if (d.error) { errEl.textContent = d.error; errEl.classList.add('show'); return; }
+    almNRDraftClear();
+    almNRCart = [];
     almFecharNovaReq();
     almLoadCompras();
   }

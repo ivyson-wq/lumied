@@ -97,6 +97,41 @@
   }, 5000);
 
   // Painel
+  // Rascunho local — protege se a aba fecha antes do usuário clicar Enviar
+  const TW_DRAFT_KEY = 'tw_draft_' + portal;
+  function twDraftSave() {
+    try {
+      const tipo = document.getElementById('tw-tipo')?.value || 'bug';
+      const desc = document.getElementById('tw-desc')?.value || '';
+      if (!desc.trim()) { localStorage.removeItem(TW_DRAFT_KEY); return; }
+      localStorage.setItem(TW_DRAFT_KEY, JSON.stringify({ tipo, desc, savedAt: Date.now() }));
+      const st = document.getElementById('tw-status');
+      if (st) st.textContent = '💾 rascunho salvo';
+    } catch {}
+  }
+  function twDraftLoad() {
+    try {
+      const raw = localStorage.getItem(TW_DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      const tipoEl = document.getElementById('tw-tipo');
+      const descEl = document.getElementById('tw-desc');
+      const stEl = document.getElementById('tw-status');
+      if (tipoEl && d.tipo) tipoEl.value = d.tipo;
+      if (descEl && d.desc) descEl.value = d.desc;
+      if (stEl && d.desc) stEl.textContent = '↩️ rascunho recuperado';
+    } catch {}
+  }
+  function twDraftClear() {
+    try { localStorage.removeItem(TW_DRAFT_KEY); } catch {}
+  }
+  function twWireDraftHandlers() {
+    const tipoEl = document.getElementById('tw-tipo');
+    const descEl = document.getElementById('tw-desc');
+    if (tipoEl) tipoEl.onchange = twDraftSave;
+    if (descEl) descEl.oninput = twDraftSave;
+  }
+
   const panel = document.createElement('div');
   panel.id = 'tw-panel';
   panel.innerHTML = `
@@ -114,11 +149,14 @@
       </select>
       <label>Descreva o problema</label>
       <textarea id="tw-desc" rows="4" placeholder="Descreva o que aconteceu ou o que precisa..."></textarea>
+      <div id="tw-status" style="font-size:11px;color:#7a7169;margin-top:6px;min-height:14px;"></div>
       <button class="tw-submit" id="tw-send" onclick="twEnviar()">Enviar</button>
       <a href="/ajuda/?portal=' + portal + '" target="_blank" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#7a7169;text-decoration:none;">📖 Consultar Manual de Ajuda</a>
     </div>
   `;
   document.body.appendChild(panel);
+  twDraftLoad();
+  twWireDraftHandlers();
 
   btn.addEventListener('click', function() {
     panel.classList.toggle('show');
@@ -167,6 +205,7 @@
         alert('Erro: ' + result.error);
         return;
       }
+      twDraftClear();
       var numDisplay = result.numero ? '<br><strong style="font-size:16px;color:#1a1a1a;">Ticket #' + result.numero + '</strong>' : '';
       document.getElementById('tw-form').innerHTML = '<div class="tw-success"><span>&#10003;</span>Ticket enviado!' + numDisplay + '<br><small style="color:#7a7169;">Guarde o número para acompanhar.</small></div>';
       setTimeout(function() {
@@ -183,9 +222,11 @@
             </select>
             <label>Descreva o problema</label>
             <textarea id="tw-desc" rows="4" placeholder="Descreva o que aconteceu ou o que precisa..."></textarea>
+            <div id="tw-status" style="font-size:11px;color:#7a7169;margin-top:6px;min-height:14px;"></div>
             <button class="tw-submit" id="tw-send" onclick="twEnviar()">Enviar</button>
             <a href="/ajuda/?portal=' + portal + '" target="_blank" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#7a7169;text-decoration:none;">📖 Consultar Manual de Ajuda</a>
           `;
+          twWireDraftHandlers();
         }, 300);
       }, 2500);
     } catch (e) {
