@@ -3,7 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
 [triggers]
-crons = ["*/30 * * * *"]
+# Reduzido de */30 (48x/dia) pra 2x/dia em 2026-05-08 — Disk IO budget Lumied estourou.
+# Monitor agora 06:00 e 18:00 UTC.
+crons = ["0 6,18 * * *"]
 
 [vars]
 LUMIED_URL = "https://lumied.com.br"
