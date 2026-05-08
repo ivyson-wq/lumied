@@ -4148,6 +4148,7 @@ docker compose up -d --build</pre>
           <button class="fb" onclick="lprTab('solicitacoes',this)">📨 Solicitações <span id="lprSolBadge" style="display:none;background:#c0392b;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:4px;font-weight:600;">0</span></button>
           <button class="fb" onclick="lprTab('cameras',this)">📷 Câmeras</button>
           <button class="fb" onclick="lprTab('relatorio',this)">📊 Relatório</button>
+          <button class="fb" onclick="lprTab('setup',this)" style="margin-left:auto;background:#fdf3e3;border:1px solid #d4a755;color:#8b5a00;font-weight:600;">📖 Como instalar</button>
         </div>
 
         <!-- Tab: Placas -->
@@ -4235,6 +4236,250 @@ docker compose up -d --build</pre>
           <div id="lprRelContent" style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;">
             <div class="empty-state">Carregando…</div>
           </div>
+        </div>
+
+        <!-- Tab: Como instalar (setup guide) -->
+        <div id="lprTabSetup" style="display:none;">
+          <style>
+            #lprTabSetup .lst { background:var(--white); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:10px; }
+            #lprTabSetup .lst[open] { background:#fffaf0; border-color:#d4a755; }
+            #lprTabSetup .lst summary { cursor:pointer; font-size:14px; padding:4px 0; list-style:none; outline:none; }
+            #lprTabSetup .lst summary::-webkit-details-marker { display:none; }
+            #lprTabSetup .lst summary::before { content:"▶"; display:inline-block; margin-right:8px; font-size:10px; color:var(--muted); transition:transform .15s; }
+            #lprTabSetup .lst[open] summary::before { transform:rotate(90deg); }
+            #lprTabSetup .lst summary label { cursor:pointer; }
+            #lprTabSetup .lst summary input[type=checkbox] { margin-right:8px; transform:scale(1.2); accent-color:#2d7a3a; }
+            #lprTabSetup .body { padding:14px 0 4px 32px; font-size:13px; line-height:1.7; color:#1a1a1a; }
+            #lprTabSetup .body p { margin:8px 0; }
+            #lprTabSetup .body ul, #lprTabSetup .body ol { padding-left:22px; }
+            #lprTabSetup .body code { background:#f4ede0; padding:1px 6px; border-radius:4px; font-family:'DM Mono',monospace; font-size:12px; }
+            #lprTabSetup .snip { position:relative; margin:10px 0; }
+            #lprTabSetup .snip pre { background:#1a1a1a; color:#e8e8e8; border-radius:8px; padding:14px 16px; font-family:'DM Mono',monospace; font-size:12px; overflow-x:auto; line-height:1.55; margin:0; }
+            #lprTabSetup .snip button { position:absolute; top:8px; right:8px; background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer; }
+            #lprTabSetup .snip button:hover { background:rgba(255,255,255,.2); }
+            #lprTabSetup .opt { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:14px; }
+            #lprTabSetup .opt-title { font-weight:600; margin-bottom:6px; font-size:13px; }
+            #lprTabSetup .ts-tbl { width:100%; font-size:13px; border-collapse:collapse; }
+            #lprTabSetup .ts-tbl th { text-align:left; padding:8px; background:#f8f5f0; border-bottom:1px solid var(--border); }
+            #lprTabSetup .ts-tbl td { padding:8px; border-bottom:1px solid #f0ece4; vertical-align:top; }
+          </style>
+
+          <!-- Header com progresso -->
+          <div style="background:linear-gradient(135deg,#fff8e8,#fef0d4);border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid #d4a755;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div style="font-size:18px;font-weight:700;margin-bottom:4px;color:#8b5a00;">📖 Como instalar o LPR na sua escola</div>
+                <div style="font-size:13px;color:#6b4500;line-height:1.5;">Passo a passo pra começar a ler placas. Marque cada etapa conforme vai concluindo — fica salvo no seu navegador.</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:22px;font-weight:700;color:#2d7a3a;" id="lprSetupProgress">0/9</div>
+                <div style="font-size:11px;color:var(--muted);">concluído</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 0: Pré-requisitos -->
+          <details class="lst" open>
+            <summary><label><input type="checkbox" data-lpr-step="0" onchange="lprMarkStep(0,event)"> <strong>0. Pré-requisitos — antes de começar</strong></label></summary>
+            <div class="body">
+              <ul>
+                <li>O <strong>Lumied Bridge</strong> precisa estar rodando no Pi/mini-PC. Confira em <em>Acesso → Lumied Bridge</em>: o "Daemon" tem que estar 🟢 Online.</li>
+                <li>Pi 5 (8GB) ou mini-PC equivalente é o ideal. Pi 4 (4GB) funciona, mas em escolas com fluxo alto de carros pode ficar apertado.</li>
+                <li>Câmera Intelbras (ou compatível RTSP) já instalada apontando pro portão de carros, com IP fixo na rede da escola.</li>
+                <li>Acesso SSH ao Pi/mini-PC. Se não souber o IP/hostname, descubra em <em>Acesso → Lumied Bridge → Hardware do mini-PC</em>.</li>
+                <li>Senha do admin da câmera Intelbras (a que você usa pra abrir o painel da câmera no navegador).</li>
+              </ul>
+            </div>
+          </details>
+
+          <!-- Step 1: atualizar daemon -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="1" onchange="lprMarkStep(1,event)"> <strong>1. Atualizar o daemon do Bridge</strong></label></summary>
+            <div class="body">
+              <p>O recurso de LPR precisa de uma versão recente do daemon. <strong>Faça isso primeiro</strong>; sem essa atualização, nada do que vem abaixo funciona.</p>
+              <div class="snip"><pre>ssh pi@&lt;ip-do-pi&gt;
+cd ~/lumied/lumied-bridge
+git pull
+npm install
+npm run build
+sudo systemctl restart lumied-bridge</pre><button onclick="lprCopySnippet(this)">📋 Copiar</button></div>
+              <p>Se o daemon roda em <strong>Docker</strong>:</p>
+              <div class="snip"><pre>cd ~/lumied/lumied-bridge
+git pull
+docker compose up -d --build</pre><button onclick="lprCopySnippet(this)">📋 Copiar</button></div>
+              <p style="font-size:12px;color:var(--muted);">Depois confira em <em>Lumied Bridge</em> que o Daemon voltou a ficar 🟢 Online.</p>
+            </div>
+          </details>
+
+          <!-- Step 2: ffmpeg + gpiod -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="2" onchange="lprMarkStep(2,event)"> <strong>2. Instalar FFmpeg (e GPIO se for usar relé direto)</strong></label></summary>
+            <div class="body">
+              <p>FFmpeg captura o vídeo da câmera e gera fotos para o reconhecedor analisar. <code>gpiod</code> só importa se você for ligar a cancela direto num pino do Pi (passo 6 opção B); se for usar webhook (Sonoff/Tasmota), pode ignorar.</p>
+              <div class="snip"><pre>sudo apt update
+sudo apt install -y ffmpeg gpiod
+ffmpeg -version | head -1</pre><button onclick="lprCopySnippet(this)">📋 Copiar</button></div>
+              <p style="font-size:12px;color:var(--muted);">Resposta esperada: <code>ffmpeg version 4.x.x</code> ou maior. Se aparecer <em>command not found</em>, o apt não baixou — verifique conexão de internet do Pi.</p>
+            </div>
+          </details>
+
+          <!-- Step 3: CodeProject.AI -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="3" onchange="lprMarkStep(3,event)"> <strong>3. Subir o reconhecedor de placas (CodeProject.AI)</strong></label></summary>
+            <div class="body">
+              <p>É o serviço local que recebe a foto e devolve o texto da placa. Roda em Docker — <strong>tudo offline, nada vai pra cloud</strong>.</p>
+              <div class="snip"><pre>sudo apt install -y docker.io
+sudo systemctl enable --now docker
+sudo docker run -d --name codeproject-ai \
+  --restart unless-stopped \
+  -p 32168:32168 \
+  -v cpai-data:/etc/codeproject/ai \
+  codeproject/ai-server:rpi64</pre><button onclick="lprCopySnippet(this)">📋 Copiar</button></div>
+              <p>O primeiro boot demora uns <strong>5 minutos</strong> (baixa o modelo de IA). Depois confira que tá no ar:</p>
+              <div class="snip"><pre>curl http://localhost:32168/v1/status/ping</pre><button onclick="lprCopySnippet(this)">📋 Copiar</button></div>
+              <p>Resposta esperada: <code>{"success":true, ...}</code></p>
+              <p>Acesse o painel do CPAI em <code>http://&lt;ip-do-pi&gt;:32168</code> no navegador. Aba <strong>Modules</strong> → procure <strong>License Plate Reader</strong> → clique <strong>Install</strong>. Quando ficar verde "Running", está pronto.</p>
+            </div>
+          </details>
+
+          <!-- Step 4: RTSP -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="4" onchange="lprMarkStep(4,event)"> <strong>4. Descobrir e testar a URL RTSP da câmera</strong></label></summary>
+            <div class="body">
+              <p>RTSP é o "endereço de vídeo ao vivo" da câmera. Padrão Intelbras (linha VIP / IPC / MCD):</p>
+              <div class="snip"><pre>rtsp://admin:SUA_SENHA@192.168.1.50:554/cam/realmonitor?channel=1&subtype=0</pre><button onclick="lprCopySnippet(this)">📋 Copiar</button></div>
+              <p>Substitua nas três partes:</p>
+              <ul>
+                <li><strong>admin / SUA_SENHA</strong>: usuário e senha do <em>painel da câmera</em> (não a senha do wifi).</li>
+                <li><strong>192.168.1.50</strong>: IP da câmera. Descubra:
+                  <ul>
+                    <li>Pelo painel do roteador (lista de DHCP — procure pelo MAC da câmera)</li>
+                    <li>Pelo app <strong>Intelbras iSIC</strong> no celular</li>
+                    <li>Por scan na rede: <code>nmap -sn 192.168.1.0/24</code> (precisa <code>sudo apt install nmap</code> antes)</li>
+                  </ul>
+                </li>
+                <li><strong>subtype=0</strong>: stream principal (alta qualidade, melhor pro OCR). Se o Pi não der conta, troque pra <code>subtype=1</code>.</li>
+              </ul>
+              <p>Teste no Pi (substitua os valores):</p>
+              <div class="snip"><pre>ffmpeg -rtsp_transport tcp \
+  -i 'rtsp://admin:SUA_SENHA@192.168.1.50:554/cam/realmonitor?channel=1&subtype=0' \
+  -frames:v 1 -y /tmp/test.jpg
+ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</button></div>
+              <p style="font-size:12px;color:var(--muted);">Se gerou um arquivo &gt; 50KB, está OK. Pra ver a imagem do seu computador: <code>scp pi@IP:/tmp/test.jpg ./</code></p>
+            </div>
+          </details>
+
+          <!-- Step 5: Cadastrar câmera -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="5" onchange="lprMarkStep(5,event)"> <strong>5. Cadastrar a câmera no painel</strong></label></summary>
+            <div class="body">
+              <ol>
+                <li>Vá pra aba <strong>📷 Câmeras</strong> aqui no painel</li>
+                <li>Clique em <strong>+ Nova câmera</strong></li>
+                <li>Preencha:
+                  <ul>
+                    <li><strong>Nome</strong>: ex "Portão de carros"</li>
+                    <li><strong>RTSP URL</strong>: a URL que você testou no passo anterior</li>
+                    <li><strong>ALPR endpoint</strong>: deixe o padrão (<code>http://localhost:32168/v1/vision/alpr</code>)</li>
+                    <li><strong>Intervalo scan</strong>: 2000ms (a cada 2 segundos). Aumente se o Pi suar muito.</li>
+                    <li><strong>Confiança mínima</strong>: <code>0.85</code>. Sobe pra <code>0.90</code> se aparecerem muitos falsos-positivos; abaixa pra <code>0.80</code> se rejeitar placas legítimas.</li>
+                    <li><strong>Câmera ativa</strong>: marcado.</li>
+                  </ul>
+                </li>
+                <li>Salvar. A câmera começa a rodar em segundos.</li>
+                <li>Vá pra aba <strong>📋 Eventos</strong>: passe um carro pelo portão e veja se a leitura aparece.</li>
+              </ol>
+            </div>
+          </details>
+
+          <!-- Step 6: Cancela -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="6" onchange="lprMarkStep(6,event)"> <strong>6. Acionar a cancela (opcional)</strong></label></summary>
+            <div class="body">
+              <p>Quando uma placa é autorizada, o daemon precisa abrir a cancela. Duas opções:</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+                <div class="opt">
+                  <div class="opt-title">🌐 A) Webhook <span style="color:#2d7a3a;font-size:11px;font-weight:600;">(recomendado)</span></div>
+                  <p style="font-size:12px;color:var(--muted);margin:4px 0 8px;">Sem fios extras. Funciona com Sonoff Mini, Tasmota, ESP-Home, Shelly e similares.</p>
+                  <p style="margin:8px 0;">Na <strong>edição da câmera</strong>:</p>
+                  <ul>
+                    <li><strong>Webhook URL</strong>: depende do firmware. Exemplos:
+                      <ul>
+                        <li>Sonoff Tasmota: <code>http://192.168.1.100/cm?cmnd=Power%20ON</code></li>
+                        <li>ESP-Home: <code>http://192.168.1.100/switch/portao/turn_on</code></li>
+                        <li>Shelly: <code>http://192.168.1.100/relay/0?turn=on</code></li>
+                      </ul>
+                    </li>
+                    <li><strong>Bearer token</strong>: só se o seu relé exigir auth.</li>
+                  </ul>
+                  <p style="font-size:11px;color:var(--muted);">Teste manual antes: <code>curl -X POST &lt;url&gt;</code> deve abrir a cancela.</p>
+                </div>
+                <div class="opt">
+                  <div class="opt-title">🔌 B) GPIO direto</div>
+                  <p style="font-size:12px;color:var(--muted);margin:4px 0 8px;">Mais barato, mas precisa de relé externo opto-isolado (ex: módulo SRD-05VDC-SL-C). Atenção a aterramento.</p>
+                  <p style="margin:8px 0;">Na <strong>edição da câmera</strong>:</p>
+                  <ul>
+                    <li><strong>GPIO pin</strong>: número BCM. Comuns: 17, 27, 22, 23.</li>
+                    <li><strong>Pulso</strong>: 500ms (default). Aumenta se a cancela é lenta.</li>
+                  </ul>
+                  <p style="font-size:11px;color:var(--muted);"><code>gpiod</code> já foi instalado no passo 2.</p>
+                </div>
+              </div>
+              <p style="font-size:12px;color:var(--muted);margin-top:10px;">⚠️ Se preencher os dois (webhook + GPIO), o GPIO tem prioridade.</p>
+            </div>
+          </details>
+
+          <!-- Step 7: ROI -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="7" onchange="lprMarkStep(7,event)"> <strong>7. Desenhar a área de leitura (ROI)</strong></label></summary>
+            <div class="body">
+              <p><strong>ROI</strong> (Region of Interest) é o polígono da área onde leituras valem. Carros passando na rua, faixas do vizinho, gente caminhando — tudo isso é descartado quando cai fora do polígono.</p>
+              <ol>
+                <li>Aba <strong>📷 Câmeras</strong> → clique no botão <strong>🎯 ROI</strong> da câmera</li>
+                <li>O snapshot ao vivo da câmera aparece</li>
+                <li>Clique nos cantos da área onde os carros realmente passam pra abrir o portão. Mínimo 3 pontos, geralmente 4 (um quadrilátero).</li>
+                <li><strong>Salvar ROI</strong></li>
+              </ol>
+              <p style="font-size:12px;color:var(--muted);">O polígono é salvo em coordenadas relativas (0-1), funciona em qualquer resolução de câmera. Se trocar de câmera depois, vale re-desenhar.</p>
+            </div>
+          </details>
+
+          <!-- Step 8: Validar -->
+          <details class="lst">
+            <summary><label><input type="checkbox" data-lpr-step="8" onchange="lprMarkStep(8,event)"> <strong>8. Validar tudo de ponta a ponta</strong></label></summary>
+            <div class="body">
+              <ol>
+                <li>Aba <strong>🅿️ Placas</strong> → cadastre uma placa de teste (ex: do seu carro pessoal). Tipo do dono: "Outro" ou "Funcionário".</li>
+                <li>Passe com o carro pelo portão (ou peça pra alguém passar)</li>
+                <li>Aba <strong>📋 Eventos</strong> deve mostrar a leitura com motivo <strong style="color:#2d7a3a;">✅ Autorizado</strong></li>
+                <li>Se cancela conectada (passo 6): ela deve abrir.</li>
+                <li>Cadastre uma placa <strong>fictícia</strong> (não passe pelo portão). Passe com um carro NÃO cadastrado: o evento deve ter motivo <strong style="color:#c0392b;">⚠️ Não cadastrada</strong>.</li>
+              </ol>
+              <p style="margin-top:12px;font-weight:600;color:#2d7a3a;">🎉 Tudo isso passou? LPR está em produção.</p>
+              <p>Próximo passo natural: incentivar os pais a cadastrar os carros via portal família (eles têm um botão "🚗 Meus Veículos" na aba Acesso). Você aprova/rejeita na aba <strong>📨 Solicitações</strong>.</p>
+            </div>
+          </details>
+
+          <!-- Troubleshooting -->
+          <details class="lst" style="background:#fef9e6;">
+            <summary><strong>🔧 Não tá funcionando? — Troubleshooting</strong></summary>
+            <div class="body">
+              <table class="ts-tbl">
+                <thead><tr><th>Sintoma</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+                <tbody>
+                  <tr><td>Eventos não aparecem mesmo com carro passando</td><td>Daemon offline ou câmera não cadastrada</td><td><em>Acesso → Lumied Bridge</em>: Daemon precisa estar 🟢. Aba <strong>📷 Câmeras</strong>: pelo menos 1 ativa.</td></tr>
+                  <tr><td>FFmpeg falha "Connection refused" / timeout</td><td>RTSP errado, câmera offline ou senha inválida</td><td>Confirme IP+senha. Teste a URL RTSP no <a href="https://www.videolan.org/vlc/" target="_blank">VLC</a> antes (Mídia → Abrir local de rede).</td></tr>
+                  <tr><td>ALPR retorna sempre vazio</td><td>Placa muito longe, ou em ângulo</td><td>Câmera deve ficar em ângulo ≤ ~30° frontal, distância 3-7m do carro. Confirme que o módulo License Plate Reader está "Running" no painel CPAI.</td></tr>
+                  <tr><td>Confiança baixa quase sempre</td><td>Iluminação ruim, foco desajustado</td><td>Verifique IR noturno da câmera, ajuste foco. Temporariamente baixe <code>confidence_min</code> pra 0.70 pra ver se as leituras melhoram.</td></tr>
+                  <tr><td>Pi trava ou esquenta muito</td><td>Sobrecarga (LPR + Face ID disputando CPU)</td><td>Aumente <code>scan_interval_ms</code> pra 3000-5000. Se Pi 4: considere Coral USB ou separar Face ID em outro Pi.</td></tr>
+                  <tr><td>Cancela não abre quando autoriza</td><td>Webhook URL errada ou relé offline</td><td>SSH no Pi: <code>curl -X POST &lt;sua-webhook-url&gt;</code> — deve abrir a cancela. Se não abre nem manualmente, o problema é o relé.</td></tr>
+                  <tr><td>"Sem snapshot" no editor ROI</td><td>Bridge offline ou camera_id não corresponde</td><td>Se o daemon está rodando legacy (env-default), a câmera no painel ainda não foi sincronizada. Reinicie daemon.</td></tr>
+                  <tr><td>Pais reclamam que não conseguem cadastrar</td><td>Família não tem email cadastrado</td><td>Confira no cadastro da família que o email do responsável está preenchido — é por ele que o portal autentica.</td></tr>
+                </tbody>
+              </table>
+              <p style="margin-top:12px;font-size:12px;color:var(--muted);">Logs do daemon: <code>sudo journalctl -u lumied-bridge -f --no-pager</code> mostra em tempo real o que está acontecendo.</p>
+            </div>
+          </details>
         </div>
 
         <!-- Lightbox foto -->
@@ -11171,10 +11416,37 @@ docker compose up -d --build</pre>
     document.getElementById('lprTabSolicitacoes').style.display = which === 'solicitacoes' ? '' : 'none';
     document.getElementById('lprTabCameras').style.display = which === 'cameras' ? '' : 'none';
     document.getElementById('lprTabRelatorio').style.display = which === 'relatorio' ? '' : 'none';
+    document.getElementById('lprTabSetup').style.display = which === 'setup' ? '' : 'none';
     if (which === 'eventos') loadAcessoLpr();
     if (which === 'solicitacoes') loadLprSolicitacoes();
     if (which === 'cameras') loadLprCameras();
     if (which === 'relatorio') loadLprRelatorio();
+    if (which === 'setup') lprUpdateSetupProgress();
+  }
+
+  // ── Setup guide (checklist persistente) ───────────────
+  function lprMarkStep(n, ev) {
+    const set = new Set(JSON.parse(localStorage.getItem('lpr_setup_done') || '[]'));
+    if (ev.target.checked) set.add(n); else set.delete(n);
+    localStorage.setItem('lpr_setup_done', JSON.stringify([...set]));
+    lprUpdateSetupProgress();
+  }
+  function lprUpdateSetupProgress() {
+    const set = new Set(JSON.parse(localStorage.getItem('lpr_setup_done') || '[]'));
+    // 9 steps: 0 (pré-req) + 1..8
+    document.getElementById('lprSetupProgress').textContent = `${set.size}/9`;
+    document.querySelectorAll('input[data-lpr-step]').forEach(cb => {
+      cb.checked = set.has(Number(cb.dataset.lprStep));
+    });
+  }
+  function lprCopySnippet(btn) {
+    const pre = btn.parentElement.querySelector('pre');
+    const text = pre.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }).catch(() => { btn.textContent = '✗ Erro'; });
   }
 
   function lprOpenLightbox(url) {
