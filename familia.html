@@ -589,6 +589,55 @@ body.has-bottomnav{padding-bottom:56px;}
       <!-- Biometria -->
 
       <p class="lw-note">🔒 Seus dados são usados apenas para identificação.<br>Não compartilhamos informações com terceiros.</p>
+
+      <!-- Auto-cadastro de aluno (Mig 295) — link discreto pra não poluir o login da família -->
+      <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);text-align:center;">
+        <button type="button" onclick="alunoSolicitarShow()" id="btnAlunoSolicitar"
+          style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline;">
+          🎓 Aluno sem cadastro? Solicitar acesso
+        </button>
+      </div>
+    </div>
+
+    <!-- Form de solicitação de acesso do aluno -->
+    <div id="alunoSolicitarSection" style="display:none;">
+      <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;margin-bottom:6px;">🎓 Solicitar acesso</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+        Preencha os dados abaixo. Sua escola revisa e aprova; você recebe um e-mail com o link de acesso.
+      </p>
+      <div class="ml-field">
+        <label>Seu nome completo *</label>
+        <input type="text" id="solAlunoNome" autocomplete="name">
+      </div>
+      <div class="ml-field">
+        <label>Seu e-mail pessoal *</label>
+        <input type="email" id="solAlunoEmail" placeholder="seuemail@exemplo.com" autocomplete="email">
+      </div>
+      <div class="ml-field">
+        <label>Sua turma/série *</label>
+        <input type="text" id="solSerie" placeholder="Ex: 5º ano, 2º EM, Pré II">
+      </div>
+      <div class="ml-field">
+        <label>Nome do(a) responsável</label>
+        <input type="text" id="solRespNome">
+      </div>
+      <div class="ml-field">
+        <label>E-mail do(a) responsável</label>
+        <input type="email" id="solRespEmail" placeholder="email@exemplo.com">
+      </div>
+      <div id="solAlunoFeedback" style="display:none;font-size:13px;padding:10px 12px;border-radius:8px;margin-bottom:10px;"></div>
+      <button id="btnSolicitarAluno" onclick="alunoSolicitarSubmit()" class="btn-magic">Enviar solicitação</button>
+      <button type="button" onclick="alunoSolicitarHide()" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline;">← Voltar ao login</button>
+    </div>
+
+    <!-- Estado após envio da solicitação -->
+    <div id="solicitacaoEnviada" style="display:none;text-align:center;">
+      <div style="font-size:42px;margin-bottom:8px;">✅</div>
+      <div style="font-family:'Lora',serif;font-size:18px;font-weight:700;margin-bottom:8px;">Solicitação enviada</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;">
+        Sua escola vai revisar e aprovar seu acesso. Quando aprovado, você recebe um e-mail com o link.
+      </p>
+      <button type="button" onclick="alunoSolicitarHide()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline;">Voltar ao login</button>
     </div>
 
     <!-- Estado após envio do magic link -->
@@ -1504,6 +1553,55 @@ body.has-bottomnav{padding-bottom:56px;}
 
     document.getElementById('solicitarState').style.display = 'none';
     document.getElementById('solicitadoState').style.display = 'block';
+  }
+
+  // ── Auto-cadastro de aluno (Mig 295) ─────────────
+  function alunoSolicitarShow() {
+    document.getElementById('emailState').style.display = 'none';
+    document.getElementById('sentState').style.display = 'none';
+    document.getElementById('alunoSolicitarSection').style.display = 'block';
+  }
+  function alunoSolicitarHide() {
+    document.getElementById('alunoSolicitarSection').style.display = 'none';
+    document.getElementById('solicitacaoEnviada').style.display = 'none';
+    document.getElementById('emailState').style.display = '';
+  }
+  async function alunoSolicitarSubmit() {
+    const fb = document.getElementById('solAlunoFeedback');
+    const btn = document.getElementById('btnSolicitarAluno');
+    fb.style.display = 'none';
+    const data = {
+      action: 'aluno_solicitar_acesso',
+      aluno_nome: document.getElementById('solAlunoNome').value.trim(),
+      aluno_email: document.getElementById('solAlunoEmail').value.trim(),
+      serie: document.getElementById('solSerie').value.trim(),
+      responsavel_nome: document.getElementById('solRespNome').value.trim(),
+      responsavel_email: document.getElementById('solRespEmail').value.trim(),
+    };
+    if (!data.aluno_nome || data.aluno_nome.length < 3) { fb.textContent = 'Informe seu nome completo.'; fb.style.background='#fdf0f2';fb.style.color='#a00d24';fb.style.display='block';return;}
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.aluno_email)) { fb.textContent = 'E-mail inválido.'; fb.style.background='#fdf0f2';fb.style.color='#a00d24';fb.style.display='block';return;}
+    if (!data.serie) { fb.textContent = 'Informe sua turma/série.'; fb.style.background='#fdf0f2';fb.style.color='#a00d24';fb.style.display='block';return;}
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Enviando…';
+    try {
+      const r = await fetch(SUPABASE_URL + '/functions/v1/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+        body: JSON.stringify(data),
+      });
+      const j = await r.json();
+      if (!r.ok || j.error) {
+        fb.textContent = j.error || 'Erro ao enviar.';
+        fb.style.background='#fdf0f2';fb.style.color='#a00d24';fb.style.display='block';
+        btn.disabled = false; btn.innerHTML = 'Enviar solicitação';
+        return;
+      }
+      document.getElementById('alunoSolicitarSection').style.display = 'none';
+      document.getElementById('solicitacaoEnviada').style.display = 'block';
+    } catch (e) {
+      fb.textContent = 'Erro de rede. Tente novamente.';
+      fb.style.background='#fdf0f2';fb.style.color='#a00d24';fb.style.display='block';
+      btn.disabled = false; btn.innerHTML = 'Enviar solicitação';
+    }
   }
 
   async function sendMagicLink() {

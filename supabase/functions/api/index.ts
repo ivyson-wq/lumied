@@ -281,6 +281,227 @@ serve(async (req: Request) => {
     return ok({ sent: true });
   }
 
+  // ── Auto-cadastro de aluno (público) — Mig 295 ──
+  if (action === "aluno_solicitar_acesso") {
+    const aluno_nome = String((body.aluno_nome as string) || '').trim();
+    const aluno_email = String((body.aluno_email as string) || '').toLowerCase().trim();
+    const serie = String((body.serie as string) || '').trim();
+    const responsavel_nome = String((body.responsavel_nome as string) || '').trim();
+    const responsavel_email = String((body.responsavel_email as string) || '').toLowerCase().trim();
+
+    if (!aluno_nome || aluno_nome.length < 3) return err("Informe seu nome completo.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(aluno_email)) return err("E-mail do aluno inválido.");
+    if (responsavel_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(responsavel_email)) return err("E-mail do responsável inválido.");
+    if (!serie) return err("Informe sua turma/série.");
+
+    // Resolve escola via Origin (subdomain). Sem escola, não dá pra continuar.
+    const escolaSol = await resolveEscolaId(req, admin, null, body);
+    if (!escolaSol) return err("Não foi possível identificar a escola. Acesse pelo subdomínio da sua escola.", 400);
+
+    // Bloqueia se email do aluno já é usuário do sistema (qualquer papel).
+    const { data: jaUser } = await admin.from("usuarios").select("id").eq("email", aluno_email).maybeSingle();
+    if (jaUser) return err("Este e-mail já tem acesso à plataforma. Use o login normal.");
+
+    // Bloqueia se já há solicitação pendente/aprovada com esse email nessa escola (índice único cobre, mas resposta amigável).
+    const { data: jaSol } = await admin.from("aluno_solicitacoes_acesso")
+      .select("id, status").eq("aluno_email", aluno_email).eq("escola_id", escolaSol)
+      .in("status", ["pendente", "aprovado"]).maybeSingle();
+    if (jaSol) {
+      const msg = (jaSol as any).status === "pendente"
+        ? "Sua solicitação já está em análise. Você receberá um e-mail quando a escola aprovar."
+        : "Este e-mail já foi aprovado. Verifique sua caixa de entrada.";
+      return err(msg, 409);
+    }
+
+    const { data: ins, error: insErr } = await admin.from("aluno_solicitacoes_acesso").insert({
+      escola_id: escolaSol,
+      aluno_nome, aluno_email, serie,
+      responsavel_nome: responsavel_nome || null,
+      responsavel_email: responsavel_email || null,
+      ip_origem: ip,
+    }).select("id").single();
+    if (insErr) return err("Erro ao registrar solicitação: " + sanitizePgError(insErr));
+
+    return ok({ ok: true, id: (ins as any).id, msg: "Solicitação enviada. Você receberá um e-mail quando a escola aprovar seu acesso." });
+  }
+
+  // ── Listagem de solicitações (gerente/secretaria) ──
+  if (action === "aluno_solicitacoes_list") {
+    const tk = (body._token as string) || '';
+    const sessao = await validarSessao(admin, tk);
+    if (!sessao) return err("Sessão inválida.", 401);
+    const escolaList = (sessao as any).escola_id || (await resolveEscolaId(req, admin, null, body));
+    if (!escolaList) return err("Escola não resolvida.", 400);
+
+    const { data: solRows } = await admin.from("aluno_solicitacoes_acesso")
+      .select("id, aluno_nome, aluno_email, serie, responsavel_nome, responsavel_email, status, motivo_rejeicao, criado_em, decidido_em")
+      .eq("escola_id", escolaList).order("criado_em", { ascending: false }).limit(200);
+    const sols = (solRows || []) as any[];
+
+    // Heurísticas de match (só pra pendentes — economiza queries).
+    const pendentes = sols.filter(s => s.status === 'pendente');
+    if (pendentes.length) {
+      const respEmails = [...new Set(pendentes.map(s => s.responsavel_email).filter(Boolean))];
+      const alunoNomes = [...new Set(pendentes.map(s => s.aluno_nome))];
+      const [{ data: famsMatch }, { data: alunosMatch }] = await Promise.all([
+        respEmails.length
+          ? admin.from("familias").select("email, nome_aluno").eq("escola_id", escolaList).in("email", respEmails)
+          : Promise.resolve({ data: [] }),
+        alunoNomes.length
+          ? admin.from("alunos").select("nome, familia_email").eq("escola_id", escolaList)
+          : Promise.resolve({ data: [] }),
+      ]);
+      const famSet = new Set((famsMatch || []).map((f: any) => f.email));
+      const alunoSet = new Set((alunosMatch || []).map((a: any) => (a.nome || '').toLowerCase().trim()));
+      for (const s of pendentes) {
+        s.match_responsavel = !!(s.responsavel_email && famSet.has(s.responsavel_email));
+        s.match_aluno = alunoSet.has((s.aluno_nome || '').toLowerCase().trim());
+      }
+    }
+
+    const counts = sols.reduce((acc: any, s: any) => { acc[s.status] = (acc[s.status] || 0) + 1; return acc; }, {});
+    return ok({ solicitacoes: sols, counts });
+  }
+
+  // ── Aprovar solicitação (gerente) ──
+  if (action === "aluno_solicitacao_aprovar") {
+    const tk = (body._token as string) || '';
+    const sessao = await validarSessao(admin, tk);
+    if (!sessao) return err("Sessão inválida.", 401);
+    const id = String((body.id as string) || '').trim();
+    if (!id) return err("id obrigatório.");
+
+    const { data: sol } = await admin.from("aluno_solicitacoes_acesso").select("*").eq("id", id).maybeSingle();
+    if (!sol) return err("Solicitação não encontrada.", 404);
+    if ((sol as any).status !== 'pendente') return err("Solicitação já decidida.", 409);
+
+    // Cria alunos_login (senha vazia — login será via magic link). Trigger Mig 294
+    // sincroniza pra usuarios.papeis += 'aluno' automaticamente.
+    const { error: alErr } = await admin.from("alunos_login").insert({
+      aluno_nome: (sol as any).aluno_nome,
+      email: (sol as any).aluno_email,
+      familia_email: (sol as any).responsavel_email || null,
+      serie: (sol as any).serie || null,
+      senha_hash: '',
+      ativo: true,
+    });
+    if (alErr && !String(alErr.message).includes("duplicate")) {
+      return err("Erro ao criar acesso: " + sanitizePgError(alErr));
+    }
+
+    await admin.from("aluno_solicitacoes_acesso").update({
+      status: 'aprovado', decidido_por: (sessao as any).id || null, decidido_em: new Date().toISOString(),
+    }).eq("id", id);
+
+    // Dispara magic link branded com o template padrão.
+    try {
+      const { data: linkData } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: (sol as any).aluno_email,
+        options: { redirectTo: `https://${(req.headers.get("host") || "")}/familia.html` },
+      });
+      const magicUrl = (linkData as any)?.properties?.action_link || '';
+      const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
+      if (magicUrl && RESEND_KEY) {
+        const { data: cfgRows } = await admin.from("escola_config").select("chave, valor").eq("escola_id", (sol as any).escola_id);
+        const cfg: Record<string, string> = {};
+        for (const r of cfgRows ?? []) cfg[r.chave] = typeof r.valor === "string" ? r.valor.replace(/^"|"$/g, "") : (r.valor ?? "");
+        const escolaNome = cfg.escola_nome || "Escola";
+        const cor = cfg.cor_primaria || "#C8102E";
+        const html = `
+          <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fff;">
+            <h2 style="color:${escapeHtml(cor)};margin:0 0 8px;font-size:20px;">Seu acesso foi aprovado!</h2>
+            <p style="color:#888;font-size:12px;margin:0 0 18px;">${escapeHtml(escolaNome)} · by Lumied</p>
+            <p style="font-size:14px;color:#333;line-height:1.6;">Olá, ${escapeHtml((sol as any).aluno_nome)}! A escola aprovou seu acesso ao portal. Clique abaixo para entrar:</p>
+            <div style="text-align:center;margin:18px 0;">
+              <a href="${escapeHtml(magicUrl)}" style="display:inline-block;padding:14px 32px;background:${escapeHtml(cor)};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">Acessar portal</a>
+            </div>
+            <p style="font-size:11px;color:#aaa;text-align:center;">Link válido por 1 hora. Se expirar, peça um novo na tela de login.</p>
+          </div>`;
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_KEY}` },
+          body: JSON.stringify({
+            from: `${sanitizeHeaderValue(escolaNome) || 'Lumied'} <onboarding@resend.dev>`,
+            to: [(sol as any).aluno_email],
+            subject: `Acesso aprovado · ${sanitizeHeaderValue(escolaNome) || 'Lumied'}`,
+            html,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+      }
+    } catch (e) {
+      console.warn('[aluno_aprovar] magic link send failed:', (e as Error).message);
+    }
+
+    return ok({ ok: true });
+  }
+
+  // ── Rejeitar solicitação (gerente) ──
+  if (action === "aluno_solicitacao_rejeitar") {
+    const tk = (body._token as string) || '';
+    const sessao = await validarSessao(admin, tk);
+    if (!sessao) return err("Sessão inválida.", 401);
+    const id = String((body.id as string) || '').trim();
+    const motivo = String((body.motivo as string) || '').trim();
+    const motivoLivre = String((body.motivo_livre as string) || '').trim();
+    if (!id) return err("id obrigatório.");
+
+    const motivosValidos: Record<string, string> = {
+      email_em_uso: "Este e-mail já está vinculado a outra conta. Use outro e-mail.",
+      nao_pertence: "Não localizamos seu cadastro nesta escola. Confirme com a secretaria.",
+      dados_inconsistentes: "Os dados informados não conferem com nosso cadastro. Tente novamente com os dados corretos.",
+      outro: motivoLivre || "Solicitação não aprovada. Entre em contato com a secretaria da escola.",
+    };
+    if (!motivosValidos[motivo]) return err("Motivo inválido.");
+
+    const { data: sol } = await admin.from("aluno_solicitacoes_acesso").select("*").eq("id", id).maybeSingle();
+    if (!sol) return err("Solicitação não encontrada.", 404);
+    if ((sol as any).status !== 'pendente') return err("Solicitação já decidida.", 409);
+
+    const motivoMsg = motivosValidos[motivo];
+    await admin.from("aluno_solicitacoes_acesso").update({
+      status: 'rejeitado',
+      motivo_rejeicao: motivo === 'outro' ? `outro: ${motivoLivre}` : motivo,
+      decidido_por: (sessao as any).id || null,
+      decidido_em: new Date().toISOString(),
+    }).eq("id", id);
+
+    // Email padronizado pro aluno.
+    try {
+      const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
+      if (RESEND_KEY) {
+        const { data: cfgRows } = await admin.from("escola_config").select("chave, valor").eq("escola_id", (sol as any).escola_id);
+        const cfg: Record<string, string> = {};
+        for (const r of cfgRows ?? []) cfg[r.chave] = typeof r.valor === "string" ? r.valor.replace(/^"|"$/g, "") : (r.valor ?? "");
+        const escolaNome = cfg.escola_nome || "Escola";
+        const html = `
+          <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fff;">
+            <h2 style="margin:0 0 8px;font-size:20px;">Solicitação de acesso</h2>
+            <p style="color:#888;font-size:12px;margin:0 0 18px;">${escapeHtml(escolaNome)} · by Lumied</p>
+            <p style="font-size:14px;color:#333;line-height:1.6;">Olá, ${escapeHtml((sol as any).aluno_nome)}.</p>
+            <p style="font-size:14px;color:#333;line-height:1.6;">${escapeHtml(motivoMsg)}</p>
+            <p style="font-size:13px;color:#666;line-height:1.6;margin-top:18px;">Se acreditar que houve um engano, fale com a secretaria da escola.</p>
+          </div>`;
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_KEY}` },
+          body: JSON.stringify({
+            from: `${sanitizeHeaderValue(escolaNome) || 'Lumied'} <onboarding@resend.dev>`,
+            to: [(sol as any).aluno_email],
+            subject: `Solicitação de acesso · ${sanitizeHeaderValue(escolaNome) || 'Lumied'}`,
+            html,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+      }
+    } catch (e) {
+      console.warn('[aluno_rejeitar] email failed:', (e as Error).message);
+    }
+
+    return ok({ ok: true });
+  }
+
   // ── Resolução de papéis do usuário autenticado (família/aluno) ──
   // Usado pelo familia.html pra aplicar RBAC frontend (esconder abas quando aluno-only).
   if (action === "me_papeis") {

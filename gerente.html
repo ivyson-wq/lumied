@@ -4716,6 +4716,98 @@ docker compose up -d --build</pre>
     return d;
   }
 
+  // ── Solicitações de Acesso de Aluno (Mig 295) ────────────────────────
+  var alunoSolFiltro = 'pendente';
+  var alunoSolPendingId = null;
+
+  function escAlunoSol(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  }
+
+  async function loadAlunoSolicitacoes() {
+    const el = document.getElementById('alunoSolLista');
+    if (!el) return;
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando…</div>';
+    document.querySelectorAll('[id^="alunoSolFiltro"]').forEach(b => {
+      if (!b.id.startsWith('alunoSolFiltro')) return;
+      const isActive = b.id === 'alunoSolFiltro' + alunoSolFiltro.charAt(0).toUpperCase() + alunoSolFiltro.slice(1);
+      b.style.background = isActive ? '#1a1a1a' : '#fff';
+      b.style.color = isActive ? '#fff' : '#1a1a1a';
+    });
+    const d = await api({ action: 'aluno_solicitacoes_list' });
+    if (d && d.error) { el.innerHTML = `<p style="color:#a00d24;font-size:13px;">${escAlunoSol(d.error)}</p>`; return; }
+    const sols = (d.solicitacoes || []).filter(s => s.status === alunoSolFiltro);
+    const counts = d.counts || {};
+    const badge = document.getElementById('alunoSolBadge');
+    if (badge) {
+      const n = counts.pendente || 0;
+      badge.textContent = n;
+      badge.style.display = n > 0 ? 'inline-block' : 'none';
+    }
+    if (!sols.length) {
+      el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Nenhuma solicitação ' + alunoSolFiltro + '.</div>';
+      return;
+    }
+    el.innerHTML = sols.map(s => {
+      const dt = new Date(s.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      const matchResp = s.match_responsavel
+        ? '<span style="background:#edf7f0;color:#2d7a3a;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">✓ responsável existe</span>'
+        : (s.responsavel_email ? '<span style="background:#fff7e6;color:#a06400;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">⚠ não localizado</span>' : '');
+      const matchAluno = s.match_aluno
+        ? '<span style="background:#edf7f0;color:#2d7a3a;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">✓ aluno cadastrado</span>'
+        : '<span style="background:#fff7e6;color:#a06400;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">⚠ aluno não localizado</span>';
+      const acoes = s.status === 'pendente'
+        ? `<div style="display:flex;gap:8px;margin-top:10px;">
+             <button onclick="aprovarAlunoSol('${s.id}')" style="padding:8px 14px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✓ Aprovar</button>
+             <button onclick="abrirRejeitarAlunoSol('${s.id}')" style="padding:8px 14px;background:#fff;border:1.5px solid #C8102E;color:#C8102E;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✕ Rejeitar</button>
+           </div>`
+        : (s.status === 'rejeitado' && s.motivo_rejeicao ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;">Motivo: ${escAlunoSol(s.motivo_rejeicao)}</div>` : '');
+      return `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;font-size:14px;">${escAlunoSol(s.aluno_nome)}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escAlunoSol(s.aluno_email)} · ${escAlunoSol(s.serie || '—')}</div>
+            ${s.responsavel_nome || s.responsavel_email ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">Resp: ${escAlunoSol(s.responsavel_nome || '—')} · ${escAlunoSol(s.responsavel_email || '—')}</div>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--muted);">${dt}</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">${matchAluno} ${matchResp}</div>
+        ${acoes}
+      </div>`;
+    }).join('');
+  }
+
+  async function aprovarAlunoSol(id) {
+    if (!confirm('Aprovar solicitação? O aluno receberá um e-mail com o link de acesso.')) return;
+    const d = await api({ action: 'aluno_solicitacao_aprovar', id });
+    if (d && d.error) { alert('Erro: ' + d.error); return; }
+    if (typeof showToast === 'function') showToast('Aprovado! E-mail enviado ao aluno.', 'ok');
+    loadAlunoSolicitacoes();
+  }
+
+  function abrirRejeitarAlunoSol(id) {
+    alunoSolPendingId = id;
+    document.querySelectorAll('input[name="alunoSolMotivo"]').forEach(r => r.checked = false);
+    document.getElementById('alunoSolMotivoLivre').value = '';
+    document.getElementById('alunoSolRejeitarModal').style.display = 'flex';
+  }
+
+  async function alunoSolConfirmarRejeicao() {
+    const motivo = (document.querySelector('input[name="alunoSolMotivo"]:checked') || {}).value;
+    const motivoLivre = document.getElementById('alunoSolMotivoLivre').value.trim();
+    if (!motivo) { alert('Selecione um motivo.'); return; }
+    if (motivo === 'outro' && !motivoLivre) { alert('Informe o motivo.'); return; }
+    const btn = document.getElementById('alunoSolBtnConfirmarRejeicao');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    const d = await api({ action: 'aluno_solicitacao_rejeitar', id: alunoSolPendingId, motivo, motivo_livre: motivoLivre });
+    btn.disabled = false; btn.textContent = 'Rejeitar';
+    if (d && d.error) { alert('Erro: ' + d.error); return; }
+    document.getElementById('alunoSolRejeitarModal').style.display = 'none';
+    if (typeof showToast === 'function') showToast('Rejeitado. E-mail enviado ao aluno.', 'ok');
+    loadAlunoSolicitacoes();
+  }
+
   // Chip de consumo de IA no topbar — mostra só se houver cap ou proximidade
   let _iaUsoData = null;
   async function carregarIaUsoChip() {
