@@ -1439,7 +1439,8 @@ function calcularROI() {
 
   // Plano estimado
   let planoMensal = 697;
-  if (alunos > 500) planoMensal = 1997;
+  if (alunos > 500) planoMensal = 1197;
+  if (alunos > 1000) planoMensal = 1997;
   const investimentoAnual = planoMensal * 12;
   const multiplo = investimentoAnual > 0 ? (totalAnual / investimentoAnual).toFixed(1) : 0;
 
@@ -1517,8 +1518,8 @@ calcularROI();
   <div class="container">
     <div class="section-header fade-up">
       <div class="section-badge">Planos & Preços</div>
-      <h2 class="section-title section-title-light">1 plano completo. Add-ons sob medida.</h2>
-      <p class="section-sub section-sub-light">Sua escola recebe 33 módulos no plano base. Adicione o que precisar, quando precisar.</p>
+      <h2 class="section-title section-title-light">3 planos. Escolha o seu nível.</h2>
+      <p class="section-sub section-sub-light">Todos incluem implantação, treinamento e migração. Sem fidelidade, cancele quando quiser.</p>
     </div>
     <div class="pricing-toggle fade-up">
       <span>Mensal</span>
@@ -1526,13 +1527,12 @@ calcularROI();
       <span class="active">Anual</span>
       <span class="save-badge">Economize 22%</span>
     </div>
-    <div class="pricing-grid fade-up" style="grid-template-columns:repeat(2,1fr);max-width:900px;margin:0 auto;gap:20px;">
+    <div class="pricing-grid fade-up" style="grid-template-columns:repeat(3,1fr);max-width:1100px;margin:0 auto;gap:16px;">
 
       <!-- ESSENCIAL -->
-      <div class="plan-card featured">
-        <div class="plan-badge">Mais Popular</div>
+      <div class="plan-card">
         <div class="plan-name">Essencial</div>
-        <div class="plan-desc">Gestão escolar completa num só lugar</div>
+        <div class="plan-desc">Gestão completa num só lugar</div>
         <div class="plan-price">
           <span class="currency">R$</span><span class="amount" data-monthly="897" data-annual="697">697</span><span class="period">/mês</span>
           <div class="per-student">Até 500 alunos</div>
@@ -1543,15 +1543,41 @@ calcularROI();
           <li><span class="check">&#10003;</span> Notas, Frequência, Chamada, Agenda</li>
           <li><span class="check">&#10003;</span> CRM de Matrículas (Kanban)</li>
           <li><span class="check">&#10003;</span> Financeiro (Boletos + PIX)</li>
-          <li><span class="check">&#10003;</span> Régua de Cobrança Automática</li>
-          <li><span class="check">&#10003;</span> Contratos Digitais + Assinatura</li>
+          <li><span class="check">&#10003;</span> Régua de Cobrança + Contratos</li>
           <li><span class="check">&#10003;</span> Compliance LGPD + Audit Log</li>
           <li><span class="check">&#10003;</span> Almoxarifado, Biblioteca, Cantina</li>
           <li><span class="check">&#10003;</span> Relatórios BNCC + PDI</li>
-          <li><span class="check">&#10003;</span> Login Biométrico (Face/Digital)</li>
-          <li><span class="check">&#10003;</span> Pickup GPS + Emergências</li>
+          <li><span class="check">&#10003;</span> Login Biométrico + Pickup GPS</li>
+          <li><span class="x">&mdash;</span> WhatsApp Business</li>
+          <li><span class="x">&mdash;</span> IA Lumi</li>
         </ul>
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 1.490</strong> (em até 3x)<br><span style="font-size:10px;">Migração + treinamento + 30 dias de suporte VIP</span></div>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 1.490</strong> (em até 3x)<br><span style="font-size:10px;">Migração + treinamento + 30 dias suporte VIP</span></div>
+        <button class="plan-btn plan-btn-outline" onclick="location.href='#contact'">Começar</button>
+      </div>
+
+      <!-- PROFISSIONAL -->
+      <div class="plan-card featured">
+        <div class="plan-badge">Mais Popular</div>
+        <div class="plan-name">Profissional</div>
+        <div class="plan-desc">WhatsApp + IA inclusos</div>
+        <div class="plan-price">
+          <span class="currency">R$</span><span class="amount" data-monthly="1.497" data-annual="1.197">1.197</span><span class="period">/mês</span>
+          <div class="per-student">Até 1.000 alunos</div>
+        </div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> <strong>Tudo do Essencial +</strong></li>
+          <li><span class="check">&#10003;</span> <strong>WhatsApp Business (1.000 msgs)</strong></li>
+          <li><span class="check">&#10003;</span> <strong>Lumi IA (Claude) — insights</strong></li>
+          <li><span class="check">&#10003;</span> BI / Analytics avançado</li>
+          <li><span class="check">&#10003;</span> WhatsApp Departamental</li>
+          <li><span class="check">&#10003;</span> FAQ Bot IA no WhatsApp</li>
+          <li style="margin-top:8px;font-size:12px;color:var(--text-muted);font-weight:600;">Add-ons disponíveis:</li>
+          <li><span class="check" style="color:var(--accent);">+</span> Face ID + Acesso (R$ 397)</li>
+          <li><span class="check" style="color:var(--accent);">+</span> Ponto CLT (R$ 197)</li>
+          <li><span class="check" style="color:var(--accent);">+</span> RH Completo (R$ 247)</li>
+          <li><span class="check" style="color:var(--accent);">+</span> Loja Virtual (R$ 97)</li>
+        </ul>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 1.990</strong> (em até 4x)<br><span style="font-size:10px;">Migração + setup WhatsApp/IA + 45 dias suporte</span></div>
         <button class="plan-btn plan-btn-primary" onclick="location.href='#contact'">Agendar Demo</button>
       </div>
 
@@ -1559,7 +1585,7 @@ calcularROI();
       <div class="plan-card" style="border-color:var(--accent);border-width:2px;">
         <div class="plan-badge" style="background:linear-gradient(135deg,#F59E0B,#F97316);">Redes de Ensino</div>
         <div class="plan-name">Rede</div>
-        <div class="plan-desc">Multi-escola. Tudo ilimitado.</div>
+        <div class="plan-desc">Tudo ilimitado. Suporte VIP.</div>
         <div class="plan-price">
           <span class="currency">R$</span><span class="amount" data-monthly="2.497" data-annual="1.997">1.997</span><span class="period">/mês</span>
           <div class="per-student">Alunos ilimitados</div>
@@ -1575,83 +1601,15 @@ calcularROI();
           <li><span class="check">&#10003;</span> Gerente de Sucesso Dedicado</li>
           <li><span class="check">&#10003;</span> SLA 99.9% + Suporte VIP</li>
         </ul>
-        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 2.990</strong> (em até 5x)<br><span style="font-size:10px;">Migração completa + 5 treinamentos + 60 dias acompanhamento</span></div>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:6px;line-height:1.4;">Implantação: <strong>R$ 2.990</strong> (em até 5x)<br><span style="font-size:10px;">Migração completa + 5 treinamentos + 60 dias</span></div>
         <button class="plan-btn plan-btn-outline" style="border-color:var(--accent);color:var(--accent);" onclick="location.href='#contact'">Falar com Vendas</button>
       </div>
 
     </div>
 
-    <!-- ADD-ONS -->
-    <div class="section-header fade-up" style="margin-top:48px;">
-      <div class="section-badge">Personalize seu plano</div>
-      <h2 class="section-title section-title-light" style="font-size:24px;">Add-ons para o plano Essencial</h2>
-      <p class="section-sub section-sub-light">Adicione funcionalidades premium quando sua escola precisar. Cancele quando quiser.</p>
-    </div>
-    <div class="addons-grid fade-up">
-      <div class="addon-card">
-        <div class="addon-icon">💬</div>
-        <div class="addon-info">
-          <div class="addon-name">WhatsApp Business</div>
-          <div class="addon-desc">API oficial Meta. Comunicados, régua de cobrança, FAQ bot. 1.000 msgs inclusas.</div>
-        </div>
-        <div class="addon-price">R$ 197<span>/mês</span></div>
-      </div>
-      <div class="addon-card">
-        <div class="addon-icon">🧠</div>
-        <div class="addon-info">
-          <div class="addon-name">Lumi — Assistente IA</div>
-          <div class="addon-desc">Claude AI com acesso aos dados da escola. Insights, comunicados, análise de inadimplência.</div>
-        </div>
-        <div class="addon-price">R$ 297<span>/mês</span></div>
-      </div>
-      <div class="addon-card">
-        <div class="addon-icon">🔐</div>
-        <div class="addon-info">
-          <div class="addon-name">Face ID + Controle de Acesso</div>
-          <div class="addon-desc">Biometria facial, RFID, presença automática, LPR veicular, alertas real-time.</div>
-        </div>
-        <div class="addon-price">R$ 397<span>/mês</span></div>
-      </div>
-      <div class="addon-card">
-        <div class="addon-icon">🕐</div>
-        <div class="addon-info">
-          <div class="addon-name">Ponto CLT (Portaria 671)</div>
-          <div class="addon-desc">REP, parser AFD, espelho de ponto, banco de horas, HE 50%/100%, hora noturna.</div>
-        </div>
-        <div class="addon-price">R$ 197<span>/mês</span></div>
-      </div>
-      <div class="addon-card">
-        <div class="addon-icon">👥</div>
-        <div class="addon-info">
-          <div class="addon-name">RH Completo</div>
-          <div class="addon-desc">Folha de pagamento, férias, admissão/demissão, integração contábil.</div>
-        </div>
-        <div class="addon-price">R$ 247<span>/mês</span></div>
-      </div>
-      <div class="addon-card">
-        <div class="addon-icon">🛒</div>
-        <div class="addon-info">
-          <div class="addon-name">Loja Virtual</div>
-          <div class="addon-desc">E-commerce de uniformes, materiais e eventos. Checkout PIX integrado.</div>
-        </div>
-        <div class="addon-price">R$ 97<span>/mês</span></div>
-      </div>
-    </div>
-    <p class="fade-up" style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:16px;">O plano Rede já inclui todos os add-ons sem custo adicional.</p>
+    <p class="fade-up" style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:16px;">O plano Rede inclui todos os add-ons sem custo adicional. Essencial pode fazer upgrade para Profissional a qualquer momento.</p>
   </div>
 </section>
-<style>
-.addons-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:900px;margin:0 auto;}
-.addon-card{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--border-light);border-radius:12px;padding:16px 20px;transition:border-color .2s,box-shadow .2s;}
-.addon-card:hover{border-color:var(--primary);box-shadow:0 4px 16px rgba(45,27,78,.08);}
-.addon-icon{font-size:28px;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--bg-soft);border-radius:10px;}
-.addon-info{flex:1;min-width:0;}
-.addon-name{font-weight:700;font-size:14px;color:var(--text-heading);margin-bottom:2px;}
-.addon-desc{font-size:11px;color:var(--text-muted);line-height:1.4;}
-.addon-price{font-weight:800;font-size:18px;color:var(--primary);white-space:nowrap;flex-shrink:0;}
-.addon-price span{font-size:11px;font-weight:500;color:var(--text-muted);}
-@media (max-width:700px){.addons-grid{grid-template-columns:1fr;}}
-</style>
 
 <!-- ── OBJECTION REMOVAL (LIGHT) ── -->
 <section class="section section-light" style="padding:32px 24px 8px;">
@@ -1686,18 +1644,27 @@ calcularROI();
       <div class="impl-card">
         <h4>Essencial</h4>
         <ul>
-          <li>3 sessões de treinamento</li>
-          <li>Migração de planilha ou sistema</li>
+          <li>2 sessões de treinamento</li>
+          <li>Migração de planilha/sistema</li>
           <li>Config financeiro + boletos + PIX</li>
-          <li>Setup compliance + CRM</li>
           <li>Suporte prioritário 30 dias</li>
+        </ul>
+      </div>
+      <div class="impl-card">
+        <h4>Profissional</h4>
+        <ul>
+          <li>3 sessões de treinamento</li>
+          <li>Migração de dados completa</li>
+          <li>Setup WhatsApp Business + IA</li>
+          <li>Config compliance + CRM</li>
+          <li>Suporte prioritário 45 dias</li>
         </ul>
       </div>
       <div class="impl-card">
         <h4>Rede</h4>
         <ul>
           <li>5 treinamentos por perfil</li>
-          <li>Migração completa de outro sistema</li>
+          <li>Migração de outro sistema</li>
           <li>Setup biometria + acesso + WhatsApp</li>
           <li>Gerente de sucesso dedicado</li>
           <li>Acompanhamento 60 dias</li>
