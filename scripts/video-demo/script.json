@@ -1,0 +1,126 @@
+{
+  "title": "Lumied — Gestão Escolar Inteligente",
+  "duration_target_seconds": 120,
+  "voice": "professional_female_ptbr",
+  "music": "corporate_upbeat_subtle",
+  "scenes": [
+    {
+      "id": 1,
+      "duration": 8,
+      "type": "hook",
+      "narration": "Sua escola ainda usa planilha pra controlar inadimplência? WhatsApp pessoal pra falar com família? E quando o ponto da professora não fecha, é no braço?",
+      "visual": "pain_points",
+      "text_overlay": ["Planilhas?", "WhatsApp pessoal?", "Ponto no braço?"],
+      "transition": "fade"
+    },
+    {
+      "id": 2,
+      "duration": 5,
+      "type": "solution_reveal",
+      "narration": "O Lumied resolve tudo isso num só sistema. Trinta e três módulos integrados, inteligência artificial real e WhatsApp oficial — a partir de seiscentos e noventa e sete reais por mês.",
+      "visual": "logo_reveal",
+      "text_overlay": ["33 módulos", "IA real", "WhatsApp oficial", "R$ 697/mês"],
+      "transition": "zoom"
+    },
+    {
+      "id": 3,
+      "duration": 12,
+      "type": "feature_showcase",
+      "narration": "No painel do gerente, você vê tudo num relance: quantos alunos estão presentes agora, qual o índice de inadimplência, quais leads estão parados e o que a Lumi, nossa inteligência artificial, sugere que você faça hoje. Sem precisar abrir planilha nenhuma.",
+      "visual": "dashboard_gerente",
+      "highlights": ["KPI cards", "Morning Briefing", "IA suggestions"],
+      "transition": "slide_left"
+    },
+    {
+      "id": 4,
+      "duration": 10,
+      "type": "feature_showcase",
+      "narration": "O financeiro funciona sozinho. Boleto e PIX integrados com o Banco Inter. A régua de cobrança dispara WhatsApp e email automaticamente no vencimento. Resultado: quarenta por cento menos inadimplência em noventa dias.",
+      "visual": "financeiro_panel",
+      "highlights": ["Boleto+PIX", "Régua automática", "-40% inadimplência"],
+      "stat_animation": {"from": 14, "to": 8.3, "suffix": "%", "label": "Inadimplência"},
+      "transition": "slide_left"
+    },
+    {
+      "id": 5,
+      "duration": 10,
+      "type": "feature_showcase",
+      "narration": "A comunicação com famílias é pelo WhatsApp oficial da Meta. Comunicados, confirmação de presença, alerta de saída e FAQ automático — tudo no número da escola, não no celular da secretária. Mil mensagens inclusas no plano Profissional.",
+      "visual": "whatsapp_panel",
+      "highlights": ["API oficial Meta", "FAQ bot IA", "1.000 msgs/mês"],
+      "transition": "slide_left"
+    },
+    {
+      "id": 6,
+      "duration": 10,
+      "type": "feature_showcase",
+      "narration": "O controle de acesso é por Face ID. A criança chega, o rosto é reconhecido, a professora recebe o alerta em tempo real e os pais são notificados. Na retirada, só sai com autorização facial. Segurança de verdade.",
+      "visual": "face_id_flow",
+      "highlights": ["Control iD iDFace", "Alerta real-time", "Retirada autorizada"],
+      "transition": "slide_left"
+    },
+    {
+      "id": 7,
+      "duration": 10,
+      "type": "feature_showcase",
+      "narration": "O ponto das professoras é Portaria seiscentos e setenta e um. O sistema puxa o AFD do relógio ponto automaticamente, calcula hora extra a cinquenta e cem por cento, hora noturna, banco de horas — e gera o espelho pronto pro contador.",
+      "visual": "ponto_panel",
+      "highlights": ["Portaria 671", "HE 50%/100%", "Espelho automático"],
+      "transition": "slide_left"
+    },
+    {
+      "id": 8,
+      "duration": 10,
+      "type": "feature_showcase",
+      "narration": "A Lumi é diferente de qualquer chatbot. Ela tem acesso real aos dados da sua escola. Pergunta 'qual turma tem mais falta?' e ela responde com dados. Pede 'redige um comunicado sobre o feriado' e ela escreve no tom da escola. Tudo via painel, sem sair do sistema.",
+      "visual": "lumi_ai",
+      "highlights": ["Claude AI", "Dados reais", "Comunicados", "Insights"],
+      "transition": "slide_left"
+    },
+    {
+      "id": 9,
+      "duration": 8,
+      "type": "social_proof",
+      "narration": "A Maple Bear Caxias do Sul reduziu a inadimplência em quarenta por cento, economizou doze horas por semana da coordenação e recuperou trinta e um mil reais por mês em receita. Em noventa dias.",
+      "visual": "case_study",
+      "stats": [
+        {"value": "-40%", "label": "Inadimplência"},
+        {"value": "12h", "label": "Economizadas/semana"},
+        {"value": "R$ 31k", "label": "Receita recuperada/mês"}
+      ],
+      "transition": "fade"
+    },
+    {
+      "id": 10,
+      "duration": 12,
+      "type": "pricing",
+      "narration": "São três planos. O Essencial, a seiscentos e noventa e sete por mês, traz trinta e três módulos — tudo que sua escola precisa pra funcionar. O Profissional, a mil cento e noventa e sete, inclui WhatsApp e inteligência artificial. E o Rede, pra quem tem mais de uma unidade, com tudo ilimitado. Sem fidelidade. Sem surpresas.",
+      "visual": "pricing_cards",
+      "plans": [
+        {"name": "Essencial", "price": "R$ 697", "highlight": false},
+        {"name": "Profissional", "price": "R$ 1.197", "highlight": true},
+        {"name": "Rede", "price": "R$ 1.997", "highlight": false}
+      ],
+      "transition": "fade"
+    },
+    {
+      "id": 11,
+      "duration": 8,
+      "type": "competitors",
+      "narration": "Enquanto a Escolaweb cobra mil seiscentos e sessenta e cinco por trezentos alunos, o Lumied Profissional entrega mil alunos, WhatsApp e IA por mil cento e noventa e sete. Quarenta e três por cento mais barato que o Sponte. E com mais funcionalidades.",
+      "visual": "comparison_table",
+      "competitors": ["Escolaweb R$ 1.665", "Sponte R$ 2.100", "Lumied R$ 1.197"],
+      "transition": "slide_up"
+    },
+    {
+      "id": 12,
+      "duration": 7,
+      "type": "cta",
+      "narration": "Agende uma demo de vinte minutos. A gente mostra sua escola rodando no Lumied com dados reais. Migração gratuita, implantação em sete dias, e suporte VIP nos primeiros trinta dias. Acesse lumied ponto com ponto b r.",
+      "visual": "cta_final",
+      "text_overlay": ["lumied.com.br", "Demo gratuita 20 min", "Migração grátis"],
+      "cta_url": "https://lumied.com.br/#contact",
+      "transition": "zoom_out"
+    }
+  ]
+}

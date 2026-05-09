@@ -339,6 +339,19 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .briefing-metric .bm-trend.up{background:rgba(72,187,120,.18);color:#86efac;}
 .briefing-metric .bm-trend.down{background:rgba(229,62,62,.18);color:#fca5a5;}
 .briefing-metric .bm-trend.flat{background:rgba(255,255,255,.08);color:rgba(255,255,255,.65);}
+/* BRIEFING ALERTAS */
+.briefing-alertas{display:flex;flex-direction:column;gap:8px;}
+.ba-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;cursor:pointer;transition:all .2s;color:#fff;font-family:inherit;text-align:left;font-size:13px;}
+.ba-item:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22);}
+.ba-item .ba-icon{font-size:16px;flex-shrink:0;width:24px;text-align:center;}
+.ba-item .ba-text{flex:1;min-width:0;}
+.ba-item .ba-text strong{font-weight:600;}
+.ba-item .ba-arrow{opacity:.5;font-size:12px;}
+.ba-item.ba-warn{border-color:rgba(250,204,21,.3);background:rgba(250,204,21,.08);}
+.ba-item.ba-urgent{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);}
+/* BRIEFING QUICK ACTIONS */
+.bqa-btn{padding:8px 16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.bqa-btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);transform:translateY(-1px);}
 /* DASHBOARD WIDGETS */
 .dash-action-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:18px;}
 .dash-action{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;text-align:left;width:100%;font-family:inherit;}
@@ -423,6 +436,9 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   .dash-action .da-count{font-size:17px;}
   .dash-card{padding:14px;}
   .rev-hero .rh-value{font-size:24px;}
+  .briefing-quick-actions{gap:6px!important;}
+  .bqa-btn{font-size:11px!important;padding:7px 12px!important;}
+  .ba-item{font-size:12px;padding:8px 10px;}
 }
 /* PRINT STYLES */
 @media print{
@@ -2514,27 +2530,35 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <button class="briefing-metric" onclick="showPanel('alunos')" title="Ver alunos">
               <span class="bm-icon">🎒</span>
               <div class="bm-value" id="bmAlunos">—</div>
-              <div class="bm-label">Alunos ativos</div>
+              <div class="bm-label">Total alunos</div>
               <span class="bm-trend flat" id="bmAlunosTrend" style="display:none;"></span>
             </button>
             <button class="briefing-metric" onclick="showPanel('frequencia')" title="Ver frequência">
               <span class="bm-icon">✅</span>
               <div class="bm-value" id="bmPresenca">—</div>
-              <div class="bm-label">Presença hoje</div>
+              <div class="bm-label">Presentes hoje</div>
               <span class="bm-trend flat" id="bmPresencaTrend" style="display:none;"></span>
             </button>
-            <button class="briefing-metric" onclick="showPanel('finDash')" title="Ver financeiro">
-              <span class="bm-icon">💰</span>
-              <div class="bm-value" id="bmReceita">—</div>
-              <div class="bm-label">Receita do mês</div>
-              <span class="bm-trend flat" id="bmReceitaTrend" style="display:none;"></span>
+            <button class="briefing-metric" onclick="showPanel('finMens')" title="Ver inadimplência">
+              <span class="bm-icon">📉</span>
+              <div class="bm-value" id="bmInadimplencia">—</div>
+              <div class="bm-label">Inadimpl. do mês</div>
+              <span class="bm-trend flat" id="bmInadimplenciaTrend" style="display:none;"></span>
             </button>
-            <button class="briefing-metric" id="bmPendentesCard" onclick="abrirPendenciasModal()" title="Ver itens pendentes">
-              <span class="bm-icon">⚠️</span>
-              <div class="bm-value" id="bmPendentes">—</div>
-              <div class="bm-label">Itens pendentes</div>
-              <span class="bm-trend flat" id="bmPendentesTrend" style="display:none;"></span>
+            <button class="briefing-metric" onclick="showPanel('finLanc')" title="Ver vencimentos">
+              <span class="bm-icon">📅</span>
+              <div class="bm-value" id="bmVencimentos">—</div>
+              <div class="bm-label">Próx. vencimentos</div>
+              <span class="bm-trend flat" id="bmVencimentosTrend" style="display:none;"></span>
             </button>
+          </div>
+          <!-- Alertas -->
+          <div class="briefing-alertas" id="briefingAlertas" style="margin-top:14px;display:none;"></div>
+          <!-- Quick Actions -->
+          <div class="briefing-quick-actions" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="bqa-btn" onclick="showPanel('finMens')">📉 Ver inadimplência</button>
+            <button class="bqa-btn" onclick="showPanel('chatConversas')">📣 Enviar comunicado</button>
+            <button class="bqa-btn" onclick="showPanel('alunos');setTimeout(function(){typeof abrirCadastroAluno==='function'&&abrirCadastroAluno()},200)">➕ Nova matrícula</button>
           </div>
         </div>
 
@@ -7371,59 +7395,82 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     }
   }
 
-  // ── Wizard de primeiro acesso ──
+  // ── Wizard de primeiro acesso (multi-step) ──
   async function checkPrimeiroAcesso() {
-    if (localStorage.getItem('lumied_wizard_done')) return;
+    if (localStorage.getItem('onboarding_done')) return;
     // Verificar se há alunos cadastrados
     const alunos = await api({ action: 'alunos_list' });
     const total = Array.isArray(alunos) ? alunos.length : (alunos?.data?.length || 0);
-    if (total > 0) { localStorage.setItem('lumied_wizard_done', '1'); return; }
-    // Mostrar wizard
-    setTimeout(mostrarWizard, 1500);
+    if (total > 0) { localStorage.setItem('onboarding_done', '1'); return; }
+    // Carregar nome da escola para o wizard
+    const nomeResp = await api({ action:'config_get', chave:'escola_nome' }).catch(()=>null);
+    const escolaNomeWiz = nomeResp?.valor ? String(nomeResp.valor).replace(/^"|"$/g, '') : 'sua escola';
+    setTimeout(() => mostrarWizard(escolaNomeWiz), 1500);
   }
 
-  function mostrarWizard() {
+  function mostrarWizard(escolaNome) {
+    let wizStep = 0;
+    const steps = [
+      { icon: '🎉', title: 'Bem-vindo ao Lumied!', desc: `<strong>${escolaNome}</strong> está pronta para uso.`, btnLabel: null, btnPanel: null },
+      { icon: '🎓', title: 'Importe seus alunos', desc: 'Cadastre alunos individualmente ou importe em massa via planilha.', btnLabel: 'Ir para Alunos', btnPanel: 'alunos' },
+      { icon: '💰', title: 'Configure o financeiro', desc: 'Defina plano de contas, mensalidades e formas de pagamento.', btnLabel: 'Ir para Financeiro', btnPanel: 'finDash' },
+      { icon: '👥', title: 'Convide sua equipe', desc: 'Adicione professoras, secretaria e coordenacao ao sistema.', btnLabel: 'Ir para Equipe', btnPanel: 'equipe' },
+      { icon: '🚀', title: 'Pronto!', desc: 'Sua escola esta configurada. Explore o painel e comece a usar o Lumied.', btnLabel: null, btnPanel: null }
+    ];
+
     const overlay = document.createElement('div');
     overlay.id = 'wizardOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
-    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:540px;width:100%;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.25);">
-      <div style="text-align:center;margin-bottom:24px;">
-        <div style="font-size:48px;margin-bottom:12px;">🎉</div>
-        <h2 style="font-family:'Lora',serif;font-size:22px;margin-bottom:6px;">Bem-vindo ao Lumied!</h2>
-        <p style="font-size:14px;color:var(--muted);">Vamos configurar sua escola em 3 passos simples.</p>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
-        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:10px;cursor:pointer;" onclick="wizardGo('logo')">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">1</div>
-          <div style="flex:1;"><strong style="font-size:14px;">Personalizar aparência</strong><br><span style="font-size:12px;color:var(--muted);">Logo, cores e tema visual</span></div>
-          <span style="font-size:18px;">→</span>
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);';
+
+    function renderStep() {
+      const s = steps[wizStep];
+      const isFirst = wizStep === 0;
+      const isLast = wizStep === steps.length - 1;
+      const dots = steps.map((_, i) =>
+        `<span style="width:${i===wizStep?'24px':'8px'};height:8px;border-radius:4px;background:${i===wizStep?'var(--red)':'#ddd'};transition:all .3s;display:inline-block;"></span>`
+      ).join('');
+
+      let actionButtons = '';
+      if (isFirst) {
+        actionButtons = `<button onclick="wizardNext()" style="flex:1;padding:13px;background:var(--red);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(200,16,46,.3);">Vamos comecar</button>`;
+      } else if (isLast) {
+        actionButtons = `<button onclick="wizardFinish()" style="flex:1;padding:13px;background:var(--red);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(200,16,46,.3);">Comecar a usar</button>`;
+      } else {
+        actionButtons = `
+          <button onclick="wizardNext()" style="padding:13px 24px;background:#f5f5f5;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;color:var(--muted);">Pular</button>
+          <button onclick="wizardGoPanel('${s.btnPanel}')" style="flex:1;padding:13px;background:var(--red);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(200,16,46,.3);">${s.btnLabel}</button>`;
+      }
+
+      overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:480px;width:100%;padding:36px 32px;box-shadow:0 24px 60px rgba(0,0,0,.25);animation:popIn .25s ease;">
+        <div style="text-align:center;margin-bottom:28px;">
+          <div style="font-size:52px;margin-bottom:14px;">${s.icon}</div>
+          <h2 style="font-family:'Lora',serif;font-size:22px;margin-bottom:8px;color:var(--text);">${s.title}</h2>
+          <p style="font-size:14px;color:var(--muted);line-height:1.6;">${s.desc}</p>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:10px;cursor:pointer;" onclick="wizardGo('equipe')">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">2</div>
-          <div style="flex:1;"><strong style="font-size:14px;">Cadastrar equipe</strong><br><span style="font-size:12px;color:var(--muted);">Professoras, secretaria, coordenação</span></div>
-          <span style="font-size:18px;">→</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg);border-radius:10px;cursor:pointer;" onclick="wizardGo('alunos')">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">3</div>
-          <div style="flex:1;"><strong style="font-size:14px;">Importar alunos</strong><br><span style="font-size:12px;color:var(--muted);">CSV em massa ou cadastro individual</span></div>
-          <span style="font-size:18px;">→</span>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button onclick="fecharWizard(true)" style="flex:1;padding:12px;background:#f5f5f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;">Não mostrar novamente</button>
-        <button onclick="fecharWizard(false)" style="flex:1;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">Fazer depois</button>
-      </div>
-    </div>`;
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:24px;">${dots}</div>
+        <div style="display:flex;gap:10px;align-items:center;">${actionButtons}</div>
+        ${!isLast ? '<button onclick="wizardSkipAll()" style="display:block;width:100%;margin-top:12px;padding:8px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);text-decoration:underline;">Nao mostrar novamente</button>' : ''}
+      </div>`;
+    }
+
+    window.wizardNext = function() { if (wizStep < steps.length - 1) { wizStep++; renderStep(); } };
+    window.wizardGoPanel = function(panel) {
+      localStorage.setItem('onboarding_done', '1');
+      overlay.remove();
+      showPanel(panel);
+    };
+    window.wizardFinish = function() {
+      localStorage.setItem('onboarding_done', '1');
+      overlay.remove();
+    };
+    window.wizardSkipAll = function() {
+      localStorage.setItem('onboarding_done', '1');
+      overlay.remove();
+    };
+
+    renderStep();
     document.body.appendChild(overlay);
   }
-  window.wizardGo = function(panel) {
-    fecharWizard(true);
-    showPanel(panel);
-  };
-  window.fecharWizard = function(permanent) {
-    if (permanent) localStorage.setItem('lumied_wizard_done', '1');
-    document.getElementById('wizardOverlay')?.remove();
-  };
 
   // Detecta subdomínio de demonstração (demo.lumied.com.br) — força branding Lumied
   // para não expor nome/logo da escola cujos dados seedados estão no banco global.
@@ -18184,14 +18231,56 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var pend = d.pendencias || {};
     document.getElementById('bmAlunos').textContent = al.ativos != null ? al.ativos : '—';
     document.getElementById('bmPresenca').textContent = al.presenca_pct != null ? al.presenca_pct + '%' : (al.freq_registrada ? '0%' : '—');
-    document.getElementById('bmReceita').textContent = _fmtBRLShort(fin.receita_mes);
-    document.getElementById('bmPendentes').textContent = pend.total != null ? pend.total : '—';
-    _setTrend('bmReceitaTrend', fin.receita_mes, fin.receita_mes_anterior, false);
+    // Inadimplência do mês
+    var inadPct = d.inadimplencia_pct;
+    var bmInadEl = document.getElementById('bmInadimplencia');
+    if (bmInadEl) bmInadEl.textContent = inadPct != null ? inadPct + '%' : '—';
+    var inadTrend = document.getElementById('bmInadimplenciaTrend');
+    if (inadTrend && inadPct != null) {
+      inadTrend.style.display = 'inline-block';
+      if (inadPct === 0) { inadTrend.className = 'bm-trend up'; inadTrend.textContent = 'Em dia'; }
+      else if (inadPct <= 10) { inadTrend.className = 'bm-trend flat'; inadTrend.textContent = fin.qtd_atrasado + ' família(s)'; }
+      else { inadTrend.className = 'bm-trend down'; inadTrend.textContent = fin.qtd_atrasado + ' família(s)'; }
+    }
+    // Próximos vencimentos
+    var bmVencEl = document.getElementById('bmVencimentos');
+    if (bmVencEl) bmVencEl.textContent = d.proximos_vencimentos_count != null ? d.proximos_vencimentos_count : '—';
+    var vencTrend = document.getElementById('bmVencimentosTrend');
+    if (vencTrend && d.proximos_vencimentos_count > 0) {
+      vencTrend.style.display = 'inline-block'; vencTrend.className = 'bm-trend flat'; vencTrend.textContent = 'em 7 dias';
+    }
     var alunosTrend = document.getElementById('bmAlunosTrend');
     if (al.ausentes_hoje > 0) { alunosTrend.style.display='inline-block'; alunosTrend.className='bm-trend down'; alunosTrend.textContent = al.ausentes_hoje + ' ausentes'; }
     else if (al.presentes_hoje > 0) { alunosTrend.style.display='inline-block'; alunosTrend.className='bm-trend up'; alunosTrend.textContent = al.presentes_hoje + ' presentes'; }
-    var pendTrend = document.getElementById('bmPendentesTrend');
-    if (pend.manutencao_urgentes > 0) { pendTrend.style.display='inline-block'; pendTrend.className='bm-trend down'; pendTrend.textContent = pend.manutencao_urgentes + ' urgente(s)'; }
+
+    // Alertas section
+    var alertas = [];
+    var fc = d.freq_critica || {};
+    if (fc.total > 0) {
+      var fcNomes = (fc.alunos || []).slice(0, 3).map(function(a) { return a.nome + ' (' + a.pct + '%)'; }).join(', ');
+      alertas.push({ icon: '🚨', text: '<strong>' + fc.total + ' aluno(s) com frequência abaixo de 75%</strong> — ' + esc(fcNomes) + (fc.total > 3 ? ' e mais...' : ''), cls: 'ba-urgent', panel: 'frequencia' });
+    }
+    if (pend.leads_parados > 0) {
+      alertas.push({ icon: '📋', text: '<strong>' + pend.leads_parados + ' lead(s) parado(s) há mais de 7 dias</strong> — sem atualização no CRM', cls: 'ba-warn', panel: 'crmKanban' });
+    }
+    if (pend.tickets_abertos > 0) {
+      alertas.push({ icon: '🎫', text: '<strong>' + pend.tickets_abertos + ' ticket(s) aberto(s)</strong> — aguardando resposta', cls: 'ba-warn', panel: 'tickets' });
+    }
+    var alertasEl = document.getElementById('briefingAlertas');
+    if (alertasEl) {
+      if (alertas.length > 0) {
+        alertasEl.style.display = 'flex';
+        alertasEl.innerHTML = '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.6;margin-bottom:4px;">Alertas</div>'
+          + alertas.map(function(a) {
+            return '<button class="ba-item ' + a.cls + '" onclick="showPanel(\'' + a.panel + '\')">'
+              + '<span class="ba-icon">' + a.icon + '</span>'
+              + '<span class="ba-text">' + a.text + '</span>'
+              + '<span class="ba-arrow">→</span></button>';
+          }).join('');
+      } else {
+        alertasEl.style.display = 'none';
+      }
+    }
 
     // Action strip
     var actions = [];

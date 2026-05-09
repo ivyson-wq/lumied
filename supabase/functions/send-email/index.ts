@@ -162,6 +162,69 @@ function emailNotifPaiAutorizou(body: Record<string, unknown>, escolaNome: strin
   }
 }
 
+function emailWelcomeEscola(body: Record<string, unknown>, escolaNome: string, cor: string, icone: string): { subject: string; html: string } {
+  const { gerente_nome, subdominio } = body
+  const painelUrl = subdominio ? `https://${subdominio}.lumied.com.br/gerente.html` : '#'
+  const firstName = String(gerente_nome || 'Gestor(a)').split(/\s/)[0]
+  return {
+    subject: `Bem-vindo ao Lumied! Sua escola está pronta`,
+    html: `
+      <div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
+        <h2 style="color:${cor};margin:0 0 8px 0;">${icone} ${escolaNome}</h2>
+        <p style="font-size:16px;line-height:1.6;margin:16px 0;">
+          Olá, <strong>${firstName}</strong>! 👋
+        </p>
+        <p style="font-size:15px;line-height:1.6;margin:16px 0;">
+          Sua escola <strong>${escolaNome}</strong> já está ativa no Lumied.
+          Para começar a aproveitar ao máximo a plataforma, siga este checklist:
+        </p>
+        <div style="background:#f8f5f0;border-radius:12px;padding:20px 24px;margin:24px 0;">
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <span style="font-size:18px;">🎓</span>
+            <div>
+              <strong style="font-size:14px;color:#1a1a1a;">1. Importar alunos</strong>
+              <p style="font-size:13px;color:#5a5249;margin:4px 0 0;">Cadastre individualmente ou importe via planilha Excel/CSV.</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <span style="font-size:18px;">💰</span>
+            <div>
+              <strong style="font-size:14px;color:#1a1a1a;">2. Configurar financeiro</strong>
+              <p style="font-size:13px;color:#5a5249;margin:4px 0 0;">Defina plano de contas, mensalidades e formas de pagamento.</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <span style="font-size:18px;">👥</span>
+            <div>
+              <strong style="font-size:14px;color:#1a1a1a;">3. Convidar equipe</strong>
+              <p style="font-size:13px;color:#5a5249;margin:4px 0 0;">Adicione professoras, secretaria e coordenação ao sistema.</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span style="font-size:18px;">📅</span>
+            <div>
+              <strong style="font-size:14px;color:#1a1a1a;">4. Agendar treinamento</strong>
+              <p style="font-size:13px;color:#5a5249;margin:4px 0 0;">Nossa equipe pode guiar você nos primeiros passos. Responda este e-mail para agendar.</p>
+            </div>
+          </div>
+        </div>
+        <p style="text-align:center;margin:28px 0;">
+          <a href="${painelUrl}" style="display:inline-block;background:${cor};color:#fff;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(200,16,46,.3);">
+            Acessar meu painel
+          </a>
+        </p>
+        <p style="font-size:13px;color:#5a5249;line-height:1.6;margin:16px 0;text-align:center;">
+          Seu painel: <a href="${painelUrl}" style="color:${cor};word-break:break-all;">${painelUrl}</a>
+        </p>
+        <hr style="border:none;border-top:1px solid #e2dbd1;margin:32px 0 16px;">
+        <p style="font-size:11px;color:#999;text-align:center;margin:0;">
+          Este é um e-mail automático do Lumied — Gestão Escolar Inteligente.
+        </p>
+      </div>
+    `,
+  }
+}
+
 // ── Handler ──────────────────────────────────────────────────
 Deno.serve(async (req) => {
   CORS = getCorsHeaders(req)
@@ -197,6 +260,7 @@ Deno.serve(async (req) => {
     case 'atividade': email = emailAtividade(body, escolaNome, cor, icone); break
     case 'cadastro_face': email = emailCadastroFace(body, escolaNome, cor, icone); break
     case 'notif_pai_autorizou': email = emailNotifPaiAutorizou(body, escolaNome, cor, icone); break
+    case 'welcome_escola': email = emailWelcomeEscola(body, escolaNome, cor, icone); break
     default: return err('Tipo de e-mail não reconhecido: ' + tipo)
   }
 
@@ -205,7 +269,7 @@ Deno.serve(async (req) => {
   // - Para os demais (ausência/turno/atividade), notifica a secretaria da escola
   const RESEND_KEY = Deno.env.get('RESEND_API_KEY')
   const ESCOLA_EMAIL = cfg.escola_email_notif || Deno.env.get('ESCOLA_EMAIL') || cfg.escola_email_sender || 'secretaria@escola.com.br'
-  const TO_EMAIL = (tipo === 'cadastro_face' && body.to) ? String(body.to) : ESCOLA_EMAIL
+  const TO_EMAIL = ((tipo === 'cadastro_face' || tipo === 'welcome_escola') && body.to) ? String(body.to) : ESCOLA_EMAIL
 
   if (!RESEND_KEY) {
     // Se Resend não está configurado, loga e retorna sucesso silencioso

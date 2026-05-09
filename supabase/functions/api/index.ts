@@ -3141,9 +3141,11 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const mesAnterior = (() => { const d = new Date(hoje); d.setMonth(d.getMonth() - 1); return anoMes(d); })();
     const proxima7 = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })();
 
+    const primeiroDiaMes = mesAtual + "-01";
     const [
       alunosRes, freqRes, mensRes, mensAntRes, lancRes, lancAntRes,
       manutRes, almRes, leadsRes, ticketsRes, evRes, alunosBdayRes,
+      freqMesRes,
     ] = await Promise.all([
       admin.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", sessionEscolaId).eq("ativo", true),
       admin.from("frequencia").select("presente").eq("escola_id", sessionEscolaId).eq("data", hojeISO),
@@ -3157,6 +3159,8 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       admin.from("tickets").select("id", { count: "exact", head: true }).eq("escola_id", sessionEscolaId).in("status", ["aberto", "escalado"]),
       admin.from("calendario_eventos").select("titulo, data_inicio, tipo, cor").eq("escola_id", sessionEscolaId).gte("data_inicio", hojeISO).lte("data_inicio", proxima7).order("data_inicio").limit(6),
       admin.from("alunos").select("nome, data_nascimento, serie").eq("escola_id", sessionEscolaId).eq("ativo", true).not("data_nascimento", "is", null),
+      // Monthly frequency for alunos with < 75% attendance
+      admin.from("frequencia").select("aluno_id, aluno_nome, presente").eq("escola_id", sessionEscolaId).gte("data", primeiroDiaMes).lte("data", hojeISO).limit(5000),
     ]);
 
     const totalAlunos = alunosRes.count || 0;
@@ -3245,6 +3249,23 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     }
     aniversariantes.sort((a, b) => a.dias_falta - b.dias_falta);
 
+    // Alunos com frequência < 75% no mês
+    const freqMesPorAluno = new Map<string, { nome: string; total: number; presentes: number }>();
+    for (const r of (freqMesRes.data || []) as any[]) {
+      const cur = freqMesPorAluno.get(r.aluno_id) || { nome: r.aluno_nome || "?", total: 0, presentes: 0 };
+      cur.total += 1;
+      if (r.presente) cur.presentes += 1;
+      freqMesPorAluno.set(r.aluno_id, cur);
+    }
+    const freqCriticos = [...freqMesPorAluno.values()]
+      .map(a => ({ nome: a.nome, pct: a.total > 0 ? Math.round((a.presentes / a.total) * 100) : 0, total: a.total, presentes: a.presentes }))
+      .filter(a => a.pct < 75 && a.total >= 3)
+      .sort((a, b) => a.pct - b.pct);
+
+    // Inadimplência do mês (%)
+    const totalMensalidades = qtdPago + qtdPendente + qtdAtrasado;
+    const inadimplenciaPct = totalMensalidades > 0 ? Math.round((qtdAtrasado / totalMensalidades) * 100) : 0;
+
     const totalPendencias = manutPendentes + almPendQtd + qtdAtrasado + leadsParados + (ticketsRes.count || 0);
 
     return ok({
@@ -3284,6 +3305,10 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       proximos_vencimentos: proxVenc.slice(0, 6),
       aniversariantes: aniversariantes.slice(0, 8),
       eventos_proximos: evRes.data || [],
+      // Morning Briefing extras
+      inadimplencia_pct: inadimplenciaPct,
+      freq_critica: { total: freqCriticos.length, alunos: freqCriticos.slice(0, 8) },
+      proximos_vencimentos_count: proxVenc.length,
     });
   }
 

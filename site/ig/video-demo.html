@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumied — Video Demo Comercial</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+body{font-family:'Inter',sans-serif;background:#0F0A1A;color:#fff;overflow:hidden;width:1920px;height:1080px;}
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;opacity:0;transition:opacity .8s;pointer-events:none;padding:80px;}
+.scene.active{opacity:1;pointer-events:auto;}
+
+/* Scene 1: Hook - Pain Points */
+.scene-hook{background:linear-gradient(135deg,#1a0a2e 0%,#2D1B4E 50%,#1a0a2e 100%);}
+.pain-item{font-size:64px;font-weight:900;opacity:0;transform:translateY(40px);margin:24px 0;text-align:center;}
+.pain-item.show{opacity:1;transform:translateY(0);transition:all .6s cubic-bezier(.16,1,.3,1);}
+.pain-item .strike{text-decoration:line-through;color:#DC2626;text-decoration-thickness:4px;}
+
+/* Scene 2: Solution Reveal */
+.scene-solution{background:linear-gradient(135deg,#2D1B4E 0%,#4A1D8A 100%);}
+.logo-big{font-size:120px;font-weight:900;letter-spacing:-3px;background:linear-gradient(135deg,#C4963C,#E8C068);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:32px;transform:scale(0);transition:transform .6s cubic-bezier(.16,1,.3,1);}
+.logo-big.show{transform:scale(1);}
+.solution-pills{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;}
+.pill{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:100px;padding:16px 32px;font-size:28px;font-weight:700;opacity:0;transform:translateY(20px);backdrop-filter:blur(10px);}
+.pill.show{opacity:1;transform:translateY(0);transition:all .5s cubic-bezier(.16,1,.3,1);}
+.pill.gold{background:linear-gradient(135deg,#C4963C,#E8C068);color:#1a0a2e;border:none;}
+
+/* Scene 3-8: Feature Showcase */
+.scene-feature{background:linear-gradient(135deg,#0F0A1A 0%,#1a1030 100%);text-align:left;padding:80px 120px;justify-content:flex-start;}
+.feature-badge{font-size:18px;font-weight:700;color:#C4963C;text-transform:uppercase;letter-spacing:3px;margin-bottom:24px;opacity:0;transform:translateX(-20px);}
+.feature-badge.show{opacity:1;transform:translateX(0);transition:all .5s;}
+.feature-title{font-size:56px;font-weight:900;line-height:1.1;margin-bottom:32px;opacity:0;transform:translateX(-30px);}
+.feature-title.show{opacity:1;transform:translateX(0);transition:all .6s .1s;}
+.feature-highlights{display:flex;gap:20px;flex-wrap:wrap;margin-top:24px;}
+.highlight-chip{background:rgba(196,150,60,.15);border:1px solid rgba(196,150,60,.3);border-radius:12px;padding:14px 28px;font-size:24px;font-weight:600;color:#E8C068;opacity:0;transform:scale(0.8);}
+.highlight-chip.show{opacity:1;transform:scale(1);transition:all .4s cubic-bezier(.16,1,.3,1);}
+.stat-big{font-size:140px;font-weight:900;color:#C4963C;position:absolute;right:120px;top:50%;transform:translateY(-50%);opacity:0;}
+.stat-big.show{opacity:.15;transition:opacity 1s;}
+
+/* Scene 9: Social Proof */
+.scene-proof{background:linear-gradient(135deg,#0A1628 0%,#1a2040 100%);}
+.proof-brand{font-size:28px;font-weight:600;color:#94A3B8;margin-bottom:48px;opacity:0;}
+.proof-brand.show{opacity:1;transition:all .5s;}
+.proof-stats{display:flex;gap:48px;}
+.proof-stat{text-align:center;opacity:0;transform:translateY(30px);}
+.proof-stat.show{opacity:1;transform:translateY(0);transition:all .6s cubic-bezier(.16,1,.3,1);}
+.proof-stat .num{font-size:80px;font-weight:900;color:#10B981;line-height:1;}
+.proof-stat .label{font-size:20px;color:#94A3B8;margin-top:8px;}
+
+/* Scene 10: Pricing */
+.scene-pricing{background:linear-gradient(135deg,#2D1B4E 0%,#1a0a2e 100%);}
+.pricing-cards{display:flex;gap:24px;align-items:stretch;}
+.p-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:40px 36px;width:320px;text-align:center;opacity:0;transform:translateY(40px);}
+.p-card.show{opacity:1;transform:translateY(0);transition:all .6s cubic-bezier(.16,1,.3,1);}
+.p-card.featured{background:rgba(196,150,60,.15);border:2px solid #C4963C;transform:translateY(40px) scale(1.05);}
+.p-card.featured.show{transform:translateY(-10px) scale(1.05);}
+.p-card .name{font-size:28px;font-weight:800;margin-bottom:8px;}
+.p-card .price{font-size:52px;font-weight:900;color:#C4963C;margin:16px 0;}
+.p-card .price span{font-size:20px;color:#94A3B8;font-weight:500;}
+.p-card .desc{font-size:16px;color:#94A3B8;}
+.p-card-badge{background:#C4963C;color:#1a0a2e;font-size:14px;font-weight:800;padding:6px 20px;border-radius:100px;margin-bottom:16px;display:inline-block;}
+
+/* Scene 11: Competitors */
+.scene-comp{background:linear-gradient(135deg,#0F0A1A 0%,#1a0a2e 100%);}
+.comp-row{display:flex;align-items:center;gap:40px;margin:16px 0;font-size:36px;opacity:0;transform:translateX(-30px);}
+.comp-row.show{opacity:1;transform:translateX(0);transition:all .5s;}
+.comp-row .comp-name{width:300px;font-weight:600;color:#94A3B8;}
+.comp-row .comp-price{font-weight:900;font-size:44px;}
+.comp-row .comp-price.red{color:#DC2626;text-decoration:line-through;text-decoration-thickness:3px;}
+.comp-row .comp-price.green{color:#10B981;}
+.comp-row .comp-badge{background:#10B981;color:#fff;font-size:18px;font-weight:800;padding:8px 20px;border-radius:8px;}
+
+/* Scene 12: CTA */
+.scene-cta{background:linear-gradient(135deg,#2D1B4E 0%,#4A1D8A 50%,#2D1B4E 100%);}
+.cta-logo{font-size:80px;font-weight:900;background:linear-gradient(135deg,#C4963C,#E8C068);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:32px;opacity:0;transform:scale(0.8);}
+.cta-logo.show{opacity:1;transform:scale(1);transition:all .6s cubic-bezier(.16,1,.3,1);}
+.cta-url{font-size:48px;font-weight:800;color:#fff;margin-bottom:24px;opacity:0;}
+.cta-url.show{opacity:1;transition:all .5s .2s;}
+.cta-btn{background:linear-gradient(135deg,#C4963C,#E8C068);color:#1a0a2e;font-size:28px;font-weight:800;padding:20px 60px;border-radius:16px;display:inline-block;opacity:0;transform:translateY(20px);}
+.cta-btn.show{opacity:1;transform:translateY(0);transition:all .5s .4s;}
+.cta-sub{font-size:22px;color:#94A3B8;margin-top:20px;opacity:0;}
+.cta-sub.show{opacity:1;transition:all .5s .6s;}
+
+/* Progress bar */
+.progress{position:fixed;bottom:0;left:0;height:4px;background:linear-gradient(90deg,#C4963C,#E8C068);z-index:999;transition:width .3s;}
+
+/* Play button overlay */
+.play-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer;}
+.play-btn{width:120px;height:120px;background:linear-gradient(135deg,#C4963C,#E8C068);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .2s;}
+.play-btn:hover{transform:scale(1.1);}
+.play-btn::after{content:'';border-left:40px solid #1a0a2e;border-top:24px solid transparent;border-bottom:24px solid transparent;margin-left:8px;}
+.play-overlay.hidden{display:none;}
+
+/* Watermark */
+.watermark{position:fixed;top:32px;right:40px;font-size:20px;font-weight:800;color:rgba(196,150,60,.4);letter-spacing:2px;z-index:99;}
+</style>
+</head>
+<body>
+
+<div class="watermark">LUMIED</div>
+<div class="progress" id="progress" style="width:0%"></div>
+
+<div class="play-overlay" id="playOverlay" onclick="startVideo()">
+  <div class="play-btn"></div>
+</div>
+
+<!-- Scene 1: Hook -->
+<div class="scene scene-hook" id="scene1">
+  <div class="pain-item" data-delay="0.5">Planilha pra controlar <span class="strike">inadimplencia</span>?</div>
+  <div class="pain-item" data-delay="2.5">WhatsApp <span class="strike">pessoal</span> pra falar com familia?</div>
+  <div class="pain-item" data-delay="5">Ponto da professora <span class="strike">no braco</span>?</div>
+</div>
+
+<!-- Scene 2: Solution -->
+<div class="scene scene-solution" id="scene2">
+  <div class="logo-big">Lumied</div>
+  <p style="font-size:28px;color:rgba(255,255,255,.7);margin-bottom:40px;opacity:0" class="scene2-sub">Gestao escolar inteligente com IA</p>
+  <div class="solution-pills">
+    <div class="pill" data-delay="0.5">33 modulos</div>
+    <div class="pill" data-delay="0.8">IA real</div>
+    <div class="pill" data-delay="1.1">WhatsApp oficial</div>
+    <div class="pill gold" data-delay="1.4">R$ 697/mes</div>
+  </div>
+</div>
+
+<!-- Scene 3: Dashboard -->
+<div class="scene scene-feature" id="scene3">
+  <div class="feature-badge">Painel do Gerente</div>
+  <div class="feature-title">Tudo num relance.<br>Sem abrir planilha.</div>
+  <div class="feature-highlights">
+    <div class="highlight-chip" data-delay="0.5">KPI Cards</div>
+    <div class="highlight-chip" data-delay="0.8">Morning Briefing</div>
+    <div class="highlight-chip" data-delay="1.1">Sugestoes IA</div>
+  </div>
+  <div class="stat-big">KPI</div>
+</div>
+
+<!-- Scene 4: Financeiro -->
+<div class="scene scene-feature" id="scene4">
+  <div class="feature-badge">Financeiro Automatico</div>
+  <div class="feature-title">Regua de cobranca<br>que funciona sozinha.</div>
+  <div class="feature-highlights">
+    <div class="highlight-chip" data-delay="0.5">Boleto + PIX</div>
+    <div class="highlight-chip" data-delay="0.8">Regua automatica</div>
+    <div class="highlight-chip" data-delay="1.1">-40% inadimplencia</div>
+  </div>
+  <div class="stat-big">-40%</div>
+</div>
+
+<!-- Scene 5: WhatsApp -->
+<div class="scene scene-feature" id="scene5">
+  <div class="feature-badge">WhatsApp Business API</div>
+  <div class="feature-title">Comunicacao oficial.<br>Nao no celular pessoal.</div>
+  <div class="feature-highlights">
+    <div class="highlight-chip" data-delay="0.5">API oficial Meta</div>
+    <div class="highlight-chip" data-delay="0.8">FAQ bot IA</div>
+    <div class="highlight-chip" data-delay="1.1">1.000 msgs/mes</div>
+  </div>
+  <div class="stat-big">1K</div>
+</div>
+
+<!-- Scene 6: Face ID -->
+<div class="scene scene-feature" id="scene6">
+  <div class="feature-badge">Controle de Acesso</div>
+  <div class="feature-title">Face ID na portaria.<br>Seguranca de verdade.</div>
+  <div class="feature-highlights">
+    <div class="highlight-chip" data-delay="0.5">Control iD iDFace</div>
+    <div class="highlight-chip" data-delay="0.8">Alerta real-time</div>
+    <div class="highlight-chip" data-delay="1.1">Retirada autorizada</div>
+  </div>
+  <div class="stat-big">ID</div>
+</div>
+
+<!-- Scene 7: Ponto -->
+<div class="scene scene-feature" id="scene7">
+  <div class="feature-badge">Ponto CLT</div>
+  <div class="feature-title">Portaria 671.<br>Espelho pronto pro contador.</div>
+  <div class="feature-highlights">
+    <div class="highlight-chip" data-delay="0.5">Portaria 671</div>
+    <div class="highlight-chip" data-delay="0.8">HE 50%/100%</div>
+    <div class="highlight-chip" data-delay="1.1">Espelho automatico</div>
+  </div>
+  <div class="stat-big">CLT</div>
+</div>
+
+<!-- Scene 8: Lumi IA -->
+<div class="scene scene-feature" id="scene8">
+  <div class="feature-badge">Inteligencia Artificial</div>
+  <div class="feature-title">Lumi analisa seus dados<br>e diz o que fazer.</div>
+  <div class="feature-highlights">
+    <div class="highlight-chip" data-delay="0.5">Claude AI</div>
+    <div class="highlight-chip" data-delay="0.8">Dados reais</div>
+    <div class="highlight-chip" data-delay="1.1">Comunicados</div>
+    <div class="highlight-chip" data-delay="1.4">Insights</div>
+  </div>
+  <div class="stat-big">IA</div>
+</div>
+
+<!-- Scene 9: Social Proof -->
+<div class="scene scene-proof" id="scene9">
+  <div class="proof-brand">Maple Bear Caxias do Sul — 90 dias com Lumied</div>
+  <div class="proof-stats">
+    <div class="proof-stat" data-delay="0.3">
+      <div class="num">-40%</div>
+      <div class="label">Inadimplencia</div>
+    </div>
+    <div class="proof-stat" data-delay="0.6">
+      <div class="num">12h</div>
+      <div class="label">Economizadas/semana</div>
+    </div>
+    <div class="proof-stat" data-delay="0.9">
+      <div class="num">R$31k</div>
+      <div class="label">Receita recuperada/mes</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scene 10: Pricing -->
+<div class="scene scene-pricing" id="scene10">
+  <div style="font-size:24px;font-weight:600;color:#94A3B8;margin-bottom:40px;">3 planos. Sem fidelidade. Sem surpresas.</div>
+  <div class="pricing-cards">
+    <div class="p-card" data-delay="0.3">
+      <div class="name">Essencial</div>
+      <div class="desc">33 modulos</div>
+      <div class="price">R$697<span>/mes</span></div>
+      <div class="desc">Ate 500 alunos</div>
+    </div>
+    <div class="p-card featured" data-delay="0.6">
+      <div class="p-card-badge">MAIS POPULAR</div>
+      <div class="name">Profissional</div>
+      <div class="desc">WhatsApp + IA inclusos</div>
+      <div class="price">R$1.197<span>/mes</span></div>
+      <div class="desc">Ate 1.000 alunos</div>
+    </div>
+    <div class="p-card" data-delay="0.9">
+      <div class="name">Rede</div>
+      <div class="desc">Tudo ilimitado</div>
+      <div class="price">R$1.997<span>/mes</span></div>
+      <div class="desc">Multi-escola</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scene 11: Competitors -->
+<div class="scene scene-comp" id="scene11">
+  <div style="font-size:32px;font-weight:700;margin-bottom:48px;color:#94A3B8;">Lumied vs Concorrencia</div>
+  <div class="comp-row" data-delay="0.3">
+    <span class="comp-name">Escolaweb Enterprise</span>
+    <span class="comp-price red">R$ 1.665</span>
+    <span style="font-size:28px;color:#64748B;">300 alunos</span>
+  </div>
+  <div class="comp-row" data-delay="0.6">
+    <span class="comp-name">Sponte Premium</span>
+    <span class="comp-price red">R$ 2.100</span>
+    <span style="font-size:28px;color:#64748B;">500 alunos</span>
+  </div>
+  <div class="comp-row" data-delay="0.9">
+    <span class="comp-name">Lumied Profissional</span>
+    <span class="comp-price green">R$ 1.197</span>
+    <span class="comp-badge">1.000 alunos + IA + WhatsApp</span>
+  </div>
+</div>
+
+<!-- Scene 12: CTA -->
+<div class="scene scene-cta" id="scene12">
+  <div class="cta-logo">Lumied</div>
+  <div class="cta-url">lumied.com.br</div>
+  <div class="cta-btn">Agendar demo gratuita</div>
+  <div class="cta-sub">Migracao gratis | Implantacao em 7 dias | Suporte VIP 30 dias</div>
+</div>
+
+<audio id="narration" preload="auto">
+  <source src="/scripts/video-demo/audio/narration-full.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const scenes = [
+  { id: 1, start: 0, end: 8 },
+  { id: 2, start: 8, end: 13 },
+  { id: 3, start: 13, end: 25 },
+  { id: 4, start: 25, end: 35 },
+  { id: 5, start: 35, end: 45 },
+  { id: 6, start: 45, end: 55 },
+  { id: 7, start: 55, end: 65 },
+  { id: 8, start: 65, end: 75 },
+  { id: 9, start: 75, end: 83 },
+  { id: 10, start: 83, end: 95 },
+  { id: 11, start: 95, end: 103 },
+  { id: 12, start: 103, end: 120 },
+];
+
+const audio = document.getElementById('narration');
+let currentScene = 0;
+
+function startVideo() {
+  document.getElementById('playOverlay').classList.add('hidden');
+  audio.play();
+  requestAnimationFrame(tick);
+}
+
+function tick() {
+  const t = audio.currentTime;
+  const total = audio.duration || 120;
+  document.getElementById('progress').style.width = (t / total * 100) + '%';
+
+  for (let i = scenes.length - 1; i >= 0; i--) {
+    if (t >= scenes[i].start) {
+      if (currentScene !== i) {
+        currentScene = i;
+        showScene(scenes[i].id);
+      }
+      break;
+    }
+  }
+
+  if (!audio.paused) requestAnimationFrame(tick);
+}
+
+function showScene(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  const scene = document.getElementById('scene' + id);
+  scene.classList.add('active');
+
+  // Animate children with data-delay
+  setTimeout(() => {
+    scene.querySelectorAll('[data-delay]').forEach(el => {
+      const delay = parseFloat(el.dataset.delay) * 1000;
+      setTimeout(() => el.classList.add('show'), delay);
+    });
+    // Animate elements without data-delay
+    scene.querySelectorAll('.logo-big,.feature-badge,.feature-title,.stat-big,.proof-brand,.cta-logo,.cta-url,.cta-btn,.cta-sub,.scene2-sub').forEach(el => {
+      setTimeout(() => el.classList.add('show'), 300);
+    });
+  }, 100);
+}
+
+// Keyboard controls
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); if(!audio.paused) requestAnimationFrame(tick); }
+  if (e.code === 'ArrowRight') audio.currentTime += 5;
+  if (e.code === 'ArrowLeft') audio.currentTime -= 5;
+});
+</script>
+</body>
+</html>
