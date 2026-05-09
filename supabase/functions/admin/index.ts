@@ -279,7 +279,7 @@ router.on("admin_login", rateLimit({ windowMs: 60000, maxRequests: 5 }), validat
   const { email, senha } = ctx.body as { email: string; senha: string };
 
   // 1. Try admins table
-  const { data: admin } = await ctx.sb.from("admins").select("id, nome, email, senha_hash, ativo").eq("email", email).single();
+  const { data: admin } = await ctx.sb.from("admins").select("id, nome, email, senha_hash, ativo").eq("email", email).maybeSingle();
   if (admin) {
     if (!admin.ativo) throw new AppError("AUTH_USER_DISABLED", "Conta desativada.");
     if (!(await verificarSenhaAuto(senha, admin.senha_hash))) throw new AppError("AUTH_BAD_CREDENTIALS", "Credenciais inválidas.");
@@ -290,7 +290,7 @@ router.on("admin_login", rateLimit({ windowMs: 60000, maxRequests: 5 }), validat
   }
 
   // 2. Fallback: try staff (fundador) credentials
-  const { data: staff } = await ctx.sb.from("lumied_staff").select("id, nome, email, senha_hash, cargo, ativo").eq("email", email.toLowerCase().trim()).single();
+  const { data: staff } = await ctx.sb.from("lumied_staff").select("id, nome, email, senha_hash, cargo, ativo").eq("email", email.toLowerCase().trim()).maybeSingle();
   if (!staff) throw new AppError("AUTH_BAD_CREDENTIALS", "Credenciais inválidas.");
   if (!staff.ativo) throw new AppError("AUTH_USER_DISABLED", "Conta desativada.");
   if (!(await verificarSenhaAuto(senha, staff.senha_hash))) throw new AppError("AUTH_BAD_CREDENTIALS", "Credenciais inválidas.");
@@ -1103,11 +1103,19 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
     });
   }
 
-  // 4. Criar gerente com escola_id
+  // 4. Criar gerente com escola_id (crítico — rollback escola se falhar)
   const gerenteSenhaHash = await hashSenha(gerente_senha);
   const emailNorm = gerente_email.toLowerCase().trim();
-  await ctx.sb.from("gerentes").insert({ nome: gerente_nome, email: emailNorm, senha_hash: gerenteSenhaHash, escola_id: escola.id });
-  await ctx.sb.from("usuarios").insert({ nome: gerente_nome, email: emailNorm, senha_hash: gerenteSenhaHash, papel: 'gerente', papeis: ['gerente'], escola_id: escola.id, ativo: true });
+  const { error: errGerente } = await ctx.sb.from("gerentes").insert({ nome: gerente_nome, email: emailNorm, senha_hash: gerenteSenhaHash, escola_id: escola.id });
+  if (errGerente) {
+    await ctx.sb.from("escola_config").delete().eq("escola_id", escola.id);
+    await ctx.sb.from("escolas").delete().eq("id", escola.id);
+    throw new AppError("BAD_REQUEST", `Erro ao criar gerente: ${errGerente.message}. Escola removida.`);
+  }
+  const { error: errUsuario } = await ctx.sb.from("usuarios").insert({ nome: gerente_nome, email: emailNorm, senha_hash: gerenteSenhaHash, papel: 'gerente', papeis: ['gerente'], escola_id: escola.id, ativo: true });
+  if (errUsuario) {
+    log.error("Falha ao criar usuario unificado (gerente já criado)", { error: errUsuario.message, escola_id: escola.id });
+  }
 
   // 5. Ativar módulos do plano (usa plano_modulos do banco, não hardcoded)
   const { data: planoModulos } = await ctx.sb.from("plano_modulos").select("modulo_id").eq("plano_id", planoRow.id);

@@ -525,7 +525,7 @@ Com base nesses dados, qual a tendência para o próximo mês? Sugira ações pr
 // ═══════════════════════════════════════════════════════
 
 async function safeQuery(promise: Promise<any>): Promise<any> {
-  try { return await promise; } catch { return { data: null, count: 0 }; }
+  try { return await promise; } catch (e) { console.warn("[lumied-ai] safeQuery falhou:", (e as Error).message); return { data: null, count: 0 }; }
 }
 
 async function coletarContexto(sb: any, _portal: string, escolaId?: string) {
@@ -537,12 +537,14 @@ async function coletarContexto(sb: any, _portal: string, escolaId?: string) {
   // Scope obrigatório por escola.
   const scope = <T>(q: any): T => q.eq("escola_id", escolaId);
 
-  const [alunos, boletos, leads, compliance, frequencia] = await Promise.all([
+  const mesInicio = `${hoje.slice(0, 7)}-01`;
+  const [alunos, boletos, leads, compliance, frequencia, freqMes] = await Promise.all([
     safeQuery(scope(sb.from("alunos").select("*", { count: "exact", head: true }).eq("ativo", true))),
     safeQuery(scope(sb.from("boletos").select("valor, status, vencimento").eq("status", "pendente")).limit(1000)),
     safeQuery(scope(sb.from("crm_leads").select("id, atualizado_em").order("atualizado_em", { ascending: false })).limit(1000)),
     safeQuery(scope(sb.from("compliance_calendario").select("*", { count: "exact", head: true }).eq("status", "pendente").lte("data_limite", new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]))),
     safeQuery(scope(sb.from("frequencia").select("presente").eq("data", hoje)).limit(1000)),
+    safeQuery(scope(sb.from("frequencia").select("aluno_id, presente").gte("data", mesInicio).lte("data", hoje)).limit(10000)),
   ]);
 
   const boletosData = boletos?.data || [];
@@ -551,6 +553,21 @@ async function coletarContexto(sb: any, _portal: string, escolaId?: string) {
   const leadsParados = leadsData.filter((l: any) => l.atualizado_em && l.atualizado_em < semanaAtras).length;
   const freqData = frequencia?.data || [];
   const presentes = freqData.filter((f: any) => f.presente).length;
+
+  // Calcular alunos com frequência < 75% no mês
+  const freqMesData = freqMes?.data || [];
+  const alunoFreq = new Map<string, { total: number; presentes: number }>();
+  for (const f of freqMesData) {
+    if (!f.aluno_id) continue;
+    const entry = alunoFreq.get(f.aluno_id) || { total: 0, presentes: 0 };
+    entry.total++;
+    if (f.presente) entry.presentes++;
+    alunoFreq.set(f.aluno_id, entry);
+  }
+  let freqBaixa = 0;
+  for (const [, v] of alunoFreq) {
+    if (v.total >= 3 && (v.presentes / v.total) < 0.75) freqBaixa++;
+  }
 
   return {
     total_alunos: alunos?.count || 0,
@@ -563,7 +580,7 @@ async function coletarContexto(sb: any, _portal: string, escolaId?: string) {
     leads_parados: leadsParados,
     leads_novos_semana: leadsData.filter((l: any) => l.atualizado_em >= semanaAtras).length,
     prazos_proximos: compliance?.count || 0,
-    alunos_frequencia_baixa: 0,
+    alunos_frequencia_baixa: freqBaixa,
   };
 }
 
@@ -668,11 +685,20 @@ router.on("roi_config_salvar", authGerente, async (ctx) => {
     "conversion_improvement_rate", "default_reduction_rate",
     "minutes_per_digital_enrollment", "minutes_per_communique", "minutes_per_shift_change",
   ]);
+  const LIMITS: Record<string, number> = {
+    operational_savings_rate: 1, evasion_reduction_rate: 1, conversion_improvement_rate: 1,
+    default_reduction_rate: 1, taxa_evasao_anterior: 100, taxa_inadimplencia_anterior: 100,
+    custo_mensal_sistemas_anteriores: 100000, salario_medio_admin: 50000,
+    mensalidade_media_aluno: 50000, custo_hora_admin: 500, total_staff_admin: 200,
+    minutes_per_digital_enrollment: 480, minutes_per_communique: 480, minutes_per_shift_change: 480,
+  };
   const fields: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(b)) {
     if (!ALLOWED.has(k)) continue;
     const n = num(v);
     if (n === null || n < 0) continue;
+    const max = LIMITS[k] ?? 100000;
+    if (n > max) continue;
     fields[k] = n;
   }
   // escola_id vem do contexto autenticado — nunca do body

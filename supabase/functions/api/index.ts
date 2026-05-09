@@ -1515,6 +1515,8 @@ serve(async (req: Request) => {
 
   // ── Ticket de suporte (público — antes do auth check) ──
   if (action === "ticket_create") {
+    const rlTicket = checkRateLimit(ip, "login");
+    if (!rlTicket.allowed) return err(`Limite de tickets atingido. Tente em ${rlTicket.retryAfterSeconds}s.`, 429);
     const { email, nome, portal, tipo, descricao, url_pagina, user_agent, resolucao_tela } = body as any;
     if (!email || !descricao || !portal) return err("email, descricao e portal obrigatórios.");
     // Escola via Origin + token (não assumir "primeira escola ativa")
@@ -2110,7 +2112,7 @@ serve(async (req: Request) => {
 
   // ── Usuários Unificados ──────────────────────────────────────
   if (action === "usuarios_list") {
-    const { data } = await admin.from("usuarios").select("id, nome, email, papel, papeis, ativo, criado_em").eq("escola_id", sessionEscolaId).order("papel").order("nome");
+    const { data } = await admin.from("usuarios").select("id, nome, email, papel, papeis, ativo, criado_em").eq("escola_id", sessionEscolaId).order("papel").order("nome").limit(2000);
     const users = (data ?? []).map((u: any) => ({ ...u, papeis: u.papeis?.length ? u.papeis : (u.papel ? [u.papel] : []) }));
     // Enriquece professoras com serie_id
     const profEmails = users.filter(u => u.papeis.includes('professora') || u.papeis.includes('professora_assistente')).map(u => u.email);
@@ -2510,15 +2512,17 @@ serve(async (req: Request) => {
     return ok({ success: true });
   }
 
-  // ── Configurações ────────────────────────────────────────────
+  // ── Configurações (tenant-scoped via escola_config) ──────────
   if (action === "config_set") {
     const { chave, valor } = body as { chave: string; valor: string };
-    await admin.from("configuracoes").upsert({ chave, valor, atualizado_em: new Date().toISOString() });
+    if (!chave) return err("chave obrigatória.");
+    await admin.from("escola_config").upsert({ escola_id: sessionEscolaId, chave, valor, atualizado_em: new Date().toISOString() }, { onConflict: "chave,escola_id" });
     return ok({ success: true });
   }
   if (action === "config_delete") {
     const { chave } = body as { chave: string };
-    await admin.from("configuracoes").delete().eq("chave", chave);
+    if (!chave) return err("chave obrigatória.");
+    await admin.from("escola_config").delete().eq("escola_id", sessionEscolaId).eq("chave", chave);
     return ok({ success: true });
   }
 
@@ -2814,7 +2818,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   // ── Professoras (autenticado) ─────────────────────────────────
   if (action === "professoras_list") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    const { data } = await admin.from("professoras").select("*").eq("escola_id", gerente.escola_id).order("nome");
+    const { data } = await admin.from("professoras").select("*").eq("escola_id", gerente.escola_id).order("nome").limit(2000);
     return ok(data ?? []);
   }
   if (action === "professoras_create") {
@@ -2971,7 +2975,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   // ── Famílias (CRUD) ─────────────────────────────────────
   if (action === "familias_list") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    const { data } = await admin.from("familias").select("cpf, nome_responsavel, nome_aluno, email, serie, turno, escola_id, atualizado_em").eq("escola_id", gerente.escola_id).order("nome_aluno");
+    const { data } = await admin.from("familias").select("cpf, nome_responsavel, nome_aluno, email, serie, turno, escola_id, atualizado_em").eq("escola_id", gerente.escola_id).order("nome_aluno").limit(5000);
     return ok(data ?? []);
   }
   if (action === "familias_update") {
@@ -3413,10 +3417,16 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const vencimento = (body as any).vencimento || 10;
     // Busca todas as solicitacoes ativas
     const { data: sols } = await admin.from("solicitacoes").select("email, nome_resp, nome_crianca, serie, turno").eq("escola_id", sessionEscolaId);
-    const TURNO_PRECOS: Record<string, number> = {
+    // Preços de turno: busca da config da escola, fallback para defaults
+    const TURNO_PRECOS_DEFAULT: Record<string, number> = {
       integral_5x: 4395, integral_4x: 4303.57, integral_3x: 4072.13, integral_2x: 3760.70, integral_1x: 3300,
       semi_5x: 4030, semi_4x: 3991.57, semi_3x: 3773.13, semi_2x: 3534.70, semi_1x: 3196.27, tarde: 0, diaria: 150,
     };
+    const { data: cfgPrecos } = await admin.from("escola_config").select("valor").eq("escola_id", sessionEscolaId).eq("chave", "turno_precos").maybeSingle();
+    let TURNO_PRECOS = TURNO_PRECOS_DEFAULT;
+    if (cfgPrecos?.valor) {
+      try { TURNO_PRECOS = { ...TURNO_PRECOS_DEFAULT, ...JSON.parse(cfgPrecos.valor) }; } catch { /* keep defaults */ }
+    }
     let geradas = 0;
     for (const s of sols ?? []) {
       const valorTurno = TURNO_PRECOS[s.turno] || 0;
@@ -4112,7 +4122,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
 
   if (action === "matricula_formulario_get") {
     const { ano, tipo } = body as any;
-    const { data } = await admin.from("matricula_formularios").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano || new Date().getFullYear()).eq("tipo", tipo || "nova").eq("ativo", true).single();
+    const { data } = await admin.from("matricula_formularios").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano || new Date().getFullYear()).eq("tipo", tipo || "nova").eq("ativo", true).maybeSingle();
     return ok(data || { campos: [] });
   }
 
@@ -4161,6 +4171,8 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   if (action === "matricula_documentos_upload") {
     const { matricula_id, tipo, base64, mime, nome_arquivo } = body as any;
     if (!matricula_id || !tipo || !base64) return err("matricula_id, tipo e base64 obrigatórios.");
+    const { data: matCheck } = await admin.from("crm_matriculas").select("id").eq("id", matricula_id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!matCheck) return err("Matrícula não encontrada nesta escola.", 403);
     const bytes = Uint8Array.from(atob(base64), (c: string) => c.charCodeAt(0));
     const ext = (mime || "application/pdf").split("/")[1] || "pdf";
     const fileName = `matriculas/${matricula_id}/${Date.now()}_${tipo}.${ext}`;
@@ -4261,8 +4273,12 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     // caracteres que possam quebrar o parser de filtros do PostgREST.
     const cleanPhone = String(waPhone).replace(/\D/g, '').replace(/^55/, '');
     if (!cleanPhone || cleanPhone.length < 8 || cleanPhone.length > 15) return err("Phone inválido.");
-    // Buscar família por telefone (pai ou mãe)
-    const { data: fam } = await admin.from("familias").select("id, nome_responsavel, email, telefone, alunos(id, nome)").eq("escola_id", sessionEscolaId).or(`telefone.like.%${cleanPhone}%,telefone2.like.%${cleanPhone}%`).limit(1).single();
+    // Buscar família por telefone (pai ou mãe) — queries separadas para evitar interpolação no .or()
+    let { data: fam } = await admin.from("familias").select("id, nome_responsavel, email, telefone, alunos(id, nome)").eq("escola_id", sessionEscolaId).ilike("telefone", `%${cleanPhone}%`).limit(1).maybeSingle();
+    if (!fam) {
+      const { data: fam2 } = await admin.from("familias").select("id, nome_responsavel, email, telefone, alunos(id, nome)").eq("escola_id", sessionEscolaId).ilike("telefone2", `%${cleanPhone}%`).limit(1).maybeSingle();
+      fam = fam2;
+    }
     if (!fam) return ok({ data: null });
     const aluno = fam.alunos?.[0];
     return ok({ data: { familia_id: fam.id, nome_responsavel: fam.nome_responsavel, email: fam.email, aluno_id: aluno?.id, aluno_nome: aluno?.nome } });
@@ -4348,7 +4364,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
 
   if (action === "financeiro_decisoes_pendentes") {
-    const { data } = await admin.from("escola_decisoes_financeiras").select("*").eq("status", "pendente").order("criado_em", { ascending: false });
+    const { data } = await admin.from("escola_decisoes_financeiras").select("*").eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: false });
     return ok({ data: data ?? [] });
   }
 

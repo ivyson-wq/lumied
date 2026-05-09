@@ -74,6 +74,10 @@ export const devTools: McpTool[] = [
       if (!accessToken) throw new Error("SUPABASE_ACCESS_TOKEN não configurado");
       const tabelaSafe = String(tabela).replace(/[^a-zA-Z0-9_]/g, "");
       const schemaSafe = String(schema).replace(/[^a-zA-Z0-9_]/g, "");
+      if (!tabelaSafe || tabelaSafe.length > 63) throw new Error("Nome de tabela inválido.");
+      if (!schemaSafe || schemaSafe.length > 63) throw new Error("Nome de schema inválido.");
+      const ALLOWED_SCHEMAS = ["public", "auth", "storage", "extensions", "cron", "net"];
+      if (!ALLOWED_SCHEMAS.includes(schemaSafe)) throw new Error(`Schema não permitido: ${schemaSafe}`);
       const res = await fetch(
         `https://api.supabase.com/v1/projects/${projectRef}/database/query`,
         {

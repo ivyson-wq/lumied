@@ -7,10 +7,9 @@
 
 import type { McpTool } from "../_shared/mcp.ts";
 
-async function getEscola(sb: any, user: any): Promise<string | null> {
+async function getEscola(_sb: any, user: any): Promise<string> {
   if (user?.escola_id) return user.escola_id;
-  const { data } = await sb.from("escolas").select("id").limit(1).single();
-  return data?.id ?? null;
+  throw new Error("escola_id obrigatório — não é possível determinar a escola do usuário.");
 }
 
 export const cozinhaTools: McpTool[] = [
