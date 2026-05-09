@@ -9,7 +9,7 @@
 <title>Lumied — Painel do Gerente</title>
 <meta name="theme-color" content="#1c1712">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Maple Bear Gerente">
+<meta name="apple-mobile-web-app-title" content="Lumied Gerente">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
@@ -839,7 +839,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
     <div class="sb-brand">
       <img class="sb-logo-img" id="sidebarLogo" alt="">
       <img src="/lumied-logo-branco.png" id="sidebarLeaf" class="sb-leaf" style="height:36px;object-fit:contain;" alt="Lumied">
-      <h1>Maple Bear</h1><span data-i18n="gerente.title">Painel do Gerente</span>
+      <h1 id="sbBrandH1">Lumied</h1><span data-i18n="gerente.title">Painel do Gerente</span>
       <script>
         if (/^demo\./i.test(location.hostname)) {
           document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = 'Demo Lumied');
@@ -7475,16 +7475,18 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   // Detecta subdomínio de demonstração (demo.lumied.com.br) — força branding Lumied
   // para não expor nome/logo da escola cujos dados seedados estão no banco global.
   const IS_DEMO_HOST = /^demo\./i.test(location.hostname);
+  // Nome da escola — usado em relatórios, PDFs, Excel, WhatsApp, etc.
+  let SCHOOL_NAME = IS_DEMO_HOST ? 'Demo Lumied' : 'Lumied';
 
   async function loadSidebarLogo() {
     if (IS_DEMO_HOST) {
       document.getElementById('sidebarLogo').style.display = 'none';
       const leaf = document.getElementById('sidebarLeaf');
       if (leaf) { leaf.src = '/lumied-logo-branco.png'; leaf.style.display = 'block'; leaf.alt = 'Lumied'; }
-      document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = 'Demo Lumied');
-      document.title = 'Demo Lumied — Painel do Gerente';
+      document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = SCHOOL_NAME);
+      document.title = SCHOOL_NAME + ' — Painel do Gerente';
       const lb = document.getElementById('loginBrandName');
-      if (lb) lb.textContent = 'Demo Lumied';
+      if (lb) lb.textContent = SCHOOL_NAME;
       return;
     }
     const d = await api({ action:'config_get', chave:'logo_url' });
@@ -7493,6 +7495,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const nome = await api({ action:'config_get', chave:'escola_nome' });
     if(nome?.valor) {
       const cleanNome = String(nome.valor).replace(/^"|"$/g, '');
+      SCHOOL_NAME = cleanNome;
       document.querySelectorAll('.sb-brand h1').forEach(el => el.textContent = cleanNome);
       document.title = cleanNome + ' — Painel do Gerente';
     }
@@ -9657,12 +9660,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       </tr>`;
     }).join('');
 
-    ultimoRelatorioTexto = `🍁 *Maple Bear — Dashboard de Turnos*\n📅 ${data}\n\n*Resumo:*\nTotal: ${total} | Integral: ${integral} | Semi-Int.: ${semi} | Tarde: ${tarde} | Diária: ${diaria}\n\nRelatório completo disponível em PDF.`;
+    ultimoRelatorioTexto = `📊 *${SCHOOL_NAME} — Dashboard de Turnos*\n📅 ${data}\n\n*Resumo:*\nTotal: ${total} | Integral: ${integral} | Semi-Int.: ${semi} | Tarde: ${tarde} | Diária: ${diaria}\n\nRelatório completo disponível em PDF.`;
 
     return `
     <div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:0;">
       <div style="background:#C8102E;padding:28px 36px;border-radius:10px 10px 0 0;">
-        <img src="https://raw.githubusercontent.com/ivyson-wq/Escolha-de-turno/main/Design%20sem%20nome.png" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="Maple Bear" loading="lazy">
+        <img src="/lumied-logo.png" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="${SCHOOL_NAME}" loading="lazy">
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;"></p>
         <h1 style="color:#fff;text-align:center;font-size:20px;margin:10px 0 4px;font-family:Georgia,serif;">Dashboard de Turnos 2026</h1>
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;">Gerado em ${data}</p>
@@ -9701,7 +9704,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         </table>
       </div>
       <div style="background:#f5f0ea;padding:14px 36px;border-radius:0 0 10px 10px;text-align:center;font-size:11px;color:#aaa;">
-        Maple Bear · Relatório gerado automaticamente
+        ${SCHOOL_NAME} · Relatório gerado automaticamente
       </div>
     </div>`;
   }
@@ -9753,12 +9756,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       </tr>`;
     }).join('');
 
-    ultimoRelatorioTexto = `🍁 *Maple Bear — Dashboard de Atividades*\n📅 ${data}\n\n*Resumo:*\nInscrições: ${total} | Atividades ativas: ${ativas} | Turmas lotadas: ${lotadas} | Vagas disponíveis: ${vagas}\n\nRelatório completo disponível em PDF.`;
+    ultimoRelatorioTexto = `📊 *${SCHOOL_NAME} — Dashboard de Atividades*\n📅 ${data}\n\n*Resumo:*\nInscrições: ${total} | Atividades ativas: ${ativas} | Turmas lotadas: ${lotadas} | Vagas disponíveis: ${vagas}\n\nRelatório completo disponível em PDF.`;
 
     return `
     <div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:0;">
       <div style="background:#C8102E;padding:28px 36px;border-radius:10px 10px 0 0;">
-        <img src="https://raw.githubusercontent.com/ivyson-wq/Escolha-de-turno/main/Design%20sem%20nome.png" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="Maple Bear" loading="lazy">
+        <img src="/lumied-logo.png" style="max-height:52px;object-fit:contain;display:block;margin:0 auto 8px;" alt="${SCHOOL_NAME}" loading="lazy">
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;"></p>
         <h1 style="color:#fff;text-align:center;font-size:20px;margin:10px 0 4px;font-family:Georgia,serif;">Dashboard de Atividades Extraclasse</h1>
         <p style="color:rgba(255,255,255,.7);text-align:center;font-size:12px;margin:0;">Gerado em ${data}</p>
@@ -9806,7 +9809,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         </table>
       </div>
       <div style="background:#f5f0ea;padding:14px 36px;border-radius:0 0 10px 10px;text-align:center;font-size:11px;color:#aaa;">
-        Maple Bear · Relatório gerado automaticamente
+        ${SCHOOL_NAME} · Relatório gerado automaticamente
       </div>
     </div>`;
   }
@@ -9858,7 +9861,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       posY += pageH;
     }
 
-    pdf.save(`maple-bear-${titulo}-${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
+    pdf.save(`${SCHOOL_NAME.toLowerCase().replace(/\s+/g,'-')}-${titulo}-${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
     btn.innerHTML = '📄 Exportar PDF'; btn.disabled = false;
   }
 
@@ -9908,7 +9911,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       // 3. Abre WhatsApp com o link
       const data = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
       const tipo  = isDashAtiv ? 'Atividades Extraclasse' : 'Turnos 2026';
-      const msg = `🍁 *Maple Bear*\n\n📊 *Relatório — Dashboard de ${tipo}*\n📅 ${data}\n\n📄 Clique para abrir o PDF:\n${d.url}`;
+      const msg = `📊 *${SCHOOL_NAME}*\n\n📊 *Relatório — Dashboard de ${tipo}*\n📅 ${data}\n\n📄 Clique para abrir o PDF:\n${d.url}`;
       window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 
     } catch(e) {
@@ -10190,7 +10193,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   function printManutRelatorio() {
     const conteudo = document.getElementById('relatorioConteudo').innerHTML;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Relatório Manutenção — Maple Bear</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>Relatório Manutenção — ${SCHOOL_NAME}</title>
       <style>body{font-family:'DM Sans',Helvetica,sans-serif;padding:32px;color:#1a1a1a;}
       h1{font-size:18px;margin-bottom:4px;} .sub{font-size:12px;color:#999;margin-bottom:24px;}
       table{width:100%;border-collapse:collapse;} th,td{text-align:left;padding:6px 8px;font-size:12px;}
@@ -10198,7 +10201,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       tr{border-bottom:1px solid #eee;} @media print{body{padding:16px;}}</style>
 </head>
       <body><h1>Relatório de Pendências — Manutenção</h1>
-      <div class="sub">Maple Bear Caxias do Sul · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+      <div class="sub">${SCHOOL_NAME} · ${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
       ${conteudo}</body></html>`);
     win.document.close();
     setTimeout(() => win.print(), 300);
@@ -10207,7 +10210,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   function shareManutWhatsApp() {
     const equipes = [...relatorioEquipesSel];
     const pendentes = manutData.filter(m => m.status !== 'concluida' && m.status !== 'rejeitada');
-    let texto = '*RELATÓRIO DE MANUTENÇÃO — Maple Bear*\n' + new Date().toLocaleDateString('pt-BR') + '\n\n';
+    let texto = '*RELATÓRIO DE MANUTENÇÃO — ' + SCHOOL_NAME + '*\n' + new Date().toLocaleDateString('pt-BR') + '\n\n';
     for (const eq of equipes) {
       const items = pendentes.filter(m => (m.equipe_responsavel || 'Sem equipe') === eq);
       if (!items.length) continue;
@@ -13979,7 +13982,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     wsReq['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 14 }, { wch: 36 }];
     XLSX.utils.book_append_sheet(wb, wsReq, 'Requisição');
     const wsInst = XLSX.utils.aoa_to_sheet([
-      ['INSTRUÇÕES — Modelo de Requisição de Insumos · Maple Bear'],
+      ['INSTRUÇÕES — Modelo de Requisição de Insumos · ' + SCHOOL_NAME],
       [''],
       ['1. Preencha a aba "Requisição" a partir da linha 2 (linha 1 é o cabeçalho).'],
       ['2. Não altere nem remova as colunas existentes.'],
@@ -13997,7 +14000,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     ]);
     wsInst['!cols'] = [{ wch: 72 }];
     XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
-    XLSX.writeFile(wb, 'modelo_requisicao_maple_bear.xlsx');
+    XLSX.writeFile(wb, 'modelo_requisicao_lumied.xlsx');
   }
 
   // ── Rascunho local da requisição-em-nome-da-professora ──
@@ -14837,7 +14840,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     ws['!cols'] = [{ wch: 36 }, { wch: 24 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Insumos');
     const wsInst = XLSX.utils.aoa_to_sheet([
-      ['INSTRUÇÕES — Modelo de Cadastro de Insumos · Maple Bear'],
+      ['INSTRUÇÕES — Modelo de Cadastro de Insumos · ' + SCHOOL_NAME],
       [''],
       ['1. Preencha a aba "Insumos" a partir da linha 2 (linha 1 é o cabeçalho).'],
       ['2. Apenas o Nome é obrigatório. Os demais campos são opcionais.'],
@@ -14846,7 +14849,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     ]);
     wsInst['!cols'] = [{ wch: 72 }];
     XLSX.utils.book_append_sheet(wb, wsInst, 'Instruções');
-    XLSX.writeFile(wb, 'modelo_insumos_maple_bear.xlsx');
+    XLSX.writeFile(wb, 'modelo_insumos_lumied.xlsx');
   }
 
   async function almImportarInsumosXlsx(input) {
@@ -15128,7 +15131,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     ]);
     wsInst['!cols'] = [{ wch: 72 }];
     XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucoes');
-    XLSX.writeFile(wb, 'modelo_familias_maple_bear.xlsx');
+    XLSX.writeFile(wb, 'modelo_familias_lumied.xlsx');
   }
 
   function gerarModeloAtividades() {
@@ -15159,7 +15162,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     ]);
     wsInst['!cols'] = [{ wch: 72 }];
     XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucoes');
-    XLSX.writeFile(wb, 'modelo_atividades_maple_bear.xlsx');
+    XLSX.writeFile(wb, 'modelo_atividades_lumied.xlsx');
   }
 
   var famImportData = [];
@@ -16199,7 +16202,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (!cpf || !valor || !venc) { errEl.textContent='CPF, valor e vencimento obrigatorios.'; errEl.classList.add('show'); return; }
     const btn = document.getElementById('bolBtn');
     btn.disabled=true; btn.textContent='Emitindo...';
-    const d = await api({ action:'fin_emitir_boleto', cpf_pagador:cpf, nome_pagador:nome, valor, vencimento:venc, descricao:desc||'Mensalidade Maple Bear' });
+    const d = await api({ action:'fin_emitir_boleto', cpf_pagador:cpf, nome_pagador:nome, valor, vencimento:venc, descricao:desc||'Mensalidade ' + SCHOOL_NAME });
     btn.disabled=false; btn.textContent='Emitir Boleto no Inter';
     if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
     showToast('Boleto emitido! N° ' + (d.nosso_numero||'—'),'success',5000);
@@ -16628,14 +16631,14 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (!titulo) return;
     const data = prompt('Data e hora (AAAA-MM-DD HH:MM):', new Date().toISOString().slice(0,16).replace('T',' '));
     if (!data) return;
-    api({ action:'crm_reuniao_save', lead_id: leadId, titulo, data_hora: data.replace(' ','T') + ':00', local: 'Maple Bear Caxias do Sul' }).then(d => {
+    api({ action:'crm_reuniao_save', lead_id: leadId, titulo, data_hora: data.replace(' ','T') + ':00', local: SCHOOL_NAME }).then(d => {
       if (d.error) showToast(d.error,'error');
       else {
         showToast('Reuniao agendada!','success');
         // Abrir Google Calendar
         const dtStart = data.replace(/[-: ]/g,'').slice(0,15) + '00';
         const dtEnd = new Date(new Date(data.replace(' ','T')).getTime()+30*60000).toISOString().replace(/[-:]/g,'').slice(0,15) + '00';
-        window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${dtStart}/${dtEnd}&location=${encodeURIComponent('Maple Bear Caxias do Sul')}&details=${encodeURIComponent('Lead: '+nome)}`, '_blank');
+        window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(titulo)}&dates=${dtStart}/${dtEnd}&location=${encodeURIComponent(SCHOOL_NAME)}&details=${encodeURIComponent('Lead: '+nome)}`, '_blank');
       }
     });
   }

@@ -1024,7 +1024,7 @@ async function enviarAlertaHoraExtra(
   const assunto = `⚠️ Alerta de Compliance — Hora Extra Não Autorizada (${dataFmt})`;
   const corpoHtml = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-      <h2 style="color:#C8102E;">⚖️ Maple Bear — Alerta de Compliance</h2>
+      <h2 style="color:#C8102E;">⚖️ Alerta de Compliance</h2>
       <p>Prezada <strong>${professora.nome}</strong>,</p>
       <p>Identificamos uma ocorrência de <strong>hora extra não autorizada</strong> no seu registro de ponto:</p>
       <table style="border-collapse:collapse;margin:16px 0;width:100%;">
@@ -1048,7 +1048,7 @@ async function enviarAlertaHoraExtra(
       <p>De acordo com a política da escola, horas extras devem ser <strong>previamente autorizadas pela coordenação</strong>.</p>
       <p>Caso tenha uma justificativa, por favor entre em contato com a coordenação para regularizar a situação.</p>
       <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-      <p style="color:#999;font-size:12px;">Este é um e-mail automático do sistema de Compliance — Maple Bear Portal.<br>
+      <p style="color:#999;font-size:12px;">Este é um e-mail automático do sistema de Compliance — Lumied.<br>
       Não responda a este e-mail.</p>
     </div>
   `;
@@ -1084,7 +1084,7 @@ async function enviarAlertaHoraExtra(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_KEY}` },
       body: JSON.stringify({
-        from: "Maple Bear Compliance <compliance@maplebear-cs.com.br>",
+        from: "Lumied Compliance <compliance@lumied.com.br>",
         to: [professora.email],
         subject: assunto,
         html: corpoHtml,

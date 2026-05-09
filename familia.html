@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#C8102E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Maple Bear">
+<meta name="apple-mobile-web-app-title" content="Lumied">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
@@ -315,7 +315,7 @@ body.has-bottomnav{padding-bottom:56px;}
 <div id="iosBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1c1712;padding:16px 20px 24px;box-shadow:0 -4px 20px rgba(0,0,0,.3);">
   <button onclick="document.getElementById('iosBanner').style.display='none';localStorage.setItem('iosBannerDismissed','1')" style="position:absolute;top:10px;right:14px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;">×</button>
   <div style="max-width:500px;margin:auto;text-align:center;">
-    <p style="color:#fff;font-size:14px;font-weight:600;margin:0 0 8px;font-family:'DM Sans',sans-serif;">Instale o app Maple Bear</p>
+    <p style="color:#fff;font-size:14px;font-weight:600;margin:0 0 8px;font-family:'DM Sans',sans-serif;">Instale o app da escola</p>
     <p style="color:rgba(255,255,255,.75);font-size:13px;margin:0;font-family:'DM Sans',sans-serif;line-height:1.5;">
       Toque em <span style="display:inline-block;background:rgba(255,255,255,.15);border-radius:4px;padding:1px 6px;">
         <svg style="vertical-align:middle;margin-bottom:2px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
@@ -328,7 +328,7 @@ body.has-bottomnav{padding-bottom:56px;}
 <!-- BANNER INSTALAR APP -->
 <div id="installBanner" style="display:none;background:#1c1712;padding:12px 20px;text-align:center;">
   <div style="max-width:700px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-    <span style="font-size:13px;color:rgba(255,255,255,.85);">📲 Instale o app Maple Bear no seu celular para acesso rápido</span>
+    <span style="font-size:13px;color:rgba(255,255,255,.85);">📲 Instale o app da escola no seu celular para acesso rápido</span>
     <div style="display:flex;gap:8px;flex-shrink:0;">
       <button id="btnInstall" onclick="instalarApp()" style="padding:7px 16px;background:#C8102E;color:#fff;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Instalar</button>
       <button onclick="document.getElementById('installBanner').style.display='none'" style="padding:7px 12px;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Agora não</button>
@@ -475,7 +475,7 @@ body.has-bottomnav{padding-bottom:56px;}
       <img id="logoImg" alt="" style="max-height:200px;max-width:380px;object-fit:contain;display:none;margin:0 auto 32px;">
       <div id="logoFallback">
         <img src="/lumied-logo-branco.png" style="height:80px;object-fit:contain;margin-bottom:16px;" alt="Lumied">
-        <div style="font-family:'Lora',serif;font-size:42px;font-weight:700;color:#fff;margin-bottom:8px;">Maple Bear</div>
+        <div id="heroSchoolName" style="font-family:'Lora',serif;font-size:42px;font-weight:700;color:#fff;margin-bottom:8px;">Lumied</div>
       </div>
       <div style="font-size:14px;color:rgba(255,255,255,.7);line-height:1.6;">Notas, agenda digital, boletos e pickup<br>— tudo na palma da mao.</div>
     </div>
@@ -486,7 +486,7 @@ body.has-bottomnav{padding-bottom:56px;}
 <div id="loginWall">
   <div class="login-card">
     <div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:24px;">
-      <img src="/maple-bear-logo.png" alt="Maple Bear" style="height:38px;object-fit:contain;max-width:100%;">
+      <img id="loginSchoolLogo" src="/lumied-logo.png" alt="Lumied" style="height:38px;object-fit:contain;max-width:100%;">
       <div style="font-size:11px;color:#7a7169;font-weight:600;letter-spacing:.4px;text-transform:uppercase;" data-i18n="pais.login.portalTitle">Portal dos Pais</div>
     </div>
     <div class="lw-icon">🔐</div>
@@ -669,7 +669,7 @@ body.has-bottomnav{padding-bottom:56px;}
 <div id="accessPending" style="display:none;max-width:500px;margin:48px auto;padding:0 24px;">
   <div style="background:#fff;border-radius:16px;border:1px solid #e6ddd3;padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,.07);text-align:center;">
     <div style="font-size:48px;margin-bottom:16px;">🏫</div>
-    <h2 style="font-family:'Lora',serif;font-size:20px;margin-bottom:8px;">Bem-vindo ao Maple Bear!</h2>
+    <h2 id="welcomeTitle" style="font-family:'Lora',serif;font-size:20px;margin-bottom:8px;">Bem-vindo!</h2>
     <p style="font-size:13px;color:#7a7169;line-height:1.7;margin-bottom:24px;">Seu e-mail ainda não está vinculado a uma família da escola. Preencha os dados abaixo para solicitar acesso.</p>
     <div style="text-align:left;">
       <div style="margin-bottom:12px;">

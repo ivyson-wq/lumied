@@ -50,7 +50,7 @@ export async function webauthnLoginChallenge(ctx: Context) {
   await ctx.sb.from("webauthn_challenges").insert({ challenge, email, portal: portal || "gerente" });
   return successResponse({
     challenge,
-    rpId: rp_id || "app.maplebearcaxiasdosul.com.br",
+    rpId: rp_id || new URL(ctx.req.headers.get("origin") || "https://lumied.com.br").hostname,
     allowCredentials: creds.map((c: any) => ({ id: c.credential_id, type: "public-key" })),
     timeout: 60000,
   });
@@ -64,7 +64,7 @@ export async function webauthnLoginVerify(ctx: Context) {
   await ctx.sb.from("webauthn_challenges").delete().eq("id", ch.id);
   const { data: cred } = await ctx.sb.from("webauthn_credentials").select("*").eq("credential_id", credential.id).eq("email", ch.email).single();
   if (!cred) throw new AppError("AUTH_INVALID", "Credencial não encontrada.");
-  const rpId = rp_id || "app.maplebearcaxiasdosul.com.br";
+  const rpId = rp_id || new URL(ctx.req.headers.get("origin") || "https://lumied.com.br").hostname;
   const origin = `https://${rpId}`;
   try {
     await verifyAuthentication(credential, cred.public_key, ch.challenge, origin, rpId, cred.sign_count);
@@ -92,7 +92,7 @@ export async function webauthnRegisterChallenge(ctx: Context) {
   await ctx.sb.from("webauthn_challenges").insert({ challenge, email, portal: portal || "gerente" });
   return successResponse({
     challenge,
-    rp: { name: "Maple Bear", id: rp_id || "app.maplebearcaxiasdosul.com.br" },
+    rp: { name: "Lumied", id: rp_id || new URL(ctx.req.headers.get("origin") || "https://lumied.com.br").hostname },
     user: { id: b64urlEncode(new TextEncoder().encode(email)), name: email, displayName: email },
     pubKeyCredParams: [{ type: "public-key", alg: -7 }],
     timeout: 60000,
@@ -106,7 +106,7 @@ export async function webauthnRegisterVerify(ctx: Context) {
   const { data: ch } = await ctx.sb.from("webauthn_challenges").select("*").eq("email", email).order("criado_em", { ascending: false }).limit(1).single();
   if (!ch) throw new AppError("AUTH_INVALID", "Challenge não encontrado.");
   await ctx.sb.from("webauthn_challenges").delete().eq("id", ch.id);
-  const rpId = rp_id || "app.maplebearcaxiasdosul.com.br";
+  const rpId = rp_id || new URL(ctx.req.headers.get("origin") || "https://lumied.com.br").hostname;
   const origin = `https://${rpId}`;
   try {
     const result = await verifyRegistration(credential, ch.challenge, origin, rpId);
