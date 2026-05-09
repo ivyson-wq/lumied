@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Lumied CRM Extension - Mockup Visual</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: #111827;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  padding: 40px;
+}
+.mockup-label {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 16px;
+  text-align: center;
+  opacity: 0.5;
+}
+
+/* ═══ PANEL ═══ */
+.panel-wrapper { display: flex; flex-direction: column; align-items: center; }
+.panel {
+  width: 330px; height: 680px; background: #fafafa; border-radius: 14px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,.5); overflow: hidden;
+}
+.panel-header {
+  background: linear-gradient(135deg, #2d1b4e 0%, #1a0f30 100%);
+  color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 14px; letter-spacing: -0.2px;
+  box-shadow: 0 2px 8px rgba(45,27,78,.3);
+}
+.panel-header .close-btn {
+  margin-left: auto; background: rgba(255,255,255,.12); border: none; color: #fff;
+  width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.panel-body { flex: 1; overflow-y: auto; padding: 14px; }
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+.section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #9ca3af; margin-bottom: 8px; }
+.divider { border: none; border-top: 1px solid #eee; margin: 14px 0; }
+
+/* Lead card */
+.lead-card { background: linear-gradient(135deg, #2d1b4e 0%, #1a0f30 100%); border: none; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(45,27,78,.3); color: #fff; }
+.lc-name { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: -0.3px; }
+.lc-stage { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; background: rgba(255,255,255,.15); color: #fcd34d; border: 1px solid rgba(252,211,77,.3); }
+.lc-row { font-size: 12px; color: rgba(255,255,255,.8); padding: 4px 0; line-height: 1.4; display: flex; align-items: baseline; gap: 4px; }
+.lc-label { color: rgba(255,255,255,.5); font-weight: 600; font-size: 11px; min-width: 58px; }
+.lc-turma { font-size: 13px; color: #fff; padding: 10px 12px; margin-top: 10px; background: rgba(252,211,77,.15); border-radius: 10px; border: 1px solid rgba(252,211,77,.25); display: flex; align-items: center; gap: 6px; }
+.lc-turma::before { content: ''; display: inline-block; width: 8px; height: 8px; background: #fcd34d; border-radius: 50%; flex-shrink: 0; }
+.lc-turma .lc-label { color: rgba(255,255,255,.6); }
+.lc-turma strong { font-size: 15px; color: #fcd34d; }
+
+/* Buttons */
+.lead-actions { display: flex; gap: 6px; margin-bottom: 10px; }
+.lead-btn { flex: 1; padding: 10px 8px; border: none; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-primary { background: linear-gradient(135deg, #2d1b4e 0%, #1a0f30 100%); color: #fff; box-shadow: 0 2px 8px rgba(45,27,78,.25); }
+.btn-secondary { background: #fff; color: #2d1b4e; border: 1px solid #d4c8f0; }
+
+.meeting-btn {
+  width: 100%; padding: 10px; background: linear-gradient(135deg, #4285f4 0%, #2b6cb0 100%);
+  color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 2px 8px rgba(66,133,244,.25);
+}
+.lead-status { padding: 12px; border-radius: 10px; font-size: 12px; line-height: 1.6; margin-bottom: 10px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+
+.search {
+  width: 100%; padding: 10px 12px 10px 34px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; margin-bottom: 10px;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23999' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") 12px center no-repeat;
+}
+.tpl-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 8px; font-size: 12px; }
+.tpl-card .tpl-name { font-weight: 700; margin-bottom: 4px; font-size: 13px; color: #1f2937; }
+.tpl-card .tpl-cat { font-size: 10px; color: #2d1b4e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.tpl-card .tpl-preview { color: #6b7280; line-height: 1.5; }
+.tpl-card .tpl-send { margin-top: 8px; padding: 6px 14px; background: #25D366; color: #fff; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+
+/* ═══ POPUP ═══ */
+.popup-wrapper { display: flex; flex-direction: column; align-items: center; }
+.popup { width: 340px; background: #fafafa; border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,.5); overflow: hidden; }
+.popup-header { background: linear-gradient(135deg, #2d1b4e 0%, #1a0f30 100%); color: #fff; padding: 16px 20px; display: flex; align-items: center; gap: 10px; }
+.popup-header h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.popup-config { padding: 16px 20px; }
+.popup-field { margin-bottom: 12px; }
+.popup-field label { font-size: 11px; font-weight: 600; color: #6b7280; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+.popup-field input { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; background: #fff; }
+.popup-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #2d1b4e 0%, #1a0f30 100%); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(45,27,78,.25); margin-top: 4px; }
+.popup-help { padding: 12px 20px; font-size: 10px; color: #9ca3af; line-height: 1.5; }
+.popup-help code { background: #f3f4f6; padding: 2px 4px; border-radius: 3px; font-size: 10px; }
+.popup-status { padding: 12px 20px; font-size: 11px; color: #065f46; text-align: center; border-top: 1px solid #f0f0f0; background: #ecfdf5; }
+
+/* ═══ TOGGLE ═══ */
+.toggle-wrapper { display: flex; flex-direction: column; align-items: center; }
+.toggle-btn {
+  width: 56px; height: 56px; background: #2d1b4e; border: none; border-radius: 50%;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(45,27,78,.5), 0 2px 8px rgba(0,0,0,.2);
+  display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden;
+  transition: transform .2s;
+}
+.toggle-btn:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(45,27,78,.6); }
+.toggle-btn img { width: 40px; height: 40px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<!-- Toggle -->
+<div class="toggle-wrapper">
+  <div class="mockup-label">Botao Toggle</div>
+  <button class="toggle-btn">
+    <img src="lumied-icon.png" alt="Lumied">
+  </button>
+</div>
+
+<!-- Panel -->
+<div class="panel-wrapper">
+  <div class="mockup-label">Painel WhatsApp Web</div>
+  <div class="panel">
+    <div class="panel-header">
+      <img src="lumied-icon.png" alt="Lumied" style="width:22px;height:22px;border-radius:4px;">
+      <span>Lumied CRM</span>
+      <button class="close-btn">&times;</button>
+    </div>
+    <div class="panel-body">
+      <div class="section-label">Lead</div>
+
+      <!-- Lead card -->
+      <div class="lead-card">
+        <div class="lc-name">Maria Silva</div>
+        <div class="lc-stage">Visita Agendada</div>
+        <div class="lc-row"><span class="lc-label">Tel:</span> +55 54 99912-3456</div>
+        <div class="lc-row"><span class="lc-label">Crianca:</span> Pedro Silva</div>
+        <div class="lc-row"><span class="lc-label">Nasc:</span> 15/03/2022 (4 anos)</div>
+        <div class="lc-row"><span class="lc-label">Origem:</span> whatsapp</div>
+        <div class="lc-turma"><span class="lc-label">Turma em 2026:</span> <strong>JK</strong></div>
+      </div>
+
+      <div class="lead-actions">
+        <button class="lead-btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Capturar Lead
+        </button>
+        <button class="lead-btn btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Atualizar info
+        </button>
+      </div>
+
+      <div class="lead-status">
+        <strong>Lead atualizado!</strong><br>
+        Historico da conversa registrado.
+        <button class="meeting-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Marcar reuniao na agenda
+        </button>
+      </div>
+
+      <hr class="divider">
+      <div class="section-label">Templates</div>
+      <input type="text" class="search" placeholder="Buscar template..." readonly>
+
+      <div class="tpl-card">
+        <div class="tpl-name">Boas-vindas</div>
+        <div class="tpl-cat">Boas-vindas</div>
+        <div class="tpl-preview">Ola {{nome}}! Obrigado pelo interesse na nossa escola...</div>
+        <button class="tpl-send">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          Enviar no chat
+        </button>
+      </div>
+
+      <div class="tpl-card">
+        <div class="tpl-name">Agendar Visita</div>
+        <div class="tpl-cat">Visita</div>
+        <div class="tpl-preview">{{nome}}, que tal conhecer nossa estrutura? Temos horarios...</div>
+        <button class="tpl-send">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          Enviar no chat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup -->
+<div class="popup-wrapper">
+  <div class="mockup-label">Popup Configuracao</div>
+  <div class="popup">
+    <div class="popup-header">
+      <img src="lumied-icon.png" alt="Lumied" style="width:24px;height:24px;border-radius:4px;">
+      <h1>Maple Bear Caxias CRM</h1>
+    </div>
+    <div class="popup-config">
+      <div class="popup-field">
+        <label>URL do Sistema</label>
+        <input type="text" value="https://brgorknbrjlfwvrrlwxj.supabase.co" readonly>
+      </div>
+      <div class="popup-field">
+        <label>API Key</label>
+        <input type="text" value="eyJhbGciOiJIUzI1NiIs..." readonly>
+      </div>
+      <div class="popup-field">
+        <label>Token do Gerente</label>
+        <input type="password" value="a1b2c3d4e5f6a1b2c3d4e5f6" readonly>
+      </div>
+      <button class="popup-btn">Salvar Configuracao</button>
+    </div>
+    <div class="popup-help">
+      No painel do gerente, abra o console (F12) e copie:<br>
+      <code>localStorage.getItem('mb_token')</code>
+    </div>
+    <div class="popup-status">Conectado ao CRM</div>
+  </div>
+</div>
+
+</body>
+</html>

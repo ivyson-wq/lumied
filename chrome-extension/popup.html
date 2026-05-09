@@ -4,30 +4,47 @@
 <meta charset="UTF-8">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{width:320px;font-family:'Segoe UI',sans-serif;background:#f8f5f0;}
-.header{background:#C8102E;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:8px;}
-.header h1{font-size:14px;font-weight:600;}
-.config{padding:12px;}
-.config label{font-size:11px;font-weight:600;color:#666;display:block;margin-bottom:4px;}
-.config input{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:12px;margin-bottom:8px;}
-.btn{width:100%;padding:10px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
-.btn:hover{background:#a00d24;}
-.status{padding:8px 16px;font-size:11px;color:#666;text-align:center;}
+body{width:340px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:#fafafa;}
+.header{background:linear-gradient(135deg,#C8102E 0%,#9B0D23 100%);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:10px;}
+.header h1{font-size:15px;font-weight:700;letter-spacing:-0.3px;}
+.header svg{opacity:.9;}
+.config{padding:16px 20px;}
+.field{margin-bottom:12px;}
+.field label{font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;}
+.field input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;transition:border-color .15s,box-shadow .15s;background:#fff;}
+.field input:focus{outline:none;border-color:#C8102E;box-shadow:0 0 0 3px rgba(200,16,46,.08);}
+.btn{width:100%;padding:12px;background:linear-gradient(135deg,#C8102E 0%,#9B0D23 100%);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 2px 8px rgba(200,16,46,.2);margin-top:4px;}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(200,16,46,.3);}
+.btn:active{transform:translateY(0);}
+.status{padding:12px 20px;font-size:11px;color:#6b7280;text-align:center;border-top:1px solid #f0f0f0;}
+.status.connected{color:#065f46;background:#ecfdf5;}
+.help{padding:0 20px 12px;font-size:10px;color:#9ca3af;line-height:1.5;}
+.help a{color:#C8102E;text-decoration:none;}
 </style>
 </head>
 <body>
 <div class="header">
-  <img src="icon48.png" alt="Lumied" style="width:24px;height:24px;border-radius:4px;">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
   <h1 id="extTitle">Lumied CRM</h1>
 </div>
 <div class="config">
-  <label>URL do Sistema</label>
-  <input type="text" id="apiUrl" placeholder="https://xxxxx.supabase.co">
-  <label>API Key</label>
-  <input type="text" id="apiKey" placeholder="Supabase Anon Key">
-  <label>Token do Gerente</label>
-  <input type="text" id="token" placeholder="Copie do localStorage: mb_token">
+  <div class="field">
+    <label>URL do Sistema</label>
+    <input type="text" id="apiUrl" placeholder="https://xxxxx.supabase.co">
+  </div>
+  <div class="field">
+    <label>API Key</label>
+    <input type="text" id="apiKey" placeholder="Supabase Anon Key">
+  </div>
+  <div class="field">
+    <label>Token do Gerente</label>
+    <input type="password" id="token" placeholder="Copie do localStorage: mb_token">
+  </div>
   <button class="btn" onclick="salvar()">Salvar Configuracao</button>
+</div>
+<div class="help">
+  No painel do gerente, abra o console (F12) e copie:<br>
+  <code style="background:#f3f4f6;padding:2px 4px;border-radius:3px;">localStorage.getItem('mb_token')</code>
 </div>
 <div class="status" id="status">Configure para conectar ao CRM</div>
 <script>
@@ -36,8 +53,9 @@ chrome.storage.local.get(['apiUrl','apiKey','token'], d => {
   if(d.apiKey) document.getElementById('apiKey').value = d.apiKey;
   if(d.token) document.getElementById('token').value = d.token;
   if(d.apiUrl && d.token) {
-    document.getElementById('status').textContent = 'Conectado ao CRM';
-    // Tenta carregar nome da escola
+    const el = document.getElementById('status');
+    el.textContent = 'Conectado ao CRM';
+    el.classList.add('connected');
     fetch(d.apiUrl + '/functions/v1/api', {
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':d.apiKey||'','Authorization':'Bearer '+(d.apiKey||'')},
@@ -52,7 +70,12 @@ function salvar() {
     apiUrl: document.getElementById('apiUrl').value.trim(),
     apiKey: document.getElementById('apiKey').value.trim(),
     token: document.getElementById('token').value.trim(),
-  }, () => { document.getElementById('status').textContent = 'Salvo!'; });
+  }, () => {
+    const el = document.getElementById('status');
+    el.textContent = 'Salvo com sucesso!';
+    el.classList.add('connected');
+    setTimeout(() => { el.textContent = 'Conectado ao CRM'; }, 2000);
+  });
 }
 </script>
 </body>

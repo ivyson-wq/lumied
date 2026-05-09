@@ -14,6 +14,7 @@ zip -j "$DIST" \
   content.js \
   content.css \
   privacy-policy.html \
+  lumied-icon.png \
   icon16.png \
   icon48.png \
   icon128.png
