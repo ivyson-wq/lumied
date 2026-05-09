@@ -406,6 +406,16 @@
       "destination": "/site/whatsapp-float.js"
     },
     {
+      "source": "/video",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/video-demo.html"
+    },
+    {
+      "source": "/video/",
+      "has": [{ "type": "host", "value": "lumied.com.br" }],
+      "destination": "/site/ig/video-demo.html"
+    },
+    {
       "source": "/ig",
       "has": [{ "type": "host", "value": "lumied.com.br" }],
       "destination": "/site/ig/index.html"
