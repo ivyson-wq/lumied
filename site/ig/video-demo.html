@@ -19,6 +19,17 @@ canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 .watermark .dot{width:8px;height:8px;border-radius:50%;background:#C4963C;}
 .watermark span{font-size:13px;font-weight:700;color:#C4963C;letter-spacing:4px;text-transform:uppercase;}
 
+/* ── VIDEO BACKGROUNDS ── */
+.bg-video{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;opacity:0;transition:opacity 1.2s;z-index:0;}
+.scene.active .bg-video{opacity:.18;}
+.bg-video-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(15,10,26,.92) 0%,rgba(45,27,78,.85) 50%,rgba(15,10,26,.92) 100%);z-index:0;}
+.scene-with-video .s-bg{display:none;}
+
+/* Video pip (picture-in-picture) */
+.pip-video{border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08);position:relative;}
+.pip-video video{width:100%;height:100%;object-fit:cover;display:block;}
+.pip-video-label{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 12px;border-radius:6px;font-size:11px;color:rgba(255,255,255,.7);font-weight:500;}
+
 /* ── PEOPLE PHOTOS ── */
 .person{border-radius:50%;object-fit:cover;border:3px solid rgba(196,150,60,.3);box-shadow:0 8px 32px rgba(0,0,0,.4);}
 .person-card{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:16px 20px;}
@@ -185,10 +196,9 @@ canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 </div>
 
 <!-- S1: Hook -->
-<div class="scene" id="s1">
-  <div class="s-bg hook-bg"></div>
-  <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&crop=face" class="person" style="position:absolute;right:160px;top:180px;width:220px;height:220px;opacity:.15;filter:grayscale(1);">
-  <img src="https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=400&h=400&fit=crop&crop=face" class="person" style="position:absolute;left:120px;bottom:200px;width:160px;height:160px;opacity:.1;filter:grayscale(1);">
+<div class="scene scene-with-video" id="s1">
+  <video class="bg-video" muted loop playsinline><source src="/clips/teacher.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay"></div>
   <div class="s-content hook-content">
     <div class="hook-line anim" data-d="0.3">Sua escola ainda usa <span class="em">planilha</span> pra controlar inadimplencia?</div>
     <div class="hook-line anim" data-d="2.8">WhatsApp <span class="em">pessoal</span> pra falar com familia?</div>
@@ -212,8 +222,9 @@ canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 </div>
 
 <!-- S3: Dashboard -->
-<div class="scene" id="s3">
-  <div class="s-bg feat-bg"></div>
+<div class="scene scene-with-video" id="s3">
+  <video class="bg-video" muted loop playsinline><source src="/clips/office.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:linear-gradient(135deg,rgba(12,8,32,.94),rgba(18,16,42,.88));"></div>
   <div class="s-content feat-content">
     <div class="feat-left">
       <div class="feat-badge anim-left" data-d="0">Painel do Gerente</div>
@@ -280,8 +291,9 @@ canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 </div>
 
 <!-- S5: WhatsApp -->
-<div class="scene" id="s5">
-  <div class="s-bg feat-bg"></div>
+<div class="scene scene-with-video" id="s5">
+  <video class="bg-video" muted loop playsinline><source src="/clips/phone.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:linear-gradient(135deg,rgba(12,8,32,.94),rgba(18,16,42,.88));"></div>
   <div class="s-content feat-content">
     <div class="feat-left">
       <div class="feat-badge anim-left" data-d="0">WhatsApp Business API</div>
@@ -408,8 +420,9 @@ canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 </div>
 
 <!-- S9: Social Proof -->
-<div class="scene" id="s9">
-  <div class="s-bg proof-bg"></div>
+<div class="scene scene-with-video" id="s9">
+  <video class="bg-video" muted loop playsinline><source src="/clips/team.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:radial-gradient(ellipse at 50% 40%,rgba(10,22,40,.88),rgba(8,6,26,.94));"></div>
   <div class="s-content" style="flex-direction:column;align-items:center;justify-content:center;">
     <div class="proof-brand anim" data-d="0">Caso real — 90 dias com Lumied</div>
     <div style="display:flex;align-items:center;gap:20px;margin-bottom:48px;">
@@ -521,30 +534,17 @@ canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 </div>
 
 <!-- S12: CTA -->
-<div class="scene" id="s12">
-  <div class="s-bg cta-bg"></div>
-  <!-- People avatars floating in background -->
-  <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop&crop=face" class="person" style="position:absolute;left:120px;top:200px;width:64px;height:64px;opacity:.12;">
-  <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=100&h=100&fit=crop&crop=face" class="person" style="position:absolute;right:180px;top:240px;width:56px;height:56px;opacity:.1;">
-  <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=100&h=100&fit=crop&crop=face" class="person" style="position:absolute;left:240px;bottom:240px;width:52px;height:52px;opacity:.1;">
-  <img src="https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=100&h=100&fit=crop&crop=face" class="person" style="position:absolute;right:260px;bottom:200px;width:60px;height:60px;opacity:.12;">
-  <img src="https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=100&h=100&fit=crop&crop=face" class="person" style="position:absolute;left:400px;top:140px;width:48px;height:48px;opacity:.08;">
-  <img src="https://images.unsplash.com/photo-1551836022-deb4988cc6c0?w=100&h=100&fit=crop&crop=face" class="person" style="position:absolute;right:400px;bottom:160px;width:44px;height:44px;opacity:.08;">
+<div class="scene scene-with-video" id="s12">
+  <video class="bg-video" muted loop playsinline><source src="/clips/team.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:radial-gradient(ellipse at center,rgba(45,27,78,.88),rgba(15,10,26,.94));"></div>
   <div class="s-content cta-content">
-    <div style="display:flex;margin-bottom:24px;">
-      <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=60&h=60&fit=crop&crop=face" class="person anim" data-d="0" style="width:44px;height:44px;margin-left:-8px;">
-      <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=60&h=60&fit=crop&crop=face" class="person anim" data-d="0.1" style="width:44px;height:44px;margin-left:-8px;">
-      <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=60&h=60&fit=crop&crop=face" class="person anim" data-d="0.2" style="width:44px;height:44px;margin-left:-8px;">
-      <img src="https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=60&h=60&fit=crop&crop=face" class="person anim" data-d="0.3" style="width:44px;height:44px;margin-left:-8px;">
-      <img src="https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=60&h=60&fit=crop&crop=face" class="person anim" data-d="0.4" style="width:44px;height:44px;margin-left:-8px;">
-    </div>
-    <div class="cta-logo anim-scale" data-d="0.2">Lumied</div>
-    <div class="cta-url anim" data-d="0.5">lumied.com.br</div>
-    <div class="cta-btn anim" data-d="0.7">Agendar demo gratuita — 20 min</div>
+    <div class="cta-logo anim-scale" data-d="0">Lumied</div>
+    <div class="cta-url anim" data-d="0.3">lumied.com.br</div>
+    <div class="cta-btn anim" data-d="0.5">Agendar demo gratuita — 20 min</div>
     <div class="cta-perks">
-      <span class="cta-perk anim" data-d="1.0">Migracao gratis</span>
-      <span class="cta-perk anim" data-d="1.2">Implantacao 7 dias</span>
-      <span class="cta-perk anim" data-d="1.4">Suporte VIP 30 dias</span>
+      <span class="cta-perk anim" data-d="0.8">Migracao gratis</span>
+      <span class="cta-perk anim" data-d="1.0">Implantacao 7 dias</span>
+      <span class="cta-perk anim" data-d="1.2">Suporte VIP 30 dias</span>
     </div>
   </div>
 </div>
@@ -603,12 +603,16 @@ function activateScene(id) {
   document.querySelectorAll('.scene').forEach(s => {
     s.classList.remove('active');
     s.querySelectorAll('.show').forEach(el => el.classList.remove('show'));
+    // Pause background videos on inactive scenes
+    s.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; });
   });
   const scene = document.getElementById('s' + id);
   scene.classList.add('active');
   scene.querySelectorAll('[data-d]').forEach(el => {
     setTimeout(() => el.classList.add('show'), parseFloat(el.dataset.d) * 1000);
   });
+  // Play background videos on active scene
+  scene.querySelectorAll('video').forEach(v => { v.play().catch(()=>{}); });
   // CountUp animations
   scene.querySelectorAll('[data-count]').forEach(el => {
     const target = parseInt(el.dataset.count);
