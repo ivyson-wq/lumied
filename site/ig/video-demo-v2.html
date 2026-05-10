@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>Lumied — Video Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:1920px;height:1080px;overflow:hidden;font-family:'Inter',sans-serif;background:#08061A;}
+
+/* ── GLOBAL LAYERS ── */
+canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.scene{position:absolute;inset:0;z-index:1;opacity:0;visibility:hidden;transition:opacity .9s ease,visibility 0s .9s;display:flex;align-items:center;justify-content:center;}
+.scene.active{opacity:1;visibility:visible;transition:opacity .9s ease,visibility 0s 0s;}
+.progress-bar{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,#C4963C,#E8C068,#C4963C);background-size:200%;animation:shimmer 2s infinite;z-index:99;transition:width .2s linear;}
+@keyframes shimmer{0%{background-position:200%}100%{background-position:0%}}
+.watermark{position:fixed;top:36px;left:48px;z-index:99;display:flex;align-items:center;gap:12px;opacity:.5;}
+.watermark .dot{width:8px;height:8px;border-radius:50%;background:#C4963C;}
+.watermark span{font-size:13px;font-weight:700;color:#C4963C;letter-spacing:4px;text-transform:uppercase;}
+
+/* ── VIDEO BACKGROUNDS ── */
+.bg-video{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;opacity:0;transition:opacity 1.2s;z-index:0;}
+.scene.active .bg-video{opacity:.18;}
+.bg-video-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(15,10,26,.92) 0%,rgba(45,27,78,.85) 50%,rgba(15,10,26,.92) 100%);z-index:0;}
+.scene-with-video .s-bg{display:none;}
+
+/* Video pip (picture-in-picture) */
+.pip-video{border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08);position:relative;}
+.pip-video video{width:100%;height:100%;object-fit:cover;display:block;}
+.pip-video-label{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 12px;border-radius:6px;font-size:11px;color:rgba(255,255,255,.7);font-weight:500;}
+
+/* ── PEOPLE PHOTOS ── */
+.person{border-radius:50%;object-fit:cover;border:3px solid rgba(196,150,60,.3);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.person-card{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:16px 20px;}
+.person-card img{width:52px;height:52px;border-radius:50%;object-fit:cover;}
+.person-card .pc-info{flex:1;}
+.person-card .pc-name{font-size:15px;font-weight:700;color:#fff;}
+.person-card .pc-role{font-size:12px;color:rgba(255,255,255,.4);}
+.person-card .pc-quote{font-size:13px;color:rgba(255,255,255,.55);font-style:italic;margin-top:6px;line-height:1.5;}
+.people-row{display:flex;gap:-12px;margin-bottom:24px;}
+.people-row img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #0F0A1A;margin-left:-12px;}
+.people-row img:first-child{margin-left:0;}
+.testimonial-grid{display:flex;gap:20px;margin-top:32px;width:100%;}
+.testimonial-card{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:24px;opacity:0;transform:translateY(20px);transition:all .6s cubic-bezier(.16,1,.3,1);}
+.testimonial-card.show{opacity:1;transform:translateY(0);}
+.tc-quote{font-size:14px;color:rgba(255,255,255,.55);font-style:italic;line-height:1.7;margin-bottom:16px;}
+.tc-author{display:flex;align-items:center;gap:12px;}
+.tc-author img{width:40px;height:40px;border-radius:50%;object-fit:cover;}
+.tc-author-name{font-size:14px;font-weight:700;color:#fff;}
+.tc-author-role{font-size:11px;color:rgba(255,255,255,.35);}
+
+/* ── PLAY OVERLAY ── */
+#playOverlay{position:fixed;inset:0;z-index:100;background:radial-gradient(ellipse at center,#1a103a 0%,#08061A 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:opacity .5s;}
+#playOverlay.hidden{opacity:0;pointer-events:none;}
+#playOverlay .logo{font-size:72px;font-weight:900;background:linear-gradient(135deg,#C4963C 0%,#E8C068 50%,#C4963C 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:40px;letter-spacing:-2px;}
+#playOverlay .play-ring{width:100px;height:100px;border:3px solid rgba(196,150,60,.4);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .3s;position:relative;}
+#playOverlay .play-ring::before{content:'';position:absolute;inset:-12px;border:1px solid rgba(196,150,60,.15);border-radius:50%;animation:pulse-ring 2s infinite;}
+#playOverlay:hover .play-ring{border-color:#C4963C;transform:scale(1.08);background:rgba(196,150,60,.08);}
+#playOverlay .play-tri{width:0;height:0;border-left:28px solid #C4963C;border-top:18px solid transparent;border-bottom:18px solid transparent;margin-left:6px;}
+#playOverlay .sub{color:rgba(255,255,255,.3);font-size:14px;margin-top:32px;letter-spacing:2px;text-transform:uppercase;}
+@keyframes pulse-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.5);opacity:0}}
+
+/* ── SCENE LAYOUTS ── */
+.s-bg{position:absolute;inset:0;z-index:0;}
+.s-content{position:relative;z-index:1;width:100%;height:100%;display:flex;padding:80px 100px;}
+
+/* Anim utilities */
+.anim{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.16,1,.3,1);}
+.anim.show{opacity:1;transform:translateY(0);}
+.anim-left{opacity:0;transform:translateX(-40px);transition:all .7s cubic-bezier(.16,1,.3,1);}
+.anim-left.show{opacity:1;transform:translateX(0);}
+.anim-scale{opacity:0;transform:scale(.85);transition:all .8s cubic-bezier(.16,1,.3,1);}
+.anim-scale.show{opacity:1;transform:scale(1);}
+
+/* ── SCENE 1: HOOK ── */
+.hook-bg{background:radial-gradient(ellipse at 30% 50%,#1a103a 0%,#08061A 60%);}
+.hook-content{flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.hook-line{font-size:52px;font-weight:800;color:#fff;margin:20px 0;line-height:1.2;}
+.hook-line .em{color:#DC2626;position:relative;}
+.hook-line .em::after{content:'';position:absolute;left:-4px;right:-4px;top:50%;height:3px;background:#DC2626;transform:scaleX(0);transition:transform .4s .3s;}
+.hook-line.show .em::after{transform:scaleX(1);}
+
+/* ── SCENE 2: REVEAL ── */
+.reveal-bg{background:radial-gradient(ellipse at center,#2D1B4E 0%,#0F0A1A 70%);}
+.reveal-content{flex-direction:column;align-items:center;justify-content:center;}
+.reveal-logo{font-size:140px;font-weight:900;letter-spacing:-5px;background:linear-gradient(135deg,#C4963C 0%,#E8C068 40%,#C4963C 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+.reveal-sub{font-size:24px;color:rgba(255,255,255,.5);font-weight:400;margin-top:16px;letter-spacing:6px;text-transform:uppercase;}
+.reveal-pills{display:flex;gap:16px;margin-top:48px;}
+.reveal-pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(20px);border-radius:60px;padding:14px 32px;font-size:20px;font-weight:600;color:rgba(255,255,255,.8);}
+.reveal-pill.gold{background:linear-gradient(135deg,rgba(196,150,60,.2),rgba(232,192,104,.15));border-color:rgba(196,150,60,.4);color:#E8C068;}
+
+/* ── SCENES 3-8: FEATURE ── */
+.feat-bg{background:linear-gradient(135deg,#0c0820 0%,#12102a 100%);}
+.feat-content{align-items:stretch;}
+.feat-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding-right:60px;}
+.feat-badge{font-size:14px;font-weight:700;color:#C4963C;letter-spacing:4px;text-transform:uppercase;margin-bottom:20px;}
+.feat-title{font-size:52px;font-weight:900;color:#fff;line-height:1.1;margin-bottom:24px;}
+.feat-title .accent{color:#C4963C;}
+.feat-desc{font-size:20px;color:rgba(255,255,255,.45);line-height:1.7;margin-bottom:32px;}
+.feat-chips{display:flex;gap:12px;flex-wrap:wrap;}
+.feat-chip{background:rgba(196,150,60,.08);border:1px solid rgba(196,150,60,.2);border-radius:10px;padding:10px 22px;font-size:16px;font-weight:600;color:#E8C068;}
+.feat-right{width:820px;display:flex;align-items:center;justify-content:center;}
+
+/* Mock device */
+.mock-device{width:760px;background:#111;border-radius:16px;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);position:relative;}
+.mock-topbar{height:36px;background:#1a1a2e;display:flex;align-items:center;padding:0 16px;gap:8px;}
+.mock-dot{width:10px;height:10px;border-radius:50%;}
+.mock-dot.r{background:#ff5f57;}.mock-dot.y{background:#febc2e;}.mock-dot.g{background:#28c840;}
+.mock-url{margin-left:16px;background:rgba(255,255,255,.06);border-radius:6px;padding:4px 16px;font-size:11px;color:rgba(255,255,255,.3);flex:1;text-align:center;}
+.mock-body{padding:28px;min-height:380px;background:#0f0f1e;}
+
+/* Mock dashboard content */
+.mock-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.mock-kpi{background:rgba(255,255,255,.04);border-radius:10px;padding:16px;border:1px solid rgba(255,255,255,.06);}
+.mock-kpi-label{font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.mock-kpi-value{font-size:28px;font-weight:800;color:#fff;}
+.mock-kpi-value.green{color:#10B981;}.mock-kpi-value.red{color:#DC2626;}.mock-kpi-value.gold{color:#C4963C;}
+.mock-chart{background:rgba(255,255,255,.02);border-radius:10px;padding:20px;border:1px solid rgba(255,255,255,.04);height:160px;position:relative;overflow:hidden;}
+.mock-chart-bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:10px;}
+.mock-bar{flex:1;background:linear-gradient(to top,rgba(196,150,60,.3),rgba(196,150,60,.8));border-radius:4px 4px 0 0;transition:height 1s cubic-bezier(.16,1,.3,1);}
+.mock-table{margin-top:12px;}
+.mock-row{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:rgba(255,255,255,.5);}
+.mock-row:nth-child(odd){background:rgba(255,255,255,.02);}
+.mock-row .name{flex:1;color:rgba(255,255,255,.7);font-weight:500;}
+.mock-row .badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;}
+.mock-row .badge.ok{background:rgba(16,185,129,.15);color:#10B981;}
+.mock-row .badge.warn{background:rgba(245,158,11,.15);color:#F59E0B;}
+.mock-row .badge.danger{background:rgba(220,38,38,.15);color:#DC2626;}
+
+/* ── SCENE 9: PROOF ── */
+.proof-bg{background:radial-gradient(ellipse at 50% 40%,#0a1628 0%,#08061A 70%);}
+.proof-content{flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.proof-brand{font-size:18px;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;}
+.proof-school{font-size:32px;font-weight:700;color:rgba(255,255,255,.7);margin-bottom:56px;}
+.proof-stats{display:flex;gap:80px;}
+.proof-stat{text-align:center;}
+.proof-num{font-size:96px;font-weight:900;line-height:1;background:linear-gradient(135deg,#10B981,#059669);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.proof-label{font-size:18px;color:rgba(255,255,255,.35);margin-top:12px;font-weight:500;}
+.proof-period{margin-top:48px;font-size:16px;color:rgba(255,255,255,.2);font-weight:600;letter-spacing:4px;text-transform:uppercase;}
+
+/* ── SCENE 10: PRICING ── */
+.pricing-bg{background:radial-gradient(ellipse at center,#1a103a 0%,#08061A 70%);}
+.pricing-content{flex-direction:column;align-items:center;justify-content:center;}
+.pricing-header{font-size:18px;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:48px;}
+.pricing-cards{display:flex;gap:20px;align-items:stretch;}
+.p-card{width:320px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 32px;text-align:center;position:relative;transition:all .4s;}
+.p-card.feat{background:rgba(196,150,60,.06);border:2px solid rgba(196,150,60,.3);transform:scale(1.06);}
+.p-card.feat .p-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#C4963C,#E8C068);color:#1a0a2e;font-size:12px;font-weight:800;padding:6px 24px;border-radius:100px;white-space:nowrap;letter-spacing:1px;}
+.p-name{font-size:28px;font-weight:800;color:#fff;margin-top:8px;}
+.p-desc{font-size:14px;color:rgba(255,255,255,.35);margin:8px 0 20px;}
+.p-price{font-size:56px;font-weight:900;color:#C4963C;line-height:1;}
+.p-price span{font-size:18px;font-weight:400;color:rgba(255,255,255,.25);}
+.p-limit{font-size:14px;color:rgba(255,255,255,.3);margin-top:12px;}
+.p-features{list-style:none;text-align:left;margin-top:24px;font-size:13px;color:rgba(255,255,255,.45);line-height:2.2;}
+.p-features li::before{content:'✓';color:#10B981;font-weight:700;margin-right:8px;}
+
+/* ── SCENE 11: COMPARISON ── */
+.comp-bg{background:linear-gradient(135deg,#0c0820 0%,#08061A 100%);}
+.comp-content{flex-direction:column;align-items:center;justify-content:center;}
+.comp-header{font-size:18px;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase;margin-bottom:48px;}
+.comp-table{width:800px;}
+.comp-row{display:flex;align-items:center;padding:20px 28px;border-radius:12px;margin:8px 0;font-size:22px;}
+.comp-row.loser{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);}
+.comp-row.winner{background:rgba(16,185,129,.06);border:2px solid rgba(16,185,129,.2);}
+.comp-name{flex:1;font-weight:600;color:rgba(255,255,255,.6);}
+.comp-row.winner .comp-name{color:#fff;font-weight:700;}
+.comp-val{font-size:32px;font-weight:900;margin:0 32px;}
+.comp-val.red{color:#DC2626;text-decoration:line-through;text-decoration-thickness:2px;}
+.comp-val.green{color:#10B981;}
+.comp-detail{font-size:14px;color:rgba(255,255,255,.3);}
+.comp-row.winner .comp-detail{color:rgba(16,185,129,.7);}
+.comp-save{background:linear-gradient(135deg,#10B981,#059669);color:#fff;font-size:14px;font-weight:800;padding:6px 16px;border-radius:8px;margin-left:12px;}
+
+/* ── SCENE 12: CTA ── */
+.cta-bg{background:radial-gradient(ellipse at center,#2D1B4E 0%,#0F0A1A 70%);}
+.cta-content{flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.cta-logo{font-size:100px;font-weight:900;letter-spacing:-3px;background:linear-gradient(135deg,#C4963C,#E8C068,#C4963C);background-size:200%;animation:shimmer 3s infinite;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.cta-url{font-size:44px;font-weight:800;color:#fff;margin:24px 0;}
+.cta-btn{display:inline-block;background:linear-gradient(135deg,#C4963C,#E8C068);color:#1a0a2e;font-size:22px;font-weight:800;padding:18px 56px;border-radius:14px;margin:16px 0;box-shadow:0 8px 40px rgba(196,150,60,.3);}
+.cta-perks{display:flex;gap:40px;margin-top:36px;}
+.cta-perk{font-size:16px;color:rgba(255,255,255,.4);font-weight:500;}
+.cta-perk::before{content:'✓';color:#10B981;margin-right:8px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div class="watermark"><div class="dot"></div><span>Lumied</span></div>
+<div class="progress-bar" id="progress" style="width:0%"></div>
+
+<div id="playOverlay" onclick="startVideo()">
+  <div class="logo">Lumied</div>
+  <div class="play-ring"><div class="play-tri"></div></div>
+  <div class="sub">Clique para assistir</div>
+</div>
+
+<!-- S1: Hook -->
+<div class="scene scene-with-video" id="s1">
+  <video class="bg-video" muted loop playsinline><source src="/clips/teacher.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay"></div>
+  <div class="s-content hook-content">
+    <div class="hook-line anim" data-d="0.3">Sua escola ainda usa <span class="em">planilha</span> pra controlar inadimplencia?</div>
+    <div class="hook-line anim" data-d="2.8">WhatsApp <span class="em">pessoal</span> pra falar com familia?</div>
+    <div class="hook-line anim" data-d="5.2">Ponto da professora fecha <span class="em">no braco</span>?</div>
+  </div>
+</div>
+
+<!-- S2: Reveal -->
+<div class="scene" id="s2">
+  <div class="s-bg reveal-bg"></div>
+  <div class="s-content reveal-content">
+    <div class="reveal-logo anim-scale" data-d="0">Lumied</div>
+    <div class="reveal-sub anim" data-d="0.4">Gestao escolar inteligente</div>
+    <div class="reveal-pills">
+      <div class="reveal-pill anim" data-d="0.8">33 modulos</div>
+      <div class="reveal-pill anim" data-d="1.0">IA real</div>
+      <div class="reveal-pill anim" data-d="1.2">WhatsApp oficial</div>
+      <div class="reveal-pill gold anim" data-d="1.4">A partir de R$ 697/mes</div>
+    </div>
+  </div>
+</div>
+
+<!-- S3: Dashboard -->
+<div class="scene scene-with-video" id="s3">
+  <video class="bg-video" muted loop playsinline><source src="/clips/office.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:linear-gradient(135deg,rgba(12,8,32,.94),rgba(18,16,42,.88));"></div>
+  <div class="s-content feat-content">
+    <div class="feat-left">
+      <div class="feat-badge anim-left" data-d="0">Painel do Gerente</div>
+      <div class="feat-title anim-left" data-d="0.2">Tudo num relance.<br><span class="accent">Sem abrir planilha.</span></div>
+      <div class="feat-desc anim-left" data-d="0.4">Inadimplencia, presenca, leads, vencimentos — tudo no Morning Briefing. A Lumi diz o que fazer primeiro.</div>
+      <div class="feat-chips">
+        <div class="feat-chip anim" data-d="0.6">Dashboard KPI</div>
+        <div class="feat-chip anim" data-d="0.8">Morning Briefing</div>
+        <div class="feat-chip anim" data-d="1.0">Sugestoes IA</div>
+      </div>
+    </div>
+    <div class="feat-right">
+      <div class="mock-device anim-scale" data-d="0.3">
+        <div class="mock-topbar"><div class="mock-dot r"></div><div class="mock-dot y"></div><div class="mock-dot g"></div><div class="mock-url">demo.lumied.com.br/gerente</div></div>
+        <video muted loop playsinline style="width:100%;display:block;" class="panel-video"><source src="/clips/screen-dashboard.webm" type="video/webm"></video>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S4: Financeiro -->
+<div class="scene" id="s4">
+  <div class="s-bg feat-bg"></div>
+  <div class="s-content feat-content">
+    <div class="feat-left">
+      <div class="feat-badge anim-left" data-d="0">Financeiro Automatico</div>
+      <div class="feat-title anim-left" data-d="0.2">Regua de cobranca<br><span class="accent">que funciona sozinha.</span></div>
+      <div class="feat-desc anim-left" data-d="0.4">Boleto + PIX integrados. WhatsApp e email disparam antes e depois do vencimento. A inadimplencia cai sem voce precisar ligar.</div>
+      <div class="feat-chips">
+        <div class="feat-chip anim" data-d="0.6">Banco Inter</div>
+        <div class="feat-chip anim" data-d="0.8">Regua automatica</div>
+        <div class="feat-chip anim" data-d="1.0">-40% inadimplencia</div>
+      </div>
+    </div>
+    <div class="feat-right">
+      <div class="mock-device anim-scale" data-d="0.3">
+        <div class="mock-topbar"><div class="mock-dot r"></div><div class="mock-dot y"></div><div class="mock-dot g"></div><div class="mock-url">Financeiro > Mensalidades</div></div>
+        <video muted loop playsinline style="width:100%;display:block;" class="panel-video"><source src="/clips/screen-financeiro.webm" type="video/webm"></video>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S5: WhatsApp -->
+<div class="scene scene-with-video" id="s5">
+  <video class="bg-video" muted loop playsinline><source src="/clips/phone.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:linear-gradient(135deg,rgba(12,8,32,.94),rgba(18,16,42,.88));"></div>
+  <div class="s-content feat-content">
+    <div class="feat-left">
+      <div class="feat-badge anim-left" data-d="0">WhatsApp Business API</div>
+      <div class="feat-title anim-left" data-d="0.2">Comunicacao oficial.<br><span class="accent">No numero da escola.</span></div>
+      <div class="feat-desc anim-left" data-d="0.4">API oficial da Meta. Comunicados em massa, confirmacao de presenca, FAQ bot com IA. Tudo organizado no painel — sem depender do celular da secretaria.</div>
+      <div class="feat-chips">
+        <div class="feat-chip anim" data-d="0.6">API oficial Meta</div>
+        <div class="feat-chip anim" data-d="0.8">FAQ bot IA</div>
+        <div class="feat-chip anim" data-d="1.0">1.000 msgs/mes</div>
+      </div>
+    </div>
+    <div class="feat-right">
+      <div class="mock-device anim-scale" data-d="0.3" style="width:400px;border-radius:32px;">
+        <div class="mock-topbar" style="background:#075E54;border-radius:32px 32px 0 0;height:44px;"><div class="mock-url" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);">Demo Lumied</div></div>
+        <div class="mock-body" style="background:#ECE5DD;padding:20px;min-height:400px;">
+          <div style="background:#DCF8C6;border-radius:12px;padding:12px 16px;max-width:80%;margin-left:auto;margin-bottom:12px;font-size:13px;color:#111;">Ola! Lembrete: a mensalidade de mai/2026 vence em 3 dias. PIX ou boleto no link abaixo.</div>
+          <div style="background:#fff;border-radius:12px;padding:12px 16px;max-width:75%;margin-bottom:12px;font-size:13px;color:#111;">Obrigada! Ja paguei pelo PIX.</div>
+          <div style="background:#DCF8C6;border-radius:12px;padding:12px 16px;max-width:80%;margin-left:auto;margin-bottom:12px;font-size:13px;color:#111;">Pagamento confirmado! Obrigado, Maria. Recibo enviado por email.</div>
+          <div style="background:#fff;border-radius:12px;padding:12px 16px;max-width:75%;margin-bottom:12px;font-size:13px;color:#111;">Qual o horario da reuniao de pais?</div>
+          <div style="background:#DCF8C6;border-radius:12px;padding:12px 16px;max-width:80%;margin-left:auto;font-size:13px;color:#111;">A reuniao de pais do Year 2 sera dia 15/05 as 19h no auditorio. Confirma presenca?</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S6: Face ID -->
+<div class="scene" id="s6">
+  <div class="s-bg feat-bg"></div>
+  <div class="s-content feat-content">
+    <div class="feat-left">
+      <div class="feat-badge anim-left" data-d="0">Controle de Acesso</div>
+      <div class="feat-title anim-left" data-d="0.2">Face ID na portaria.<br><span class="accent">Seguranca real.</span></div>
+      <div class="feat-desc anim-left" data-d="0.4">Reconhecimento facial na entrada e saida. Professora recebe alerta em tempo real. Pais sao notificados. Retirada so com autorizacao facial.</div>
+      <div class="feat-chips">
+        <div class="feat-chip anim" data-d="0.6">Control iD iDFace</div>
+        <div class="feat-chip anim" data-d="0.8">Alerta real-time</div>
+        <div class="feat-chip anim" data-d="1.0">LPR Veicular</div>
+      </div>
+    </div>
+    <div class="feat-right">
+      <div class="mock-device anim-scale" data-d="0.3">
+        <div class="mock-topbar"><div class="mock-dot r"></div><div class="mock-dot y"></div><div class="mock-dot g"></div><div class="mock-url">Alunos + CRM</div></div>
+        <video muted loop playsinline style="width:100%;display:block;" class="panel-video"><source src="/clips/screen-alunos.webm" type="video/webm"></video>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S7: Ponto -->
+<div class="scene" id="s7">
+  <div class="s-bg feat-bg"></div>
+  <div class="s-content feat-content">
+    <div class="feat-left">
+      <div class="feat-badge anim-left" data-d="0">Ponto CLT</div>
+      <div class="feat-title anim-left" data-d="0.2">Portaria 671.<br><span class="accent">Espelho pronto pro contador.</span></div>
+      <div class="feat-desc anim-left" data-d="0.4">O sistema puxa o AFD do relogio automaticamente. Calcula HE a 50% e 100%, hora noturna, banco de horas — e gera o espelho mensal.</div>
+      <div class="feat-chips">
+        <div class="feat-chip anim" data-d="0.6">Parser AFD</div>
+        <div class="feat-chip anim" data-d="0.8">HE 50%/100%</div>
+        <div class="feat-chip anim" data-d="1.0">Banco de horas</div>
+      </div>
+    </div>
+    <div class="feat-right">
+      <div class="mock-device anim-scale" data-d="0.3">
+        <div class="mock-topbar"><div class="mock-dot r"></div><div class="mock-dot y"></div><div class="mock-dot g"></div><div class="mock-url">Ponto > Setup Relogio</div></div>
+        <video muted loop playsinline style="width:100%;display:block;" class="panel-video"><source src="/clips/screen-ponto.webm" type="video/webm"></video>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S8: Lumi IA -->
+<div class="scene" id="s8">
+  <div class="s-bg feat-bg"></div>
+  <div class="s-content feat-content">
+    <div class="feat-left">
+      <div class="feat-badge anim-left" data-d="0">Inteligencia Artificial</div>
+      <div class="feat-title anim-left" data-d="0.2">Lumi analisa seus dados<br><span class="accent">e diz o que fazer.</span></div>
+      <div class="feat-desc anim-left" data-d="0.4">Pergunte em linguagem natural. A Lumi tem acesso real aos dados da escola — presenca, financeiro, turmas. Nao e um chatbot generico.</div>
+      <div class="feat-chips">
+        <div class="feat-chip anim" data-d="0.6">Claude AI</div>
+        <div class="feat-chip anim" data-d="0.8">Dados reais</div>
+        <div class="feat-chip anim" data-d="1.0">Comunicados</div>
+        <div class="feat-chip anim" data-d="1.2">Insights</div>
+      </div>
+    </div>
+    <div class="feat-right">
+      <div class="mock-device anim-scale" data-d="0.3">
+        <div class="mock-topbar"><div class="mock-dot r"></div><div class="mock-dot y"></div><div class="mock-dot g"></div><div class="mock-url">CRM > Pipeline</div></div>
+        <video muted loop playsinline style="width:100%;display:block;" class="panel-video"><source src="/clips/screen-crm.webm" type="video/webm"></video>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S9: Social Proof -->
+<div class="scene scene-with-video" id="s9">
+  <video class="bg-video" muted loop playsinline><source src="/clips/team.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:radial-gradient(ellipse at 50% 40%,rgba(10,22,40,.88),rgba(8,6,26,.94));"></div>
+  <div class="s-content" style="flex-direction:column;align-items:center;justify-content:center;">
+    <div class="proof-brand anim" data-d="0">Caso real — 90 dias com Lumied</div>
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:48px;">
+      <img src="https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=120&h=120&fit=crop&crop=face" class="person anim-scale" data-d="0.2" style="width:80px;height:80px;">
+      <div class="anim" data-d="0.3">
+        <div style="font-size:28px;font-weight:700;color:#fff;">Maple Bear Caxias do Sul</div>
+        <div style="font-size:16px;color:rgba(255,255,255,.4);">180 alunos · Ed. Infantil + Fundamental</div>
+      </div>
+    </div>
+    <div class="proof-stats">
+      <div class="proof-stat anim" data-d="0.5">
+        <div class="proof-num" data-count-up="-40" data-suffix="%">0%</div>
+        <div class="proof-label">Inadimplencia</div>
+      </div>
+      <div class="proof-stat anim" data-d="0.8">
+        <div class="proof-num" data-count-up="12" data-suffix="h">0h</div>
+        <div class="proof-label">Economizadas/semana</div>
+      </div>
+      <div class="proof-stat anim" data-d="1.1">
+        <div class="proof-num" data-count-up="31" data-prefix="R$" data-suffix="k">R$0k</div>
+        <div class="proof-label">Receita recuperada/mes</div>
+      </div>
+    </div>
+    <div class="testimonial-grid" style="max-width:1000px;margin-top:40px;">
+      <div class="testimonial-card" data-d="1.4">
+        <div class="tc-quote">"Antes do Lumied, a gente vivia apagando incendio. Hoje tudo esta num lugar so, e o sistema me diz o que olhar primeiro."</div>
+        <div class="tc-author">
+          <img src="https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=80&h=80&fit=crop&crop=face">
+          <div><div class="tc-author-name">Denise Magnus</div><div class="tc-author-role">Diretora</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card" data-d="1.7">
+        <div class="tc-quote">"A regua de cobranca recuperou R$ 31 mil por mes que a gente achava que era prejuizo perdido. Paga o Lumied 30 vezes."</div>
+        <div class="tc-author">
+          <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=80&h=80&fit=crop&crop=face">
+          <div><div class="tc-author-name">Simone Onzi</div><div class="tc-author-role">Coord. Financeira</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card" data-d="2.0">
+        <div class="tc-quote">"O controle de acesso por Face ID deu uma tranquilidade pras familias que nenhum crachat resolve. E a professora sabe na hora quem chegou."</div>
+        <div class="tc-author">
+          <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=80&h=80&fit=crop&crop=face">
+          <div><div class="tc-author-name">Prof. Carolina</div><div class="tc-author-role">Year 2</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S10: Pricing -->
+<div class="scene" id="s10">
+  <div class="s-bg pricing-bg"></div>
+  <div class="s-content pricing-content">
+    <div class="pricing-header anim" data-d="0">3 planos — sem fidelidade — sem surpresas</div>
+    <div class="pricing-cards">
+      <div class="p-card anim" data-d="0.3">
+        <div class="p-name">Essencial</div>
+        <div class="p-desc">33 modulos</div>
+        <div class="p-price">R$697<span>/mes</span></div>
+        <div class="p-limit">Ate 500 alunos</div>
+      </div>
+      <div class="p-card feat anim" data-d="0.5">
+        <div class="p-badge">MAIS POPULAR</div>
+        <div class="p-name">Profissional</div>
+        <div class="p-desc">WhatsApp + IA inclusos</div>
+        <div class="p-price">R$1.197<span>/mes</span></div>
+        <div class="p-limit">Ate 1.000 alunos</div>
+        <ul class="p-features">
+          <li>Tudo do Essencial</li>
+          <li>WhatsApp 1.000 msgs</li>
+          <li>Lumi IA (Claude)</li>
+          <li>BI Analytics</li>
+        </ul>
+      </div>
+      <div class="p-card anim" data-d="0.7">
+        <div class="p-name">Rede</div>
+        <div class="p-desc">Tudo ilimitado</div>
+        <div class="p-price">R$1.997<span>/mes</span></div>
+        <div class="p-limit">Multi-escola</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S11: Competitors -->
+<div class="scene" id="s11">
+  <div class="s-bg comp-bg"></div>
+  <div class="s-content comp-content">
+    <div class="comp-header anim" data-d="0">Lumied vs Concorrencia</div>
+    <div class="comp-table">
+      <div class="comp-row loser anim" data-d="0.3">
+        <span class="comp-name">Escolaweb Enterprise</span>
+        <span class="comp-val red">R$ 1.665</span>
+        <span class="comp-detail">300 alunos · sem IA · sem WhatsApp</span>
+      </div>
+      <div class="comp-row loser anim" data-d="0.6">
+        <span class="comp-name">Sponte Premium</span>
+        <span class="comp-val red">R$ 2.100</span>
+        <span class="comp-detail">500 alunos · modulos extras pagos</span>
+      </div>
+      <div class="comp-row winner anim" data-d="0.9">
+        <span class="comp-name">Lumied Profissional</span>
+        <span class="comp-val green">R$ 1.197</span>
+        <span class="comp-detail">1.000 alunos · IA + WhatsApp inclusos</span>
+        <span class="comp-save">-43%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S12: CTA -->
+<div class="scene scene-with-video" id="s12">
+  <video class="bg-video" muted loop playsinline><source src="/clips/team.mp4" type="video/mp4"></video>
+  <div class="bg-video-overlay" style="background:radial-gradient(ellipse at center,rgba(45,27,78,.88),rgba(15,10,26,.94));"></div>
+  <div class="s-content cta-content">
+    <div class="cta-logo anim-scale" data-d="0">Lumied</div>
+    <div class="cta-url anim" data-d="0.3">lumied.com.br</div>
+    <div class="cta-btn anim" data-d="0.5">Agendar demo gratuita — 20 min</div>
+    <div class="cta-perks">
+      <span class="cta-perk anim" data-d="0.8">Migracao gratis</span>
+      <span class="cta-perk anim" data-d="1.0">Implantacao 7 dias</span>
+      <span class="cta-perk anim" data-d="1.2">Suporte VIP 30 dias</span>
+    </div>
+  </div>
+</div>
+
+<audio id="audio" preload="auto"><source src="/narration.mp3" type="audio/mpeg"></audio>
+
+<script>
+// Particles
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+canvas.width = 1920; canvas.height = 1080;
+const dots = Array.from({length: 60}, () => ({
+  x: Math.random() * 1920, y: Math.random() * 1080,
+  r: Math.random() * 2 + 0.5, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+  a: Math.random() * 0.15 + 0.03
+}));
+function drawParticles() {
+  ctx.clearRect(0, 0, 1920, 1080);
+  dots.forEach(d => {
+    d.x += d.vx; d.y += d.vy;
+    if (d.x < 0) d.x = 1920; if (d.x > 1920) d.x = 0;
+    if (d.y < 0) d.y = 1080; if (d.y > 1080) d.y = 0;
+    ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(196,150,60,${d.a})`; ctx.fill();
+  });
+  requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+// Scene timings (seconds)
+const timings = [
+  {s:1,start:0},{s:2,start:8},{s:3,start:13},{s:4,start:25},
+  {s:5,start:35},{s:6,start:45},{s:7,start:55},{s:8,start:65},
+  {s:9,start:75},{s:10,start:83},{s:11,start:95},{s:12,start:103}
+];
+
+const audio = document.getElementById('audio');
+let cur = -1;
+
+function startVideo() {
+  document.getElementById('playOverlay').classList.add('hidden');
+  audio.play();
+  tick();
+}
+
+function tick() {
+  const t = audio.currentTime;
+  document.getElementById('progress').style.width = (t / (audio.duration || 120) * 100) + '%';
+  for (let i = timings.length - 1; i >= 0; i--) {
+    if (t >= timings[i].start) { if (cur !== i) { cur = i; activateScene(timings[i].s); } break; }
+  }
+  if (!audio.paused && !audio.ended) requestAnimationFrame(tick);
+}
+
+function activateScene(id) {
+  document.querySelectorAll('.scene').forEach(s => {
+    s.classList.remove('active');
+    s.querySelectorAll('.show').forEach(el => el.classList.remove('show'));
+    // Pause background videos on inactive scenes
+    s.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; });
+  });
+  const scene = document.getElementById('s' + id);
+  scene.classList.add('active');
+  scene.querySelectorAll('[data-d]').forEach(el => {
+    setTimeout(() => el.classList.add('show'), parseFloat(el.dataset.d) * 1000);
+  });
+  // Play all videos (background + panel recordings) on active scene
+  scene.querySelectorAll('video').forEach(v => { v.currentTime = 0; v.play().catch(()=>{}); });
+  // CountUp animations
+  scene.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count);
+    const suffix = el.dataset.suffix || '';
+    countUp(el, 0, target, 1200, suffix);
+  });
+  scene.querySelectorAll('[data-count-up]').forEach(el => {
+    const target = parseInt(el.dataset.countUp);
+    const suffix = el.dataset.suffix || '';
+    const prefix = el.dataset.prefix || '';
+    setTimeout(() => countUp(el, 0, target, 1500, suffix, prefix), 600);
+  });
+  // Chart bars animation
+  if (id === 3) {
+    const bars = document.getElementById('chartBars');
+    if (bars && !bars.children.length) {
+      const heights = [45,62,58,71,80,65,73,88,77,82,69,90];
+      heights.forEach((h, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'mock-bar';
+        bar.style.height = '0%';
+        bars.appendChild(bar);
+        setTimeout(() => bar.style.height = h + '%', 400 + i * 80);
+      });
+    }
+  }
+}
+
+function countUp(el, from, to, duration, suffix, prefix) {
+  const start = performance.now();
+  const abs = Math.abs(to - from);
+  const sign = to < 0 ? '-' : '';
+  function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const val = Math.round(from + (Math.abs(to) - from) * ease);
+    el.textContent = (prefix || '') + sign + val + (suffix || '');
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Controls
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); audio.paused ? (audio.play(), tick()) : audio.pause(); }
+  if (e.code === 'ArrowRight') { audio.currentTime += 5; cur = -1; tick(); }
+  if (e.code === 'ArrowLeft') { audio.currentTime = Math.max(0, audio.currentTime - 5); cur = -1; tick(); }
+});
+</script>
+</body>
+</html>
