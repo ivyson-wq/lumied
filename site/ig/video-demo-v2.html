@@ -13,7 +13,22 @@ html,body{width:1920px;height:1080px;overflow:hidden;font-family:'Inter',sans-se
 canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 .scene{position:absolute;inset:0;z-index:1;opacity:0;visibility:hidden;transition:opacity .9s ease,visibility 0s .9s;display:flex;align-items:center;justify-content:center;}
 .scene.active{opacity:1;visibility:visible;transition:opacity .9s ease,visibility 0s 0s;}
-.progress-bar{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,#C4963C,#E8C068,#C4963C);background-size:200%;animation:shimmer 2s infinite;z-index:99;transition:width .2s linear;}
+/* ── CONTROLS BAR ── */
+.controls-bar{position:fixed;bottom:0;left:0;right:0;height:48px;background:rgba(8,6,26,.85);backdrop-filter:blur(12px);z-index:99;display:flex;align-items:center;padding:0 20px;gap:16px;border-top:1px solid rgba(255,255,255,.06);opacity:0;transition:opacity .3s;}
+.controls-bar.visible{opacity:1;}
+.ctrl-play{width:36px;height:36px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background .2s;}
+.ctrl-play:hover{background:rgba(255,255,255,.1);}
+.ctrl-play svg{width:20px;height:20px;fill:#fff;}
+.ctrl-time{font-size:12px;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;min-width:90px;font-weight:500;}
+.ctrl-track{flex:1;height:4px;background:rgba(255,255,255,.1);border-radius:4px;cursor:pointer;position:relative;transition:height .15s;}
+.ctrl-track:hover{height:6px;}
+.ctrl-fill{height:100%;background:linear-gradient(90deg,#C4963C,#E8C068);border-radius:4px;position:relative;transition:width .15s linear;}
+.ctrl-fill::after{content:'';position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:12px;height:12px;background:#E8C068;border-radius:50%;opacity:0;transition:opacity .15s;}
+.ctrl-track:hover .ctrl-fill::after{opacity:1;}
+.ctrl-vol{width:36px;height:36px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background .2s;}
+.ctrl-vol:hover{background:rgba(255,255,255,.1);}
+.ctrl-vol svg{width:18px;height:18px;fill:rgba(255,255,255,.5);}
+.progress-bar{display:none;}
 @keyframes shimmer{0%{background-position:200%}100%{background-position:0%}}
 .watermark{position:fixed;top:36px;left:48px;z-index:99;display:flex;align-items:center;gap:12px;opacity:.5;}
 .watermark .dot{width:8px;height:8px;border-radius:50%;background:#C4963C;}
@@ -187,7 +202,19 @@ canvas#particles{position:fixed;inset:0;z-index:0;pointer-events:none;}
 
 <canvas id="particles"></canvas>
 <div class="watermark"><div class="dot"></div><span>Lumied</span></div>
-<div class="progress-bar" id="progress" style="width:0%"></div>
+<div class="controls-bar" id="controlsBar">
+  <button class="ctrl-play" id="ctrlPlay" onclick="togglePlay()">
+    <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <svg id="iconPause" viewBox="0 0 24 24" style="display:none"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+  </button>
+  <span class="ctrl-time" id="ctrlTime">0:00 / 0:00</span>
+  <div class="ctrl-track" id="ctrlTrack" onclick="seekTo(event)">
+    <div class="ctrl-fill" id="ctrlFill" style="width:0%"></div>
+  </div>
+  <button class="ctrl-vol" onclick="toggleMute()">
+    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+  </button>
+</div>
 
 <div id="playOverlay" onclick="startVideo()">
   <div class="logo">Lumied</div>
@@ -535,13 +562,46 @@ let cur = -1;
 
 function startVideo() {
   document.getElementById('playOverlay').classList.add('hidden');
+  document.getElementById('controlsBar').classList.add('visible');
   audio.play();
+  updatePlayIcon();
   tick();
+}
+
+function togglePlay() {
+  if (audio.paused) { audio.play(); tick(); } else { audio.pause(); }
+  updatePlayIcon();
+}
+
+function updatePlayIcon() {
+  document.getElementById('iconPlay').style.display = audio.paused ? '' : 'none';
+  document.getElementById('iconPause').style.display = audio.paused ? 'none' : '';
+}
+
+function seekTo(e) {
+  const track = document.getElementById('ctrlTrack');
+  const rect = track.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  audio.currentTime = pct * (audio.duration || 120);
+  cur = -1;
+  tick();
+}
+
+function toggleMute() {
+  audio.muted = !audio.muted;
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
 }
 
 function tick() {
   const t = audio.currentTime;
-  document.getElementById('progress').style.width = (t / (audio.duration || 120) * 100) + '%';
+  const dur = audio.duration || 120;
+  document.getElementById('ctrlFill').style.width = (t / dur * 100) + '%';
+  document.getElementById('ctrlTime').textContent = formatTime(t) + ' / ' + formatTime(dur);
   for (let i = timings.length - 1; i >= 0; i--) {
     if (t >= timings[i].start) { if (cur !== i) { cur = i; activateScene(timings[i].s); } break; }
   }
@@ -606,7 +666,7 @@ function countUp(el, from, to, duration, suffix, prefix) {
 
 // Controls
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); audio.paused ? (audio.play(), tick()) : audio.pause(); }
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
   if (e.code === 'ArrowRight') { audio.currentTime += 5; cur = -1; tick(); }
   if (e.code === 'ArrowLeft') { audio.currentTime = Math.max(0, audio.currentTime - 5); cur = -1; tick(); }
 });
