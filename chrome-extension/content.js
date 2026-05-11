@@ -307,45 +307,62 @@
   // --- LEAD CARD DISPLAY ---
 
   function renderLeadCard(lead, serieInfo) {
-    const cardEl = document.getElementById('mb-lead-card');
-    const contentEl = document.getElementById('mb-lead-card-content');
+    var cardEl = document.getElementById('mb-lead-card');
+    var contentEl = document.getElementById('mb-lead-card-content');
     if (!cardEl || !contentEl) return;
 
-    const estagio = lead.crm_estagios?.nome || 'Novo Lead';
-    const estagioColor = lead.crm_estagios?.cor || '#6b7280';
+    var estagio = (lead.crm_estagios && lead.crm_estagios.nome) || 'Novo Lead';
+    var estagioColor = (lead.crm_estagios && lead.crm_estagios.cor) || '#6b7280';
+    var tipoIcons = { ligacao:'📞', email:'📧', whatsapp:'💬', visita:'🏫', reuniao:'📅', nota:'📝', outro:'📌' };
 
-    let html = `
-      <div class="mb-lc-name">${lead.nome_responsavel || 'Sem nome'}</div>
-      <div class="mb-lc-stage" style="background:${estagioColor}20;color:${estagioColor};border:1px solid ${estagioColor}40;">${estagio}</div>
-    `;
+    var html = '<div class="mb-lc-name">' + (lead.nome_responsavel || 'Sem nome') + '</div>'
+      + '<div class="mb-lc-stage" style="background:' + estagioColor + '20;color:' + estagioColor + ';border:1px solid ' + estagioColor + '40;">' + estagio + '</div>';
 
-    if (lead.telefone) {
-      html += `<div class="mb-lc-row"><span class="mb-lc-label">Tel:</span> ${lead.telefone}</div>`;
-    }
-    if (lead.nome_crianca) {
-      html += `<div class="mb-lc-row"><span class="mb-lc-label">Crianca:</span> ${lead.nome_crianca}</div>`;
-    }
+    if (lead.telefone) html += '<div class="mb-lc-row"><span class="mb-lc-label">Tel:</span> ' + lead.telefone + '</div>';
+    if (lead.nome_crianca) html += '<div class="mb-lc-row"><span class="mb-lc-label">Crianca:</span> ' + lead.nome_crianca + '</div>';
     if (lead.data_nascimento) {
-      const dn = new Date(lead.data_nascimento);
-      const hoje = new Date();
-      const diffMs = hoje - dn;
-      const anos = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
-      const meses = Math.floor(diffMs / (30.44 * 24 * 60 * 60 * 1000));
-      const idadeStr = anos >= 1 ? `${anos} ano${anos > 1 ? 's' : ''}` : `${meses} mes${meses > 1 ? 'es' : ''}`;
-      html += `<div class="mb-lc-row"><span class="mb-lc-label">Nasc:</span> ${dn.toLocaleDateString('pt-BR')} (${idadeStr})</div>`;
+      var dn = new Date(lead.data_nascimento);
+      var diffMs = Date.now() - dn.getTime();
+      var anos = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
+      var meses = Math.floor(diffMs / (30.44 * 24 * 60 * 60 * 1000));
+      var idadeStr = anos >= 1 ? anos + ' ano' + (anos > 1 ? 's' : '') : meses + ' mes' + (meses > 1 ? 'es' : '');
+      html += '<div class="mb-lc-row"><span class="mb-lc-label">Nasc:</span> ' + dn.toLocaleDateString('pt-BR') + ' (' + idadeStr + ')</div>';
     }
-    if (serieInfo?.serie) {
-      html += `<div class="mb-lc-turma"><span class="mb-lc-label">Turma em ${new Date().getFullYear()}:</span> <strong>${serieInfo.serie}</strong></div>`;
-    }
-    if (lead.serie_interesse) {
-      html += `<div class="mb-lc-row"><span class="mb-lc-label">Serie interesse:</span> ${lead.serie_interesse}</div>`;
-    }
-    if (lead.origem) {
-      html += `<div class="mb-lc-row"><span class="mb-lc-label">Origem:</span> ${lead.origem}</div>`;
-    }
+    if (serieInfo && serieInfo.serie) html += '<div class="mb-lc-turma"><span class="mb-lc-label">Turma ' + new Date().getFullYear() + ':</span> <strong>' + serieInfo.serie + '</strong></div>';
+    if (lead.serie_interesse) html += '<div class="mb-lc-row"><span class="mb-lc-label">Serie:</span> ' + lead.serie_interesse + '</div>';
+    if (lead.origem) html += '<div class="mb-lc-row"><span class="mb-lc-label">Origem:</span> ' + lead.origem + '</div>';
+    if (lead.observacoes) html += '<div class="mb-lc-row" style="font-style:italic;color:#888;font-size:10px;">' + lead.observacoes.substring(0, 100) + (lead.observacoes.length > 100 ? '...' : '') + '</div>';
+
+    // Placeholder for interactions (loaded async)
+    html += '<div id="mb-lc-interacoes" style="margin-top:6px;border-top:1px solid #eee;padding-top:6px;"></div>';
 
     contentEl.innerHTML = html;
     cardEl.classList.remove('hidden');
+
+    // Load last interactions async
+    if (lead.id) {
+      apiCall('crm_interacoes_list', { lead_id: lead.id }).then(function(data) {
+        var intEl = document.getElementById('mb-lc-interacoes');
+        if (!intEl) return;
+        var items = Array.isArray(data) ? data : [];
+        if (!items.length) {
+          intEl.innerHTML = '<div style="font-size:10px;color:#aaa;">Nenhuma interacao registrada.</div>';
+          return;
+        }
+        var recent = items.slice(0, 5);
+        intEl.innerHTML = '<div style="font-size:10px;font-weight:700;color:#666;margin-bottom:4px;">Ultimas interacoes (' + items.length + ')</div>'
+          + recent.map(function(i) {
+            var icon = tipoIcons[i.tipo] || '📌';
+            var desc = (i.descricao || '').length > 80 ? i.descricao.substring(0, 80) + '...' : (i.descricao || '');
+            var dt = new Date(i.criado_em);
+            var timeStr = dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }) + ' ' + dt.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+            return '<div style="font-size:10px;padding:3px 0;border-bottom:1px solid #f5f5f5;">'
+              + icon + ' <span style="color:#555;">' + desc + '</span>'
+              + '<div style="font-size:9px;color:#bbb;">' + timeStr + (i.criado_por ? ' · ' + i.criado_por : '') + '</div>'
+              + '</div>';
+          }).join('');
+      }).catch(function() {});
+    }
   }
 
   // --- REFRESH LEAD INFO ---
