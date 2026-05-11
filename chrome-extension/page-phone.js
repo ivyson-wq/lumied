@@ -71,45 +71,101 @@ window.addEventListener('lumied-get-phone', function() {
       } catch(e) { debug.push('require failed: ' + e.message); }
     }
 
-    // Extract phone from JID — only individual chats (@c.us or @s.whatsapp.net)
-    // Reject group JIDs (@g.us), broadcast (@broadcast), status (@status)
+    // Extract phone from JID
     if (jid) {
       debug.push('raw jid: ' + jid);
-      if (jid.includes('@c.us') || jid.includes('@s.whatsapp.net')) {
-        var match = jid.match(/^(\d{10,15})@/);
-        if (match) {
-          phone = match[1];
-          debug.push('extracted phone: ' + phone);
-        } else {
-          debug.push('jid did not match phone pattern');
-        }
-      } else {
-        debug.push('not individual chat: ' + jid);
-        jid = null; // reset — not a phone JID
-      }
-    }
 
-    // Also try to get phone from contact info if Store.Chat gave us the chat object
-    if (!phone) {
-      try {
-        var stores = [window.Store, window.__x_store];
-        for (var s = 0; s < stores.length; s++) {
-          if (!stores[s] || !stores[s].Chat) continue;
-          var activeChat = stores[s].Chat.active;
-          if (!activeChat) continue;
-          // Try contact.id which sometimes has the real phone
-          var contactId = activeChat.contact?.id?._serialized || activeChat.contact?.id?.user;
-          if (contactId) {
-            var cMatch = contactId.match(/^(\d{10,15})@(?:c\.us|s\.whatsapp\.net)/);
-            if (cMatch) { phone = cMatch[1]; debug.push('contact.id: ' + phone); break; }
+      if (jid.includes('@c.us') || jid.includes('@s.whatsapp.net')) {
+        // Direct phone JID
+        var match = jid.match(/^(\d{10,15})@/);
+        if (match) { phone = match[1]; debug.push('phone from @c.us: ' + phone); }
+
+      } else if (jid.includes('@lid')) {
+        // LID (Linked Device ID) — need to resolve to real phone number
+        debug.push('LID detected, resolving to phone...');
+
+        // Method 1: Store.LidUtils.getPhoneNumber (best approach per whatsapp-web.js)
+        try {
+          var lidStores = [window.Store, window.__x_store];
+          for (var ls = 0; ls < lidStores.length; ls++) {
+            if (!lidStores[ls]?.LidUtils) continue;
+            var lidObj = { _serialized: jid, user: jid.split('@')[0], server: 'lid' };
+            var pnResult = lidStores[ls].LidUtils.getPhoneNumber(lidObj);
+            if (pnResult) {
+              var pnSerialized = pnResult._serialized || pnResult.user || String(pnResult);
+              var pnMatch = pnSerialized.match(/(\d{10,15})/);
+              if (pnMatch) { phone = pnMatch[1]; debug.push('LidUtils.getPhoneNumber: ' + phone); }
+            }
+            if (phone) break;
           }
-          // Try participants for 1:1 chats
-          if (activeChat.groupMetadata === undefined && activeChat.id?.user) {
-            var userId = activeChat.id.user;
-            if (/^\d{10,15}$/.test(userId)) { phone = userId; debug.push('id.user: ' + phone); break; }
-          }
+        } catch(e) { debug.push('LidUtils.getPhoneNumber error: ' + e.message); }
+
+        // Method 2: Contact object on the active chat
+        if (!phone) {
+          try {
+            var lidStores2 = [window.Store, window.__x_store];
+            for (var ls2 = 0; ls2 < lidStores2.length; ls2++) {
+              if (!lidStores2[ls2]?.Chat) continue;
+              var ac = lidStores2[ls2].Chat.active;
+              if (!ac) continue;
+              // contact.id might be @c.us even when chat.id is @lid
+              var cid = ac.contact?.id?._serialized || ac.contact?.id?.user || '';
+              var cidMatch = cid.match(/^(\d{10,15})@(?:c\.us|s\.whatsapp)/);
+              if (cidMatch) { phone = cidMatch[1]; debug.push('contact.id: ' + phone); break; }
+              // contact.phoneNumber or contact.userid
+              var cpn = ac.contact?.phoneNumber || ac.contact?.userid || ac.contact?.number || '';
+              if (cpn) { var cpnMatch = String(cpn).match(/(\d{10,15})/); if (cpnMatch) { phone = cpnMatch[1]; debug.push('contact.phoneNumber: ' + phone); break; } }
+            }
+          } catch(e) { debug.push('contact fallback error: ' + e.message); }
         }
-      } catch(e) { debug.push('contact fallback error: ' + e.message); }
+
+        // Method 3: QueryExist to force resolve
+        if (!phone) {
+          try {
+            var lidStores3 = [window.Store, window.__x_store];
+            for (var ls3 = 0; ls3 < lidStores3.length; ls3++) {
+              if (!lidStores3[ls3]?.QueryExist) continue;
+              var qResult = lidStores3[ls3].QueryExist(jid);
+              if (qResult && qResult.then) {
+                // Can't await in sync context, skip async approach
+                debug.push('QueryExist available but async, skipping');
+              }
+              break;
+            }
+          } catch(e) { debug.push('QueryExist error: ' + e.message); }
+        }
+
+        // Method 4: Scan contact list for matching LID
+        if (!phone) {
+          try {
+            var contactStores = [window.Store, window.__x_store];
+            for (var cs = 0; cs < contactStores.length; cs++) {
+              var contacts = contactStores[cs]?.Contact?.models || contactStores[cs]?.Contacts?.models || [];
+              for (var ci = 0; ci < contacts.length; ci++) {
+                var c = contacts[ci];
+                var cLid = c.id?._serialized || '';
+                if (cLid === jid) {
+                  // Found the contact by LID — now get phone from userid/phoneNumber
+                  var realPhone = c.userid || c.phoneNumber || c.number || c.id?.user || '';
+                  var rpMatch = String(realPhone).match(/(\d{10,15})/);
+                  if (rpMatch) { phone = rpMatch[1]; debug.push('Contact.models match: ' + phone); break; }
+                }
+              }
+              if (phone) break;
+              // Also check if Contact has a getPhoneNumber method
+              if (contactStores[cs]?.Contact?.getPhoneNumber) {
+                try {
+                  var gpn = contactStores[cs].Contact.getPhoneNumber({ _serialized: jid });
+                  if (gpn) { var gpnMatch = String(gpn._serialized || gpn).match(/(\d{10,15})/); if (gpnMatch) { phone = gpnMatch[1]; debug.push('Contact.getPhoneNumber: ' + phone); break; } }
+                } catch(e2) { /* skip */ }
+              }
+            }
+          } catch(e) { debug.push('Contact scan error: ' + e.message); }
+        }
+
+      } else {
+        debug.push('unknown jid type: ' + jid);
+      }
     }
   } catch(e) {
     debug.push('error: ' + e.message);
