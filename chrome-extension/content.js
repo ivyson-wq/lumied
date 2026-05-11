@@ -20,7 +20,14 @@
       appEl.style.marginRight = '0';
     }
     if (open && !templates.length) loadTemplates();
-    if (open) autoLookupLead();
+    if (open) {
+      // Always refresh lead for current conversation
+      _lastContactKey = null;
+      currentLeadInfo = null;
+      var cardEl = document.getElementById('mb-lead-card');
+      if (cardEl) cardEl.classList.add('hidden');
+      autoLookupLead();
+    }
   }
 
   // Create toggle button with owl logo
@@ -77,27 +84,67 @@
   // --- HELPERS ---
 
   function getContactInfo() {
-    const headerEl = document.querySelector('header span[dir="auto"][title]')
-      || document.querySelector('header ._amig span[title]')
-      || document.querySelector('#main header span[title]');
-    const nome = headerEl ? headerEl.getAttribute('title') || headerEl.textContent : null;
+    // WhatsApp Web: contact name is in the conversation header
+    // Try multiple strategies to find the right element
+    var nome = null;
+    var telefone = null;
 
-    const phoneEl = document.querySelector('header span[title^="+"]')
-      || document.querySelector('#main header span[title^="+"]');
-    let telefone = phoneEl ? phoneEl.getAttribute('title') : null;
+    // Strategy 1: conversation-info-header (data-testid based)
+    var infoHeader = document.querySelector('#main header [data-testid="conversation-info-header"] span[title]');
 
-    if (!telefone && nome && /^\+?\d[\d\s\-()]+$/.test(nome)) {
-      telefone = nome;
+    // Strategy 2: first span[title] inside the clickable header area (role="button")
+    if (!infoHeader) {
+      infoHeader = document.querySelector('#main header div[role="button"] span[title]');
     }
-    if (!telefone) {
-      const infoSpans = document.querySelectorAll('span[title^="+"]');
-      for (const sp of infoSpans) {
-        const t = sp.getAttribute('title');
-        if (t && /^\+?\d/.test(t)) { telefone = t; break; }
+
+    // Strategy 3: first span[title] directly in #main header, but filter out status texts
+    if (!infoHeader) {
+      var candidates = document.querySelectorAll('#main header span[title]');
+      for (var i = 0; i < candidates.length; i++) {
+        var t = candidates[i].getAttribute('title') || '';
+        // Skip "last seen", "online", "typing", "click here" status texts
+        if (/ltima vez|online|digitando|clique aqui|last seen|typing|click here/i.test(t)) continue;
+        infoHeader = candidates[i];
+        break;
       }
     }
+
+    // Strategy 4: legacy selectors
+    if (!infoHeader) {
+      infoHeader = document.querySelector('header span[dir="auto"][title]');
+      // Verify it's not a status text
+      if (infoHeader) {
+        var val = infoHeader.getAttribute('title') || '';
+        if (/ltima vez|online|digitando|clique aqui|last seen|typing|click here/i.test(val)) {
+          infoHeader = null;
+        }
+      }
+    }
+
+    if (infoHeader) {
+      nome = infoHeader.getAttribute('title') || infoHeader.textContent || null;
+    }
+
+    // Phone: look for elements with phone-like titles
+    var phoneEl = document.querySelector('#main header span[title^="+"]');
+    if (phoneEl) telefone = phoneEl.getAttribute('title');
+
+    // If the name itself is a phone number
+    if (!telefone && nome && /^\+?\d[\d\s\-()]{7,}$/.test(nome)) {
+      telefone = nome;
+    }
+
+    // Search broader for phone numbers
+    if (!telefone) {
+      var spans = document.querySelectorAll('#main header span[title]');
+      for (var j = 0; j < spans.length; j++) {
+        var sv = spans[j].getAttribute('title') || '';
+        if (/^\+?\d[\d\s\-()]{7,}$/.test(sv)) { telefone = sv; break; }
+      }
+    }
+
     if (telefone) telefone = telefone.replace(/[\s\-()]/g, '');
-    return { nome, telefone };
+    return { nome: nome, telefone: telefone };
   }
 
   function getConversationMessages(maxMessages = 50) {
