@@ -17165,7 +17165,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           ${esc(est.nome)} <span style="background:${est.cor};color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;">${leads.length}</span>
         </div>
         <div class="kanban-col-body" ondragover="event.preventDefault()" ondrop="dropLead(event,'${est.id}')">
-          ${leads.length ? leads.map(l => `<div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('text','${l.id}')" onclick="if(!event.dataTransfer||!event.dataTransfer.getData('text'))abrirLeadDetalhe('${l.id}')" style="cursor:pointer;">
+          ${leads.length ? leads.map(l => `<div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('text','${l.id}')" onclick="if(!event.dataTransfer||!event.dataTransfer.getData('text'))abrirLeadDetalheV2('${l.id}')" style="cursor:pointer;">
             <div class="kc-name">${esc(l.nome_responsavel)}</div>
             <div class="kc-info">
               ${l.nome_crianca ? '👶 ' + esc(l.nome_crianca) + (l.data_nascimento ? ' (' + crmIdadeTexto(l.data_nascimento) + ')' : '') : ''}
@@ -17227,7 +17227,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     window.open('https://wa.me/' + fullNum, '_blank');
   }
 
-  async function abrirLeadDetalhe(id) {
+  async function abrirLeadDetalheV2(id) {
     let lead = crmLeads.find(l => l.id === id);
     if (!lead) {
       const all = await api({ action:'crm_leads_list' });
@@ -17360,7 +17360,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     showToast('Lead atualizado!','success');
     document.querySelector('div[style*=fixed]')?.remove();
     loadCrmKanban();
-    abrirLeadDetalhe(leadId);
+    abrirLeadDetalheV2(leadId);
   }
 
   async function salvarCrmInteracao(leadId) {
@@ -17369,7 +17369,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (!desc) return;
     await api({ action:'crm_interacao_save', lead_id: leadId, tipo, descricao: desc });
     document.querySelector('div[style*=fixed]')?.remove();
-    abrirLeadDetalhe(leadId);
+    abrirLeadDetalheV2(leadId);
   }
 
   function agendarReuniaoCrm(leadId, nome) {
@@ -17559,7 +17559,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   async function loadCrmLeads() {
     const d = await api({ action:'crm_leads_list' });
     const items = Array.isArray(d) ? d : [];
-    document.getElementById('crmLeadsList').innerHTML = items.length ? items.map(l => `<div onclick="abrirLeadDetalhe('${l.id}')" style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${l.crm_estagios?.cor||'#999'};border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s;" onmouseenter="this.style.background='#faf8f5'" onmouseleave="this.style.background='#fff'">
+    document.getElementById('crmLeadsList').innerHTML = items.length ? items.map(l => `<div onclick="abrirLeadDetalheV2('${l.id}')" style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${l.crm_estagios?.cor||'#999'};border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s;" onmouseenter="this.style.background='#faf8f5'" onmouseleave="this.style.background='#fff'">
       <div style="flex:1;"><div style="font-weight:600;font-size:13px;">${esc(l.nome_responsavel)}</div>
         <div style="font-size:11px;color:var(--muted);">${esc(l.nome_crianca||'')} · ${esc(l.telefone||'')} · ${esc(l.crm_estagios?.nome||'?')} · ${esc(l.origem||'')}</div></div>
       <span style="color:var(--muted);font-size:14px;">→</span>
