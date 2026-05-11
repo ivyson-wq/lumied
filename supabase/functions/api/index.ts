@@ -3399,12 +3399,12 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok(data ?? []);
   }
   if (action === "fin_plano_contas_save") {
-    const { id, codigo, nome, tipo } = body as any;
+    const { id, codigo, nome, tipo, grupo, nivel } = body as any;
     if (!nome || !tipo) return err("Nome e tipo obrigatorios.");
     if (id) {
-      await admin.from("fin_plano_contas").update({ codigo, nome, tipo }).eq("id", id).eq("escola_id", sessionEscolaId);
+      await admin.from("fin_plano_contas").update({ codigo, nome, tipo, grupo: grupo || null, nivel: nivel || 2 }).eq("id", id).eq("escola_id", sessionEscolaId);
     } else {
-      await admin.from("fin_plano_contas").insert({ codigo, nome, tipo, escola_id: sessionEscolaId });
+      await admin.from("fin_plano_contas").insert({ codigo, nome, tipo, grupo: grupo || null, nivel: nivel || 2, escola_id: sessionEscolaId });
     }
     return ok({ success: true });
   }
@@ -3511,23 +3511,25 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true });
   }
 
-  // ── DRE ────────────────────────────────────────────────
+  // ── DRE Estruturado (NBC TG 1000) ───────────────────────
   if (action === "fin_dre") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const ano = (body as any).ano || new Date().getFullYear().toString();
-    // Fetch contas for escola + global seed accounts (escola_id IS NULL)
-    const { data: contasEscola } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["receita", "despesa"]).order("codigo");
-    const { data: contasGlobal } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").is("escola_id", null).in("tipo", ["receita", "despesa"]).order("codigo");
-    const codigosEscola = new Set((contasEscola ?? []).map(c => c.codigo));
-    const contas = [...(contasEscola ?? []), ...(contasGlobal ?? []).filter(c => !codigosEscola.has(c.codigo))];
-    const { data: lancs } = await admin.from("fin_lancamentos").select("conta_id, valor, tipo, status, data_lancamento")
-      .eq("escola_id", gerente.escola_id)
-      .neq("status", "cancelado")
+    const eid = gerente.escola_id;
+    // Fetch all receita/despesa accounts with grupo info
+    const { data: contas } = await admin.from("fin_plano_contas")
+      .select("id, codigo, nome, tipo, grupo, nivel")
+      .eq("escola_id", eid).in("tipo", ["receita", "despesa"]).order("codigo");
+    const { data: lancs } = await admin.from("fin_lancamentos")
+      .select("conta_id, valor, tipo, status, data_lancamento")
+      .eq("escola_id", eid).neq("status", "cancelado")
       .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
-    // Agrupa por conta e mes
-    const contaMap: Record<string, { nome: string; codigo: string; tipo: string; meses: number[]; total: number }> = {};
-    for (const c of contas) {
-      contaMap[c.id] = { nome: c.nome, codigo: c.codigo, tipo: c.tipo, meses: Array(12).fill(0), total: 0 };
+
+    // Build conta map with grupo
+    type ContaDRE = { nome: string; codigo: string; tipo: string; grupo: string; nivel: number; meses: number[]; total: number };
+    const contaMap: Record<string, ContaDRE> = {};
+    for (const c of contas ?? []) {
+      contaMap[c.id] = { nome: c.nome, codigo: c.codigo, tipo: c.tipo, grupo: c.grupo || "", nivel: c.nivel || 2, meses: Array(12).fill(0), total: 0 };
     }
     for (const l of lancs ?? []) {
       if (l.conta_id && contaMap[l.conta_id]) {
@@ -3536,54 +3538,141 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
         contaMap[l.conta_id].total += l.valor;
       }
     }
-    const receitas = Object.values(contaMap).filter(c => c.tipo === "receita");
-    const despesas = Object.values(contaMap).filter(c => c.tipo === "despesa");
-    const totalReceitasMes = Array(12).fill(0), totalDespesasMes = Array(12).fill(0);
-    for (const r of receitas) r.meses.forEach((v, i) => totalReceitasMes[i] += v);
-    for (const d of despesas) d.meses.forEach((v, i) => totalDespesasMes[i] += v);
-    const resultadoMes = totalReceitasMes.map((r, i) => r - totalDespesasMes[i]);
-    return ok({ receitas, despesas, total_receitas_mes: totalReceitasMes, total_despesas_mes: totalDespesasMes, resultado_mes: resultadoMes, ano });
+    const allContas = Object.values(contaMap).filter(c => c.nivel === 2); // only leaf accounts
+
+    // Group by DRE sections
+    const sumMeses = (items: ContaDRE[]) => {
+      const m = Array(12).fill(0);
+      items.forEach(c => c.meses.forEach((v, i) => m[i] += v));
+      return m;
+    };
+    const recOp = allContas.filter(c => c.tipo === "receita" && c.grupo === "operacional");
+    const recFin = allContas.filter(c => c.tipo === "receita" && c.grupo === "financeira");
+    const recOut = allContas.filter(c => c.tipo === "receita" && c.grupo === "outras");
+    const csp = allContas.filter(c => c.tipo === "despesa" && c.grupo === "csp");
+    const despAdm = allContas.filter(c => c.tipo === "despesa" && c.grupo === "administrativa");
+    const despCom = allContas.filter(c => c.tipo === "despesa" && c.grupo === "comercial");
+    const despFin = allContas.filter(c => c.tipo === "despesa" && c.grupo === "financeira");
+    const despFisc = allContas.filter(c => c.tipo === "despesa" && c.grupo === "fiscal");
+
+    const recOpMes = sumMeses(recOp), recFinMes = sumMeses(recFin), recOutMes = sumMeses(recOut);
+    const cspMes = sumMeses(csp), admMes = sumMeses(despAdm), comMes = sumMeses(despCom);
+    const finMes = sumMeses(despFin), fiscMes = sumMeses(despFisc);
+    const totalRecMes = recOpMes.map((v, i) => v + recFinMes[i] + recOutMes[i]);
+    const totalDespMes = cspMes.map((v, i) => v + admMes[i] + comMes[i] + finMes[i] + fiscMes[i]);
+    const lucroBrutoMes = recOpMes.map((v, i) => v - cspMes[i]);
+    const resultadoOpMes = lucroBrutoMes.map((v, i) => v - admMes[i] - comMes[i]);
+    const resultadoMes = totalRecMes.map((v, i) => v - totalDespMes[i]);
+
+    return ok({
+      // Structured DRE sections
+      receita_operacional: recOp, receita_financeira: recFin, outras_receitas: recOut,
+      csp, despesas_administrativas: despAdm, despesas_comerciais: despCom,
+      despesas_financeiras: despFin, impostos: despFisc,
+      // Aggregated monthly totals
+      total_receita_operacional_mes: recOpMes,
+      total_csp_mes: cspMes,
+      lucro_bruto_mes: lucroBrutoMes,
+      total_desp_adm_mes: admMes,
+      total_desp_com_mes: comMes,
+      resultado_operacional_mes: resultadoOpMes,
+      total_rec_fin_mes: recFinMes,
+      total_desp_fin_mes: finMes,
+      total_impostos_mes: fiscMes,
+      total_receitas_mes: totalRecMes,
+      total_despesas_mes: totalDespMes,
+      resultado_mes: resultadoMes,
+      // Legacy compat
+      receitas: [...recOp, ...recFin, ...recOut],
+      despesas: [...csp, ...despAdm, ...despCom, ...despFin, ...despFisc],
+      ano,
+    });
   }
 
-  // ── Balanco Patrimonial ───────────────────────────────
+  // ── Balanço Patrimonial (NBC TG 1000) ──────────────────
   if (action === "fin_balanco") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
-    // Fetch contas for escola, fallback to global (escola_id IS NULL) for seed accounts
-    const { data: contasEscola } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
-    const { data: contasGlobal } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").is("escola_id", null).in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
-    // Merge: escola-specific first, add globals whose codigo is not already present
-    const codigosEscola = new Set((contasEscola ?? []).map(c => c.codigo));
-    const contas = [...(contasEscola ?? []), ...(contasGlobal ?? []).filter(c => !codigosEscola.has(c.codigo))];
-    const { data: saldos } = await admin.from("fin_saldos_patrimoniais").select("conta_id, saldo").eq("escola_id", gerente.escola_id).eq("mes", mes);
+    const eid = gerente.escola_id;
+    // All balance sheet accounts with grupo
+    const { data: contas } = await admin.from("fin_plano_contas")
+      .select("id, codigo, nome, tipo, grupo, nivel")
+      .eq("escola_id", eid).in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
+    // Manual saldos (imobilizado, capital social, etc.)
+    const { data: saldos } = await admin.from("fin_saldos_patrimoniais").select("conta_id, saldo").eq("escola_id", eid).eq("mes", mes);
     const saldoMap: Record<string, number> = {};
     for (const s of saldos ?? []) saldoMap[s.conta_id] = s.saldo;
-    // Auto-calculate "Contas a Receber" (3.2) from pending lancamentos
-    const contaAR = contas.find(c => c.codigo === "3.2");
-    if (contaAR) {
-      const { data: pendentes } = await admin.from("fin_lancamentos").select("valor")
-        .eq("escola_id", gerente.escola_id).eq("tipo", "receita").eq("status", "pendente")
-        .lte("data_lancamento", mes + "-31");
-      const totalAR = (pendentes ?? []).reduce((s, l) => s + (l.valor || 0), 0);
-      saldoMap[contaAR.id] = (saldoMap[contaAR.id] || 0) + totalAR;
-    }
-    // Calcula receitas - despesas REALIZADAS (status=pago) acumulado ate o mes para lucro/prejuizo
+
+    // Auto-calculate from lancamentos
     const [y] = mes.split("-");
+    // Mensalidades a Receber (1.1.04) = pending receita lancamentos
+    const contaAR = (contas ?? []).find(c => c.codigo === "1.1.04");
+    if (contaAR) {
+      const { data: pend } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", eid).eq("tipo", "receita").in("status", ["pendente", "atrasado"])
+        .lte("data_lancamento", mes + "-31");
+      saldoMap[contaAR.id] = (pend ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+    }
+    // PDD (1.1.07) = negative, estimated as overdue > 28 days
+    const contaPDD = (contas ?? []).find(c => c.codigo === "1.1.07");
+    if (contaPDD) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 28);
+      const { data: overdue } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", eid).eq("tipo", "receita").eq("status", "atrasado")
+        .lt("data_vencimento", cutoff.toISOString().slice(0, 10));
+      saldoMap[contaPDD.id] = -1 * (overdue ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+    }
+    // Fornecedores (2.1.01) = pending despesa lancamentos
+    const contaForn = (contas ?? []).find(c => c.codigo === "2.1.01");
+    if (contaForn) {
+      const { data: despPend } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", eid).eq("tipo", "despesa").eq("status", "pendente")
+        .lte("data_lancamento", mes + "-31");
+      saldoMap[contaForn.id] = (saldoMap[contaForn.id] || 0) + (despPend ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+    }
+
+    // Lucro do período (receitas - despesas realizadas)
     const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor, status")
-      .eq("escola_id", gerente.escola_id)
+      .eq("escola_id", eid).neq("status", "cancelado")
       .gte("data_lancamento", y + "-01-01").lte("data_lancamento", mes + "-31");
     let lucro = 0;
-    for (const l of lancs ?? []) {
-      if (l.status === "cancelado") continue;
-      lucro += l.tipo === "receita" ? l.valor : -l.valor;
-    }
-    const ativos = contas.filter(c => c.tipo === "ativo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
-    const passivos = contas.filter(c => c.tipo === "passivo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
-    const patrimonio = contas.filter(c => c.tipo === "patrimonio").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
-    const totalAtivo = ativos.reduce((s, c) => s + c.saldo, 0);
-    const totalPassivo = passivos.reduce((s, c) => s + c.saldo, 0);
-    const totalPL = patrimonio.reduce((s, c) => s + c.saldo, 0) + lucro;
-    return ok({ ativos, passivos, patrimonio, total_ativo: totalAtivo, total_passivo: totalPassivo, total_pl: totalPL, lucro_periodo: lucro, mes });
+    for (const l of lancs ?? []) lucro += l.tipo === "receita" ? l.valor : -l.valor;
+
+    // Build structured response
+    const buildGroup = (tipo: string, grupo: string) =>
+      (contas ?? []).filter(c => c.tipo === tipo && c.grupo === grupo && c.nivel === 2)
+        .map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+
+    const ativoCirculante = buildGroup("ativo", "circulante");
+    const ativoNaoCirculante = buildGroup("ativo", "nao_circulante");
+    const passivoCirculante = buildGroup("passivo", "circulante");
+    const passivoNaoCirculante = buildGroup("passivo", "nao_circulante");
+    const pl = (contas ?? []).filter(c => c.tipo === "patrimonio" && c.nivel === 2)
+      .map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+
+    const sumSaldo = (items: any[]) => items.reduce((s, c) => s + c.saldo, 0);
+    const totalAtivoCirc = sumSaldo(ativoCirculante);
+    const totalAtivoNaoCirc = sumSaldo(ativoNaoCirculante);
+    const totalAtivo = totalAtivoCirc + totalAtivoNaoCirc;
+    const totalPassivoCirc = sumSaldo(passivoCirculante);
+    const totalPassivoNaoCirc = sumSaldo(passivoNaoCirculante);
+    const totalPassivo = totalPassivoCirc + totalPassivoNaoCirc;
+    const totalPL = sumSaldo(pl) + lucro;
+
+    return ok({
+      ativo_circulante: ativoCirculante, ativo_nao_circulante: ativoNaoCirculante,
+      passivo_circulante: passivoCirculante, passivo_nao_circulante: passivoNaoCirculante,
+      patrimonio: pl,
+      total_ativo_circulante: totalAtivoCirc, total_ativo_nao_circulante: totalAtivoNaoCirc,
+      total_ativo: totalAtivo,
+      total_passivo_circulante: totalPassivoCirc, total_passivo_nao_circulante: totalPassivoNaoCirc,
+      total_passivo: totalPassivo, total_pl: totalPL, lucro_periodo: lucro,
+      // Legacy compat
+      ativos: [...ativoCirculante, ...ativoNaoCirculante],
+      passivos: [...passivoCirculante, ...passivoNaoCirculante],
+      mes,
+    });
   }
   if (action === "fin_saldo_patrimonial_set") {
     const { conta_id, mes, saldo } = body as any;

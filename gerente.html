@@ -16710,38 +16710,78 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d.error) { document.getElementById('dreContent').innerHTML = '<div class="empty-state">Erro.</div>'; return; }
     const fmtR = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
     const MS = MESES_CURTOS;
-    const renderSection = (title, items, color) => {
-      if (!items.length) return '';
-      return `<tr style="background:#f5f0ea;"><td colspan="14" style="padding:8px 12px;font-weight:700;font-size:13px;color:${color};">${title}</td></tr>` +
-        items.filter(c=>c.total>0).map(c => `<tr>
-          <td style="padding:6px 12px;font-size:12px;border-bottom:1px solid #f5f0ea;">${esc(c.codigo||'')} ${esc(c.nome)}</td>
-          ${c.meses.map(v => `<td style="padding:6px 8px;text-align:right;font-size:11px;border-bottom:1px solid #f5f0ea;color:${v>0?color:'var(--muted)'};">${v>0?fmtR(v):'—'}</td>`).join('')}
-          <td style="padding:6px 8px;text-align:right;font-size:12px;font-weight:700;border-bottom:1px solid #f5f0ea;color:${color};">${fmtR(c.total)}</td>
-        </tr>`).join('');
+    const sumArr = arr => (arr||[]).reduce((s,v)=>s+v,0);
+    const thStyle = 'text-align:right;padding:8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);';
+    const renderAccounts = (items, color) => {
+      if (!items || !items.length) return '';
+      return items.map(c => {
+        const meses = c.meses || new Array(12).fill(0);
+        const total = meses.reduce((s,v)=>s+v,0);
+        if (total === 0 && !meses.some(v=>v!==0)) return '';
+        return `<tr>
+          <td style="padding:6px 12px;font-size:12px;border-bottom:1px solid #f5f0ea;padding-left:24px;">${esc(c.codigo||'')} ${esc(c.nome)}</td>
+          ${meses.map(v => `<td style="padding:6px 8px;text-align:right;font-size:11px;border-bottom:1px solid #f5f0ea;color:${v!==0?color:'var(--muted)'};">${v!==0?fmtR(v):'—'}</td>`).join('')}
+          <td style="padding:6px 8px;text-align:right;font-size:12px;font-weight:700;border-bottom:1px solid #f5f0ea;color:${color};">${fmtR(total)}</td>
+        </tr>`;
+      }).join('');
+    };
+    const sectionHeader = (title, color, bg) => `<tr style="background:${bg||'#f5f0ea'};"><td colspan="14" style="padding:8px 12px;font-weight:700;font-size:13px;color:${color};">${title}</td></tr>`;
+    const subtotalRow = (label, mesArr, color, bg) => {
+      const arr = mesArr || new Array(12).fill(0);
+      return `<tr style="background:${bg||'#fafaf8'};"><td style="padding:6px 12px;font-weight:700;font-size:12px;color:${color};">${label}</td>
+        ${arr.map(v => `<td style="padding:6px 8px;text-align:right;font-weight:700;font-size:11px;color:${color};">${fmtR(v)}</td>`).join('')}
+        <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:13px;color:${color};">${fmtR(sumArr(arr))}</td>
+      </tr>`;
+    };
+    const resultRow = (label, mesArr, fontSize, bg) => {
+      const arr = mesArr || new Array(12).fill(0);
+      return `<tr style="background:${bg||'#f0f7ff'};border-top:2px solid var(--border);"><td style="padding:10px 12px;font-weight:700;font-size:${fontSize||'14'}px;">${label}</td>
+        ${arr.map(v => `<td style="padding:6px 8px;text-align:right;font-weight:700;font-size:${Math.max(11,parseInt(fontSize||14)-1)}px;color:${v>=0?'#2d7a3a':'#e53e3e'};">${fmtR(v)}</td>`).join('')}
+        <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:${parseInt(fontSize||14)+2}px;color:${sumArr(arr)>=0?'#2d7a3a':'#e53e3e'};">${fmtR(sumArr(arr))}</td>
+      </tr>`;
     };
     document.getElementById('dreContent').innerHTML = `
       <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr>
-          <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);min-width:180px;">Conta</th>
-          ${MS.map(m => `<th style="text-align:right;padding:8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);">${m}</th>`).join('')}
-          <th style="text-align:right;padding:8px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);">TOTAL</th>
+          <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);min-width:220px;">Conta</th>
+          ${MS.map(m => `<th style="${thStyle}">${m}</th>`).join('')}
+          <th style="${thStyle}">TOTAL</th>
         </tr></thead>
         <tbody>
-          ${renderSection('RECEITAS', d.receitas, '#2d7a3a')}
-          <tr style="background:#edf7f0;"><td style="padding:8px 12px;font-weight:700;color:#2d7a3a;">TOTAL RECEITAS</td>
-            ${d.total_receitas_mes.map(v => `<td style="padding:6px 8px;text-align:right;font-weight:700;color:#2d7a3a;">${fmtR(v)}</td>`).join('')}
-            <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:14px;color:#2d7a3a;">${fmtR(d.total_receitas_mes.reduce((s,v)=>s+v,0))}</td>
-          </tr>
-          ${renderSection('DESPESAS', d.despesas, '#e53e3e')}
-          <tr style="background:#fdf0f2;"><td style="padding:8px 12px;font-weight:700;color:#e53e3e;">TOTAL DESPESAS</td>
-            ${d.total_despesas_mes.map(v => `<td style="padding:6px 8px;text-align:right;font-weight:700;color:#e53e3e;">${fmtR(v)}</td>`).join('')}
-            <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:14px;color:#e53e3e;">${fmtR(d.total_despesas_mes.reduce((s,v)=>s+v,0))}</td>
-          </tr>
-          <tr style="background:#f0f7ff;border-top:3px solid var(--border);"><td style="padding:10px 12px;font-weight:700;font-size:14px;">RESULTADO</td>
-            ${d.resultado_mes.map(v => `<td style="padding:6px 8px;text-align:right;font-weight:700;font-size:13px;color:${v>=0?'#2d7a3a':'#e53e3e'};">${fmtR(v)}</td>`).join('')}
-            <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:16px;color:${d.resultado_mes.reduce((s,v)=>s+v,0)>=0?'#2d7a3a':'#e53e3e'};">${fmtR(d.resultado_mes.reduce((s,v)=>s+v,0))}</td>
-          </tr>
+          ${sectionHeader('RECEITA OPERACIONAL','#2d7a3a','#edf7f0')}
+          ${renderAccounts(d.receita_operacional,'#2d7a3a')}
+          ${subtotalRow('Subtotal Receita Operacional', d.total_receita_operacional_mes,'#2d7a3a','#edf7f0')}
+
+          ${sectionHeader('(-) CUSTO DOS SERVIÇOS PRESTADOS','#e53e3e','#fdf0f2')}
+          ${renderAccounts(d.csp,'#e53e3e')}
+          ${subtotalRow('Subtotal CSP', d.total_csp_mes,'#e53e3e','#fdf0f2')}
+
+          ${resultRow('= LUCRO BRUTO', d.lucro_bruto_mes,'14','#f0f7ff')}
+
+          ${sectionHeader('(-) DESPESAS ADMINISTRATIVAS','#e53e3e','#f5f0ea')}
+          ${renderAccounts(d.despesas_administrativas,'#e53e3e')}
+          ${subtotalRow('Subtotal Desp. Administrativas', d.total_desp_adm_mes,'#e53e3e','#fafaf8')}
+
+          ${sectionHeader('(-) DESPESAS COMERCIAIS','#e53e3e','#f5f0ea')}
+          ${renderAccounts(d.despesas_comerciais,'#e53e3e')}
+          ${subtotalRow('Subtotal Desp. Comerciais', d.total_desp_com_mes,'#e53e3e','#fafaf8')}
+
+          ${resultRow('= RESULTADO OPERACIONAL', d.resultado_operacional_mes,'14','#f0f7ff')}
+
+          ${sectionHeader('(+) RECEITAS FINANCEIRAS','#2d7a3a','#edf7f0')}
+          ${renderAccounts(d.receita_financeira,'#2d7a3a')}
+          ${subtotalRow('Subtotal Rec. Financeiras', d.total_rec_fin_mes,'#2d7a3a','#edf7f0')}
+
+          ${sectionHeader('(-) DESPESAS FINANCEIRAS','#e53e3e','#fdf0f2')}
+          ${renderAccounts(d.despesas_financeiras,'#e53e3e')}
+          ${subtotalRow('Subtotal Desp. Financeiras', d.total_desp_fin_mes,'#e53e3e','#fdf0f2')}
+
+          ${sectionHeader('(-) IMPOSTOS SOBRE RECEITA','#e53e3e','#f5f0ea')}
+          ${renderAccounts(d.impostos,'#e53e3e')}
+          ${subtotalRow('Subtotal Impostos', d.total_impostos_mes,'#e53e3e','#fafaf8')}
+
+          ${resultRow('= RESULTADO DO EXERCÍCIO', d.resultado_mes,'16','#f0f7ff')}
         </tbody>
       </table></div>`;
   }
@@ -16756,28 +16796,40 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const renderGroup = (title, items, color) => `
       <div style="margin-bottom:20px;">
         <div style="font-size:14px;font-weight:700;color:${color};padding:8px 0;border-bottom:2px solid ${color};">${title}</div>
-        ${items.map(c => `<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f5f0ea;">
+        ${(items||[]).map(c => `<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f5f0ea;">
           <span style="font-size:13px;">${esc(c.codigo||'')} ${esc(c.nome)}</span>
-          <span style="font-size:13px;font-weight:600;">${fmtR(c.saldo)}</span>
+          <span style="font-size:13px;font-weight:600;color:${parseFloat(c.saldo||0)<0?'#e53e3e':'inherit'};">${fmtR(c.saldo)}</span>
         </div>`).join('')}
+      </div>`;
+    const renderSubtotal = (label, value, color) => `
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fafaf8;border-bottom:2px solid ${color};margin-bottom:12px;">
+        <span style="font-size:13px;font-weight:700;color:${color};">${label}</span>
+        <span style="font-size:13px;font-weight:700;color:${color};">${fmtR(value)}</span>
       </div>`;
     document.getElementById('balancoContent').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
         <div>
-          ${renderGroup('ATIVO', d.ativos, '#1a6bb5')}
-          <div style="display:flex;justify-content:space-between;padding:12px;background:#f0f7ff;border-radius:8px;font-weight:700;font-size:15px;color:#1a6bb5;">
+          ${renderGroup('ATIVO CIRCULANTE', d.ativo_circulante, '#1a6bb5')}
+          ${renderSubtotal('Subtotal Ativo Circulante', d.total_ativo_circulante, '#1a6bb5')}
+          ${renderGroup('ATIVO NAO CIRCULANTE', d.ativo_nao_circulante, '#1a6bb5')}
+          ${renderSubtotal('Subtotal Ativo Nao Circulante', d.total_ativo_nao_circulante, '#1a6bb5')}
+          <div style="display:flex;justify-content:space-between;padding:14px;background:#f0f7ff;border-radius:8px;font-weight:700;font-size:17px;color:#1a6bb5;margin-top:8px;">
             <span>TOTAL ATIVO</span><span>${fmtR(d.total_ativo)}</span>
           </div>
         </div>
         <div>
-          ${renderGroup('PASSIVO', d.passivos, '#e53e3e')}
+          ${renderGroup('PASSIVO CIRCULANTE', d.passivo_circulante, '#e53e3e')}
+          ${renderSubtotal('Subtotal Passivo Circulante', d.total_passivo_circulante, '#e53e3e')}
+          ${renderGroup('PASSIVO NAO CIRCULANTE', d.passivo_nao_circulante, '#e53e3e')}
+          ${renderSubtotal('Subtotal Passivo Nao Circulante', d.total_passivo_nao_circulante, '#e53e3e')}
           ${renderGroup('PATRIMONIO LIQUIDO', d.patrimonio, '#6b3fa0')}
-          <div style="padding:8px 12px;border-bottom:1px solid #f5f0ea;display:flex;justify-content:space-between;">
+          <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f5f0ea;">
             <span style="font-size:13px;font-style:italic;">Resultado do Periodo</span>
-            <span style="font-size:13px;font-weight:600;color:${d.lucro_periodo>=0?'#2d7a3a':'#e53e3e'};">${fmtR(d.lucro_periodo)}</span>
+            <span style="font-size:13px;font-weight:600;color:${parseFloat(d.lucro_periodo||0)>=0?'#2d7a3a':'#e53e3e'};">${fmtR(d.lucro_periodo)}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:12px;background:#fdf0f2;border-radius:8px;font-weight:700;font-size:15px;color:#e53e3e;margin-top:12px;">
-            <span>PASSIVO + PL</span><span>${fmtR(d.total_passivo + d.total_pl)}</span>
+          ${renderSubtotal('Subtotal PL', d.total_pl, '#6b3fa0')}
+          <div style="display:flex;justify-content:space-between;padding:14px;background:#fdf0f2;border-radius:8px;font-weight:700;font-size:17px;color:#e53e3e;margin-top:8px;">
+            <span>TOTAL PASSIVO + PL</span><span>${fmtR(parseFloat(d.total_passivo_circulante||0) + parseFloat(d.total_passivo_nao_circulante||0) + parseFloat(d.total_pl||0))}</span>
           </div>
         </div>
       </div>
