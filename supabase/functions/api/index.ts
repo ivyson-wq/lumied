@@ -1872,7 +1872,7 @@ serve(async (req: Request) => {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const { recurso_id, desde, ate } = body as Record<string, string>;
     let q = admin.from("reservas_recursos")
-      .select("*, recursos(tipo, identificacao, localizacao), series(nome), professoras(nome)")
+      .select("*, recursos(tipo, identificacao, localizacao, buffer_pos_uso_min, tempo_carga_min), series(nome), professoras(nome)")
       .eq("escola_id", gerente.escola_id).order("inicio", { ascending: true }).limit(500);
     if (recurso_id) q = q.eq("recurso_id", recurso_id);
     if (desde) q = q.gte("inicio", desde);

@@ -952,19 +952,14 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div data-modulo="financeiro">
       <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.financeiro">Financeiro</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> <span data-i18n="gerente.nav.finDashboard">Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> <span>Dashboard & Análise</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> <span data-i18n="gerente.nav.mensalidades">Mensalidades & Boletos</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.lancamentos">Lançamentos</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finDescontos',this)"><span class="ic">🏷️</span> <span>Descontos & Ajustes</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> <span>Lançamentos & Recibos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finDescontos',this)"><span class="ic">🏷️</span> <span>Descontos & Reajuste</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.inadimplencia">Inadimplência</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> <span data-i18n="gerente.nav.folhaPagamento">Folha de Pagamento</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finDashExt',this)"><span class="ic">📊</span> <span>Análise Avançada</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finReajuste',this)"><span class="ic">📈</span> <span>Reajuste Anual</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finExport',this)"><span class="ic">📥</span> <span>Exportar Dados</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finRecibos',this)"><span class="ic">🧾</span> <span>Recibos</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finFluxoCaixa',this)"><span class="ic">💹</span> <span>Fluxo de Caixa</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finFechamento',this)"><span class="ic">🔒</span> <span>Fechamento Mensal</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finNotifConfig',this)"><span class="ic">🔔</span> <span>Config Notificações</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finFluxoCaixa',this)"><span class="ic">💹</span> <span>Fluxo de Caixa & Fechamento</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finConfig',this)"><span class="ic">⚙️</span> <span>Exportar & Notificações</span></a>
       </div>
       </div>
 
@@ -972,10 +967,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div data-modulo="financeiro">
       <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.contabilidade">Contabilidade</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> <span data-i18n="gerente.nav.dre">DRE</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finBalanco',this)"><span class="ic">⚖️</span> <span data-i18n="gerente.nav.balanco">Balanço</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> <span data-i18n="gerente.nav.conciliacao">Conciliação</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finContas',this)"><span class="ic">📊</span> <span data-i18n="gerente.nav.planoContas">Plano de Contas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> <span>DRE & Balanço</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> <span>Conciliação & Plano de Contas</span></a>
       </div>
       </div>
 
@@ -7335,16 +7328,30 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     _reservasCache = list;
     const el = document.getElementById('reservasList');
     if (!list.length) { el.innerHTML = '<div class="empty-state">Nenhuma reserva próxima.</div>'; return; }
+    const _fmtHM = (d) => new Date(d).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
     el.innerHTML = list.map(r => {
-      const ini = new Date(r.inicio).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
-      const fim = new Date(r.fim).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
+      const ini = _fmtHM(r.inicio);
+      const fim = _fmtHM(r.fim);
+      const carga = r.recursos?.tempo_carga_min || 0;
+      const buffer = r.recursos?.buffer_pos_uso_min || 0;
+      const temMargem = carga > 0 || buffer > 0;
+      let margemHtml = '';
+      if (temMargem) {
+        const iniEfetivo = new Date(new Date(r.inicio).getTime() - carga * 60000);
+        const fimEfetivo = new Date(new Date(r.fim).getTime() + buffer * 60000);
+        const partes = [];
+        if (carga > 0) partes.push(`${carga}min preparo antes`);
+        if (buffer > 0) partes.push(`${buffer}min margem após`);
+        margemHtml = `<div style="font-size:10px;color:#92400e;background:#fef3c7;border-radius:4px;padding:2px 6px;margin-top:3px;display:inline-block;">🔒 Indisponível ${_fmtHM(iniEfetivo)} → ${_fmtHM(fimEfetivo)} (${partes.join(' + ')})</div>`;
+      }
       const ehSerie = r.serie_id || ['semanal','diaria'].includes(r.recorrencia);
-      const idCancelar = r.serie_id || r.id; // cancela a partir do parent (cobre todas filhas)
+      const idCancelar = r.serie_id || r.id;
       const badge = ehSerie ? '<span style="background:#dbeafe;color:#1e40af;font-size:9px;padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600;">🔁 série</span>' : '';
       return `<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div>
           <div style="font-weight:600;font-size:13px;">${esc(r.recursos?.identificacao || '—')} <span style="font-size:11px;color:var(--muted);">· ${esc(r.recursos?.tipo || '')}</span>${badge}</div>
-          <div style="font-size:11px;color:var(--muted);">${ini} → ${fim}${r.series ? ' · turma ' + esc(r.series.nome) : ''}${r.observacao ? ' · ' + esc(r.observacao) : ''}</div>
+          <div style="font-size:11px;color:var(--muted);">📅 ${ini} → ${fim}${r.series ? ' · turma ' + esc(r.series.nome) : ''}${r.observacao ? ' · ' + esc(r.observacao) : ''}</div>
+          ${margemHtml}
         </div>
         <div style="display:flex;gap:6px;">
           <button onclick="abrirModalEditarReserva('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
@@ -7520,6 +7527,66 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
   function fecharReservaModal() { document.getElementById('reservaModal').classList.remove('show'); }
 
+  function _buildReservaPreview(recurso_ids, inicio, fim) {
+    const iniDate = new Date(inicio);
+    const fimDate = new Date(fim);
+    const fmt = (d) => d.toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
+    const recursos = recurso_ids.map(id => _recursosCache.find(x => x.id === id)).filter(Boolean);
+    const linhas = recursos.map(r => {
+      const carga = r.tempo_carga_min || 0;
+      const buffer = r.buffer_pos_uso_min || 0;
+      if (!carga && !buffer) return null;
+      const iniEf = new Date(iniDate.getTime() - carga * 60000);
+      const fimEf = new Date(fimDate.getTime() + buffer * 60000);
+      const detalhes = [];
+      if (carga > 0) detalhes.push(`${carga}min preparo antes`);
+      if (buffer > 0) detalhes.push(`${buffer}min margem após`);
+      return { nome: r.identificacao, tipo: r.tipo, iniEf, fimEf, detalhes, carga, buffer };
+    }).filter(Boolean);
+    return { linhas, fmt, iniDate, fimDate };
+  }
+
+  function _confirmarReservaComMargens(recurso_ids, inicio, fim) {
+    return new Promise(resolve => {
+      const { linhas, fmt, iniDate, fimDate } = _buildReservaPreview(recurso_ids, inicio, fim);
+      if (!linhas.length) { resolve(true); return; }
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1200;display:flex;align-items:center;justify-content:center;padding:20px;';
+      const rows = linhas.map(l => `
+        <tr style="border-bottom:1px solid #f0ece6;">
+          <td style="padding:6px 8px;font-size:12px;font-weight:600;">${esc(l.nome)}</td>
+          <td style="padding:6px 8px;font-size:11px;color:var(--muted);">${esc(l.tipo)}</td>
+          <td style="padding:6px 8px;font-size:12px;">📅 ${fmt(iniDate)} → ${fmt(fimDate)}</td>
+          <td style="padding:6px 8px;font-size:12px;color:#92400e;font-weight:600;">🔒 ${fmt(l.iniEf)} → ${fmt(l.fimEf)}</td>
+          <td style="padding:6px 8px;font-size:10px;color:var(--muted);">${l.detalhes.join(' + ')}</td>
+        </tr>`).join('');
+      overlay.innerHTML = `<div style="background:#fff;border-radius:14px;padding:22px;max-width:620px;width:100%;">
+        <h3 style="font-family:'Lora',serif;font-size:16px;margin-bottom:6px;">⚠️ Atenção: margens de segurança</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">O(s) recurso(s) abaixo possuem tempo de preparo e/ou margem pós-uso. O horário real de indisponibilidade será <strong>diferente</strong> do horário que você agendou:</p>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+            <thead><tr style="background:#f9f7f4;">
+              <th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Recurso</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Tipo</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Horário agendado</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Indisponível de/até</th>
+              <th style="padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);">Motivo</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="_prevCancelar" style="padding:8px 18px;background:#fff;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;">Voltar</button>
+          <button id="_prevConfirmar" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;">Confirmar reserva</button>
+        </div>
+      </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#_prevCancelar').onclick = () => { overlay.remove(); resolve(false); };
+      overlay.querySelector('#_prevConfirmar').onclick = () => { overlay.remove(); resolve(true); };
+      overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } };
+    });
+  }
+
   async function salvarReserva() {
     const errEl = document.getElementById('reservaErr');
     const okEl = document.getElementById('reservaResultadoOk');
@@ -7538,6 +7605,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       errEl.style.display = 'block';
       return;
     }
+    // Popup de confirmação se algum recurso tem margens
+    const confirmou = await _confirmarReservaComMargens(recurso_ids, inicio, fim);
+    if (!confirmou) return;
     // Modo edição: atualiza uma reserva existente
     if (editId) {
       if (recurso_ids.length > 1) {
