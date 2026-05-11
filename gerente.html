@@ -1806,7 +1806,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <!-- Modal: Nova reserva -->
         <div id="reservaModal" class="modal-overlay" role="dialog" onclick="if(event.target===this)fecharReservaModal()">
           <div class="modal" style="max-width:520px;">
-            <h3>📅 Nova reserva</h3>
+            <h3 id="reservaModalTitle">📅 Nova reserva</h3>
+            <input type="hidden" id="reservaEditId" value="">
             <div class="ff" style="margin-top:12px;">
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <label>Recursos * <span style="font-weight:400;font-size:11px;color:var(--muted);">(selecione um ou mais)</span></label>
@@ -1820,7 +1821,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <div class="ff"><label>Fim *</label><input type="datetime-local" id="reservaFim"></div>
             </div>
             <div class="ff"><label>Turma</label><select id="reservaTurma" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option></select></div>
-            <div class="ff" style="background:#f9f7f4;border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+            <div id="reservaRecorrenciaBloco" class="ff" style="background:#f9f7f4;border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;">
                 <input type="checkbox" id="reservaRecorrencia" onchange="document.getElementById('reservaRecorrenciaWrap').style.display=this.checked?'grid':'none'" style="width:16px;height:16px;cursor:pointer;">
                 🔁 Repetir esta reserva
@@ -1842,7 +1843,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div id="reservaResultadoOk" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;margin-top:8px;"></div>
             <div class="modal-actions">
               <button class="btn-cancel" onclick="fecharReservaModal()">Cancelar</button>
-              <button class="btn-save" onclick="salvarReserva()">Reservar</button>
+              <button class="btn-save" id="reservaBtnSalvar" onclick="salvarReserva()">Reservar</button>
             </div>
           </div>
         </div>
@@ -7301,6 +7302,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
 
   // ── Recursos & Reservas ────────────────────────────────
   var _recursosCache = [];
+  var _reservasCache = [];
 
   async function loadRecursos() {
     const dRec = await api({ action: 'recursos_list' });
@@ -7330,6 +7332,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const ate = new Date(Date.now() + 30 * 86400000).toISOString();
     const d = await api({ action: 'reservas_list', desde, ate });
     const list = (d.data || []).filter(r => r.status === 'ativa');
+    _reservasCache = list;
     const el = document.getElementById('reservasList');
     if (!list.length) { el.innerHTML = '<div class="empty-state">Nenhuma reserva próxima.</div>'; return; }
     el.innerHTML = list.map(r => {
@@ -7343,7 +7346,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           <div style="font-weight:600;font-size:13px;">${esc(r.recursos?.identificacao || '—')} <span style="font-size:11px;color:var(--muted);">· ${esc(r.recursos?.tipo || '')}</span>${badge}</div>
           <div style="font-size:11px;color:var(--muted);">${ini} → ${fim}${r.series ? ' · turma ' + esc(r.series.nome) : ''}${r.observacao ? ' · ' + esc(r.observacao) : ''}</div>
         </div>
-        <button onclick="cancelarReserva('${r.id}', ${ehSerie})" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+        <div style="display:flex;gap:6px;">
+          <button onclick="abrirModalEditarReserva('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
+          <button onclick="cancelarReserva('${r.id}', ${ehSerie})" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+        </div>
       </div>`;
     }).join('');
   }
@@ -7447,26 +7453,69 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       : '';
   }
 
-  async function abrirModalNovaReserva() {
-    if (!_recursosCache.length) await loadRecursos();
+  function _renderRecursosCheckboxes(selectedIds) {
     const wrap = document.getElementById('reservaRecursosWrap');
     const ativos = _recursosCache.filter(r => r.ativo);
+    const sel = new Set(Array.isArray(selectedIds) ? selectedIds : []);
     wrap.innerHTML = ativos.length
       ? ativos.map(r => `<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0ece6;">
-          <input type="checkbox" value="${r.id}" onchange="reservaAtualizarInfoRecurso()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+          <input type="checkbox" value="${r.id}" ${sel.has(r.id) ? 'checked' : ''} onchange="reservaAtualizarInfoRecurso()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
           <span>${esc(r.tipo)} · <strong>${esc(r.identificacao)}</strong>${r.localizacao ? ' <span style=color:var(--muted)>(' + esc(r.localizacao) + ')</span>' : ''}</span>
         </label>`).join('')
       : '<span style="font-size:12px;color:var(--muted);">Nenhum recurso ativo.</span>';
     reservaAtualizarInfoRecurso();
+  }
+
+  async function _ensureTurmaSelect() {
     const turmaSel = document.getElementById('reservaTurma');
     if (turmaSel.options.length <= 1) {
       const t = await api({ action: 'series_list_all' });
       (Array.isArray(t) ? t : []).forEach(s => turmaSel.add(new Option(s.nome, s.id)));
     }
+  }
+
+  async function abrirModalNovaReserva() {
+    if (!_recursosCache.length) await loadRecursos();
+    document.getElementById('reservaEditId').value = '';
+    document.getElementById('reservaModalTitle').textContent = '📅 Nova reserva';
+    document.getElementById('reservaBtnSalvar').textContent = 'Reservar';
+    _renderRecursosCheckboxes([]);
+    await _ensureTurmaSelect();
+    document.getElementById('reservaTurma').value = '';
     document.getElementById('reservaInicio').value = '';
     document.getElementById('reservaFim').value = '';
     document.getElementById('reservaObs').value = '';
+    document.getElementById('reservaRecorrenciaBloco').style.display = '';
+    document.getElementById('reservaRecorrencia').checked = false;
+    document.getElementById('reservaRecorrenciaWrap').style.display = 'none';
     document.getElementById('reservaErr').style.display = 'none';
+    const okEl = document.getElementById('reservaResultadoOk');
+    if (okEl) okEl.style.display = 'none';
+    document.getElementById('reservaModal').classList.add('show');
+  }
+
+  async function abrirModalEditarReserva(id) {
+    if (!_recursosCache.length) await loadRecursos();
+    const r = _reservasCache.find(x => x.id === id);
+    if (!r) { showToast('Reserva não encontrada.', 'error'); return; }
+    document.getElementById('reservaEditId').value = id;
+    document.getElementById('reservaModalTitle').textContent = '✏️ Editar reserva';
+    document.getElementById('reservaBtnSalvar').textContent = 'Salvar alterações';
+    _renderRecursosCheckboxes([r.recurso_id]);
+    await _ensureTurmaSelect();
+    document.getElementById('reservaTurma').value = r.turma_id || '';
+    // Formatar datas para datetime-local (YYYY-MM-DDTHH:mm)
+    const fmtDT = (iso) => iso ? iso.slice(0, 16) : '';
+    document.getElementById('reservaInicio').value = fmtDT(r.inicio);
+    document.getElementById('reservaFim').value = fmtDT(r.fim);
+    document.getElementById('reservaObs').value = r.observacao || '';
+    // Esconder recorrência no modo edição (edita só esta ocorrência)
+    document.getElementById('reservaRecorrenciaBloco').style.display = 'none';
+    document.getElementById('reservaRecorrencia').checked = false;
+    document.getElementById('reservaRecorrenciaWrap').style.display = 'none';
+    document.getElementById('reservaErr').style.display = 'none';
+    const okEl = document.getElementById('reservaResultadoOk');
+    if (okEl) okEl.style.display = 'none';
     document.getElementById('reservaModal').classList.add('show');
   }
   function fecharReservaModal() { document.getElementById('reservaModal').classList.remove('show'); }
@@ -7476,7 +7525,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const okEl = document.getElementById('reservaResultadoOk');
     errEl.style.display = 'none';
     if (okEl) okEl.style.display = 'none';
-    const recorrente = document.getElementById('reservaRecorrencia').checked;
+    const editId = document.getElementById('reservaEditId').value;
+    const recorrente = !editId && document.getElementById('reservaRecorrencia').checked;
     const wrap = document.getElementById('reservaRecursosWrap');
     const recurso_ids = Array.from(wrap.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
     const inicio = document.getElementById('reservaInicio').value;
@@ -7486,6 +7536,21 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (!recurso_ids.length || !inicio || !fim) {
       errEl.textContent = 'Selecione ao menos um recurso e defina início e fim.';
       errEl.style.display = 'block';
+      return;
+    }
+    // Modo edição: atualiza uma reserva existente
+    if (editId) {
+      if (recurso_ids.length > 1) {
+        errEl.textContent = 'Ao editar, selecione apenas um recurso.';
+        errEl.style.display = 'block';
+        return;
+      }
+      const d = await api({ action: 'reservas_editar', id: editId, recurso_id: recurso_ids[0], turma_id, inicio, fim, observacao });
+      if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+      fecharReservaModal();
+      showToast('Reserva atualizada.', 'success');
+      loadReservas();
+      loadRecursosAnalytics();
       return;
     }
     if (recorrente) {

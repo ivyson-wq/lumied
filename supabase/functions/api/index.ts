@@ -1950,6 +1950,24 @@ serve(async (req: Request) => {
     }
     return ok({ success: true, id: parentId, criadas, puladas, total_planejadas: rows.length + 1 });
   }
+  if (action === "reservas_editar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id, recurso_id, turma_id, inicio, fim, observacao } = body as Record<string, string | null>;
+    if (!id) return err("ID obrigatório.");
+    if (!recurso_id || !inicio || !fim) return err("Recurso, início e fim obrigatórios.");
+    if (new Date(fim as string) <= new Date(inicio as string)) return err("O fim deve ser posterior ao início.");
+    const upd: Record<string, unknown> = {
+      recurso_id, turma_id: turma_id || null,
+      inicio, fim, observacao: observacao || null,
+    };
+    const { error } = await admin.from("reservas_recursos").update(upd)
+      .eq("id", id).eq("escola_id", gerente.escola_id);
+    if (error) {
+      if (/Conflito de reserva/i.test(error.message)) return err(error.message, 409);
+      return err(sanitizePgError(error));
+    }
+    return ok({ success: true, id });
+  }
   if (action === "reservas_cancelar") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const { id, serie } = body as { id: string; serie?: boolean };
