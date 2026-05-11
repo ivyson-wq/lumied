@@ -1807,8 +1807,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div id="reservaModal" class="modal-overlay" role="dialog" onclick="if(event.target===this)fecharReservaModal()">
           <div class="modal" style="max-width:520px;">
             <h3>📅 Nova reserva</h3>
-            <div class="ff" style="margin-top:12px;"><label>Recurso *</label>
-              <select id="reservaRecurso" onchange="reservaAtualizarInfoRecurso()" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></select>
+            <div class="ff" style="margin-top:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <label>Recursos * <span style="font-weight:400;font-size:11px;color:var(--muted);">(selecione um ou mais)</span></label>
+                <a href="#" onclick="event.preventDefault();const cbs=document.querySelectorAll('#reservaRecursosWrap input[type=checkbox]');const all=Array.from(cbs).every(c=>c.checked);cbs.forEach(c=>c.checked=!all);reservaAtualizarInfoRecurso();" style="font-size:11px;color:var(--accent);text-decoration:none;font-weight:600;">Todos</a>
+              </div>
+              <div id="reservaRecursosWrap" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;background:#fff;"></div>
               <div id="reservaInfoRecurso" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5;"></div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -7425,22 +7429,34 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
 
   function reservaAtualizarInfoRecurso() {
-    const id = document.getElementById('reservaRecurso').value;
-    const r = _recursosCache.find(x => x.id === id);
+    const wrap = document.getElementById('reservaRecursosWrap');
+    const checked = Array.from(wrap.querySelectorAll('input[type=checkbox]:checked'));
     const info = document.getElementById('reservaInfoRecurso');
-    if (!r) { info.innerHTML = ''; return; }
+    if (!checked.length) { info.innerHTML = ''; return; }
     const partes = [];
-    if (r.tempo_carga_min > 0) partes.push(`🔌 <strong>${r.tempo_carga_min} min</strong> de preparo antes (carga)`);
-    if (r.buffer_pos_uso_min > 0) partes.push(`⏱️ <strong>${r.buffer_pos_uso_min} min</strong> de margem após (atraso de aula)`);
+    checked.forEach(cb => {
+      const r = _recursosCache.find(x => x.id === cb.value);
+      if (!r) return;
+      const p = [];
+      if (r.tempo_carga_min > 0) p.push(`${r.tempo_carga_min}min carga`);
+      if (r.buffer_pos_uso_min > 0) p.push(`${r.buffer_pos_uso_min}min buffer`);
+      if (p.length) partes.push(`<strong>${esc(r.identificacao)}</strong>: ${p.join(' + ')}`);
+    });
     info.innerHTML = partes.length
-      ? `Este recurso reserva ${partes.join(' + ')}. Outras reservas só podem usar fora dessa janela.`
+      ? `Margens de segurança: ${partes.join(' · ')}`
       : '';
   }
 
   async function abrirModalNovaReserva() {
     if (!_recursosCache.length) await loadRecursos();
-    const sel = document.getElementById('reservaRecurso');
-    sel.innerHTML = _recursosCache.filter(r => r.ativo).map(r => `<option value="${r.id}">${esc(r.tipo)} · ${esc(r.identificacao)}${r.localizacao ? ' (' + esc(r.localizacao) + ')' : ''}</option>`).join('');
+    const wrap = document.getElementById('reservaRecursosWrap');
+    const ativos = _recursosCache.filter(r => r.ativo);
+    wrap.innerHTML = ativos.length
+      ? ativos.map(r => `<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0ece6;">
+          <input type="checkbox" value="${r.id}" onchange="reservaAtualizarInfoRecurso()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+          <span>${esc(r.tipo)} · <strong>${esc(r.identificacao)}</strong>${r.localizacao ? ' <span style=color:var(--muted)>(' + esc(r.localizacao) + ')</span>' : ''}</span>
+        </label>`).join('')
+      : '<span style="font-size:12px;color:var(--muted);">Nenhum recurso ativo.</span>';
     reservaAtualizarInfoRecurso();
     const turmaSel = document.getElementById('reservaTurma');
     if (turmaSel.options.length <= 1) {
@@ -7461,38 +7477,55 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     errEl.style.display = 'none';
     if (okEl) okEl.style.display = 'none';
     const recorrente = document.getElementById('reservaRecorrencia').checked;
-    const payload = {
-      action: 'reservas_criar',
-      recurso_id: document.getElementById('reservaRecurso').value,
-      turma_id: document.getElementById('reservaTurma').value || null,
-      inicio: document.getElementById('reservaInicio').value,
-      fim: document.getElementById('reservaFim').value,
-      observacao: document.getElementById('reservaObs').value.trim() || null,
-    };
+    const wrap = document.getElementById('reservaRecursosWrap');
+    const recurso_ids = Array.from(wrap.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+    const inicio = document.getElementById('reservaInicio').value;
+    const fim = document.getElementById('reservaFim').value;
+    const turma_id = document.getElementById('reservaTurma').value || null;
+    const observacao = document.getElementById('reservaObs').value.trim() || null;
+    if (!recurso_ids.length || !inicio || !fim) {
+      errEl.textContent = 'Selecione ao menos um recurso e defina início e fim.';
+      errEl.style.display = 'block';
+      return;
+    }
     if (recorrente) {
-      payload.recorrencia = document.getElementById('reservaRecorrenciaTipo').value;
-      payload.recorrencia_ate = document.getElementById('reservaRecorrenciaAte').value;
-      if (!payload.recorrencia_ate) {
+      const recAte = document.getElementById('reservaRecorrenciaAte').value;
+      if (!recAte) {
         errEl.textContent = 'Defina até quando a reserva se repete.';
         errEl.style.display = 'block';
         return;
       }
     }
-    if (!payload.recurso_id || !payload.inicio || !payload.fim) {
-      errEl.textContent = 'Recurso, início e fim obrigatórios.';
+    // Reservar cada recurso selecionado
+    let totalCriadas = 0, totalPuladas = 0;
+    const erros = [];
+    for (const rid of recurso_ids) {
+      const payload = { action: 'reservas_criar', recurso_id: rid, turma_id, inicio, fim, observacao };
+      if (recorrente) {
+        payload.recorrencia = document.getElementById('reservaRecorrenciaTipo').value;
+        payload.recorrencia_ate = document.getElementById('reservaRecorrenciaAte').value;
+      }
+      const d = await api(payload);
+      if (d.error) {
+        const r = _recursosCache.find(x => x.id === rid);
+        erros.push(r ? r.identificacao : rid);
+      } else {
+        totalCriadas += (d.criadas || 1);
+        totalPuladas += (d.puladas || 0);
+      }
+    }
+    if (erros.length === recurso_ids.length) {
+      errEl.textContent = 'Conflito em todos os recursos selecionados.';
       errEl.style.display = 'block';
       return;
     }
-    const d = await api(payload);
-    if (d.error) {
-      errEl.textContent = d.error;
-      errEl.style.display = 'block';
-      return;
-    }
-    if (recorrente && okEl) {
-      okEl.textContent = `✅ ${d.criadas} reserva(s) criada(s)${d.puladas ? ` · ${d.puladas} pulada(s) por conflito` : ''}.`;
+    if (okEl) {
+      const msgs = [`✅ ${totalCriadas} reserva(s) criada(s)`];
+      if (totalPuladas) msgs.push(`${totalPuladas} pulada(s) por conflito`);
+      if (erros.length) msgs.push(`⚠️ Conflito: ${erros.join(', ')}`);
+      okEl.textContent = msgs.join(' · ');
       okEl.style.display = 'block';
-      setTimeout(() => { fecharReservaModal(); loadReservas(); }, 2200);
+      setTimeout(() => { fecharReservaModal(); loadReservas(); }, 2400);
     } else {
       fecharReservaModal();
       loadReservas();
