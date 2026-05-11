@@ -8621,22 +8621,25 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const senha = document.getElementById('eqSenha').value;
     const papeis = [...document.querySelectorAll('input[name="eqPapel"]:checked')].map(c => c.value);
     const turma = document.getElementById('eqTurma').value;
-    if (!nome || !email || !senha || !papeis.length) return showAlert('eq','error','Preencha todos os campos e selecione pelo menos um papel.');
-    if (senha.length < 6) return showAlert('eq','error','Senha mínima de 6 caracteres.');
+    if (!nome || !email || !senha || !papeis.length) return showToast('Preencha todos os campos e selecione pelo menos um papel.', 'error');
+    if (senha.length < 6) return showToast('Senha mínima de 6 caracteres.', 'error');
+    const btn = document.querySelector('#panelEquipe .btn-create[onclick*="createEquipeMember"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Cadastrando...'; }
     const d = await api({ action:'usuarios_create', nome, email, senha, papeis });
-    if (d.error) return showAlert('eq','error',d.error);
+    if (btn) { btn.disabled = false; btn.textContent = 'Cadastrar'; }
+    if (d.error) { showToast(d.error, 'error'); return; }
     // Atribui turma se for professora
     if (turma && (papeis.includes('professora') || papeis.includes('professora_assistente'))) {
       await api({ action:'usuarios_set_serie', email, serie_id: turma });
     }
-    showAlert('eq','success','Membro "'+nome+'" cadastrado com sucesso!');
+    showToast('Membro "'+nome+'" cadastrado com sucesso!', 'success');
     document.getElementById('eqNome').value = '';
     document.getElementById('eqEmail').value = '';
     document.getElementById('eqSenha').value = '';
     document.querySelectorAll('input[name="eqPapel"]').forEach(c => c.checked = false);
     document.getElementById('eqTurma').value = '';
     document.getElementById('eqTurmaWrap').style.display = 'none';
-    loadEquipe();
+    await loadEquipe();
   }
   async function setEquipeSerie(email, serie_id) {
     const d = await api({ action:'usuarios_set_serie', email, serie_id: serie_id || null });
