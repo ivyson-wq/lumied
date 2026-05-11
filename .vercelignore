@@ -9,3 +9,7 @@ seed_*.py
 *.rar
 manual_*.pdf
 package-lock.json
+clips
+relay
+render.yaml
+*.webm
