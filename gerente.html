@@ -17204,13 +17204,33 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       (tV>0?'<div class="card" style="padding:10px;border-left:3px solid #EF4444;"><div style="font-size:18px;font-weight:700;color:#EF4444;">'+_fmtR(tV)+'</div><div style="font-size:10px;color:#888;">Vencido</div></div>':'') +
       (tPn>0?'<div class="card" style="padding:10px;border-left:3px solid #d4830a;"><div style="font-size:18px;font-weight:700;color:#d4830a;">'+_fmtR(tPn)+'</div><div style="font-size:10px;color:#888;">Aguardando</div></div>':'');
     var h = '';
+    window._fmBatchCache = {};
     if (biArr.length) {
-      h += '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#d4830a;">Aguardando Aprova\u00e7\u00e3o</div>';
+      h += '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#d4830a;">Aguardando Aprova\u00e7\u00e3o (edit\u00e1vel)</div>';
       biArr.forEach(function(bi) {
         var arr = Array.isArray(bi.itens)?bi.itens:[];
+        window._fmBatchCache[bi.id] = JSON.parse(JSON.stringify(arr));
         var vc = bi.vencimento?new Date(bi.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):'\u2014';
-        h += '<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #d4830a;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span><strong>Lote '+esc(bi._batch_mes)+'</strong> \u00b7 Venc: '+vc+'</span><span style="font-weight:700;">'+_fmtR(bi.valor_total||0)+'</span></div>' +
-          arr.map(function(c){return '<div style="display:flex;justify-content:space-between;font-size:11px;color:#888;"><span>'+_catIcon(c.categoria)+' '+esc(c.nome)+'</span><span>'+_fmtR(c.valor)+'</span></div>';}).join('') + '</div>';
+        var canEdit = bi.status === 'aguardando';
+        h += '<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid #d4830a;">';
+        h += '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span><strong>Lote '+esc(bi._batch_mes)+'</strong> \u00b7 Venc: '+vc+'</span><span style="font-weight:700;" id="fm_total_'+bi.id+'">'+_fmtR(bi.valor_total||0)+'</span></div>';
+        arr.forEach(function(c,ci) {
+          if (canEdit) {
+            h += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">' +
+              '<span style="font-size:12px;">'+_catIcon(c.categoria)+'</span>' +
+              '<input type="text" value="'+esc(c.nome)+'" style="flex:1;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:11px;font-family:inherit;" onchange="_fmItemNameChange(\''+bi.id+'\','+ci+',this.value)">' +
+              '<input type="number" value="'+(c.valor||0).toFixed(2)+'" step="0.01" style="width:90px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:11px;font-family:inherit;text-align:right;" onchange="_fmItemValorChange(\''+bi.id+'\','+ci+',this.value)">' +
+              '<button onclick="_fmItemRemove(\''+bi.id+'\','+ci+',\''+a.id+'\')" style="background:none;border:none;cursor:pointer;color:#EF4444;font-size:12px;" title="Remover">\u2715</button></div>';
+          } else {
+            h += '<div style="display:flex;justify-content:space-between;font-size:11px;color:#888;"><span>'+_catIcon(c.categoria)+' '+esc(c.nome)+'</span><span>'+_fmtR(c.valor)+'</span></div>';
+          }
+        });
+        if (canEdit) {
+          h += '<div style="display:flex;gap:8px;margin-top:6px;">' +
+            '<button onclick="_fmItemAdd(\''+bi.id+'\',\''+a.id+'\')" style="padding:3px 10px;font-size:10px;background:#f5f0ea;border:1px solid #e5e0d8;border-radius:4px;cursor:pointer;font-family:inherit;">+ item</button>' +
+            '<button onclick="_fmItemSave(\''+bi.id+'\',\''+a.id+'\')" style="padding:3px 12px;font-size:10px;background:#5c6bc0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-family:inherit;font-weight:600;">Salvar</button></div>';
+        }
+        h += '</div>';
       });
     }
     if (bList.length) {
@@ -17244,7 +17264,45 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           ajL.map(function(x){return '<div style="display:flex;justify-content:space-between;padding:6px 10px;background:#faf8f5;border-radius:6px;margin-bottom:4px;font-size:12px;"><span>'+esc(x.descricao||x.tipo)+' <span style="color:#888;">('+esc(x.categoria_aplicacao||'total')+')</span></span><span style="font-weight:600;color:'+(x.tipo.indexOf('desconto')>=0?'#EF4444':'#2d7a3a')+';">'+((x.tipo.indexOf('percentual')>=0)?x.valor+'%':_fmtR(x.valor))+'</span></div>';}).join('');
       } else { ajEl.innerHTML = ''; }
     } catch(e) { /* best-effort */ }
-  }// ── Batch item inline editing ──
+  }
+  function _fmRecalc(biId) {
+    var itens = window._fmBatchCache[biId] || [];
+    var total = Math.max(0, Math.round(itens.reduce(function(s,it){return s+(parseFloat(it.valor)||0);},0)*100)/100);
+    var el = document.getElementById('fm_total_'+biId);
+    if (el) el.textContent = _fmtR(total);
+  }
+  function _fmItemValorChange(biId, idx, val) {
+    if (!window._fmBatchCache[biId]) return;
+    window._fmBatchCache[biId][idx].valor = parseFloat(val) || 0;
+    _fmRecalc(biId);
+  }
+  function _fmItemNameChange(biId, idx, val) {
+    if (!window._fmBatchCache[biId]) return;
+    window._fmBatchCache[biId][idx].nome = val;
+  }
+  function _fmItemRemove(biId, idx, alunoId) {
+    if (!window._fmBatchCache[biId]) return;
+    window._fmBatchCache[biId].splice(idx, 1);
+    abrirFichaAlunoFinanceiro(alunoId);
+  }
+  function _fmItemAdd(biId, alunoId) {
+    if (!window._fmBatchCache[biId]) window._fmBatchCache[biId] = [];
+    window._fmBatchCache[biId].push({nome:'Novo item',valor:0,categoria:'extra'});
+    abrirFichaAlunoFinanceiro(alunoId);
+  }
+  async function _fmItemSave(biId, alunoId) {
+    var itens = window._fmBatchCache[biId] || [];
+    var total = Math.max(0, Math.round(itens.reduce(function(s,it){return s+(parseFloat(it.valor)||0);},0)*100)/100);
+    var desc = itens.map(function(it){return it.nome+': R$'+(it.valor||0).toFixed(2);}).join(' | ');
+    showToast('Salvando...','info');
+    var d = await apiFinExt({action:'boletos_batch_item_edit',id:biId,valor_total:total,itens:itens,descricao_detalhada:desc});
+    if (d && d.error) { showToast('Erro: '+d.error,'error'); return; }
+    showToast('Atualizado! Total: '+_fmtR(total),'success');
+    abrirFichaAlunoFinanceiro(alunoId);
+    loadFinMensalidades();
+  }
+
+  // ── Batch item inline editing ──
   function _batchItemRecalc(biId) {
     const itens = window._batchEditCache[biId] || [];
     const total = Math.max(0, Math.round(itens.reduce((s,it) => s + (parseFloat(it.valor)||0), 0) * 100) / 100);
