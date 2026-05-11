@@ -2752,9 +2752,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <!-- KPIs -->
         <div id="finMensKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
         <!-- Tabs -->
-        <div style="display:flex;gap:4px;margin-bottom:16px;">
-          <button id="finMensTabPreview" onclick="switchFinMensTab('preview')" style="padding:12px 24px;font-size:14px;font-weight:700;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;border-radius:8px 8px 0 0;letter-spacing:0.3px;">🧾 Mensalidades dos Alunos</button>
-          <button id="finMensTabBoletos" onclick="switchFinMensTab('boletos')" style="padding:12px 24px;font-size:14px;font-weight:700;border:2px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:inherit;border-radius:8px 8px 0 0;letter-spacing:0.3px;">🏦 Boletos Emitidos</button>
+        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:3px solid var(--accent);">
+          <button id="finMensTabPreview" onclick="switchFinMensTab('preview')" style="padding:12px 28px;font-size:14px;font-weight:700;border:2px solid var(--accent);border-bottom:none;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;border-radius:10px 10px 0 0;margin-bottom:-1px;">🧾 Mensalidades dos Alunos</button>
+          <button id="finMensTabBoletos" onclick="switchFinMensTab('boletos')" style="padding:12px 28px;font-size:14px;font-weight:700;border:2px solid var(--border);border-bottom:none;background:#fff;color:#666;cursor:pointer;font-family:inherit;border-radius:10px 10px 0 0;margin-bottom:-1px;">🏦 Boletos Emitidos</button>
         </div>
         <!-- Tab: Preview mensalidades -->
         <div id="finMensPreviewSection">
@@ -16674,11 +16674,11 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('finMensBoletosSection').style.display = tab === 'boletos' ? 'block' : 'none';
     const tPrev = document.getElementById('finMensTabPreview');
     const tBol = document.getElementById('finMensTabBoletos');
-    tPrev.style.background = tab === 'preview' ? 'var(--accent)' : 'var(--bg)';
-    tPrev.style.color = tab === 'preview' ? '#fff' : 'var(--muted)';
+    tPrev.style.background = tab === 'preview' ? 'var(--accent)' : '#fff';
+    tPrev.style.color = tab === 'preview' ? '#fff' : '#666';
     tPrev.style.borderColor = tab === 'preview' ? 'var(--accent)' : 'var(--border)';
-    tBol.style.background = tab === 'boletos' ? 'var(--accent)' : 'var(--bg)';
-    tBol.style.color = tab === 'boletos' ? '#fff' : 'var(--muted)';
+    tBol.style.background = tab === 'boletos' ? 'var(--accent)' : '#fff';
+    tBol.style.color = tab === 'boletos' ? '#fff' : '#666';
     tBol.style.borderColor = tab === 'boletos' ? 'var(--accent)' : 'var(--border)';
     if (tab === 'boletos') loadFinMensBoletos();
   }
@@ -16850,9 +16850,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
       <span id="finMensSelCount" style="font-size:12px;font-weight:600;color:var(--accent);"></span>
     </div>
-    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead>
-      <tr><th colspan="2"></th><th style="padding:0 10px 6px;text-align:left;"><input type="text" id="finMensBusca" placeholder="Buscar aluno, família ou CPF..." oninput="_finMensFilterChanged()" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;width:100%;"></th><th colspan="4"></th></tr>
-      <tr>
+    <div style="margin-bottom:10px;"><input type="text" id="finMensBusca" placeholder="Buscar aluno, família ou CPF..." oninput="_finMensFilterChanged()" style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:280px;"></div>
+    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
       <th style="${thS}text-align:center;width:70px;"><input type="checkbox" onchange="finMensToggleAll(this.checked)" style="cursor:pointer;"></th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('nome')">Aluno${_sortIcon(s,'nome')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('turno')">Turno${_sortIcon(s,'turno')}</th>
@@ -16862,7 +16861,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('status')">Boleto${_sortIcon(s,'status')}</th>
     </tr></thead><tbody>${data.map((a,idx) => {
       const hasBoleto = !!a.boleto_status && a.boleto_status !== 'cancelado';
-      const composicao = (a.itens||[]).map(it => `<div style="display:flex;justify-content:space-between;gap:6px;"><span>${_catIcon(it.categoria)} ${esc(it.nome)}</span><span style="font-weight:600;white-space:nowrap;">${_fmtR(it.valor)}</span></div>`).join('');
+      const composicao = (a.itens||[]).map(it => `<div style="display:flex;justify-content:space-between;gap:6px;"><span>${_catIcon(it.categoria)} ${esc(it.nome)}</span>${a.itens.length > 1 ? `<span style="font-weight:600;white-space:nowrap;font-size:10px;color:var(--muted);">${_fmtR(it.valor)}</span>` : ''}</div>`).join('');
       const bS = a.boleto_status;
       const bBadge = bS==='pago'?'background:#edf7f0;color:#2d7a3a;':bS==='emitido'?'background:#fff8e1;color:#b07d00;':bS==='cancelado'?'background:#f5f0ea;color:var(--muted);':'';
       const bLabel = bS==='pago'?'Pago':bS==='emitido'?'Emitido':bS==='cancelado'?'Cancelado':'';
@@ -16934,9 +16933,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       <span id="finBolSelCount" style="font-size:12px;font-weight:600;color:var(--accent);"></span>
       <button id="finBolBulkEmailBtn" onclick="finBolEnviarEmailBatch()" style="display:none;padding:5px 14px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">📧 Enviar selecionados por email</button>
     </div>
-    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead>
-      <tr><th></th><th style="padding:0 10px 6px;text-align:left;"><input type="text" id="finBolBusca" placeholder="Buscar aluno, família ou CPF..." oninput="_finMensFilterChanged()" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;width:100%;"></th><th colspan="4"></th></tr>
-      <tr>
+    <div style="margin-bottom:10px;"><input type="text" id="finBolBusca" placeholder="Buscar aluno, família ou CPF..." oninput="_finMensFilterChanged()" style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;width:280px;"></div>
+    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
       <th style="${thS}text-align:center;width:70px;"><input type="checkbox" onchange="finBolToggleAll(this.checked)" style="cursor:pointer;"></th>
       <th style="${thS}text-align:left;" onclick="sortFinMensBoletos('nome')">Aluno${_sortIcon(s,'nome')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensBoletos('vencimento')">Vencimento${_sortIcon(s,'vencimento')}</th>
