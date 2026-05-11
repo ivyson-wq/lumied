@@ -8638,6 +8638,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Boleto cancelado.', 'success');
     if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
+    loadFinBoletos();
   }
 
   async function alunoFinBaixarPdf(boletoId) {
@@ -8711,6 +8712,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Baixa manual registrada por ' + (d.baixa_manual_por || 'você'), 'success');
     if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
+    loadFinBoletos();
   }
 
   // ── Ajustes inline na ficha do aluno ──
