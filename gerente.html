@@ -957,6 +957,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('finBoletos',this)"><span class="ic">🏦</span> <span data-i18n="gerente.nav.boletos">Boletos</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finBatchBoletos',this)"><span class="ic">📄</span> <span data-i18n="gerente.nav.boletosLote">Boletos em Lote</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> <span data-i18n="gerente.nav.lancamentos">Lançamentos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finDescontos',this)"><span class="ic">🏷️</span> <span>Descontos & Ajustes</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.inadimplencia">Inadimplência</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> <span data-i18n="gerente.nav.folhaPagamento">Folha de Pagamento</span></a>
       </div>
@@ -1522,6 +1523,43 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <!-- Tab: Financeiro -->
         <div class="aluno-tab-panel" id="alunoTabFinanceiro">
           <div id="alunoFinResumo" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+          <!-- Atalhos para fontes de preço -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;" id="alunoFinAtalhos">
+            <button onclick="showPanel('finDescontos');setTimeout(function(){loadFinDescontos(alunoAtual?.id)},200)" style="padding:6px 14px;font-size:11px;background:#fff;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;">🏷️ Ver descontos deste aluno</button>
+            <button onclick="alunoFinNovoAjuste()" style="padding:6px 14px;font-size:11px;background:#fff;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;">+ Novo desconto/ajuste</button>
+            <button onclick="showPanel('atividades')" style="padding:6px 14px;font-size:11px;background:#fff;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;">⚽ Config. Atividades</button>
+          </div>
+
+          <!-- Ajustes ativos deste aluno (inline) -->
+          <div id="alunoFinAjustes" style="margin-bottom:16px;"></div>
+
+          <!-- Form criar ajuste direto da ficha -->
+          <div id="alunoFinNovoAjusteForm" style="display:none;margin-bottom:16px;">
+            <div class="form-card" style="border-left:4px solid #d4830a;">
+              <strong style="font-size:13px;">Novo ajuste para <span id="afAjNomeAluno"></span></strong>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
+                <div class="ff" style="margin:0;"><label>Tipo</label><select id="afAjTipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;">
+                  <option value="desconto_fixo">Desconto fixo (R$)</option>
+                  <option value="desconto_percentual">Desconto %</option>
+                  <option value="acrescimo_fixo">Acréscimo (R$)</option>
+                </select></div>
+                <div class="ff" style="margin:0;"><label>Valor</label><input type="number" id="afAjValor" step="0.01" min="0" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+                <div class="ff" style="margin:0;"><label>Incide sobre</label><select id="afAjCat" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;">
+                  <option value="total">Total</option><option value="mensalidade">Mensalidade</option><option value="alimentacao">Alimentação</option>
+                </select></div>
+              </div>
+              <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:8px;">
+                <div class="ff" style="margin:0;"><label>Descrição</label><input type="text" id="afAjDesc" placeholder="Desconto irmão, Bolsa..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+                <div class="ff" style="margin:0;"><label>Até (vazio=sem fim)</label><input type="date" id="afAjFim" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button onclick="alunoFinSalvarAjuste()" class="btn-create" style="width:auto;padding:6px 16px;font-size:12px;">Salvar</button>
+                <button onclick="document.getElementById('alunoFinNovoAjusteForm').style.display='none'" style="padding:6px 12px;background:none;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">Cancelar</button>
+              </div>
+            </div>
+          </div>
+
           <div class="sec-title" style="font-size:14px;margin-bottom:12px;">Histórico de Cobranças</div>
           <div id="alunoFinLista" style="font-size:13px;color:var(--muted);padding:20px;text-align:center;">Carregando...</div>
         </div>
@@ -2812,6 +2850,40 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
         </div>
         <div id="finBoletosContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- DESCONTOS & AJUSTES -->
+      <div id="panelFinDescontos" class="panel">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;">🏷️ Descontos & Ajustes Recorrentes</div>
+          <button onclick="toggleNovoAjuste()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Novo Ajuste</button>
+        </div>
+        <div id="novoAjusteForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Aluno *</label><select id="ajAluno" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></select></div>
+              <div class="ff" style="margin:0;"><label>Tipo *</label><select id="ajTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+                <option value="desconto_fixo">Desconto fixo (R$)</option>
+                <option value="desconto_percentual">Desconto percentual (%)</option>
+                <option value="acrescimo_fixo">Acréscimo fixo (R$)</option>
+              </select></div>
+              <div class="ff" style="margin:0;"><label>Valor *</label><input type="number" id="ajValor" step="0.01" min="0" placeholder="500.00 ou 30" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Incide sobre</label><select id="ajCategoria" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+                <option value="total">Total do boleto</option>
+                <option value="mensalidade">Só mensalidade</option>
+                <option value="alimentacao">Só alimentação</option>
+              </select></div>
+              <div class="ff" style="margin:0;"><label>Descrição *</label><input type="text" id="ajDesc" placeholder="Desconto irmão, Bolsa 30%, Material didático..." style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Vigência até (vazio = sem fim)</label><input type="date" id="ajDataFim" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarAjuste()" id="ajBtn" class="btn-create" style="width:auto;padding:8px 20px;">Criar Ajuste</button>
+              <button onclick="toggleNovoAjuste()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            </div>
+            <div id="ajErr" class="f-alert error" style="margin-top:8px;"></div>
+          </div>
+        </div>
+        <div id="ajustesList"></div>
       </div>
 
       <!-- INADIMPLENCIA -->
@@ -5832,7 +5904,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoInventario:'Controle de Acesso — Inventário Simpax',acessoMapa:'Controle de Acesso — Mapa de Terminais',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finDescontos:'Descontos & Ajustes',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoInventario:'Controle de Acesso — Inventário Simpax',acessoMapa:'Controle de Acesso — Mapa de Terminais',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
@@ -5851,7 +5923,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
     if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finDescontos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -5911,6 +5983,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='finConciliacao') loadFinConciliacao();
     if(id==='finBoletos')  loadFinBoletos();
     if(id==='finNfs')      loadFinNfs();
+    if(id==='finDescontos') loadFinDescontos();
     if(id==='finInadimplencia') loadInadimplencia();
     if(id==='finBatchBoletos') loadBatchBoletos();
     if(id==='crmKanban')   loadCrmKanban();
@@ -8478,6 +8551,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       batchItems.forEach(function(bi) {
         window._alunoFinBatchItems[bi.id] = JSON.parse(JSON.stringify(bi.itens || []));
       });
+      // Carrega ajustes recorrentes
+      loadAlunoFinAjustes(a);
     } catch(e) { console.error('[fin]',e); listaEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar dados financeiros.</div>'; }
   }
 
@@ -8516,6 +8591,50 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Cobrança atualizada! Total: R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}), 'success');
     if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
+  }
+
+  // ── Ajustes inline na ficha do aluno ──
+  async function loadAlunoFinAjustes(a) {
+    var el = document.getElementById('alunoFinAjustes');
+    var d = await apiFinExt({ action:'fin_ajustes_list', aluno_id: a.id });
+    var list = (Array.isArray(d) ? d : (d?.data || [])).filter(function(aj){ return aj.ativo; });
+    if (!list.length) { el.innerHTML = ''; return; }
+    var fmtR = function(v){ return 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2}); };
+    el.innerHTML = '<div style="font-size:12px;font-weight:700;margin-bottom:6px;color:#d4830a;">Ajustes recorrentes ativos</div>' +
+      list.map(function(aj) {
+        var icon = aj.tipo.startsWith('desconto') ? '🔻' : '🔺';
+        var valorStr = aj.tipo === 'desconto_percentual' ? aj.valor+'%' : fmtR(aj.valor);
+        var vigencia = aj.data_fim ? ' · até '+new Date(aj.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : '';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fef3cd;border-radius:6px;margin-bottom:4px;font-size:12px;">' +
+          '<span>'+icon+'</span><span style="flex:1;">'+esc(aj.descricao)+' <span style="color:var(--muted);">('+esc(aj.categoria_aplicacao)+vigencia+')</span></span>' +
+          '<strong>'+(aj.tipo.startsWith('desconto')?'-':'+')+valorStr+'</strong>' +
+          '<button onclick="desativarAjuste(\''+aj.id+'\');setTimeout(function(){loadAlunoFinAjustes(alunoAtual)},500)" style="background:none;border:none;cursor:pointer;font-size:11px;color:#EF4444;" title="Pausar">⏸</button>' +
+          '</div>';
+      }).join('');
+  }
+
+  function alunoFinNovoAjuste() {
+    if (!alunoAtual) return;
+    document.getElementById('afAjNomeAluno').textContent = alunoAtual.nome;
+    document.getElementById('afAjValor').value = '';
+    document.getElementById('afAjDesc').value = '';
+    document.getElementById('afAjFim').value = '';
+    document.getElementById('alunoFinNovoAjusteForm').style.display = 'block';
+  }
+
+  async function alunoFinSalvarAjuste() {
+    if (!alunoAtual) return;
+    var tipo = document.getElementById('afAjTipo').value;
+    var valor = document.getElementById('afAjValor').value;
+    var desc = document.getElementById('afAjDesc').value.trim();
+    var cat = document.getElementById('afAjCat').value;
+    var dataFim = document.getElementById('afAjFim').value || null;
+    if (!valor || !desc) { showToast('Preencha valor e descrição.','error'); return; }
+    var d = await apiFinExt({ action:'fin_ajuste_create', aluno_id:alunoAtual.id, aluno_nome:alunoAtual.nome, tipo:tipo, valor:valor, descricao:desc, categoria_aplicacao:cat, data_fim:dataFim });
+    if (d && d.error) { showToast('Erro: '+d.error,'error'); return; }
+    showToast('Ajuste criado para '+alunoAtual.nome,'success');
+    document.getElementById('alunoFinNovoAjusteForm').style.display = 'none';
+    loadAlunoFinAjustes(alunoAtual);
   }
 
   async function loadAlunoAtas(a) {
@@ -16580,6 +16699,88 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var d = await apiCobranca({ action: 'tratativa_delete', id: id });
     if (d && d.error) { showToast('Erro: ' + d.error); return; }
     carregarTimelineCobranca();
+  }
+
+  // ═══ DESCONTOS & AJUSTES RECORRENTES ═══
+  function toggleNovoAjuste() {
+    var el = document.getElementById('novoAjusteForm');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') {
+      // Popular dropdown de alunos
+      var sel = document.getElementById('ajAluno');
+      sel.innerHTML = '<option value="">Selecione...</option>';
+      (alunosData||[]).filter(function(a){return a.ativo!==false;}).forEach(function(a){
+        sel.innerHTML += '<option value="'+a.id+'" data-nome="'+esc(a.nome)+'">'+esc(a.nome)+' — '+esc(a.serie||a.turno||'')+'</option>';
+      });
+    }
+  }
+  async function salvarAjuste() {
+    var sel = document.getElementById('ajAluno');
+    var alunoId = sel.value;
+    var alunoNome = sel.selectedOptions[0]?.dataset?.nome || '';
+    var tipo = document.getElementById('ajTipo').value;
+    var valor = document.getElementById('ajValor').value;
+    var desc = document.getElementById('ajDesc').value.trim();
+    var cat = document.getElementById('ajCategoria').value;
+    var dataFim = document.getElementById('ajDataFim').value || null;
+    var errEl = document.getElementById('ajErr');
+    errEl.classList.remove('show');
+    if (!alunoId || !valor || !desc) { errEl.textContent='Preencha aluno, valor e descrição.'; errEl.classList.add('show'); return; }
+    var btn = document.getElementById('ajBtn');
+    btn.disabled=true; btn.textContent='Salvando...';
+    var d = await apiFinExt({ action:'fin_ajuste_create', aluno_id:alunoId, aluno_nome:alunoNome, tipo:tipo, valor:valor, descricao:desc, categoria_aplicacao:cat, data_fim:dataFim });
+    btn.disabled=false; btn.textContent='Criar Ajuste';
+    if (d && d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }
+    showToast('Ajuste criado para '+alunoNome, 'success');
+    toggleNovoAjuste();
+    document.getElementById('ajValor').value='';
+    document.getElementById('ajDesc').value='';
+    document.getElementById('ajDataFim').value='';
+    loadFinDescontos();
+  }
+  async function loadFinDescontos(filtroAlunoId) {
+    var el = document.getElementById('ajustesList');
+    el.innerHTML = '<div class="empty-state">Carregando...</div>';
+    var payload = { action:'fin_ajustes_list' };
+    if (filtroAlunoId) payload.aluno_id = filtroAlunoId;
+    var d = await apiFinExt(payload);
+    var list = Array.isArray(d) ? d : (d?.data || []);
+    if (!list.length) { el.innerHTML='<div class="empty-state">Nenhum ajuste cadastrado.</div>'; return; }
+    var fmtR = function(v){ return 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2}); };
+    var tipoIcons = { desconto_fixo:'🔻', desconto_percentual:'🔻', acrescimo_fixo:'🔺' };
+    var tipoLabels = { desconto_fixo:'Desconto fixo', desconto_percentual:'Desconto %', acrescimo_fixo:'Acréscimo' };
+    var catLabels = { total:'Total', mensalidade:'Mensalidade', alimentacao:'Alimentação' };
+    el.innerHTML = '<table style="width:100%;"><thead><tr><th>Aluno</th><th>Tipo</th><th>Descrição</th><th style="text-align:right;">Valor</th><th>Incide sobre</th><th>Vigência</th><th>Ações</th></tr></thead><tbody>' +
+      list.map(function(aj) {
+        var icon = tipoIcons[aj.tipo]||'📋';
+        var valorStr = aj.tipo === 'desconto_percentual' ? aj.valor+'%' : fmtR(aj.valor);
+        var cor = aj.tipo.startsWith('desconto') ? '#EF4444' : '#2d7a3a';
+        var vigencia = aj.data_fim ? 'Até '+new Date(aj.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : 'Permanente';
+        var ativoClass = aj.ativo ? '' : ' style="opacity:.5;"';
+        return '<tr'+ativoClass+'><td style="padding:8px;font-weight:600;">'+esc(aj.aluno_nome)+'</td>' +
+          '<td style="padding:8px;font-size:12px;">'+icon+' '+esc(tipoLabels[aj.tipo]||aj.tipo)+'</td>' +
+          '<td style="padding:8px;">'+esc(aj.descricao)+'</td>' +
+          '<td style="padding:8px;text-align:right;font-weight:700;color:'+cor+';">'+(aj.tipo.startsWith('desconto')?'-':'+')+''+valorStr+'</td>' +
+          '<td style="padding:8px;font-size:12px;">'+esc(catLabels[aj.categoria_aplicacao]||aj.categoria_aplicacao)+'</td>' +
+          '<td style="padding:8px;font-size:12px;">'+vigencia+(aj.ativo?'':' · <span style="color:#EF4444;">Inativo</span>')+'</td>' +
+          '<td style="padding:8px;white-space:nowrap;">' +
+            (aj.ativo ? '<button class="action-btn" onclick="desativarAjuste(\''+aj.id+'\')">⏸ Pausar</button>' : '<button class="action-btn" onclick="ativarAjuste(\''+aj.id+'\')">▶ Reativar</button>') +
+            ' <button class="action-btn del" onclick="removerAjuste(\''+aj.id+'\',\''+esc(aj.descricao)+'\')">🗑</button>' +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  async function desativarAjuste(id) {
+    await apiFinExt({ action:'fin_ajuste_update', id:id, ativo:false });
+    showToast('Ajuste pausado.'); loadFinDescontos();
+  }
+  async function ativarAjuste(id) {
+    await apiFinExt({ action:'fin_ajuste_update', id:id, ativo:true });
+    showToast('Ajuste reativado.'); loadFinDescontos();
+  }
+  async function removerAjuste(id, desc) {
+    if (!confirm('Remover ajuste "'+desc+'"? Isto não afeta boletos já gerados.')) return;
+    await apiFinExt({ action:'fin_ajuste_delete', id:id });
+    showToast('Ajuste removido.'); loadFinDescontos();
   }
 
   // ═══ BOLETOS EM LOTE ═══

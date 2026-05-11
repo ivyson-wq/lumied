@@ -580,6 +580,23 @@ async function gerarBatchParaMes(
     .maybeSingle();
   const almocoPrecoDia = parseFloat(cfgAlmoco?.valor || "0");
 
+  // ── Ajustes recorrentes por aluno (descontos, bolsas, acréscimos) ──
+  const { data: todosAjustes } = await ctx.sb
+    .from("fin_ajustes_aluno")
+    .select("*")
+    .eq("escola_id", escolaId)
+    .eq("ativo", true)
+    .lte("data_inicio", vencimento);
+  // Filtra ajustes vigentes (sem data_fim ou data_fim >= vencimento)
+  const ajustesVigentes = (todosAjustes ?? []).filter((a: any) => !a.data_fim || a.data_fim >= vencimento);
+  // Agrupa por aluno_id
+  const ajustesPorAluno = new Map<string, any[]>();
+  for (const aj of ajustesVigentes) {
+    const list = ajustesPorAluno.get(aj.aluno_id) || [];
+    list.push(aj);
+    ajustesPorAluno.set(aj.aluno_id, list);
+  }
+
   // ── Atividades com preço (apenas as cobradas pela escola) ──
   const { data: todasAtividades } = await ctx.sb
     .from("atividades")
@@ -636,8 +653,32 @@ async function gerarBatchParaMes(
       }
     }
 
-    const descDetalhada = items.map(i => `${i.nome}: R$${i.valor.toFixed(2)}`).join(" | ");
-    const valorTotal = Math.round(items.reduce((s, i) => s + i.valor, 0) * 100) / 100;
+    // ── 4. AJUSTES RECORRENTES (descontos, bolsas, acréscimos) ──
+    const ajustesAluno = ajustesPorAluno.get(aluno.id) || [];
+    for (const aj of ajustesAluno) {
+      if (aj.tipo === "desconto_fixo") {
+        items.push({ nome: `${aj.descricao} (desconto)`, valor: -aj.valor, categoria: "ajuste" });
+      } else if (aj.tipo === "acrescimo_fixo") {
+        items.push({ nome: aj.descricao, valor: aj.valor, categoria: "ajuste" });
+      } else if (aj.tipo === "desconto_percentual") {
+        // Calcula base conforme categoria_aplicacao
+        let base = 0;
+        if (aj.categoria_aplicacao === "mensalidade") {
+          base = items.filter(i => i.categoria === "mensalidade").reduce((s: number, i: any) => s + i.valor, 0);
+        } else if (aj.categoria_aplicacao === "alimentacao") {
+          base = items.filter(i => i.categoria === "alimentacao").reduce((s: number, i: any) => s + i.valor, 0);
+        } else {
+          base = items.reduce((s: number, i: any) => s + i.valor, 0);
+        }
+        const descValor = Math.round(base * aj.valor / 100 * 100) / 100;
+        if (descValor > 0) {
+          items.push({ nome: `${aj.descricao} (-${aj.valor}%)`, valor: -descValor, categoria: "ajuste" });
+        }
+      }
+    }
+
+    const descDetalhada = items.map((i: any) => `${i.nome}: R$${i.valor.toFixed(2)}`).join(" | ");
+    const valorTotal = Math.max(0, Math.round(items.reduce((s: number, i: any) => s + i.valor, 0) * 100) / 100);
     totalGeral += valorTotal;
 
     const familia = familiaMap.get(famEmail);
@@ -1481,6 +1522,62 @@ router.on("folha_upload_save", authGerente, async (ctx) => {
 
   if (error) throw new AppError("BAD_REQUEST", error.message);
   return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  AJUSTES RECORRENTES POR ALUNO
+// ═══════════════════════════════════════════════════════════════
+router.on("fin_ajustes_list", authGerente, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { aluno_id } = ctx.body as any;
+  let q = ctx.sb.from("fin_ajustes_aluno").select("*").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false });
+  if (aluno_id) q = q.eq("aluno_id", aluno_id);
+  const { data } = await q.limit(500);
+  return successResponse(data ?? []);
+});
+
+router.on("fin_ajuste_create", authGerente, async (ctx) => {
+  const { aluno_id, aluno_nome, tipo, valor, descricao, categoria_aplicacao, data_inicio, data_fim } = ctx.body as any;
+  if (!aluno_id || !tipo || valor == null || !descricao) throw new AppError("VALIDATION_FAILED", "aluno_id, tipo, valor e descricao obrigatórios.");
+  if (!["desconto_fixo", "desconto_percentual", "acrescimo_fixo"].includes(tipo)) throw new AppError("VALIDATION_FAILED", "tipo inválido.");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data, error } = await ctx.sb.from("fin_ajustes_aluno").insert({
+    escola_id: ctx.escola_id,
+    aluno_id, aluno_nome: aluno_nome || "",
+    tipo, valor: parseFloat(valor),
+    descricao,
+    categoria_aplicacao: categoria_aplicacao || "total",
+    data_inicio: data_inicio || new Date().toISOString().slice(0, 10),
+    data_fim: data_fim || null,
+    criado_por: ctx.user?.nome,
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  log.info("Ajuste criado", { metadata: { aluno_nome, tipo, valor } });
+  return successResponse(data);
+});
+
+router.on("fin_ajuste_update", authGerente, async (ctx) => {
+  const { id, tipo, valor, descricao, categoria_aplicacao, data_fim, ativo } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const updates: Record<string, any> = { atualizado_em: new Date().toISOString() };
+  if (tipo !== undefined) updates.tipo = tipo;
+  if (valor !== undefined) updates.valor = parseFloat(valor);
+  if (descricao !== undefined) updates.descricao = descricao;
+  if (categoria_aplicacao !== undefined) updates.categoria_aplicacao = categoria_aplicacao;
+  if (data_fim !== undefined) updates.data_fim = data_fim;
+  if (ativo !== undefined) updates.ativo = ativo;
+  const { error } = await ctx.sb.from("fin_ajustes_aluno").update(updates).eq("id", id).eq("escola_id", ctx.escola_id);
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse({ success: true });
+});
+
+router.on("fin_ajuste_delete", authGerente, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  await ctx.sb.from("fin_ajustes_aluno").delete().eq("id", id).eq("escola_id", ctx.escola_id);
+  return successResponse({ success: true });
 });
 
 // ═══════════════════════════════════════════════════════════════
