@@ -165,6 +165,19 @@ Deno.serve(async (req) => {
       if (escolaId) legadoFilter.eq('escola_id', escolaId)
       await legadoFilter
 
+      // 5. Set metodo_pagamento='boleto' on linked lancamento (trigger created it)
+      if (boleto.mensalidade_id) {
+        await supabase.from('fin_lancamentos')
+          .update({ metodo_pagamento: 'boleto', referencia_pagamento: nossoNumero })
+          .eq('mensalidade_id', boleto.mensalidade_id)
+      }
+
+      // 6. Mark linked PIX cobrança as paga (if parent paid via boleto, PIX becomes irrelevant)
+      await supabase.from('pix_cobrancas')
+        .update({ status: 'cancelada' })
+        .eq('status', 'ativa')
+        .eq('boleto_id', boleto.id)
+
       return new Response(JSON.stringify({ ok: true, action: 'pago', nossoNumero }), {
         headers: { 'Content-Type': 'application/json' },
       })

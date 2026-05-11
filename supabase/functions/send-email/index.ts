@@ -261,15 +261,16 @@ Deno.serve(async (req) => {
     case 'cadastro_face': email = emailCadastroFace(body, escolaNome, cor, icone); break
     case 'notif_pai_autorizou': email = emailNotifPaiAutorizou(body, escolaNome, cor, icone); break
     case 'welcome_escola': email = emailWelcomeEscola(body, escolaNome, cor, icone); break
+    case 'financeiro_custom': email = { subject: String(body.subject || 'Notificação Financeira'), html: String(body.html || '') }; break
     default: return err('Tipo de e-mail não reconhecido: ' + tipo)
   }
 
   // Busca o e-mail destino:
-  // - Para `cadastro_face`, vai para o responsável (body.to)
+  // - Para `cadastro_face`/`welcome_escola`/`financeiro_custom`, vai para o destinatário (body.to)
   // - Para os demais (ausência/turno/atividade), notifica a secretaria da escola
   const RESEND_KEY = Deno.env.get('RESEND_API_KEY')
   const ESCOLA_EMAIL = cfg.escola_email_notif || Deno.env.get('ESCOLA_EMAIL') || cfg.escola_email_sender || 'secretaria@escola.com.br'
-  const TO_EMAIL = ((tipo === 'cadastro_face' || tipo === 'welcome_escola') && body.to) ? String(body.to) : ESCOLA_EMAIL
+  const TO_EMAIL = (['cadastro_face', 'welcome_escola', 'financeiro_custom'].includes(tipo) && body.to) ? String(body.to) : ESCOLA_EMAIL
 
   if (!RESEND_KEY) {
     // Se Resend não está configurado, loga e retorna sucesso silencioso

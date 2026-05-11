@@ -3592,6 +3592,265 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true });
   }
 
+  // ── Dashboard Estendido ─────────────────────────────────
+  if (action === "fin_dashboard_extended") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const eid = gerente.escola_id;
+    const hoje = new Date().toISOString().slice(0, 10);
+    const mesAtual = hoje.slice(0, 7);
+    const ano = (body as any).ano || hoje.slice(0, 4);
+
+    // Aging buckets (receivables)
+    const { data: pendentes } = await admin.from("fin_lancamentos")
+      .select("valor, data_vencimento, familia_email, familia_nome, descricao")
+      .eq("escola_id", eid).eq("tipo", "receita").in("status", ["pendente", "atrasado"])
+      .not("data_vencimento", "is", null);
+    const aging = { current: 0, d7: 0, d15: 0, d28: 0, d28_items: [] as any[] };
+    for (const l of pendentes ?? []) {
+      const dias = Math.floor((Date.now() - new Date(l.data_vencimento + "T12:00:00").getTime()) / 86400000);
+      if (dias < 0) aging.current += l.valor;
+      else if (dias < 7) aging.current += l.valor;
+      else if (dias < 15) aging.d7 += l.valor;
+      else if (dias < 28) aging.d15 += l.valor;
+      else { aging.d28 += l.valor; aging.d28_items.push({ familia: l.familia_nome, valor: l.valor, dias, descricao: l.descricao }); }
+    }
+
+    // Receita prevista vs realizada (by month)
+    const { data: allLancsAno } = await admin.from("fin_lancamentos")
+      .select("valor, status, data_lancamento, tipo")
+      .eq("escola_id", eid).eq("tipo", "receita").neq("status", "cancelado")
+      .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
+    const previsto = Array(12).fill(0), realizado = Array(12).fill(0);
+    for (const l of allLancsAno ?? []) {
+      const m = parseInt(l.data_lancamento.split("-")[1]) - 1;
+      previsto[m] += l.valor;
+      if (l.status === "pago") realizado[m] += l.valor;
+    }
+
+    // Inadimplencia rate
+    const { data: mensMes } = await admin.from("fin_mensalidades")
+      .select("status").eq("escola_id", eid).eq("mes", mesAtual);
+    const totalMens = (mensMes ?? []).length;
+    const atrasados = (mensMes ?? []).filter(m => m.status === "atrasado").length;
+    const inadimplencia_pct = totalMens > 0 ? Math.round((atrasados / totalMens) * 100) : 0;
+
+    // Payment by turma/serie
+    const { data: mensPorSerie } = await admin.from("fin_mensalidades")
+      .select("serie, status, valor_total").eq("escola_id", eid).like("mes", ano + "-%");
+    const serieMap: Record<string, { total: number; pago: number; valor_total: number; valor_pago: number }> = {};
+    for (const m of mensPorSerie ?? []) {
+      const s = m.serie || "Sem série";
+      if (!serieMap[s]) serieMap[s] = { total: 0, pago: 0, valor_total: 0, valor_pago: 0 };
+      serieMap[s].total++;
+      serieMap[s].valor_total += m.valor_total;
+      if (m.status === "pago") { serieMap[s].pago++; serieMap[s].valor_pago += m.valor_total; }
+    }
+    const por_serie = Object.entries(serieMap).map(([serie, d]) => ({
+      serie, ...d, taxa_pgto: d.total > 0 ? Math.round((d.pago / d.total) * 100) : 0,
+    })).sort((a, b) => a.taxa_pgto - b.taxa_pgto);
+
+    // Top devedores
+    const topDev = (aging.d28_items || []).sort((a: any, b: any) => b.valor - a.valor).slice(0, 10);
+
+    return ok({
+      aging, previsto, realizado, inadimplencia_pct,
+      por_serie, top_devedores: topDev, ano,
+    });
+  }
+
+  // ── Reajuste Anual ─────────────────────────────────────
+  if (action === "fin_reajuste_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("fin_reajustes").select("*, fin_reajuste_historico(turno, preco_anterior, preco_novo)")
+      .eq("escola_id", gerente.escola_id).order("ano_letivo", { ascending: false });
+    return ok(data ?? []);
+  }
+  if (action === "fin_reajuste_create") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { ano_letivo, taxa_percentual, indice, data_vigencia, motivo } = body as any;
+    if (!ano_letivo || taxa_percentual == null || !data_vigencia) return err("ano_letivo, taxa_percentual e data_vigencia obrigatórios.");
+    const { data, error: e2 } = await admin.from("fin_reajustes").insert({
+      ano_letivo, taxa_percentual: parseFloat(taxa_percentual), indice: indice || "manual",
+      data_vigencia, motivo, criado_por: gerente.nome, escola_id: gerente.escola_id,
+    }).select().single();
+    if (e2) return err(e2.message);
+    return ok(data);
+  }
+  if (action === "fin_reajuste_aplicar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id } = body as any;
+    if (!id) return err("id obrigatório.");
+    const { data: rea } = await admin.from("fin_reajustes").select("*").eq("id", id).eq("escola_id", gerente.escola_id).single();
+    if (!rea) return err("Reajuste não encontrado.");
+    if (rea.aplicado) return err("Reajuste já aplicado.");
+    const taxa = 1 + (rea.taxa_percentual / 100);
+    // Read current turno prices
+    const { data: cfgPrecos } = await admin.from("escola_config").select("valor").eq("escola_id", gerente.escola_id).eq("chave", "turno_precos").maybeSingle();
+    const precos: Record<string, number> = cfgPrecos?.valor ? JSON.parse(cfgPrecos.valor) : {};
+    const historico: any[] = [];
+    for (const [turno, precoAtual] of Object.entries(precos)) {
+      const novo = Math.round(precoAtual * taxa * 100) / 100;
+      historico.push({ reajuste_id: id, turno, preco_anterior: precoAtual, preco_novo: novo, escola_id: gerente.escola_id });
+      precos[turno] = novo;
+    }
+    // Save new prices
+    await admin.from("escola_config").upsert({ escola_id: gerente.escola_id, chave: "turno_precos", valor: JSON.stringify(precos) }, { onConflict: "escola_id,chave" });
+    // Save history
+    if (historico.length) await admin.from("fin_reajuste_historico").insert(historico);
+    // Mark as applied
+    await admin.from("fin_reajustes").update({ aplicado: true, aplicado_em: new Date().toISOString() }).eq("id", id);
+    return ok({ success: true, historico });
+  }
+
+  // ── Recibos ────────────────────────────────────────────
+  if (action === "fin_recibos_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { familia_email, mes } = body as any;
+    let q = admin.from("fin_recibos").select("*").eq("escola_id", gerente.escola_id).order("data_pagamento", { ascending: false });
+    if (familia_email) q = q.eq("familia_email", familia_email);
+    if (mes) q = q.gte("data_pagamento", mes + "-01").lte("data_pagamento", mes + "-31");
+    const { data } = await q.limit(200);
+    return ok(data ?? []);
+  }
+
+  // ── NF Batch ───────────────────────────────────────────
+  if (action === "fin_nf_emitir") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { cpf_cnpj_tomador, familia_nome, valor, descricao_servico, mensalidade_id, boleto_id, lancamento_id } = body as any;
+    if (!valor || !descricao_servico) return err("Valor e descrição obrigatórios.");
+    const { data, error: e3 } = await admin.from("fin_notas_fiscais").insert({
+      cpf_cnpj_tomador, familia_nome, valor: parseFloat(valor), descricao_servico,
+      mensalidade_id, boleto_id, lancamento_id, escola_id: gerente.escola_id,
+    }).select().single();
+    if (e3) return err(e3.message);
+    return ok(data);
+  }
+  if (action === "fin_nf_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("fin_notas_fiscais").select("*").eq("escola_id", gerente.escola_id).order("criado_em", { ascending: false }).limit(200);
+    return ok(data ?? []);
+  }
+  if (action === "fin_nf_marcar_emitida") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id, numero_nf } = body as any;
+    if (!id) return err("id obrigatório.");
+    await admin.from("fin_notas_fiscais").update({ status: "emitida", numero_nf }).eq("id", id).eq("escola_id", gerente.escola_id);
+    return ok({ success: true });
+  }
+  if (action === "fin_nf_batch") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { batch_id, mes } = body as any;
+    // Get all paid mensalidades for the month that don't have NFs yet
+    let q = admin.from("fin_mensalidades").select("id, familia_email, familia_nome, crianca_nome, valor_total")
+      .eq("escola_id", gerente.escola_id).eq("status", "pago");
+    if (mes) q = q.eq("mes", mes);
+    const { data: mens } = await q;
+    let geradas = 0;
+    for (const m of mens ?? []) {
+      const exists = await admin.from("fin_notas_fiscais").select("id").eq("mensalidade_id", m.id).eq("escola_id", gerente.escola_id).maybeSingle();
+      if (exists.data) continue;
+      await admin.from("fin_notas_fiscais").insert({
+        mensalidade_id: m.id, familia_email: m.familia_email, familia_nome: m.familia_nome,
+        valor: m.valor_total, descricao_servico: "Serviços educacionais - " + (m.crianca_nome || "Aluno"),
+        escola_id: gerente.escola_id,
+      });
+      geradas++;
+    }
+    return ok({ geradas });
+  }
+
+  // ── Export CSV/JSON ────────────────────────────────────
+  if (action === "fin_export") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { tipo: exportTipo, periodo_inicio, periodo_fim, formato } = body as any;
+    const inicio = periodo_inicio || new Date().getFullYear() + "-01-01";
+    const fim = periodo_fim || new Date().toISOString().slice(0, 10);
+    let data: any[] = [];
+
+    if (exportTipo === "lancamentos" || !exportTipo) {
+      const { data: lancs } = await admin.from("fin_lancamentos")
+        .select("data_lancamento, descricao, tipo, valor, status, data_pagamento, metodo_pagamento, familia_nome, familia_email")
+        .eq("escola_id", gerente.escola_id).neq("status", "cancelado")
+        .gte("data_lancamento", inicio).lte("data_lancamento", fim)
+        .order("data_lancamento");
+      data = lancs ?? [];
+    } else if (exportTipo === "mensalidades") {
+      const { data: mens } = await admin.from("fin_mensalidades")
+        .select("mes, crianca_nome, familia_nome, familia_email, serie, turno, valor_total, status, data_vencimento, data_pagamento")
+        .eq("escola_id", gerente.escola_id)
+        .gte("mes", inicio.slice(0, 7)).lte("mes", fim.slice(0, 7))
+        .order("mes");
+      data = mens ?? [];
+    } else if (exportTipo === "recibos") {
+      const { data: recs } = await admin.from("fin_recibos")
+        .select("numero_recibo, familia_nome, familia_email, crianca_nome, valor, data_pagamento, metodo_pagamento, descricao")
+        .eq("escola_id", gerente.escola_id)
+        .gte("data_pagamento", inicio).lte("data_pagamento", fim)
+        .order("data_pagamento");
+      data = recs ?? [];
+    }
+
+    if (formato === "csv" && data.length > 0) {
+      const headers = Object.keys(data[0]);
+      const csv = [headers.join(";"), ...data.map(row => headers.map(h => String(row[h] ?? "").replace(/;/g, ",")).join(";"))].join("\n");
+      return ok({ csv, total: data.length });
+    }
+    return ok({ data, total: data.length });
+  }
+
+  // ── Notificação Config ─────────────────────────────────
+  if (action === "fin_notificacao_config_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("fin_notificacao_config").select("*").eq("escola_id", gerente.escola_id).order("tipo");
+    return ok(data ?? []);
+  }
+  if (action === "fin_notificacao_config_save") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { tipo, canal, habilitado, dias_offset, template_assunto, template_corpo } = body as any;
+    if (!tipo) return err("tipo obrigatório.");
+    const { data, error: e4 } = await admin.from("fin_notificacao_config").upsert({
+      tipo, canal: canal || "email", habilitado: habilitado !== false,
+      dias_offset: dias_offset ?? 0, template_assunto, template_corpo,
+      escola_id: gerente.escola_id,
+    }, { onConflict: "escola_id,tipo,canal" }).select().single();
+    if (e4) return err(e4.message);
+    return ok(data);
+  }
+  if (action === "fin_notificacao_log_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("fin_notificacao_log").select("*").eq("escola_id", gerente.escola_id).order("criado_em", { ascending: false }).limit(100);
+    return ok(data ?? []);
+  }
+
+  // ── Portal Pais: Financeiro ────────────────────────────
+  if (action === "pais_pagamentos_historico") {
+    const email = (body as any).email || gerente?.email;
+    if (!email) return err("Email obrigatório.");
+    const eid = sessionEscolaId;
+    const { data: recibos } = await admin.from("fin_recibos")
+      .select("numero_recibo, valor, data_pagamento, metodo_pagamento, descricao, crianca_nome, criado_em")
+      .eq("escola_id", eid).eq("familia_email", email)
+      .order("data_pagamento", { ascending: false }).limit(50);
+    const { data: mens } = await admin.from("fin_mensalidades")
+      .select("id, mes, crianca_nome, valor_total, status, data_vencimento, data_pagamento")
+      .eq("escola_id", eid).eq("familia_email", email)
+      .order("mes", { ascending: false }).limit(24);
+    return ok({ recibos: recibos ?? [], mensalidades: mens ?? [] });
+  }
+
+  // ── Desconto Approval ──────────────────────────────────
+  if (action === "fin_ajuste_aprovar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { id, aprovado } = body as any;
+    if (!id) return err("id obrigatório.");
+    await admin.from("fin_ajustes_aluno").update({
+      status_aprovacao: aprovado ? "aprovado" : "rejeitado",
+      aprovado_por: gerente.nome,
+      aprovado_em: new Date().toISOString(),
+    }).eq("id", id).eq("escola_id", gerente.escola_id);
+    return ok({ success: true });
+  }
+
   // ── Conciliacao Bancaria ──────────────────────────────
   if (action === "fin_extrato_importar") {
     const itens = (body as any).itens || [];

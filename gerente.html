@@ -960,6 +960,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('finDescontos',this)"><span class="ic">🏷️</span> <span>Descontos & Ajustes</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.inadimplencia">Inadimplência</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> <span data-i18n="gerente.nav.folhaPagamento">Folha de Pagamento</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finDashExt',this)"><span class="ic">📊</span> <span>Análise Avançada</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finReajuste',this)"><span class="ic">📈</span> <span>Reajuste Anual</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finExport',this)"><span class="ic">📥</span> <span>Exportar Dados</span></a>
       </div>
       </div>
 
@@ -2997,6 +3000,82 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
         </div>
         <div id="finNfsContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- ANÁLISE FINANCEIRA AVANÇADA -->
+      <div id="panelFinDashExt" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">📊 Análise Financeira Avançada — <span id="dashExtAno"></span></div>
+        <select id="dashExtAnoSel" onchange="loadFinDashExt()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:16px;"></select>
+
+        <div style="font-weight:700;font-size:14px;margin-bottom:8px;">Aging — Contas a Receber</div>
+        <div id="agingBuckets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+          <div class="card">
+            <div class="card-title">Receita Prevista vs Realizada</div>
+            <div id="previstoRealizadoChart" style="overflow-x:auto;"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Taxa de Inadimplência</div>
+            <div id="inadimplRate" style="text-align:center;padding:20px;"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-title">Pagamento por Série/Turma</div>
+          <div style="overflow-x:auto;">
+            <table><thead><tr><th>Série</th><th>Total</th><th>Pagos</th><th style="text-align:right;">Valor Total</th><th style="text-align:right;">Valor Pago</th><th>Taxa Pgto</th></tr></thead>
+            <tbody id="seriePgtoTable"></tbody></table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Top Devedores (28d+)</div>
+          <div id="topDevedoresList"></div>
+        </div>
+      </div>
+
+      <!-- REAJUSTE ANUAL -->
+      <div id="panelFinReajuste" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">📈 Reajuste Anual de Mensalidades</div>
+          <button onclick="toggleNovoReajuste()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Novo Reajuste</button>
+        </div>
+        <div id="novoReajusteForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Ano Letivo *</label><input type="number" id="reaAno" value="2027" min="2025" max="2030" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Taxa (%) *</label><input type="number" id="reaTaxa" step="0.1" placeholder="8.5" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Índice</label><select id="reaIndice" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="manual">Manual</option><option value="igpm">IGPM</option><option value="ipca">IPCA</option></select></div>
+              <div class="ff" style="margin:0;"><label>Vigência *</label><input type="date" id="reaVigencia" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            </div>
+            <div class="ff" style="margin-top:10px;"><label>Motivo</label><input type="text" id="reaMotivo" placeholder="Reajuste anual conforme contrato" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarReajuste()" class="btn-create" style="width:auto;padding:8px 20px;">Criar Reajuste</button>
+              <button onclick="toggleNovoReajuste()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+            </div>
+          </div>
+        </div>
+        <div id="reajustesList"></div>
+      </div>
+
+      <!-- EXPORTAR DADOS FINANCEIROS -->
+      <div id="panelFinExport" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">📥 Exportar Dados Financeiros</div>
+        <div class="card" style="padding:20px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div class="ff" style="margin:0;"><label>Tipo</label><select id="expTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="lancamentos">Lançamentos</option><option value="mensalidades">Mensalidades</option><option value="recibos">Recibos</option>
+            </select></div>
+            <div class="ff" style="margin:0;"><label>Período Início</label><input type="date" id="expInicio" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            <div class="ff" style="margin:0;"><label>Período Fim</label><input type="date" id="expFim" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="exportarCSV()" class="btn-create" style="width:auto;padding:10px 20px;">📄 Exportar CSV</button>
+            <button onclick="exportarJSON()" style="padding:10px 20px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Exportar JSON</button>
+          </div>
+          <div id="exportResult" style="margin-top:16px;"></div>
+        </div>
       </div>
 
       <!-- CRM KANBAN -->
@@ -5999,6 +6078,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='finDescontos') loadFinDescontos();
     if(id==='finInadimplencia') loadInadimplencia();
     if(id==='finBatchBoletos') loadBatchBoletos();
+    if(id==='finDashExt') loadFinDashExt();
+    if(id==='finReajuste') loadReajustes();
+    if(id==='finExport') initExportPanel();
     if(id==='crmKanban')   loadCrmKanban();
     if(id==='crmLeads')  { showPanel('crmKanban'); loadCrmLeads(); return; }
     if(id==='crmTemplates') loadCrmTemplates();
@@ -16940,6 +17022,114 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (!confirm('Remover ajuste "'+desc+'"? Isto não afeta boletos já gerados.')) return;
     await apiFinExt({ action:'fin_ajuste_delete', id:id });
     showToast('Ajuste removido.'); loadFinDescontos();
+  }
+
+  // ═══ DASHBOARD ESTENDIDO ═══
+  async function loadFinDashExt() {
+    var ano = initYearSel('dashExtAnoSel','dashExtAno');
+    var d = await api({ action:'fin_dashboard_extended', ano });
+    if (!d || d.error) return;
+
+    // Aging buckets
+    var a = d.aging || {};
+    var fmtR = function(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); };
+    document.getElementById('agingBuckets').innerHTML = [
+      {label:'A vencer / Corrente',val:a.current||0,cor:'#2d7a3a'},
+      {label:'7-14 dias atraso',val:a.d7||0,cor:'#EAB308'},
+      {label:'15-27 dias atraso',val:a.d15||0,cor:'#F97316'},
+      {label:'28+ dias atraso',val:a.d28||0,cor:'#EF4444'}
+    ].map(function(b){return '<div class="card" style="border-left:4px solid '+b.cor+';padding:12px;"><div style="font-size:20px;font-weight:700;color:'+b.cor+';">'+fmtR(b.val)+'</div><div style="color:var(--muted);font-size:12px;">'+b.label+'</div></div>';}).join('');
+
+    // Previsto vs Realizado chart
+    var MS = MESES_CURTOS;
+    var maxV = Math.max(...(d.previsto||[]).concat(d.realizado||[]), 1);
+    document.getElementById('previstoRealizadoChart').innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:180px;padding:10px 0;">'+
+      (d.previsto||[]).map(function(p,i){
+        var r = (d.realizado||[])[i]||0;
+        var pH = Math.round((p/maxV)*150);
+        var rH = Math.round((r/maxV)*150);
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="display:flex;gap:1px;align-items:flex-end;height:155px;"><div style="width:10px;background:#cbd5e1;border-radius:2px 2px 0 0;height:'+pH+'px;" title="Previsto: '+fmtR(p)+'"></div><div style="width:10px;background:#2d7a3a;border-radius:2px 2px 0 0;height:'+rH+'px;" title="Realizado: '+fmtR(r)+'"></div></div><span style="font-size:9px;color:var(--muted);">'+MS[i]+'</span></div>';
+      }).join('')+'</div><div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--muted);"><span><span style="display:inline-block;width:10px;height:10px;background:#cbd5e1;border-radius:2px;"></span> Previsto</span><span><span style="display:inline-block;width:10px;height:10px;background:#2d7a3a;border-radius:2px;"></span> Realizado</span></div>';
+
+    // Inadimplência rate
+    var pct = d.inadimplencia_pct || 0;
+    var pctColor = pct > 15 ? '#EF4444' : pct > 5 ? '#F97316' : '#2d7a3a';
+    document.getElementById('inadimplRate').innerHTML = '<div style="font-size:48px;font-weight:700;color:'+pctColor+';">'+pct+'%</div><div style="color:var(--muted);font-size:13px;">do mês atual</div>';
+
+    // Série table
+    var series = d.por_serie || [];
+    document.getElementById('seriePgtoTable').innerHTML = series.length ? series.map(function(s){
+      var taxaCor = s.taxa_pgto >= 80 ? '#2d7a3a' : s.taxa_pgto >= 50 ? '#F97316' : '#EF4444';
+      return '<tr><td style="font-weight:600;">'+esc(s.serie)+'</td><td>'+s.total+'</td><td>'+s.pago+'</td><td style="text-align:right;">'+fmtR(s.valor_total)+'</td><td style="text-align:right;color:#2d7a3a;">'+fmtR(s.valor_pago)+'</td><td><span style="color:'+taxaCor+';font-weight:700;">'+s.taxa_pgto+'%</span></td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty-state">Sem dados para o período.</td></tr>';
+
+    // Top devedores
+    var devs = d.top_devedores || [];
+    document.getElementById('topDevedoresList').innerHTML = devs.length ? devs.map(function(d){
+      return '<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f5f0ea;"><span>'+esc(d.familia||'—')+' <span style="color:var(--muted);font-size:11px;">'+d.dias+' dias</span></span><span style="font-weight:700;color:#EF4444;">'+fmtR(d.valor)+'</span></div>';
+    }).join('') : '<div class="empty-state">Nenhum devedor 28d+.</div>';
+  }
+
+  // ═══ REAJUSTE ANUAL ═══
+  function toggleNovoReajuste() {
+    var el = document.getElementById('novoReajusteForm');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+  async function salvarReajuste() {
+    var d = await api({ action:'fin_reajuste_create', ano_letivo: parseInt(document.getElementById('reaAno').value), taxa_percentual: parseFloat(document.getElementById('reaTaxa').value), indice: document.getElementById('reaIndice').value, data_vigencia: document.getElementById('reaVigencia').value, motivo: document.getElementById('reaMotivo').value });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Reajuste criado!','success');
+    toggleNovoReajuste();
+    loadReajustes();
+  }
+  async function loadReajustes() {
+    var d = await api({ action:'fin_reajuste_list' });
+    var list = Array.isArray(d) ? d : [];
+    var el = document.getElementById('reajustesList');
+    if (!list.length) { el.innerHTML = '<div class="empty-state">Nenhum reajuste cadastrado.</div>'; return; }
+    var fmtR = function(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); };
+    el.innerHTML = list.map(function(r) {
+      var badge = r.aplicado ? '<span class="badge badge-green">Aplicado</span>' : '<span class="badge badge-orange">Pendente</span>';
+      var hist = (r.fin_reajuste_historico || []);
+      var histHtml = hist.length ? '<div style="margin-top:8px;"><table style="font-size:12px;"><thead><tr><th>Turno</th><th style="text-align:right;">Anterior</th><th style="text-align:right;">Novo</th></tr></thead><tbody>'+hist.map(function(h){ return '<tr><td>'+esc(h.turno)+'</td><td style="text-align:right;">'+fmtR(h.preco_anterior)+'</td><td style="text-align:right;color:#2d7a3a;font-weight:600;">'+fmtR(h.preco_novo)+'</td></tr>'; }).join('')+'</tbody></table></div>' : '';
+      var acoes = !r.aplicado ? '<button class="btn btn-sm" onclick="aplicarReajuste(\''+r.id+'\')">✅ Aplicar Agora</button>' : '';
+      return '<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div><strong>Ano '+r.ano_letivo+'</strong> — <span style="font-size:18px;font-weight:700;color:#1a6bb5;">+'+r.taxa_percentual+'%</span> <span style="color:var(--muted);font-size:12px;">('+esc(r.indice)+')</span></div><div style="display:flex;gap:8px;align-items:center;">'+badge+acoes+'</div></div><div style="color:var(--muted);font-size:12px;margin-top:4px;">Vigência: '+new Date(r.data_vigencia+'T12:00:00').toLocaleDateString('pt-BR')+(r.motivo?' · '+esc(r.motivo):'')+'</div>'+histHtml+'</div>';
+    }).join('');
+  }
+  async function aplicarReajuste(id) {
+    if (!confirm('Aplicar reajuste? Todos os preços de turno serão atualizados permanentemente.')) return;
+    var d = await api({ action:'fin_reajuste_aplicar', id:id });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Reajuste aplicado! '+((d.historico||[]).length)+' turnos atualizados.','success');
+    loadReajustes();
+  }
+
+  // ═══ EXPORT ═══
+  function initExportPanel() {
+    var y = new Date().getFullYear();
+    document.getElementById('expInicio').value = y+'-01-01';
+    document.getElementById('expFim').value = new Date().toISOString().slice(0,10);
+  }
+  async function exportarCSV() {
+    var d = await api({ action:'fin_export', tipo: document.getElementById('expTipo').value, periodo_inicio: document.getElementById('expInicio').value, periodo_fim: document.getElementById('expFim').value, formato:'csv' });
+    if (!d || d.error) { showToast(d?.error||'Erro','error'); return; }
+    if (!d.csv) { showToast('Nenhum dado para exportar.','info'); return; }
+    var blob = new Blob(['\ufeff'+d.csv], {type:'text/csv;charset=utf-8;'});
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = document.getElementById('expTipo').value+'_'+document.getElementById('expInicio').value+'_'+document.getElementById('expFim').value+'.csv';
+    link.click();
+    showToast(d.total+' registros exportados!','success');
+  }
+  async function exportarJSON() {
+    var d = await api({ action:'fin_export', tipo: document.getElementById('expTipo').value, periodo_inicio: document.getElementById('expInicio').value, periodo_fim: document.getElementById('expFim').value });
+    if (!d || d.error) { showToast(d?.error||'Erro','error'); return; }
+    var blob = new Blob([JSON.stringify(d.data, null, 2)], {type:'application/json'});
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = document.getElementById('expTipo').value+'_export.json';
+    link.click();
+    showToast(d.total+' registros exportados!','success');
   }
 
   // ═══ BOLETOS EM LOTE ═══

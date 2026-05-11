@@ -931,6 +931,11 @@ body.has-bottomnav{padding-bottom:56px;}
     </div>
     <div id="boletosConteudo"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div></div>
   </div>
+  <!-- HISTÓRICO DE PAGAMENTOS -->
+  <div class="card" id="pagamentosCard" style="margin-top:16px;">
+    <div class="card-title">📋 Histórico de Pagamentos</div>
+    <div id="pagamentosConteudo"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Carregue seus boletos acima para ver o histórico.</div></div>
+  </div>
   </div><!-- /tabBoletos -->
 
   <!-- TAB: ACHADOS & PERDIDOS -->
@@ -2923,6 +2928,68 @@ body.has-bottomnav{padding-bottom:56px;}
         </div>
       </div>`;
     }).join('');
+    carregarPagamentos();
+  }
+
+  async function carregarPagamentos() {
+    if (!currentUser) return;
+    var el = document.getElementById('pagamentosConteudo');
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;"><span class="spinner dark"></span></div>';
+    try {
+      var tok = await getActiveToken();
+      var res = await fetch(SUPABASE_URL + '/functions/v1/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
+        body: JSON.stringify({ action: 'pais_pagamentos_historico', email: currentUser.email, _token: tok || '' }),
+      });
+      var json = await res.json();
+      var recibos = json.recibos || [];
+      var mens = json.mensalidades || [];
+
+      // Show recibos (paid items)
+      var html = '';
+      if (recibos.length > 0) {
+        html += '<div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Pagamentos confirmados</div>';
+        html += recibos.map(function(r) {
+          var valor = Number(r.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          var data = r.data_pagamento ? r.data_pagamento.split('-').reverse().join('/') : '—';
+          var metodo = r.metodo_pagamento ? ({'boleto':'Boleto','pix':'PIX','cartao':'Cartão','dinheiro':'Dinheiro','ted':'TED'}[r.metodo_pagamento] || r.metodo_pagamento) : '';
+          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">' +
+            '<div><div style="font-size:13px;font-weight:600;">' + (r.descricao || 'Pagamento') + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);">' + (r.crianca_nome || '') + (metodo ? ' · ' + metodo : '') + '</div></div>' +
+            '<div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:#065f46;">' + valor + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);">' + data + '</div></div></div>';
+        }).join('');
+      }
+
+      // Show pending mensalidades
+      var pendentes = mens.filter(function(m) { return m.status !== 'pago' && m.status !== 'cancelado'; });
+      if (pendentes.length > 0) {
+        html += '<div style="font-size:13px;font-weight:600;color:var(--muted);margin:16px 0 8px;text-transform:uppercase;">Pendentes</div>';
+        html += pendentes.map(function(m) {
+          var valor = Number(m.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          var venc = m.data_vencimento ? m.data_vencimento.split('-').reverse().join('/') : '—';
+          var hoje = new Date(); hoje.setHours(0,0,0,0);
+          var dvenc = m.data_vencimento ? new Date(m.data_vencimento + 'T12:00:00') : null;
+          var vencido = dvenc && dvenc < hoje;
+          var badge = vencido
+            ? '<span style="background:#fee2e2;color:#991b1b;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600;">Vencido</span>'
+            : '<span style="background:#fef9c3;color:#854d0e;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600;">Pendente</span>';
+          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">' +
+            '<div><div style="font-size:13px;">Mensalidade ' + (m.mes || '') + ' — ' + (m.crianca_nome || '') + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);">Vence: ' + venc + '</div></div>' +
+            '<div style="display:flex;align-items:center;gap:8px;"><div style="font-size:14px;font-weight:600;">' + valor + '</div>' + badge + '</div></div>';
+        }).join('');
+      }
+
+      if (!html) {
+        html = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Nenhum pagamento encontrado.</div>';
+      }
+
+      el.innerHTML = html;
+    } catch(e) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Erro ao carregar histórico.</div>';
+    }
   }
 
   function vincularCpfBoletos() {

@@ -1623,6 +1623,148 @@ function gerarPayloadPix(chave: string, nome: string, cidade: string, valor: num
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  Notificações Financeiras + Régua de Cobrança com Envio
+// ═══════════════════════════════════════════════════════════════
+
+async function sendFinEmail(sb: any, escolaId: string, to: string, subject: string, html: string) {
+  try {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify({ tipo: "financeiro_custom", to, subject, html, escola_id: escolaId }),
+    });
+    return true;
+  } catch (e) {
+    log.warn("Erro ao enviar email financeiro", { metadata: { error: String(e) } });
+    return false;
+  }
+}
+
+// Cron: send pending financial notifications (boleto emitido, vencimento próximo, vencido, pago)
+router.on("fin_notificacoes_enviar", authCronOrEquipe, async (ctx) => {
+  const escolaId = ctx.escola_id || (await getEscolaPadrao(ctx.sb)) || undefined;
+  if (!escolaId) return successResponse({ enviados: 0, msg: "Sem escola" });
+
+  // Load notification config
+  const { data: configs } = await ctx.sb.from("fin_notificacao_config")
+    .select("*").eq("escola_id", escolaId).eq("habilitado", true);
+  if (!configs?.length) return successResponse({ enviados: 0, msg: "Sem config de notificação" });
+
+  // Load escola branding
+  const { data: cfgRows } = await ctx.sb.from("escola_config").select("chave, valor").eq("escola_id", escolaId);
+  const cfg: Record<string, string> = {};
+  for (const r of cfgRows ?? []) cfg[r.chave] = r.valor;
+  const escolaNome = cfg.escola_nome || "Escola";
+  const cor = cfg.cor_primaria || "#C8102E";
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  let enviados = 0;
+
+  for (const nc of configs) {
+    if (nc.canal !== "email") continue; // only email for now
+
+    // Determine which mensalidades to notify based on tipo
+    let mensalidades: any[] = [];
+
+    if (nc.tipo === "vencimento_proximo") {
+      // Send X days before vencimento (dias_offset is negative, e.g. -3)
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() - (nc.dias_offset || -3));
+      const target = targetDate.toISOString().slice(0, 10);
+      const { data } = await ctx.sb.from("fin_mensalidades").select("*")
+        .eq("escola_id", escolaId).eq("status", "pendente").eq("data_vencimento", target);
+      mensalidades = data ?? [];
+    } else if (nc.tipo === "vencido") {
+      // Send X days after vencimento (dias_offset is positive, e.g. 1, 3, 7)
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() - (nc.dias_offset || 1));
+      const target = targetDate.toISOString().slice(0, 10);
+      const { data } = await ctx.sb.from("fin_mensalidades").select("*")
+        .eq("escola_id", escolaId).in("status", ["pendente", "atrasado"]).eq("data_vencimento", target);
+      mensalidades = data ?? [];
+    } else if (nc.tipo === "pago") {
+      // Send confirmation for payments in last 24h
+      const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const { data } = await ctx.sb.from("fin_mensalidades").select("*")
+        .eq("escola_id", escolaId).eq("status", "pago").gte("data_pagamento", ontem);
+      mensalidades = data ?? [];
+    }
+
+    for (const m of mensalidades) {
+      // Check if already notified
+      const { data: existing } = await ctx.sb.from("fin_notificacao_log")
+        .select("id").eq("tipo", nc.tipo).eq("mensalidade_id", m.id).eq("canal", "email").limit(1);
+      if (existing?.length) continue;
+
+      const fmtValor = "R$ " + Number(m.valor_total).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+      const fmtVenc = m.data_vencimento ? new Date(m.data_vencimento + "T12:00:00").toLocaleDateString("pt-BR") : "—";
+      const crianca = m.crianca_nome || "Aluno";
+
+      let subject = "";
+      let body = "";
+
+      if (nc.tipo === "vencimento_proximo") {
+        subject = `${escolaNome} — Boleto próximo do vencimento`;
+        body = `<p>Olá <strong>${m.familia_nome || "Responsável"}</strong>,</p>
+          <p>Lembramos que a mensalidade de <strong>${crianca}</strong> no valor de <strong>${fmtValor}</strong> vence em <strong>${fmtVenc}</strong>.</p>
+          <p>Acesse o portal de pais para visualizar e pagar seu boleto.</p>`;
+      } else if (nc.tipo === "vencido") {
+        subject = `${escolaNome} — Mensalidade em atraso`;
+        body = `<p>Olá <strong>${m.familia_nome || "Responsável"}</strong>,</p>
+          <p>A mensalidade de <strong>${crianca}</strong> (${m.mes}) no valor de <strong>${fmtValor}</strong> encontra-se <strong>vencida desde ${fmtVenc}</strong>.</p>
+          <p>Por favor, regularize o pagamento o mais breve possível pelo portal de pais ou entre em contato com a secretaria.</p>`;
+      } else if (nc.tipo === "pago") {
+        subject = `${escolaNome} — Pagamento confirmado`;
+        body = `<p>Olá <strong>${m.familia_nome || "Responsável"}</strong>,</p>
+          <p>Confirmamos o recebimento do pagamento da mensalidade de <strong>${crianca}</strong> (${m.mes}) no valor de <strong>${fmtValor}</strong>.</p>
+          <p>Obrigado!</p>`;
+      }
+
+      if (!subject || !m.familia_email) continue;
+
+      const html = `<div style="font-family:'DM Sans',Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <div style="text-align:center;padding:16px;background:${cor};color:#fff;border-radius:12px 12px 0 0;">
+          <h2 style="margin:0;font-size:18px;">${escolaNome}</h2>
+        </div>
+        <div style="padding:20px;background:#fff;border:1px solid #e5e5e5;border-top:0;border-radius:0 0 12px 12px;">
+          ${body}
+          <hr style="border:0;border-top:1px solid #eee;margin:20px 0;">
+          <p style="font-size:12px;color:#999;">Este é um email automático. Em caso de dúvidas, entre em contato com a secretaria da escola.</p>
+        </div>
+      </div>`;
+
+      const sent = await sendFinEmail(ctx.sb, escolaId, m.familia_email, subject, html);
+      await ctx.sb.from("fin_notificacao_log").insert({
+        tipo: nc.tipo, canal: "email", familia_email: m.familia_email,
+        mensalidade_id: m.id, status: sent ? "enviado" : "erro",
+        erro_msg: sent ? null : "Falha no envio", escola_id: escolaId,
+      });
+      if (sent) enviados++;
+    }
+  }
+
+  return successResponse({ enviados });
+});
+
+// PIX: expire stale cobranças
+router.on("pix_expirar", authCronOrEquipe, async (ctx) => {
+  const { data } = await ctx.sb.rpc("fin_pix_expirar");
+  return successResponse({ expirados: data ?? 0 });
+});
+
+// Update inter-webhook boleto payment to set metodo_pagamento
+router.on("fin_marcar_metodo_pagamento", authEquipeFinanceira, async (ctx) => {
+  const { lancamento_id, metodo, referencia } = ctx.body as any;
+  if (!lancamento_id || !metodo) throw new AppError("VALIDATION_FAILED", "lancamento_id e metodo obrigatórios.");
+  await ctx.sb.from("fin_lancamentos").update({
+    metodo_pagamento: metodo, referencia_pagamento: referencia || null,
+  }).eq("id", lancamento_id);
+  return successResponse({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Serve
 // ═══════════════════════════════════════════════════════════════
 serve(async (req) => {
