@@ -3008,17 +3008,28 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
         <div id="crmLeadForm" style="display:none;margin-bottom:16px;">
           <div class="form-card" style="max-width:1000px;">
+            <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Responsavel</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
               <div class="ff" style="margin:0;"><label>Nome Responsavel *</label><input type="text" id="crmNome" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Telefone</label><input type="text" id="crmTel" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Telefone</label><input type="text" id="crmTel" placeholder="+55 54 99702-1634" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
               <div class="ff" style="margin:0;"><label>Email</label><input type="email" id="crmEmail" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Nome Crianca</label><input type="text" id="crmCrianca" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Data Nascimento</label><input type="date" id="crmNasc" onchange="crmAutoSerie()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-              <div class="ff" style="margin:0;"><label>Serie <span id="crmSerieAuto" style="font-size:10px;color:#2d7a3a;"></span></label><input type="text" id="crmSerie" readonly style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#f5f0ea;color:var(--muted);"></div>
-              <div class="ff" style="margin:0;"><label>Origem</label><select id="crmOrigem" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option><option value="indicacao">Indicacao</option><option value="site">Site</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="evento">Evento</option><option value="outro">Outro</option></select></div>
-              <div class="ff" style="margin:0;grid-column:span 2;"><label>Observacoes</label><input type="text" id="crmObs" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:10px;">
+            <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px;">Crianca</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Nome da Crianca</label><input type="text" id="crmCrianca" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Data de Nascimento</label><input type="date" id="crmNasc" onchange="crmAutoSerie()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Serie <span id="crmSerieAuto" style="font-size:10px;color:#2d7a3a;"></span></label><input type="text" id="crmSerie" readonly style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#f5f0ea;color:var(--muted);"></div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px;">Detalhes do Lead</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Origem</label><select id="crmOrigem" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="">—</option><option value="indicacao">Indicacao</option><option value="site">Site</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="whatsapp">WhatsApp</option><option value="evento">Evento</option><option value="outro">Outro</option></select></div>
+              <div class="ff" style="margin:0;"><label>Valor Mensalidade (R$)</label><input type="number" id="crmValorMens" step="0.01" min="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Responsavel Interno</label><input type="text" id="crmRespInterno" placeholder="Quem esta atendendo" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Proximo Contato</label><input type="date" id="crmProxContato" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Data Visita</label><input type="date" id="crmDataVisita" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+              <div class="ff" style="margin:0;"><label>Observacoes</label><input type="text" id="crmObs" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
               <button onclick="salvarCrmLead()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button>
               <button onclick="toggleCrmLeadForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
             </div>
@@ -17159,7 +17170,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
               ${l.nome_crianca ? '👶 ' + esc(l.nome_crianca) + (l.data_nascimento ? ' (' + crmIdadeTexto(l.data_nascimento) + ')' : '') : ''}
               ${l.serie_interesse ? '<br>🎒 ' + esc(l.serie_interesse) : ''}
               ${l.telefone ? '<br>📱 ' + esc(l.telefone) : ''}
+              ${l.email ? '<br>📧 ' + esc(l.email) : ''}
               ${l.origem ? '<br>📍 ' + esc(l.origem) : ''}
+              ${l.responsavel_interno ? '<br>👤 ' + esc(l.responsavel_interno) : ''}
+              ${l.data_proximo_contato ? '<br>📅 Prox: ' + new Date(l.data_proximo_contato+'T12:00:00').toLocaleDateString('pt-BR') : ''}
             </div>
             <div class="kc-actions">
               ${l.telefone ? `<button class="kc-btn" style="color:#2d7a3a;" onclick="event.stopPropagation();abrirWhatsApp('${esc(l.telefone)}','${esc(l.nome_responsavel)}')">WhatsApp</button>` : ''}
@@ -17191,12 +17205,17 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       data_nascimento: document.getElementById('crmNasc').value || null,
       serie_interesse: document.getElementById('crmSerie').value.trim(),
       origem: document.getElementById('crmOrigem').value,
+      valor_mensalidade: document.getElementById('crmValorMens').value || null,
+      responsavel_interno: document.getElementById('crmRespInterno').value.trim(),
+      data_proximo_contato: document.getElementById('crmProxContato').value || null,
+      data_visita: document.getElementById('crmDataVisita').value || null,
       observacoes: document.getElementById('crmObs').value.trim(),
       estagio_id: primeiroEstagio,
     });
     if (d.error) { showToast(d.error,'error'); return; }
     showToast('Lead salvo!','success'); toggleCrmLeadForm();
-    ['crmNome','crmTel','crmEmail','crmCrianca','crmNasc','crmSerie','crmObs'].forEach(id=>document.getElementById(id).value='');
+    ['crmNome','crmTel','crmEmail','crmCrianca','crmNasc','crmSerie','crmObs','crmValorMens','crmRespInterno','crmProxContato','crmDataVisita'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('crmOrigem').value = '';
     document.getElementById('crmSerieAuto').textContent = '';
     loadCrmKanban();
   }

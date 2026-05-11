@@ -4029,22 +4029,47 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok(data ?? []);
   }
   if (action === "crm_lead_save") {
-    const { id, nome_responsavel, email, telefone, nome_crianca, data_nascimento, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, responsavel_interno, data_proximo_contato, data_visita } = body as any;
-    if (!nome_responsavel) return err("Nome obrigatorio.");
+    const b = body as any;
+    if (!b.id && !b.nome_responsavel) return err("Nome obrigatorio.");
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    // Se novo lead sem estagio_id, atribuir primeiro estágio (menor ordem)
-    let estagioFinal = estagio_id;
-    if (!id && !estagioFinal) {
-      const { data: primeiro } = await admin.from("crm_estagios").select("id").eq("escola_id", gerente.escola_id).order("ordem").limit(1).maybeSingle();
-      if (primeiro) estagioFinal = primeiro.id;
-    }
-    const data = { nome_responsavel, email, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id: estagioFinal, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString(), escola_id: gerente.escola_id };
-    if (id) {
-      const { data: updated, error: updErr } = await admin.from("crm_leads").update(data).eq("id", id).eq("escola_id", gerente.escola_id).select("id").maybeSingle();
+
+    if (b.id) {
+      // UPDATE: só envia campos que foram explicitamente fornecidos (não sobrescreve com undefined)
+      const updates: Record<string, unknown> = { atualizado_em: new Date().toISOString() };
+      if (b.nome_responsavel !== undefined) updates.nome_responsavel = b.nome_responsavel;
+      if (b.email !== undefined) updates.email = b.email;
+      if (b.telefone !== undefined) updates.telefone = b.telefone;
+      if (b.nome_crianca !== undefined) updates.nome_crianca = b.nome_crianca;
+      if (b.data_nascimento !== undefined) updates.data_nascimento = b.data_nascimento || null;
+      if (b.serie_interesse !== undefined) updates.serie_interesse = b.serie_interesse;
+      if (b.estagio_id !== undefined) updates.estagio_id = b.estagio_id;
+      if (b.origem !== undefined) updates.origem = b.origem;
+      if (b.valor_mensalidade !== undefined) updates.valor_mensalidade = b.valor_mensalidade ? parseFloat(b.valor_mensalidade) : null;
+      if (b.observacoes !== undefined) updates.observacoes = b.observacoes;
+      if (b.responsavel_interno !== undefined) updates.responsavel_interno = b.responsavel_interno;
+      if (b.data_proximo_contato !== undefined) updates.data_proximo_contato = b.data_proximo_contato || null;
+      if (b.data_visita !== undefined) updates.data_visita = b.data_visita || null;
+      const { data: updated, error: updErr } = await admin.from("crm_leads").update(updates).eq("id", b.id).eq("escola_id", gerente.escola_id).select("id").maybeSingle();
       if (updErr) return err(updErr.message);
       if (!updated) return err("Lead não encontrado.", 404);
-      return ok({ success: true, id });
+      return ok({ success: true, id: b.id });
     } else {
+      // INSERT: monta objeto completo
+      let estagioFinal = b.estagio_id;
+      if (!estagioFinal) {
+        const { data: primeiro } = await admin.from("crm_estagios").select("id").eq("escola_id", gerente.escola_id).order("ordem").limit(1).maybeSingle();
+        if (primeiro) estagioFinal = primeiro.id;
+      }
+      const data = {
+        nome_responsavel: b.nome_responsavel, email: b.email, telefone: b.telefone,
+        nome_crianca: b.nome_crianca, data_nascimento: b.data_nascimento || null,
+        serie_interesse: b.serie_interesse, estagio_id: estagioFinal, origem: b.origem,
+        valor_mensalidade: b.valor_mensalidade ? parseFloat(b.valor_mensalidade) : null,
+        observacoes: b.observacoes, responsavel_interno: b.responsavel_interno,
+        data_proximo_contato: b.data_proximo_contato || null,
+        data_visita: b.data_visita || null,
+        atualizado_em: new Date().toISOString(), escola_id: gerente.escola_id,
+      };
       const { data: created, error: insErr } = await admin.from("crm_leads").insert(data).select("id").single();
       if (insErr) return err(insErr.message);
       return ok({ success: true, id: created.id });
