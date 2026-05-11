@@ -3003,7 +3003,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelCrmKanban" class="panel">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
           <div class="sec-title" style="margin:0;">Pipeline de Leads</div>
-          <button onclick="toggleCrmLeadForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">+ Novo Lead</button>
+          <button onclick="baixarExtensaoCrm()" id="btnExtCrm" class="btn-export" style="width:auto;padding:8px 14px;font-size:11px;margin-left:auto;display:none;gap:6px;align-items:center;"><img src="https://cdn.jsdelivr.net/gh/nicedoc/chrome-icon/icon.svg" width="14" height="14" alt="" onerror="this.style.display='none'"> Extensao WhatsApp</button>
+          <button onclick="toggleCrmLeadForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Novo Lead</button>
         </div>
         <div id="crmLeadForm" style="display:none;margin-bottom:16px;">
           <div class="form-card" style="max-width:1000px;">
@@ -16992,6 +16993,39 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   // ── CRM ────────────────────────────────────────────
   var crmEstagios = [], crmLeads = [];
   function toggleCrmLeadForm() { const el=document.getElementById('crmLeadForm'); el.style.display=el.style.display==='none'?'block':'none'; }
+
+  // Extension download — only show on desktop (no touch + wide screen)
+  (function() {
+    var isDesktop = !('ontouchstart' in window) && window.innerWidth > 900;
+    var btn = document.getElementById('btnExtCrm');
+    if (btn && isDesktop) btn.style.display = 'flex';
+  })();
+
+  function baixarExtensaoCrm() {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:28px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+      + '<h3 style="font-family:\'Lora\',serif;font-size:18px;">Extensao Lumied CRM — WhatsApp</h3>'
+      + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">x</button></div>'
+      + '<p style="font-size:13px;color:#555;line-height:1.6;margin-bottom:16px;">Capture leads, envie templates e acompanhe interacoes direto no <strong>WhatsApp Web</strong>. A extensao identifica automaticamente os contatos ja cadastrados no CRM.</p>'
+      + '<div style="background:#f8f5f0;border-radius:10px;padding:16px;margin-bottom:16px;">'
+      + '<div style="font-size:12px;font-weight:700;margin-bottom:10px;">Como instalar:</div>'
+      + '<ol style="font-size:12px;color:#555;line-height:1.8;padding-left:18px;margin:0;">'
+      + '<li>Clique em <strong>"Baixar extensao"</strong> abaixo</li>'
+      + '<li>Extraia o arquivo <strong>.zip</strong> em uma pasta</li>'
+      + '<li>Abra <code style="background:#e5e0d8;padding:1px 6px;border-radius:4px;">chrome://extensions/</code> no Chrome</li>'
+      + '<li>Ative o <strong>Modo do desenvolvedor</strong> (canto superior direito)</li>'
+      + '<li>Clique em <strong>"Carregar sem compactacao"</strong> e selecione a pasta extraida</li>'
+      + '<li>Abra o WhatsApp Web e clique no icone Lumied para fazer login</li>'
+      + '</ol></div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<a href="/chrome-extension/lumied-crm-whatsapp.zip" download="lumied-crm-whatsapp.zip" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:linear-gradient(135deg,#C8102E,#9B0D23);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;font-family:\'DM Sans\',sans-serif;">Baixar extensao (.zip)</a>'
+      + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="padding:10px 16px;background:none;border:1.5px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Fechar</button>'
+      + '</div></div>';
+    document.body.appendChild(overlay);
+  }
   function gPipeSetView(view, btn) {
     btn.parentElement.querySelectorAll('.gpipe-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
