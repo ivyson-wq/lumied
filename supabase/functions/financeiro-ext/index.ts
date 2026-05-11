@@ -718,6 +718,130 @@ router.on("boletos_gerar_batch", authCronOrEquipe, async (ctx) => {
 });
 
 // ── Batch manual (sob demanda, qualquer mês) — pula quem já tem boleto ──
+router.on("mensalidades_preview", authEquipeFinanceira, async (ctx) => {
+  const { mes_referencia } = ctx.body as any;
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const escolaId = ctx.escola_id;
+  const nm = nextMonth();
+  const mesRef = mes_referencia || nm.label;
+  const [anoStr, mesStr] = mesRef.split("-");
+  const ano = parseInt(anoStr);
+  const mes = parseInt(mesStr);
+  if (!ano || !mes || mes < 1 || mes > 12) throw new AppError("VALIDATION_FAILED", "mes_referencia inválido (formato: YYYY-MM).");
+  const monthNames = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+  // Dia de vencimento
+  const { data: cfgDia } = await ctx.sb.from("escola_config").select("valor").eq("chave", "dia_vencimento_boleto").eq("escola_id", escolaId).maybeSingle();
+  const diaVencimento = cfgDia?.valor || "10";
+  const vencimento = `${ano}-${String(mes).padStart(2, "0")}-${diaVencimento.padStart(2, "0")}`;
+
+  // Alunos ativos
+  const { data: alunos } = await ctx.sb.from("alunos").select("id, nome, serie, turno, familia_email, resp_nome, cpf").eq("escola_id", escolaId).eq("ativo", true);
+  if (!alunos || alunos.length === 0) return successResponse({ alunos: [], totais: { alunos: 0, valor: 0 } });
+
+  // Turnos config
+  const { data: cfgTurnos } = await ctx.sb.from("escola_config").select("valor").eq("chave", "turnos_config").eq("escola_id", escolaId).maybeSingle();
+  let turnosConfig: Array<{ id: string; nome: string; preco: number }> = [];
+  try { turnosConfig = cfgTurnos?.valor ? (typeof cfgTurnos.valor === "string" ? JSON.parse(cfgTurnos.valor) : cfgTurnos.valor) : []; } catch { /* */ }
+  const turnoPrecoMap = new Map(turnosConfig.map(t => [t.id, { nome: t.nome, preco: t.preco || 0 }]));
+
+  // Almoço
+  const { data: cfgAlmoco } = await ctx.sb.from("escola_config").select("valor").eq("chave", "almoco_preco").eq("escola_id", escolaId).maybeSingle();
+  const almocoPrecoDia = parseFloat(cfgAlmoco?.valor || "0");
+
+  // Ajustes
+  const { data: todosAjustes } = await ctx.sb.from("fin_ajustes_aluno").select("*").eq("escola_id", escolaId).eq("ativo", true).lte("data_inicio", vencimento);
+  const ajustesVigentes = (todosAjustes ?? []).filter((a: any) => !a.data_fim || a.data_fim >= vencimento);
+  const ajustesPorAluno = new Map<string, any[]>();
+  for (const aj of ajustesVigentes) { const l = ajustesPorAluno.get(aj.aluno_id) || []; l.push(aj); ajustesPorAluno.set(aj.aluno_id, l); }
+
+  // Atividades
+  const { data: todasAtividades } = await ctx.sb.from("atividades").select("id, nome, preco, cobranca_pela_escola").eq("escola_id", escolaId).eq("ativo", true);
+  const atividadeMap = new Map((todasAtividades ?? []).filter((a: any) => a.cobranca_pela_escola !== false).map((a: any) => [a.id, { nome: a.nome, preco: a.preco || 0 }]));
+
+  // Boletos já emitidos no mês
+  const { data: jaEmitidos } = await ctx.sb.from("fin_boletos_emitidos").select("aluno_id, crianca_nome, status, valor").eq("escola_id", escolaId).gte("vencimento", `${mesRef}-01`).lte("vencimento", `${mesRef}-31`);
+  const boletoStatusMap = new Map<string, { status: string; valor: number }>();
+  for (const b of jaEmitidos ?? []) {
+    const key = b.aluno_id || b.crianca_nome;
+    if (key) boletoStatusMap.set(key, { status: b.status, valor: parseFloat(b.valor || "0") });
+  }
+
+  const result: any[] = [];
+  let totalGeral = 0;
+  for (const aluno of alunos) {
+    const items: { nome: string; valor: number; categoria: string }[] = [];
+
+    // Mensalidade base
+    const turnoInfo = turnoPrecoMap.get(aluno.turno);
+    const turnoNome = turnoInfo?.nome || (aluno.turno || "").replace(/_/g, " ") || "Sem turno";
+    const turnoValor = turnoInfo?.preco ?? 0;
+    items.push({ nome: `Mensalidade ${monthNames[mes]}/${ano} — ${turnoNome}`, valor: turnoValor, categoria: "mensalidade" });
+
+    // Alimentação
+    if (almocoPrecoDia > 0 && aluno.turno) {
+      const turnoMatch = (aluno.turno || "").match(/(\d+)x$/);
+      if (turnoMatch) {
+        const diasAlmoco = parseInt(turnoMatch[1]);
+        const diasMes = Math.round(diasAlmoco * 4.33);
+        items.push({ nome: `Alimentação (${diasAlmoco}×/sem, ${diasMes} dias)`, valor: Math.round(almocoPrecoDia * diasMes * 100) / 100, categoria: "alimentacao" });
+      }
+    }
+
+    // Atividades extras
+    if (aluno.familia_email) {
+      const { data: inscricoes } = await ctx.sb.from("inscricoes_atividades").select("atividades_ids").eq("email", aluno.familia_email).maybeSingle();
+      if (inscricoes?.atividades_ids?.length) {
+        for (const atId of inscricoes.atividades_ids) {
+          const at = atividadeMap.get(atId);
+          if (at && at.preco > 0) items.push({ nome: at.nome, valor: at.preco, categoria: "atividade_extra" });
+        }
+      }
+    }
+
+    // Ajustes
+    const ajustesAluno = ajustesPorAluno.get(aluno.id) || [];
+    for (const aj of ajustesAluno) {
+      if (aj.tipo === "desconto_fixo") { items.push({ nome: `${aj.descricao} (desconto)`, valor: -aj.valor, categoria: "ajuste" }); }
+      else if (aj.tipo === "acrescimo_fixo") { items.push({ nome: aj.descricao, valor: aj.valor, categoria: "ajuste" }); }
+      else if (aj.tipo === "desconto_percentual") {
+        let base = 0;
+        if (aj.categoria_aplicacao === "mensalidade") base = items.filter(i => i.categoria === "mensalidade").reduce((s: number, i: any) => s + i.valor, 0);
+        else if (aj.categoria_aplicacao === "alimentacao") base = items.filter(i => i.categoria === "alimentacao").reduce((s: number, i: any) => s + i.valor, 0);
+        else base = items.reduce((s: number, i: any) => s + i.valor, 0);
+        const descValor = Math.round(base * aj.valor / 100 * 100) / 100;
+        if (descValor > 0) items.push({ nome: `${aj.descricao} (-${aj.valor}%)`, valor: -descValor, categoria: "ajuste" });
+      }
+    }
+
+    const valorTotal = Math.max(0, Math.round(items.reduce((s: number, i: any) => s + i.valor, 0) * 100) / 100);
+    totalGeral += valorTotal;
+
+    // Status do boleto (se já emitido)
+    const boletoInfo = boletoStatusMap.get(aluno.id) || boletoStatusMap.get(aluno.nome);
+
+    result.push({
+      aluno_id: aluno.id,
+      nome: aluno.nome,
+      serie: aluno.serie,
+      turno: turnoNome,
+      familia_email: aluno.familia_email,
+      resp_nome: aluno.resp_nome,
+      itens: items,
+      valor_total: valorTotal,
+      vencimento,
+      boleto_status: boletoInfo?.status || null,
+    });
+  }
+
+  return successResponse({
+    mes: mesRef,
+    vencimento,
+    alunos: result,
+    totais: { alunos: result.length, valor: totalGeral, com_boleto: boletoStatusMap.size },
+  });
+});
+
 router.on("boletos_gerar_batch_manual", authEquipeFinanceira, async (ctx) => {
   const { mes_referencia } = ctx.body as any;
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");

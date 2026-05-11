@@ -2751,10 +2751,20 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
         <!-- KPIs -->
         <div id="finMensKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
-        <!-- Lote pendente (aguardando aprovação) -->
-        <div id="finMensBatchPending" style="display:none;margin-bottom:20px;"></div>
-        <!-- Tabela unificada -->
-        <div id="finMensList"><div class="empty-state">Carregando...</div></div>
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
+          <button id="finMensTabPreview" onclick="switchFinMensTab('preview')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid var(--accent);margin-bottom:-2px;color:var(--accent);">Mensalidades dos Alunos</button>
+          <button id="finMensTabBoletos" onclick="switchFinMensTab('boletos')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);">Boletos Emitidos</button>
+        </div>
+        <!-- Tab: Preview mensalidades -->
+        <div id="finMensPreviewSection">
+          <div id="finMensBatchPending" style="display:none;margin-bottom:20px;"></div>
+          <div id="finMensPreview"><div class="empty-state">Carregando...</div></div>
+        </div>
+        <!-- Tab: Boletos emitidos -->
+        <div id="finMensBoletosSection" style="display:none;">
+          <div id="finMensList"><div class="empty-state">Carregando...</div></div>
+        </div>
       </div>
 
       <!-- FINANCEIRO - PLANO DE CONTAS -->
@@ -16650,64 +16660,54 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
   async function pagarFinLanc(id) { await api({ action:'fin_lancamento_pagar', id }); showToast('Pago!','success'); loadFinLancamentos(); }
 
+  var _finMensCurrentTab = 'preview';
+  function switchFinMensTab(tab) {
+    _finMensCurrentTab = tab;
+    document.getElementById('finMensPreviewSection').style.display = tab === 'preview' ? 'block' : 'none';
+    document.getElementById('finMensBoletosSection').style.display = tab === 'boletos' ? 'block' : 'none';
+    const tPrev = document.getElementById('finMensTabPreview');
+    const tBol = document.getElementById('finMensTabBoletos');
+    tPrev.style.borderBottomColor = tab === 'preview' ? 'var(--accent)' : 'transparent';
+    tPrev.style.color = tab === 'preview' ? 'var(--accent)' : 'var(--muted)';
+    tBol.style.borderBottomColor = tab === 'boletos' ? 'var(--accent)' : 'transparent';
+    tBol.style.color = tab === 'boletos' ? 'var(--accent)' : 'var(--muted)';
+    if (tab === 'boletos') loadFinMensBoletos();
+  }
   async function loadFinMensalidades() {
     const mes = document.getElementById('finMensMes').value || new Date().toISOString().slice(0,7);
     if (!document.getElementById('finMensMes').value) monthNavSet('finMensMes', mes);
     const fmtR = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
-    const el = document.getElementById('finMensList');
     const kpiEl = document.getElementById('finMensKpis');
+    const previewEl = document.getElementById('finMensPreview');
     const batchPendEl = document.getElementById('finMensBatchPending');
-    el.innerHTML = '<div class="empty-state">Carregando...</div>';
-    // Busca boletos emitidos do mês + batches
-    const [boletosData, batchesData] = await Promise.all([
-      api({ action:'fin_boletos_emitidos_list', mes }),
+    previewEl.innerHTML = '<div class="empty-state">Carregando mensalidades...</div>';
+    // Busca preview + batches em paralelo
+    const [previewData, batchesData] = await Promise.all([
+      apiFinExt({ action:'mensalidades_preview', mes_referencia: mes }),
       apiFinExt({ action:'boletos_batch_list' })
     ]);
-    const boletos = Array.isArray(boletosData) ? boletosData : [];
+    const preview = previewData?.alunos || previewData?.data?.alunos || [];
+    const totais = previewData?.totais || previewData?.data?.totais || {};
     const allBatches = Array.isArray(batchesData) ? batchesData : (batchesData?.data || []);
-    // Filtra batches do mês selecionado
     const mesBatches = allBatches.filter(b => b.mes_referencia === mes);
     const pendingBatches = mesBatches.filter(b => b.status === 'aguardando_aprovacao');
-    const emittedBatches = mesBatches.filter(b => b.status === 'emitido' || b.status === 'parcial');
-    // Coleta batch items pendentes
-    let pendingItems = [];
-    pendingBatches.forEach(b => {
-      (b.fin_boleto_batch_items || b.itens || []).forEach(it => { it._batch_id = b.id; it._batch_mes = b.mes_referencia; pendingItems.push(it); });
-    });
     // KPIs
-    const totalEmitido = boletos.filter(b => b.status !== 'cancelado').reduce((s,b) => s + parseFloat(b.valor||0), 0);
-    const totalPago = boletos.filter(b => b.status === 'pago').reduce((s,b) => s + parseFloat(b.valor||0), 0);
-    const totalAberto = boletos.filter(b => b.status === 'emitido').reduce((s,b) => s + parseFloat(b.valor||0), 0);
-    const totalVencido = boletos.filter(b => b.status === 'emitido' && b.vencimento < new Date().toISOString().slice(0,10)).reduce((s,b) => s + parseFloat(b.valor||0), 0);
-    const totalPendente = pendingItems.reduce((s,it) => s + parseFloat(it.valor_total||0), 0);
-    const qtyBoletos = boletos.filter(b => b.status !== 'cancelado').length;
-    const qtyPagos = boletos.filter(b => b.status === 'pago').length;
+    const comBoleto = totais.com_boleto || 0;
+    const semBoleto = preview.filter(a => !a.boleto_status).length;
     kpiEl.innerHTML = `
-      <div class="card" style="padding:12px;border-left:4px solid #2d7a3a;"><div style="font-size:20px;font-weight:700;color:#2d7a3a;">${fmtR(totalPago)}</div><div style="font-size:11px;color:var(--muted);">${qtyPagos} pago(s)</div></div>
-      <div class="card" style="padding:12px;border-left:4px solid #1a6bb5;"><div style="font-size:20px;font-weight:700;color:#1a6bb5;">${fmtR(totalAberto)}</div><div style="font-size:11px;color:var(--muted);">Em aberto</div></div>
-      ${totalVencido > 0 ? `<div class="card" style="padding:12px;border-left:4px solid #EF4444;"><div style="font-size:20px;font-weight:700;color:#EF4444;">${fmtR(totalVencido)}</div><div style="font-size:11px;color:var(--muted);">Vencido</div></div>` : ''}
-      ${totalPendente > 0 ? `<div class="card" style="padding:12px;border-left:4px solid #d4830a;"><div style="font-size:20px;font-weight:700;color:#d4830a;">${fmtR(totalPendente)}</div><div style="font-size:11px;color:var(--muted);">${pendingItems.length} aguardando aprovação</div></div>` : ''}
-      <div class="card" style="padding:12px;border-left:4px solid var(--border);"><div style="font-size:20px;font-weight:700;">${fmtR(totalEmitido + totalPendente)}</div><div style="font-size:11px;color:var(--muted);">${qtyBoletos + pendingItems.length} total</div></div>`;
+      <div class="card" style="padding:12px;border-left:4px solid var(--accent);"><div style="font-size:20px;font-weight:700;">${totais.alunos||0}</div><div style="font-size:11px;color:var(--muted);">Alunos ativos</div></div>
+      <div class="card" style="padding:12px;border-left:4px solid #1a6bb5;"><div style="font-size:20px;font-weight:700;">${fmtR(totais.valor||0)}</div><div style="font-size:11px;color:var(--muted);">Total mensal previsto</div></div>
+      <div class="card" style="padding:12px;border-left:4px solid #2d7a3a;"><div style="font-size:20px;font-weight:700;">${comBoleto}</div><div style="font-size:11px;color:var(--muted);">Com boleto emitido</div></div>
+      <div class="card" style="padding:12px;border-left:4px solid ${semBoleto > 0 ? '#d4830a' : 'var(--border)'};""><div style="font-size:20px;font-weight:700;${semBoleto > 0 ? 'color:#d4830a;' : ''}">${semBoleto}</div><div style="font-size:11px;color:var(--muted);">Sem boleto ainda</div></div>`;
     // ── Lotes aguardando aprovação ──
     if (pendingBatches.length) {
       batchPendEl.style.display = 'block';
       batchPendEl.innerHTML = pendingBatches.map(b => {
         const items = b.fin_boleto_batch_items || b.itens || [];
-        const itensHtml = items.map(it => {
-          const composicao = Array.isArray(it.itens) && it.itens.length ? it.itens.map(c => {
-            const catIcon = c.categoria==='mensalidade'?'📚':c.categoria==='alimentacao'?'🍽️':c.categoria==='atividade_extra'?'⚽':'📋';
-            return `<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;"><span>${catIcon} ${esc(c.nome)}</span><span style="font-weight:600;white-space:nowrap;">${fmtR(c.valor||0)}</span></div>`;
-          }).join('') : `<div style="font-size:11px;color:var(--muted);">${esc(it.descricao_detalhada||'—')}</div>`;
-          return `<tr style="border-bottom:1px solid #f5f0ea;">
-            <td style="padding:8px;"><div style="font-weight:600;">${esc(it.crianca_nome||'—')}</div><div style="font-size:11px;color:var(--muted);">${esc(it.familia_nome||'—')}</div></td>
-            <td style="padding:8px;font-size:12px;">${composicao}</td>
-            <td style="padding:8px;font-weight:700;text-align:right;font-size:14px;">${fmtR(it.valor_total||0)}</td>
-          </tr>`;
-        }).join('');
         return `<div class="card" style="border-left:4px solid #d4830a;margin-bottom:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <div>
-              <span style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:600;background:#fff8e1;color:#b07d00;">Aguardando aprovação</span>
+              <span style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:600;background:#fff8e1;color:#b07d00;">Lote aguardando aprovação</span>
               <strong style="margin-left:8px;">${items.length} aluno(s)</strong> — <span style="font-weight:700;font-size:15px;">${fmtR(b.valor_total||0)}</span>
             </div>
             <div style="display:flex;gap:8px;">
@@ -16715,29 +16715,53 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
               <button onclick="rejeitarBatch('${b.id}')" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">❌ Rejeitar</button>
             </div>
           </div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;"><thead><tr>
-              <th style="text-align:left;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Aluno / Família</th>
-              <th style="text-align:left;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Composição</th>
-              <th style="text-align:right;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);">Valor</th>
-            </tr></thead><tbody>${itensHtml}</tbody></table>
-          </div>
         </div>`;
       }).join('');
     } else {
       batchPendEl.style.display = 'none';
-      batchPendEl.innerHTML = '';
     }
-    // ── Tabela de boletos emitidos ──
-    if (!boletos.length && !pendingItems.length) {
-      el.innerHTML = `<div class="empty-state">Nenhum boleto para ${mes}. Clique "Gerar Lote de Boletos" para criar.</div>`;
+    // ── Tabela de mensalidades (preview) ──
+    if (!preview.length) {
+      previewEl.innerHTML = '<div class="empty-state">Nenhum aluno ativo encontrado. Cadastre alunos primeiro.</div>';
       return;
     }
-    if (!boletos.length) { el.innerHTML = ''; return; }
+    const thStyle = 'text-align:left;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);';
+    previewEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
+      <th style="${thStyle}">Aluno</th>
+      <th style="${thStyle}">Turma / Turno</th>
+      <th style="${thStyle}">Composição</th>
+      <th style="text-align:right;${thStyle}">Valor Mensal</th>
+      <th style="${thStyle}">Vencimento</th>
+      <th style="${thStyle}">Boleto</th>
+    </tr></thead><tbody>${preview.map(a => {
+      const catIcon = c => c==='mensalidade'?'📚':c==='alimentacao'?'🍽️':c==='atividade_extra'?'⚽':c==='ajuste'?'🏷️':'📋';
+      const composicao = (a.itens||[]).map(it => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>${catIcon(it.categoria)} ${esc(it.nome)}</span><span style="font-weight:600;white-space:nowrap;">${fmtR(it.valor)}</span></div>`).join('');
+      const bStatus = a.boleto_status;
+      const bBadge = bStatus === 'pago' ? 'background:#edf7f0;color:#2d7a3a;' : bStatus === 'emitido' ? 'background:#fff8e1;color:#b07d00;' : bStatus === 'cancelado' ? 'background:#f5f0ea;color:var(--muted);' : '';
+      const bLabel = bStatus === 'pago' ? 'Pago' : bStatus === 'emitido' ? 'Emitido' : bStatus === 'cancelado' ? 'Cancelado' : '';
+      return `<tr style="border-bottom:1px solid #f5f0ea;">
+        <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(a.nome)}</div><div style="font-size:11px;color:var(--muted);">${esc(a.resp_nome||a.familia_email||'')}</div></td>
+        <td style="padding:10px;font-size:12px;">${esc(a.serie||'—')}<br><span style="color:var(--muted);">${esc(a.turno||'—')}</span></td>
+        <td style="padding:10px;font-size:11px;">${composicao}</td>
+        <td style="padding:10px;font-weight:700;text-align:right;font-size:14px;">${fmtR(a.valor_total)}</td>
+        <td style="padding:10px;font-size:12px;">${a.vencimento ? new Date(a.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+        <td style="padding:10px;">${bLabel ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${bBadge}">${bLabel}</span>` : '<span style="font-size:10px;color:var(--muted);">—</span>'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+    // Reset tab
+    switchFinMensTab(_finMensCurrentTab);
+  }
+  async function loadFinMensBoletos() {
+    const mes = document.getElementById('finMensMes').value || new Date().toISOString().slice(0,7);
+    const fmtR = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    const el = document.getElementById('finMensList');
+    el.innerHTML = '<div class="empty-state">Carregando boletos...</div>';
+    const boletosData = await api({ action:'fin_boletos_emitidos_list', mes });
+    const boletos = Array.isArray(boletosData) ? boletosData : [];
+    if (!boletos.length) { el.innerHTML = `<div class="empty-state">Nenhum boleto emitido para ${mes}.</div>`; return; }
     boletos.forEach(b => _cacheBoleto(b));
     const thStyle = 'text-align:left;padding:10px;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--border);';
-    el.innerHTML = `<div style="font-size:14px;font-weight:700;margin-bottom:10px;">Boletos Emitidos</div>
-    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
+    el.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
       <th style="${thStyle}">Aluno / Família</th>
       <th style="${thStyle}">Descrição</th>
       <th style="${thStyle}">Vencimento</th>
