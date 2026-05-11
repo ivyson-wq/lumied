@@ -3036,9 +3036,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
         </div>
         <style>.gpipe-tab{padding:8px 18px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}.gpipe-tab.active{color:var(--accent,#1a6bb5);border-bottom-color:var(--accent,#1a6bb5);}</style>
-        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);">
+        <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);align-items:center;">
           <button class="gpipe-tab active" onclick="gPipeSetView('kanban',this)">Kanban</button>
           <button class="gpipe-tab" onclick="gPipeSetView('lista',this)">Lista de Leads</button>
+          <button onclick="loadCrmKanban();loadCrmLeads();showToast('Leads atualizados!','success')" style="margin-left:auto;padding:4px 12px;background:none;border:1.5px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--muted);margin-bottom:2px;" title="Recarregar leads">🔄 Atualizar</button>
         </div>
         <div id="gPipeViewKanban">
           <div id="crmKanbanBoard" class="kanban-board"><div class="empty-state" style="width:100%;">Carregando...</div></div>
@@ -17238,10 +17239,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const interacoes = Array.isArray(intData) ? intData : [];
     const tipoIcons = { ligacao:'📞', email:'📧', whatsapp:'💬', visita:'🏫', reuniao:'📅', nota:'📝', outro:'📌' };
 
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
-    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
-    // Calcula idade da criança
+    // Calcula idade
     let idadeStr = '';
     if (lead.data_nascimento) {
       const dn = new Date(lead.data_nascimento + 'T12:00:00');
@@ -17251,29 +17249,33 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       idadeStr = anos >= 1 ? anos + ' ano' + (anos>1?'s':'') : meses + ' mes' + (meses>1?'es':'');
     }
     const nascFmt = lead.data_nascimento ? new Date(lead.data_nascimento+'T12:00:00').toLocaleDateString('pt-BR') : '';
-    const proxContatoFmt = lead.data_proximo_contato ? new Date(lead.data_proximo_contato+'T12:00:00').toLocaleDateString('pt-BR') : '';
+    const proxFmt = lead.data_proximo_contato ? new Date(lead.data_proximo_contato+'T12:00:00').toLocaleDateString('pt-BR') : '';
     const visitaFmt = lead.data_visita ? new Date(lead.data_visita+'T12:00:00').toLocaleDateString('pt-BR') : '';
-    const estagioNome = lead.crm_estagios?.nome || 'Sem estagio';
-    const estagioCor = lead.crm_estagios?.cor || '#6b7280';
+    const estNome = lead.crm_estagios?.nome || 'Sem estagio';
+    const estCor = lead.crm_estagios?.cor || '#6b7280';
+    const v = (val) => val ? esc(String(val)) : '<span style="color:#ccc;">—</span>';
 
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+    overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
     overlay.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:750px;width:100%;padding:28px;max-height:85vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <h3 style="font-family:'Lora',serif;font-size:18px;margin:0;">${esc(lead.nome_responsavel)}</h3>
         <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);">x</button>
       </div>
-      <div style="margin-bottom:16px;"><span style="font-size:11px;padding:2px 10px;border-radius:10px;font-weight:600;background:${estagioCor}20;color:${estagioCor};border:1px solid ${estagioCor}40;">${esc(estagioNome)}</span></div>
+      <div style="margin-bottom:16px;"><span style="font-size:11px;padding:2px 10px;border-radius:10px;font-weight:600;background:${estCor}20;color:${estCor};border:1px solid ${estCor}40;">${esc(estNome)}</span></div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;font-size:13px;margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Telefone</span><strong>${lead.telefone ? esc(lead.telefone) : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Email</span><strong>${lead.email ? esc(lead.email) : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Crianca</span><strong>${lead.nome_crianca ? esc(lead.nome_crianca) : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Nascimento / Idade</span><strong>${nascFmt ? nascFmt + ' (' + idadeStr + ')' : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Serie de Interesse</span><strong>${lead.serie_interesse ? esc(lead.serie_interesse) : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Origem</span><strong>${lead.origem ? esc(lead.origem) : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Valor Mensalidade</span><strong>${lead.valor_mensalidade ? 'R$ ' + parseFloat(lead.valor_mensalidade).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Responsavel Interno</span><strong>${lead.responsavel_interno ? esc(lead.responsavel_interno) : '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;"><span style="font-size:11px;color:var(--muted);display:block;">Proximo Contato</span><strong>${proxContatoFmt || '<span style=color:var(--muted)>—</span>'}</strong></div>
-        <div style="padding:10px 12px;border-left:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Data Visita</span><strong>${visitaFmt || '<span style=color:var(--muted)>—</span>'}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Telefone</span><strong>${v(lead.telefone)}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Email</span><strong>${v(lead.email)}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Crianca</span><strong>${v(lead.nome_crianca)}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Nascimento / Idade</span><strong>${nascFmt ? nascFmt + ' (' + idadeStr + ')' : v(null)}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Serie de Interesse</span><strong>${v(lead.serie_interesse)}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);background:#faf8f5;"><span style="font-size:11px;color:var(--muted);display:block;">Origem</span><strong>${v(lead.origem)}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Valor Mensalidade</span><strong>${lead.valor_mensalidade ? 'R$ '+parseFloat(lead.valor_mensalidade).toLocaleString('pt-BR',{minimumFractionDigits:2}) : v(null)}</strong></div>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Responsavel Interno</span><strong>${v(lead.responsavel_interno)}</strong></div>
+        <div style="padding:10px 12px;"><span style="font-size:11px;color:var(--muted);display:block;">Proximo Contato</span><strong>${proxFmt || v(null)}</strong></div>
+        <div style="padding:10px 12px;border-left:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);display:block;">Data Visita</span><strong>${visitaFmt || v(null)}</strong></div>
       </div>
       ${lead.observacoes?`<div style="font-size:12px;color:#555;margin-bottom:12px;padding:10px;background:#f5f0ea;border-radius:8px;line-height:1.5;">${esc(lead.observacoes)}</div>`:''}
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">

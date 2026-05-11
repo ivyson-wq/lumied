@@ -83,7 +83,7 @@
 
   // --- HELPERS ---
 
-  var STATUS_TEXT_RE = /ltima vez|online|digitando|clique aqui|last seen|typing|click here|visto por|sem intera|às \d{1,2}|as \d{1,2}:\d{2}|^\d{1,2}:\d{2}$|^hoje$|^ontem$|default-contact|refreshed|undefined|null|^\s*$/i;
+  var STATUS_TEXT_RE = /ltima vez|online|digitando|clique aqui|clique para mostrar|last seen|typing|click here|click to show|visto por|sem intera|às \d{1,2}|as \d{1,2}:\d{2}|^\d{1,2}:\d{2}$|^hoje$|^ontem$|default-contact|refreshed|undefined|null|^\s*$|^Pesquisar$|^Comunidade$|^Status$/i;
 
   function isStatusText(t) {
     return !t || STATUS_TEXT_RE.test(t);
@@ -167,12 +167,12 @@
 
     // Strategy D: extract phone from message data-id attributes
     // WhatsApp messages have data-id like "false_5554997021634@c.us_..."
-    // or "true_5554997021634@c.us_..." (true = sent by us)
     if (!telefone) {
       var msgEls = document.querySelectorAll('#main div[data-id]');
-      for (var m = msgEls.length - 1; m >= 0 && m >= msgEls.length - 10; m--) {
+      for (var m = msgEls.length - 1; m >= 0 && m >= msgEls.length - 20; m--) {
         var did = msgEls[m].getAttribute('data-id') || '';
-        var phoneMatch = did.match(/(?:false|true)_(\d{10,15})@/);
+        // "false" = received from contact (their phone), "true" = sent by us
+        var phoneMatch = did.match(/false_(\d{10,15})@/);
         if (phoneMatch) { telefone = phoneMatch[1]; break; }
       }
     }
@@ -188,7 +188,30 @@
       }
     }
 
+    // Strategy F: search ALL elements with data-id containing @c.us (broader search)
+    if (!telefone) {
+      var allDataIds = document.querySelectorAll('[data-id*="@c.us"], [data-id*="@s.whatsapp.net"]');
+      for (var f = allDataIds.length - 1; f >= 0 && f >= allDataIds.length - 30; f--) {
+        var fid = allDataIds[f].getAttribute('data-id') || '';
+        var fMatch = fid.match(/(\d{10,15})@/);
+        if (fMatch) { telefone = fMatch[1]; break; }
+      }
+    }
+
+    // Strategy G: conversation panel section data attributes
+    if (!telefone) {
+      var sectionEl = document.querySelector('#main section[data-id]') || document.querySelector('[data-testid="conversation-panel-body"]');
+      if (sectionEl) {
+        var secId = sectionEl.getAttribute('data-id') || sectionEl.closest('[data-id]')?.getAttribute('data-id') || '';
+        var secMatch = secId.match(/(\d{10,15})@/);
+        if (secMatch) telefone = secMatch[1];
+      }
+    }
+
     if (telefone) telefone = telefone.replace(/[\s\-()]/g, '');
+    // Normaliza para formato +55XXXXXXXXXXX se for brasileiro
+    if (telefone && /^\d{10,11}$/.test(telefone)) telefone = '55' + telefone;
+    if (telefone && /^\d{12,13}$/.test(telefone) && telefone.startsWith('55')) telefone = '+' + telefone;
 
     // Debug: log what we found (remove after confirming it works)
     console.log('[Lumied CRM] getContactInfo:', { nome: nome, telefone: telefone });
