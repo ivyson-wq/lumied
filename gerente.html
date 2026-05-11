@@ -2753,9 +2753,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <!-- KPIs -->
         <div id="finMensKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
         <!-- Tabs -->
-        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
-          <button id="finMensTabPreview" onclick="switchFinMensTab('preview')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid var(--accent);margin-bottom:-2px;color:var(--accent);">Mensalidades dos Alunos</button>
-          <button id="finMensTabBoletos" onclick="switchFinMensTab('boletos')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted);">Boletos Emitidos</button>
+        <div style="display:flex;gap:4px;margin-bottom:16px;">
+          <button id="finMensTabPreview" onclick="switchFinMensTab('preview')" style="padding:12px 24px;font-size:14px;font-weight:700;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;border-radius:8px 8px 0 0;letter-spacing:0.3px;">🧾 Mensalidades dos Alunos</button>
+          <button id="finMensTabBoletos" onclick="switchFinMensTab('boletos')" style="padding:12px 24px;font-size:14px;font-weight:700;border:2px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:inherit;border-radius:8px 8px 0 0;letter-spacing:0.3px;">🏦 Boletos Emitidos</button>
         </div>
         <!-- Tab: Preview mensalidades -->
         <div id="finMensPreviewSection">
@@ -16675,10 +16675,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('finMensBoletosSection').style.display = tab === 'boletos' ? 'block' : 'none';
     const tPrev = document.getElementById('finMensTabPreview');
     const tBol = document.getElementById('finMensTabBoletos');
-    tPrev.style.borderBottomColor = tab === 'preview' ? 'var(--accent)' : 'transparent';
-    tPrev.style.color = tab === 'preview' ? 'var(--accent)' : 'var(--muted)';
-    tBol.style.borderBottomColor = tab === 'boletos' ? 'var(--accent)' : 'transparent';
-    tBol.style.color = tab === 'boletos' ? 'var(--accent)' : 'var(--muted)';
+    tPrev.style.background = tab === 'preview' ? 'var(--accent)' : 'var(--bg)';
+    tPrev.style.color = tab === 'preview' ? '#fff' : 'var(--muted)';
+    tPrev.style.borderColor = tab === 'preview' ? 'var(--accent)' : 'var(--border)';
+    tBol.style.background = tab === 'boletos' ? 'var(--accent)' : 'var(--bg)';
+    tBol.style.color = tab === 'boletos' ? '#fff' : 'var(--muted)';
+    tBol.style.borderColor = tab === 'boletos' ? 'var(--accent)' : 'var(--border)';
     if (tab === 'boletos') loadFinMensBoletos();
   }
 
