@@ -560,22 +560,60 @@ async function gerarBatchParaMes(
   const batchItems: any[] = [];
   const monthNames = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+  // ── Carregar tabela de preços por turno (escola_config → turnos_config) ──
+  const { data: cfgTurnos } = await ctx.sb
+    .from("escola_config")
+    .select("valor")
+    .eq("chave", "turnos_config")
+    .eq("escola_id", escolaId)
+    .maybeSingle();
+  let turnosConfig: Array<{ id: string; nome: string; preco: number }> = [];
+  try { turnosConfig = cfgTurnos?.valor ? (typeof cfgTurnos.valor === "string" ? JSON.parse(cfgTurnos.valor) : cfgTurnos.valor) : []; } catch { /* */ }
+  const turnoPrecoMap = new Map(turnosConfig.map(t => [t.id, { nome: t.nome, preco: t.preco || 0 }]));
+
+  // ── Preço do almoço ──
+  const { data: cfgAlmoco } = await ctx.sb
+    .from("escola_config")
+    .select("valor")
+    .eq("chave", "almoco_preco")
+    .eq("escola_id", escolaId)
+    .maybeSingle();
+  const almocoPrecoDia = parseFloat(cfgAlmoco?.valor || "0");
+
+  // ── Atividades com preço (cache para não repetir queries) ──
+  const { data: todasAtividades } = await ctx.sb
+    .from("atividades")
+    .select("id, nome, preco")
+    .eq("escola_id", escolaId)
+    .eq("ativo", true);
+  const atividadeMap = new Map((todasAtividades ?? []).map((a: any) => [a.id, { nome: a.nome, preco: a.preco || 0 }]));
+
   for (const aluno of alunosFiltrados) {
-    const items: { nome: string; valor: number }[] = [];
+    const items: { nome: string; valor: number; categoria: string }[] = [];
 
-    // Valor referência: última mensalidade
-    const { data: prevMens } = await ctx.sb
-      .from("fin_mensalidades")
-      .select("valor_total")
-      .eq("crianca_nome", aluno.nome)
-      .eq("escola_id", escolaId)
-      .order("mes", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const turnoValor = prevMens?.valor_total || 0;
-    items.push({ nome: `Mensalidade ${monthNames[mes]}/${ano}`, valor: turnoValor });
+    // ── 1. MENSALIDADE BASE (turno do aluno → turnos_config) ──
+    const turnoInfo = turnoPrecoMap.get(aluno.turno);
+    const turnoNome = turnoInfo?.nome || aluno.turno || "Turno";
+    const turnoValor = turnoInfo?.preco ?? 0;
+    items.push({ nome: `Mensalidade ${monthNames[mes]}/${ano} — ${turnoNome}`, valor: turnoValor, categoria: "mensalidade" });
 
-    // Atividades inscritas
+    // ── 2. ALIMENTAÇÃO (almoco_dias do aluno × preço/dia) ──
+    if (almocoPrecoDia > 0 && aluno.turno) {
+      // Turnos integrais/semi incluem alimentação nos dias selecionados
+      // almoco_dias pode estar no aluno ou inferido do turno (integral_Nx = N dias)
+      let diasAlmoco = 0;
+      // Tentar extrair dias do turno (e.g., integral_5x → 5, semi_3x → 3)
+      const turnoMatch = (aluno.turno || "").match(/(\d+)x$/);
+      if (turnoMatch) diasAlmoco = parseInt(turnoMatch[1]);
+      // Média de semanas no mês ≈ 4.33
+      if (diasAlmoco > 0) {
+        const diasMes = Math.round(diasAlmoco * 4.33);
+        const valorAlimentacao = Math.round(almocoPrecoDia * diasMes * 100) / 100;
+        items.push({ nome: `Alimentação (${diasAlmoco}×/sem, ${diasMes} dias)`, valor: valorAlimentacao, categoria: "alimentacao" });
+      }
+    }
+
+    // ── 3. ATIVIDADES EXTRAS (inscrições do aluno/família) ──
     const famEmail = aluno.familia_email;
     if (famEmail) {
       const { data: inscricoes } = await ctx.sb
@@ -584,18 +622,17 @@ async function gerarBatchParaMes(
         .eq("email", famEmail)
         .maybeSingle();
       if (inscricoes?.atividades_ids?.length) {
-        const { data: atividades } = await ctx.sb
-          .from("atividades")
-          .select("nome, preco")
-          .in("id", inscricoes.atividades_ids);
-        for (const at of atividades ?? []) {
-          if (at.preco && at.preco > 0) items.push({ nome: at.nome, valor: at.preco });
+        for (const atId of inscricoes.atividades_ids) {
+          const at = atividadeMap.get(atId);
+          if (at && at.preco > 0) {
+            items.push({ nome: at.nome, valor: at.preco, categoria: "atividade_extra" });
+          }
         }
       }
     }
 
     const descDetalhada = items.map(i => `${i.nome}: R$${i.valor.toFixed(2)}`).join(" | ");
-    const valorTotal = items.reduce((s, i) => s + i.valor, 0);
+    const valorTotal = Math.round(items.reduce((s, i) => s + i.valor, 0) * 100) / 100;
     totalGeral += valorTotal;
 
     const familia = familiaMap.get(famEmail);
@@ -715,6 +752,16 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
     if (token) {
       for (const item of items) {
         try {
+          // Inter API suporta até 5 linhas de mensagem (78 chars cada)
+          const itensArr: Array<{ nome: string; valor: number }> = Array.isArray(item.itens) ? item.itens : [];
+          const msgLines: Record<string, string> = {};
+          const fmtVal = (v: number) => `R$${v.toFixed(2)}`;
+          for (let li = 0; li < Math.min(itensArr.length, 4); li++) {
+            const it = itensArr[li];
+            msgLines[`linha${li + 1}`] = `${it.nome}: ${fmtVal(it.valor)}`.substring(0, 78);
+          }
+          msgLines[`linha${Math.min(itensArr.length, 4) + 1}`] = `TOTAL: ${fmtVal(item.valor_total)} — ${item.crianca_nome}`.substring(0, 78);
+
           const boletoPayload = {
             seuNumero: `LUM-${item.id.substring(0, 8)}`,
             valorNominal: item.valor_total,
@@ -725,9 +772,7 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
               tipoPessoa: "FISICA",
               nome: item.familia_nome,
             },
-            mensagem: {
-              linha1: (item.descricao_detalhada || "").substring(0, 100),
-            },
+            mensagem: msgLines,
           };
 
           const result = await interFetch(
@@ -749,6 +794,7 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
           // Insert into fin_boletos_emitidos
           await ctx.sb.from("fin_boletos_emitidos").insert({
             batch_item_id: item.id,
+            aluno_id: item.aluno_id || null,
             crianca_nome: item.crianca_nome,
             familia_email: item.familia_email,
             familia_nome: item.familia_nome,

@@ -16452,9 +16452,20 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       var itens = b.fin_boleto_batch_items || b.itens || [];
       var itensHtml = itens.map(function(it) {
         var iBadge = it.status === 'emitido' ? 'badge-green' : it.status === 'erro' ? 'badge-red' : 'badge-orange';
-        return '<tr><td>'+esc(it.crianca_nome||'—')+'</td><td>'+esc(it.familia_nome||'—')+'</td><td>'+esc(it.descricao_detalhada||'—')+'</td><td style="font-weight:600;text-align:right;">R$ '+(it.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td><span class="badge '+iBadge+'">'+esc(it.status)+'</span></td></tr>';
+        var composicao = '';
+        if (it.itens && Array.isArray(it.itens) && it.itens.length > 0) {
+          composicao = '<div style="margin-top:2px;">' + it.itens.map(function(comp) {
+            var catIcon = comp.categoria === 'mensalidade' ? '📚' : comp.categoria === 'alimentacao' ? '🍽️' : comp.categoria === 'atividade_extra' ? '⚽' : '📋';
+            return '<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;">' +
+              '<span>' + catIcon + ' ' + esc(comp.nome) + '</span>' +
+              '<span style="font-weight:600;white-space:nowrap;">R$ ' + (comp.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span></div>';
+          }).join('') + '</div>';
+        } else {
+          composicao = '<div style="font-size:11px;color:var(--muted);">' + esc(it.descricao_detalhada||'—') + '</div>';
+        }
+        return '<tr><td><div style="font-weight:600;">'+esc(it.crianca_nome||'—')+'</div><div style="font-size:11px;color:var(--muted);">'+esc(it.familia_nome||'—')+'</div></td><td>'+composicao+'</td><td style="font-weight:700;text-align:right;font-size:15px;">R$ '+(it.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td><span class="badge '+iBadge+'">'+esc(it.status)+'</span></td></tr>';
       }).join('');
-      return '<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div><strong>Lote '+esc(b.mes_referencia)+'</strong> — '+b.total_boletos+' boletos — R$ '+(b.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div><div style="display:flex;gap:8px;align-items:center;"><span class="badge '+badge+'">'+esc(b.status)+'</span>'+(b.status==='aguardando_aprovacao'?'<button class="btn btn-sm" onclick="aprovarBatch(\''+b.id+'\')">✅ Aprovar e Emitir</button><button class="btn btn-sm btn-outline" onclick="rejeitarBatch(\''+b.id+'\')">❌ Rejeitar</button>':'')+'</div></div>'+(itens.length?'<table style="width:100%;"><thead><tr><th>Criança</th><th>Família</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead><tbody>'+itensHtml+'</tbody></table>':'')+'</div>';
+      return '<div class="card" style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;"><div><strong>Lote '+esc(b.mes_referencia)+'</strong> — '+b.total_boletos+' boletos — <span style="font-size:16px;font-weight:700;">R$ '+(b.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span></div><div style="display:flex;gap:8px;align-items:center;"><span class="badge '+badge+'">'+esc((b.status||'').replace(/_/g,' '))+'</span>'+(b.status==='aguardando_aprovacao'?'<button class="btn btn-sm" onclick="aprovarBatch(\''+b.id+'\')">✅ Aprovar e Emitir</button><button class="btn btn-sm btn-outline" onclick="rejeitarBatch(\''+b.id+'\')">❌ Rejeitar</button>':'')+'</div></div>'+(itens.length?'<table style="width:100%;"><thead><tr><th>Aluno / Família</th><th>Composição do Boleto</th><th style="text-align:right;">Total</th><th>Status</th></tr></thead><tbody>'+itensHtml+'</tbody></table>':'')+'</div>';
     }).join('');
   }
   async function aprovarBatch(id) {
