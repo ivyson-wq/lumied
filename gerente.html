@@ -2856,6 +2856,35 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div id="bolErr" class="f-alert error" style="margin-top:8px;"></div>
           </div>
         </div>
+        <!-- Filtros Boletos -->
+        <div id="finBoletosFilters" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <label style="font-size:11px;font-weight:600;color:var(--muted);">Mês</label>
+            <input type="month" id="bolFiltroMes" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <label style="font-size:11px;font-weight:600;color:var(--muted);">Emissão de</label>
+            <input type="date" id="bolFiltroEmissaoIni" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <label style="font-size:11px;font-weight:600;color:var(--muted);">Emissão até</label>
+            <input type="date" id="bolFiltroEmissaoFim" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <label style="font-size:11px;font-weight:600;color:var(--muted);">Vencimento de</label>
+            <input type="date" id="bolFiltroVencIni" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <label style="font-size:11px;font-weight:600;color:var(--muted);">Vencimento até</label>
+            <input type="date" id="bolFiltroVencFim" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <label style="font-size:11px;font-weight:600;color:var(--muted);">Pessoa</label>
+            <input type="text" id="bolFiltroPessoa" placeholder="Nome ou CPF" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;width:160px;">
+          </div>
+          <button onclick="loadFinBoletos()" style="padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Filtrar</button>
+          <button onclick="limparFiltrosBoletos()" style="padding:6px 14px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">Limpar</button>
+        </div>
         <div id="finBoletosContent"><div class="empty-state">Carregando...</div></div>
       </div>
 
@@ -16831,8 +16860,34 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     loadFinBoletos();
   }
 
+  function initBoletosFiltroMes() {
+    const el = document.getElementById('bolFiltroMes');
+    if (el && !el.value) el.value = new Date().toISOString().slice(0,7);
+  }
+  function limparFiltrosBoletos() {
+    document.getElementById('bolFiltroMes').value = new Date().toISOString().slice(0,7);
+    document.getElementById('bolFiltroEmissaoIni').value = '';
+    document.getElementById('bolFiltroEmissaoFim').value = '';
+    document.getElementById('bolFiltroVencIni').value = '';
+    document.getElementById('bolFiltroVencFim').value = '';
+    document.getElementById('bolFiltroPessoa').value = '';
+    loadFinBoletos();
+  }
   async function loadFinBoletos() {
-    const d = await api({ action:'fin_boletos_emitidos_list' });
+    initBoletosFiltroMes();
+    const mes = document.getElementById('bolFiltroMes').value;
+    const emissao_inicio = document.getElementById('bolFiltroEmissaoIni').value;
+    const emissao_fim = document.getElementById('bolFiltroEmissaoFim').value;
+    const vencimento_inicio = document.getElementById('bolFiltroVencIni').value;
+    const vencimento_fim = document.getElementById('bolFiltroVencFim').value;
+    const pessoa = document.getElementById('bolFiltroPessoa').value.trim();
+    const params = { action:'fin_boletos_emitidos_list' };
+    if (vencimento_inicio && vencimento_fim) { params.vencimento_inicio = vencimento_inicio; params.vencimento_fim = vencimento_fim; }
+    else if (mes) { params.mes = mes; }
+    if (emissao_inicio) params.emissao_inicio = emissao_inicio;
+    if (emissao_fim) params.emissao_fim = emissao_fim;
+    if (pessoa) params.pessoa = pessoa;
+    const d = await api(params);
     const items = Array.isArray(d) ? d : [];
     const el = document.getElementById('finBoletosContent');
     const fmtR = v => 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});

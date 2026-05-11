@@ -4151,10 +4151,17 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     } catch (e) { return err("Erro ao emitir boleto: " + (e as Error).message); }
   }
   if (action === "fin_boletos_emitidos_list") {
-    const mes = (body as any).mes;
+    const { mes, emissao_inicio, emissao_fim, vencimento_inicio, vencimento_fim, pessoa } = body as any;
     let query = admin.from("fin_boletos_emitidos").select("*").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
-    if (mes) query = query.gte("vencimento", mes + "-01").lte("vencimento", mes + "-31");
-    const { data } = await query.limit(100);
+    if (vencimento_inicio && vencimento_fim) {
+      query = query.gte("vencimento", vencimento_inicio).lte("vencimento", vencimento_fim);
+    } else if (mes) {
+      query = query.gte("vencimento", mes + "-01").lte("vencimento", mes + "-31");
+    }
+    if (emissao_inicio) query = query.gte("criado_em", emissao_inicio + "T00:00:00");
+    if (emissao_fim) query = query.lte("criado_em", emissao_fim + "T23:59:59");
+    if (pessoa) query = query.or(`familia_nome.ilike.%${pessoa}%,crianca_nome.ilike.%${pessoa}%,cpf_pagador.ilike.%${pessoa}%`);
+    const { data } = await query.limit(500);
     return ok(data ?? []);
   }
   if (action === "fin_boleto_cancelar") {
