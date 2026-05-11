@@ -4040,11 +4040,15 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     }
     const data = { nome_responsavel, email, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id: estagioFinal, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString(), escola_id: gerente.escola_id };
     if (id) {
-      await admin.from("crm_leads").update(data).eq("id", id).eq("escola_id", gerente.escola_id);
+      const { data: updated, error: updErr } = await admin.from("crm_leads").update(data).eq("id", id).eq("escola_id", gerente.escola_id).select("id").maybeSingle();
+      if (updErr) return err(updErr.message);
+      if (!updated) return err("Lead não encontrado.", 404);
+      return ok({ success: true, id });
     } else {
-      await admin.from("crm_leads").insert(data);
+      const { data: created, error: insErr } = await admin.from("crm_leads").insert(data).select("id").single();
+      if (insErr) return err(insErr.message);
+      return ok({ success: true, id: created.id });
     }
-    return ok({ success: true });
   }
   if (action === "crm_lead_mover") {
     const { id, estagio_id } = body as any;

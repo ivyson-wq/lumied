@@ -94,7 +94,7 @@
     var telefone = null;
 
     // --- NAME DETECTION ---
-    // Strategy 1: conversation-info-header (most reliable data-testid)
+    // Strategy 1: conversation-info-header and conversation-title (data-testid)
     var selectors = [
       '#main header [data-testid="conversation-info-header"] span[title]',
       '#main header [data-testid="conversation-title"] span[title]',
@@ -117,14 +117,25 @@
       if (nome) break;
     }
 
-    // Strategy 2: if no title found, try textContent of header elements
+    // Strategy 2: first non-status span inside the header's clickable area
     if (!nome) {
-      var headerBtns = document.querySelectorAll('#main header div[role="button"] span');
+      var headerBtns = document.querySelectorAll('#main header div[role="button"] span, #main header [data-testid="conversation-panel-wrapper"] span');
       for (var k = 0; k < headerBtns.length; k++) {
         var txt = (headerBtns[k].textContent || '').trim();
-        if (txt && txt.length > 1 && txt.length < 60 && !isStatusText(txt)) {
+        if (txt && txt.length > 1 && txt.length < 60 && !isStatusText(txt) && !/^\d[\d\s\-()]{7,}$/.test(txt)) {
           nome = txt;
           break;
+        }
+      }
+    }
+
+    // Strategy 3: aria-label on the header contact info button
+    if (!nome) {
+      var infoBtn = document.querySelector('#main header div[role="button"][aria-label]');
+      if (infoBtn) {
+        var ariaLabel = infoBtn.getAttribute('aria-label') || '';
+        if (ariaLabel && ariaLabel.length > 1 && ariaLabel.length < 60 && !isStatusText(ariaLabel)) {
+          nome = ariaLabel;
         }
       }
     }
@@ -381,9 +392,18 @@
         return;
       }
 
-      // Find existing lead
+      // Find existing lead (by phone first, then by name)
       let lead = null;
       if (telefone) lead = await findLeadByPhone(telefone);
+      if (!lead && nome) {
+        var leads = await apiCall('crm_leads_list');
+        if (Array.isArray(leads)) {
+          var nomeLower = nome.toLowerCase().trim();
+          lead = leads.find(function(l) {
+            return l.nome_responsavel && l.nome_responsavel.toLowerCase().trim() === nomeLower;
+          });
+        }
+      }
 
       if (!lead) {
         statusEl.className = 'mb-lead-status error';
@@ -544,7 +564,8 @@
         if (extracted.dataNascimento) leadData.data_nascimento = extracted.dataNascimento;
 
         const newLead = await apiCall('crm_lead_save', leadData);
-        const leadId = newLead?.id || newLead?.[0]?.id;
+        const leadId = newLead?.id;
+        console.log('[Lumied CRM] Lead criado, id:', leadId);
 
         if (leadId && messages.length > 0) {
           await apiCall('crm_interacao_save', { lead_id: leadId, tipo: 'whatsapp', descricao: resumo });
