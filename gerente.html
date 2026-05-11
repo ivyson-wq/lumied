@@ -3954,6 +3954,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <button class="fb" onclick="setEquipeFilter('comercial',this)">Comercial</button>
               <button class="fb" onclick="setEquipeFilter('manutencao',this)">Manutenção</button>
             </div>
+            <input type="text" id="eqBusca" placeholder="Buscar por nome ou email..." oninput="renderEquipe()" style="width:100%;padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:12px;box-sizing:border-box;">
             <div class="list-card" id="equipeList"></div>
           </div>
           <div>
@@ -8572,10 +8573,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     renderEquipe();
   }
   function renderEquipe() {
-    const list = equipeFilter === 'todos' ? equipeData : equipeData.filter(u => {
+    const busca = (document.getElementById('eqBusca')?.value || '').trim().toLowerCase();
+    let list = equipeFilter === 'todos' ? equipeData : equipeData.filter(u => {
       const roles = u.papeis?.length ? u.papeis : [u.papel];
       return roles.includes(equipeFilter);
     });
+    if (busca) list = list.filter(u => (u.nome||'').toLowerCase().includes(busca) || (u.email||'').toLowerCase().includes(busca));
     document.getElementById('equipeCount').textContent = list.length;
     const el = document.getElementById('equipeList');
     if (!list.length) { el.innerHTML = '<div class="list-row"><span style="color:var(--muted);font-size:13px;">Nenhum membro encontrado.</span></div>'; return; }
