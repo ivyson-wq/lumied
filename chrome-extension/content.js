@@ -83,57 +83,81 @@
 
   // --- HELPERS ---
 
-  var STATUS_TEXT_RE = /ltima vez|online|digitando|clique aqui|last seen|typing|click here|visto por|sem intera|às \d|as \d{1,2}:\d{2}/i;
+  var STATUS_TEXT_RE = /ltima vez|online|digitando|clique aqui|last seen|typing|click here|visto por|sem intera|às \d{1,2}|as \d{1,2}:\d{2}|^\d{1,2}:\d{2}$|^hoje$|^ontem$/i;
+
+  function isStatusText(t) {
+    return !t || STATUS_TEXT_RE.test(t);
+  }
 
   function getContactInfo() {
-    // WhatsApp Web: contact name is in the conversation header
-    // Collect ALL span[title] in #main header, filter out status texts, use first valid one
     var nome = null;
     var telefone = null;
-    var infoHeader = null;
 
-    var allSpans = document.querySelectorAll('#main header span[title]');
-    for (var i = 0; i < allSpans.length; i++) {
-      var t = allSpans[i].getAttribute('title') || '';
-      if (!t || STATUS_TEXT_RE.test(t)) continue;
-      infoHeader = allSpans[i];
-      break;
+    // --- NAME DETECTION ---
+    // Strategy 1: conversation-info-header (most reliable data-testid)
+    var selectors = [
+      '#main header [data-testid="conversation-info-header"] span[title]',
+      '#main header [data-testid="conversation-title"] span[title]',
+      '#main header [data-testid="conversation-title"]',
+      '#main header div[role="button"] span[title]',
+      '#main header span[title]',
+      'header span[dir="auto"][title]',
+    ];
+
+    for (var s = 0; s < selectors.length; s++) {
+      var els = document.querySelectorAll(selectors[s]);
+      for (var i = 0; i < els.length; i++) {
+        var t = els[i].getAttribute('title') || els[i].textContent || '';
+        t = t.trim();
+        if (t && !isStatusText(t)) {
+          nome = t;
+          break;
+        }
+      }
+      if (nome) break;
     }
 
-    // Fallback: legacy selector outside #main header
-    if (!infoHeader) {
-      infoHeader = document.querySelector('header span[dir="auto"][title]');
-      if (infoHeader) {
-        var val = infoHeader.getAttribute('title') || '';
-        if (STATUS_TEXT_RE.test(val)) {
-          infoHeader = null;
+    // Strategy 2: if no title found, try textContent of header elements
+    if (!nome) {
+      var headerBtns = document.querySelectorAll('#main header div[role="button"] span');
+      for (var k = 0; k < headerBtns.length; k++) {
+        var txt = (headerBtns[k].textContent || '').trim();
+        if (txt && txt.length > 1 && txt.length < 60 && !isStatusText(txt)) {
+          nome = txt;
+          break;
         }
       }
     }
 
-    if (infoHeader) {
-      nome = infoHeader.getAttribute('title') || infoHeader.textContent || null;
+    // --- PHONE DETECTION ---
+    var phoneSelectors = [
+      '#main header span[title^="+"]',
+      'header span[title^="+"]',
+    ];
+    for (var p = 0; p < phoneSelectors.length; p++) {
+      var phoneEl = document.querySelector(phoneSelectors[p]);
+      if (phoneEl) { telefone = phoneEl.getAttribute('title'); break; }
     }
-
-    // Phone: look for elements with phone-like titles
-    var phoneEl = document.querySelector('#main header span[title^="+"]');
-    if (phoneEl) telefone = phoneEl.getAttribute('title');
 
     // If the name itself is a phone number
     if (!telefone && nome && /^\+?\d[\d\s\-()]{7,}$/.test(nome)) {
       telefone = nome;
     }
 
-    // Search broader for phone numbers
+    // Broader search for phone in all header spans
     if (!telefone) {
-      var spans = document.querySelectorAll('#main header span[title]');
-      for (var j = 0; j < spans.length; j++) {
-        var sv = spans[j].getAttribute('title') || '';
+      var allSpans = document.querySelectorAll('#main header span[title]');
+      for (var j = 0; j < allSpans.length; j++) {
+        var sv = allSpans[j].getAttribute('title') || '';
         if (/^\+?\d[\d\s\-()]{7,}$/.test(sv)) { telefone = sv; break; }
       }
     }
 
     if (telefone) telefone = telefone.replace(/[\s\-()]/g, '');
+
+    // Debug: log what we found (remove after confirming it works)
+    console.log('[Lumied CRM] getContactInfo:', { nome: nome, telefone: telefone });
+
     return { nome: nome, telefone: telefone };
   }
 
@@ -663,64 +687,81 @@
   async function autoLookupLead(info) {
     var statusEl = document.getElementById('mb-lead-status');
     if (!info) info = getContactInfo();
-    if (!info.telefone && !info.nome) return;
+    if (!info.telefone && !info.nome) {
+      console.log('[Lumied CRM] autoLookup: no contact info found');
+      return;
+    }
     statusEl.classList.remove('hidden');
     statusEl.className = 'mb-lead-status loading';
     statusEl.textContent = 'Buscando lead...';
     try {
+      // Fetch all leads once, search by phone then name
+      var allLeads = await apiCall('crm_leads_list');
+      if (!Array.isArray(allLeads)) allLeads = [];
+      console.log('[Lumied CRM] autoLookup: searching', info, 'in', allLeads.length, 'leads');
+
       var lead = null;
-      if (info.telefone) lead = await findLeadByPhone(info.telefone);
-      if (!lead && info.nome) lead = await findLeadByName(info.nome);
+      // Search by phone
+      if (info.telefone) {
+        var normPhone = info.telefone.replace(/\D/g, '').slice(-11);
+        lead = allLeads.find(function(l) {
+          return l.telefone && l.telefone.replace(/\D/g, '').slice(-11) === normPhone;
+        });
+      }
+      // Search by exact name
+      if (!lead && info.nome) {
+        var lower = info.nome.toLowerCase();
+        lead = allLeads.find(function(l) {
+          return (l.nome_responsavel || '').toLowerCase() === lower
+            || (l.nome_crianca || '').toLowerCase() === lower;
+        });
+      }
+      // Search by partial name (first name match)
+      if (!lead && info.nome) {
+        var firstName = info.nome.split(' ')[0].toLowerCase();
+        if (firstName.length >= 3) {
+          lead = allLeads.find(function(l) {
+            return (l.nome_responsavel || '').toLowerCase().indexOf(firstName) >= 0;
+          });
+        }
+      }
+
       if (!lead) {
+        console.log('[Lumied CRM] autoLookup: no match found');
         statusEl.className = 'mb-lead-status';
-        statusEl.innerHTML = 'Lead nao encontrado. <strong>Capture</strong> para adicionar ao CRM.';
-        setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
+        statusEl.innerHTML = 'Lead nao encontrado. Use <strong>"Capturar Lead"</strong> para adicionar.';
+        setTimeout(function() { statusEl.classList.add('hidden'); }, 4000);
         return;
       }
+      console.log('[Lumied CRM] autoLookup: found lead', lead.nome_responsavel);
       currentLeadInfo = { lead: lead, serieInfo: null };
       renderLeadCard(lead, null);
       statusEl.classList.add('hidden');
     } catch(e) {
-      statusEl.classList.add('hidden');
+      console.error('[Lumied CRM] autoLookup error:', e);
+      statusEl.className = 'mb-lead-status error';
+      statusEl.textContent = 'Erro ao buscar: ' + e.message;
+      setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
     }
   }
 
-  async function findLeadByName(nome) {
-    var leads = await apiCall('crm_leads_list');
-    if (!Array.isArray(leads)) return null;
-    var lower = nome.toLowerCase();
-    return leads.find(function(l) {
-      return (l.nome_responsavel || '').toLowerCase() === lower
-        || (l.nome_crianca || '').toLowerCase() === lower;
-    });
-  }
-
-  // MutationObserver to detect conversation changes (replaces polling)
+  // Observe #app for any DOM changes (conversation switches rebuild #main)
+  // Use a broad observer with debounce to catch all conversation changes
   var _debounceTimer = null;
   function debouncedCheck() {
     if (_debounceTimer) clearTimeout(_debounceTimer);
-    _debounceTimer = setTimeout(checkConversationChange, 300);
+    _debounceTimer = setTimeout(checkConversationChange, 400);
   }
 
-  function observeHeader() {
-    var header = document.querySelector('#main header');
-    if (header) {
-      var obs = new MutationObserver(debouncedCheck);
-      obs.observe(header, { childList: true, subtree: true, characterData: true });
-      // Also trigger an initial check
-      checkConversationChange();
-      return;
-    }
-    // #main not ready yet — watch document.body for it to appear
-    var bodyObs = new MutationObserver(function(mutations, self) {
-      if (document.querySelector('#main header')) {
-        self.disconnect();
-        observeHeader();
-      }
-    });
-    bodyObs.observe(document.body, { childList: true, subtree: true });
+  function startObserver() {
+    var target = document.getElementById('app') || document.querySelector('[data-testid="web"]') || document.body;
+    var obs = new MutationObserver(debouncedCheck);
+    obs.observe(target, { childList: true, subtree: true });
+    // Initial check
+    checkConversationChange();
   }
-  observeHeader();
+  // Give WhatsApp Web time to render, then start observing
+  setTimeout(startObserver, 2000);
 
   // --- TEMPLATES ---
 
