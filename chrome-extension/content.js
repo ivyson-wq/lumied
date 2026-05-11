@@ -114,7 +114,13 @@
 
     // --- PHONE PRIORITY #1: window.Store (most reliable for saved contacts) ---
     try {
-      telefone = await getPhoneFromStore();
+      var storePhone = await getPhoneFromStore();
+      // Validate: must be 10-15 digits, not a group/broadcast hash
+      if (storePhone && /^\d{10,15}$/.test(storePhone)) {
+        telefone = storePhone;
+      } else if (storePhone) {
+        console.warn('[Lumied CRM] Store returned invalid phone:', storePhone);
+      }
     } catch(e) { console.warn('[Lumied CRM] Store phone failed:', e); }
 
     // --- NAME DETECTION ---

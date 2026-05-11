@@ -71,10 +71,45 @@ window.addEventListener('lumied-get-phone', function() {
       } catch(e) { debug.push('require failed: ' + e.message); }
     }
 
-    // Extract phone from JID
+    // Extract phone from JID — only individual chats (@c.us or @s.whatsapp.net)
+    // Reject group JIDs (@g.us), broadcast (@broadcast), status (@status)
     if (jid) {
-      var match = jid.match(/(\d+)@/);
-      if (match) phone = match[1];
+      debug.push('raw jid: ' + jid);
+      if (jid.includes('@c.us') || jid.includes('@s.whatsapp.net')) {
+        var match = jid.match(/^(\d{10,15})@/);
+        if (match) {
+          phone = match[1];
+          debug.push('extracted phone: ' + phone);
+        } else {
+          debug.push('jid did not match phone pattern');
+        }
+      } else {
+        debug.push('not individual chat: ' + jid);
+        jid = null; // reset — not a phone JID
+      }
+    }
+
+    // Also try to get phone from contact info if Store.Chat gave us the chat object
+    if (!phone) {
+      try {
+        var stores = [window.Store, window.__x_store];
+        for (var s = 0; s < stores.length; s++) {
+          if (!stores[s] || !stores[s].Chat) continue;
+          var activeChat = stores[s].Chat.active;
+          if (!activeChat) continue;
+          // Try contact.id which sometimes has the real phone
+          var contactId = activeChat.contact?.id?._serialized || activeChat.contact?.id?.user;
+          if (contactId) {
+            var cMatch = contactId.match(/^(\d{10,15})@(?:c\.us|s\.whatsapp\.net)/);
+            if (cMatch) { phone = cMatch[1]; debug.push('contact.id: ' + phone); break; }
+          }
+          // Try participants for 1:1 chats
+          if (activeChat.groupMetadata === undefined && activeChat.id?.user) {
+            var userId = activeChat.id.user;
+            if (/^\d{10,15}$/.test(userId)) { phone = userId; debug.push('id.user: ' + phone); break; }
+          }
+        }
+      } catch(e) { debug.push('contact fallback error: ' + e.message); }
     }
   } catch(e) {
     debug.push('error: ' + e.message);
