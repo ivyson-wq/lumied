@@ -3862,7 +3862,56 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     if (!destino) return err("Email de destino não encontrado.");
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) return err("RESEND_API_KEY não configurada.");
-    // Busca nome da escola
+
+    // Se faltar dados (linha_digitavel, pix), busca do Inter
+    let linhaDigitavel = bol.linha_digitavel || "";
+    let pixCopiaECola = bol.pix_copia_cola || "";
+    let nossoNumero = bol.nosso_numero || "";
+    const codSol = bol.inter_response?.codigoSolicitacao || bol.inter_response?.detalhes?.cobranca?.codigoSolicitacao || "";
+    const RELAY_URL = Deno.env.get("INTER_RELAY_URL") || "";
+    const RELAY_SECRET_VAL = Deno.env.get("RELAY_SECRET") || "";
+
+    if (codSol && RELAY_URL && (!linhaDigitavel || !pixCopiaECola)) {
+      try {
+        const cId = Deno.env.get("INTER_CLIENT_ID") || "";
+        const cSec = Deno.env.get("INTER_CLIENT_SECRET") || "";
+        const p = new URLSearchParams({ client_id: cId, client_secret: cSec, scope: "boleto-cobranca.read", grant_type: "client_credentials" });
+        const tR = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET_VAL}` }, body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: p.toString() }), signal: AbortSignal.timeout(10000) });
+        const tk = JSON.parse((await tR.json() as any).body).access_token;
+        const dR = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET_VAL}` }, body: JSON.stringify({ path: `/cobranca/v3/cobrancas/${codSol}`, method: "GET", headers: { Authorization: `Bearer ${tk}` }, body: "" }), signal: AbortSignal.timeout(10000) });
+        const det = JSON.parse((await dR.json() as any).body);
+        linhaDigitavel = linhaDigitavel || det?.boleto?.linhaDigitavel || "";
+        pixCopiaECola = pixCopiaECola || det?.pix?.pixCopiaECola || "";
+        nossoNumero = nossoNumero || det?.boleto?.nossoNumero || "";
+        // Atualiza no banco para próximas vezes
+        if (det?.boleto?.linhaDigitavel) {
+          await admin.from("fin_boletos_emitidos").update({
+            linha_digitavel: det.boleto.linhaDigitavel,
+            nosso_numero: det.boleto.nossoNumero,
+            codigo_barras: det.boleto.codigoBarras,
+            pix_copia_cola: det.pix?.pixCopiaECola,
+          }).eq("id", id);
+        }
+      } catch { /* continua sem dados extras */ }
+    }
+
+    // Baixar PDF do Inter para anexar ao email
+    let pdfBase64 = "";
+    if (codSol && RELAY_URL) {
+      try {
+        const cId = Deno.env.get("INTER_CLIENT_ID") || "";
+        const cSec = Deno.env.get("INTER_CLIENT_SECRET") || "";
+        const p = new URLSearchParams({ client_id: cId, client_secret: cSec, scope: "boleto-cobranca.read", grant_type: "client_credentials" });
+        const tR = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET_VAL}` }, body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: p.toString() }), signal: AbortSignal.timeout(10000) });
+        const tk = JSON.parse((await tR.json() as any).body).access_token;
+        const pR = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET_VAL}` }, body: JSON.stringify({ path: `/cobranca/v3/cobrancas/${codSol}/pdf`, method: "GET", headers: { Authorization: `Bearer ${tk}` }, body: "" }), signal: AbortSignal.timeout(15000) });
+        const pRelay = await pR.json() as any;
+        if (pRelay.status >= 200 && pRelay.status < 300) {
+          pdfBase64 = JSON.parse(pRelay.body).pdf || "";
+        }
+      } catch { /* continua sem PDF */ }
+    }
+
     const { data: escola } = await admin.from("escolas").select("nome").eq("id", sessionEscolaId).maybeSingle();
     const escolaNome = (escola as any)?.nome || "Escola";
     const venc = bol.vencimento ? new Date(bol.vencimento + "T12:00:00").toLocaleDateString("pt-BR") : "—";
@@ -3870,26 +3919,48 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
       <h2 style="color:#1a6bb5;">${escolaNome} — Boleto</h2>
       <p>Olá, <strong>${bol.familia_nome || "Responsável"}</strong>!</p>
-      <p>Segue o boleto referente a <strong>${bol.crianca_nome || "aluno"}</strong>:</p>
+      <p>Segue o boleto referente a <strong>${bol.crianca_nome || "aluno"}</strong>.</p>
+      ${pdfBase64 ? '<p style="color:#2d7a3a;font-weight:600;">O boleto em PDF está anexado a este email.</p>' : ""}
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-        <tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Descrição</td><td style="padding:8px;border:1px solid #ddd;">${bol.descricao || "Mensalidade"}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Valor</td><td style="padding:8px;border:1px solid #ddd;font-size:18px;font-weight:700;">${valor}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Vencimento</td><td style="padding:8px;border:1px solid #ddd;">${venc}</td></tr>
-        ${bol.linha_digitavel ? `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Linha Digitável</td><td style="padding:8px;border:1px solid #ddd;font-family:monospace;font-size:12px;word-break:break-all;">${bol.linha_digitavel}</td></tr>` : ""}
-        ${bol.nosso_numero ? `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Nosso Número</td><td style="padding:8px;border:1px solid #ddd;">${bol.nosso_numero}</td></tr>` : ""}
+        <tr style="background:#f8f8f8;"><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Descrição</td><td style="padding:10px;border:1px solid #ddd;">${bol.descricao || "Mensalidade"}</td></tr>
+        <tr><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Valor</td><td style="padding:10px;border:1px solid #ddd;font-size:20px;font-weight:700;color:#1a6bb5;">${valor}</td></tr>
+        <tr style="background:#f8f8f8;"><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Vencimento</td><td style="padding:10px;border:1px solid #ddd;">${venc}</td></tr>
+        ${nossoNumero ? `<tr><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Nosso Número</td><td style="padding:10px;border:1px solid #ddd;">${nossoNumero}</td></tr>` : ""}
+        ${linhaDigitavel ? `<tr style="background:#f8f8f8;"><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Linha Digitável</td><td style="padding:10px;border:1px solid #ddd;font-family:monospace;font-size:13px;word-break:break-all;letter-spacing:0.5px;">${linhaDigitavel}</td></tr>` : ""}
       </table>
-      ${bol.pix_copia_cola ? `<div style="background:#f0f7ff;border:1px solid #c5d9f0;border-radius:8px;padding:12px;margin:16px 0;"><strong>PIX Copia e Cola:</strong><br><code style="font-size:11px;word-break:break-all;">${bol.pix_copia_cola}</code></div>` : ""}
-      <p style="color:#666;font-size:12px;margin-top:20px;">Este email foi enviado automaticamente por ${escolaNome} via Lumied.</p>
+      ${pixCopiaECola ? `<div style="background:#f0f7ff;border:1px solid #c5d9f0;border-radius:8px;padding:16px;margin:16px 0;">
+        <div style="font-weight:700;margin-bottom:8px;color:#1a6bb5;">PIX Copia e Cola</div>
+        <div style="font-size:12px;color:#666;margin-bottom:6px;">Copie o código abaixo e cole no app do seu banco:</div>
+        <code style="font-size:11px;word-break:break-all;display:block;background:#fff;padding:10px;border-radius:4px;border:1px solid #e0e0e0;">${pixCopiaECola}</code>
+      </div>` : ""}
+      <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+      <p style="color:#999;font-size:11px;">Este email foi enviado automaticamente por ${escolaNome} via Lumied. Em caso de dúvidas, entre em contato com a secretaria da escola.</p>
     </div>`;
+
+    const emailBody: Record<string, unknown> = {
+      from: `${escolaNome} <financeiro@lumied.com.br>`,
+      to: [destino],
+      subject: `Boleto — ${bol.crianca_nome || "Mensalidade"} — ${valor} — Venc: ${venc}`,
+      html,
+    };
+    if (pdfBase64) {
+      emailBody.attachments = [{
+        filename: `boleto_${nossoNumero || "lumied"}.pdf`,
+        content: pdfBase64,
+        content_type: "application/pdf",
+      }];
+    }
     try {
-      await fetch("https://api.resend.com/emails", {
+      const emailRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-        body: JSON.stringify({ from: `${escolaNome} <financeiro@lumied.com.br>`, to: [destino], subject: `Boleto — ${bol.crianca_nome || "Mensalidade"} — ${valor}`, html }),
-        signal: AbortSignal.timeout(8000),
+        body: JSON.stringify(emailBody),
+        signal: AbortSignal.timeout(15000),
       });
+      const emailResult = await emailRes.json();
+      if (emailResult?.statusCode >= 400) return err("Erro Resend: " + (emailResult.message || emailResult.name));
     } catch (e) { return err("Erro ao enviar email: " + (e as Error).message); }
-    return ok({ success: true, enviado_para: destino });
+    return ok({ success: true, enviado_para: destino, com_pdf: !!pdfBase64, com_linha_digitavel: !!linhaDigitavel, com_pix: !!pixCopiaECola });
   }
   if (action === "fin_boleto_baixa_manual") {
     const { id, observacao } = body as any;
