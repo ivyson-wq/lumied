@@ -269,8 +269,8 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div id="panelTickets" class="panel">
         <div class="sec-title"><span data-i18n="admin.panels.ticketsSuporte">Tickets de Suporte</span> <span class="count-badge" id="ticketsCount">0</span></div>
         <div class="table-wrap"><table>
-          <thead><tr><th data-i18n="admin.tickets.assunto">Assunto</th><th data-i18n="admin.tickets.status">Status</th><th data-i18n="common.date">Data</th><th data-i18n="admin.tickets.acoes">Acoes</th></tr></thead>
-          <tbody id="ticketsBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody>
+          <thead><tr><th>#</th><th data-i18n="admin.tickets.descricao">Descricao</th><th>Tipo</th><th>Portal</th><th data-i18n="admin.tickets.status">Status</th><th data-i18n="common.date">Data</th><th data-i18n="admin.tickets.acoes">Acoes</th></tr></thead>
+          <tbody id="ticketsBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody>
         </table></div>
       </div>
 
@@ -359,9 +359,11 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
 <!-- MODAL: TICKET RESPOND -->
 <div class="modal-overlay" id="modalTicket" role="dialog" aria-modal="true">
-  <div class="modal">
+  <div class="modal" style="max-width:560px;">
     <h3 id="mtTitle">Ticket</h3>
-    <p class="msub" id="mtDesc"></p>
+    <div id="mtMeta" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
+    <div id="mtDesc" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px;white-space:pre-wrap;max-height:200px;overflow-y:auto;"></div>
+    <div id="mtRespostaExistente" style="display:none;background:#eef7ee;border:1px solid #c3e6c3;border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px;white-space:pre-wrap;max-height:150px;overflow-y:auto;"></div>
     <div class="ff"><label data-i18n="admin.tickets.resposta">Resposta</label><textarea id="mtResposta" rows="4" placeholder="Digite sua resposta..." data-i18n-placeholder="admin.tickets.respostaPlaceholder"></textarea></div>
     <div class="btn-bar">
       <button class="btn-primary" onclick="responderTicket()" data-i18n="admin.tickets.responder">Responder</button>
@@ -645,18 +647,31 @@ async function loadTickets() {
   if (!ESCOLA_ID) { const dash = await api({ action: 'escola_dashboard' }); ESCOLA_ID = dash.escola?.id; }
   const d = await api({ action: 'tickets_list', escola_id: ESCOLA_ID });
   const tickets = Array.isArray(d) ? d : [];
+  window._ticketsCache = tickets;
   document.getElementById('ticketsCount').textContent = tickets.length;
   const tbody = document.getElementById('ticketsBody');
-  if (tickets.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum ticket</td></tr>'; return; }
+  if (tickets.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum ticket</td></tr>'; return; }
   tbody.innerHTML = tickets.map(t => {
-    const st = t.status === 'aberto' ? 'warn' : t.status === 'respondido' ? 'ativo' : 'inativo';
-    return `<tr><td><strong>${esc(t.assunto || t.titulo || '—')}</strong></td><td><span class="status-pill ${st}">${esc(t.status)}</span></td><td style="font-size:12px;color:var(--muted);">${t.criado_em ? new Date(t.criado_em).toLocaleDateString('pt-BR') : '—'}</td><td><button class="action-btn" onclick="abrirTicket('${t.id}','${esc(t.assunto || t.titulo || '')}','${esc(t.descricao || '')}')">Responder</button></td></tr>`;
+    const st = t.status === 'aberto' ? 'warn' : t.status === 'respondido' ? 'ativo' : t.status === 'escalado' ? 'warn' : 'inativo';
+    const descCurta = t.descricao ? (t.descricao.length > 80 ? t.descricao.substring(0, 80) + '…' : t.descricao) : '—';
+    const tipoLabel = { bug: 'Bug', sugestao: 'Sugestão', duvida: 'Dúvida', outro: 'Outro' }[t.tipo] || t.tipo || '—';
+    const portalLabel = t.portal || '—';
+    return `<tr><td style="font-size:12px;color:var(--muted);white-space:nowrap;">#${t.numero || '—'}</td><td><strong>${esc(descCurta)}</strong></td><td style="font-size:12px;">${esc(tipoLabel)}</td><td style="font-size:12px;">${esc(portalLabel)}</td><td><span class="status-pill ${st}">${esc(t.status)}</span></td><td style="font-size:12px;color:var(--muted);white-space:nowrap;">${t.criado_em ? new Date(t.criado_em).toLocaleDateString('pt-BR') : '—'}</td><td><button class="action-btn" onclick="abrirTicket('${t.id}')">Ver</button></td></tr>`;
   }).join('');
 }
-function abrirTicket(id, assunto, desc) {
+function abrirTicket(id) {
   _currentTicketId = id;
-  document.getElementById('mtTitle').textContent = assunto;
-  document.getElementById('mtDesc').textContent = desc;
+  // Find ticket data from the loaded list
+  const d = document.getElementById('ticketsBody');
+  const allTickets = window._ticketsCache || [];
+  const t = allTickets.find(x => x.id === id) || {};
+  const tipoLabel = { bug: 'Bug', sugestao: 'Sugestão', duvida: 'Dúvida', outro: 'Outro' }[t.tipo] || t.tipo || '';
+  document.getElementById('mtTitle').textContent = `Ticket #${t.numero || '—'} — ${tipoLabel}`;
+  document.getElementById('mtMeta').innerHTML = `<strong>De:</strong> ${esc(t.nome || t.email || '—')} | <strong>Portal:</strong> ${esc(t.portal || '—')} | <strong>Status:</strong> ${esc(t.status || '—')} | <strong>Data:</strong> ${t.criado_em ? new Date(t.criado_em).toLocaleString('pt-BR') : '—'}`;
+  document.getElementById('mtDesc').textContent = t.descricao || '—';
+  const resEl = document.getElementById('mtRespostaExistente');
+  if (t.resposta) { resEl.style.display = 'block'; resEl.innerHTML = '<strong>Resposta anterior:</strong><br>' + esc(t.resposta); }
+  else { resEl.style.display = 'none'; }
   document.getElementById('mtResposta').value = '';
   document.getElementById('modalTicket').classList.add('show');
 }
