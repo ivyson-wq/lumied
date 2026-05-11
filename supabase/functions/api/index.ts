@@ -3840,7 +3840,16 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       await admin.storage.from("boletos").upload(fileName, bytes, { contentType: "application/pdf", upsert: true });
       // Signed URL válida por 30 dias
       const { data: signed } = await admin.storage.from("boletos").createSignedUrl(fileName, 60 * 60 * 24 * 30);
-      return ok({ pdf_url: signed?.signedUrl || null, nosso_numero: bol.nosso_numero });
+      const fullUrl = signed?.signedUrl || null;
+      // Gerar short link lumied.com.br/b/XXXX
+      let shortUrl = fullUrl;
+      if (fullUrl) {
+        const code = Array.from(crypto.getRandomValues(new Uint8Array(4))).map(b => b.toString(36)).join("").toUpperCase().substring(0, 6);
+        const expiresAt = new Date(Date.now() + 30 * 24 * 3600000).toISOString();
+        await admin.from("short_links").upsert({ code, url: fullUrl, tipo: "boleto_pdf", expira_em: expiresAt }, { onConflict: "code" });
+        shortUrl = `https://lumied.com.br/b/${code}`;
+      }
+      return ok({ pdf_url: shortUrl, pdf_url_full: fullUrl, nosso_numero: bol.nosso_numero });
     } catch (e) { return err("Erro ao gerar link PDF: " + (e as Error).message); }
   }
   // ── Enviar boleto por email ──

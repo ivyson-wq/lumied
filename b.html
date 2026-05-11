@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><title>Lumied — Boleto</title>
+<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#faf8f5;color:#333;}
+.box{text-align:center;padding:40px;}.spinner{width:32px;height:32px;border:3px solid #e2dbd1;border-top-color:#6B3FA0;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;}
+@keyframes spin{to{transform:rotate(360deg)}}a{color:#1a6bb5;}</style>
+</head><body><div class="box" id="box"><div class="spinner"></div><p>Carregando boleto...</p></div>
+<script>
+(async function(){
+  var code = location.pathname.split('/b/')[1] || new URLSearchParams(location.search).get('c');
+  if (!code) { document.getElementById('box').innerHTML = '<p>Link inválido.</p>'; return; }
+  try {
+    var r = await fetch('https://brgorknbrjlfwvrrlwxj.supabase.co/rest/v1/short_links?code=eq.'+code+'&select=url',{
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE'}
+    });
+    var d = await r.json();
+    if (d[0] && d[0].url) {
+      // Incrementa acessos (fire-and-forget)
+      fetch('https://brgorknbrjlfwvrrlwxj.supabase.co/rest/v1/short_links?code=eq.'+code,{
+        method:'PATCH',headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE','Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({acessos:d[0].acessos+1||1})
+      }).catch(function(){});
+      location.replace(d[0].url);
+    } else {
+      document.getElementById('box').innerHTML = '<p>Boleto não encontrado ou expirado.</p><p><a href="https://lumied.com.br">lumied.com.br</a></p>';
+    }
+  } catch(e) {
+    document.getElementById('box').innerHTML = '<p>Erro ao carregar. Tente novamente.</p>';
+  }
+})();
+</script></body></html>
