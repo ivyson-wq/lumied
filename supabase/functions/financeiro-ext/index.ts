@@ -473,49 +473,84 @@ router.on("conciliacao_historico", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 //  BOLETOS BATCH (Day 28)
 // ═══════════════════════════════════════════════════════════════
-router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
-  const nm = nextMonth();
-  const mesRef = nm.label;
-
-  // Get dia vencimento from escola_config (multi-tenant desde mig 236)
-  const escolaIdCron = (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
+// ── Helper: gera batch para um mês (usado por auto e manual) ──
+async function gerarBatchParaMes(
+  ctx: any,
+  escolaId: string,
+  mesRef: string,
+  ano: number,
+  mes: number,
+  origem: "automatico" | "manual",
+): Promise<any> {
+  // Dia de vencimento configurável
   const { data: cfgDia } = await ctx.sb
     .from("escola_config")
     .select("valor")
     .eq("chave", "dia_vencimento_boleto")
-    .eq("escola_id", escolaIdCron)
+    .eq("escola_id", escolaId)
     .maybeSingle();
   const diaVencimento = cfgDia?.valor || "10";
-  const vencimento = `${nm.year}-${String(nm.month).padStart(2, "0")}-${diaVencimento.padStart(2, "0")}`;
+  const vencimento = `${ano}-${String(mes).padStart(2, "0")}-${diaVencimento.padStart(2, "0")}`;
 
-  // Get active alunos with families
+  // Alunos ativos
   const { data: alunos } = await ctx.sb
     .from("alunos")
     .select("id, nome, serie, turno, familia_email, resp_nome, cpf")
-    .eq("escola_id", escolaIdCron)
+    .eq("escola_id", escolaId)
     .eq("ativo", true);
 
   if (!alunos || alunos.length === 0) {
-    return successResponse({ batch_id: null, total_alunos: 0, message: "Nenhum aluno ativo encontrado." });
+    return { batch_id: null, total_alunos: 0, pulados: 0, message: "Nenhum aluno ativo encontrado." };
   }
 
-  // Get family data
-  const emails = [...new Set(alunos.map((a: any) => a.familia_email).filter(Boolean))];
-  const { data: familias } = await ctx.sb
-    .from("familias")
-    .select("email, nome_resp, cpf")
-    .eq("escola_id", escolaIdCron)
-    .in("email", emails);
+  // Alunos que JÁ têm boleto emitido/pendente neste mês (pular duplicatas)
+  const { data: jaEmitidos } = await ctx.sb
+    .from("fin_boletos_emitidos")
+    .select("aluno_id, crianca_nome")
+    .eq("escola_id", escolaId)
+    .gte("vencimento", `${mesRef}-01`)
+    .lte("vencimento", `${mesRef}-31`)
+    .in("status", ["emitido", "pago"]);
+
+  const jaEmitidosSet = new Set<string>();
+  for (const b of jaEmitidos ?? []) {
+    if (b.aluno_id) jaEmitidosSet.add(b.aluno_id);
+    if (b.crianca_nome) jaEmitidosSet.add(b.crianca_nome);
+  }
+  // Também checar batch items pendentes
+  const { data: jaBatchItems } = await ctx.sb
+    .from("fin_boleto_batch_items")
+    .select("aluno_id")
+    .eq("escola_id", escolaId)
+    .gte("vencimento", `${mesRef}-01`)
+    .lte("vencimento", `${mesRef}-31`)
+    .in("status", ["aguardando", "aprovado", "emitido"]);
+  for (const bi of jaBatchItems ?? []) {
+    if (bi.aluno_id) jaEmitidosSet.add(bi.aluno_id);
+  }
+
+  const alunosFiltrados = alunos.filter((a: any) => !jaEmitidosSet.has(a.id) && !jaEmitidosSet.has(a.nome));
+  const pulados = alunos.length - alunosFiltrados.length;
+
+  if (alunosFiltrados.length === 0) {
+    return { batch_id: null, total_alunos: 0, pulados, message: `Todos os ${alunos.length} alunos já têm boleto para ${mesRef}.` };
+  }
+
+  // Famílias
+  const emails = [...new Set(alunosFiltrados.map((a: any) => a.familia_email).filter(Boolean))];
+  const { data: familias } = emails.length
+    ? await ctx.sb.from("familias").select("email, nome_resp, cpf").eq("escola_id", escolaId).in("email", emails)
+    : { data: [] };
   const familiaMap = new Map((familias ?? []).map((f: any) => [f.email, f]));
 
-  // Create batch record
+  // Criar batch
   const { data: batch, error: batchErr } = await ctx.sb
     .from("fin_boletos_batch")
     .insert({
       mes_referencia: mesRef,
       status: "aguardando_aprovacao",
-      total_boletos: alunos.length,
-      escola_id: escolaIdCron,
+      total_boletos: alunosFiltrados.length,
+      escola_id: escolaId,
     })
     .select()
     .single();
@@ -523,25 +558,24 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
 
   let totalGeral = 0;
   const batchItems: any[] = [];
+  const monthNames = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-  for (const aluno of alunos) {
+  for (const aluno of alunosFiltrados) {
     const items: { nome: string; valor: number }[] = [];
 
-    // Turno value: try previous month's mensalidade as reference
+    // Valor referência: última mensalidade
     const { data: prevMens } = await ctx.sb
       .from("fin_mensalidades")
-      .select("valor")
+      .select("valor_total")
       .eq("crianca_nome", aluno.nome)
+      .eq("escola_id", escolaId)
       .order("mes", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const turnoValor = prevMens?.valor || 0;
+    const turnoValor = prevMens?.valor_total || 0;
+    items.push({ nome: `Mensalidade ${monthNames[mes]}/${ano}`, valor: turnoValor });
 
-    const mesLabel = nm.month <= 9 ? `0${nm.month}` : `${nm.month}`;
-    const monthNames = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    items.push({ nome: `Mensalidade ${monthNames[nm.month]}/${nm.year}`, valor: turnoValor });
-
-    // Get inscribed activities
+    // Atividades inscritas
     const famEmail = aluno.familia_email;
     if (famEmail) {
       const { data: inscricoes } = await ctx.sb
@@ -549,17 +583,13 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
         .select("atividades_ids")
         .eq("email", famEmail)
         .maybeSingle();
-
       if (inscricoes?.atividades_ids?.length) {
         const { data: atividades } = await ctx.sb
           .from("atividades")
           .select("nome, preco")
           .in("id", inscricoes.atividades_ids);
-
         for (const at of atividades ?? []) {
-          if (at.preco && at.preco > 0) {
-            items.push({ nome: at.nome, valor: at.preco });
-          }
+          if (at.preco && at.preco > 0) items.push({ nome: at.nome, valor: at.preco });
         }
       }
     }
@@ -579,23 +609,42 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
       valor_total: valorTotal,
       descricao_detalhada: descDetalhada,
       itens: items,
-      vencimento: vencimento,
+      vencimento,
       status: "aguardando",
-      escola_id: escolaIdCron,
+      escola_id: escolaId,
     });
   }
 
   if (batchItems.length > 0) {
     await ctx.sb.from("fin_boleto_batch_items").insert(batchItems);
   }
+  await ctx.sb.from("fin_boletos_batch").update({ valor_total: totalGeral }).eq("id", batch.id);
 
-  // Update batch with totals
-  await ctx.sb.from("fin_boletos_batch").update({
-    valor_total: totalGeral,
-  }).eq("id", batch.id);
+  log.info(`Batch ${origem} gerado`, { metadata: { mesRef, alunos: alunosFiltrados.length, pulados, valorTotal: totalGeral } });
+  return { batch_id: batch.id, mes_referencia: mesRef, total_alunos: alunosFiltrados.length, pulados, valor_total: totalGeral, origem };
+}
 
-  log.info("Batch de boletos gerado", { metadata: { mesRef, alunos: alunos.length, valorTotal: totalGeral } });
-  return successResponse({ batch_id: batch.id, mes_referencia: mesRef, total_alunos: alunos.length, valor_total: totalGeral });
+// ── Batch automático (dia 28, próximo mês) — pula quem já tem boleto ──
+router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
+  const escolaId = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
+  const nm = nextMonth();
+  const result = await gerarBatchParaMes(ctx, escolaId!, nm.label, nm.year, nm.month, "automatico");
+  return successResponse(result);
+});
+
+// ── Batch manual (sob demanda, qualquer mês) — pula quem já tem boleto ──
+router.on("boletos_gerar_batch_manual", authGerente, async (ctx) => {
+  const { mes_referencia } = ctx.body as any;
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  // Default: próximo mês
+  const nm = nextMonth();
+  const mesRef = mes_referencia || nm.label;
+  const [anoStr, mesStr] = mesRef.split("-");
+  const ano = parseInt(anoStr);
+  const mes = parseInt(mesStr);
+  if (!ano || !mes || mes < 1 || mes > 12) throw new AppError("VALIDATION_FAILED", "mes_referencia inválido (formato: YYYY-MM).");
+  const result = await gerarBatchParaMes(ctx, ctx.escola_id, mesRef, ano, mes, "manual");
+  return successResponse(result);
 });
 
 router.on("boletos_batch_list", authGerente, async (ctx) => {

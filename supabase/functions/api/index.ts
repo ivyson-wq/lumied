@@ -3616,14 +3616,38 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
 
   // ── Emissao de Boletos (Inter) ──────────────────────────
   if (action === "fin_emitir_boleto") {
-    const { mensalidade_id, cpf_pagador, valor, vencimento, descricao, nome_pagador } = body as any;
+    const { mensalidade_id, cpf_pagador, valor, vencimento, descricao, nome_pagador, aluno_id } = body as any;
     if (!cpf_pagador || !valor || !vencimento) return err("CPF, valor e vencimento obrigatorios.");
     const RELAY_URL = Deno.env.get("INTER_RELAY_URL") || "";
     const RELAY_SECRET = Deno.env.get("RELAY_SECRET") || "";
+    if (!RELAY_URL || !RELAY_SECRET) return err("Inter API não configurada (INTER_RELAY_URL).");
     try {
-      // Criar cobranca via API Inter v3
+      // 1. Obter OAuth token
+      const clientId = Deno.env.get("INTER_CLIENT_ID") || "";
+      const clientSecret = Deno.env.get("INTER_CLIENT_SECRET") || "";
+      if (!clientId || !clientSecret) return err("Inter API não configurada (CLIENT_ID/SECRET).");
+      const scopes = ["boleto-cobranca.write", "boleto-cobranca.read boleto-cobranca.write", "cobv.write", "cobranca.write"];
+      let interToken = "";
+      for (const scope of scopes) {
+        try {
+          const params = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: "client_credentials" });
+          const tokenRes = await fetch(`${RELAY_URL}/inter-proxy`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` },
+            body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() }),
+            signal: AbortSignal.timeout(15000),
+          });
+          const tokenResp = await tokenRes.json() as any;
+          if (tokenResp.status >= 200 && tokenResp.status < 300) {
+            const parsed = JSON.parse(tokenResp.body);
+            if (parsed?.access_token) { interToken = parsed.access_token; break; }
+          }
+        } catch { /* try next scope */ }
+      }
+      if (!interToken) return err("Não foi possível autenticar com o Banco Inter. Verifique as credenciais.");
+      // 2. Criar cobranca via API Inter v3
       const cobrancaBody = {
-        seuNumero: `MB-${Date.now()}`,
+        seuNumero: `LUM-${Date.now().toString(36).toUpperCase()}`,
         valorNominal: parseFloat(valor),
         dataVencimento: vencimento,
         numDiasAgenda: 30,
@@ -3632,19 +3656,23 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
           tipoPessoa: cpf_pagador.replace(/\D/g, "").length > 11 ? "JURIDICA" : "FISICA",
           nome: nome_pagador || "Responsavel",
         },
-        mensagem: { linha1: descricao || "Mensalidade Escolar" },
+        mensagem: { linha1: (descricao || "Mensalidade Escolar").substring(0, 100) },
       };
       const res = await fetch(`${RELAY_URL}/inter-proxy`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` },
-        body: JSON.stringify({ path: "/cobranca/v3/cobrancas", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cobrancaBody) }),
+        body: JSON.stringify({ path: "/cobranca/v3/cobrancas", method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${interToken}` }, body: JSON.stringify(cobrancaBody) }),
         signal: AbortSignal.timeout(15000),
       });
       const relayResp = await res.json() as any;
+      if (relayResp.status && (relayResp.status < 200 || relayResp.status >= 300)) {
+        return err("Erro Inter API: " + (relayResp.body || relayResp.status));
+      }
       const interData = typeof relayResp.body === "string" ? JSON.parse(relayResp.body) : relayResp.body;
-      // Salvar boleto emitido
+      // 3. Salvar boleto emitido
       const { error: insErr } = await admin.from("fin_boletos_emitidos").insert({
         mensalidade_id: mensalidade_id || null,
+        aluno_id: aluno_id || null,
         familia_email: (body as any).familia_email || null,
         familia_nome: nome_pagador || null,
         crianca_nome: (body as any).crianca_nome || null,
@@ -3657,11 +3685,11 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
         inter_response: interData,
       });
       if (insErr) return err("Boleto criado no Inter mas erro ao salvar: " + insErr.message);
-      // Atualizar mensalidade se vinculada
+      // 4. Upsert mensalidade se vinculada
       if (mensalidade_id) {
         await admin.from("fin_mensalidades").update({ status: "pendente" }).eq("id", mensalidade_id).eq("escola_id", sessionEscolaId);
       }
-      return ok({ success: true, nosso_numero: interData?.cobranca?.nossoNumero, pix: interData?.pix?.pixCopiaECola });
+      return ok({ success: true, nosso_numero: interData?.cobranca?.nossoNumero, pix: interData?.pix?.pixCopiaECola, linha_digitavel: interData?.boleto?.linhaDigitavel });
     } catch (e) { return err("Erro ao emitir boleto: " + (e as Error).message); }
   }
   if (action === "fin_boletos_emitidos_list") {
