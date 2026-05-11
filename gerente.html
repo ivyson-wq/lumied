@@ -17277,9 +17277,31 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       </div>
       ${lead.observacoes?`<div style="font-size:12px;color:#555;margin-bottom:12px;padding:10px;background:#f5f0ea;border-radius:8px;line-height:1.5;">${esc(lead.observacoes)}</div>`:''}
       <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+        <button onclick="document.getElementById('ldEditForm').style.display=document.getElementById('ldEditForm').style.display==='none'?'block':'none'" style="padding:6px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">✏️ Editar</button>
         ${lead.telefone?`<button onclick="abrirWhatsApp('${esc(lead.telefone)}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#25D366;color:#0a3d12;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">💬 WhatsApp</button>`:''}
         <button onclick="this.closest('div[style*=fixed]').remove();agendarReuniaoCrm('${id}','${esc(lead.nome_responsavel)}')" style="padding:6px 12px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📅 Agendar Reuniao</button>
         <button onclick="criarMatriculaDoLead('${id}')" style="padding:6px 12px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📝 Registrar Reserva/Matricula</button>
+      </div>
+      <div id="ldEditForm" style="display:none;margin-bottom:16px;padding:16px;background:#faf8f5;border:1px solid var(--border);border-radius:10px;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;">EDITAR LEAD</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px;">
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Nome Responsavel *</label><input type="text" id="ldEdNome" value="${esc(lead.nome_responsavel||'')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Telefone</label><input type="text" id="ldEdTel" value="${esc(lead.telefone||'')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Email</label><input type="email" id="ldEdEmail" value="${esc(lead.email||'')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Nome Crianca</label><input type="text" id="ldEdCrianca" value="${esc(lead.nome_crianca||'')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Data Nascimento</label><input type="date" id="ldEdNasc" value="${lead.data_nascimento||''}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Serie Interesse</label><input type="text" id="ldEdSerie" value="${esc(lead.serie_interesse||'')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Origem</label><select id="ldEdOrigem" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"><option value="">—</option><option value="indicacao"${lead.origem==='indicacao'?' selected':''}>Indicacao</option><option value="site"${lead.origem==='site'?' selected':''}>Site</option><option value="instagram"${lead.origem==='instagram'?' selected':''}>Instagram</option><option value="facebook"${lead.origem==='facebook'?' selected':''}>Facebook</option><option value="whatsapp"${lead.origem==='whatsapp'?' selected':''}>WhatsApp</option><option value="evento"${lead.origem==='evento'?' selected':''}>Evento</option><option value="outro"${lead.origem==='outro'?' selected':''}>Outro</option></select></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Valor Mensalidade</label><input type="number" id="ldEdValor" step="0.01" value="${lead.valor_mensalidade||''}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Responsavel Interno</label><input type="text" id="ldEdResp" value="${esc(lead.responsavel_interno||'')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Proximo Contato</label><input type="date" id="ldEdProx" value="${lead.data_proximo_contato||''}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Data Visita</label><input type="date" id="ldEdVisita" value="${lead.data_visita||''}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+          <div><label style="display:block;font-size:10px;color:var(--muted);margin-bottom:2px;">Observacoes</label><input type="text" id="ldEdObs" value="${esc(lead.observacoes||'')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button onclick="salvarLeadEdicao('${id}')" style="padding:6px 16px;background:var(--red);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Salvar</button>
+          <button onclick="document.getElementById('ldEditForm').style.display='none'" style="padding:6px 12px;background:none;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">Cancelar</button>
+        </div>
       </div>
       <div style="margin-bottom:12px;">
         <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Nova interacao:</div>
@@ -17313,6 +17335,30 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       })()}
     </div>`;
     document.body.appendChild(overlay);
+  }
+
+  async function salvarLeadEdicao(leadId) {
+    var nome = document.getElementById('ldEdNome').value.trim();
+    if (!nome) { showToast('Nome obrigatorio','error'); return; }
+    var d = await api({ action:'crm_lead_save', id: leadId,
+      nome_responsavel: nome,
+      telefone: document.getElementById('ldEdTel').value.trim(),
+      email: document.getElementById('ldEdEmail').value.trim(),
+      nome_crianca: document.getElementById('ldEdCrianca').value.trim(),
+      data_nascimento: document.getElementById('ldEdNasc').value || null,
+      serie_interesse: document.getElementById('ldEdSerie').value.trim(),
+      origem: document.getElementById('ldEdOrigem').value,
+      valor_mensalidade: document.getElementById('ldEdValor').value || null,
+      responsavel_interno: document.getElementById('ldEdResp').value.trim(),
+      data_proximo_contato: document.getElementById('ldEdProx').value || null,
+      data_visita: document.getElementById('ldEdVisita').value || null,
+      observacoes: document.getElementById('ldEdObs').value.trim(),
+    });
+    if (d && d.error) { showToast('Erro: '+d.error,'error'); return; }
+    showToast('Lead atualizado!','success');
+    document.querySelector('div[style*=fixed]')?.remove();
+    loadCrmKanban();
+    abrirLeadDetalhe(leadId);
   }
 
   async function salvarCrmInteracao(leadId) {
