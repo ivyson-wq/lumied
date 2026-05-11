@@ -130,6 +130,7 @@
     }
 
     // --- PHONE DETECTION ---
+    // Strategy A: header span with phone-like title
     var phoneSelectors = [
       '#main header span[title^="+"]',
       'header span[title^="+"]',
@@ -139,17 +140,40 @@
       if (phoneEl) { telefone = phoneEl.getAttribute('title'); break; }
     }
 
-    // If the name itself is a phone number
+    // Strategy B: name itself is a phone number
     if (!telefone && nome && /^\+?\d[\d\s\-()]{7,}$/.test(nome)) {
       telefone = nome;
     }
 
-    // Broader search for phone in all header spans
+    // Strategy C: header spans with phone pattern
     if (!telefone) {
       var allSpans = document.querySelectorAll('#main header span[title]');
       for (var j = 0; j < allSpans.length; j++) {
         var sv = allSpans[j].getAttribute('title') || '';
         if (/^\+?\d[\d\s\-()]{7,}$/.test(sv)) { telefone = sv; break; }
+      }
+    }
+
+    // Strategy D: extract phone from message data-id attributes
+    // WhatsApp messages have data-id like "false_5554997021634@c.us_..."
+    // or "true_5554997021634@c.us_..." (true = sent by us)
+    if (!telefone) {
+      var msgEls = document.querySelectorAll('#main div[data-id]');
+      for (var m = msgEls.length - 1; m >= 0 && m >= msgEls.length - 10; m--) {
+        var did = msgEls[m].getAttribute('data-id') || '';
+        var phoneMatch = did.match(/(?:false|true)_(\d{10,15})@/);
+        if (phoneMatch) { telefone = phoneMatch[1]; break; }
+      }
+    }
+
+    // Strategy E: look at conversation list item that's selected/active
+    if (!telefone) {
+      var activeChat = document.querySelector('[data-testid="cell-frame-container"][aria-selected="true"]')
+        || document.querySelector('div[tabindex="-1"][aria-selected="true"]');
+      if (activeChat) {
+        var chatDataId = activeChat.getAttribute('data-id') || '';
+        var chatPhone = chatDataId.match(/(\d{10,15})@/);
+        if (chatPhone) telefone = chatPhone[1];
       }
     }
 
@@ -204,12 +228,16 @@
   }
 
   async function findLeadByPhone(telefone) {
-    const leads = await apiCall('crm_leads_list');
+    var leads = await apiCall('crm_leads_list');
     if (!Array.isArray(leads)) return null;
-    const normalizedSearch = telefone.replace(/\D/g, '').slice(-11);
-    return leads.find(l => {
+    var raw = telefone.replace(/\D/g, '');
+    return leads.find(function(l) {
       if (!l.telefone) return false;
-      return l.telefone.replace(/\D/g, '').slice(-11) === normalizedSearch;
+      var lRaw = l.telefone.replace(/\D/g, '');
+      // Match if either ends with the other (handles +55, DDD variations)
+      var shorter = raw.length <= lRaw.length ? raw : lRaw;
+      var longer = raw.length > lRaw.length ? raw : lRaw;
+      return shorter.length >= 8 && longer.slice(-shorter.length) === shorter;
     });
   }
 
@@ -701,12 +729,25 @@
       console.log('[Lumied CRM] autoLookup: searching', info, 'in', allLeads.length, 'leads');
 
       var lead = null;
-      // Search by phone
+      // Search by phone — normalize both sides to last 8-11 digits for flexible matching
       if (info.telefone) {
-        var normPhone = info.telefone.replace(/\D/g, '').slice(-11);
+        var rawPhone = info.telefone.replace(/\D/g, '');
+        // Try matching last 11, 10, 9, 8 digits (handles +55, DDD variations)
+        var phoneVariants = [rawPhone];
+        if (rawPhone.length > 11) phoneVariants.push(rawPhone.slice(-11));
+        if (rawPhone.length > 10) phoneVariants.push(rawPhone.slice(-10));
+        if (rawPhone.length > 9) phoneVariants.push(rawPhone.slice(-9));
+        if (rawPhone.length > 8) phoneVariants.push(rawPhone.slice(-8));
+
         lead = allLeads.find(function(l) {
-          return l.telefone && l.telefone.replace(/\D/g, '').slice(-11) === normPhone;
+          if (!l.telefone) return false;
+          var lRaw = l.telefone.replace(/\D/g, '');
+          for (var v = 0; v < phoneVariants.length; v++) {
+            if (lRaw === phoneVariants[v] || lRaw.slice(-phoneVariants[v].length) === phoneVariants[v] || phoneVariants[v].slice(-lRaw.length) === lRaw) return true;
+          }
+          return false;
         });
+        console.log('[Lumied CRM] phone search:', rawPhone, 'variants:', phoneVariants, 'found:', lead ? lead.nome_responsavel : 'none');
       }
       // Search by exact name
       if (!lead && info.nome) {
