@@ -442,6 +442,29 @@ export function authPaisOuAluno(): Middleware {
       || (ctx.req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
     if (!tk || tk.length < 20) throw new AppError("AUTH_REQUIRED", "Token de sessão obrigatório.");
 
+    // 1. Try familia_sessoes (password-based login)
+    const { data: famSess } = await ctx.sb
+      .from("familia_sessoes")
+      .select("familia_id, expira_em")
+      .eq("token", tk)
+      .maybeSingle();
+
+    if (famSess && new Date(famSess.expira_em) >= new Date()) {
+      const { data: fam } = await ctx.sb
+        .from("familias")
+        .select("id, nome_responsavel, email, escola_id")
+        .eq("id", famSess.familia_id)
+        .maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const f = fam as any;
+      if (f) {
+        ctx.user = { id: f.id, nome: f.nome_responsavel || "Família", email: f.email, tipo: "responsavel" };
+        if (!ctx.escola_id) ctx.escola_id = f.escola_id || (await resolveEscolaId(ctx.req, ctx.sb, null, ctx.body)) || undefined;
+        return next();
+      }
+    }
+
+    // 2. Fallback: Supabase Auth JWT (magic link)
     try {
       const { data: { user } } = await ctx.sb.auth.getUser(tk);
       if (!user?.email) throw new AppError("AUTH_INVALID", "Sessão inválida.");

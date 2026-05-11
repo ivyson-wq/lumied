@@ -200,6 +200,36 @@ serve(async (req: Request) => {
     return ok({ logged: false });
   }
 
+  // ── Login Família por email+senha (alternativa ao magic link) ──
+  if (action === "familia_login") {
+    const email = ((body.email as string) || "").toLowerCase().trim();
+    const senha = (body.senha as string) || "";
+    if (!email || !senha) return err("E-mail e senha são obrigatórios.");
+
+    const rlFam = checkRateLimit(email, "login");
+    if (!rlFam.allowed) return err(`Tente novamente em ${rlFam.retryAfterSeconds}s.`, 429);
+
+    const escolaId = await resolveEscolaId(req, admin, null, body);
+    const { data: familia } = await admin
+      .from("familias")
+      .select("id, nome_responsavel, email, senha_hash, escola_id")
+      .eq("email", email)
+      .eq("escola_id", escolaId)
+      .maybeSingle();
+
+    if (!familia || !familia.senha_hash) return err("E-mail ou senha incorretos.");
+    if (!(await verificarSenhaAuto(senha, familia.senha_hash))) return err("E-mail ou senha incorretos.");
+
+    const token = gerarToken();
+    await admin.from("familia_sessoes").insert({
+      familia_id: familia.id,
+      token,
+      expira_em: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    return ok({ token, nome: familia.nome_responsavel || "Família", email: familia.email });
+  }
+
   // ── Magic Link customizado (com branding da escola) ──
   if (action === "send_magic_link") {
     const email = ((body.email as string) || "").toLowerCase().trim();

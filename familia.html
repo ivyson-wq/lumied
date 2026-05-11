@@ -1244,6 +1244,14 @@ body.has-bottomnav{padding-bottom:56px;}
   var { createClient } = supabase;
   var sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
+  /** Retorna token ativo — prioriza familia_token (login por senha), fallback Supabase Auth JWT */
+  async function getActiveToken() {
+    var ft = window._familiaToken || localStorage.getItem('familia_token');
+    if (ft) return ft;
+    var sess = (await sb.auth.getSession()).data?.session;
+    return sess?.access_token || null;
+  }
+
   // ── TAB NAVIGATION ──────────────────────────────────────
   var currentTab = 'inicio';
   // Aluno-only: esconde abas/cards exclusivas de responsável.
@@ -1469,6 +1477,28 @@ body.has-bottomnav{padding-bottom:56px;}
         console.error('[Auth Debug] Exchange exception:', e);
         window.history.replaceState({}, '', window.location.pathname);
       }
+    }
+
+    // Verifica familia_token (login por senha) antes do Supabase Auth
+    const savedFamiliaToken = localStorage.getItem('familia_token');
+    if (savedFamiliaToken) {
+      try {
+        const vr = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'me_papeis', _token: savedFamiliaToken }),
+        });
+        if (vr.ok) {
+          window._familiaToken = savedFamiliaToken;
+          const vd = await vr.json();
+          const dt = vd?.data || vd;
+          currentUser = { id: 'fam-restored', email: dt?.email || '', user_metadata: { nome: dt?.nome || 'Família' } };
+          await showForm(currentUser);
+          return;
+        } else {
+          localStorage.removeItem('familia_token');
+        }
+      } catch (_) { localStorage.removeItem('familia_token'); }
     }
 
     // getSession() detecta tokens no hash (implicit) ou sessão existente
@@ -1733,6 +1763,27 @@ body.has-bottomnav{padding-bottom:56px;}
     if (!email || !senha) { errEl.textContent = 'Preencha e-mail e senha.'; errEl.style.display = 'block'; return; }
     const btn = document.getElementById('btnLogin');
     btn.disabled = true; btn.textContent = 'Entrando...';
+
+    // 1. Tentar login custom (familia_login — tabela familias.senha_hash)
+    try {
+      const r = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'familia_login', email, senha }),
+      });
+      const j = await r.json();
+      if (r.ok && j.token) {
+        // Login custom OK — armazena token e simula user
+        localStorage.setItem('familia_token', j.token);
+        window._familiaToken = j.token;
+        currentUser = { id: 'fam-' + Date.now(), email: j.email, user_metadata: { nome: j.nome } };
+        btn.disabled = false; btn.textContent = 'Entrar';
+        showForm(currentUser);
+        return;
+      }
+    } catch (_) { /* fallback abaixo */ }
+
+    // 2. Fallback: Supabase Auth (signInWithPassword)
     const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
     btn.disabled = false; btn.textContent = 'Entrar';
     if (error) {
@@ -1848,8 +1899,7 @@ body.has-bottomnav{padding-bottom:56px;}
     window._alunoOnly = false;
     window._papeis = [];
     try {
-      const sess = (await sb.auth.getSession()).data?.session;
-      const tk = sess?.access_token;
+      const tk = await getActiveToken();
       if (tk) {
         const rp = await fetch(SUPABASE_URL + '/functions/v1/api', {
           method: 'POST',
@@ -2590,9 +2640,8 @@ body.has-bottomnav{padding-bottom:56px;}
   }
 
   async function callDiplomas(body) {
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session?.access_token || SUPABASE_ANON;
-    const email = session?.user?.email || currentUser?.email || null;
+    const token = (await getActiveToken()) || SUPABASE_ANON;
+    const email = currentUser?.email || null;
     const payload = JSON.stringify({ ...body, _email: email });
     const makeReq = (tk) => fetch(DIPLOMAS, {
       method: 'POST',
@@ -3201,11 +3250,11 @@ body.has-bottomnav{padding-bottom:56px;}
     return r.json();
   }
 
-  // Wrapper que injeta o JWT do user (Supabase Auth) em _token. Usado por endpoints
-  // que requerem authAluno (e que usam o JWT de magic link como sessão de aluno).
+  // Wrapper que injeta o token do user em _token. Usado por endpoints
+  // que requerem authAluno/authPaisOuAluno.
   async function callAcademicoAuth(body) {
-    const sess = sb ? (await sb.auth.getSession()).data?.session : null;
-    return callAcademico({ ...body, _token: sess?.access_token || null });
+    const tk = await getActiveToken();
+    return callAcademico({ ...body, _token: tk || null });
   }
 
   // Aluno-only: papeis === ['aluno']. Definido após login em showForm via me_papeis.
@@ -3354,7 +3403,7 @@ body.has-bottomnav{padding-bottom:56px;}
   var meusFilhosData = [];
 
   async function callAcesso(body) {
-    const token = sb ? (await sb.auth.getSession()).data?.session?.access_token : null;
+    const token = await getActiveToken();
     const r = await fetch(ACESSO_API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': CONFIG.SUPABASE_ANON, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON }, body: JSON.stringify({ ...body, _pais_email: currentUser?.email, _pais_token: token }) });
     return r.json();
   }
