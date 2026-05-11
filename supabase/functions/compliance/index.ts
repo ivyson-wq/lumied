@@ -429,6 +429,11 @@ router.on("compliance_incidente_historico", authGerenteOrSecretaria, feat, async
 //  CERTIFICAÇÕES E TREINAMENTOS
 // ═══════════════════════════════════════════════════════════════
 
+router.on("compliance_funcionarios_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("rh_funcionarios").select("id, nome, cargo, departamento").eq("escola_id", ctx.escola_id!).eq("ativo", true).order("nome");
+  return successResponse(data ?? []);
+});
+
 router.on("compliance_cert_tipos_list", authGerenteOrSecretaria, feat, async (ctx) => {
   const { data } = await ctx.sb.from("compliance_certificacoes_tipos").select("*").eq("ativo", true).order("nome");
   return successResponse(data ?? []);

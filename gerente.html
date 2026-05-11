@@ -3423,21 +3423,79 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <div id="panelCompCertificacoes" class="panel">
-        <div class="sec-title">🎓 Certificações e Treinamentos</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Controle de certificações obrigatórias e treinamentos programados.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">🎓 Certificações e Treinamentos</div>
+          <button onclick="toggleCompCertForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Nova Certificação</button>
+        </div>
+        <div id="compCertForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Funcionário *</label><select id="ccFunc" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></select></div>
+              <div class="ff" style="margin:0;"><label>Tipo Certificação *</label><select id="ccTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></select></div>
+              <div class="ff" style="margin:0;"><label>Data Obtenção *</label><input type="date" id="ccData" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+              <div class="ff" style="margin:0;"><label>Instituição</label><input type="text" id="ccInstituicao" placeholder="Ex: SENAI" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Nº Certificado</label><input type="text" id="ccNumero" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarCompCert()" class="btn-create" style="width:auto;padding:8px 20px;">Salvar</button>
+              <button onclick="toggleCompCertForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            </div>
+          </div>
+        </div>
         <table class="data-table"><thead><tr><th>Funcionário</th><th>Certificação</th><th>Obtida em</th><th>Vencimento</th><th>Status</th></tr></thead>
         <tbody id="compCertBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
 
       <div id="panelCompInspecoes" class="panel">
-        <div class="sec-title">📋 Inspeções e Vistorias</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Checklists de cantina, infraestrutura, transporte e segurança.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">📋 Inspeções e Vistorias</div>
+          <button onclick="toggleCompInspForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Nova Inspeção</button>
+        </div>
+        <div id="compInspForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Template *</label><select id="ciTemplate" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></select></div>
+              <div class="ff" style="margin:0;"><label>Data da Inspeção</label><input type="date" id="ciData" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+            </div>
+            <div class="ff" style="margin-top:10px;"><label>Observações</label><textarea id="ciObs" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></textarea></div>
+            <div id="ciChecklist" style="margin-top:10px;"></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarCompInsp()" class="btn-create" style="width:auto;padding:8px 20px;">Registrar Inspeção</button>
+              <button onclick="toggleCompInspForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            </div>
+          </div>
+        </div>
         <table class="data-table"><thead><tr><th>Data</th><th>Inspeção</th><th>Categoria</th><th>Conformidade</th><th>Status</th></tr></thead>
         <tbody id="compInspecoesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
 
       <div id="panelCompPoliticas" class="panel">
-        <div class="sec-title">📄 Políticas e Documentos</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">📄 Políticas e Documentos</div>
+          <button onclick="toggleCompPolForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Nova Política</button>
+        </div>
+        <div id="compPolForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Título *</label><input type="text" id="cpTitulo" placeholder="Ex: Política de Uso de Celular" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Categoria *</label><select id="cpCategoria" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+                <option value="seguranca">Segurança</option><option value="pedagogico">Pedagógico</option><option value="rh">RH</option><option value="financeiro">Financeiro</option><option value="lgpd">LGPD</option><option value="saude">Saúde</option><option value="outro">Outro</option>
+              </select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
+              <div class="ff" style="margin:0;"><label>Vigente desde</label><input type="date" id="cpVigente" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Próxima revisão</label><input type="date" id="cpRevisao" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Aceite obrigatório</label><select id="cpAceite" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"><option value="false">Não</option><option value="true">Sim</option></select></div>
+            </div>
+            <div class="ff" style="margin-top:10px;"><label>Conteúdo</label><textarea id="cpConteudo" rows="4" placeholder="Texto da política..." style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></textarea></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarCompPol()" class="btn-create" style="width:auto;padding:8px 20px;">Criar Política</button>
+              <button onclick="toggleCompPolForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            </div>
+          </div>
+        </div>
         <table class="data-table"><thead><tr><th>Título</th><th>Categoria</th><th>Versão</th><th>Vigente desde</th><th>Revisão</th><th>Status</th></tr></thead>
         <tbody id="compPoliticasBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
@@ -20538,6 +20596,60 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   async function loadCompPoliticas() { const d = await compApi({action:'compliance_politicas_list'}); const items = d.data||[]; document.getElementById('compPoliticasBody').innerHTML = items.length ? items.map(p=>`<tr><td>${p.titulo}</td><td>${p.categoria}</td><td>v${p.versao}</td><td>${p.vigente_desde?String(p.vigente_desde).split('-').reverse().join('/'):'—'}</td><td>${p.revisao_proxima?String(p.revisao_proxima).split('-').reverse().join('/'):'—'}</td><td><span class="status-pill" style="background:${{vigente:'#2d7a3a',rascunho:'#d4830a',revogada:'#888'}[p.status]||'#888'};color:#fff;">${p.status}</span></td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhuma.</td></tr>'; }
   async function loadCompCalendario() { const d = await compApi({action:'compliance_calendario_list'}); const items = d.data||[]; document.getElementById('compCalendarioBody').innerHTML = items.length ? items.map(c=>`<tr><td>${String(c.data_limite).split('-').reverse().join('/')}</td><td>${c.titulo}</td><td>${c.categoria}</td><td><span class="status-pill" style="background:${{baixa:'#888',normal:'#1a6bb5',alta:'#d4830a',critica:'#C8102E'}[c.prioridade]||'#888'};color:#fff;">${c.prioridade}</span></td><td><span class="status-pill" style="background:${{pendente:'#d4830a',em_andamento:'#1a6bb5',concluido:'#2d7a3a',atrasado:'#C8102E'}[c.status]||'#888'};color:#fff;">${c.status}</span></td><td>${c.status!=='concluido'?`<button onclick="compApi({action:'compliance_calendario_concluir',id:'${c.id}'}).then(()=>{showToast('Concluído');loadCompCalendario()})" style="background:#2d7a3a;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">Concluir</button>`:'✓'}</td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">Nenhum.</td></tr>'; }
   async function loadCompAlertas() { const d = await compApi({action:'compliance_alertas_list'}); const items = d.data||[]; document.getElementById('compAlertasBody').innerHTML = items.length ? items.map(a=>`<tr><td>${new Date(a.criado_em).toLocaleDateString('pt-BR')}</td><td>${a.professoras?.nome||'—'}</td><td>${a.email_destino}</td><td>${a.assunto}</td><td>${a.enviado?'<span class="status-pill" style="background:#2d7a3a;color:#fff;">Sim</span>':'<span class="status-pill" style="background:#C8102E;color:#fff;">Não</span>'}</td></tr>`).join('') : '<tr><td colspan="5" class="empty-state">Nenhum.</td></tr>'; }
+  // ── Certificações: form toggle + salvar ──
+  function toggleCompCertForm() { var el = document.getElementById('compCertForm'); el.style.display = el.style.display==='none'?'block':'none'; if (el.style.display==='block') loadCompCertFormData(); }
+  async function loadCompCertFormData() {
+    var [funcs, tipos] = await Promise.all([compApi({action:'compliance_funcionarios_list'}), compApi({action:'compliance_cert_tipos_list'})]);
+    var fList = funcs.data||[]; var tList = tipos.data||[];
+    document.getElementById('ccFunc').innerHTML = '<option value="">Selecione...</option>' + fList.map(function(f){return '<option value="'+f.id+'">'+esc(f.nome)+'</option>';}).join('');
+    document.getElementById('ccTipo').innerHTML = '<option value="">Selecione...</option>' + tList.map(function(t){return '<option value="'+t.id+'">'+esc(t.nome)+'</option>';}).join('');
+  }
+  async function salvarCompCert() {
+    var d = await compApi({action:'compliance_cert_criar', funcionario_id:document.getElementById('ccFunc').value, tipo_id:document.getElementById('ccTipo').value, data_obtencao:document.getElementById('ccData').value, instituicao:document.getElementById('ccInstituicao').value, numero_certificado:document.getElementById('ccNumero').value});
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Certificação registrada!','success'); toggleCompCertForm(); loadCompCertificacoes();
+  }
+
+  // ── Inspeções: form toggle + salvar ──
+  var _inspTemplates = [];
+  function toggleCompInspForm() { var el = document.getElementById('compInspForm'); el.style.display = el.style.display==='none'?'block':'none'; if (el.style.display==='block') loadCompInspFormData(); }
+  async function loadCompInspFormData() {
+    if (!document.getElementById('ciData').value) document.getElementById('ciData').value = new Date().toISOString().split('T')[0];
+    var d = await compApi({action:'compliance_inspecao_templates_list'}); _inspTemplates = d.data||[];
+    document.getElementById('ciTemplate').innerHTML = '<option value="">Selecione...</option>' + _inspTemplates.map(function(t){return '<option value="'+t.id+'">'+esc(t.nome)+' ('+esc(t.categoria)+')</option>';}).join('');
+    document.getElementById('ciTemplate').onchange = function(){ renderInspChecklist(this.value); };
+    document.getElementById('ciChecklist').innerHTML = '';
+  }
+  function renderInspChecklist(tid) {
+    var tmpl = _inspTemplates.find(function(t){return t.id===tid;});
+    if (!tmpl || !tmpl.itens_checklist) { document.getElementById('ciChecklist').innerHTML=''; return; }
+    var items = Array.isArray(tmpl.itens_checklist) ? tmpl.itens_checklist : [];
+    document.getElementById('ciChecklist').innerHTML = items.length ? '<div style="font-weight:600;margin-bottom:8px;">Checklist</div>' + items.map(function(it,i){
+      return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f0ea;font-size:13px;"><input type="checkbox" id="ciItem'+i+'" '+(it.obrigatorio?'required':'')+'>'+esc(it.item||it)+(it.obrigatorio?' <span style="color:#C8102E;">*</span>':'')+'</label>';
+    }).join('') : '';
+  }
+  async function salvarCompInsp() {
+    var tid = document.getElementById('ciTemplate').value;
+    if (!tid) { showToast('Selecione um template.','warning'); return; }
+    var tmpl = _inspTemplates.find(function(t){return t.id===tid;});
+    var items = tmpl && Array.isArray(tmpl.itens_checklist) ? tmpl.itens_checklist : [];
+    var respostas = items.map(function(it,i){ return {item:it.item||it, resposta:document.getElementById('ciItem'+i)?.checked||false, obrigatorio:!!it.obrigatorio}; });
+    var d = await compApi({action:'compliance_inspecao_realizar', template_id:tid, data_inspecao:document.getElementById('ciData').value, respostas:respostas, observacoes:document.getElementById('ciObs').value});
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Inspeção registrada! Conformidade: '+((d.data||{}).conformidade_pct||0)+'%','success'); toggleCompInspForm(); loadCompInspecoes();
+  }
+
+  // ── Políticas: form toggle + salvar ──
+  function toggleCompPolForm() { var el = document.getElementById('compPolForm'); el.style.display = el.style.display==='none'?'block':'none'; }
+  async function salvarCompPol() {
+    var titulo = document.getElementById('cpTitulo').value;
+    var categoria = document.getElementById('cpCategoria').value;
+    if (!titulo || !categoria) { showToast('Título e categoria são obrigatórios.','warning'); return; }
+    var d = await compApi({action:'compliance_politica_criar', titulo:titulo, categoria:categoria, conteudo_html:document.getElementById('cpConteudo').value, vigente_desde:document.getElementById('cpVigente').value||null, revisao_proxima:document.getElementById('cpRevisao').value||null, aceite_obrigatorio:document.getElementById('cpAceite').value==='true'});
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Política criada!','success'); toggleCompPolForm(); loadCompPoliticas();
+  }
+
   var compPontoRegistros = [];
   function previewPontoGerente() {
     const fileInput = document.getElementById('compArquivoPonto');
