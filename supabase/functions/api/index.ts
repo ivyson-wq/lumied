@@ -3446,6 +3446,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const ano = (body as any).ano || new Date().getFullYear().toString();
     const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor, status, data_lancamento")
       .eq("escola_id", gerente.escola_id)
+      .neq("status", "cancelado")
       .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
     const receitasMes = Array(12).fill(0), despesasMes = Array(12).fill(0);
     let totalReceitas = 0, totalDespesas = 0, pendente = 0;
@@ -3514,13 +3515,18 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   if (action === "fin_dre") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const ano = (body as any).ano || new Date().getFullYear().toString();
-    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["receita", "despesa"]).order("codigo");
+    // Fetch contas for escola + global seed accounts (escola_id IS NULL)
+    const { data: contasEscola } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["receita", "despesa"]).order("codigo");
+    const { data: contasGlobal } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").is("escola_id", null).in("tipo", ["receita", "despesa"]).order("codigo");
+    const codigosEscola = new Set((contasEscola ?? []).map(c => c.codigo));
+    const contas = [...(contasEscola ?? []), ...(contasGlobal ?? []).filter(c => !codigosEscola.has(c.codigo))];
     const { data: lancs } = await admin.from("fin_lancamentos").select("conta_id, valor, tipo, status, data_lancamento")
       .eq("escola_id", gerente.escola_id)
+      .neq("status", "cancelado")
       .gte("data_lancamento", ano + "-01-01").lte("data_lancamento", ano + "-12-31");
     // Agrupa por conta e mes
     const contaMap: Record<string, { nome: string; codigo: string; tipo: string; meses: number[]; total: number }> = {};
-    for (const c of contas ?? []) {
+    for (const c of contas) {
       contaMap[c.id] = { nome: c.nome, codigo: c.codigo, tipo: c.tipo, meses: Array(12).fill(0), total: 0 };
     }
     for (const l of lancs ?? []) {
@@ -3543,20 +3549,37 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   if (action === "fin_balanco") {
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
     const mes = (body as any).mes || new Date().toISOString().slice(0, 7);
-    const { data: contas } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
+    // Fetch contas for escola, fallback to global (escola_id IS NULL) for seed accounts
+    const { data: contasEscola } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
+    const { data: contasGlobal } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").is("escola_id", null).in("tipo", ["ativo", "passivo", "patrimonio"]).order("codigo");
+    // Merge: escola-specific first, add globals whose codigo is not already present
+    const codigosEscola = new Set((contasEscola ?? []).map(c => c.codigo));
+    const contas = [...(contasEscola ?? []), ...(contasGlobal ?? []).filter(c => !codigosEscola.has(c.codigo))];
     const { data: saldos } = await admin.from("fin_saldos_patrimoniais").select("conta_id, saldo").eq("escola_id", gerente.escola_id).eq("mes", mes);
     const saldoMap: Record<string, number> = {};
     for (const s of saldos ?? []) saldoMap[s.conta_id] = s.saldo;
-    // Calcula receitas - despesas acumulado ate o mes para lucro/prejuizo
-    const [y, m] = mes.split("-");
-    const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor")
+    // Auto-calculate "Contas a Receber" (3.2) from pending lancamentos
+    const contaAR = contas.find(c => c.codigo === "3.2");
+    if (contaAR) {
+      const { data: pendentes } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", gerente.escola_id).eq("tipo", "receita").eq("status", "pendente")
+        .lte("data_lancamento", mes + "-31");
+      const totalAR = (pendentes ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+      saldoMap[contaAR.id] = (saldoMap[contaAR.id] || 0) + totalAR;
+    }
+    // Calcula receitas - despesas REALIZADAS (status=pago) acumulado ate o mes para lucro/prejuizo
+    const [y] = mes.split("-");
+    const { data: lancs } = await admin.from("fin_lancamentos").select("tipo, valor, status")
       .eq("escola_id", gerente.escola_id)
       .gte("data_lancamento", y + "-01-01").lte("data_lancamento", mes + "-31");
     let lucro = 0;
-    for (const l of lancs ?? []) { lucro += l.tipo === "receita" ? l.valor : -l.valor; }
-    const ativos = (contas ?? []).filter(c => c.tipo === "ativo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
-    const passivos = (contas ?? []).filter(c => c.tipo === "passivo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
-    const patrimonio = (contas ?? []).filter(c => c.tipo === "patrimonio").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+    for (const l of lancs ?? []) {
+      if (l.status === "cancelado") continue;
+      lucro += l.tipo === "receita" ? l.valor : -l.valor;
+    }
+    const ativos = contas.filter(c => c.tipo === "ativo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+    const passivos = contas.filter(c => c.tipo === "passivo").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
+    const patrimonio = contas.filter(c => c.tipo === "patrimonio").map(c => ({ ...c, saldo: saldoMap[c.id] || 0 }));
     const totalAtivo = ativos.reduce((s, c) => s + c.saldo, 0);
     const totalPassivo = passivos.reduce((s, c) => s + c.saldo, 0);
     const totalPL = patrimonio.reduce((s, c) => s + c.saldo, 0) + lucro;
