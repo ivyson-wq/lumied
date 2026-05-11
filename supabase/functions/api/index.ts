@@ -2294,6 +2294,86 @@ serve(async (req: Request) => {
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
+  if (action === "usuarios_reenviar_credenciais") {
+    const { id } = body as { id: string };
+    if (!id) return err("ID obrigatório.");
+    const { data: u } = await admin.from("usuarios").select("nome, email, papeis, papel").eq("id", id).eq("escola_id", sessionEscolaId).single();
+    if (!u) return err("Usuário não encontrado.");
+    // Gera nova senha aleatória de 8 chars
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let novaSenha = "";
+    for (let i = 0; i < 8; i++) novaSenha += chars[Math.floor(Math.random() * chars.length)];
+    const senha_hash = await hashSenhaProf(novaSenha);
+    await admin.from("usuarios").update({ senha_hash }).eq("id", id).eq("escola_id", sessionEscolaId);
+    // Atualiza tabelas legadas
+    await admin.from("gerentes").update({ senha_hash: await hashSenha(novaSenha) }).eq("email", u.email).eq("escola_id", sessionEscolaId).catch(() => {});
+    await admin.from("professoras").update({ senha_hash }).eq("email", u.email).eq("escola_id", sessionEscolaId).catch(() => {});
+    await admin.from("secretarias").update({ senha_hash }).eq("email", u.email).eq("escola_id", sessionEscolaId).catch(() => {});
+    // Determina portal
+    const roles: string[] = u.papeis?.length ? u.papeis : (u.papel ? [u.papel] : []);
+    let portal = "area-restrita.html";
+    if (roles.includes("gerente") || roles.includes("diretor")) portal = "gerente.html";
+    else if (roles.includes("professora") || roles.includes("professora_assistente")) portal = "professora.html";
+    else portal = "secretaria.html";
+    // Busca branding da escola
+    const { data: escola } = await admin.from("escolas").select("nome, slug").eq("id", sessionEscolaId).single();
+    const escolaNome = escola?.nome || "Escola";
+    const slug = escola?.slug || "";
+    const { data: cfgRows } = await admin.from("escola_config").select("chave, valor").eq("escola_id", sessionEscolaId);
+    const cfg: Record<string, string> = {};
+    for (const r of cfgRows || []) cfg[r.chave] = r.valor;
+    const cor = cfg.cor_primaria || "#C8102E";
+    const logoUrl = cfg.escola_logo_url || "";
+    const icone = cfg.escola_icone || "🎓";
+    const portalUrl = slug ? `https://${slug}.lumied.com.br/${portal}` : portal;
+    const escolaNomeSafe = escapeHtml(escolaNome);
+    const corSafe = escapeHtml(cor);
+    const logoHtml = logoUrl
+      ? `<img src="${escapeHtml(logoUrl)}" alt="${escolaNomeSafe}" style="max-height:60px;max-width:200px;object-fit:contain;margin-bottom:16px;">`
+      : `<div style="font-size:32px;margin-bottom:16px;">${escapeHtml(icone)}</div>`;
+    const html = `
+      <div style="font-family:'Segoe UI',Tahoma,sans-serif;max-width:500px;margin:0 auto;padding:32px 24px;background:#fff;">
+        <div style="text-align:center;margin-bottom:24px;">
+          ${logoHtml}
+          <h2 style="color:${corSafe};margin:0;font-size:20px;">${escolaNomeSafe}</h2>
+          <p style="color:#888;font-size:12px;margin:4px 0 0;">by <strong>Lumied</strong></p>
+        </div>
+        <div style="background:#f8f5f0;border-radius:12px;padding:24px;">
+          <p style="font-size:15px;color:#333;margin:0 0 12px;">Olá <strong>${escapeHtml(u.nome || '')}</strong>,</p>
+          <p style="font-size:14px;color:#555;margin:0 0 16px;">Suas credenciais de acesso ao sistema:</p>
+          <div style="background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:16px;margin-bottom:16px;">
+            <p style="margin:0 0 8px;font-size:13px;"><strong>Email:</strong> ${escapeHtml(u.email)}</p>
+            <p style="margin:0;font-size:13px;"><strong>Senha:</strong> <code style="background:#f0f0f0;padding:2px 8px;border-radius:4px;font-size:14px;letter-spacing:1px;">${escapeHtml(novaSenha)}</code></p>
+          </div>
+          <div style="text-align:center;">
+            <a href="${escapeHtml(portalUrl)}" style="display:inline-block;padding:12px 28px;background:${corSafe};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Acessar Portal</a>
+          </div>
+          <p style="font-size:12px;color:#999;margin:16px 0 0;text-align:center;">Recomendamos alterar sua senha após o primeiro acesso.</p>
+        </div>
+        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+        <p style="font-size:11px;color:#bbb;text-align:center;">Sistema ${escolaNomeSafe} by Lumied</p>
+      </div>`;
+    const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_KEY) return err("Serviço de e-mail não configurado.");
+    const escolaNomeHeader = sanitizeHeaderValue(escolaNome) || "Lumied";
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_KEY}` },
+      body: JSON.stringify({
+        from: `${escolaNomeHeader} <noreply@lumied.com.br>`,
+        to: [u.email],
+        subject: `Suas credenciais de acesso — ${escolaNomeHeader}`,
+        html,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      console.error("[reenviar-credenciais] Resend error:", resp.status, errBody);
+      return err("Erro ao enviar e-mail. Tente novamente.");
+    }
+    return ok({ success: true, email: u.email });
+  }
 
   // ── Permissões RBAC ────────────────────────────────────────────
   if (action === "permissoes_get") {

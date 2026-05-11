@@ -9185,6 +9185,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         <div style="display:flex;gap:4px;align-items:center;margin-left:auto;">
           <button class="action-btn" onclick="openPermissoes('${u.id}','${esc(u.nome||u.email)}','${u.papeis?u.papeis[0]:u.papel}')" title="Permissões" style="font-size:14px;">🔐</button>
           <button class="action-btn" onclick="openEditPapeis('${u.id}')" title="Editar papéis" style="font-size:14px;">✏️</button>
+          <button class="action-btn" onclick="reenviarCredenciais('${u.id}','${esc(u.nome||u.email)}')" title="Reenviar email com senha" style="font-size:14px;">📧</button>
           ${isMe ? '<span class="you-badge">Você</span>' : `<button class="action-btn del" onclick="deleteEquipeMember('${u.id}','${esc(u.nome||u.email)}')">🗑</button>`}
         </div>
       </div>`;
@@ -9233,6 +9234,13 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const d = await api({ action:'usuarios_delete', id });
     if (d.error) { showToast(d.error, 'error'); return; }
     loadEquipe();
+  }
+  async function reenviarCredenciais(id, nome) {
+    if (!await _lumiedConfirm('Gerar nova senha e enviar por email para "'+nome+'"?\n\nA senha atual será substituída.')) return;
+    showToast('Enviando email...', 'info');
+    const d = await api({ action:'usuarios_reenviar_credenciais', id });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('Email com credenciais enviado para '+d.email+'!', 'success');
   }
   // ── IMPORTAÇÃO EM MASSA ────────────────────────────────
   var eqImportData = [];
