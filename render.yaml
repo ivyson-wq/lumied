@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: inter-relay-lumied
+    runtime: node
+    region: oregon
+    rootDir: relay
+    buildCommand: ""
+    startCommand: node index.js
+    envVars:
+      - key: RELAY_SECRET
+        sync: false
+      - key: INTER_CERT
+        sync: false
+      - key: INTER_KEY
+        sync: false
+    plan: free
+    autoDeploy: false
