@@ -89,6 +89,21 @@
     return !t || STATUS_TEXT_RE.test(t);
   }
 
+  // --- PHONE VALIDATION ---
+  // Rejects LIDs (14+ digit internal IDs) and accepts real phones
+  function isValidPhone(num) {
+    if (!num) return false;
+    var clean = num.replace(/\D/g, '');
+    // BR phone: 55 + DDD(2) + number(8-9) = 12-13 digits
+    if (/^55\d{10,11}$/.test(clean)) return true;
+    // Local BR without country code: DDD(2) + number(8-9) = 10-11 digits
+    if (/^\d{10,11}$/.test(clean)) return true;
+    // International with + prefix stripped: starts with known country codes
+    if (/^(1|44|49|33|34|39|351|54|56|57|58|595|598)\d{7,12}$/.test(clean)) return true;
+    // Reject: 14+ digits are almost certainly LIDs, not phones
+    return false;
+  }
+
   // --- PHONE FROM STORE (page-level script via CustomEvent) ---
   function getPhoneFromStore() {
     return new Promise(function(resolve) {
@@ -112,14 +127,16 @@
     var nome = null;
     var telefone = null;
 
-    // --- PHONE PRIORITY #1: window.Store (most reliable for saved contacts) ---
+    // --- PHONE PRIORITY #1: window.Store ---
+    // Note: WhatsApp Web now uses @lid (Linked Device IDs) instead of @c.us.
+    // The LID is NOT a phone number. We validate by checking if it looks like
+    // a real BR phone: 12-13 digits starting with 55, or 10-11 digits (local).
     try {
       var storePhone = await getPhoneFromStore();
-      // Validate: must be 10-15 digits, not a group/broadcast hash
-      if (storePhone && /^\d{10,15}$/.test(storePhone)) {
+      if (storePhone && isValidPhone(storePhone)) {
         telefone = storePhone;
       } else if (storePhone) {
-        console.warn('[Lumied CRM] Store returned invalid phone:', storePhone);
+        console.warn('[Lumied CRM] Store returned LID (not phone):', storePhone);
       }
     } catch(e) { console.warn('[Lumied CRM] Store phone failed:', e); }
 
@@ -440,6 +457,18 @@
       }
 
       if (!lead) {
+        // Tentar com telefone manual
+        var manualTel = prompt('Lead nao encontrado automaticamente.\nDigite o telefone do contato para buscar (com DDD):', '');
+        if (manualTel) {
+          manualTel = manualTel.replace(/\D/g, '');
+          if (manualTel.length >= 10) {
+            if (/^\d{10,11}$/.test(manualTel)) manualTel = '55' + manualTel;
+            telefone = manualTel;
+            lead = await findLeadByPhone(telefone);
+          }
+        }
+      }
+      if (!lead) {
         statusEl.className = 'mb-lead-status error';
         statusEl.innerHTML = `Lead nao encontrado para este contato.<br>Use <strong>"Capturar Lead"</strong> primeiro.`;
         document.getElementById('mb-lead-card').classList.add('hidden');
@@ -580,6 +609,18 @@
           }, 50);
         }
       } else {
+        // Se telefone não foi detectado automaticamente, pedir ao usuário
+        if (!telefone) {
+          var manualPhone = prompt('Telefone nao detectado automaticamente.\nDigite o telefone do contato (com DDD):', '');
+          if (manualPhone) {
+            manualPhone = manualPhone.replace(/\D/g, '');
+            if (manualPhone.length >= 10) {
+              if (/^\d{10,11}$/.test(manualPhone)) manualPhone = '55' + manualPhone;
+              telefone = manualPhone;
+            }
+          }
+        }
+
         statusEl.textContent = 'Criando novo lead no pipeline...';
         const nomeCrianca = extracted.nomeCrianca || prompt('Nome da crianca (opcional):', '') || '';
 
