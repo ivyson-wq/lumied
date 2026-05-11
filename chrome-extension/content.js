@@ -118,8 +118,8 @@
       };
       window.addEventListener('lumied-phone-result', handler);
       window.dispatchEvent(new Event('lumied-get-phone'));
-      // Timeout after 2000ms (IndexedDB lookup may take time)
-      setTimeout(function() { if (!resolved) { resolved = true; resolve(null); } }, 2000);
+      // Timeout after 3500ms (IndexedDB lookup may take time)
+      setTimeout(function() { if (!resolved) { resolved = true; resolve(null); } }, 3500);
     });
   }
 
@@ -197,12 +197,12 @@
       }
       // Strategy B: name itself is a phone number
       if (!telefone && nome && /^\+?\d[\d\s\-()]{7,}$/.test(nome)) telefone = nome;
-      // Strategy C: header spans with phone pattern
+      // Strategy C: header spans with phone pattern (title OR textContent)
       if (!telefone) {
-        var allSpans = document.querySelectorAll('#main header span[title]');
+        var allSpans = document.querySelectorAll('#main header span[title], #main header span[dir="auto"]');
         for (var j = 0; j < allSpans.length; j++) {
-          var sv = allSpans[j].getAttribute('title') || '';
-          if (/^\+?\d[\d\s\-()]{7,}$/.test(sv)) { telefone = sv; break; }
+          var sv = allSpans[j].getAttribute('title') || allSpans[j].textContent || '';
+          if (/^\+?\d[\d\s\-()]{7,}$/.test(sv.trim())) { telefone = sv.trim(); break; }
         }
       }
       // Strategy D: message data-id (false_PHONE@c.us = received from contact)
@@ -231,6 +231,23 @@
           var fid = allDataIds[f].getAttribute('data-id') || '';
           var fMatch = fid.match(/(\d{10,15})@/);
           if (fMatch) { telefone = fMatch[1]; break; }
+        }
+      }
+      // Strategy G: contact info drawer (right panel, if open)
+      if (!telefone) {
+        var drawerSpans = document.querySelectorAll('[data-testid="contact-info-drawer"] span, [data-testid="chat-info-drawer"] span');
+        for (var g = 0; g < drawerSpans.length; g++) {
+          var gt = (drawerSpans[g].textContent || '').trim();
+          if (/^\+?\d[\d\s\-()]{7,}$/.test(gt)) { telefone = gt; break; }
+        }
+      }
+      // Strategy H: aria-label on chat/message elements
+      if (!telefone) {
+        var ariaEls = document.querySelectorAll('#main [aria-label]');
+        for (var h = 0; h < ariaEls.length && h < 30; h++) {
+          var al = ariaEls[h].getAttribute('aria-label') || '';
+          var alMatch = al.match(/\+?(\d[\d\s\-()]{7,})/);
+          if (alMatch && isValidPhone(alMatch[1])) { telefone = alMatch[1]; break; }
         }
       }
     }
@@ -544,6 +561,57 @@
     }
   }
 
+  // --- MANDATORY PHONE MODAL ---
+
+  function requestPhoneModal(prefill) {
+    return new Promise(function(resolve) {
+      // Remove any existing modal
+      var existing = document.getElementById('lumied-phone-overlay');
+      if (existing) existing.remove();
+
+      var overlay = document.createElement('div');
+      overlay.id = 'lumied-phone-overlay';
+      overlay.className = 'lumied-phone-overlay';
+      overlay.innerHTML =
+        '<div class="lumied-phone-modal">' +
+          '<div class="lumied-phone-title">Telefone do contato</div>' +
+          '<p class="lumied-phone-desc">O telefone nao foi detectado automaticamente.<br>Digite o numero com DDD para salvar o lead.</p>' +
+          '<input type="tel" id="lumied-phone-input" class="lumied-phone-input" placeholder="Ex: 54 99902-1234" value="' + (prefill || '') + '" />' +
+          '<div id="lumied-phone-error" class="lumied-phone-error" style="display:none"></div>' +
+          '<button id="lumied-phone-btn" class="lumied-phone-btn">Confirmar</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      var input = document.getElementById('lumied-phone-input');
+      var errorEl = document.getElementById('lumied-phone-error');
+      var btn = document.getElementById('lumied-phone-btn');
+      input.focus();
+
+      function trySubmit() {
+        var raw = input.value.replace(/\D/g, '');
+        if (/^\d{10,11}$/.test(raw)) raw = '55' + raw;
+        if (!isValidPhone(raw)) {
+          errorEl.textContent = 'Telefone invalido. Digite DDD + numero (min 10 digitos).';
+          errorEl.style.display = 'block';
+          input.focus();
+          return;
+        }
+        overlay.remove();
+        resolve(raw);
+      }
+
+      btn.addEventListener('click', trySubmit);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') trySubmit();
+        if (e.key === 'Escape') e.preventDefault();
+      });
+      // Block Escape from closing
+      overlay.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
+      });
+    });
+  }
+
   // --- LEAD CAPTURE ---
 
   async function captureLead() {
@@ -609,16 +677,16 @@
           }, 50);
         }
       } else {
-        // Se telefone não foi detectado automaticamente, pedir ao usuário
+        // Se telefone nao foi detectado automaticamente, exigir do usuario
         if (!telefone) {
-          var manualPhone = prompt('Telefone nao detectado automaticamente.\nDigite o telefone do contato (com DDD):', '');
-          if (manualPhone) {
-            manualPhone = manualPhone.replace(/\D/g, '');
-            if (manualPhone.length >= 10) {
-              if (/^\d{10,11}$/.test(manualPhone)) manualPhone = '55' + manualPhone;
-              telefone = manualPhone;
-            }
-          }
+          telefone = await requestPhoneModal('');
+        }
+
+        // Validacao defensiva: nunca salvar lead sem telefone
+        if (!telefone || !isValidPhone(telefone)) {
+          statusEl.className = 'mb-lead-status error';
+          statusEl.textContent = 'Erro: telefone invalido. Tente novamente.';
+          return;
         }
 
         statusEl.textContent = 'Criando novo lead no pipeline...';
@@ -631,7 +699,7 @@
         }
         const leadData = {
           nome_responsavel: safeNome || telefone || 'Contato WhatsApp',
-          telefone: telefone || '',
+          telefone: telefone,
           origem: 'whatsapp',
           observacoes: 'Lead capturado via extensao Chrome WhatsApp Web'
         };

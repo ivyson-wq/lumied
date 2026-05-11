@@ -340,3 +340,72 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Phone Modal (mandatory phone input) */
+.lumied-phone-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 100001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn .2s ease;
+}
+.lumied-phone-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 24px 20px;
+  width: 340px;
+  max-width: 90vw;
+  box-shadow: 0 12px 40px rgba(0,0,0,.3);
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.lumied-phone-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #2d1b4e;
+  margin-bottom: 8px;
+}
+.lumied-phone-desc {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+.lumied-phone-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e0d8ec;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .2s;
+}
+.lumied-phone-input:focus {
+  border-color: #2d1b4e;
+}
+.lumied-phone-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 6px;
+  text-align: left;
+}
+.lumied-phone-btn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+  background: #2d1b4e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+.lumied-phone-btn:hover {
+  background: #3d2b5e;
+}

@@ -244,24 +244,25 @@ window.addEventListener('lumied-get-phone', function() {
               }
             }
 
+            console.log('[Lumied CRM page-phone] IDB result:', phone, 'debug:', debug.join(' | '));
             window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: phone, jid: jid, debug: debug } }));
           };
           getAllReq.onerror = function() {
             debug.push('IDB getAll failed');
+            console.log('[Lumied CRM page-phone] IDB error, debug:', debug.join(' | '));
             window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
           };
         };
         dbRequest.onerror = function() {
           debug.push('IDB open failed');
+          console.log('[Lumied CRM page-phone] IDB open error, debug:', debug.join(' | '));
           window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
         };
         return; // async — result dispatched in callbacks
       } catch(e) { debug.push('IDB error: ' + e.message); }
     }
-  } catch(e) {
-    debug.push('fatal error: ' + e.message);
-  }
 
+  console.log('[Lumied CRM page-phone] result:', phone, 'debug:', debug.join(' | '));
   window.dispatchEvent(new CustomEvent('lumied-phone-result', {
     detail: { phone: phone, jid: jid, debug: debug }
   }));
