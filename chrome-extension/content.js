@@ -417,11 +417,11 @@
       const extracted = extractLeadInfoFromMessages(messages);
       const resumo = summarizeConversation(messages);
 
-      // Update lead with extracted info if we found new data
+      // Update lead with extracted info (always overwrite with fresh data)
       const updates = {};
-      if (extracted.nomeCrianca && !lead.nome_crianca) updates.nome_crianca = extracted.nomeCrianca;
-      if (extracted.dataNascimento && !lead.data_nascimento) updates.data_nascimento = extracted.dataNascimento;
-      if (nome && nome !== telefone && !lead.nome_responsavel) updates.nome_responsavel = nome;
+      if (nome && nome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(nome)) updates.nome_responsavel = nome;
+      if (extracted.nomeCrianca) updates.nome_crianca = extracted.nomeCrianca;
+      if (extracted.dataNascimento) updates.data_nascimento = extracted.dataNascimento;
 
       if (Object.keys(updates).length > 0) {
         statusEl.textContent = 'Atualizando dados do lead...';
@@ -515,9 +515,9 @@
         });
 
         const updates = {};
-        if (nome && nome !== telefone && !existingLead.nome_responsavel) updates.nome_responsavel = nome;
-        if (extracted.nomeCrianca && !existingLead.nome_crianca) updates.nome_crianca = extracted.nomeCrianca;
-        if (extracted.dataNascimento && !existingLead.data_nascimento) updates.data_nascimento = extracted.dataNascimento;
+        if (nome && nome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(nome)) updates.nome_responsavel = nome;
+        if (extracted.nomeCrianca) updates.nome_crianca = extracted.nomeCrianca;
+        if (extracted.dataNascimento) updates.data_nascimento = extracted.dataNascimento;
         if (Object.keys(updates).length > 0) {
           await apiCall('crm_lead_save', { id: existingLead.id, ...updates });
           Object.assign(existingLead, updates);
