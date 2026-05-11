@@ -3409,9 +3409,9 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true });
   }
   if (action === "fin_lancamento_save") {
-    const { id, tipo, conta_id, descricao, valor, data_lancamento, data_vencimento, status, fornecedor, familia_email, familia_nome, observacao } = body as any;
+    const { id, tipo, conta_id, descricao, valor, data_lancamento, data_vencimento, status, fornecedor, familia_email, familia_nome, observacao, centro_custo_id, metodo_pagamento } = body as any;
     if (!descricao || !valor || !data_lancamento) return err("Descricao, valor e data obrigatorios.");
-    const data = { tipo, conta_id, descricao, valor: parseFloat(valor), data_lancamento, data_vencimento: data_vencimento || null, status: status || 'pendente', fornecedor: fornecedor || null, familia_email: familia_email || null, familia_nome: familia_nome || null, observacao: observacao || null, criado_por: gerente?.nome };
+    const data = { tipo, conta_id, descricao, valor: parseFloat(valor), data_lancamento, data_vencimento: data_vencimento || null, status: status || 'pendente', fornecedor: fornecedor || null, familia_email: familia_email || null, familia_nome: familia_nome || null, observacao: observacao || null, centro_custo_id: centro_custo_id || null, metodo_pagamento: metodo_pagamento || null, criado_por: gerente?.nome };
     if (id) {
       await admin.from("fin_lancamentos").update(data).eq("id", id).eq("escola_id", sessionEscolaId);
     } else {
