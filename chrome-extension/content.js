@@ -83,7 +83,7 @@
 
   // --- HELPERS ---
 
-  var STATUS_TEXT_RE = /ltima vez|online|digitando|clique aqui|last seen|typing|click here|visto por|sem intera|às \d{1,2}|as \d{1,2}:\d{2}|^\d{1,2}:\d{2}$|^hoje$|^ontem$/i;
+  var STATUS_TEXT_RE = /ltima vez|online|digitando|clique aqui|last seen|typing|click here|visto por|sem intera|às \d{1,2}|as \d{1,2}:\d{2}|^\d{1,2}:\d{2}$|^hoje$|^ontem$|default-contact|refreshed|undefined|null|^\s*$/i;
 
   function isStatusText(t) {
     return !t || STATUS_TEXT_RE.test(t);
