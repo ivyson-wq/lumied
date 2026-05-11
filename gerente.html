@@ -16796,21 +16796,21 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       <span id="finMensSelCount" style="font-size:12px;font-weight:600;color:var(--accent);"></span>
     </div>
     <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
-      <th style="${thS}text-align:center;width:40px;"><input type="checkbox" onchange="finMensToggleAll(this.checked)" style="cursor:pointer;"></th>
+      <th style="${thS}text-align:center;width:60px;"><input type="checkbox" onchange="finMensToggleAll(this.checked)" style="cursor:pointer;"> #</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('nome')">Aluno${_sortIcon(s,'nome')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('turno')">Turno${_sortIcon(s,'turno')}</th>
       <th style="${thS}text-align:left;">Composição</th>
       <th style="${thS}text-align:right;" onclick="sortFinMensPreview('valor')">Valor${_sortIcon(s,'valor')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('vencimento')">Vencimento${_sortIcon(s,'vencimento')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('status')">Boleto${_sortIcon(s,'status')}</th>
-    </tr></thead><tbody>${data.map(a => {
+    </tr></thead><tbody>${data.map((a,idx) => {
       const hasBoleto = !!a.boleto_status && a.boleto_status !== 'cancelado';
       const composicao = (a.itens||[]).map(it => `<div style="display:flex;justify-content:space-between;gap:6px;"><span>${_catIcon(it.categoria)} ${esc(it.nome)}</span><span style="font-weight:600;white-space:nowrap;">${_fmtR(it.valor)}</span></div>`).join('');
       const bS = a.boleto_status;
       const bBadge = bS==='pago'?'background:#edf7f0;color:#2d7a3a;':bS==='emitido'?'background:#fff8e1;color:#b07d00;':bS==='cancelado'?'background:#f5f0ea;color:var(--muted);':'';
       const bLabel = bS==='pago'?'Pago':bS==='emitido'?'Emitido':bS==='cancelado'?'Cancelado':'';
       return `<tr style="border-bottom:1px solid #f5f0ea;">
-        <td style="padding:10px;text-align:center;"><input type="checkbox" class="fmens-chk" value="${a.aluno_id}" ${hasBoleto?'disabled title="Já tem boleto"':''} onchange="_finMensUpdateSelCount()" style="cursor:pointer;"></td>
+        <td style="padding:10px;text-align:center;"><input type="checkbox" class="fmens-chk" value="${a.aluno_id}" ${hasBoleto?'disabled title="Já tem boleto"':''} onchange="_finMensUpdateSelCount()" style="cursor:pointer;"><span style="font-size:10px;color:var(--muted);margin-left:2px;">${idx+1}</span></td>
         <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(a.nome)}</div><div style="font-size:11px;color:var(--muted);">${esc(a.resp_nome||a.familia_email||'')}</div></td>
         <td style="padding:10px;font-size:12px;">${esc(a.serie||'—')}<br><span style="color:var(--muted);">${esc(a.turno||'—')}</span></td>
         <td style="padding:10px;font-size:11px;">${composicao}</td>
@@ -16878,13 +16878,13 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       <button id="finBolBulkEmailBtn" onclick="finBolEnviarEmailBatch()" style="display:none;padding:5px 14px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">📧 Enviar selecionados por email</button>
     </div>
     <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
-      <th style="${thS}text-align:center;width:40px;"><input type="checkbox" onchange="finBolToggleAll(this.checked)" style="cursor:pointer;"></th>
+      <th style="${thS}text-align:center;width:60px;"><input type="checkbox" onchange="finBolToggleAll(this.checked)" style="cursor:pointer;"> #</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensBoletos('nome')">Aluno${_sortIcon(s,'nome')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensBoletos('vencimento')">Vencimento${_sortIcon(s,'vencimento')}</th>
       <th style="${thS}text-align:right;" onclick="sortFinMensBoletos('valor')">Valor${_sortIcon(s,'valor')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensBoletos('status')">Status${_sortIcon(s,'status')}</th>
       <th style="${thS}text-align:left;">Ações</th>
-    </tr></thead><tbody>${boletos.map(b => {
+    </tr></thead><tbody>${boletos.map((b,idx) => {
       const isManual = b.baixa_manual === true;
       const isVencido = b.status==='emitido' && b.vencimento < new Date().toISOString().slice(0,10);
       const badgeStyle = b.status==='pago'&&isManual?'background:#e8eaf6;color:#5c6bc0;border:1px solid #c5cae9;':b.status==='pago'?'background:#edf7f0;color:#2d7a3a;':b.status==='cancelado'?'background:#f5f0ea;color:var(--muted);':isVencido?'background:#fde8e8;color:#EF4444;':'background:#fff8e1;color:#b07d00;';
@@ -16902,7 +16902,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       if (b.pix_copia_cola) acoes += `<button onclick="navigator.clipboard.writeText('${esc(b.pix_copia_cola)}');showToast('PIX copiado!','success')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Copiar PIX">📋 PIX</button>`;
       acoes += '</div>';
       return `<tr style="border-bottom:1px solid #f5f0ea;${isManual?'background:#f5f5ff;':''}">
-        <td style="padding:10px;text-align:center;"><input type="checkbox" class="fbol-chk" value="${b.id}" onchange="_finBolUpdateSelCount()" style="cursor:pointer;"></td>
+        <td style="padding:10px;text-align:center;"><input type="checkbox" class="fbol-chk" value="${b.id}" onchange="_finBolUpdateSelCount()" style="cursor:pointer;"><span style="font-size:10px;color:var(--muted);margin-left:2px;">${idx+1}</span></td>
         <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(b.crianca_nome||b.familia_nome||b.cpf_pagador)}</div><div style="font-size:11px;color:var(--muted);">${esc(b.familia_nome||b.familia_email||'')}</div></td>
         <td style="padding:10px;font-size:12px;">${b.vencimento ? new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
         <td style="padding:10px;font-weight:700;text-align:right;">${_fmtR(b.valor)}</td>
