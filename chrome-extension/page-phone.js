@@ -1,166 +1,159 @@
-// Lumied CRM — Page-level script (runs in MAIN world, has access to window.Store)
-// Extracts phone number from WhatsApp Web's internal Store API.
+// Lumied CRM — Page-level script (runs in MAIN world)
+// Extracts phone number from WhatsApp Web's internal APIs.
+// WhatsApp now uses @lid (Linked Device ID) instead of @c.us for chats.
+// We need to resolve the LID back to a real phone number.
 
 window.addEventListener('lumied-get-phone', function() {
   var phone = null;
   var jid = null;
   var debug = [];
+  var activeChat = null;
 
   try {
-    // Strategy 1: window.Store.Chat (most common path)
-    if (window.Store && window.Store.Chat) {
-      var active = window.Store.Chat.active;
-      if (!active && window.Store.Chat.getActive) active = window.Store.Chat.getActive();
-      if (active) {
-        jid = active.id?._serialized || active.id?.user || null;
-        debug.push('Store.Chat.active: ' + jid);
+    // ── Step 1: Find the active chat object ──
+    // Try window.Store first, then require (webpack modules)
+    var chatSources = [];
+    if (window.Store?.Chat) chatSources.push({ name: 'Store.Chat', obj: window.Store.Chat });
+    if (window.Store?.Chats) chatSources.push({ name: 'Store.Chats', obj: window.Store.Chats });
+
+    // require-based modules (this is what actually works in current WhatsApp Web)
+    if (window.require) {
+      try { var m = window.require('WAWebCollections'); if (m?.Chat) chatSources.push({ name: 'require.Chat', obj: m.Chat }); } catch(e) {}
+      try { var m2 = window.require('WAWebChatCollection'); if (m2) chatSources.push({ name: 'require.ChatColl', obj: m2 }); } catch(e) {}
+    }
+
+    for (var i = 0; i < chatSources.length; i++) {
+      var src = chatSources[i];
+      var chat = src.obj.active || src.obj.getActive?.() || null;
+      if (!chat && src.obj.models) {
+        for (var j = 0; j < src.obj.models.length; j++) {
+          if (src.obj.models[j].active || src.obj.models[j].isActive) { chat = src.obj.models[j]; break; }
+        }
+      }
+      if (chat) {
+        activeChat = chat;
+        jid = chat.id?._serialized || chat.id?.user || null;
+        debug.push(src.name + ': ' + jid);
+        break;
       }
     }
 
-    // Strategy 2: window.Store.Chats.models (fallback)
-    if (!jid && window.Store && window.Store.Chats && window.Store.Chats.models) {
-      var models = window.Store.Chats.models || window.Store.Chats._models || [];
-      for (var i = 0; i < models.length; i++) {
-        if (models[i].active || models[i].isActive) {
-          jid = models[i].id?._serialized || models[i].id?.user || null;
-          debug.push('Store.Chats.models[active]: ' + jid);
-          break;
-        }
-      }
-    }
+    if (!jid) { debug.push('no active chat found'); }
 
-    // Strategy 3: window.Store.Chat.get() with currently visible chat
-    if (!jid && window.Store && window.Store.Chat && window.Store.Chat.models) {
-      var chatModels = window.Store.Chat.models || [];
-      for (var j = 0; j < chatModels.length; j++) {
-        if (chatModels[j].active) {
-          jid = chatModels[j].id?._serialized || chatModels[j].id?.user || null;
-          debug.push('Store.Chat.models[active]: ' + jid);
-          break;
-        }
-      }
-    }
-
-    // Strategy 4: Look for Store in different module paths (WA updates move things around)
-    if (!jid) {
-      var storeKeys = ['Store', '__x_store', 'WWebJS'];
-      for (var k = 0; k < storeKeys.length; k++) {
-        var store = window[storeKeys[k]];
-        if (store && store.Chat) {
-          var ch = store.Chat.active || (store.Chat.getActive ? store.Chat.getActive() : null);
-          if (ch) {
-            jid = ch.id?._serialized || ch.id?.user || null;
-            debug.push(storeKeys[k] + '.Chat.active: ' + jid);
-            break;
-          }
-        }
-      }
-    }
-
-    // Strategy 5: Search for require/webpack modules that expose Chat
-    if (!jid && window.require) {
-      try {
-        var chatModule = window.require('WAWebCollections')?.Chat || window.require('WAWebChatCollection');
-        if (chatModule) {
-          var activeChat = chatModule.active || chatModule.getActive?.();
-          if (activeChat) {
-            jid = activeChat.id?._serialized || activeChat.id?.user || null;
-            debug.push('require.Chat.active: ' + jid);
-          }
-        }
-      } catch(e) { debug.push('require failed: ' + e.message); }
-    }
-
-    // Extract phone from JID
+    // ── Step 2: Extract phone from JID ──
     if (jid) {
-      debug.push('raw jid: ' + jid);
-
       if (jid.includes('@c.us') || jid.includes('@s.whatsapp.net')) {
-        // Direct phone JID
         var match = jid.match(/^(\d{10,15})@/);
-        if (match) { phone = match[1]; debug.push('phone from @c.us: ' + phone); }
+        if (match) { phone = match[1]; debug.push('direct @c.us phone: ' + phone); }
 
       } else if (jid.includes('@lid')) {
-        // LID (Linked Device ID) — need to resolve to real phone number
-        debug.push('LID detected, resolving to phone...');
+        debug.push('LID detected, trying resolution methods...');
+        var lidUser = jid.split('@')[0];
 
-        // Method 1: Store.LidUtils.getPhoneNumber (best approach per whatsapp-web.js)
-        try {
-          var lidStores = [window.Store, window.__x_store];
-          for (var ls = 0; ls < lidStores.length; ls++) {
-            if (!lidStores[ls]?.LidUtils) continue;
-            var lidObj = { _serialized: jid, user: jid.split('@')[0], server: 'lid' };
-            var pnResult = lidStores[ls].LidUtils.getPhoneNumber(lidObj);
-            if (pnResult) {
-              var pnSerialized = pnResult._serialized || pnResult.user || String(pnResult);
-              var pnMatch = pnSerialized.match(/(\d{10,15})/);
-              if (pnMatch) { phone = pnMatch[1]; debug.push('LidUtils.getPhoneNumber: ' + phone); }
+        // ── Method A: LidUtils via require ──
+        if (!phone) {
+          var lidUtilsSources = [];
+          if (window.Store?.LidUtils) lidUtilsSources.push(window.Store.LidUtils);
+          if (window.require) {
+            try { var lu = window.require('WAWebLidUtils'); if (lu) lidUtilsSources.push(lu); } catch(e) {}
+            try { var lu2 = window.require('WAWebWidFactory'); if (lu2?.getPhoneNumber) lidUtilsSources.push(lu2); } catch(e) {}
+          }
+          for (var a = 0; a < lidUtilsSources.length; a++) {
+            try {
+              var lidObj = { _serialized: jid, user: lidUser, server: 'lid' };
+              var fn = lidUtilsSources[a].getPhoneNumber || lidUtilsSources[a].getWid || lidUtilsSources[a].lidToWid;
+              if (fn) {
+                var result = fn(lidObj);
+                if (result) {
+                  var rs = result._serialized || result.user || String(result);
+                  var rm = rs.match(/(\d{10,15})/);
+                  if (rm) { phone = rm[1]; debug.push('LidUtils resolved: ' + phone); break; }
+                }
+              }
+            } catch(e) { debug.push('LidUtils[' + a + '] error: ' + e.message); }
+          }
+        }
+
+        // ── Method B: Contact object on active chat ──
+        if (!phone && activeChat) {
+          try {
+            var contact = activeChat.contact;
+            if (contact) {
+              // Try every possible phone field
+              var fields = ['id._serialized', 'id.user', 'phoneNumber', 'userid', 'number', 'jid', 'wid._serialized', 'wid.user'];
+              for (var b = 0; b < fields.length; b++) {
+                var val = fields[b].split('.').reduce(function(o, k) { return o?.[k]; }, contact);
+                if (val) {
+                  var vs = String(val);
+                  // Must contain @c.us or be pure digits
+                  var vm = vs.match(/(\d{10,15})(?:@|$)/);
+                  if (vm && !vs.includes('@lid') && !vs.includes('@g.us')) {
+                    phone = vm[1];
+                    debug.push('contact.' + fields[b] + ': ' + phone);
+                    break;
+                  }
+                }
+              }
+              // Dump all contact keys for debugging if phone not found
+              if (!phone) {
+                var keys = Object.keys(contact).filter(function(k) { return typeof contact[k] !== 'function' && typeof contact[k] !== 'object'; });
+                debug.push('contact keys: ' + keys.join(','));
+                var vals = keys.map(function(k) { return k + '=' + String(contact[k]).substring(0, 30); });
+                debug.push('contact vals: ' + vals.join(' | '));
+              }
+            } else {
+              debug.push('activeChat.contact is null');
+            }
+          } catch(e) { debug.push('contact error: ' + e.message); }
+        }
+
+        // ── Method C: Contact collection scan ──
+        if (!phone) {
+          var contactSources = [];
+          if (window.Store?.Contact?.models) contactSources.push(window.Store.Contact.models);
+          if (window.require) {
+            try { var cc = window.require('WAWebCollections'); if (cc?.Contact?.models) contactSources.push(cc.Contact.models); } catch(e) {}
+          }
+          for (var c = 0; c < contactSources.length; c++) {
+            var models = contactSources[c];
+            debug.push('scanning ' + models.length + ' contacts...');
+            for (var ci = 0; ci < models.length; ci++) {
+              var ct = models[ci];
+              var ctLid = ct.id?._serialized || '';
+              if (ctLid === jid || ct.id?.user === lidUser) {
+                // Found! Try to get phone
+                var ctFields = [ct.userid, ct.phoneNumber, ct.number, ct.wid?._serialized, ct.wid?.user];
+                for (var cf = 0; cf < ctFields.length; cf++) {
+                  if (ctFields[cf]) {
+                    var cfm = String(ctFields[cf]).match(/(\d{10,15})/);
+                    if (cfm) { phone = cfm[1]; debug.push('Contact scan found: ' + phone); break; }
+                  }
+                }
+                if (!phone) {
+                  // Dump this contact's keys for debugging
+                  var ctKeys = Object.keys(ct).filter(function(k) { return typeof ct[k] !== 'function' && typeof ct[k] !== 'object'; });
+                  debug.push('matched contact keys: ' + ctKeys.map(function(k) { return k + '=' + String(ct[k]).substring(0, 25); }).join(' | '));
+                }
+                break;
+              }
             }
             if (phone) break;
           }
-        } catch(e) { debug.push('LidUtils.getPhoneNumber error: ' + e.message); }
-
-        // Method 2: Contact object on the active chat
-        if (!phone) {
-          try {
-            var lidStores2 = [window.Store, window.__x_store];
-            for (var ls2 = 0; ls2 < lidStores2.length; ls2++) {
-              if (!lidStores2[ls2]?.Chat) continue;
-              var ac = lidStores2[ls2].Chat.active;
-              if (!ac) continue;
-              // contact.id might be @c.us even when chat.id is @lid
-              var cid = ac.contact?.id?._serialized || ac.contact?.id?.user || '';
-              var cidMatch = cid.match(/^(\d{10,15})@(?:c\.us|s\.whatsapp)/);
-              if (cidMatch) { phone = cidMatch[1]; debug.push('contact.id: ' + phone); break; }
-              // contact.phoneNumber or contact.userid
-              var cpn = ac.contact?.phoneNumber || ac.contact?.userid || ac.contact?.number || '';
-              if (cpn) { var cpnMatch = String(cpn).match(/(\d{10,15})/); if (cpnMatch) { phone = cpnMatch[1]; debug.push('contact.phoneNumber: ' + phone); break; } }
-            }
-          } catch(e) { debug.push('contact fallback error: ' + e.message); }
         }
 
-        // Method 3: QueryExist to force resolve
-        if (!phone) {
+        // ── Method D: Check if chat has a 'wid' separate from 'id' ──
+        if (!phone && activeChat) {
           try {
-            var lidStores3 = [window.Store, window.__x_store];
-            for (var ls3 = 0; ls3 < lidStores3.length; ls3++) {
-              if (!lidStores3[ls3]?.QueryExist) continue;
-              var qResult = lidStores3[ls3].QueryExist(jid);
-              if (qResult && qResult.then) {
-                // Can't await in sync context, skip async approach
-                debug.push('QueryExist available but async, skipping');
-              }
-              break;
-            }
-          } catch(e) { debug.push('QueryExist error: ' + e.message); }
-        }
-
-        // Method 4: Scan contact list for matching LID
-        if (!phone) {
-          try {
-            var contactStores = [window.Store, window.__x_store];
-            for (var cs = 0; cs < contactStores.length; cs++) {
-              var contacts = contactStores[cs]?.Contact?.models || contactStores[cs]?.Contacts?.models || [];
-              for (var ci = 0; ci < contacts.length; ci++) {
-                var c = contacts[ci];
-                var cLid = c.id?._serialized || '';
-                if (cLid === jid) {
-                  // Found the contact by LID — now get phone from userid/phoneNumber
-                  var realPhone = c.userid || c.phoneNumber || c.number || c.id?.user || '';
-                  var rpMatch = String(realPhone).match(/(\d{10,15})/);
-                  if (rpMatch) { phone = rpMatch[1]; debug.push('Contact.models match: ' + phone); break; }
-                }
-              }
-              if (phone) break;
-              // Also check if Contact has a getPhoneNumber method
-              if (contactStores[cs]?.Contact?.getPhoneNumber) {
-                try {
-                  var gpn = contactStores[cs].Contact.getPhoneNumber({ _serialized: jid });
-                  if (gpn) { var gpnMatch = String(gpn._serialized || gpn).match(/(\d{10,15})/); if (gpnMatch) { phone = gpnMatch[1]; debug.push('Contact.getPhoneNumber: ' + phone); break; } }
-                } catch(e2) { /* skip */ }
+            var widPaths = ['wid', 'contactJid', 'pendingAction.wid', 'msgsLoaded.wid'];
+            for (var d = 0; d < widPaths.length; d++) {
+              var wid = widPaths[d].split('.').reduce(function(o, k) { return o?.[k]; }, activeChat);
+              if (wid) {
+                var ws = wid._serialized || wid.user || String(wid);
+                var wm = ws.match(/(\d{10,15})(?:@c\.us|@s\.whatsapp|$)/);
+                if (wm) { phone = wm[1]; debug.push('chat.' + widPaths[d] + ': ' + phone); break; }
               }
             }
-          } catch(e) { debug.push('Contact scan error: ' + e.message); }
+          } catch(e) { debug.push('wid scan error: ' + e.message); }
         }
 
       } else {
@@ -168,7 +161,7 @@ window.addEventListener('lumied-get-phone', function() {
       }
     }
   } catch(e) {
-    debug.push('error: ' + e.message);
+    debug.push('fatal error: ' + e.message);
   }
 
   window.dispatchEvent(new CustomEvent('lumied-phone-result', {
