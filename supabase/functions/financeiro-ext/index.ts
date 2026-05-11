@@ -817,6 +817,10 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
               cpfCnpj: (item.cpf_pagador || "").replace(/\D/g, ""),
               tipoPessoa: "FISICA",
               nome: item.familia_nome,
+              endereco: "Rua não informada",
+              cidade: "Caxias do Sul",
+              uf: "RS",
+              cep: "95000000",
             },
             mensagem: msgLines,
           };

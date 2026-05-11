@@ -3618,6 +3618,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   // ── Emissao de Boletos (Inter) ──────────────────────────
   if (action === "fin_emitir_boleto") {
     const { mensalidade_id, cpf_pagador, valor, vencimento, descricao, nome_pagador, aluno_id } = body as any;
+    const { endereco, cep, cidade, uf } = body as any;
     if (!cpf_pagador || !valor || !vencimento) return err("CPF, valor e vencimento obrigatorios.");
     const RELAY_URL = Deno.env.get("INTER_RELAY_URL") || "";
     const RELAY_SECRET = Deno.env.get("RELAY_SECRET") || "";
@@ -3656,6 +3657,10 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
           cpfCnpj: cpf_pagador.replace(/\D/g, ""),
           tipoPessoa: cpf_pagador.replace(/\D/g, "").length > 11 ? "JURIDICA" : "FISICA",
           nome: nome_pagador || "Responsavel",
+          endereco: endereco || "Rua não informada",
+          cidade: cidade || "Caxias do Sul",
+          uf: uf || "RS",
+          cep: (cep || "95000000").replace(/\D/g, ""),
         },
         mensagem: { linha1: (descricao || "Mensalidade Escolar").substring(0, 100) },
       };
