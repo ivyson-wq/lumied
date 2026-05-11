@@ -16778,7 +16778,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           ${esc(est.nome)} <span style="background:${est.cor};color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;">${leads.length}</span>
         </div>
         <div class="kanban-col-body" ondragover="event.preventDefault()" ondrop="dropLead(event,'${est.id}')">
-          ${leads.length ? leads.map(l => `<div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('text','${l.id}')">
+          ${leads.length ? leads.map(l => `<div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('text','${l.id}')" onclick="if(!event.dataTransfer||!event.dataTransfer.getData('text'))abrirLeadDetalhe('${l.id}')" style="cursor:pointer;">
             <div class="kc-name">${esc(l.nome_responsavel)}</div>
             <div class="kc-info">
               ${l.nome_crianca ? '👶 ' + esc(l.nome_crianca) + (l.data_nascimento ? ' (' + crmIdadeTexto(l.data_nascimento) + ')' : '') : ''}
@@ -16787,8 +16787,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
               ${l.origem ? '<br>📍 ' + esc(l.origem) : ''}
             </div>
             <div class="kc-actions">
-              <button class="kc-btn" onclick="abrirLeadDetalhe('${l.id}')">Detalhes</button>
-              ${l.telefone ? `<button class="kc-btn" style="color:#2d7a3a;" onclick="abrirWhatsApp('${esc(l.telefone)}','${esc(l.nome_responsavel)}')">WhatsApp</button>` : ''}
+              ${l.telefone ? `<button class="kc-btn" style="color:#2d7a3a;" onclick="event.stopPropagation();abrirWhatsApp('${esc(l.telefone)}','${esc(l.nome_responsavel)}')">WhatsApp</button>` : ''}
             </div>
           </div>`).join('') : '<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px;">Arraste leads aqui</div>'}
         </div>
@@ -16878,10 +16877,25 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         </div>
       </div>
       <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Historico (${interacoes.length})</div>
-      ${interacoes.map(i => `<div style="padding:8px 0;border-bottom:1px solid #f5f0ea;font-size:12px;">
-        <span>${tipoIcons[i.tipo]||'📌'}</span> ${esc(i.descricao)}
-        <div style="font-size:10px;color:var(--muted);">${new Date(i.criado_em).toLocaleString('pt-BR')} · ${esc(i.criado_por||'')}</div>
-      </div>`).join('') || '<div style="color:var(--muted);font-size:12px;">Nenhuma interacao.</div>'}
+      ${(function() {
+        if (!interacoes.length) return '<div style="color:var(--muted);font-size:12px;">Nenhuma interacao.</div>';
+        var days = {};
+        interacoes.forEach(function(i) {
+          var d = new Date(i.criado_em).toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+          if (!days[d]) days[d] = [];
+          days[d].push(i);
+        });
+        return Object.keys(days).map(function(day) {
+          return '<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:var(--red);text-transform:capitalize;padding:4px 0;border-bottom:2px solid var(--red);margin-bottom:6px;">' + day + '</div>'
+            + days[day].map(function(i) {
+              return '<div style="padding:6px 0 6px 12px;border-left:2px solid #e5e0d8;margin-left:4px;font-size:12px;">'
+                + '<span>' + (tipoIcons[i.tipo]||'📌') + '</span> '
+                + '<span style="white-space:pre-wrap;">' + esc(i.descricao) + '</span>'
+                + '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + new Date(i.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) + (i.criado_por ? ' · ' + esc(i.criado_por) : '') + '</div>'
+                + '</div>';
+            }).join('') + '</div>';
+        }).join('');
+      })()}
     </div>`;
     document.body.appendChild(overlay);
   }
@@ -17082,10 +17096,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   async function loadCrmLeads() {
     const d = await api({ action:'crm_leads_list' });
     const items = Array.isArray(d) ? d : [];
-    document.getElementById('crmLeadsList').innerHTML = items.length ? items.map(l => `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${l.crm_estagios?.cor||'#999'};border-radius:8px;margin-bottom:6px;">
+    document.getElementById('crmLeadsList').innerHTML = items.length ? items.map(l => `<div onclick="abrirLeadDetalhe('${l.id}')" style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${l.crm_estagios?.cor||'#999'};border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s;" onmouseenter="this.style.background='#faf8f5'" onmouseleave="this.style.background='#fff'">
       <div style="flex:1;"><div style="font-weight:600;font-size:13px;">${esc(l.nome_responsavel)}</div>
         <div style="font-size:11px;color:var(--muted);">${esc(l.nome_crianca||'')} · ${esc(l.telefone||'')} · ${esc(l.crm_estagios?.nome||'?')} · ${esc(l.origem||'')}</div></div>
-      <button onclick="abrirLeadDetalhe('${l.id}')" style="padding:4px 10px;background:none;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Detalhes</button>
+      <span style="color:var(--muted);font-size:14px;">→</span>
     </div>`).join('') : '<div class="empty-state">Nenhum lead.</div>';
   }
 

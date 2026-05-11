@@ -83,39 +83,29 @@
 
   // --- HELPERS ---
 
+  var STATUS_TEXT_RE = /ltima vez|online|digitando|clique aqui|last seen|typing|click here|visto por|sem intera|às \d|as \d{1,2}:\d{2}/i;
+
   function getContactInfo() {
     // WhatsApp Web: contact name is in the conversation header
-    // Try multiple strategies to find the right element
+    // Collect ALL span[title] in #main header, filter out status texts, use first valid one
     var nome = null;
     var telefone = null;
+    var infoHeader = null;
 
-    // Strategy 1: conversation-info-header (data-testid based)
-    var infoHeader = document.querySelector('#main header [data-testid="conversation-info-header"] span[title]');
-
-    // Strategy 2: first span[title] inside the clickable header area (role="button")
-    if (!infoHeader) {
-      infoHeader = document.querySelector('#main header div[role="button"] span[title]');
+    var allSpans = document.querySelectorAll('#main header span[title]');
+    for (var i = 0; i < allSpans.length; i++) {
+      var t = allSpans[i].getAttribute('title') || '';
+      if (!t || STATUS_TEXT_RE.test(t)) continue;
+      infoHeader = allSpans[i];
+      break;
     }
 
-    // Strategy 3: first span[title] directly in #main header, but filter out status texts
-    if (!infoHeader) {
-      var candidates = document.querySelectorAll('#main header span[title]');
-      for (var i = 0; i < candidates.length; i++) {
-        var t = candidates[i].getAttribute('title') || '';
-        // Skip "last seen", "online", "typing", "click here" status texts
-        if (/ltima vez|online|digitando|clique aqui|last seen|typing|click here/i.test(t)) continue;
-        infoHeader = candidates[i];
-        break;
-      }
-    }
-
-    // Strategy 4: legacy selectors
+    // Fallback: legacy selector outside #main header
     if (!infoHeader) {
       infoHeader = document.querySelector('header span[dir="auto"][title]');
-      // Verify it's not a status text
       if (infoHeader) {
         var val = infoHeader.getAttribute('title') || '';
-        if (/ltima vez|online|digitando|clique aqui|last seen|typing|click here/i.test(val)) {
+        if (STATUS_TEXT_RE.test(val)) {
           infoHeader = null;
         }
       }
@@ -470,8 +460,13 @@
         statusEl.textContent = 'Criando novo lead no pipeline...';
         const nomeCrianca = extracted.nomeCrianca || prompt('Nome da crianca (opcional):', '') || '';
 
+        // Safety: if nome looks like a status text, fall back to phone or generic
+        var safeNome = nome;
+        if (safeNome && STATUS_TEXT_RE.test(safeNome)) {
+          safeNome = null;
+        }
         const leadData = {
-          nome_responsavel: nome || telefone || 'Contato WhatsApp',
+          nome_responsavel: safeNome || telefone || 'Contato WhatsApp',
           telefone: telefone || '',
           origem: 'whatsapp',
           observacoes: 'Lead capturado via extensao Chrome WhatsApp Web'
@@ -700,8 +695,32 @@
     });
   }
 
-  // Poll for conversation changes (header updates when switching chats)
-  setInterval(checkConversationChange, 1500);
+  // MutationObserver to detect conversation changes (replaces polling)
+  var _debounceTimer = null;
+  function debouncedCheck() {
+    if (_debounceTimer) clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(checkConversationChange, 300);
+  }
+
+  function observeHeader() {
+    var header = document.querySelector('#main header');
+    if (header) {
+      var obs = new MutationObserver(debouncedCheck);
+      obs.observe(header, { childList: true, subtree: true, characterData: true });
+      // Also trigger an initial check
+      checkConversationChange();
+      return;
+    }
+    // #main not ready yet — watch document.body for it to appear
+    var bodyObs = new MutationObserver(function(mutations, self) {
+      if (document.querySelector('#main header')) {
+        self.disconnect();
+        observeHeader();
+      }
+    });
+    bodyObs.observe(document.body, { childList: true, subtree: true });
+  }
+  observeHeader();
 
   // --- TEMPLATES ---
 
