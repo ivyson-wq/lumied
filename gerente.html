@@ -2747,8 +2747,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <button class="mn-btn" onclick="monthNavMonth('finMensMes',1,loadFinMensalidades)">&#8250;</button>
             </div>
           </div>
-          <input type="text" id="finMensBusca" placeholder="Buscar aluno, família ou CPF..." oninput="_finMensFilterChanged()" style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;width:220px;margin-left:auto;">
-          <button onclick="gerarLoteMensalidades()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">Gerar Lote de Boletos</button>
+          <button onclick="gerarLoteMensalidades()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;margin-left:auto;">Gerar Lote de Boletos</button>
         </div>
         <!-- KPIs -->
         <div id="finMensKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
@@ -16788,6 +16787,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     else renderFinMensBoletos();
   }
   function _finMensGetBusca() {
+    if (_finMensCurrentTab === 'boletos') return (document.getElementById('finBolBusca')?.value || '').trim().toLowerCase();
     return (document.getElementById('finMensBusca')?.value || '').trim().toLowerCase();
   }
 
@@ -16850,8 +16850,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
       <span id="finMensSelCount" style="font-size:12px;font-weight:600;color:var(--accent);"></span>
     </div>
-    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
-      <th style="${thS}text-align:center;width:60px;"><input type="checkbox" onchange="finMensToggleAll(this.checked)" style="cursor:pointer;"> #</th>
+    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead>
+      <tr><th colspan="2"></th><th style="padding:0 10px 6px;text-align:left;"><input type="text" id="finMensBusca" placeholder="Buscar aluno, família ou CPF..." oninput="_finMensFilterChanged()" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;width:100%;"></th><th colspan="4"></th></tr>
+      <tr>
+      <th style="${thS}text-align:center;width:70px;"><input type="checkbox" onchange="finMensToggleAll(this.checked)" style="cursor:pointer;"></th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('nome')">Aluno${_sortIcon(s,'nome')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensPreview('turno')">Turno${_sortIcon(s,'turno')}</th>
       <th style="${thS}text-align:left;">Composição</th>
@@ -16865,7 +16867,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       const bBadge = bS==='pago'?'background:#edf7f0;color:#2d7a3a;':bS==='emitido'?'background:#fff8e1;color:#b07d00;':bS==='cancelado'?'background:#f5f0ea;color:var(--muted);':'';
       const bLabel = bS==='pago'?'Pago':bS==='emitido'?'Emitido':bS==='cancelado'?'Cancelado':'';
       return `<tr style="border-bottom:1px solid #f5f0ea;">
-        <td style="padding:10px;text-align:center;"><input type="checkbox" class="fmens-chk" value="${a.aluno_id}" ${hasBoleto?'disabled title="Já tem boleto"':''} onchange="_finMensUpdateSelCount()" style="cursor:pointer;"><span style="font-size:10px;color:var(--muted);margin-left:2px;">${idx+1}</span></td>
+        <td style="padding:10px;text-align:center;"><span style="font-size:12px;color:var(--muted);margin-right:6px;min-width:18px;display:inline-block;text-align:right;">${idx+1}</span><input type="checkbox" class="fmens-chk" value="${a.aluno_id}" ${hasBoleto?'disabled title="Já tem boleto"':''} onchange="_finMensUpdateSelCount()" style="cursor:pointer;"></td>
         <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(a.nome)}</div><div style="font-size:11px;color:var(--muted);">${esc(a.resp_nome||a.familia_email||'')}</div></td>
         <td style="padding:10px;font-size:12px;">${esc(a.serie||'—')}<br><span style="color:var(--muted);">${esc(a.turno||'—')}</span></td>
         <td style="padding:10px;font-size:11px;">${composicao}</td>
@@ -16932,8 +16934,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       <span id="finBolSelCount" style="font-size:12px;font-weight:600;color:var(--accent);"></span>
       <button id="finBolBulkEmailBtn" onclick="finBolEnviarEmailBatch()" style="display:none;padding:5px 14px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">📧 Enviar selecionados por email</button>
     </div>
-    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
-      <th style="${thS}text-align:center;width:60px;"><input type="checkbox" onchange="finBolToggleAll(this.checked)" style="cursor:pointer;"> #</th>
+    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead>
+      <tr><th></th><th style="padding:0 10px 6px;text-align:left;"><input type="text" id="finBolBusca" placeholder="Buscar aluno, família ou CPF..." oninput="_finMensFilterChanged()" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;width:100%;"></th><th colspan="4"></th></tr>
+      <tr>
+      <th style="${thS}text-align:center;width:70px;"><input type="checkbox" onchange="finBolToggleAll(this.checked)" style="cursor:pointer;"></th>
       <th style="${thS}text-align:left;" onclick="sortFinMensBoletos('nome')">Aluno${_sortIcon(s,'nome')}</th>
       <th style="${thS}text-align:left;" onclick="sortFinMensBoletos('vencimento')">Vencimento${_sortIcon(s,'vencimento')}</th>
       <th style="${thS}text-align:right;" onclick="sortFinMensBoletos('valor')">Valor${_sortIcon(s,'valor')}</th>
@@ -16958,7 +16962,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       acoes += '</div>';
       const linhaCompacta = b.linha_digitavel ? `<div style="font-size:9px;color:var(--muted);font-family:monospace;margin-top:3px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(b.linha_digitavel)}');showToast('Linha digitável copiada!','success')" title="${esc(b.linha_digitavel)}">${esc(b.linha_digitavel)}</div>` : '';
       return `<tr style="border-bottom:1px solid #f5f0ea;${isManual?'background:#f5f5ff;':''}">
-        <td style="padding:10px;text-align:center;"><input type="checkbox" class="fbol-chk" value="${b.id}" onchange="_finBolUpdateSelCount()" style="cursor:pointer;"><span style="font-size:10px;color:var(--muted);margin-left:2px;">${idx+1}</span></td>
+        <td style="padding:10px;text-align:center;"><span style="font-size:12px;color:var(--muted);margin-right:6px;min-width:18px;display:inline-block;text-align:right;">${idx+1}</span><input type="checkbox" class="fbol-chk" value="${b.id}" onchange="_finBolUpdateSelCount()" style="cursor:pointer;"></td>
         <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(b.crianca_nome||b.familia_nome||b.cpf_pagador)}</div><div style="font-size:11px;color:var(--muted);">${esc(b.familia_nome||b.familia_email||'')}</div>${linhaCompacta}</td>
         <td style="padding:10px;font-size:12px;">${b.vencimento ? new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
         <td style="padding:10px;font-weight:700;text-align:right;">${_fmtR(b.valor)}</td>
