@@ -1867,6 +1867,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <div class="ff"><label>Nome</label><input type="text" id="newAtivNome" placeholder="Ex: Natação"></div>
               <div class="ff"><label>Preço mensal (R$) — cobrado da família</label><input type="number" id="newAtivPreco" placeholder="150.00" step="0.01" min="0"></div>
               <div class="ff"><label>Repasse à escola (R$/aluno/mês)</label><input type="number" id="newAtivRepasse" placeholder="30.00" step="0.01" min="0"></div>
+              <div class="ff" style="display:flex;align-items:center;gap:10px;"><label class="toggle-switch" style="margin:0;"><input type="checkbox" id="newAtivCobrancaEscola" checked><span class="toggle-slider"></span></label><span style="font-size:13px;">Cobrança pela escola <span style="color:var(--muted);font-size:11px;">(inclui no boleto). Se desligado, a empresa fornecedora cobra direto.</span></span></div>
               <div class="ff"><label>Descrição</label><input type="text" id="newAtivDesc" placeholder="Descrição curta (opcional)"></div>
               <div class="ff">
                 <label>Cor</label>
@@ -5170,6 +5171,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="ff"><label>Preço mensal (R$) — cobrado da família</label><input type="number" id="editAtivPreco" step="0.01" min="0"></div>
       <div class="ff"><label>Repasse à escola (R$/aluno/mês)</label><input type="number" id="editAtivRepasse" step="0.01" min="0"></div>
+      <div class="ff" style="display:flex;align-items:center;gap:10px;"><label class="toggle-switch" style="margin:0;"><input type="checkbox" id="editAtivCobrancaEscola"><span class="toggle-slider"></span></label><span style="font-size:13px;">Cobrança pela escola <span style="color:var(--muted);font-size:11px;">(inclui no boleto)</span></span></div>
       <div class="ff"><label>Ordem</label><input type="number" id="editAtivOrdem" min="1"></div>
     </div>
     <div class="ff"><label>Descrição</label><input type="text" id="editAtivDesc"></div>
@@ -8993,7 +8995,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         <span class="ativ-color-dot" style="background:${a.cor||'#C8102E'}"></span>
         <div class="lr-main">
           <strong>${esc(a.nome)}</strong>
-          <span>R$ ${Number(a.preco).toFixed(2).replace('.',',')} · ${a.ativo?'Ativa':'Inativa'}${a.valor_repasse_aluno ? ` · Repasse: R$ ${Number(a.valor_repasse_aluno).toFixed(2).replace('.',',')}/aluno` : ''}</span>
+          <span>R$ ${Number(a.preco).toFixed(2).replace('.',',')} · ${a.ativo?'Ativa':'Inativa'} · ${a.cobranca_pela_escola!==false?'<span style="color:#2d7a3a;">Cobrado pela escola</span>':'<span style="color:#b07d00;">Cobrado pela empresa</span>'}${a.valor_repasse_aluno ? ` · Repasse: R$ ${Number(a.valor_repasse_aluno).toFixed(2).replace('.',',')}/aluno` : ''}</span>
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${turmaInfo}</div>
         </div>
         <button class="action-btn" onclick="openAtivEdit('${a.id}')">✎ Editar</button>
@@ -9205,7 +9207,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       if (!t.slots.length) return showAlert('ativ','error','Adicione horários para todas as turmas.');
     }
     const repasse = parseFloat(document.getElementById('newAtivRepasse').value)||0;
-    const d = await api({ action:'atividades_create', nome, preco, descricao:desc, cor, horarios, ordem:99, valor_repasse_aluno:repasse });
+    const cobrancaEscola = document.getElementById('newAtivCobrancaEscola').checked;
+    const d = await api({ action:'atividades_create', nome, preco, descricao:desc, cor, horarios, ordem:99, valor_repasse_aluno:repasse, cobranca_pela_escola:cobrancaEscola });
     if (d.error) return showAlert('ativ','error',d.error);
     showAlert('ativ','success','✅ Atividade "'+nome+'" criada!');
     document.getElementById('newAtivNome').value='';
@@ -9242,6 +9245,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('editAtivNome').value  = a.nome || '';
     document.getElementById('editAtivPreco').value = a.preco || 0;
     document.getElementById('editAtivRepasse').value = a.valor_repasse_aluno || 0;
+    document.getElementById('editAtivCobrancaEscola').checked = a.cobranca_pela_escola !== false;
     document.getElementById('editAtivOrdem').value = a.ordem || 99;
     document.getElementById('editAtivDesc').value  = a.descricao || '';
     document.getElementById('editAtivCor').value   = a.cor || '#C8102E';
@@ -9377,7 +9381,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
 
     document.getElementById('btnSaveAtiv').disabled = true;
     const repasse = parseFloat(document.getElementById('editAtivRepasse').value)||0;
-    const d = await api({ action:'atividades_update_full', id:editingAtivId, nome, preco, descricao:desc, cor, horarios, ordem, valor_repasse_aluno:repasse });
+    const cobrancaEscola = document.getElementById('editAtivCobrancaEscola').checked;
+    const d = await api({ action:'atividades_update_full', id:editingAtivId, nome, preco, descricao:desc, cor, horarios, ordem, valor_repasse_aluno:repasse, cobranca_pela_escola:cobrancaEscola });
     document.getElementById('btnSaveAtiv').disabled = false;
 
     if (d.error) { errEl.textContent=d.error; errEl.classList.add('show'); return; }

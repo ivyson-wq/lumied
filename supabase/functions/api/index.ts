@@ -2625,10 +2625,10 @@ serve(async (req: Request) => {
     return ok(resultado);
   }
   if (action === "atividades_create") {
-    const { nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno } = body as Record<string, unknown>;
+    const { nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno, cobranca_pela_escola } = body as Record<string, unknown>;
     if (!nome) return err("Nome é obrigatório.");
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    const { error } = await admin.from("atividades").insert({ nome, preco: preco ?? 0, descricao: descricao ?? "", cor: cor ?? "#C8102E", horarios: horarios ?? [], ordem: ordem ?? 99, valor_repasse_aluno: valor_repasse_aluno ?? 0, escola_id: gerente.escola_id });
+    const { error } = await admin.from("atividades").insert({ nome, preco: preco ?? 0, descricao: descricao ?? "", cor: cor ?? "#C8102E", horarios: horarios ?? [], ordem: ordem ?? 99, valor_repasse_aluno: valor_repasse_aluno ?? 0, cobranca_pela_escola: cobranca_pela_escola ?? true, escola_id: gerente.escola_id });
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
   }
@@ -2642,10 +2642,11 @@ serve(async (req: Request) => {
 
   // Atualização completa (edição pelo gerente)
   if (action === "atividades_update_full") {
-    const { id, nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno } = body as Record<string, unknown>;
+    const { id, nome, preco, descricao, cor, horarios, ordem, valor_repasse_aluno, cobranca_pela_escola } = body as Record<string, unknown>;
     if (!id || !nome) return err("ID e nome são obrigatórios.");
     const updateData: Record<string, unknown> = { nome, preco, descricao, cor, horarios, ordem };
     if (valor_repasse_aluno != null) updateData.valor_repasse_aluno = valor_repasse_aluno;
+    if (cobranca_pela_escola != null) updateData.cobranca_pela_escola = cobranca_pela_escola;
     const { error } = await admin.from("atividades").update(updateData).eq("id", id).eq("escola_id", sessionEscolaId);
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
     return ok({ success: true });
@@ -3748,7 +3749,13 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const { id, nome_responsavel, email, telefone, nome_crianca, data_nascimento, serie_interesse, estagio_id, origem, valor_mensalidade, observacoes, responsavel_interno, data_proximo_contato, data_visita } = body as any;
     if (!nome_responsavel) return err("Nome obrigatorio.");
     if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
-    const data = { nome_responsavel, email, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString(), escola_id: gerente.escola_id };
+    // Se novo lead sem estagio_id, atribuir primeiro estágio (menor ordem)
+    let estagioFinal = estagio_id;
+    if (!id && !estagioFinal) {
+      const { data: primeiro } = await admin.from("crm_estagios").select("id").eq("escola_id", gerente.escola_id).order("ordem").limit(1).maybeSingle();
+      if (primeiro) estagioFinal = primeiro.id;
+    }
+    const data = { nome_responsavel, email, telefone, nome_crianca, data_nascimento: data_nascimento || null, serie_interesse, estagio_id: estagioFinal, origem, valor_mensalidade: valor_mensalidade ? parseFloat(valor_mensalidade) : null, observacoes, responsavel_interno, data_proximo_contato: data_proximo_contato || null, data_visita: data_visita || null, atualizado_em: new Date().toISOString(), escola_id: gerente.escola_id };
     if (id) {
       await admin.from("crm_leads").update(data).eq("id", id).eq("escola_id", gerente.escola_id);
     } else {

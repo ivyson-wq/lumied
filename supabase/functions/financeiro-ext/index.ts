@@ -580,13 +580,18 @@ async function gerarBatchParaMes(
     .maybeSingle();
   const almocoPrecoDia = parseFloat(cfgAlmoco?.valor || "0");
 
-  // ── Atividades com preço (cache para não repetir queries) ──
+  // ── Atividades com preço (apenas as cobradas pela escola) ──
   const { data: todasAtividades } = await ctx.sb
     .from("atividades")
-    .select("id, nome, preco")
+    .select("id, nome, preco, cobranca_pela_escola")
     .eq("escola_id", escolaId)
     .eq("ativo", true);
-  const atividadeMap = new Map((todasAtividades ?? []).map((a: any) => [a.id, { nome: a.nome, preco: a.preco || 0 }]));
+  // Só inclui no boleto atividades onde a escola faz a cobrança (não a empresa fornecedora)
+  const atividadeMap = new Map(
+    (todasAtividades ?? [])
+      .filter((a: any) => a.cobranca_pela_escola !== false)
+      .map((a: any) => [a.id, { nome: a.nome, preco: a.preco || 0 }])
+  );
 
   for (const aluno of alunosFiltrados) {
     const items: { nome: string; valor: number; categoria: string }[] = [];
