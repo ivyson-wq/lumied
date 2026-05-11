@@ -16670,16 +16670,40 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const el = document.getElementById('finBoletosContent');
     const fmtR = v => 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
     if (!items.length) { el.innerHTML='<div class="empty-state">Nenhum boleto emitido.</div>'; return; }
-    el.innerHTML = items.map(b => `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:200px;">
-        <div style="font-weight:600;font-size:13px;">${esc(b.familia_nome||b.cpf_pagador)}</div>
-        <div style="font-size:11px;color:var(--muted);">${esc(b.descricao||'—')} · Venc: ${new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR')}</div>
-        ${b.linha_digitavel?`<div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace;">${esc(b.linha_digitavel)}</div>`:''}
-        ${b.pix_copia_cola?`<div style="font-size:10px;color:#1a6bb5;margin-top:2px;cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(b.pix_copia_cola)}');showToast('PIX copiado!','success')">📋 Copiar PIX</div>`:''}
-      </div>
-      <div style="font-size:16px;font-weight:700;">${fmtR(b.valor)}</div>
-      <span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${b.status==='pago'?'background:#edf7f0;color:#2d7a3a;':b.status==='cancelado'?'background:#f5f0ea;color:var(--muted);':'background:#fff8e1;color:#b07d00;'}">${b.status}</span>
-    </div>`).join('');
+    el.innerHTML = items.map(b => {
+      const isManual = b.baixa_manual === true;
+      const isVencido = b.status === 'emitido' && b.vencimento < new Date().toISOString().slice(0,10);
+      const badgeStyle = b.status==='pago' && isManual ? 'background:#e8eaf6;color:#5c6bc0;border:1px solid #c5cae9;' : b.status==='pago' ? 'background:#edf7f0;color:#2d7a3a;' : b.status==='cancelado' ? 'background:#f5f0ea;color:var(--muted);' : isVencido ? 'background:#fde8e8;color:#EF4444;' : 'background:#fff8e1;color:#b07d00;';
+      const statusLabel = b.status==='pago' && isManual ? 'Pago (manual)' : b.status==='pago' ? 'Pago' : b.status==='cancelado' ? 'Cancelado' : isVencido ? 'Vencido' : 'Pendente';
+      let manualInfo = '';
+      if (isManual) {
+        manualInfo = `<div style="font-size:10px;color:#5c6bc0;margin-top:2px;">Por: ${esc(b.baixa_manual_por||'—')}${b.baixa_manual_em?' · '+new Date(b.baixa_manual_em).toLocaleString('pt-BR'):''}${b.baixa_manual_obs?'<br>Obs: '+esc(b.baixa_manual_obs):''}</div>`;
+      }
+      let acoes = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">';
+      if (b.status === 'emitido') {
+        acoes += `<button onclick="alunoFinBaixaManual('${b.id}')" style="padding:3px 8px;font-size:10px;background:#5c6bc0;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600;">Marcar pago</button>`;
+        acoes += `<button onclick="alunoFinCancelar('${b.id}')" style="padding:3px 8px;font-size:10px;background:#EF4444;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;">Cancelar</button>`;
+      }
+      if (b.status !== 'cancelado') {
+        acoes += `<button onclick="alunoFinBaixarPdf('${b.id}')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;">📄 PDF</button>`;
+        acoes += `<button onclick="alunoFinEnviarEmail('${b.id}','${esc(b.familia_email||'')}')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;">📧 Email</button>`;
+        acoes += `<button onclick="alunoFinEnviarWhatsApp('${b.id}','${esc(b.linha_digitavel||'')}','${esc(b.pix_copia_cola||'')}','${esc(b.crianca_nome||'')}',${parseFloat(b.valor||0)},'${esc(b.vencimento||'')}')" style="padding:3px 8px;font-size:10px;background:#25D366;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;">💬 WhatsApp</button>`;
+      }
+      if (b.pix_copia_cola) acoes += `<button onclick="navigator.clipboard.writeText('${esc(b.pix_copia_cola)}');showToast('PIX copiado!','success')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;">📋 PIX</button>`;
+      acoes += '</div>';
+      return `<div style="padding:12px;background:${isManual?'#f5f5ff':'#fff'};border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-weight:600;font-size:13px;">${esc(b.crianca_nome||b.familia_nome||b.cpf_pagador)}</div>
+            <div style="font-size:11px;color:var(--muted);">${esc(b.descricao||'—')} · Venc: ${new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR')}</div>
+            ${b.linha_digitavel?`<div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace;">${esc(b.linha_digitavel)}</div>`:''}
+          </div>
+          <div style="font-size:16px;font-weight:700;">${fmtR(b.valor)}</div>
+          <div><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${badgeStyle}">${statusLabel}</span>${manualInfo}</div>
+        </div>
+        ${acoes}
+      </div>`;
+    }).join('');
   }
 
   // ═══ INADIMPLÊNCIA ═══
