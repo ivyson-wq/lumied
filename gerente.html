@@ -8559,12 +8559,18 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
             manualInfo += '</div>';
           }
           // Ações
-          var acoesHtml = '';
+          var acoesHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
           if (b.status === 'emitido') {
-            acoesHtml += '<button onclick="alunoFinBaixaManual(\''+b.id+'\')" style="padding:3px 10px;font-size:10px;background:#5c6bc0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">Marcar pago</button> ';
+            acoesHtml += '<button onclick="alunoFinBaixaManual(\''+b.id+'\')" style="padding:3px 8px;font-size:10px;background:#5c6bc0;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600;">Marcar pago</button>';
+            acoesHtml += '<button onclick="alunoFinCancelar(\''+b.id+'\')" style="padding:3px 8px;font-size:10px;background:#EF4444;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;">Cancelar</button>';
           }
-          if (b.pix_copia_cola) acoesHtml += '<span style="font-size:10px;color:#1a6bb5;cursor:pointer;" onclick="navigator.clipboard.writeText(\''+esc(b.pix_copia_cola)+'\');showToast(\'PIX copiado!\',\'success\')">📋 PIX</span> ';
-          if (b.linha_digitavel) acoesHtml += '<span style="font-size:10px;color:var(--muted);font-family:monospace;" title="'+esc(b.linha_digitavel)+'">'+esc((b.linha_digitavel||'').substring(0,20))+'…</span>';
+          if (b.status !== 'cancelado') {
+            acoesHtml += '<button onclick="alunoFinBaixarPdf(\''+b.id+'\')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Baixar PDF">📄 PDF</button>';
+            acoesHtml += '<button onclick="alunoFinEnviarEmail(\''+b.id+'\',\''+esc(b.familia_email||'')+'\')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Enviar por email">📧</button>';
+            acoesHtml += '<button onclick="alunoFinEnviarWhatsApp(\''+esc(b.linha_digitavel||'')+'\',\''+esc(b.pix_copia_cola||'')+'\',\''+esc(b.crianca_nome||'')+'\','+parseFloat(b.valor||0)+',\''+esc(b.vencimento||'')+'\')" style="padding:3px 8px;font-size:10px;background:#25D366;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;" title="Enviar via WhatsApp">💬</button>';
+          }
+          if (b.pix_copia_cola) acoesHtml += '<button onclick="navigator.clipboard.writeText(\''+esc(b.pix_copia_cola)+'\');showToast(\'PIX copiado!\',\'success\')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Copiar PIX">📋 PIX</button>';
+          acoesHtml += '</div>';
           return '<tr style="border-bottom:1px solid #f0ece6;'+(isManual?'background:#f5f5ff;':'')+'"><td style="padding:8px;">'+esc(b.descricao||b.crianca_nome||'—')+'</td><td style="padding:8px;text-align:center;">'+venc+'</td><td style="padding:8px;text-align:right;font-weight:700;">'+fmtR(parseFloat(b.valor||0))+'</td><td style="padding:8px;text-align:center;"><span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;'+badge+'">'+statusLabel+'</span>'+manualInfo+'</td><td style="padding:8px;">'+acoesHtml+'</td></tr>';
         }).join('');
         html += '</tbody></table>';
@@ -8622,7 +8628,56 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
   }
 
-  // ── Baixa manual de boleto ──
+  // ── Ações de boleto ──
+  async function alunoFinCancelar(boletoId) {
+    if (!confirm('Cancelar este boleto? Isto também cancela no Banco Inter (se aplicável). Esta ação não pode ser desfeita.')) return;
+    showToast('Cancelando...', 'info');
+    var d = await api({ action: 'fin_boleto_cancelar', id: boletoId });
+    if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Boleto cancelado.', 'success');
+    if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
+  }
+
+  async function alunoFinBaixarPdf(boletoId) {
+    showToast('Baixando PDF do Inter...', 'info');
+    var d = await api({ action: 'fin_boleto_pdf', id: boletoId });
+    if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    if (!d.pdf_base64) { showToast('PDF não disponível.', 'error'); return; }
+    // Download
+    var byteChars = atob(d.pdf_base64);
+    var byteNums = new Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+    var blob = new Blob([new Uint8Array(byteNums)], { type: 'application/pdf' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'boleto_' + (d.nosso_numero || 'lumied') + '.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('PDF baixado!', 'success');
+  }
+
+  async function alunoFinEnviarEmail(boletoId, emailPadrao) {
+    var email = prompt('Enviar boleto por email para:', emailPadrao || '');
+    if (!email) return;
+    showToast('Enviando...', 'info');
+    var d = await api({ action: 'fin_boleto_enviar_email', id: boletoId, email_destino: email });
+    if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Email enviado para ' + (d.enviado_para || email), 'success');
+  }
+
+  function alunoFinEnviarWhatsApp(linhaDigitavel, pixCopiaECola, criancaNome, valor, vencimento) {
+    var venc = vencimento ? new Date(vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+    var fmtValor = 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    var msg = 'Olá! Segue o boleto referente a *' + criancaNome + '*:\n\n';
+    msg += '💰 *Valor:* ' + fmtValor + '\n';
+    msg += '📅 *Vencimento:* ' + venc + '\n';
+    if (linhaDigitavel) msg += '\n📋 *Linha Digitável:*\n' + linhaDigitavel + '\n';
+    if (pixCopiaECola) msg += '\n📱 *PIX Copia e Cola:*\n' + pixCopiaECola + '\n';
+    msg += '\n_Enviado via Lumied_';
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  }
+
   async function alunoFinBaixaManual(boletoId) {
     var obs = prompt('Observação da baixa manual (opcional):\nEx: Pago via depósito, comprovante recebido');
     if (obs === null) return; // cancelou

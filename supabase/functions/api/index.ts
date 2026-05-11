@@ -3757,8 +3757,98 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
   if (action === "fin_boleto_cancelar") {
     const { id } = body as { id: string };
+    if (!id) return err("id obrigatório.");
+    // Busca dados do boleto
+    const { data: bol } = await admin.from("fin_boletos_emitidos").select("*").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!bol) return err("Boleto não encontrado.");
+    if (bol.status === "pago") return err("Boleto já pago, não pode ser cancelado.");
+    if (bol.status === "cancelado") return err("Boleto já está cancelado.");
+    // Tenta cancelar no Inter se tiver codigoSolicitacao
+    const RELAY_URL = Deno.env.get("INTER_RELAY_URL") || "";
+    const RELAY_SECRET = Deno.env.get("RELAY_SECRET") || "";
+    const codSol = bol.inter_response?.codigoSolicitacao || bol.inter_response?.detalhes?.cobranca?.codigoSolicitacao || "";
+    if (codSol && RELAY_URL) {
+      try {
+        const clientId = Deno.env.get("INTER_CLIENT_ID") || "";
+        const clientSecret = Deno.env.get("INTER_CLIENT_SECRET") || "";
+        const params = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope: "boleto-cobranca.write", grant_type: "client_credentials" });
+        const tRes = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` }, body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() }), signal: AbortSignal.timeout(10000) });
+        const tData = await tRes.json() as any;
+        if (tData.status >= 200 && tData.status < 300) {
+          const token = JSON.parse(tData.body).access_token;
+          await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` }, body: JSON.stringify({ path: `/cobranca/v3/cobrancas/${codSol}/cancelar`, method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ motivoCancelamento: "ACERTOS" }) }), signal: AbortSignal.timeout(10000) });
+        }
+      } catch (e) { console.warn("[fin_boleto_cancelar] Erro ao cancelar no Inter:", e); }
+    }
     await admin.from("fin_boletos_emitidos").update({ status: "cancelado" }).eq("id", id).eq("escola_id", sessionEscolaId);
+    // Atualiza batch item se houver
+    if (bol.batch_item_id) {
+      await admin.from("fin_boleto_batch_items").update({ status: "cancelado" }).eq("id", bol.batch_item_id).eq("escola_id", sessionEscolaId);
+    }
     return ok({ success: true });
+  }
+  // ── Baixar PDF do boleto via Inter API ──
+  if (action === "fin_boleto_pdf") {
+    const { id } = body as any;
+    if (!id) return err("id obrigatório.");
+    const { data: bol } = await admin.from("fin_boletos_emitidos").select("*").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!bol) return err("Boleto não encontrado.");
+    const codSol = bol.inter_response?.codigoSolicitacao || bol.inter_response?.detalhes?.cobranca?.codigoSolicitacao || "";
+    if (!codSol) return err("Código de solicitação não encontrado. Boleto pode não ter sido emitido no Inter.");
+    const RELAY_URL = Deno.env.get("INTER_RELAY_URL") || "";
+    const RELAY_SECRET = Deno.env.get("RELAY_SECRET") || "";
+    try {
+      const clientId = Deno.env.get("INTER_CLIENT_ID") || "";
+      const clientSecret = Deno.env.get("INTER_CLIENT_SECRET") || "";
+      const params = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope: "boleto-cobranca.read", grant_type: "client_credentials" });
+      const tRes = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` }, body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() }), signal: AbortSignal.timeout(10000) });
+      const tData = await tRes.json() as any;
+      const token = JSON.parse(tData.body).access_token;
+      const pdfRes = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` }, body: JSON.stringify({ path: `/cobranca/v3/cobrancas/${codSol}/pdf`, method: "GET", headers: { Authorization: `Bearer ${token}` }, body: "" }), signal: AbortSignal.timeout(15000) });
+      const pdfRelay = await pdfRes.json() as any;
+      if (pdfRelay.status < 200 || pdfRelay.status >= 300) return err("Erro ao baixar PDF: " + pdfRelay.status);
+      const pdfData = JSON.parse(pdfRelay.body);
+      return ok({ pdf_base64: pdfData.pdf, nosso_numero: bol.nosso_numero, crianca_nome: bol.crianca_nome });
+    } catch (e) { return err("Erro ao baixar PDF: " + (e as Error).message); }
+  }
+  // ── Enviar boleto por email ──
+  if (action === "fin_boleto_enviar_email") {
+    const { id, email_destino } = body as any;
+    if (!id) return err("id obrigatório.");
+    const { data: bol } = await admin.from("fin_boletos_emitidos").select("*").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!bol) return err("Boleto não encontrado.");
+    const destino = email_destino || bol.familia_email;
+    if (!destino) return err("Email de destino não encontrado.");
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return err("RESEND_API_KEY não configurada.");
+    // Busca nome da escola
+    const { data: escola } = await admin.from("escolas").select("nome").eq("id", sessionEscolaId).maybeSingle();
+    const escolaNome = (escola as any)?.nome || "Escola";
+    const venc = bol.vencimento ? new Date(bol.vencimento + "T12:00:00").toLocaleDateString("pt-BR") : "—";
+    const valor = `R$ ${parseFloat(bol.valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+      <h2 style="color:#1a6bb5;">${escolaNome} — Boleto</h2>
+      <p>Olá, <strong>${bol.familia_nome || "Responsável"}</strong>!</p>
+      <p>Segue o boleto referente a <strong>${bol.crianca_nome || "aluno"}</strong>:</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Descrição</td><td style="padding:8px;border:1px solid #ddd;">${bol.descricao || "Mensalidade"}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Valor</td><td style="padding:8px;border:1px solid #ddd;font-size:18px;font-weight:700;">${valor}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Vencimento</td><td style="padding:8px;border:1px solid #ddd;">${venc}</td></tr>
+        ${bol.linha_digitavel ? `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Linha Digitável</td><td style="padding:8px;border:1px solid #ddd;font-family:monospace;font-size:12px;word-break:break-all;">${bol.linha_digitavel}</td></tr>` : ""}
+        ${bol.nosso_numero ? `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:600;">Nosso Número</td><td style="padding:8px;border:1px solid #ddd;">${bol.nosso_numero}</td></tr>` : ""}
+      </table>
+      ${bol.pix_copia_cola ? `<div style="background:#f0f7ff;border:1px solid #c5d9f0;border-radius:8px;padding:12px;margin:16px 0;"><strong>PIX Copia e Cola:</strong><br><code style="font-size:11px;word-break:break-all;">${bol.pix_copia_cola}</code></div>` : ""}
+      <p style="color:#666;font-size:12px;margin-top:20px;">Este email foi enviado automaticamente por ${escolaNome} via Lumied.</p>
+    </div>`;
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+        body: JSON.stringify({ from: `${escolaNome} <financeiro@lumied.com.br>`, to: [destino], subject: `Boleto — ${bol.crianca_nome || "Mensalidade"} — ${valor}`, html }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (e) { return err("Erro ao enviar email: " + (e as Error).message); }
+    return ok({ success: true, enviado_para: destino });
   }
   if (action === "fin_boleto_baixa_manual") {
     const { id, observacao } = body as any;
