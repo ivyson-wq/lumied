@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Router, rateLimit, authGerente, requireFeature } from "../_shared/router.ts";
+import { Router, rateLimit, authGerenteOrSecretaria, requireFeature } from "../_shared/router.ts";
 import { successResponse, AppError } from "../_shared/errors.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { getEscolaPadrao } from "../_shared/modulos.ts";
@@ -18,13 +18,15 @@ router.useGlobal(rateLimit());
 // ═══════════════════════════════════════════════════════════════
 //  Auth: Cron or Gerente middleware
 // ═══════════════════════════════════════════════════════════════
-const authCronOrGerente: Middleware = async (ctx, next) => {
+const authEquipeFinanceira = authGerenteOrSecretaria(["gerente", "diretor", "financeiro", "secretaria"]);
+
+const authCronOrEquipe: Middleware = async (ctx, next) => {
   const cronKey = (ctx.body as Record<string, unknown>)._cron_key as string | undefined;
   if (cronKey && cronKey === Deno.env.get("CRON_INTERNAL_KEY")) {
     ctx.user = { id: "cron", nome: "Sistema", email: "cron@lumied.com.br", tipo: "cron" };
     return next();
   }
-  return authGerente(ctx, next);
+  return authEquipeFinanceira(ctx, next);
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -267,13 +269,13 @@ function nextMonth(): { year: number; month: number; label: string } {
 // ═══════════════════════════════════════════════════════════════
 //  PIX
 // ═══════════════════════════════════════════════════════════════
-router.on("pix_config_get", authGerente, requireFeature("pix"), async (ctx) => {
+router.on("pix_config_get", authEquipeFinanceira, requireFeature("pix"), async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb.from("pix_config").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true).limit(1).maybeSingle();
   return successResponse(data || {});
 });
 
-router.on("pix_config_set", authGerente, requireFeature("pix"), async (ctx) => {
+router.on("pix_config_set", authEquipeFinanceira, requireFeature("pix"), async (ctx) => {
   const { chave_pix, tipo_chave, nome_beneficiario, cidade } = ctx.body as any;
   if (!chave_pix) throw new AppError("VALIDATION_FAILED", "Chave PIX obrigatória.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
@@ -284,7 +286,7 @@ router.on("pix_config_set", authGerente, requireFeature("pix"), async (ctx) => {
   return successResponse({ success: true });
 });
 
-router.on("pix_gerar_cobranca", authGerente, requireFeature("pix"), async (ctx) => {
+router.on("pix_gerar_cobranca", authEquipeFinanceira, requireFeature("pix"), async (ctx) => {
   const { valor, descricao, familia_email, boleto_id, mensalidade_id } = ctx.body as any;
   if (!valor) throw new AppError("VALIDATION_FAILED", "Valor obrigatório.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
@@ -298,7 +300,7 @@ router.on("pix_gerar_cobranca", authGerente, requireFeature("pix"), async (ctx) 
   return successResponse(data);
 });
 
-router.on("pix_cobrancas_list", authGerente, requireFeature("pix"), async (ctx) => {
+router.on("pix_cobrancas_list", authEquipeFinanceira, requireFeature("pix"), async (ctx) => {
   const { status, familia_email } = ctx.body as any;
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   let q = ctx.sb.from("pix_cobrancas").select("*").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false });
@@ -311,13 +313,13 @@ router.on("pix_cobrancas_list", authGerente, requireFeature("pix"), async (ctx) 
 // ═══════════════════════════════════════════════════════════════
 //  CONTÁBIL
 // ═══════════════════════════════════════════════════════════════
-router.on("contabil_config_get", authGerente, requireFeature("contabil"), async (ctx) => {
+router.on("contabil_config_get", authEquipeFinanceira, requireFeature("contabil"), async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb.from("contabil_config").select("*").eq("escola_id", ctx.escola_id).eq("ativo", true);
   return successResponse(data ?? []);
 });
 
-router.on("contabil_config_set", authGerente, requireFeature("contabil"), async (ctx) => {
+router.on("contabil_config_set", authEquipeFinanceira, requireFeature("contabil"), async (ctx) => {
   const { sistema, formato_exportacao, config: cfg } = ctx.body as any;
   if (!sistema) throw new AppError("VALIDATION_FAILED", "Sistema obrigatório.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
@@ -326,7 +328,7 @@ router.on("contabil_config_set", authGerente, requireFeature("contabil"), async 
   return successResponse({ success: true });
 });
 
-router.on("contabil_exportar", authGerente, requireFeature("contabil"), async (ctx) => {
+router.on("contabil_exportar", authEquipeFinanceira, requireFeature("contabil"), async (ctx) => {
   const { sistema, periodo_inicio, periodo_fim, tipo } = ctx.body as any;
   if (!sistema || !periodo_inicio || !periodo_fim) throw new AppError("VALIDATION_FAILED", "sistema, periodo_inicio e periodo_fim obrigatórios.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
@@ -337,7 +339,7 @@ router.on("contabil_exportar", authGerente, requireFeature("contabil"), async (c
   return successResponse({ ...exp, lancamentos: lancamentos ?? [] });
 });
 
-router.on("contabil_exportacoes_list", authGerente, requireFeature("contabil"), async (ctx) => {
+router.on("contabil_exportacoes_list", authEquipeFinanceira, requireFeature("contabil"), async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb.from("contabil_exportacoes").select("*").eq("escola_id", ctx.escola_id).order("gerado_em", { ascending: false }).limit(50);
   return successResponse(data ?? []);
@@ -346,7 +348,7 @@ router.on("contabil_exportacoes_list", authGerente, requireFeature("contabil"), 
 // ═══════════════════════════════════════════════════════════════
 //  CONCILIAÇÃO AUTOMÁTICA
 // ═══════════════════════════════════════════════════════════════
-router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
+router.on("conciliacao_automatica", authCronOrEquipe, async (ctx) => {
   const escolaId = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const relayUrl = Deno.env.get("INTER_RELAY_URL");
   if (!relayUrl) {
@@ -437,7 +439,7 @@ router.on("conciliacao_automatica", authCronOrGerente, async (ctx) => {
   return successResponse({ data_referencia: dataRef, transacoes: transacoes.length, conciliadas: matched, novas: created });
 });
 
-router.on("conciliacao_pendentes_list", authGerente, async (ctx) => {
+router.on("conciliacao_pendentes_list", authEquipeFinanceira, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb
     .from("fin_lancamentos")
@@ -448,7 +450,7 @@ router.on("conciliacao_pendentes_list", authGerente, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("conciliacao_pendente_resolver", authGerente, async (ctx) => {
+router.on("conciliacao_pendente_resolver", authEquipeFinanceira, async (ctx) => {
   const { id, conta_id, status } = ctx.body as any;
   if (!id || !status) throw new AppError("VALIDATION_FAILED", "id e status obrigatórios.");
   if (!["pendente", "pago"].includes(status)) throw new AppError("VALIDATION_FAILED", "Status deve ser 'pendente' ou 'pago'.");
@@ -459,7 +461,7 @@ router.on("conciliacao_pendente_resolver", authGerente, async (ctx) => {
   return successResponse({ success: true });
 });
 
-router.on("conciliacao_historico", authGerente, async (ctx) => {
+router.on("conciliacao_historico", authEquipeFinanceira, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb
     .from("fin_conciliacao_execucoes")
@@ -708,7 +710,7 @@ async function gerarBatchParaMes(
 }
 
 // ── Batch automático (dia 28, próximo mês) — pula quem já tem boleto ──
-router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
+router.on("boletos_gerar_batch", authCronOrEquipe, async (ctx) => {
   const escolaId = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const nm = nextMonth();
   const result = await gerarBatchParaMes(ctx, escolaId!, nm.label, nm.year, nm.month, "automatico");
@@ -716,7 +718,7 @@ router.on("boletos_gerar_batch", authCronOrGerente, async (ctx) => {
 });
 
 // ── Batch manual (sob demanda, qualquer mês) — pula quem já tem boleto ──
-router.on("boletos_gerar_batch_manual", authGerente, async (ctx) => {
+router.on("boletos_gerar_batch_manual", authEquipeFinanceira, async (ctx) => {
   const { mes_referencia } = ctx.body as any;
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   // Default: próximo mês
@@ -730,7 +732,7 @@ router.on("boletos_gerar_batch_manual", authGerente, async (ctx) => {
   return successResponse(result);
 });
 
-router.on("boletos_batch_list", authGerente, async (ctx) => {
+router.on("boletos_batch_list", authEquipeFinanceira, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb
     .from("fin_boletos_batch")
@@ -740,7 +742,7 @@ router.on("boletos_batch_list", authGerente, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("boletos_batch_item_edit", authGerente, async (ctx) => {
+router.on("boletos_batch_item_edit", authEquipeFinanceira, async (ctx) => {
   const { id, valor_total, descricao_detalhada, itens } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
 
@@ -755,7 +757,7 @@ router.on("boletos_batch_item_edit", authGerente, async (ctx) => {
   return successResponse({ success: true });
 });
 
-router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
+router.on("boletos_batch_aprovar", authEquipeFinanceira, async (ctx) => {
   const { batch_id } = ctx.body as any;
   if (!batch_id) throw new AppError("VALIDATION_FAILED", "batch_id obrigatório.");
 
@@ -905,7 +907,7 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
   return successResponse({ batch_id, emitidos, erros, status: finalStatus });
 });
 
-router.on("boletos_batch_rejeitar", authGerente, async (ctx) => {
+router.on("boletos_batch_rejeitar", authEquipeFinanceira, async (ctx) => {
   const { batch_id } = ctx.body as any;
   if (!batch_id) throw new AppError("VALIDATION_FAILED", "batch_id obrigatório.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
@@ -916,7 +918,7 @@ router.on("boletos_batch_rejeitar", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 //  INADIMPLÊNCIA
 // ═══════════════════════════════════════════════════════════════
-router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
+router.on("inadimplencia_verificar", authCronOrEquipe, async (ctx) => {
   const escolaIdInad = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const { data: overdue } = await ctx.sb
     .from("fin_mensalidades")
@@ -1241,7 +1243,7 @@ router.on("inadimplencia_verificar", authCronOrGerente, async (ctx) => {
   return successResponse({ buckets, total: overdue.length });
 });
 
-router.on("inadimplencia_dashboard", authGerente, async (ctx) => {
+router.on("inadimplencia_dashboard", authEquipeFinanceira, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data: items } = await ctx.sb
     .from("fin_inadimplencia")
@@ -1271,7 +1273,7 @@ router.on("inadimplencia_dashboard", authGerente, async (ctx) => {
   });
 });
 
-router.on("inadimplencia_marcar_resolvido", authGerente, async (ctx) => {
+router.on("inadimplencia_marcar_resolvido", authEquipeFinanceira, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
@@ -1410,7 +1412,7 @@ Dê sugestões curtas e acionáveis. Sem markdown, texto puro.`;
   }
 }
 
-router.on("relatorio_mensal_enviar", authCronOrGerente, async (ctx) => {
+router.on("relatorio_mensal_enviar", authCronOrEquipe, async (ctx) => {
   const escolaIdRelatorio = ctx.escola_id || (ctx.user as any)?.escola_id || await getEscolaPadrao(ctx.sb);
   const data = await buildRelatorioData(ctx.sb, escolaIdRelatorio);
   const sugestoes = await getAiSugestoes(data);
@@ -1446,7 +1448,7 @@ router.on("relatorio_mensal_enviar", authCronOrGerente, async (ctx) => {
   return successResponse({ ...data, sugestoes, html, enviado_para: recipientEmail });
 });
 
-router.on("relatorio_mensal_preview", authGerente, async (ctx) => {
+router.on("relatorio_mensal_preview", authEquipeFinanceira, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const data = await buildRelatorioData(ctx.sb, ctx.escola_id);
   const sugestoes = await getAiSugestoes(data);
@@ -1457,7 +1459,7 @@ router.on("relatorio_mensal_preview", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 //  FOLHA DE PAGAMENTO
 // ═══════════════════════════════════════════════════════════════
-router.on("folha_upload_parse", authGerente, async (ctx) => {
+router.on("folha_upload_parse", authEquipeFinanceira, async (ctx) => {
   const { pdf_base64 } = ctx.body as any;
   if (!pdf_base64) throw new AppError("VALIDATION_FAILED", "pdf_base64 obrigatório.");
 
@@ -1526,7 +1528,7 @@ router.on("folha_upload_parse", authGerente, async (ctx) => {
   return successResponse(parsed);
 });
 
-router.on("folha_upload_save", authGerente, async (ctx) => {
+router.on("folha_upload_save", authEquipeFinanceira, async (ctx) => {
   const { mes_referencia, dados } = ctx.body as any;
   if (!mes_referencia || !dados) throw new AppError("VALIDATION_FAILED", "mes_referencia e dados obrigatórios.");
 
@@ -1543,7 +1545,7 @@ router.on("folha_upload_save", authGerente, async (ctx) => {
 // ═══════════════════════════════════════════════════════════════
 //  AJUSTES RECORRENTES POR ALUNO
 // ═══════════════════════════════════════════════════════════════
-router.on("fin_ajustes_list", authGerente, async (ctx) => {
+router.on("fin_ajustes_list", authEquipeFinanceira, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { aluno_id } = ctx.body as any;
   let q = ctx.sb.from("fin_ajustes_aluno").select("*").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false });
@@ -1552,7 +1554,7 @@ router.on("fin_ajustes_list", authGerente, async (ctx) => {
   return successResponse(data ?? []);
 });
 
-router.on("fin_ajuste_create", authGerente, async (ctx) => {
+router.on("fin_ajuste_create", authEquipeFinanceira, async (ctx) => {
   const { aluno_id, aluno_nome, tipo, valor, descricao, categoria_aplicacao, data_inicio, data_fim } = ctx.body as any;
   if (!aluno_id || !tipo || valor == null || !descricao) throw new AppError("VALIDATION_FAILED", "aluno_id, tipo, valor e descricao obrigatórios.");
   if (!["desconto_fixo", "desconto_percentual", "acrescimo_fixo"].includes(tipo)) throw new AppError("VALIDATION_FAILED", "tipo inválido.");
@@ -1572,7 +1574,7 @@ router.on("fin_ajuste_create", authGerente, async (ctx) => {
   return successResponse(data);
 });
 
-router.on("fin_ajuste_update", authGerente, async (ctx) => {
+router.on("fin_ajuste_update", authEquipeFinanceira, async (ctx) => {
   const { id, tipo, valor, descricao, categoria_aplicacao, data_fim, ativo } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
@@ -1588,7 +1590,7 @@ router.on("fin_ajuste_update", authGerente, async (ctx) => {
   return successResponse({ success: true });
 });
 
-router.on("fin_ajuste_delete", authGerente, async (ctx) => {
+router.on("fin_ajuste_delete", authEquipeFinanceira, async (ctx) => {
   const { id } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
