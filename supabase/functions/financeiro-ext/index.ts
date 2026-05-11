@@ -832,12 +832,27 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
             JSON.stringify(boletoPayload),
           );
 
+          // Inter v3 é assíncrono — buscar detalhes (nosso_numero, linha digitável, PIX)
+          const codSol = result?.codigoSolicitacao || "";
+          let det: any = {};
+          if (codSol) {
+            for (let att = 0; att < 5; att++) {
+              try {
+                await new Promise(r => setTimeout(r, 3000));
+                det = await interFetch(`/cobranca/v3/cobrancas/${codSol}`, "GET", { Authorization: `Bearer ${token}` });
+                if (det?.cobranca?.nossoNumero || det?.boleto?.linhaDigitavel) break;
+              } catch { /* retry */ }
+            }
+          }
+
+          const nn = det?.boleto?.nossoNumero || det?.cobranca?.nossoNumero || null;
+          const cb = det?.boleto?.codigoBarras || null;
+          const ld = det?.boleto?.linhaDigitavel || null;
+          const px = det?.pix?.pixCopiaECola || null;
+
           await ctx.sb.from("fin_boleto_batch_items").update({
-            nosso_numero: result?.cobranca?.nossoNumero || result?.nossoNumero,
-            codigo_barras: result?.boleto?.codigoBarras || result?.codigoBarras,
-            linha_digitavel: result?.boleto?.linhaDigitavel || result?.linhaDigitavel,
-            pix_copia_cola: result?.pix?.pixCopiaECola || result?.pixCopiaECola,
-            inter_response: result,
+            nosso_numero: nn, codigo_barras: cb, linha_digitavel: ld, pix_copia_cola: px,
+            inter_response: { ...result, detalhes: det },
             status: "emitido",
           }).eq("id", item.id);
 
@@ -849,14 +864,11 @@ router.on("boletos_batch_aprovar", authGerente, async (ctx) => {
             familia_email: item.familia_email,
             familia_nome: item.familia_nome,
             cpf_pagador: item.cpf_pagador,
-            nosso_numero: result?.cobranca?.nossoNumero || result?.nossoNumero,
-            codigo_barras: result?.boleto?.codigoBarras || result?.codigoBarras,
-            linha_digitavel: result?.boleto?.linhaDigitavel || result?.linhaDigitavel,
-            pix_copia_cola: result?.pix?.pixCopiaECola || result?.pixCopiaECola,
+            nosso_numero: nn, codigo_barras: cb, linha_digitavel: ld, pix_copia_cola: px,
             valor: item.valor_total,
             vencimento: item.vencimento,
             descricao: item.descricao_detalhada,
-            inter_response: result,
+            inter_response: { ...result, detalhes: det },
             status: "emitido",
             escola_id: item.escola_id,
           }).catch((e: any) => log.warn("Insert fin_boletos_emitidos failed", { error: e.message }));

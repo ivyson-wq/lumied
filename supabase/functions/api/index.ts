@@ -3675,7 +3675,57 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
         return err("Erro Inter API: " + (relayResp.body || relayResp.status));
       }
       const interData = typeof relayResp.body === "string" ? JSON.parse(relayResp.body) : relayResp.body;
-      // 3. Salvar boleto emitido
+      const codigoSolicitacao = interData?.codigoSolicitacao || "";
+
+      // 3. Inter v3 é assíncrono — buscar detalhes do boleto (nosso_numero, linha digitável, PIX)
+      //    Obtém novo token com scope de leitura e faz polling
+      let boletoDetails: any = {};
+      if (codigoSolicitacao) {
+        let readToken = "";
+        try {
+          const readScopes = ["boleto-cobranca.read", "boleto-cobranca.read boleto-cobranca.write"];
+          for (const scope of readScopes) {
+            const tp = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope, grant_type: "client_credentials" });
+            const tr = await fetch(`${RELAY_URL}/inter-proxy`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` },
+              body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: tp.toString() }),
+              signal: AbortSignal.timeout(10000),
+            });
+            const tResp = await tr.json() as any;
+            if (tResp.status >= 200 && tResp.status < 300) {
+              const parsed = JSON.parse(tResp.body);
+              if (parsed?.access_token) { readToken = parsed.access_token; break; }
+            }
+          }
+        } catch { /* use write token as fallback */ }
+        const pollToken = readToken || interToken;
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+          await new Promise(r => setTimeout(r, 3000));
+          try {
+            const detRes = await fetch(`${RELAY_URL}/inter-proxy`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` },
+              body: JSON.stringify({ path: `/cobranca/v3/cobrancas/${codigoSolicitacao}`, method: "GET", headers: { Authorization: `Bearer ${pollToken}` }, body: "" }),
+              signal: AbortSignal.timeout(10000),
+            });
+            const detRelay = await detRes.json() as any;
+            if (detRelay.status >= 200 && detRelay.status < 300) {
+              const parsed = typeof detRelay.body === "string" ? JSON.parse(detRelay.body) : detRelay.body;
+              boletoDetails = parsed;
+              if (parsed?.boleto?.nossoNumero || parsed?.boleto?.linhaDigitavel) break;
+            }
+          } catch { /* retry */ }
+        }
+      }
+
+      const nossoNumero = boletoDetails?.boleto?.nossoNumero || boletoDetails?.cobranca?.nossoNumero || null;
+      const codigoBarras = boletoDetails?.boleto?.codigoBarras || null;
+      const linhaDigitavel = boletoDetails?.boleto?.linhaDigitavel || null;
+      const pixCopiaECola = boletoDetails?.pix?.pixCopiaECola || null;
+
+      // 4. Salvar boleto emitido
       const { error: insErr } = await admin.from("fin_boletos_emitidos").insert({
         mensalidade_id: mensalidade_id || null,
         aluno_id: aluno_id || null,
@@ -3684,18 +3734,18 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
         crianca_nome: (body as any).crianca_nome || null,
         cpf_pagador, valor: parseFloat(valor), vencimento, descricao,
         escola_id: sessionEscolaId,
-        nosso_numero: interData?.cobranca?.nossoNumero || interData?.nossoNumero || null,
-        codigo_barras: interData?.boleto?.codigoBarras || null,
-        linha_digitavel: interData?.boleto?.linhaDigitavel || null,
-        pix_copia_cola: interData?.pix?.pixCopiaECola || null,
-        inter_response: interData,
+        nosso_numero: nossoNumero,
+        codigo_barras: codigoBarras,
+        linha_digitavel: linhaDigitavel,
+        pix_copia_cola: pixCopiaECola,
+        inter_response: { ...interData, detalhes: boletoDetails },
       });
       if (insErr) return err("Boleto criado no Inter mas erro ao salvar: " + insErr.message);
-      // 4. Upsert mensalidade se vinculada
+      // 5. Upsert mensalidade se vinculada
       if (mensalidade_id) {
         await admin.from("fin_mensalidades").update({ status: "pendente" }).eq("id", mensalidade_id).eq("escola_id", sessionEscolaId);
       }
-      return ok({ success: true, nosso_numero: interData?.cobranca?.nossoNumero, pix: interData?.pix?.pixCopiaECola, linha_digitavel: interData?.boleto?.linhaDigitavel });
+      return ok({ success: true, nosso_numero: nossoNumero, linha_digitavel: linhaDigitavel, pix: pixCopiaECola, codigo_solicitacao: codigoSolicitacao });
     } catch (e) { return err("Erro ao emitir boleto: " + (e as Error).message); }
   }
   if (action === "fin_boletos_emitidos_list") {
