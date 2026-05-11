@@ -1761,6 +1761,24 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
         <div id="reservasList"></div>
 
+        <!-- Grade semanal de reservas -->
+        <div style="margin-top:28px;margin-bottom:24px;">
+          <div class="sec-title" style="font-size:16px;margin-bottom:12px;">📊 Grade semanal de reservas</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <button onclick="_reservaGridSemana(-1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">◀ Semana anterior</button>
+            <button onclick="_reservaGridSemana(0)" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Esta semana</button>
+            <button onclick="_reservaGridSemana(1)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Próxima semana ▶</button>
+            <span id="reservaGridSemanaLabel" style="font-size:11px;color:var(--muted);align-self:center;"></span>
+          </div>
+          <div class="dias-semana-grid" id="reservasSemanaGrid">
+            <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Segunda</span><span class="dia-count" id="rCount_0">—</span></div><div class="dia-card-body" id="rList_0"><div class="dia-vazio">—</div></div></div>
+            <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Terça</span><span class="dia-count" id="rCount_1">—</span></div><div class="dia-card-body" id="rList_1"><div class="dia-vazio">—</div></div></div>
+            <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quarta</span><span class="dia-count" id="rCount_2">—</span></div><div class="dia-card-body" id="rList_2"><div class="dia-vazio">—</div></div></div>
+            <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Quinta</span><span class="dia-count" id="rCount_3">—</span></div><div class="dia-card-body" id="rList_3"><div class="dia-vazio">—</div></div></div>
+            <div class="dia-card"><div class="dia-card-header"><span class="dia-nome">Sexta</span><span class="dia-count" id="rCount_4">—</span></div><div class="dia-card-body" id="rList_4"><div class="dia-vazio">—</div></div></div>
+          </div>
+        </div>
+
         <!-- Modal: Novo / Editar recurso -->
         <div id="recursoModal" class="modal-overlay" role="dialog" onclick="if(event.target===this)fecharRecursoModal()">
           <div class="modal" style="max-width:480px;">
@@ -1775,6 +1793,11 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <div class="ff"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;">
               <input type="checkbox" id="recursoFixo" style="width:16px;height:16px;"> Fixo na sala (não-móvel)
             </label></div>
+            <div class="ff"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;">
+              <input type="checkbox" id="recursoSobreposicao" style="width:16px;height:16px;"> Permitir sobreposição de horários
+            </label>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;margin-left:24px;">Múltiplas turmas podem usar ao mesmo tempo (ex: sala grande, pátio)</div>
+            </div>
             <div style="background:#f9f7f4;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
               <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Margens de segurança</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -7350,6 +7373,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           <div style="font-weight:600;font-size:14px;margin:4px 0;">${esc(r.identificacao)}</div>
           <div style="font-size:11px;color:var(--muted);">${esc(r.modelo || '—')} · ${esc(r.localizacao || '—')}</div>
           ${(r.tempo_carga_min || r.buffer_pos_uso_min) ? `<div style="font-size:10px;color:#6b7280;margin-top:4px;">⏱ ${r.tempo_carga_min ? r.tempo_carga_min + 'min carga · ' : ''}${r.buffer_pos_uso_min || 0}min margem</div>` : ''}
+          ${r.permite_sobreposicao ? `<div style="font-size:10px;color:#059669;margin-top:2px;">🔓 Sobreposição permitida</div>` : ''}
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
             <button onclick="abrirModalEditarRecurso('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
             <button onclick="deletarRecurso('${r.id}','${esc(r.identificacao)}')" style="background:none;border:1px solid #fed7aa;color:#b5591a;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Remover</button>
@@ -7357,6 +7381,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         </div>`).join('') + '</div>';
     }
     loadReservas();
+    _renderReservaGrid();
   }
 
   async function loadReservas() {
@@ -7400,6 +7425,69 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     }).join('');
   }
 
+  // ── Grade semanal de reservas ────────────────────────────
+  var _reservaGridOffset = 0;
+  function _reservaGridSemana(dir) {
+    if (dir === 0) _reservaGridOffset = 0;
+    else _reservaGridOffset += dir;
+    _renderReservaGrid();
+  }
+  async function _renderReservaGrid() {
+    const hoje = new Date();
+    const dow = hoje.getDay() || 7;
+    const seg = new Date(hoje);
+    seg.setDate(seg.getDate() - (dow - 1) + _reservaGridOffset * 7);
+    seg.setHours(0, 0, 0, 0);
+    const dom = new Date(seg);
+    dom.setDate(dom.getDate() + 6);
+    dom.setHours(23, 59, 59, 999);
+    const label = document.getElementById('reservaGridSemanaLabel');
+    if (label) label.textContent = `${seg.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' })} — ${dom.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' })}`;
+
+    const d = await api({ action: 'reservas_list', desde: seg.toISOString(), ate: dom.toISOString() });
+    const list = (d.data || []).filter(r => r.status === 'ativa');
+
+    const dias = [[], [], [], [], []];
+    list.forEach(r => {
+      const dIni = new Date(r.inicio);
+      const dIdx = dIni.getDay() - 1;
+      if (dIdx >= 0 && dIdx <= 4) dias[dIdx].push(r);
+    });
+
+    const fmtH = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    for (let i = 0; i < 5; i++) {
+      const countEl = document.getElementById('rCount_' + i);
+      const listEl = document.getElementById('rList_' + i);
+      if (!countEl || !listEl) continue;
+      const items = dias[i].sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
+      countEl.textContent = items.length;
+      if (!items.length) { listEl.innerHTML = '<div class="dia-vazio">Sem reservas</div>'; continue; }
+      listEl.innerHTML = items.map(r => {
+        const carga = r.recursos?.tempo_carga_min || 0;
+        const buffer = r.recursos?.buffer_pos_uso_min || 0;
+        const temMargem = carga > 0 || buffer > 0;
+        let margemTag = '';
+        if (temMargem) {
+          const iniEf = fmtH(new Date(new Date(r.inicio).getTime() - carga * 60000).toISOString());
+          const fimEf = fmtH(new Date(new Date(r.fim).getTime() + buffer * 60000).toISOString());
+          margemTag = `<span style="font-size:9px;color:#92400e;background:#fef3c7;padding:0 4px;border-radius:3px;margin-left:4px;">🔒 ${iniEf}–${fimEf}</span>`;
+        }
+        const sobrep = r.recursos?.permite_sobreposicao ? '<span style="font-size:9px;color:#059669;margin-left:4px;" title="Sobreposição permitida">🔓</span>' : '';
+        return `<div class="dia-crianca-item">
+          <div class="dia-crianca-dot"></div>
+          <div class="dia-crianca-info">
+            <strong>${fmtH(r.inicio)}–${fmtH(r.fim)} · ${esc(r.recursos?.identificacao || '—')}${sobrep}</strong>
+            <span>${esc(r.recursos?.tipo || '')}${r.series ? ' · ' + esc(r.series.nome) : ''}${r.observacao ? ' · ' + esc(r.observacao) : ''}${margemTag}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    if (typeof _buildMobileTabs === 'function' && _isMobile) {
+      const counts = dias.map(d => d.length);
+      _buildMobileTabs('reservasSemanaGrid', ['Segunda','Terça','Quarta','Quinta','Sexta'], counts);
+    }
+  }
+
   // Defaults sugeridos por tipo (alinhados com mig 287)
   const _RECURSO_DEFAULTS = {
     tablet:     { carga: 30, buffer: 15 },
@@ -7424,6 +7512,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('recursoModelo').value = '';
     document.getElementById('recursoLocal').value = '';
     document.getElementById('recursoFixo').checked = false;
+    document.getElementById('recursoSobreposicao').checked = false;
     document.getElementById('recursoCarga').value = '';
     document.getElementById('recursoBuffer').value = '';
     document.getElementById('recursoObs').value = '';
@@ -7442,6 +7531,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('recursoModelo').value = r.modelo || '';
     document.getElementById('recursoLocal').value = r.localizacao || '';
     document.getElementById('recursoFixo').checked = !!r.fixo;
+    document.getElementById('recursoSobreposicao').checked = !!r.permite_sobreposicao;
     document.getElementById('recursoCarga').value = r.tempo_carga_min ?? '';
     document.getElementById('recursoBuffer').value = r.buffer_pos_uso_min ?? '';
     document.getElementById('recursoObs').value = r.observacao || '';
@@ -7462,6 +7552,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       modelo: document.getElementById('recursoModelo').value.trim() || null,
       localizacao: document.getElementById('recursoLocal').value.trim() || null,
       fixo: document.getElementById('recursoFixo').checked,
+      permite_sobreposicao: document.getElementById('recursoSobreposicao').checked,
       observacao: document.getElementById('recursoObs').value.trim() || null,
       tempo_carga_min: carga !== '' ? parseInt(carga) : undefined,
       buffer_pos_uso_min: buffer !== '' ? parseInt(buffer) : undefined,
@@ -16783,6 +16874,81 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
 
   // ── FINANCEIRO ─────────────────────────────────────
+
+  // initYearSel (util para selects de ano)
+  function initYearSel(selId, spanId) {
+    var y = new Date().getFullYear();
+    var sel = document.getElementById(selId);
+    if (!sel.options.length) {
+      sel.innerHTML = [y-1,y,y+1].map(function(a){ return '<option value="'+a+'"'+(a===y?' selected':'')+'>'+a+'</option>'; }).join('');
+    }
+    var sp = document.getElementById(spanId);
+    if (sp) sp.textContent = sel.value;
+    return parseInt(sel.value);
+  }
+
+  // Helper genérico para switching de abas financeiras
+  function _finSwitchTab(prefix, tabs, activeTab, loadFn) {
+    var activeStyle = 'padding:14px 28px;font-size:14px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);';
+    var inactiveStyle = 'padding:14px 28px;font-size:14px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;';
+    tabs.forEach(function(t) {
+      var btn = document.getElementById(prefix + 'Tab' + t.charAt(0).toUpperCase() + t.slice(1));
+      var sec = document.getElementById(prefix + t.charAt(0).toUpperCase() + t.slice(1) + 'Section');
+      if (btn) btn.style.cssText = (t === activeTab) ? activeStyle : inactiveStyle;
+      if (sec) sec.style.display = (t === activeTab) ? '' : 'none';
+    });
+    if (loadFn) loadFn();
+  }
+
+  // 1. Dashboard & Análise
+  var _finDashCurrentTab = 'visao';
+  function switchFinDashTab(tab) {
+    _finDashCurrentTab = tab;
+    _finSwitchTab('finDash', ['visao','analise'], tab, tab === 'analise' ? loadFinDashExt : null);
+  }
+
+  // 2. Lançamentos & Recibos
+  var _finLancCurrentTab = 'lanc';
+  function switchFinLancTab(tab) {
+    _finLancCurrentTab = tab;
+    _finSwitchTab('finLanc', ['lanc','recibos'], tab, tab === 'recibos' ? loadRecibos : null);
+  }
+
+  // 3. Descontos & Reajuste
+  var _finDescCurrentTab = 'desc';
+  function switchFinDescTab(tab) {
+    _finDescCurrentTab = tab;
+    _finSwitchTab('finDesc', ['desc','reaj'], tab, tab === 'reaj' ? loadReajustes : null);
+  }
+
+  // 4. Fluxo de Caixa & Fechamento
+  var _finFluxoCurrentTab = 'fluxo';
+  function switchFinFluxoTab(tab) {
+    _finFluxoCurrentTab = tab;
+    _finSwitchTab('finFluxo', ['fluxo','fech'], tab, tab === 'fech' ? loadFechamento : null);
+  }
+
+  // 5. Exportar & Notificações
+  var _finCfgCurrentTab = 'export';
+  function switchFinCfgTab(tab) {
+    _finCfgCurrentTab = tab;
+    _finSwitchTab('finCfg', ['export','notif'], tab, tab === 'notif' ? loadNotifConfig : null);
+  }
+
+  // 6. DRE & Balanço
+  var _finDreCurrentTab = 'dre';
+  function switchFinDreTab(tab) {
+    _finDreCurrentTab = tab;
+    _finSwitchTab('finDre', ['dre','balanco'], tab, tab === 'balanco' ? loadFinBalanco : null);
+  }
+
+  // 7. Conciliação & Plano de Contas
+  var _finConcCurrentTab = 'conc';
+  function switchFinConcTab(tab) {
+    _finConcCurrentTab = tab;
+    _finSwitchTab('finConc', ['conc','contas'], tab, tab === 'contas' ? loadFinContas : null);
+  }
+
   var finTipoFilter = 'todos';
   function setFinTipo(t, btn) { finTipoFilter = t; document.querySelectorAll('#panelFinLanc .fb').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); loadFinLancamentos(); }
   function toggleFinLancForm() { const el = document.getElementById('finLancForm'); el.style.display = el.style.display==='none'?'block':'none'; }
