@@ -11,6 +11,7 @@ rm -f "$DIST"
 zip -j "$DIST" \
   manifest.json \
   popup.html \
+  popup.js \
   content.js \
   content.css \
   privacy-policy.html \
