@@ -3726,46 +3726,6 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
-      <!-- TICKETS DE SUPORTE -->
-      <div id="panelTickets" class="panel">
-        <div class="dip-stats" id="ticketStatsRow">
-          <div class="stat-card" data-g="total"><div class="stat-label">Abertos</div><div class="stat-value" id="tkAbertos">—</div><div class="stat-sub">aguardando resposta</div></div>
-          <div class="stat-card" data-g="integral"><div class="stat-label">Escalados</div><div class="stat-value" id="tkEscalados">—</div><div class="stat-sub">precisam atenção</div></div>
-          <div class="stat-card" data-g="semi"><div class="stat-label">Respondidos</div><div class="stat-value" id="tkRespondidos">—</div><div class="stat-sub">aguardando feedback</div></div>
-          <div class="stat-card" data-g="diaria"><div class="stat-label">Fechados</div><div class="stat-value" id="tkFechados">—</div><div class="stat-sub">resolvidos</div></div>
-        </div>
-        <div class="sec-title">Tickets de Suporte <span class="count-badge" id="tkCount">0</span></div>
-        <div class="filter-bar" style="margin-bottom:12px;">
-          <button class="fb active" onclick="setTkFilter('todos',this)">Todos</button>
-          <button class="fb" onclick="setTkFilter('aberto',this)">Abertos</button>
-          <button class="fb" onclick="setTkFilter('escalado',this)">Escalados</button>
-          <button class="fb" onclick="setTkFilter('respondido',this)">Respondidos</button>
-          <button class="fb" onclick="setTkFilter('fechado',this)">Fechados</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>#</th><th>Descrição</th><th>Tipo</th><th>Portal</th><th>Remetente</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
-            <tbody id="tkBody"><tr><td colspan="8" class="empty-state">Carregando...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Modal Ticket -->
-      <div class="modal-overlay" id="tkModalOverlay" role="dialog" aria-modal="true" onclick="if(event.target===this)fecharModal('tkModalOverlay')">
-        <div class="modal" style="max-width:560px;">
-          <h3 id="tkModalTitle">Ticket</h3>
-          <div id="tkModalMeta" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
-          <div id="tkModalDesc" style="background:var(--bg-subtle,#f8f9fa);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px;white-space:pre-wrap;max-height:200px;overflow-y:auto;"></div>
-          <div id="tkModalRespAnterior" style="display:none;background:#eef7ee;border:1px solid #c3e6c3;border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px;white-space:pre-wrap;max-height:150px;overflow-y:auto;"></div>
-          <div class="ff"><label>Resposta</label><textarea id="tkModalResposta" rows="4" placeholder="Digite sua resposta..."></textarea></div>
-          <div class="btn-bar" style="display:flex;gap:8px;margin-top:12px;">
-            <button class="btn-create" onclick="tkResponder()">Responder</button>
-            <button class="btn-export" onclick="tkFechar()">Fechar Ticket</button>
-            <button class="btn-export" style="background:var(--bg);color:var(--text);" onclick="fecharModal('tkModalOverlay')">Cancelar</button>
-          </div>
-        </div>
-      </div>
-
       <!-- Modal Relatório Manutenção -->
       <div class="modal-overlay" id="manutRelatorioOverlay" role="dialog" aria-modal="true" onclick="if(event.target===this)closeManutRelatorio()">
         <div class="modal" style="max-width:1000px;">
@@ -5837,7 +5797,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoInventario:'Controle de Acesso — Inventário Simpax',acessoMapa:'Controle de Acesso — Mapa de Terminais',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas',tickets:'Tickets de Suporte'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoInventario:'Controle de Acesso — Inventário Simpax',acessoMapa:'Controle de Acesso — Mapa de Terminais',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
@@ -5856,7 +5816,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
     if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD',tickets:'Infraestrutura'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -5897,7 +5857,6 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='almTurmas')   { showPanel('almConfig'); return; }
     if(id==='almOrc')      { showPanel('almConfig'); return; }
     if(id==='almRel')      { showPanel('almDash'); return; }
-    if(id==='tickets')        loadTicketsPanel();
     if(id==='manutencao')    loadManutPanel();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
@@ -6348,7 +6307,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     almPend:{icon:'📋',label:'Requisições'},almTodas:{icon:'📋',label:'Requisições'},almInsumos:{icon:'⚙️',label:'Configuração'},
     almTurmas:{icon:'⚙️',label:'Configuração'},almOrc:{icon:'⚙️',label:'Configuração'},
     almRel:{icon:'📦',label:'Visão Geral'},almCompras:{icon:'📋',label:'Requisições'},
-    manutencao:{icon:'🔧',label:'Manutenção'},tickets:{icon:'🎫',label:'Tickets'},achados:{icon:'🔍',label:'Achados'},
+    manutencao:{icon:'🔧',label:'Manutenção'},achados:{icon:'🔍',label:'Achados'},
     finDash:{icon:'💰',label:'Financeiro'},finLanc:{icon:'📝',label:'Lançamentos'},
     finMens:{icon:'🧾',label:'Mensalidades'},finContas:{icon:'📊',label:'Plano Contas'},
     finDre:{icon:'📈',label:'DRE'},finBalanco:{icon:'⚖️',label:'Balanço'},
@@ -10052,83 +10011,6 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   // ── MANUTENÇÃO ──────────────────────────────────────────
   var manutData = [], manutFilter = 'todos';
   var URGENCIA_LABEL = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🟠 Alta', critica:'🔴 Crítica' };
-  // ═══ TICKETS DE SUPORTE ═══
-  var _tkCache = [];
-  var _tkFilter = 'todos';
-  var _tkCurrentId = null;
-
-  function setTkFilter(f, el) {
-    _tkFilter = f;
-    document.querySelectorAll('#panelTickets .filter-bar .fb').forEach(b => b.classList.remove('active'));
-    if (el) el.classList.add('active');
-    loadTicketsPanel();
-  }
-
-  async function loadTicketsPanel() {
-    const d = await api({ action: 'tickets_list', status: _tkFilter !== 'todos' ? _tkFilter : undefined });
-    const tickets = Array.isArray(d) ? d : [];
-    _tkCache = tickets;
-    const abertos = tickets.filter(t => t.status === 'aberto').length;
-    const escalados = tickets.filter(t => t.status === 'escalado').length;
-    const respondidos = tickets.filter(t => t.status === 'respondido').length;
-    const fechados = tickets.filter(t => t.status === 'fechado').length;
-    document.getElementById('tkAbertos').textContent = abertos;
-    document.getElementById('tkEscalados').textContent = escalados;
-    document.getElementById('tkRespondidos').textContent = respondidos;
-    document.getElementById('tkFechados').textContent = fechados;
-    document.getElementById('tkCount').textContent = tickets.length;
-    const tbody = document.getElementById('tkBody');
-    if (!tickets.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum ticket encontrado.</td></tr>'; return; }
-    const tipoLabel = { bug:'Bug', sugestao:'Sugestão', duvida:'Dúvida', outro:'Outro' };
-    const stCls = { aberto:'warn', escalado:'warn', respondido:'ativo', fechado:'inativo' };
-    tbody.innerHTML = tickets.map(t => {
-      const desc = t.descricao ? (t.descricao.length > 70 ? t.descricao.substring(0,70) + '…' : t.descricao) : '—';
-      return `<tr>
-        <td style="font-size:12px;color:var(--muted);white-space:nowrap;">#${t.numero||'—'}</td>
-        <td><strong>${esc(desc)}</strong></td>
-        <td style="font-size:12px;">${esc(tipoLabel[t.tipo]||t.tipo||'—')}</td>
-        <td style="font-size:12px;">${esc(t.portal||'—')}</td>
-        <td style="font-size:12px;">${esc(t.nome||t.email||'—')}</td>
-        <td><span class="status-pill ${stCls[t.status]||'inativo'}">${esc(t.status)}</span></td>
-        <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${t.criado_em ? new Date(t.criado_em).toLocaleDateString('pt-BR') : '—'}</td>
-        <td><button class="action-btn" onclick="tkAbrir('${t.id}')">Ver</button></td>
-      </tr>`;
-    }).join('');
-  }
-
-  function tkAbrir(id) {
-    _tkCurrentId = id;
-    const t = _tkCache.find(x => x.id === id) || {};
-    const tipoLabel = { bug:'Bug', sugestao:'Sugestão', duvida:'Dúvida', outro:'Outro' };
-    document.getElementById('tkModalTitle').textContent = 'Ticket #' + (t.numero||'—') + ' — ' + (tipoLabel[t.tipo]||t.tipo||'');
-    document.getElementById('tkModalMeta').innerHTML = '<strong>De:</strong> ' + esc(t.nome||t.email||'—') + ' | <strong>Portal:</strong> ' + esc(t.portal||'—') + ' | <strong>Status:</strong> ' + esc(t.status||'—') + ' | <strong>Data:</strong> ' + (t.criado_em ? new Date(t.criado_em).toLocaleString('pt-BR') : '—');
-    document.getElementById('tkModalDesc').textContent = t.descricao || '—';
-    var resEl = document.getElementById('tkModalRespAnterior');
-    if (t.resposta) { resEl.style.display = 'block'; resEl.innerHTML = '<strong>Resposta anterior:</strong><br>' + esc(t.resposta); }
-    else { resEl.style.display = 'none'; }
-    document.getElementById('tkModalResposta').value = '';
-    document.getElementById('tkModalOverlay').classList.add('show');
-  }
-
-  async function tkResponder() {
-    var resp = document.getElementById('tkModalResposta').value.trim();
-    if (!resp) return showToast('Digite uma resposta', 'error');
-    var d = await api({ action: 'ticket_respond', id: _tkCurrentId, resposta: resp });
-    if (d.error) return showToast(d.error, 'error');
-    showToast('Resposta enviada!');
-    fecharModal('tkModalOverlay');
-    loadTicketsPanel();
-  }
-
-  async function tkFechar() {
-    if (!await _lumiedConfirm('Fechar este ticket?')) return;
-    var d = await api({ action: 'ticket_close', id: _tkCurrentId });
-    if (d.error) return showToast(d.error, 'error');
-    showToast('Ticket fechado!');
-    fecharModal('tkModalOverlay');
-    loadTicketsPanel();
-  }
-
   // ═══ MANUTENÇÃO ═══
   var MANUT_STATUS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
   var EQUIPES = [];
@@ -18309,8 +18191,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     });
 
     const totalUrgentes = (pend.manutencao_urgentes || 0)
-      + (pend.mensalidades_atrasadas || arrMensAtr.length || 0)
-      + (pend.tickets_abertos || 0);
+      + (pend.mensalidades_atrasadas || arrMensAtr.length || 0);
     const totalGeral = pend.total ?? (arrManut.length + arrAlmox.length + arrMensAtr.length + arrLeadsParados.length);
 
     const sec = (icone, titulo, panelAlvo, items, renderItem) => {
@@ -18368,10 +18249,6 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           <span style="color:#1a6bb5;font-weight:600;align-self:center;">→</span>
         </button>`
       )}
-      ${(pend.tickets_abertos||0) > 0 ? `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-        <strong>🎫 Tickets abertos</strong> <span style="color:var(--muted);font-size:12px;">(${pend.tickets_abertos})</span>
-        <button onclick="fecharPendenciasModal();showPanel('tickets')" style="float:right;background:#1a6bb5;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;">Ver tudo →</button>
-      </div>` : ''}
       ${totalGeral === 0 ? '<div style="padding:30px;text-align:center;color:#15803d;font-weight:600;">✨ Tudo em dia — nenhuma pendência.</div>' : ''}
     `;
   }
@@ -18419,9 +18296,6 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (pend.leads_parados > 0) {
       alertas.push({ icon: '📋', text: '<strong>' + pend.leads_parados + ' lead(s) parado(s) há mais de 7 dias</strong> — sem atualização no CRM', cls: 'ba-warn', panel: 'crmKanban' });
     }
-    if (pend.tickets_abertos > 0) {
-      alertas.push({ icon: '🎫', text: '<strong>' + pend.tickets_abertos + ' ticket(s) aberto(s)</strong> — aguardando resposta', cls: 'ba-warn', panel: 'tickets' });
-    }
     var alertasEl = document.getElementById('briefingAlertas');
     if (alertasEl) {
       if (alertas.length > 0) {
@@ -18443,7 +18317,6 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (pend.mensalidades_atrasadas > 0) actions.push({ icon:'💸', count: pend.mensalidades_atrasadas, label:'Mensalidades atrasadas', cls:'urgent', panel:'finMens' });
     if (pend.manutencao_pendente > 0) actions.push({ icon:'🔧', count: pend.manutencao_pendente, label:'Manutenções pendentes', cls: pend.manutencao_urgentes>0?'urgent':'warn', panel:'manutencao' });
     if (pend.almox_pendente_qtd > 0) actions.push({ icon:'📦', count: pend.almox_pendente_qtd, label:'Requisições almox.', cls:'warn', panel:'almPend' });
-    if (pend.tickets_abertos > 0) actions.push({ icon:'🎫', count: pend.tickets_abertos, label:'Tickets abertos', cls:'warn', panel:'tickets' });
     if (pend.leads_parados > 0) actions.push({ icon:'📋', count: pend.leads_parados, label:'Leads parados +7d', cls:'warn', panel:'crmKanban' });
     if (al.ausentes_hoje > 0) actions.push({ icon:'🚨', count: al.ausentes_hoje, label:'Faltas hoje', cls:'urgent', panel:'frequencia' });
     if (!actions.length) actions.push({ icon:'✨', count: '0', label:'Tudo em dia!', cls:'ok', panel:'analytics' });

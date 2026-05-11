@@ -2882,29 +2882,6 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
 
   // ── Manutenção CRUD (autenticado — gerente) ─────────────────
   // Filtros: { somente_abertas?: bool, limit?: number }
-  // ── Tickets de suporte (gerente) ──
-  if (action === "tickets_list") {
-    const { status: filtro } = body as { status?: string };
-    let q = admin.from("tickets").select("*").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
-    if (filtro && filtro !== "todos") q = q.eq("status", filtro);
-    const { data } = await q;
-    return ok(data ?? []);
-  }
-  if (action === "ticket_respond") {
-    const { id, resposta } = body as { id?: string; resposta?: string };
-    if (!id || !resposta) return err("id e resposta obrigatórios.");
-    const { error } = await admin.from("tickets").update({ resposta, status: "respondido", respondido_por: gerente?.nome || gerente?.email || "gerente" }).eq("id", id).eq("escola_id", sessionEscolaId);
-    if (error) return err("Erro ao responder ticket: " + error.message);
-    return ok({ success: true });
-  }
-  if (action === "ticket_close") {
-    const { id } = body as { id?: string };
-    if (!id) return err("id obrigatório.");
-    const { error } = await admin.from("tickets").update({ status: "fechado" }).eq("id", id).eq("escola_id", sessionEscolaId);
-    if (error) return err("Erro ao fechar ticket: " + error.message);
-    return ok({ success: true });
-  }
-
   // Default sem args: últimos 500 chamados (qualquer status). Com somente_abertas=true,
   // bate o índice parcial idx_manutencoes_abertas (mig 273) e responde instantâneo.
   if (action === "manutencao_list") {
@@ -3197,7 +3174,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const primeiroDiaMes = mesAtual + "-01";
     const [
       alunosRes, freqRes, mensRes, mensAntRes, lancRes, lancAntRes,
-      manutRes, almRes, leadsRes, ticketsRes, evRes, alunosBdayRes,
+      manutRes, almRes, leadsRes, evRes, alunosBdayRes,
       freqMesRes,
     ] = await Promise.all([
       admin.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", sessionEscolaId).eq("ativo", true),
@@ -3209,7 +3186,6 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       admin.from("manutencoes").select("id, status, urgencia").eq("escola_id", sessionEscolaId).in("status", ["pendente", "aprovada", "em_execucao"]),
       admin.from("alm_requisicoes").select("id, status, total").eq("escola_id", sessionEscolaId).eq("status", "pendente"),
       admin.from("crm_leads").select("id, atualizado_em").eq("escola_id", sessionEscolaId),
-      admin.from("tickets").select("id", { count: "exact", head: true }).eq("escola_id", sessionEscolaId).in("status", ["aberto", "escalado"]),
       admin.from("calendario_eventos").select("titulo, data_inicio, tipo, cor").eq("escola_id", sessionEscolaId).gte("data_inicio", hojeISO).lte("data_inicio", proxima7).order("data_inicio").limit(6),
       admin.from("alunos").select("nome, data_nascimento, serie").eq("escola_id", sessionEscolaId).eq("ativo", true).not("data_nascimento", "is", null),
       // Monthly frequency for alunos with < 75% attendance
@@ -3319,7 +3295,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const totalMensalidades = qtdPago + qtdPendente + qtdAtrasado;
     const inadimplenciaPct = totalMensalidades > 0 ? Math.round((qtdAtrasado / totalMensalidades) * 100) : 0;
 
-    const totalPendencias = manutPendentes + almPendQtd + qtdAtrasado + leadsParados + (ticketsRes.count || 0);
+    const totalPendencias = manutPendentes + almPendQtd + qtdAtrasado + leadsParados;
 
     return ok({
       data: hojeISO,
@@ -3350,7 +3326,6 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
         almox_pendente_valor: almPendValor,
         leads_parados: leadsParados,
         leads_total: leadsTotal,
-        tickets_abertos: ticketsRes.count || 0,
         mensalidades_atrasadas: qtdAtrasado,
         total: totalPendencias,
       },
