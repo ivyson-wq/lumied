@@ -827,7 +827,10 @@ serve(async (req: Request) => {
         console.error("[auth] gerente login AUTH_SESSION_FAILED", { email, err: sErr });
         return err("Não foi possível criar a sessão. Tente novamente.", 500, "AUTH_SESSION_FAILED");
       }
-      return ok({ token: sessao.token, nome: g.nome, email: g.email });
+      // Fetch papeis from usuarios table for role-based gating
+      const { data: uPapeis } = await admin.from("usuarios").select("papeis").eq("email", email).eq("escola_id", g.escola_id).maybeSingle();
+      const papeis = uPapeis?.papeis || ["gerente"];
+      return ok({ token: sessao.token, nome: g.nome, email: g.email, papeis });
     }
     // Fallback: busca na tabela unificada usuarios (apenas comercial pode acessar CRM)
     const allowedLoginRoles = ["comercial"];
@@ -2228,6 +2231,7 @@ serve(async (req: Request) => {
         if (papeis.includes("secretaria")) secFeatures.push("atestados");
         if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
         if (papeis.includes("financeiro") || papeis.includes("diretor")) secFeatures.push("financeiro");
+        if (papeis.includes("diretor") || papeis.includes("gerente")) secFeatures.push("financeiro_gerencial");
         if (papeis.includes("manutencao")) secFeatures.push("manutencao");
         if (papeis.includes("impressao")) secFeatures.push("impressao");
         if (papeis.includes("nutricionista")) secFeatures.push("cozinha");
@@ -2287,6 +2291,7 @@ serve(async (req: Request) => {
             if (papeis.includes("secretaria")) secFeatures.push("atestados");
             if (papeis.includes("comercial")) secFeatures.push("crm", "templates", "metas");
             if (papeis.includes("financeiro") || papeis.includes("diretor")) secFeatures.push("financeiro");
+            if (papeis.includes("diretor") || papeis.includes("gerente")) secFeatures.push("financeiro_gerencial");
             if (papeis.includes("manutencao")) secFeatures.push("manutencao");
             if (papeis.includes("impressao")) secFeatures.push("impressao");
             if (papeis.includes("nutricionista")) secFeatures.push("cozinha");

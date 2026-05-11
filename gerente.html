@@ -948,27 +948,22 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
       </div>
 
-      <!-- ═══ FINANCEIRO — OPERAÇÃO ═══ -->
+      <!-- ═══ FINANCEIRO ═══ -->
       <div data-modulo="financeiro">
       <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.financeiro">Financeiro</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> <span>Dashboard & Análise</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finDash',this)"><span class="ic">💰</span> <span>Dashboard</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finMens',this)"><span class="ic">🧾</span> <span data-i18n="gerente.nav.mensalidades">Mensalidades & Boletos</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finLanc',this)"><span class="ic">📝</span> <span>Lançamentos & Recibos</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finDescontos',this)"><span class="ic">🏷️</span> <span>Descontos & Reajuste</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finInadimplencia',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.inadimplencia">Inadimplência</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finFolha',this)"><span class="ic">💼</span> <span data-i18n="gerente.nav.folhaPagamento">Folha de Pagamento</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finFluxoCaixa',this)"><span class="ic">💹</span> <span>Fluxo de Caixa & Fechamento</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finConfig',this)"><span class="ic">⚙️</span> <span>Exportar & Notificações</span></a>
-      </div>
-      </div>
-
-      <!-- ═══ FINANCEIRO — CONTÁBIL ═══ -->
-      <div data-modulo="financeiro">
-      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.contabilidade">Contabilidade</span> <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('finDre',this)"><span class="ic">📈</span> <span>DRE & Balanço</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> <span>Conciliação & Plano de Contas</span></a>
+        <div class="sb-divider" data-papel="diretor,gerente" style="border-top:1px solid var(--border);margin:8px 12px;opacity:.5;"></div>
+        <a class="nav-item" href="#" data-papel="diretor,gerente" onclick="showPanel('finDash',this);setTimeout(function(){switchFinDashTab('analise')},50)"><span class="ic">📊</span> <span>Análise Avançada</span></a>
+        <a class="nav-item" href="#" data-papel="diretor,gerente" onclick="showPanel('finDre',this)"><span class="ic">📈</span> <span>DRE & Balanço</span></a>
+        <a class="nav-item" href="#" data-papel="diretor,gerente" onclick="showPanel('finConciliacao',this)"><span class="ic">🔄</span> <span>Conciliação & Plano de Contas</span></a>
+        <a class="nav-item" href="#" data-papel="diretor,gerente" onclick="showPanel('finFluxoCaixa',this)"><span class="ic">💹</span> <span>Fluxo de Caixa & Fechamento</span></a>
       </div>
       </div>
 
@@ -1014,44 +1009,18 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
       </div>
 
-      <!-- ═══ COMPLIANCE — REGULATÓRIO ═══ -->
+      <!-- ═══ PONTO & COMPLIANCE ═══ -->
       <div data-modulo="compliance">
-      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.compliance">Compliance</span> <span class="sb-arrow collapsed">▼</span></div>
+      <div class="sb-label" onclick="toggleSbSection(this)"><span>Ponto & Compliance</span> <span class="sb-arrow collapsed">▼</span></div>
       <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> <span data-i18n="gerente.nav.compPainelGeral">Painel Geral</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compAlertas',this)"><span class="ic">📧</span> <span data-i18n="gerente.nav.compAlertas">Alertas</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compIncidentes',this)"><span class="ic">🛡️</span> <span data-i18n="gerente.nav.compIncidentes">Incidentes</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compCertificacoes',this)"><span class="ic">🎓</span> <span data-i18n="gerente.nav.compCertificacoes">Certificações</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compInspecoes',this)"><span class="ic">📋</span> <span data-i18n="gerente.nav.compInspecoes">Inspeções</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compPoliticas',this)"><span class="ic">📄</span> <span data-i18n="gerente.nav.compPoliticas">Políticas</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.compCalendario">Calendário Regulatório</span></a>
-      </div>
-      </div>
-
-      <!-- ═══ PONTO CLT ═══ -->
-      <div data-modulo="compliance">
-      <div class="sb-label" onclick="toggleSbSection(this)"><span data-i18n="gerente.sidebar.pontoClt">Ponto CLT</span> <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> <span data-i18n="gerente.nav.horarioProfs">Horários de Profs</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> <span data-i18n="gerente.nav.importarPonto">Importar Ponto</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.horaExtra">Hora Extra</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compBancoHoras',this)"><span class="ic">🏦</span> Banco de Horas</a>
-        <a class="nav-item" href="#" onclick="showPanel('compResumoMensal',this)"><span class="ic">📊</span> Resumo Mensal</a>
-        <a class="nav-item" href="#" onclick="showPanel('compFeriados',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.feriados">Feriados</span></a>
-        <a class="nav-item" href="#" onclick="showPanel('compConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.configPonto">Config. de Ponto</span></a>
-      </div>
-      </div>
-
-      <!-- ═══ PONTO AFD (Portaria 671) ═══ -->
-      <div data-modulo="ponto">
-      <div class="sb-label" onclick="toggleSbSection(this)">Ponto AFD <span class="sb-arrow collapsed">▼</span></div>
-      <div class="sb-section collapsed">
-        <a class="nav-item" href="#" onclick="showPanel('pontoSetup',this); loadPontoSetup()"><span class="ic">✅</span> <strong>Setup do Relógio</strong></a>
-        <a class="nav-item" href="#" onclick="showPanel('pontoDash',this)"><span class="ic">📊</span> Dashboard</a>
-        <a class="nav-item" href="#" onclick="showPanel('pontoEmployees',this)"><span class="ic">👥</span> Funcionários</a>
-        <a class="nav-item" href="#" onclick="showPanel('pontoImport',this)"><span class="ic">📥</span> Importar AFD</a>
-        <a class="nav-item" href="#" onclick="showPanel('pontoMirror',this)"><span class="ic">🪞</span> Espelho de Ponto</a>
-        <a class="nav-item" href="#" onclick="showPanel('pontoJustif',this)"><span class="ic">📝</span> Justificativas</a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoDash',this)"><span class="ic">📊</span> <span>Dashboard</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoEmployees',this)"><span class="ic">👥</span> <span>Funcionários & Horários</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoImport',this)"><span class="ic">📥</span> <span>Importar Ponto</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoMirror',this)"><span class="ic">🪞</span> <span>Espelho & Análise Mensal</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoJustif',this)"><span class="ic">📝</span> <span>Justificativas</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compCalendario',this)"><span class="ic">📅</span> <span>Calendário & Feriados</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compDash',this)"><span class="ic">⚖️</span> <span>Compliance</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compConfig',this)"><span class="ic">⚙️</span> <span>Configuração</span></a>
       </div>
       </div>
 
@@ -3408,172 +3377,116 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <!-- COMPLIANCE — Dashboard Completo -->
+      <!-- COMPLIANCE — Painel (abas: Incidentes, Certificações, Inspeções, Políticas) -->
       <div id="panelCompDash" class="panel">
-        <div class="sec-title">⚖️ Compliance — Painel Geral</div>
-        <div style="text-align:center;margin-bottom:24px;">
-          <div style="display:inline-flex;width:120px;height:120px;border-radius:50%;border:8px solid #2d7a3a;align-items:center;justify-content:center;flex-direction:column;">
-            <div style="font-size:32px;font-weight:900;color:#1a1a1a;" id="compScore">—</div>
-            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Score</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button id="compTabScore" onclick="switchCompTab('score')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);">⚖️ Painel</button>
+          <button id="compTabIncidentes" onclick="switchCompTab('incidentes')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">🛡️ Incidentes</button>
+          <button id="compTabCertificacoes" onclick="switchCompTab('certificacoes')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">🎓 Certificações</button>
+          <button id="compTabInspecoes" onclick="switchCompTab('inspecoes')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">📋 Inspeções</button>
+          <button id="compTabPoliticas" onclick="switchCompTab('politicas')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">📄 Políticas</button>
+        </div>
+        <div id="compScoreSection">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="display:inline-flex;width:120px;height:120px;border-radius:50%;border:8px solid #2d7a3a;align-items:center;justify-content:center;flex-direction:column;">
+              <div style="font-size:32px;font-weight:900;color:#1a1a1a;" id="compScore">—</div>
+              <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;">Score</div>
+            </div>
+          </div>
+          <div class="dip-stats">
+            <div class="stat-card" data-g="diaria"><div class="stat-label">Incidentes</div><div class="stat-value" id="compIncidentesAbertos">—</div><div class="stat-sub">abertos</div></div>
+            <div class="stat-card" data-g="semi"><div class="stat-label">Certificações</div><div class="stat-value" id="compCertVencidas">—</div><div class="stat-sub">vencidas</div></div>
+            <div class="stat-card" data-g="integral"><div class="stat-label">Prazos</div><div class="stat-value" id="compPrazosAtrasados">—</div><div class="stat-sub">atrasados</div></div>
+            <div class="stat-card" data-g="total"><div class="stat-label">Inspeções</div><div class="stat-value" id="compInspecoesPend">—</div><div class="stat-sub">com pendências</div></div>
+            <div class="stat-card" data-g="semi"><div class="stat-label">Hora Extra</div><div class="stat-value" id="compHoraExtraPend">—</div><div class="stat-sub">pendentes</div></div>
           </div>
         </div>
-        <div class="dip-stats">
-          <div class="stat-card" data-g="diaria"><div class="stat-label">Incidentes</div><div class="stat-value" id="compIncidentesAbertos">—</div><div class="stat-sub">abertos</div></div>
-          <div class="stat-card" data-g="semi"><div class="stat-label">Certificações</div><div class="stat-value" id="compCertVencidas">—</div><div class="stat-sub">vencidas</div></div>
-          <div class="stat-card" data-g="integral"><div class="stat-label">Prazos</div><div class="stat-value" id="compPrazosAtrasados">—</div><div class="stat-sub">atrasados</div></div>
-          <div class="stat-card" data-g="total"><div class="stat-label">Inspeções</div><div class="stat-value" id="compInspecoesPend">—</div><div class="stat-sub">com pendências</div></div>
-          <div class="stat-card" data-g="semi"><div class="stat-label">Hora Extra</div><div class="stat-value" id="compHoraExtraPend">—</div><div class="stat-sub">pendentes</div></div>
+        <div id="compIncidentesSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Registro de bullying, discriminação, acidentes e outros eventos.</p>
+          <button onclick="alert('Funcionalidade em implementação')" style="padding:8px 18px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;margin-bottom:16px;">+ Registrar Incidente</button>
+          <table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Gravidade</th><th>Descrição</th><th>Status</th></tr></thead>
+          <tbody id="compIncidentesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
         </div>
-      </div>
-
-      <!-- COMPLIANCE — Horários Professoras -->
-      <div id="panelCompHorarios" class="panel">
-        <div class="sec-title">🕐 Horários Pré-Configurados</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Configure o horário de trabalho de cada professora para detecção automática de hora extra.</p>
-        <table class="data-table"><thead><tr><th>Professora</th><th>Dia</th><th>Entrada</th><th>Saída</th><th>Tolerância</th></tr></thead>
-        <tbody id="compHorariosBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Importar Ponto -->
-      <div id="panelCompImportar" class="panel">
-        <div class="sec-title">📂 Importar Arquivo de Ponto</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Importe o arquivo de ponto das professoras (CSV ou TXT). O sistema detectará horas extras automaticamente.</p>
-        <div class="form-card" style="margin-bottom:20px;">
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;background:#f8f5f0;padding:10px;border-radius:8px;">
-            <strong>Formato esperado (CSV):</strong> Uma linha por registro, com colunas separadas por <code>;</code> ou <code>,</code><br>
-            <code>professora_id;data;hora_entrada;hora_saida</code><br>
-            Exemplo: <code>abc-123;2026-04-01;08:00;17:30</code>
-          </p>
-          <div class="ff"><label>Arquivo de Ponto (CSV/TXT)</label><input type="file" id="compArquivoPonto" accept=".csv,.txt" style="padding:10px;border:1.5px solid #e2dbd1;border-radius:8px;width:100%;background:#fdfbf8;"></div>
-          <div id="compPontoPreview" style="display:none;margin:14px 0;">
-            <p style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Pre-visualizacao: <span id="compPontoQtd">0</span> registros</p>
-            <div style="max-height:200px;overflow-y:auto;background:#f8f5f0;border-radius:8px;padding:8px;font-size:11px;font-family:monospace;" id="compPontoPreviewContent"></div>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button onclick="previewPontoGerente()" style="padding:8px 18px;background:transparent;border:1px solid #e2dbd1;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">Pre-visualizar</button>
-            <button onclick="importarPontoCompliance()" id="compPontoEnviarBtn" disabled style="padding:8px 18px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;">Importar</button>
-          </div>
-          <div id="compPontoStatus" style="display:none;margin-top:10px;font-size:13px;padding:10px;border-radius:8px;"></div>
+        <div id="compCertificacoesSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Controle de certificações obrigatórias e treinamentos programados.</p>
+          <table class="data-table"><thead><tr><th>Funcionário</th><th>Certificação</th><th>Obtida em</th><th>Vencimento</th><th>Status</th></tr></thead>
+          <tbody id="compCertBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
         </div>
-        <div class="sec-title" style="font-size:15px;margin-bottom:12px;">Importacoes Anteriores</div>
-        <table class="data-table"><thead><tr><th>Data</th><th>Arquivo</th><th>Registros</th><th>Processados</th><th>Erros</th><th>Status</th></tr></thead>
-        <tbody id="compImportacoesBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
-        <div style="margin-top:24px;">
-          <div class="sec-title" style="font-size:15px;margin-bottom:12px;">Resumo Mensal</div>
-          <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
-            <select id="compImportResumoMes" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
-            <select id="compImportResumoAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
-            <button onclick="loadCompImportResumo()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
-          </div>
-          <div id="compImportResumoCards" class="stat-grid" style="margin-bottom:14px;"></div>
+        <div id="compInspecoesSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Checklists de cantina, infraestrutura, transporte e segurança.</p>
+          <table class="data-table"><thead><tr><th>Data</th><th>Inspeção</th><th>Categoria</th><th>Conformidade</th><th>Status</th></tr></thead>
+          <tbody id="compInspecoesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+        </div>
+        <div id="compPoliticasSection" style="display:none;">
+          <table class="data-table"><thead><tr><th>Título</th><th>Categoria</th><th>Versão</th><th>Vigente desde</th><th>Revisão</th><th>Status</th></tr></thead>
+          <tbody id="compPoliticasBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
         </div>
       </div>
 
-      <!-- COMPLIANCE — Ocorrências Hora Extra -->
-      <div id="panelCompOcorrencias" class="panel">
-        <div class="sec-title">⚠️ Ocorrencias — Hora Extra (CLT)</div>
-        <table class="data-table"><thead><tr><th>Data</th><th>Professora</th><th>Tipo Dia</th><th>Saida Prevista</th><th>Saida Real</th><th>Excedente</th><th>Adicional</th><th>Status</th><th>Acoes</th></tr></thead>
-        <tbody id="compOcorrenciasBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
+      <!-- Legacy: absorvido em pontoEmployees -->
+      <div id="panelCompHorarios" class="panel" style="display:none;"></div>
 
-      <!-- COMPLIANCE — Incidentes -->
-      <div id="panelCompIncidentes" class="panel">
-        <div class="sec-title">🛡️ Incidentes — Proteção ao Aluno</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Registro de bullying, discriminação, acidentes e outros eventos.</p>
-        <button onclick="alert('Funcionalidade em implementação')" style="padding:8px 18px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;margin-bottom:16px;">+ Registrar Incidente</button>
-        <table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Gravidade</th><th>Descrição</th><th>Status</th></tr></thead>
-        <tbody id="compIncidentesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
+      <!-- Legacy: painéis absorvidos -->
+      <div id="panelCompImportar" class="panel" style="display:none;"></div>
+      <div id="panelCompOcorrencias" class="panel" style="display:none;"></div>
+      <div id="panelCompIncidentes" class="panel" style="display:none;"></div>
+      <div id="panelCompCertificacoes" class="panel" style="display:none;"></div>
+      <div id="panelCompInspecoes" class="panel" style="display:none;"></div>
+      <div id="panelCompPoliticas" class="panel" style="display:none;"></div>
 
-      <!-- COMPLIANCE — Certificações -->
-      <div id="panelCompCertificacoes" class="panel">
-        <div class="sec-title">🎓 Certificações e Treinamentos</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Controle de certificações obrigatórias e treinamentos programados.</p>
-        <table class="data-table"><thead><tr><th>Funcionário</th><th>Certificação</th><th>Obtida em</th><th>Vencimento</th><th>Status</th></tr></thead>
-        <tbody id="compCertBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Inspeções -->
-      <div id="panelCompInspecoes" class="panel">
-        <div class="sec-title">📋 Inspeções e Vistorias</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Checklists de cantina, infraestrutura, transporte e segurança.</p>
-        <table class="data-table"><thead><tr><th>Data</th><th>Inspeção</th><th>Categoria</th><th>Conformidade</th><th>Status</th></tr></thead>
-        <tbody id="compInspecoesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Políticas -->
-      <div id="panelCompPoliticas" class="panel">
-        <div class="sec-title">📄 Políticas e Documentos</div>
-        <table class="data-table"><thead><tr><th>Título</th><th>Categoria</th><th>Versão</th><th>Vigente desde</th><th>Revisão</th><th>Status</th></tr></thead>
-        <tbody id="compPoliticasBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Calendário -->
+      <!-- CALENDÁRIO & FERIADOS & ALERTAS -->
       <div id="panelCompCalendario" class="panel">
-        <div class="sec-title">📅 Calendário de Compliance</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Prazos regulatórios: trabalhistas, fiscais, MEC, LGPD, saúde e segurança.</p>
-        <table class="data-table"><thead><tr><th>Prazo</th><th>Obrigação</th><th>Categoria</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
-        <tbody id="compCalendarioBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Alertas -->
-      <div id="panelCompAlertas" class="panel">
-        <div class="sec-title">📧 Alertas de Compliance Enviados</div>
-        <table class="data-table"><thead><tr><th>Data</th><th>Professora</th><th>E-mail</th><th>Assunto</th><th>Enviado</th></tr></thead>
-        <tbody id="compAlertasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Banco de Horas -->
-      <div id="panelCompBancoHoras" class="panel">
-        <div class="sec-title">🏦 Banco de Horas</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Saldo mensal de banco de horas por professora (creditos = hora extra compensavel, debitos = compensacoes realizadas).</p>
-        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
-          <select id="compBhAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
-          <select id="compBhProf" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;">
-            <option value="">Todas as professoras</option>
-          </select>
-          <button onclick="loadCompBancoHoras()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button id="calTabCalendario" onclick="switchCalTab('calendario')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);">📅 Calendário</button>
+          <button id="calTabFeriados" onclick="switchCalTab('feriados')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">📅 Feriados</button>
+          <button id="calTabAlertas" onclick="switchCalTab('alertas')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">📧 Alertas</button>
         </div>
-        <div id="compBhCards" class="dip-stats" style="margin-bottom:16px;"></div>
-        <table class="data-table"><thead><tr><th>Professora</th><th>Mes</th><th>Saldo Anterior</th><th>Creditos</th><th>Debitos</th><th>Saldo Final</th><th>Status</th></tr></thead>
-        <tbody id="compBhBody"><tr><td colspan="7" class="empty-state">Selecione o ano e clique Carregar.</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Resumo Mensal Detalhado -->
-      <div id="panelCompResumoMensal" class="panel">
-        <div class="sec-title">📊 Resumo Mensal por Professora</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Visao detalhada de horas trabalhadas, extras, noturnas, atrasos e faltas por professora no mes.</p>
-        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
-          <select id="compRmMes" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
-          <select id="compRmAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
-          <button onclick="loadCompResumoMensal()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
+        <div id="calCalendarioSection">
+          <p style="color:var(--muted);margin-bottom:16px;">Prazos regulatórios: trabalhistas, fiscais, MEC, LGPD, saúde e segurança.</p>
+          <table class="data-table"><thead><tr><th>Prazo</th><th>Obrigação</th><th>Categoria</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="compCalendarioBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
         </div>
-        <div id="compRmTotals" class="dip-stats" style="margin-bottom:16px;"></div>
-        <table class="data-table"><thead><tr><th>Professora</th><th>Dias Trab.</th><th>Horas Normais</th><th>HE 50%</th><th>HE 100%</th><th>Noturnas</th><th>Atrasos</th><th>Faltas</th><th>DSR</th><th>Banco Horas</th></tr></thead>
-        <tbody id="compRmBody"><tr><td colspan="10" class="empty-state">Selecione mes/ano e clique Carregar.</td></tr></tbody></table>
+        <div id="calFeriadosSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Gerencie os feriados para calculo correto de adicional (100% em domingos/feriados vs 50% dias uteis).</p>
+          <div class="form-card" style="margin-bottom:20px;">
+            <div style="display:grid;grid-template-columns:140px 1fr 140px auto;gap:10px;align-items:end;">
+              <div class="ff"><label>Data</label><input type="date" id="compFeriadoData"></div>
+              <div class="ff"><label>Descricao</label><input type="text" id="compFeriadoDesc" placeholder="Ex: Natal"></div>
+              <div class="ff"><label>Tipo</label><select id="compFeriadoTipo"><option value="nacional">Nacional</option><option value="estadual">Estadual</option><option value="municipal">Municipal</option><option value="ponto_facultativo">Ponto Facultativo</option></select></div>
+              <button onclick="salvarFeriado()" style="padding:8px 18px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;height:38px;">+ Adicionar</button>
+            </div>
+          </div>
+          <table class="data-table"><thead><tr><th>Data</th><th>Descricao</th><th>Tipo</th><th>Acoes</th></tr></thead>
+          <tbody id="compFeriadosBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody></table>
+        </div>
+        <div id="calAlertasSection" style="display:none;">
+          <table class="data-table"><thead><tr><th>Data</th><th>Professora</th><th>E-mail</th><th>Assunto</th><th>Enviado</th></tr></thead>
+          <tbody id="compAlertasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+        </div>
       </div>
+      <!-- Legacy -->
+      <div id="panelCompAlertas" class="panel" style="display:none;"></div>
 
-      <!-- COMPLIANCE — Feriados -->
-      <div id="panelCompFeriados" class="panel">
-        <div class="sec-title">📅 Feriados</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Gerencie os feriados para calculo correto de adicional (100% em domingos/feriados vs 50% dias uteis).</p>
-        <div class="form-card" style="margin-bottom:20px;">
-          <div style="display:grid;grid-template-columns:140px 1fr 140px auto;gap:10px;align-items:end;">
-            <div class="ff"><label>Data</label><input type="date" id="compFeriadoData"></div>
-            <div class="ff"><label>Descricao</label><input type="text" id="compFeriadoDesc" placeholder="Ex: Natal"></div>
-            <div class="ff"><label>Tipo</label><select id="compFeriadoTipo"><option value="nacional">Nacional</option><option value="estadual">Estadual</option><option value="municipal">Municipal</option><option value="ponto_facultativo">Ponto Facultativo</option></select></div>
-            <button onclick="salvarFeriado()" style="padding:8px 18px;background:#2d7a3a;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;height:38px;">+ Adicionar</button>
+      <!-- Legacy: absorvidos no painel Espelho & Análise Mensal -->
+      <div id="panelCompBancoHoras" class="panel" style="display:none;"></div>
+      <div id="panelCompResumoMensal" class="panel" style="display:none;"></div>
+      <div id="panelCompFeriados" class="panel" style="display:none;"></div>
+
+      <!-- CONFIGURAÇÃO (Config CLT + Setup Relógio) -->
+      <div id="panelCompConfig" class="panel">
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button id="cfgTabConfig" onclick="switchCfgTab('config')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);">⚙️ Parâmetros CLT</button>
+          <button id="cfgTabSetup" onclick="switchCfgTab('setup')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">✅ Setup do Relógio</button>
+        </div>
+        <div id="cfgConfigSection">
+          <p style="color:var(--muted);margin-bottom:16px;">Parametros CLT para calculo de hora extra, tolerancia e banco de horas.</p>
+          <div id="compConfigForm" class="form-card">
+            <div class="empty-state">Carregando configuracoes...</div>
           </div>
         </div>
-        <table class="data-table"><thead><tr><th>Data</th><th>Descricao</th><th>Tipo</th><th>Acoes</th></tr></thead>
-        <tbody id="compFeriadosBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody></table>
-      </div>
-
-      <!-- COMPLIANCE — Configuração do Ponto -->
-      <div id="panelCompConfig" class="panel">
-        <div class="sec-title">⚙️ Configuracao do Ponto</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Parametros CLT para calculo de hora extra, tolerancia e banco de horas.</p>
-        <div id="compConfigForm" class="form-card">
-          <div class="empty-state">Carregando configuracoes...</div>
+        <div id="cfgSetupSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Wizard de configuração do relógio ponto eletrônico (REP).</p>
+          <button onclick="showPanel('pontoSetup')" class="btn-create" style="width:auto;padding:10px 24px;">Abrir Setup do Relógio</button>
         </div>
       </div>
 
@@ -3698,8 +3611,13 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
-      <!-- ═══ PONTO AFD — Funcionários ═══ -->
+      <!-- ═══ PONTO — Funcionários & Horários ═══ -->
       <div id="panelPontoEmployees" class="panel">
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button id="empTabFunc" onclick="switchEmpTab('func')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);">👥 Funcionários</button>
+          <button id="empTabHorarios" onclick="switchEmpTab('horarios')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">🕐 Horários CLT</button>
+        </div>
+        <div id="empFuncSection">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
           <div class="sec-title" style="margin:0;">👥 Funcionários do Ponto <span class="count-badge" id="pontoEmpsCount">0</span></div>
           <button class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;" onclick="pontoToggleEmpForm()">+ Novo Funcionário</button>
@@ -3731,6 +3649,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <tbody id="pontoEmpsTable"><tr><td colspan="7" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
           </table>
         </div>
+        </div>
+        <div id="empHorariosSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Configure o horário de trabalho de cada professora para detecção automática de hora extra.</p>
+          <table class="data-table"><thead><tr><th>Professora</th><th>Dia</th><th>Entrada</th><th>Saída</th><th>Tolerância</th></tr></thead>
+          <tbody id="compHorariosBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
+        </div>
       </div>
 
       <!-- ═══ PONTO AFD — Importar AFD ═══ -->
@@ -3744,6 +3668,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div class="filter-bar" style="margin-bottom:16px;">
           <button class="fb active" id="pontoTabManual" onclick="pontoTabSwitch('manual',this)">📤 Upload Manual</button>
           <button class="fb" id="pontoTabAuto" onclick="pontoTabSwitch('auto',this)">🤖 Coleta Automática</button>
+          <button class="fb" id="pontoTabClt" onclick="pontoTabSwitch('clt',this)">📂 Importar CLT</button>
         </div>
 
         <!-- ── Tab Manual ── -->
@@ -3830,7 +3755,40 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           </div>
         </div>
 
-        <!-- ── Importações recentes (compartilhada entre as duas tabs) ── -->
+        <!-- ── Tab CLT (absorvido de compImportar) ── -->
+        <div id="pontoTabContentClt" style="display:none;">
+          <div class="form-card" style="margin-bottom:20px;">
+            <p style="font-size:11px;color:var(--muted);margin-bottom:14px;background:#f8f5f0;padding:10px;border-radius:8px;">
+              <strong>Formato esperado (CSV):</strong> Uma linha por registro, com colunas separadas por <code>;</code> ou <code>,</code><br>
+              <code>professora_id;data;hora_entrada;hora_saida</code><br>
+              Exemplo: <code>abc-123;2026-04-01;08:00;17:30</code>
+            </p>
+            <div class="ff"><label>Arquivo de Ponto (CSV/TXT)</label><input type="file" id="compArquivoPonto" accept=".csv,.txt" style="padding:10px;border:1.5px solid #e2dbd1;border-radius:8px;width:100%;background:#fdfbf8;"></div>
+            <div id="compPontoPreview" style="display:none;margin:14px 0;">
+              <p style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Pre-visualizacao: <span id="compPontoQtd">0</span> registros</p>
+              <div style="max-height:200px;overflow-y:auto;background:#f8f5f0;border-radius:8px;padding:8px;font-size:11px;font-family:monospace;" id="compPontoPreviewContent"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="previewPontoGerente()" style="padding:8px 18px;background:transparent;border:1px solid #e2dbd1;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">Pre-visualizar</button>
+              <button onclick="importarPontoCompliance()" id="compPontoEnviarBtn" disabled style="padding:8px 18px;background:#C8102E;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;">Importar</button>
+            </div>
+            <div id="compPontoStatus" style="display:none;margin-top:10px;font-size:13px;padding:10px;border-radius:8px;"></div>
+          </div>
+          <div class="sec-title" style="font-size:15px;margin-bottom:12px;">Importações CLT Anteriores</div>
+          <table class="data-table"><thead><tr><th>Data</th><th>Arquivo</th><th>Registros</th><th>Processados</th><th>Erros</th><th>Status</th></tr></thead>
+          <tbody id="compImportacoesBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
+          <div style="margin-top:24px;">
+            <div class="sec-title" style="font-size:15px;margin-bottom:12px;">Resumo Mensal</div>
+            <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+              <select id="compImportResumoMes" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+              <select id="compImportResumoAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+              <button onclick="loadCompImportResumo()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
+            </div>
+            <div id="compImportResumoCards" class="stat-grid" style="margin-bottom:14px;"></div>
+          </div>
+        </div>
+
+        <!-- ── Importações recentes (compartilhada entre as tabs) ── -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div class="sec-title" style="margin:0;font-size:14px;">Importações recentes</div>
           <button onclick="loadPontoImports()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
@@ -3843,34 +3801,49 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
-      <!-- ═══ PONTO AFD — Espelho de Ponto ═══ -->
+      <!-- ═══ PONTO — Espelho & Análise Mensal ═══ -->
       <div id="panelPontoMirror" class="panel">
-        <div class="sec-title" style="margin-bottom:6px;">🪞 Espelho de Ponto</div>
-        <p style="color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5;">
-          Visão mensal por funcionário com batidas, horas trabalhadas, saldo (HE/débito) e status do dia. Use para conferir antes de fechar a folha.
-        </p>
-
-        <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
-          <div class="ff" style="margin:0;flex:1;min-width:220px;">
-            <label>Funcionário</label>
-            <select id="pontoMirrorEmp" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;">
-              <option value="">Selecione…</option>
-            </select>
-          </div>
-          <div class="ff" style="margin:0;width:120px;">
-            <label>Mês</label>
-            <select id="pontoMirrorMes" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
-          </div>
-          <div class="ff" style="margin:0;width:110px;">
-            <label>Ano</label>
-            <select id="pontoMirrorAno" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select>
-          </div>
-          <button class="btn-create" style="width:auto;padding:9px 22px;" onclick="loadPontoMirror()">Gerar</button>
-          <button onclick="pontoMirrorPrint()" style="padding:9px 14px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">🖨️ Imprimir</button>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button id="mirrorTabEspelho" onclick="switchMirrorTab('espelho')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);">🪞 Espelho</button>
+          <button id="mirrorTabOcorrencias" onclick="switchMirrorTab('ocorrencias')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">⚠️ Hora Extra</button>
+          <button id="mirrorTabBanco" onclick="switchMirrorTab('banco')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">🏦 Banco de Horas</button>
+          <button id="mirrorTabResumo" onclick="switchMirrorTab('resumo')" style="padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">📊 Resumo Mensal</button>
         </div>
-
-        <div id="pontoMirrorContent" style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;min-height:200px;">
-          <div class="empty-state">Selecione funcionário, mês e ano e clique em <strong>Gerar</strong>.</div>
+        <div id="mirrorEspelhoSection">
+          <div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+            <div class="ff" style="margin:0;flex:1;min-width:220px;"><label>Funcionário</label><select id="pontoMirrorEmp" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"><option value="">Selecione…</option></select></div>
+            <div class="ff" style="margin:0;width:120px;"><label>Mês</label><select id="pontoMirrorMes" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select></div>
+            <div class="ff" style="margin:0;width:110px;"><label>Ano</label><select id="pontoMirrorAno" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#fdfbf8;"></select></div>
+            <button class="btn-create" style="width:auto;padding:9px 22px;" onclick="loadPontoMirror()">Gerar</button>
+            <button onclick="pontoMirrorPrint()" style="padding:9px 14px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">🖨️ Imprimir</button>
+          </div>
+          <div id="pontoMirrorContent" style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:24px;min-height:200px;"><div class="empty-state">Selecione funcionário, mês e ano e clique em <strong>Gerar</strong>.</div></div>
+        </div>
+        <div id="mirrorOcorrenciasSection" style="display:none;">
+          <table class="data-table"><thead><tr><th>Data</th><th>Professora</th><th>Tipo Dia</th><th>Saida Prevista</th><th>Saida Real</th><th>Excedente</th><th>Adicional</th><th>Status</th><th>Acoes</th></tr></thead>
+          <tbody id="compOcorrenciasBody"><tr><td colspan="9" class="empty-state">Carregando...</td></tr></tbody></table>
+        </div>
+        <div id="mirrorBancoSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Saldo mensal de banco de horas por professora.</p>
+          <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+            <select id="compBhAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+            <select id="compBhProf" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"><option value="">Todas as professoras</option></select>
+            <button onclick="loadCompBancoHoras()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
+          </div>
+          <div id="compBhCards" class="dip-stats" style="margin-bottom:16px;"></div>
+          <table class="data-table"><thead><tr><th>Professora</th><th>Mes</th><th>Saldo Anterior</th><th>Creditos</th><th>Debitos</th><th>Saldo Final</th><th>Status</th></tr></thead>
+          <tbody id="compBhBody"><tr><td colspan="7" class="empty-state">Selecione o ano e clique Carregar.</td></tr></tbody></table>
+        </div>
+        <div id="mirrorResumoSection" style="display:none;">
+          <p style="color:var(--muted);margin-bottom:16px;">Visao detalhada de horas trabalhadas, extras, noturnas, atrasos e faltas por professora no mes.</p>
+          <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+            <select id="compRmMes" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+            <select id="compRmAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+            <button onclick="loadCompResumoMensal()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
+          </div>
+          <div id="compRmTotals" class="dip-stats" style="margin-bottom:16px;"></div>
+          <table class="data-table"><thead><tr><th>Professora</th><th>Dias Trab.</th><th>Horas Normais</th><th>HE 50%</th><th>HE 100%</th><th>Noturnas</th><th>Atrasos</th><th>Faltas</th><th>DSR</th><th>Banco Horas</th></tr></thead>
+          <tbody id="compRmBody"><tr><td colspan="10" class="empty-state">Selecione mes/ano e clique Carregar.</td></tr></tbody></table>
         </div>
       </div>
 
@@ -6027,7 +6000,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     }
     const nome  = localStorage.getItem('mb_nome');
     const email = localStorage.getItem('mb_email');
-    showApp({ nome, email });
+    const papeis = JSON.parse(localStorage.getItem('mb_papeis') || '["gerente"]');
+    showApp({ nome, email, papeis });
   }
 
   async function doLogin() {
@@ -6043,6 +6017,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     localStorage.setItem('mb_token', d.token);
     localStorage.setItem('mb_nome',  d.nome);
     localStorage.setItem('mb_email', d.email);
+    if (d.papeis) localStorage.setItem('mb_papeis', JSON.stringify(d.papeis));
     showApp(d);
   }
 
@@ -6051,6 +6026,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     localStorage.removeItem('mb_token');
     localStorage.removeItem('mb_nome');
     localStorage.removeItem('mb_email');
+    localStorage.removeItem('mb_papeis');
     if (realtimeChannel) { sbClient.removeChannel(realtimeChannel); realtimeChannel = null; }
     document.getElementById('appShell').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
@@ -6058,6 +6034,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
 
   function showApp(user) {
     currentGerente = user;
+    window._userPapeis = user.papeis || JSON.parse(localStorage.getItem('mb_papeis') || '["gerente"]');
+    applyRoleGating();
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('appShell').style.display='flex';
     document.getElementById('userNome').textContent = user.nome || 'Gerente';
@@ -6237,18 +6215,19 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='notasPeriodos') loadNotasPeriodos();
     if(id==='notasVisao') initNotasVisao();
     if(id==='compDash') loadCompDashboard();
-    if(id==='compHorarios') loadCompHorarios();
-    if(id==='compOcorrencias') loadCompOcorrencias();
-    if(id==='compIncidentes') loadCompIncidentes();
-    if(id==='compCertificacoes') loadCompCertificacoes();
-    if(id==='compInspecoes') loadCompInspecoes();
-    if(id==='compPoliticas') loadCompPoliticas();
+    if(id==='compHorarios') { showPanel('pontoEmployees'); switchEmpTab('horarios'); return; }
+    if(id==='compOcorrencias') { showPanel('pontoMirror'); switchMirrorTab('ocorrencias'); return; }
+    if(id==='compIncidentes') { showPanel('compDash'); switchCompTab('incidentes'); return; }
+    if(id==='compCertificacoes') { showPanel('compDash'); switchCompTab('certificacoes'); return; }
+    if(id==='compInspecoes') { showPanel('compDash'); switchCompTab('inspecoes'); return; }
+    if(id==='compPoliticas') { showPanel('compDash'); switchCompTab('politicas'); return; }
     if(id==='compCalendario') loadCompCalendario();
-    if(id==='compBancoHoras') loadCompBancoHorasInit();
-    if(id==='compResumoMensal') loadCompResumoMensalInit();
-    if(id==='compFeriados') loadCompFeriados();
+    if(id==='compBancoHoras') { showPanel('pontoMirror'); switchMirrorTab('banco'); return; }
+    if(id==='compResumoMensal') { showPanel('pontoMirror'); switchMirrorTab('resumo'); return; }
+    if(id==='compFeriados') { showPanel('compCalendario'); switchCalTab('feriados'); return; }
     if(id==='compConfig') loadCompConfig();
-    if(id==='compImportar') loadCompImportacoes();
+    if(id==='compImportar') { showPanel('pontoImport'); pontoTabSwitch('clt',document.getElementById('pontoTabClt')); return; }
+    if(id==='compAlertas') { showPanel('compCalendario'); switchCalTab('alertas'); return; }
     if(id==='contaFinanceiro') loadContaFinanceiro();
     if(id==='roi') loadRoiDashboard();
     if(id==='contratos') loadContratos();
@@ -6673,8 +6652,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     compCalendario:{icon:'📅',label:'Cal. Regulatório'},compAlertas:{icon:'📧',label:'Alertas'},compFeriados:{icon:'📅',label:'Feriados'},compConfig:{icon:'⚙️',label:'Config. Ponto'},
     contaFinanceiro:{icon:'💳',label:'Conta & Plano'},roi:{icon:'📈',label:'ROI'},
     emergencia:{icon:'🚨',label:'Emergência'},
-    pontoSetup:{icon:'✅',label:'Setup Relógio'},pontoDash:{icon:'🕐',label:'Ponto AFD'},pontoEmployees:{icon:'👥',label:'Funcionários'},
-    pontoImport:{icon:'📥',label:'Importar AFD'},pontoMirror:{icon:'🪞',label:'Espelho'},pontoJustif:{icon:'📝',label:'Justificativas'}
+    pontoSetup:{icon:'✅',label:'Setup Relógio'},pontoDash:{icon:'📊',label:'Dashboard Ponto'},pontoEmployees:{icon:'👥',label:'Funcionários & Horários'},
+    pontoImport:{icon:'📥',label:'Importar Ponto'},pontoMirror:{icon:'🪞',label:'Espelho & Análise'},pontoJustif:{icon:'📝',label:'Justificativas'},
+    compCalendario:{icon:'📅',label:'Calendário & Feriados'},compDash:{icon:'⚖️',label:'Compliance'},compConfig:{icon:'⚙️',label:'Configuração'}
   };
 
   function getFavorites() {
@@ -7991,6 +7971,13 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         return true;
       });
       label.style.display = hasVisible ? '' : 'none';
+    });
+  }
+  function applyRoleGating() {
+    var papeis = window._userPapeis || ['gerente'];
+    document.querySelectorAll('[data-papel]').forEach(function(el) {
+      var required = el.dataset.papel.split(',');
+      el.style.display = required.some(function(r) { return papeis.includes(r); }) ? '' : 'none';
     });
   }
 
@@ -20498,6 +20485,24 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     autoSaveIndicator.classList.add('show');
     setTimeout(() => autoSaveIndicator.classList.remove('show'), 1500);
   };
+
+  // ═══ PONTO & COMPLIANCE — TAB SWITCHING ═══
+  function _pcSwitchTab(prefix, tabs, activeTab, loadFn) {
+    var activeStyle = 'padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);';
+    var inactiveStyle = 'padding:12px 20px;font-size:13px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;';
+    tabs.forEach(function(t) {
+      var btn = document.getElementById(prefix + 'Tab' + t.charAt(0).toUpperCase() + t.slice(1));
+      var sec = document.getElementById(prefix + t.charAt(0).toUpperCase() + t.slice(1) + 'Section');
+      if (btn) btn.style.cssText = (t === activeTab) ? activeStyle : inactiveStyle;
+      if (sec) sec.style.display = (t === activeTab) ? '' : 'none';
+    });
+    if (loadFn) loadFn();
+  }
+  function switchCompTab(tab) { _pcSwitchTab('comp', ['score','incidentes','certificacoes','inspecoes','politicas'], tab, {incidentes:loadCompIncidentes,certificacoes:loadCompCertificacoes,inspecoes:loadCompInspecoes,politicas:loadCompPoliticas}[tab]); }
+  function switchEmpTab(tab) { _pcSwitchTab('emp', ['func','horarios'], tab, tab==='horarios'?loadCompHorarios:null); }
+  function switchMirrorTab(tab) { _pcSwitchTab('mirror', ['espelho','ocorrencias','banco','resumo'], tab, {ocorrencias:loadCompOcorrencias,banco:loadCompBancoHorasInit,resumo:loadCompResumoMensalInit}[tab]); }
+  function switchCalTab(tab) { _pcSwitchTab('cal', ['calendario','feriados','alertas'], tab, {feriados:loadCompFeriados,alertas:loadCompAlertas}[tab]); }
+  function switchCfgTab(tab) { _pcSwitchTab('cfg', ['config','setup'], tab, tab==='setup'?loadPontoSetup:null); }
 
   // ═══ COMPLIANCE MODULE ═══
   var COMPLIANCE_API = SUPABASE_URL + '/functions/v1/compliance';
