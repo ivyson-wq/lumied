@@ -8813,7 +8813,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Boleto cancelado.', 'success');
     if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
-    loadFinBoletos(); loadFinMensalidades();
+    loadFinBoletos(); loadFinMensalidades(); if(_finMensCurrentTab==='boletos') loadFinMensBoletos();
   }
 
   async function alunoFinBaixarPdf(boletoId) {
@@ -8887,7 +8887,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Baixa manual registrada por ' + (d.baixa_manual_por || 'você'), 'success');
     if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
-    loadFinBoletos(); loadFinMensalidades();
+    loadFinBoletos(); loadFinMensalidades(); if(_finMensCurrentTab==='boletos') loadFinMensBoletos();
   }
 
   // ── Ajustes inline na ficha do aluno ──
@@ -16734,20 +16734,35 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       <div class="card" style="padding:12px;border-left:4px solid #1a6bb5;"><div style="font-size:20px;font-weight:700;">${_fmtR(totais.valor||0)}</div><div style="font-size:11px;color:var(--muted);">Total mensal previsto</div></div>
       <div class="card" style="padding:12px;border-left:4px solid #2d7a3a;"><div style="font-size:20px;font-weight:700;">${comBoleto}</div><div style="font-size:11px;color:var(--muted);">Com boleto emitido</div></div>
       <div class="card" style="padding:12px;border-left:4px solid ${semBoleto>0?'#d4830a':'var(--border)'};""><div style="font-size:20px;font-weight:700;${semBoleto>0?'color:#d4830a;':''}">${semBoleto}</div><div style="font-size:11px;color:var(--muted);">Sem boleto ainda</div></div>`;
-    // Lotes aguardando aprovação
+    // Lotes aguardando aprovação — com edição inline
+    window._batchEditCache = {};
     if (pendingBatches.length) {
       batchPendEl.style.display = 'block';
       batchPendEl.innerHTML = pendingBatches.map(b => {
         const items = b.fin_boleto_batch_items || b.itens || [];
-        const itensHtml = items.map(it => {
-          const comp = Array.isArray(it.itens) && it.itens.length ? it.itens.map(c =>
-            `<div style="display:flex;justify-content:space-between;gap:6px;"><span style="font-size:11px;">${_catIcon(c.categoria)} ${esc(c.nome)}</span><span style="font-weight:600;font-size:11px;">${_fmtR(c.valor)}</span></div>`
-          ).join('') : `<span style="font-size:11px;color:var(--muted);">${esc(it.descricao_detalhada||'—')}</span>`;
-          return `<tr style="border-bottom:1px solid #f5f0ea;"><td style="padding:8px;"><strong>${esc(it.crianca_nome||'—')}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(it.familia_nome||'—')}</span></td><td style="padding:8px;">${comp}</td><td style="padding:8px;font-weight:700;text-align:right;">${_fmtR(it.valor_total||0)}</td></tr>`;
+        items.forEach(it => { window._batchEditCache[it.id] = JSON.parse(JSON.stringify(it.itens || [])); });
+        const itensHtml = items.map((it,idx) => {
+          const itArr = it.itens || [];
+          const compRows = itArr.map((c,ci) =>
+            `<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;" id="bi_${it.id}_row_${ci}">
+              <span style="font-size:12px;">${_catIcon(c.categoria)}</span>
+              <input type="text" value="${esc(c.nome)}" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:inherit;" onchange="_batchItemNameChange('${it.id}',${ci},this.value)">
+              <input type="number" value="${(c.valor||0).toFixed(2)}" step="0.01" style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:inherit;text-align:right;" onchange="_batchItemValorChange('${it.id}',${ci},this.value)">
+              <button onclick="_batchItemRemove('${it.id}',${ci})" style="background:none;border:none;cursor:pointer;color:#EF4444;font-size:12px;" title="Remover">✕</button>
+            </div>`
+          ).join('');
+          return `<tr style="border-bottom:1px solid #f5f0ea;">
+            <td style="padding:8px;vertical-align:top;"><strong>${esc(it.crianca_nome||'—')}</strong><br><span style="font-size:11px;color:var(--muted);">${esc(it.familia_nome||'—')}</span></td>
+            <td style="padding:8px;" id="bi_comp_${it.id}">${compRows}
+              <button onclick="_batchItemAdd('${it.id}')" style="padding:2px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:inherit;margin-top:2px;">+ item</button>
+            </td>
+            <td style="padding:8px;font-weight:700;text-align:right;vertical-align:top;" id="bi_total_${it.id}">${_fmtR(it.valor_total||0)}</td>
+            <td style="padding:8px;vertical-align:top;"><button onclick="_batchItemSave('${it.id}')" style="padding:4px 10px;font-size:10px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600;">Salvar</button></td>
+          </tr>`;
         }).join('');
         return `<div class="card" style="border-left:4px solid #d4830a;margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-            <div><span style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:600;background:#fff8e1;color:#b07d00;">Lote aguardando aprovação</span> <strong style="margin-left:8px;">${items.length} aluno(s)</strong> — <span style="font-weight:700;font-size:15px;">${_fmtR(b.valor_total||0)}</span></div>
+            <div><span style="font-size:10px;padding:3px 10px;border-radius:10px;font-weight:600;background:#fff8e1;color:#b07d00;">Lote aguardando aprovação</span> <strong style="margin-left:8px;">${items.length} aluno(s)</strong> — <span style="font-weight:700;font-size:15px;" id="bi_batch_total_${b.id}">${_fmtR(b.valor_total||0)}</span></div>
             <div style="display:flex;gap:8px;">
               <button onclick="aprovarBatch('${b.id}')" class="btn-create" style="width:auto;padding:8px 18px;font-size:12px;">✅ Aprovar e Emitir</button>
               <button onclick="rejeitarBatch('${b.id}')" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">❌ Rejeitar</button>
@@ -16755,8 +16770,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           </div>
           <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>
             <th style="text-align:left;padding:8px;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1.5px solid var(--border);">Aluno / Família</th>
-            <th style="text-align:left;padding:8px;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1.5px solid var(--border);">Composição</th>
+            <th style="text-align:left;padding:8px;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1.5px solid var(--border);">Composição (editável)</th>
             <th style="text-align:right;padding:8px;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1.5px solid var(--border);">Valor</th>
+            <th style="padding:8px;border-bottom:1.5px solid var(--border);width:60px;"></th>
           </tr></thead><tbody>${itensHtml}</tbody></table></div>
         </div>`;
       }).join('');
@@ -16771,6 +16787,43 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
   function _finMensGetBusca() {
     return (document.getElementById('finMensBusca')?.value || '').trim().toLowerCase();
+  }
+
+  // ── Batch item inline editing ──
+  function _batchItemRecalc(biId) {
+    const itens = window._batchEditCache[biId] || [];
+    const total = Math.max(0, Math.round(itens.reduce((s,it) => s + (parseFloat(it.valor)||0), 0) * 100) / 100);
+    const el = document.getElementById('bi_total_' + biId);
+    if (el) el.textContent = _fmtR(total);
+  }
+  function _batchItemValorChange(biId, idx, val) {
+    if (!window._batchEditCache[biId]) return;
+    window._batchEditCache[biId][idx].valor = parseFloat(val) || 0;
+    _batchItemRecalc(biId);
+  }
+  function _batchItemNameChange(biId, idx, val) {
+    if (!window._batchEditCache[biId]) return;
+    window._batchEditCache[biId][idx].nome = val;
+  }
+  function _batchItemRemove(biId, idx) {
+    if (!window._batchEditCache[biId]) return;
+    window._batchEditCache[biId].splice(idx, 1);
+    loadFinMensalidades(); // re-render to update DOM
+  }
+  function _batchItemAdd(biId) {
+    if (!window._batchEditCache[biId]) window._batchEditCache[biId] = [];
+    window._batchEditCache[biId].push({ nome: 'Novo item', valor: 0, categoria: 'extra' });
+    loadFinMensalidades();
+  }
+  async function _batchItemSave(biId) {
+    const itens = window._batchEditCache[biId] || [];
+    const total = Math.max(0, Math.round(itens.reduce((s,it) => s + (parseFloat(it.valor)||0), 0) * 100) / 100);
+    const desc = itens.map(it => it.nome + ': R$' + (it.valor||0).toFixed(2)).join(' | ');
+    showToast('Salvando...', 'info');
+    const d = await apiFinExt({ action:'boletos_batch_item_edit', id: biId, valor_total: total, itens: itens, descricao_detalhada: desc });
+    if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Item atualizado! Total: ' + _fmtR(total), 'success');
+    loadFinMensalidades();
   }
 
   function renderFinMensPreview() {
@@ -16901,9 +16954,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       }
       if (b.pix_copia_cola) acoes += `<button onclick="navigator.clipboard.writeText('${esc(b.pix_copia_cola)}');showToast('PIX copiado!','success')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Copiar PIX">📋 PIX</button>`;
       acoes += '</div>';
+      const linhaCompacta = b.linha_digitavel ? `<div style="font-size:9px;color:var(--muted);font-family:monospace;margin-top:3px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" onclick="navigator.clipboard.writeText('${esc(b.linha_digitavel)}');showToast('Linha digitável copiada!','success')" title="${esc(b.linha_digitavel)}">${esc(b.linha_digitavel)}</div>` : '';
       return `<tr style="border-bottom:1px solid #f5f0ea;${isManual?'background:#f5f5ff;':''}">
         <td style="padding:10px;text-align:center;"><input type="checkbox" class="fbol-chk" value="${b.id}" onchange="_finBolUpdateSelCount()" style="cursor:pointer;"><span style="font-size:10px;color:var(--muted);margin-left:2px;">${idx+1}</span></td>
-        <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(b.crianca_nome||b.familia_nome||b.cpf_pagador)}</div><div style="font-size:11px;color:var(--muted);">${esc(b.familia_nome||b.familia_email||'')}</div></td>
+        <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(b.crianca_nome||b.familia_nome||b.cpf_pagador)}</div><div style="font-size:11px;color:var(--muted);">${esc(b.familia_nome||b.familia_email||'')}</div>${linhaCompacta}</td>
         <td style="padding:10px;font-size:12px;">${b.vencimento ? new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
         <td style="padding:10px;font-weight:700;text-align:right;">${_fmtR(b.valor)}</td>
         <td style="padding:10px;"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;${badgeStyle}">${statusLabel}</span></td>
