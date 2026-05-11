@@ -8,7 +8,7 @@ body{width:340px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;backgrou
 .header{background:linear-gradient(135deg,#C8102E 0%,#9B0D23 100%);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:10px;}
 .header h1{font-size:15px;font-weight:700;letter-spacing:-0.3px;}
 .header svg{opacity:.9;}
-.config{padding:16px 20px;}
+.body{padding:16px 20px;}
 .field{margin-bottom:12px;}
 .field label{font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px;}
 .field input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;transition:border-color .15s,box-shadow .15s;background:#fff;}
@@ -16,10 +16,17 @@ body{width:340px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;backgrou
 .btn{width:100%;padding:12px;background:linear-gradient(135deg,#C8102E 0%,#9B0D23 100%);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 2px 8px rgba(200,16,46,.2);margin-top:4px;}
 .btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(200,16,46,.3);}
 .btn:active{transform:translateY(0);}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.btn-logout{background:#f3f4f6;color:#6b7280;box-shadow:none;font-size:12px;font-weight:600;margin-top:8px;}
+.btn-logout:hover{background:#e5e7eb;transform:none;box-shadow:none;}
 .status{padding:12px 20px;font-size:11px;color:#6b7280;text-align:center;border-top:1px solid #f0f0f0;}
 .status.connected{color:#065f46;background:#ecfdf5;}
-.help{padding:0 20px 12px;font-size:10px;color:#9ca3af;line-height:1.5;}
-.help a{color:#C8102E;text-decoration:none;}
+.status.error{color:#991b1b;background:#fef2f2;}
+.user-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:12px;}
+.user-card .name{font-weight:700;font-size:14px;color:#111;}
+.user-card .email{font-size:11px;color:#6b7280;margin-top:2px;}
+.user-card .escola{font-size:11px;color:#C8102E;font-weight:600;margin-top:6px;}
+.hidden{display:none!important;}
 </style>
 </head>
 <body>
@@ -27,56 +34,137 @@ body{width:340px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;backgrou
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
   <h1 id="extTitle">Lumied CRM</h1>
 </div>
-<div class="config">
+
+<!-- LOGIN VIEW -->
+<div id="viewLogin" class="body">
   <div class="field">
-    <label>URL do Sistema</label>
-    <input type="text" id="apiUrl" placeholder="https://xxxxx.supabase.co">
+    <label>E-mail</label>
+    <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email">
   </div>
   <div class="field">
-    <label>API Key</label>
-    <input type="text" id="apiKey" placeholder="Supabase Anon Key">
+    <label>Senha</label>
+    <input type="password" id="loginSenha" placeholder="Sua senha do portal" autocomplete="current-password">
   </div>
-  <div class="field">
-    <label>Token do Gerente</label>
-    <input type="password" id="token" placeholder="Copie do localStorage: mb_token">
-  </div>
-  <button class="btn" onclick="salvar()">Salvar Configuracao</button>
+  <button class="btn" id="btnLogin">Entrar</button>
 </div>
-<div class="help">
-  No painel do gerente, abra o console (F12) e copie:<br>
-  <code style="background:#f3f4f6;padding:2px 4px;border-radius:3px;">localStorage.getItem('mb_token')</code>
+
+<!-- CONNECTED VIEW -->
+<div id="viewConnected" class="body hidden">
+  <div class="user-card">
+    <div class="name" id="userName">—</div>
+    <div class="email" id="userEmail">—</div>
+    <div class="escola" id="userEscola"></div>
+  </div>
+  <button class="btn btn-logout" id="btnLogout">Sair da conta</button>
 </div>
-<div class="status" id="status">Configure para conectar ao CRM</div>
+
+<div class="status" id="status">Faca login para conectar ao CRM</div>
+
 <script>
-chrome.storage.local.get(['apiUrl','apiKey','token'], d => {
-  if(d.apiUrl) document.getElementById('apiUrl').value = d.apiUrl;
-  if(d.apiKey) document.getElementById('apiKey').value = d.apiKey;
-  if(d.token) document.getElementById('token').value = d.token;
-  if(d.apiUrl && d.token) {
-    const el = document.getElementById('status');
-    el.textContent = 'Conectado ao CRM';
-    el.classList.add('connected');
-    fetch(d.apiUrl + '/functions/v1/api', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':d.apiKey||'','Authorization':'Bearer '+(d.apiKey||'')},
-      body:JSON.stringify({action:'config_publica'})
-    }).then(r=>r.json()).then(cfg=>{
-      if(cfg.escola_nome) document.getElementById('extTitle').textContent = cfg.escola_nome + ' CRM';
-    }).catch(()=>{});
+const API_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+
+const $ = id => document.getElementById(id);
+
+async function apiCall(action, params = {}) {
+  const res = await fetch(API_URL + '/functions/v1/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': API_KEY, 'Authorization': 'Bearer ' + API_KEY },
+    body: JSON.stringify({ action, ...params }),
+  });
+  return res.json();
+}
+
+function showView(view) {
+  $('viewLogin').classList.toggle('hidden', view !== 'login');
+  $('viewConnected').classList.toggle('hidden', view !== 'connected');
+}
+
+function setStatus(msg, type) {
+  const el = $('status');
+  el.textContent = msg;
+  el.className = 'status' + (type ? ' ' + type : '');
+}
+
+// Check existing session on open
+chrome.storage.local.get(['apiUrl', 'apiKey', 'token', 'userName', 'userEmail'], async (d) => {
+  if (d.token) {
+    showView('connected');
+    $('userName').textContent = d.userName || '—';
+    $('userEmail').textContent = d.userEmail || '—';
+    setStatus('Conectado ao CRM', 'connected');
+    // Fetch escola name
+    try {
+      const cfg = await apiCall('config_publica');
+      if (cfg.escola_nome) {
+        $('userEscola').textContent = cfg.escola_nome;
+        $('extTitle').textContent = cfg.escola_nome + ' CRM';
+      }
+    } catch (_) {}
+  } else {
+    showView('login');
   }
 });
-function salvar() {
-  chrome.storage.local.set({
-    apiUrl: document.getElementById('apiUrl').value.trim(),
-    apiKey: document.getElementById('apiKey').value.trim(),
-    token: document.getElementById('token').value.trim(),
-  }, () => {
-    const el = document.getElementById('status');
-    el.textContent = 'Salvo com sucesso!';
-    el.classList.add('connected');
-    setTimeout(() => { el.textContent = 'Conectado ao CRM'; }, 2000);
+
+// Login
+$('btnLogin').onclick = async () => {
+  const email = $('loginEmail').value.trim();
+  const senha = $('loginSenha').value;
+  if (!email || !senha) { setStatus('Preencha e-mail e senha.', 'error'); return; }
+
+  const btn = $('btnLogin');
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  setStatus('Autenticando...', '');
+
+  try {
+    const d = await apiCall('login', { email, senha });
+    if (d.error) {
+      setStatus(d.error, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+    // Save credentials
+    chrome.storage.local.set({
+      apiUrl: API_URL,
+      apiKey: API_KEY,
+      token: d.token,
+      userName: d.nome,
+      userEmail: d.email,
+    }, () => {
+      showView('connected');
+      $('userName').textContent = d.nome || '—';
+      $('userEmail').textContent = d.email || '—';
+      setStatus('Conectado ao CRM', 'connected');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    });
+  } catch (err) {
+    setStatus('Erro de conexao. Tente novamente.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+};
+
+// Enter key submits login
+$('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnLogin').click(); });
+$('loginSenha').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnLogin').click(); });
+
+// Logout
+$('btnLogout').onclick = async () => {
+  const config = await new Promise(r => chrome.storage.local.get(['token'], r));
+  if (config.token) {
+    try { await apiCall('logout', { _token: config.token }); } catch (_) {}
+  }
+  chrome.storage.local.remove(['token', 'userName', 'userEmail'], () => {
+    showView('login');
+    $('loginEmail').value = '';
+    $('loginSenha').value = '';
+    $('extTitle').textContent = 'Lumied CRM';
+    setStatus('Faca login para conectar ao CRM', '');
   });
-}
+};
 </script>
 </body>
 </html>
