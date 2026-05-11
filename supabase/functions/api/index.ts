@@ -4923,6 +4923,93 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const { data } = await admin.from("crm_matriculas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano).order("serie").order("turma").order("criado_em");
     return ok(data ?? []);
   }
+  // ── Exclusão de matrícula (remover aluno da turma) ──
+  if (action === "crm_matricula_remover") {
+    // Gerente remove direto (deleta o registro)
+    const { id, motivo } = body as any;
+    if (!id) return err("id obrigatorio.");
+    const { data: mat } = await admin.from("crm_matriculas").select("nome_crianca, serie, turma").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!mat) return err("Matricula nao encontrada.");
+    await admin.from("crm_matriculas").delete().eq("id", id).eq("escola_id", sessionEscolaId);
+    // Log a exclusão aprovada automaticamente
+    await admin.from("crm_matricula_exclusoes").insert({
+      matricula_id: id, solicitado_por: gerente?.email || "gerente", solicitado_papel: "gerente",
+      motivo: motivo || "Removido pelo gerente", status: "aprovado", aprovado_por: gerente?.email || "gerente",
+      respondido_em: new Date().toISOString(), escola_id: sessionEscolaId,
+    });
+    return ok({ success: true, message: `${mat.nome_crianca} removido(a) de ${mat.serie} ${mat.turma || ""}`.trim() });
+  }
+  if (action === "crm_matricula_solicitar_exclusao") {
+    // Secretaria solicita exclusão — fica pendente para gerente aprovar
+    const { id, motivo, solicitante_email, solicitante_nome } = body as any;
+    if (!id) return err("id obrigatorio.");
+    const { data: mat } = await admin.from("crm_matriculas").select("nome_crianca, serie, turma").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!mat) return err("Matricula nao encontrada.");
+    // Checar se já há pendência para esta matrícula
+    const { data: existing } = await admin.from("crm_matricula_exclusoes").select("id").eq("matricula_id", id).eq("status", "pendente").eq("escola_id", sessionEscolaId).maybeSingle();
+    if (existing) return err("Ja existe uma solicitacao pendente para esta matricula.");
+    await admin.from("crm_matricula_exclusoes").insert({
+      matricula_id: id, solicitado_por: solicitante_email || "secretaria", solicitado_papel: "secretaria",
+      motivo: motivo || "", status: "pendente", escola_id: sessionEscolaId,
+    });
+    // Notificar gerentes
+    const { data: gerentes } = await admin.from("gerentes").select("email").eq("escola_id", sessionEscolaId);
+    for (const g of gerentes ?? []) {
+      await admin.from("notificacoes").insert({
+        portal: "gerente", destinatario: g.email,
+        titulo: "Solicitação de exclusão",
+        mensagem: `${solicitante_nome || "Secretaria"} solicitou a exclusão de ${mat.nome_crianca} (${mat.serie} ${mat.turma || ""}).${motivo ? " Motivo: " + motivo : ""}`,
+        tipo: "warning", escola_id: sessionEscolaId,
+      });
+    }
+    return ok({ success: true, message: "Solicitação enviada para aprovação do gerente." });
+  }
+  if (action === "crm_exclusoes_pendentes_list") {
+    const { data } = await admin.from("crm_matricula_exclusoes").select("*, crm_matriculas(nome_crianca, nome_responsavel, serie, turma, status, telefone, email)")
+      .eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: false });
+    return ok(data ?? []);
+  }
+  if (action === "crm_exclusao_aprovar") {
+    const { id, observacao } = body as any;
+    if (!id) return err("id obrigatorio.");
+    const { data: excl } = await admin.from("crm_matricula_exclusoes").select("matricula_id").eq("id", id).eq("escola_id", sessionEscolaId).eq("status", "pendente").maybeSingle();
+    if (!excl) return err("Solicitacao nao encontrada ou ja respondida.");
+    // Deletar a matrícula
+    await admin.from("crm_matriculas").delete().eq("id", excl.matricula_id).eq("escola_id", sessionEscolaId);
+    // Atualizar exclusão
+    await admin.from("crm_matricula_exclusoes").update({
+      status: "aprovado", aprovado_por: gerente?.email || "gerente",
+      observacao_resposta: observacao || null, respondido_em: new Date().toISOString(),
+    }).eq("id", id).eq("escola_id", sessionEscolaId);
+    // Notificar quem solicitou
+    const { data: exclFull } = await admin.from("crm_matricula_exclusoes").select("solicitado_por").eq("id", id).maybeSingle();
+    if (exclFull?.solicitado_por) {
+      await admin.from("notificacoes").insert({
+        portal: "secretaria", destinatario: exclFull.solicitado_por,
+        titulo: "Exclusão aprovada ✅", mensagem: `A solicitação de exclusão foi aprovada pelo gerente.${observacao ? " Obs: " + observacao : ""}`,
+        tipo: "success", escola_id: sessionEscolaId,
+      });
+    }
+    return ok({ success: true });
+  }
+  if (action === "crm_exclusao_rejeitar") {
+    const { id, observacao } = body as any;
+    if (!id) return err("id obrigatorio.");
+    const { data: excl } = await admin.from("crm_matricula_exclusoes").select("matricula_id, solicitado_por").eq("id", id).eq("escola_id", sessionEscolaId).eq("status", "pendente").maybeSingle();
+    if (!excl) return err("Solicitacao nao encontrada ou ja respondida.");
+    await admin.from("crm_matricula_exclusoes").update({
+      status: "rejeitado", aprovado_por: gerente?.email || "gerente",
+      observacao_resposta: observacao || null, respondido_em: new Date().toISOString(),
+    }).eq("id", id).eq("escola_id", sessionEscolaId);
+    if (excl.solicitado_por) {
+      await admin.from("notificacoes").insert({
+        portal: "secretaria", destinatario: excl.solicitado_por,
+        titulo: "Exclusão rejeitada ❌", mensagem: `A solicitação de exclusão foi rejeitada pelo gerente.${observacao ? " Motivo: " + observacao : ""}`,
+        tipo: "error", escola_id: sessionEscolaId,
+      });
+    }
+    return ok({ success: true });
+  }
   if (action === "crm_metas_list") {
     const ano = parseInt((body as any).ano) || new Date().getFullYear();
     const { data } = await admin.from("comercial_metas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano).order("mes");

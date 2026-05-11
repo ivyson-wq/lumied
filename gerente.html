@@ -3284,6 +3284,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
           <button class="gmat-tab active" onclick="gMatSetView('resumo',this)">Resumo por Série</button>
           <button class="gmat-tab" onclick="gMatSetView('alunos',this)">Lista de Alunos</button>
           <button class="gmat-tab" onclick="gMatSetView('config',this)">Configurar Vagas</button>
+          <button class="gmat-tab" onclick="gMatSetView('exclusoes',this)" style="position:relative;">Exclusoes Pendentes <span id="gExclBadge" style="display:none;background:#e53e3e;color:#fff;border-radius:50%;font-size:10px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;font-weight:700;"></span></button>
         </div>
         <div class="stats-grid" id="gMatStats"></div>
         <div id="gMatViewResumo"></div>
@@ -3300,6 +3301,9 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
               <button onclick="salvarCrmVaga()" class="btn-create" style="width:auto;padding:6px 12px;font-size:11px;">Salvar</button>
             </div>
           </div>
+        </div>
+        <div id="gMatViewExclusoes" style="display:none;">
+          <div id="gExclContent"><div class="empty-state">Carregando...</div></div>
         </div>
       </div>
 
@@ -18910,7 +18914,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('gMatViewResumo').style.display = view === 'resumo' ? '' : 'none';
     document.getElementById('gMatViewAlunos').style.display = view === 'alunos' ? '' : 'none';
     document.getElementById('gMatViewConfig').style.display = view === 'config' ? '' : 'none';
+    document.getElementById('gMatViewExclusoes').style.display = view === 'exclusoes' ? '' : 'none';
     if (view === 'config') loadCrmVagas();
+    if (view === 'exclusoes') loadExclusoesPendentes();
   }
 
   // ── CRM VAGAS (config tab) ─────────────
@@ -18976,8 +18982,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('gMatAnoDisplay').textContent = ano;
     const [matrResp, vagasResp] = await Promise.all([
       api({ action:'crm_matriculas_list', ano }),
-      api({ action:'crm_vagas_list', ano })
+      api({ action:'crm_vagas_list', ano }),
     ]);
+    // Load exclusion badge count in background
+    loadExclusoesPendentes();
     gMatData = Array.isArray(matrResp) ? matrResp : [];
     gMatVagas = Array.isArray(vagasResp) ? vagasResp : [];
 
@@ -19085,6 +19093,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
             <div style="display:flex;gap:4px;flex-shrink:0;">
               ${m.status==='reserva'?`<button onclick="atualizarMatricula('${m.id}','matriculado')" style="padding:3px 8px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Matricular</button>`:''}
               <button onclick="atualizarMatricula('${m.id}','cancelado')" style="padding:3px 8px;background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancelar</button>
+              <button onclick="removerMatricula('${m.id}','${esc(m.nome_crianca)}')" style="padding:3px 8px;background:#e53e3e;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;" title="Remover da turma">Remover</button>
             </div>
           </div>`;
         }).join('') : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Nenhuma crianca nesta turma.</div>'}
@@ -19115,6 +19124,67 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     loadCrmMatriculas();
     // Refresh vagas if that panel was loaded
     if (document.getElementById('panelCrmVagas').style.display !== 'none') loadCrmVagas();
+  }
+
+  async function removerMatricula(id, nome) {
+    const motivo = prompt('Remover ' + nome + ' da turma?\n\nMotivo (opcional):');
+    if (motivo === null) return; // cancelou
+    if (!await _lumiedConfirm('Confirmar exclusao de ' + nome + '?\n\nEsta acao nao pode ser desfeita.')) return;
+    const d = await api({ action:'crm_matricula_remover', id, motivo });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast(d.message || 'Removido com sucesso!','success');
+    loadCrmMatriculas();
+  }
+
+  // ── Exclusões pendentes (solicitadas pela secretaria) ──
+  var gExclPendentes = [];
+  async function loadExclusoesPendentes() {
+    const d = await api({ action:'crm_exclusoes_pendentes_list' });
+    gExclPendentes = Array.isArray(d) ? d : [];
+    renderExclusoesPendentes();
+    // Update badge
+    const badge = document.getElementById('gExclBadge');
+    if (badge) badge.textContent = gExclPendentes.length || '';
+    if (badge) badge.style.display = gExclPendentes.length ? '' : 'none';
+  }
+  function renderExclusoesPendentes() {
+    const el = document.getElementById('gExclContent');
+    if (!el) return;
+    if (!gExclPendentes.length) { el.innerHTML = '<div class="empty-state">Nenhuma solicitacao pendente.</div>'; return; }
+    el.innerHTML = gExclPendentes.map(e => {
+      const m = e.crm_matriculas || {};
+      const dt = e.criado_em ? new Date(e.criado_em).toLocaleDateString('pt-BR') : '';
+      return `<div style="background:#fff;border:1.5px solid #f6a623;border-radius:10px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="width:10px;height:10px;border-radius:50%;background:#f6a623;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:180px;">
+          <div style="font-size:14px;font-weight:700;">${esc(m.nome_crianca||'—')}</div>
+          <div style="font-size:12px;color:var(--muted);">${esc(m.serie||'')} ${esc(m.turma||'')} · Resp: ${esc(m.nome_responsavel||'—')}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Solicitado por: ${esc(e.solicitado_por)} em ${dt}</div>
+          ${e.motivo?`<div style="font-size:11px;color:#b07d00;margin-top:2px;">Motivo: ${esc(e.motivo)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="aprovarExclusao('${e.id}')" style="padding:5px 12px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Aprovar</button>
+          <button onclick="rejeitarExclusao('${e.id}')" style="padding:5px 12px;background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">Rejeitar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  async function aprovarExclusao(id) {
+    const obs = prompt('Observacao (opcional):');
+    if (obs === null) return;
+    const d = await api({ action:'crm_exclusao_aprovar', id, observacao: obs });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Exclusao aprovada!','success');
+    loadExclusoesPendentes();
+    loadCrmMatriculas();
+  }
+  async function rejeitarExclusao(id) {
+    const obs = prompt('Motivo da rejeicao (opcional):');
+    if (obs === null) return;
+    const d = await api({ action:'crm_exclusao_rejeitar', id, observacao: obs });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Exclusao rejeitada.','success');
+    loadExclusoesPendentes();
   }
 
   async function criarMatriculaDoLead(leadId) {
