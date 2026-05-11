@@ -483,6 +483,7 @@ async function gerarBatchParaMes(
   ano: number,
   mes: number,
   origem: "automatico" | "manual",
+  alunoIdsFiltro?: string[],
 ): Promise<any> {
   // Dia de vencimento configurável
   const { data: cfgDia } = await ctx.sb
@@ -531,7 +532,12 @@ async function gerarBatchParaMes(
     if (bi.aluno_id) jaEmitidosSet.add(bi.aluno_id);
   }
 
-  const alunosFiltrados = alunos.filter((a: any) => !jaEmitidosSet.has(a.id) && !jaEmitidosSet.has(a.nome));
+  let alunosFiltrados = alunos.filter((a: any) => !jaEmitidosSet.has(a.id) && !jaEmitidosSet.has(a.nome));
+  // Se aluno_ids fornecido, filtra apenas os selecionados
+  if (alunoIdsFiltro && alunoIdsFiltro.length > 0) {
+    const idSet = new Set(alunoIdsFiltro);
+    alunosFiltrados = alunosFiltrados.filter((a: any) => idSet.has(a.id));
+  }
   const pulados = alunos.length - alunosFiltrados.length;
 
   if (alunosFiltrados.length === 0) {
@@ -843,16 +849,16 @@ router.on("mensalidades_preview", authEquipeFinanceira, async (ctx) => {
 });
 
 router.on("boletos_gerar_batch_manual", authEquipeFinanceira, async (ctx) => {
-  const { mes_referencia } = ctx.body as any;
+  const { mes_referencia, aluno_ids } = ctx.body as any;
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
-  // Default: próximo mês
   const nm = nextMonth();
   const mesRef = mes_referencia || nm.label;
   const [anoStr, mesStr] = mesRef.split("-");
   const ano = parseInt(anoStr);
   const mes = parseInt(mesStr);
   if (!ano || !mes || mes < 1 || mes > 12) throw new AppError("VALIDATION_FAILED", "mes_referencia inválido (formato: YYYY-MM).");
-  const result = await gerarBatchParaMes(ctx, ctx.escola_id, mesRef, ano, mes, "manual");
+  const ids = Array.isArray(aluno_ids) && aluno_ids.length ? aluno_ids : undefined;
+  const result = await gerarBatchParaMes(ctx, ctx.escola_id, mesRef, ano, mes, "manual", ids);
   return successResponse(result);
 });
 

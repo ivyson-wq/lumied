@@ -812,22 +812,45 @@ serve(async (req: Request) => {
     let q = admin.from("gerentes").select("id, nome, email, senha_hash, escola_id").eq("email", email);
     if (escolaIdLogin) q = q.eq("escola_id", escolaIdLogin);
     const { data: matches } = await q.limit(2);
-    if (!matches?.length) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
     // Se multi-match sem Origin: não podemos decidir qual escola — erro genérico
-    if (matches.length > 1) {
+    if (matches && matches.length > 1) {
       console.warn("[login] multiple gerentes com email", { email, n: matches.length });
       return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
     }
-    const g = matches[0];
-    const ok2 = await verificarSenhaAuto(senha as string, g.senha_hash);
-    if (!ok2) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
-    await admin.from("gerente_sessoes").delete().lt("expira_em", new Date().toISOString());
-    const { data: sessao, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
-    if (sErr || !sessao?.token) {
-      console.error("[auth] gerente login AUTH_SESSION_FAILED", { email, err: sErr });
+    if (matches?.length) {
+      const g = matches[0];
+      const ok2 = await verificarSenhaAuto(senha as string, g.senha_hash);
+      if (!ok2) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+      await admin.from("gerente_sessoes").delete().lt("expira_em", new Date().toISOString());
+      const { data: sessao, error: sErr } = await admin.from("gerente_sessoes").insert({ gerente_id: g.id }).select().single();
+      if (sErr || !sessao?.token) {
+        console.error("[auth] gerente login AUTH_SESSION_FAILED", { email, err: sErr });
+        return err("Não foi possível criar a sessão. Tente novamente.", 500, "AUTH_SESSION_FAILED");
+      }
+      return ok({ token: sessao.token, nome: g.nome, email: g.email });
+    }
+    // Fallback: busca na tabela unificada usuarios (apenas comercial pode acessar CRM)
+    const allowedLoginRoles = ["comercial"];
+    let qu = admin.from("usuarios").select("id, nome, email, senha_hash, escola_id, papeis").eq("email", email).eq("ativo", true);
+    if (escolaIdLogin) qu = qu.eq("escola_id", escolaIdLogin);
+    const { data: uMatches } = await qu.limit(2);
+    if (!uMatches?.length) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+    if (uMatches.length > 1) {
+      console.warn("[login] multiple usuarios com email", { email, n: uMatches.length });
+      return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+    }
+    const u = uMatches[0];
+    const uRoles: string[] = u.papeis || [];
+    if (!uRoles.some((r: string) => allowedLoginRoles.includes(r))) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+    if (!u.senha_hash) return err("Senha não cadastrada. Solicite ao gestor.", 401, "AUTH_NO_PASSWORD");
+    const ok3 = await verificarSenhaAuto(senha as string, u.senha_hash);
+    if (!ok3) return err("E-mail ou senha incorretos.", 401, "AUTH_BAD_CREDENTIALS");
+    const { data: uSessao, error: uSErr } = await admin.from("sessoes").insert({ usuario_id: u.id, usuario_tipo: uRoles[0] }).select("token").single();
+    if (uSErr || !uSessao?.token) {
+      console.error("[auth] usuario login AUTH_SESSION_FAILED", { email, err: uSErr });
       return err("Não foi possível criar a sessão. Tente novamente.", 500, "AUTH_SESSION_FAILED");
     }
-    return ok({ token: sessao.token, nome: g.nome, email: g.email });
+    return ok({ token: uSessao.token, nome: u.nome, email: u.email });
   }
 
   // Logout
@@ -4539,6 +4562,45 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       if (emailResult?.statusCode >= 400) return err("Erro Resend: " + (emailResult.message || emailResult.name));
     } catch (e) { return err("Erro ao enviar email: " + (e as Error).message); }
     return ok({ success: true, enviado_para: destino, com_pdf: !!pdfBase64, com_linha_digitavel: !!linhaDigitavel, com_pix: !!pixCopiaECola });
+  }
+  if (action === "fin_boletos_enviar_email_batch") {
+    const { ids } = body as { ids: string[] };
+    if (!ids || !ids.length) return err("ids obrigatório (array de IDs de boletos).");
+    if (ids.length > 50) return err("Máximo de 50 boletos por vez.");
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return err("RESEND_API_KEY não configurada.");
+    const { data: escola } = await admin.from("escolas").select("nome").eq("id", sessionEscolaId).maybeSingle();
+    const escolaNome = (escola as any)?.nome || "Escola";
+    const { data: boletos } = await admin.from("fin_boletos_emitidos").select("*").eq("escola_id", sessionEscolaId).in("id", ids);
+    let enviados = 0, erros = 0;
+    for (const bol of boletos ?? []) {
+      if (!bol.familia_email) { erros++; continue; }
+      try {
+        const venc = bol.vencimento ? new Date(bol.vencimento + "T12:00:00").toLocaleDateString("pt-BR") : "—";
+        const valor = `R$ ${parseFloat(bol.valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+        const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <h2 style="color:#1a6bb5;">${escapeHtml(escolaNome)} — Boleto</h2>
+          <p>Olá, <strong>${escapeHtml(bol.familia_nome || "Responsável")}</strong>!</p>
+          <p>Segue o boleto referente a <strong>${escapeHtml(bol.crianca_nome || "aluno")}</strong>.</p>
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+            <tr style="background:#f8f8f8;"><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Valor</td><td style="padding:10px;border:1px solid #ddd;font-size:20px;font-weight:700;color:#1a6bb5;">${valor}</td></tr>
+            <tr><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Vencimento</td><td style="padding:10px;border:1px solid #ddd;">${venc}</td></tr>
+            ${bol.linha_digitavel ? `<tr style="background:#f8f8f8;"><td style="padding:10px;border:1px solid #ddd;font-weight:600;">Linha Digitável</td><td style="padding:10px;border:1px solid #ddd;font-family:monospace;font-size:13px;">${escapeHtml(bol.linha_digitavel)}</td></tr>` : ""}
+          </table>
+          ${bol.pix_copia_cola ? `<div style="background:#f0f7ff;border:1px solid #c5d9f0;border-radius:8px;padding:16px;margin:16px 0;"><div style="font-weight:700;margin-bottom:8px;color:#1a6bb5;">PIX Copia e Cola</div><code style="font-size:11px;word-break:break-all;display:block;background:#fff;padding:10px;border-radius:4px;border:1px solid #e0e0e0;">${escapeHtml(bol.pix_copia_cola)}</code></div>` : ""}
+          <p style="color:#999;font-size:11px;">Enviado por ${escapeHtml(escolaNome)} via Lumied.</p>
+        </div>`;
+        const emailRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
+          body: JSON.stringify({ from: `${sanitizeHeaderValue(escolaNome)} <financeiro@lumied.com.br>`, to: [bol.familia_email], subject: `Boleto — ${bol.crianca_nome || "Mensalidade"} — ${valor}`, html }),
+          signal: AbortSignal.timeout(10000),
+        });
+        if (emailRes.ok) enviados++;
+        else erros++;
+      } catch { erros++; }
+    }
+    return ok({ enviados, erros, total: ids.length });
   }
   if (action === "fin_boleto_baixa_manual") {
     const { id, observacao } = body as any;
