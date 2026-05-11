@@ -25,12 +25,18 @@
     return localStorage.getItem('mb_token') || localStorage.getItem('prof_token') || localStorage.getItem('mb_aluno_token') || localStorage.getItem('sec_token');
   }
 
-  // Wait for DOM + login, max 60 checks (2 min)
+  // Check if lumi_ia module is enabled (waits for window._enabledModules from portal)
+  function isLumiEnabled() {
+    return window._enabledModules && window._enabledModules.has('lumi_ia');
+  }
+
+  // Wait for DOM + login + module check, max 60 checks (2 min)
   let attempts = 0;
   function tryInit() {
     attempts++;
     if (attempts > 60) return; // Give up after 2 minutes
     if (!isLoggedIn()) { setTimeout(tryInit, 2000); return; }
+    if (!isLumiEnabled()) { setTimeout(tryInit, 2000); return; }
     init();
   }
   // Wait for DOM to be ready before first check
