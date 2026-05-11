@@ -590,6 +590,44 @@
     if (closeBtn) closeBtn.onclick = () => setPanelOpen(false);
   }, 100);
 
+  // --- DETECT CONVERSATION CHANGE ---
+  let _lastContact = null;
+
+  function checkConversationChange() {
+    const { nome, telefone } = getContactInfo();
+    const key = (telefone || '') + '|' + (nome || '');
+    if (key === _lastContact || key === '|') return;
+    _lastContact = key;
+    // Reset lead card
+    currentLeadInfo = null;
+    var cardEl = document.getElementById('mb-lead-card');
+    if (cardEl) cardEl.classList.add('hidden');
+    var statusEl = document.getElementById('mb-lead-status');
+    if (statusEl) statusEl.classList.add('hidden');
+    // Auto-lookup lead if panel is open
+    if (panelOpen && telefone) {
+      statusEl.classList.remove('hidden');
+      statusEl.className = 'mb-lead-status loading';
+      statusEl.textContent = 'Buscando lead...';
+      findLeadByPhone(telefone).then(function(lead) {
+        if (!lead) {
+          statusEl.className = 'mb-lead-status';
+          statusEl.textContent = '';
+          statusEl.classList.add('hidden');
+          return;
+        }
+        currentLeadInfo = { lead: lead, serieInfo: null };
+        renderLeadCard(lead, null);
+        statusEl.classList.add('hidden');
+      }).catch(function() {
+        statusEl.classList.add('hidden');
+      });
+    }
+  }
+
+  // Poll for conversation changes (header updates when switching chats)
+  setInterval(checkConversationChange, 1500);
+
   // --- TEMPLATES ---
 
   async function loadTemplates() {
@@ -638,8 +676,7 @@
       inputEl.focus();
       document.execCommand('insertText', false, msg);
       inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-      panel.classList.add('hidden');
-      panelOpen = false;
+      setPanelOpen(false);
     } else {
       navigator.clipboard.writeText(msg);
       alert('Mensagem copiada! Cole no chat com Ctrl+V.\n(Abra um chat primeiro)');
