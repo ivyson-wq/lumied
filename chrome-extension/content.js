@@ -118,8 +118,8 @@
       };
       window.addEventListener('lumied-phone-result', handler);
       window.dispatchEvent(new Event('lumied-get-phone'));
-      // Timeout after 800ms
-      setTimeout(function() { if (!resolved) { resolved = true; resolve(null); } }, 800);
+      // Timeout after 2000ms (IndexedDB lookup may take time)
+      setTimeout(function() { if (!resolved) { resolved = true; resolve(null); } }, 2000);
     });
   }
 

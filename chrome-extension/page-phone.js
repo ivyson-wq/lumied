@@ -164,6 +164,104 @@ window.addEventListener('lumied-get-phone', function() {
     debug.push('fatal error: ' + e.message);
   }
 
+    // ── Method E: IndexedDB lookup (model-storage > contact) ──
+    // WhatsApp stores contacts in IndexedDB with both LID and phone number
+    if (!phone && jid && jid.includes('@lid')) {
+      try {
+        var lidUser = jid.split('@')[0];
+        debug.push('trying IndexedDB for LID ' + lidUser + '...');
+
+        var dbRequest = indexedDB.open('model-storage');
+        dbRequest.onsuccess = function(event) {
+          var db = event.target.result;
+          var storeNames = Array.from(db.objectStoreNames);
+          debug.push('IDB stores: ' + storeNames.join(','));
+
+          // Try 'contact' store first, then others
+          var contactStore = storeNames.find(function(s) { return s === 'contact'; })
+            || storeNames.find(function(s) { return s.includes('contact'); });
+
+          if (!contactStore) {
+            debug.push('no contact store in IDB');
+            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
+            return;
+          }
+
+          var tx = db.transaction([contactStore], 'readonly');
+          var store = tx.objectStore(contactStore);
+          var getAllReq = store.getAll();
+          getAllReq.onsuccess = function() {
+            var contacts = getAllReq.result || [];
+            debug.push('IDB contacts: ' + contacts.length);
+
+            for (var ci = 0; ci < contacts.length; ci++) {
+              var c = contacts[ci];
+              // Contact record might have: id (lid or phone), phoneNumber, userid, etc.
+              var cId = c.id || c.__x_id || '';
+              var cIdStr = typeof cId === 'object' ? (cId._serialized || cId.user || '') : String(cId);
+
+              // Match by LID
+              if (cIdStr.includes(lidUser) || cIdStr === jid) {
+                // Look for phone in various fields
+                var phoneFields = [c.phoneNumber, c.phone, c.number, c.userid, c.pn, c.wid];
+                for (var pf = 0; pf < phoneFields.length; pf++) {
+                  if (phoneFields[pf]) {
+                    var pfStr = typeof phoneFields[pf] === 'object' ? (phoneFields[pf]._serialized || phoneFields[pf].user || '') : String(phoneFields[pf]);
+                    var pfMatch = pfStr.match(/(\d{10,13})/);
+                    if (pfMatch && !pfStr.includes('@lid')) {
+                      phone = pfMatch[1];
+                      debug.push('IDB contact match: ' + phone);
+                      break;
+                    }
+                  }
+                }
+                if (!phone) {
+                  // Dump keys for debugging
+                  var keys = Object.keys(c).slice(0, 15);
+                  debug.push('IDB matched contact keys: ' + keys.join(','));
+                }
+                break;
+              }
+            }
+
+            // If still no match, try to find any contact whose LID field matches
+            if (!phone) {
+              for (var ci2 = 0; ci2 < contacts.length; ci2++) {
+                var c2 = contacts[ci2];
+                var allVals = JSON.stringify(c2);
+                if (allVals.includes(lidUser)) {
+                  // Found! Extract any phone-like number that's not the LID
+                  var allPhones = allVals.match(/\d{10,13}/g) || [];
+                  for (var ap = 0; ap < allPhones.length; ap++) {
+                    if (allPhones[ap] !== lidUser && allPhones[ap].length <= 13) {
+                      phone = allPhones[ap];
+                      debug.push('IDB JSON scan match: ' + phone);
+                      break;
+                    }
+                  }
+                  if (phone) break;
+                }
+              }
+            }
+
+            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: phone, jid: jid, debug: debug } }));
+          };
+          getAllReq.onerror = function() {
+            debug.push('IDB getAll failed');
+            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
+          };
+        };
+        dbRequest.onerror = function() {
+          debug.push('IDB open failed');
+          window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
+        };
+        return; // async — result dispatched in callbacks
+      } catch(e) { debug.push('IDB error: ' + e.message); }
+    }
+  } catch(e) {
+    debug.push('fatal error: ' + e.message);
+  }
+
   window.dispatchEvent(new CustomEvent('lumied-phone-result', {
     detail: { phone: phone, jid: jid, debug: debug }
   }));
