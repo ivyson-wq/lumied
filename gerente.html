@@ -20848,7 +20848,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const token = getToken();
     const headers = { 'Content-Type':'application/json', 'apikey':ANON, 'Authorization':'Bearer '+ANON };
     const r = await fetch(PONTO_API, { method:'POST', headers, body: JSON.stringify({ ...body, _token: token }) });
-    return r.json();
+    const j = await r.json();
+    // Normalize: edge function returns raw arrays; callers expect {data: [...]}
+    return Array.isArray(j) ? { data: j } : j;
   }
 
   function pontoEsc(s) {
