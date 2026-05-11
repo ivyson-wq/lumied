@@ -8524,19 +8524,47 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
         html += '</div>';
       }
 
-      // ── Boletos emitidos (read-only) ──
+      // ── Boletos emitidos ──
       if (bList.length) {
         bList.sort(function(x,y){ return (y.vencimento||'').localeCompare(x.vencimento||''); });
-        html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px;text-align:left;">Descrição</th><th style="padding:8px;text-align:center;">Vencimento</th><th style="padding:8px;text-align:right;">Valor</th><th style="padding:8px;text-align:center;">Status</th><th style="padding:8px;">PIX / Linha</th></tr></thead><tbody>';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px;text-align:left;">Descrição</th><th style="padding:8px;text-align:center;">Vencimento</th><th style="padding:8px;text-align:right;">Valor</th><th style="padding:8px;text-align:center;">Status</th><th style="padding:8px;">Ações</th></tr></thead><tbody>';
         html += bList.map(function(b) {
           var venc = b.vencimento ? new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
           var isVencido = b.status === 'emitido' && b.vencimento < new Date().toISOString().slice(0,10);
-          var badge = b.status === 'pago' ? 'background:#edf7f0;color:#2d7a3a;' : b.status === 'cancelado' ? 'background:#f5f0ea;color:var(--muted);' : isVencido ? 'background:#fde8e8;color:#EF4444;' : 'background:#fff8e1;color:#b07d00;';
-          var statusLabel = b.status === 'pago' ? 'Pago' : b.status === 'cancelado' ? 'Cancelado' : isVencido ? 'Vencido' : 'Pendente';
-          var pixHtml = '';
-          if (b.pix_copia_cola) pixHtml += '<span style="font-size:10px;color:#1a6bb5;cursor:pointer;" onclick="navigator.clipboard.writeText(\''+esc(b.pix_copia_cola)+'\');showToast(\'PIX copiado!\',\'success\')">📋 PIX</span> ';
-          if (b.linha_digitavel) pixHtml += '<span style="font-size:10px;color:var(--muted);font-family:monospace;" title="'+esc(b.linha_digitavel)+'">'+esc((b.linha_digitavel||'').substring(0,25))+'...</span>';
-          return '<tr style="border-bottom:1px solid #f0ece6;"><td style="padding:8px;">'+esc(b.descricao||b.crianca_nome||'—')+'</td><td style="padding:8px;text-align:center;">'+venc+'</td><td style="padding:8px;text-align:right;font-weight:700;">'+fmtR(parseFloat(b.valor||0))+'</td><td style="padding:8px;text-align:center;"><span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;'+badge+'">'+statusLabel+'</span></td><td style="padding:8px;">'+pixHtml+'</td></tr>';
+          var isManual = b.baixa_manual === true;
+          var badge, statusLabel;
+          if (b.status === 'pago' && isManual) {
+            badge = 'background:#e8eaf6;color:#5c6bc0;border:1px solid #c5cae9;';
+            statusLabel = 'Pago (manual)';
+          } else if (b.status === 'pago') {
+            badge = 'background:#edf7f0;color:#2d7a3a;';
+            statusLabel = 'Pago';
+          } else if (b.status === 'cancelado') {
+            badge = 'background:#f5f0ea;color:var(--muted);';
+            statusLabel = 'Cancelado';
+          } else if (isVencido) {
+            badge = 'background:#fde8e8;color:#EF4444;';
+            statusLabel = 'Vencido';
+          } else {
+            badge = 'background:#fff8e1;color:#b07d00;';
+            statusLabel = 'Pendente';
+          }
+          // Info de baixa manual
+          var manualInfo = '';
+          if (isManual) {
+            manualInfo = '<div style="font-size:10px;color:#5c6bc0;margin-top:2px;">Por: '+esc(b.baixa_manual_por||'—');
+            if (b.baixa_manual_em) manualInfo += ' · '+new Date(b.baixa_manual_em).toLocaleString('pt-BR');
+            if (b.baixa_manual_obs) manualInfo += '<br>Obs: '+esc(b.baixa_manual_obs);
+            manualInfo += '</div>';
+          }
+          // Ações
+          var acoesHtml = '';
+          if (b.status === 'emitido') {
+            acoesHtml += '<button onclick="alunoFinBaixaManual(\''+b.id+'\')" style="padding:3px 10px;font-size:10px;background:#5c6bc0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">Marcar pago</button> ';
+          }
+          if (b.pix_copia_cola) acoesHtml += '<span style="font-size:10px;color:#1a6bb5;cursor:pointer;" onclick="navigator.clipboard.writeText(\''+esc(b.pix_copia_cola)+'\');showToast(\'PIX copiado!\',\'success\')">📋 PIX</span> ';
+          if (b.linha_digitavel) acoesHtml += '<span style="font-size:10px;color:var(--muted);font-family:monospace;" title="'+esc(b.linha_digitavel)+'">'+esc((b.linha_digitavel||'').substring(0,20))+'…</span>';
+          return '<tr style="border-bottom:1px solid #f0ece6;'+(isManual?'background:#f5f5ff;':'')+'"><td style="padding:8px;">'+esc(b.descricao||b.crianca_nome||'—')+'</td><td style="padding:8px;text-align:center;">'+venc+'</td><td style="padding:8px;text-align:right;font-weight:700;">'+fmtR(parseFloat(b.valor||0))+'</td><td style="padding:8px;text-align:center;"><span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;'+badge+'">'+statusLabel+'</span>'+manualInfo+'</td><td style="padding:8px;">'+acoesHtml+'</td></tr>';
         }).join('');
         html += '</tbody></table>';
       }
@@ -8590,6 +8618,17 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var d = await apiFinExt({ action: 'boletos_batch_item_edit', id: biId, valor_total: total, itens: itens, descricao_detalhada: desc });
     if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
     showToast('Cobrança atualizada! Total: R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}), 'success');
+    if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
+  }
+
+  // ── Baixa manual de boleto ──
+  async function alunoFinBaixaManual(boletoId) {
+    var obs = prompt('Observação da baixa manual (opcional):\nEx: Pago via depósito, comprovante recebido');
+    if (obs === null) return; // cancelou
+    if (!confirm('Confirma a baixa manual deste boleto?\nIsto marcará como PAGO e ficará registrado quem fez a baixa.')) return;
+    var d = await api({ action: 'fin_boleto_baixa_manual', id: boletoId, observacao: obs || '' });
+    if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Baixa manual registrada por ' + (d.baixa_manual_por || 'você'), 'success');
     if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
   }
 

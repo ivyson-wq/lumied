@@ -3705,6 +3705,32 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     await admin.from("fin_boletos_emitidos").update({ status: "cancelado" }).eq("id", id).eq("escola_id", sessionEscolaId);
     return ok({ success: true });
   }
+  if (action === "fin_boleto_baixa_manual") {
+    const { id, observacao } = body as any;
+    if (!id) return err("id obrigatório.");
+    const agora = new Date().toISOString();
+    const userName = gerente?.nome || "Usuário";
+    // Atomic: só marca pago se ainda não está pago
+    const { data: updated, error: updErr } = await admin.from("fin_boletos_emitidos").update({
+      status: "pago",
+      pago_em: agora.slice(0, 10),
+      baixa_manual: true,
+      baixa_manual_por: userName,
+      baixa_manual_em: agora,
+      baixa_manual_obs: observacao || null,
+    }).eq("id", id).eq("escola_id", sessionEscolaId).neq("status", "pago").select("id, mensalidade_id, batch_item_id");
+    if (updErr) return err(updErr.message);
+    if (!updated?.length) return err("Boleto já está marcado como pago.");
+    const boleto = updated[0];
+    // Atualiza mensalidade e batch item vinculados
+    if (boleto.mensalidade_id) {
+      await admin.from("fin_mensalidades").update({ status: "pago", data_pagamento: agora.slice(0, 10) }).eq("id", boleto.mensalidade_id).eq("escola_id", sessionEscolaId);
+    }
+    if (boleto.batch_item_id) {
+      await admin.from("fin_boleto_batch_items").update({ status: "pago" }).eq("id", boleto.batch_item_id).eq("escola_id", sessionEscolaId);
+    }
+    return ok({ success: true, baixa_manual_por: userName, baixa_manual_em: agora });
+  }
 
   // ── Notas Fiscais ─────────────────────────────────────
   if (action === "fin_nf_emitir") {
