@@ -2757,7 +2757,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <div id="finMensKpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
         <!-- Tabs -->
         <div style="display:flex;gap:8px;margin-bottom:20px;">
-          <button id="finMensTabPreview" onclick="switchFinMensTab('preview')" style="padding:14px 28px;font-size:14px;font-weight:700;background:#fff;color:var(--accent);cursor:pointer;font-family:inherit;border:2px solid var(--accent);border-radius:10px;border-bottom:4px solid var(--accent);box-shadow:0 2px 8px rgba(0,0,0,0.08);">🧾 Mensalidades dos Alunos</button>
+          <button id="finMensTabPreview" onclick="switchFinMensTab('preview')" style="padding:14px 28px;font-size:14px;font-weight:700;background:#fff;color:#C8102E;cursor:pointer;font-family:inherit;border:2px solid #C8102E;border-radius:10px;border-bottom:4px solid #C8102E;box-shadow:0 2px 8px rgba(0,0,0,0.08);">🧾 Mensalidades dos Alunos</button>
           <button id="finMensTabBoletos" onclick="switchFinMensTab('boletos')" style="padding:14px 28px;font-size:14px;font-weight:700;background:#fff;color:#888;cursor:pointer;font-family:inherit;border:2px solid #ddd;border-radius:10px;border-bottom:4px solid transparent;box-shadow:none;">🏦 Boletos Emitidos</button>
         </div>
         <!-- Tab: Preview mensalidades -->
@@ -16707,13 +16707,14 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('finMensBoletosSection').style.display = tab === 'boletos' ? 'block' : 'none';
     const tPrev = document.getElementById('finMensTabPreview');
     const tBol = document.getElementById('finMensTabBoletos');
-    tPrev.style.color = tab === 'preview' ? 'var(--accent)' : '#888';
-    tPrev.style.borderColor = tab === 'preview' ? 'var(--accent)' : '#ddd';
-    tPrev.style.borderBottomColor = tab === 'preview' ? 'var(--accent)' : 'transparent';
+    const acRed = '#C8102E';
+    tPrev.style.color = tab === 'preview' ? acRed : '#888';
+    tPrev.style.borderColor = tab === 'preview' ? acRed : '#ddd';
+    tPrev.style.borderBottomColor = tab === 'preview' ? acRed : 'transparent';
     tPrev.style.boxShadow = tab === 'preview' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none';
-    tBol.style.color = tab === 'boletos' ? 'var(--accent)' : '#888';
-    tBol.style.borderColor = tab === 'boletos' ? 'var(--accent)' : '#ddd';
-    tBol.style.borderBottomColor = tab === 'boletos' ? 'var(--accent)' : 'transparent';
+    tBol.style.color = tab === 'boletos' ? acRed : '#888';
+    tBol.style.borderColor = tab === 'boletos' ? acRed : '#ddd';
+    tBol.style.borderBottomColor = tab === 'boletos' ? acRed : 'transparent';
     tBol.style.boxShadow = tab === 'boletos' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none';
     if (tab === 'boletos') loadFinMensBoletos();
   }
