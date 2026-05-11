@@ -8567,7 +8567,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           if (b.status !== 'cancelado') {
             acoesHtml += '<button onclick="alunoFinBaixarPdf(\''+b.id+'\')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Baixar PDF">📄 PDF</button>';
             acoesHtml += '<button onclick="alunoFinEnviarEmail(\''+b.id+'\',\''+esc(b.familia_email||'')+'\')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Enviar por email">📧</button>';
-            acoesHtml += '<button onclick="alunoFinEnviarWhatsApp(\''+esc(b.linha_digitavel||'')+'\',\''+esc(b.pix_copia_cola||'')+'\',\''+esc(b.crianca_nome||'')+'\','+parseFloat(b.valor||0)+',\''+esc(b.vencimento||'')+'\')" style="padding:3px 8px;font-size:10px;background:#25D366;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;" title="Enviar via WhatsApp">💬</button>';
+            acoesHtml += '<button onclick="alunoFinEnviarWhatsApp(\''+b.id+'\',\''+esc(b.linha_digitavel||'')+'\',\''+esc(b.pix_copia_cola||'')+'\',\''+esc(b.crianca_nome||'')+'\','+parseFloat(b.valor||0)+',\''+esc(b.vencimento||'')+'\')" style="padding:3px 8px;font-size:10px;background:#25D366;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;" title="Enviar via WhatsApp">💬</button>';
           }
           if (b.pix_copia_cola) acoesHtml += '<button onclick="navigator.clipboard.writeText(\''+esc(b.pix_copia_cola)+'\');showToast(\'PIX copiado!\',\'success\')" style="padding:3px 8px;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-family:inherit;" title="Copiar PIX">📋 PIX</button>';
           acoesHtml += '</div>';
@@ -8666,12 +8666,20 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     showToast('Email enviado para ' + (d.enviado_para || email), 'success');
   }
 
-  function alunoFinEnviarWhatsApp(linhaDigitavel, pixCopiaECola, criancaNome, valor, vencimento) {
+  async function alunoFinEnviarWhatsApp(boletoId, linhaDigitavel, pixCopiaECola, criancaNome, valor, vencimento) {
     var venc = vencimento ? new Date(vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '';
     var fmtValor = 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    // Busca link do PDF
+    showToast('Gerando link do PDF...', 'info');
+    var pdfUrl = '';
+    try {
+      var d = await api({ action: 'fin_boleto_pdf_link', id: boletoId });
+      if (d && d.pdf_url) pdfUrl = d.pdf_url;
+    } catch(e) { /* segue sem PDF */ }
     var msg = 'Olá! Segue o boleto referente a *' + criancaNome + '*:\n\n';
     msg += '💰 *Valor:* ' + fmtValor + '\n';
     msg += '📅 *Vencimento:* ' + venc + '\n';
+    if (pdfUrl) msg += '\n📄 *Boleto PDF:*\n' + pdfUrl + '\n';
     if (linhaDigitavel) msg += '\n📋 *Linha Digitável:*\n' + linhaDigitavel + '\n';
     if (pixCopiaECola) msg += '\n📱 *PIX Copia e Cola:*\n' + pixCopiaECola + '\n';
     msg += '\n_Enviado via Lumied_';

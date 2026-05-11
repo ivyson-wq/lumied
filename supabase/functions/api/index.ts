@@ -3811,6 +3811,38 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
       return ok({ pdf_base64: pdfData.pdf, nosso_numero: bol.nosso_numero, crianca_nome: bol.crianca_nome });
     } catch (e) { return err("Erro ao baixar PDF: " + (e as Error).message); }
   }
+  // ── Gerar link público do PDF do boleto (para WhatsApp / compartilhamento) ──
+  if (action === "fin_boleto_pdf_link") {
+    const { id } = body as any;
+    if (!id) return err("id obrigatório.");
+    const { data: bol } = await admin.from("fin_boletos_emitidos").select("*").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!bol) return err("Boleto não encontrado.");
+    const codSol = bol.inter_response?.codigoSolicitacao || bol.inter_response?.detalhes?.cobranca?.codigoSolicitacao || "";
+    if (!codSol) return err("Código de solicitação não encontrado.");
+    const RELAY_URL = Deno.env.get("INTER_RELAY_URL") || "";
+    const RELAY_SECRET = Deno.env.get("RELAY_SECRET") || "";
+    try {
+      const clientId = Deno.env.get("INTER_CLIENT_ID") || "";
+      const clientSecret = Deno.env.get("INTER_CLIENT_SECRET") || "";
+      const params = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, scope: "boleto-cobranca.read", grant_type: "client_credentials" });
+      const tRes = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` }, body: JSON.stringify({ path: "/oauth/v2/token", method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: params.toString() }), signal: AbortSignal.timeout(10000) });
+      const token = JSON.parse((await tRes.json() as any).body).access_token;
+      const pdfRes = await fetch(`${RELAY_URL}/inter-proxy`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RELAY_SECRET}` }, body: JSON.stringify({ path: `/cobranca/v3/cobrancas/${codSol}/pdf`, method: "GET", headers: { Authorization: `Bearer ${token}` }, body: "" }), signal: AbortSignal.timeout(15000) });
+      const pdfRelay = await pdfRes.json() as any;
+      if (pdfRelay.status < 200 || pdfRelay.status >= 300) return err("Erro ao baixar PDF.");
+      const pdfB64 = JSON.parse(pdfRelay.body).pdf;
+      // Converte base64 para Uint8Array
+      const bin = atob(pdfB64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      // Upload para Supabase Storage
+      const fileName = `boletos-compartilhados/${bol.nosso_numero || id}.pdf`;
+      await admin.storage.from("boletos").upload(fileName, bytes, { contentType: "application/pdf", upsert: true });
+      // Signed URL válida por 30 dias
+      const { data: signed } = await admin.storage.from("boletos").createSignedUrl(fileName, 60 * 60 * 24 * 30);
+      return ok({ pdf_url: signed?.signedUrl || null, nosso_numero: bol.nosso_numero });
+    } catch (e) { return err("Erro ao gerar link PDF: " + (e as Error).message); }
+  }
   // ── Enviar boleto por email ──
   if (action === "fin_boleto_enviar_email") {
     const { id, email_destino } = body as any;
