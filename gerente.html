@@ -8365,36 +8365,97 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     } catch { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar documentos.</div>'; }
   }
 
+  var _alunoFinAtual = null;
   async function loadAlunoFinanceiro(a) {
+    _alunoFinAtual = a;
     var resumoEl = document.getElementById('alunoFinResumo');
     var listaEl = document.getElementById('alunoFinLista');
     resumoEl.innerHTML = '';
     listaEl.innerHTML = '<span style="color:var(--muted);">Carregando...</span>';
     try {
-      // Busca boletos emitidos + mensalidades do aluno
-      var boletos = await api({ action: 'fin_boletos_emitidos_list' });
+      // Busca boletos emitidos + batch items pendentes do aluno
+      var [boletos, batches] = await Promise.all([
+        api({ action: 'fin_boletos_emitidos_list' }),
+        apiFinExt({ action: 'boletos_batch_list' })
+      ]);
       var bList = (Array.isArray(boletos) ? boletos : []).filter(function(b) {
         return b.crianca_nome === a.nome || b.aluno_id === a.id || b.familia_email === a.email;
       });
-      // KPIs
+      // Batch items pendentes (aguardando/aprovado — editáveis)
+      var batchItems = [];
+      var batchList = Array.isArray(batches) ? batches : (batches?.data || []);
+      batchList.forEach(function(batch) {
+        var items = batch.fin_boleto_batch_items || batch.itens || [];
+        items.forEach(function(it) {
+          if ((it.crianca_nome === a.nome || it.aluno_id === a.id) && (it.status === 'aguardando' || it.status === 'aprovado')) {
+            it._batch_mes = batch.mes_referencia;
+            it._batch_status = batch.status;
+            batchItems.push(it);
+          }
+        });
+      });
+      // KPIs (apenas boletos emitidos)
       var totalEmitido = bList.reduce(function(s,b){ return s + (b.status !== 'cancelado' ? parseFloat(b.valor||0) : 0); }, 0);
       var totalPago = bList.reduce(function(s,b){ return s + (b.status === 'pago' ? parseFloat(b.valor||0) : 0); }, 0);
       var totalAberto = bList.reduce(function(s,b){ return s + (b.status === 'emitido' ? parseFloat(b.valor||0) : 0); }, 0);
       var totalVencido = bList.filter(function(b){ return b.status === 'emitido' && b.vencimento < new Date().toISOString().slice(0,10); }).reduce(function(s,b){ return s + parseFloat(b.valor||0); }, 0);
+      var totalPendente = batchItems.reduce(function(s,b){ return s + parseFloat(b.valor_total||0); }, 0);
       var fmtR = function(v){ return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2}); };
       resumoEl.innerHTML =
         '<div class="card" style="padding:12px;border-left:4px solid #2d7a3a;"><div style="font-size:22px;font-weight:700;color:#2d7a3a;">'+fmtR(totalPago)+'</div><div style="font-size:11px;color:var(--muted);">Pago</div></div>' +
         '<div class="card" style="padding:12px;border-left:4px solid #1a6bb5;"><div style="font-size:22px;font-weight:700;color:#1a6bb5;">'+fmtR(totalAberto)+'</div><div style="font-size:11px;color:var(--muted);">Em aberto</div></div>' +
         '<div class="card" style="padding:12px;border-left:4px solid #EF4444;"><div style="font-size:22px;font-weight:700;color:#EF4444;">'+fmtR(totalVencido)+'</div><div style="font-size:11px;color:var(--muted);">Vencido</div></div>' +
-        '<div class="card" style="padding:12px;border-left:4px solid var(--border);"><div style="font-size:22px;font-weight:700;">'+fmtR(totalEmitido)+'</div><div style="font-size:11px;color:var(--muted);">Total emitido</div></div>';
-      // Lista
-      if (!bList.length) {
-        listaEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Nenhuma cobrança registrada para este aluno.</div>';
-        return;
+        (totalPendente > 0 ? '<div class="card" style="padding:12px;border-left:4px solid #d4830a;"><div style="font-size:22px;font-weight:700;color:#d4830a;">'+fmtR(totalPendente)+'</div><div style="font-size:11px;color:var(--muted);">Aguardando aprovação</div></div>' : '') +
+        '<div class="card" style="padding:12px;border-left:4px solid var(--border);"><div style="font-size:22px;font-weight:700;">'+fmtR(totalEmitido+totalPendente)+'</div><div style="font-size:11px;color:var(--muted);">Total geral</div></div>';
+
+      var html = '';
+
+      // ── Batch items pendentes (editáveis) ──
+      if (batchItems.length) {
+        html += '<div style="margin-bottom:24px;">';
+        html += '<div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#d4830a;">Aguardando Aprovação (editável)</div>';
+        batchItems.forEach(function(bi) {
+          var itensArr = Array.isArray(bi.itens) ? bi.itens : [];
+          var venc = bi.vencimento ? new Date(bi.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+          var canEdit = bi.status === 'aguardando';
+          html += '<div class="card" style="padding:14px;margin-bottom:10px;border-left:4px solid #d4830a;">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+          html += '<div><strong>Lote '+esc(bi._batch_mes)+'</strong> · Venc: '+venc+'</div>';
+          html += '<div style="font-size:18px;font-weight:700;" id="biTotal_'+bi.id+'">'+fmtR(parseFloat(bi.valor_total||0))+'</div>';
+          html += '</div>';
+          // Itens editáveis
+          html += '<div id="biItens_'+bi.id+'">';
+          itensArr.forEach(function(it, idx) {
+            var catIcon = it.categoria === 'mensalidade' ? '📚' : it.categoria === 'alimentacao' ? '🍽️' : it.categoria === 'atividade_extra' ? '⚽' : '📋';
+            html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+            html += '<span style="font-size:14px;">'+catIcon+'</span>';
+            if (canEdit) {
+              html += '<input type="text" value="'+esc(it.nome)+'" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;" onchange="alunoFinItemNomeChange(\''+bi.id+'\','+idx+',this.value)">';
+              html += '<input type="number" value="'+(it.valor||0).toFixed(2)+'" step="0.01" min="0" style="width:110px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;text-align:right;" onchange="alunoFinItemValorChange(\''+bi.id+'\','+idx+',this.value)">';
+              html += '<button onclick="alunoFinItemRemove(\''+bi.id+'\','+idx+')" style="background:none;border:none;cursor:pointer;font-size:14px;color:#EF4444;" title="Remover">✕</button>';
+            } else {
+              html += '<span style="flex:1;font-size:12px;">'+esc(it.nome)+'</span>';
+              html += '<span style="font-weight:600;font-size:12px;">'+fmtR(it.valor||0)+'</span>';
+            }
+            html += '</div>';
+          });
+          html += '</div>';
+          if (canEdit) {
+            html += '<div style="display:flex;gap:8px;margin-top:8px;">';
+            html += '<button onclick="alunoFinItemAdd(\''+bi.id+'\')" style="padding:4px 12px;font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:inherit;">+ Adicionar item</button>';
+            html += '<button onclick="alunoFinSave(\''+bi.id+'\')" style="padding:4px 14px;font-size:11px;background:var(--blue);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;">Salvar alterações</button>';
+            html += '</div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
       }
-      bList.sort(function(x,y){ return (y.vencimento||'').localeCompare(x.vencimento||''); });
-      listaEl.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px;text-align:left;">Descrição</th><th style="padding:8px;text-align:center;">Vencimento</th><th style="padding:8px;text-align:right;">Valor</th><th style="padding:8px;text-align:center;">Status</th><th style="padding:8px;">PIX / Linha</th></tr></thead><tbody>' +
-        bList.map(function(b) {
+
+      // ── Boletos emitidos (read-only) ──
+      if (bList.length) {
+        bList.sort(function(x,y){ return (y.vencimento||'').localeCompare(x.vencimento||''); });
+        html += '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--border);"><th style="padding:8px;text-align:left;">Descrição</th><th style="padding:8px;text-align:center;">Vencimento</th><th style="padding:8px;text-align:right;">Valor</th><th style="padding:8px;text-align:center;">Status</th><th style="padding:8px;">PIX / Linha</th></tr></thead><tbody>';
+        html += bList.map(function(b) {
           var venc = b.vencimento ? new Date(b.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
           var isVencido = b.status === 'emitido' && b.vencimento < new Date().toISOString().slice(0,10);
           var badge = b.status === 'pago' ? 'background:#edf7f0;color:#2d7a3a;' : b.status === 'cancelado' ? 'background:#f5f0ea;color:var(--muted);' : isVencido ? 'background:#fde8e8;color:#EF4444;' : 'background:#fff8e1;color:#b07d00;';
@@ -8403,8 +8464,58 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           if (b.pix_copia_cola) pixHtml += '<span style="font-size:10px;color:#1a6bb5;cursor:pointer;" onclick="navigator.clipboard.writeText(\''+esc(b.pix_copia_cola)+'\');showToast(\'PIX copiado!\',\'success\')">📋 PIX</span> ';
           if (b.linha_digitavel) pixHtml += '<span style="font-size:10px;color:var(--muted);font-family:monospace;" title="'+esc(b.linha_digitavel)+'">'+esc((b.linha_digitavel||'').substring(0,25))+'...</span>';
           return '<tr style="border-bottom:1px solid #f0ece6;"><td style="padding:8px;">'+esc(b.descricao||b.crianca_nome||'—')+'</td><td style="padding:8px;text-align:center;">'+venc+'</td><td style="padding:8px;text-align:right;font-weight:700;">'+fmtR(parseFloat(b.valor||0))+'</td><td style="padding:8px;text-align:center;"><span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;'+badge+'">'+statusLabel+'</span></td><td style="padding:8px;">'+pixHtml+'</td></tr>';
-        }).join('') + '</tbody></table>';
+        }).join('');
+        html += '</tbody></table>';
+      }
+
+      if (!bList.length && !batchItems.length) {
+        html = '<div style="padding:20px;text-align:center;color:var(--muted);">Nenhuma cobrança registrada para este aluno.</div>';
+      }
+      listaEl.innerHTML = html;
+
+      // Guarda batch items para edição inline
+      window._alunoFinBatchItems = {};
+      batchItems.forEach(function(bi) {
+        window._alunoFinBatchItems[bi.id] = JSON.parse(JSON.stringify(bi.itens || []));
+      });
     } catch(e) { console.error('[fin]',e); listaEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Erro ao carregar dados financeiros.</div>'; }
+  }
+
+  // ── Edição inline dos itens do batch ──
+  function _alunoFinRecalcTotal(biId) {
+    var itens = window._alunoFinBatchItems[biId] || [];
+    var total = itens.reduce(function(s,it){ return s + (parseFloat(it.valor)||0); }, 0);
+    var el = document.getElementById('biTotal_'+biId);
+    if (el) el.textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  }
+  function alunoFinItemValorChange(biId, idx, val) {
+    if (!window._alunoFinBatchItems[biId]) return;
+    window._alunoFinBatchItems[biId][idx].valor = parseFloat(val) || 0;
+    _alunoFinRecalcTotal(biId);
+  }
+  function alunoFinItemNomeChange(biId, idx, val) {
+    if (!window._alunoFinBatchItems[biId]) return;
+    window._alunoFinBatchItems[biId][idx].nome = val;
+  }
+  function alunoFinItemRemove(biId, idx) {
+    if (!window._alunoFinBatchItems[biId]) return;
+    window._alunoFinBatchItems[biId].splice(idx, 1);
+    // Re-render items
+    if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
+  }
+  function alunoFinItemAdd(biId) {
+    if (!window._alunoFinBatchItems[biId]) window._alunoFinBatchItems[biId] = [];
+    window._alunoFinBatchItems[biId].push({ nome: 'Novo item', valor: 0, categoria: 'extra' });
+    if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
+  }
+  async function alunoFinSave(biId) {
+    var itens = window._alunoFinBatchItems[biId] || [];
+    var total = Math.round(itens.reduce(function(s,it){ return s + (parseFloat(it.valor)||0); }, 0) * 100) / 100;
+    var desc = itens.map(function(it){ return it.nome + ': R$' + (it.valor||0).toFixed(2); }).join(' | ');
+    var d = await apiFinExt({ action: 'boletos_batch_item_edit', id: biId, valor_total: total, itens: itens, descricao_detalhada: desc });
+    if (d && d.error) { showToast('Erro: ' + d.error, 'error'); return; }
+    showToast('Cobrança atualizada! Total: R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2}), 'success');
+    if (_alunoFinAtual) loadAlunoFinanceiro(_alunoFinAtual);
   }
 
   async function loadAlunoAtas(a) {
