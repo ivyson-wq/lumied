@@ -755,15 +755,23 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         });
       }
 
-      // Mostra botão de biometria se o usuário já logou aqui antes (storage tem mb_last_email)
-      // e o navegador suporta WebAuthn
-      (function() {
+      // Mostra botão de biometria se: módulo webauthn habilitado + navegador suporta + já logou antes
+      (async function() {
         var lastEmail = localStorage.getItem('mb_last_email');
         var hasWebAuthn = !!(window.PublicKeyCredential);
-        if (lastEmail && hasWebAuthn) {
-          document.getElementById('loginEmail').value = lastEmail;
-          document.getElementById('loginBiometricBtn').style.display = 'flex';
-        }
+        if (!lastEmail || !hasWebAuthn) return;
+        document.getElementById('loginEmail').value = lastEmail;
+        try {
+          var r = await fetch(_LOGIN_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': _LOGIN_AK, 'Authorization': 'Bearer ' + _LOGIN_AK },
+            body: JSON.stringify({ action: 'modulos_habilitados' })
+          });
+          var d = await r.json();
+          if (d && Array.isArray(d.modulos) && d.modulos.includes('webauthn')) {
+            document.getElementById('loginBiometricBtn').style.display = 'flex';
+          }
+        } catch(e) { /* módulo não verificável — mantém oculto */ }
       })();
 
       function loginBiometric() {

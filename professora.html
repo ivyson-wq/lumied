@@ -620,14 +620,23 @@ body.dash-clean #greetingBar{display:none;}
         });
       });
 
-      // Biometria — só aparece se navegador suporta WebAuthn e usuário já logou aqui antes
-      (function() {
+      // Biometria — só aparece se módulo webauthn habilitado + navegador suporta + já logou antes
+      (async function() {
         var lastEmail = localStorage.getItem('prof_last_email');
         var hasWebAuthn = !!(window.PublicKeyCredential);
-        if (lastEmail && hasWebAuthn) {
-          document.getElementById('loginEmail').value = lastEmail;
-          document.getElementById('loginBiometricBtn').style.display = 'flex';
-        }
+        if (!lastEmail || !hasWebAuthn) return;
+        document.getElementById('loginEmail').value = lastEmail;
+        try {
+          var r = await fetch(_PROF_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': _PROF_AK, 'Authorization': 'Bearer ' + _PROF_AK },
+            body: JSON.stringify({ action: 'modulos_habilitados' })
+          });
+          var d = await r.json();
+          if (d && Array.isArray(d.modulos) && d.modulos.includes('webauthn')) {
+            document.getElementById('loginBiometricBtn').style.display = 'flex';
+          }
+        } catch(e) { /* módulo não verificável — mantém oculto */ }
       })();
 
       function loginBiometric() {
