@@ -116,18 +116,20 @@
     return [`Resumo da conversa (${total} msgs: ${fromContact} do contato, ${fromSchool} da escola):`, '---', ...lastMsgs].join('\n');
   }
 
-  async function apiCall(action, params = {}) {
-    const config = await new Promise(r => chrome.storage.local.get(['apiUrl', 'apiKey', 'token'], r));
-    if (!config.apiUrl || !config.token) {
-      throw new Error('Extensao nao configurada. Clique no icone Lumied na barra do Chrome.');
-    }
-    const res = await fetch(config.apiUrl + '/functions/v1/api', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': config.apiKey, 'Authorization': 'Bearer ' + config.apiKey },
-      body: JSON.stringify({ action, _token: config.token, ...params }),
+  async function apiCall(action, params) {
+    return new Promise(function(resolve, reject) {
+      chrome.runtime.sendMessage({ type: 'api', action: action, params: params || {} }, function(response) {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (response && response.error) {
+          reject(new Error(response.error));
+          return;
+        }
+        resolve(response);
+      });
     });
-    if (!res.ok) throw new Error('Erro HTTP ' + res.status);
-    return res.json();
   }
 
   async function findLeadByPhone(telefone) {
@@ -591,18 +593,8 @@
   // --- TEMPLATES ---
 
   async function loadTemplates() {
-    const config = await new Promise(r => chrome.storage.local.get(['apiUrl','apiKey','token'], r));
-    if (!config.apiUrl || !config.token) {
-      document.getElementById('mb-templates-list').innerHTML = '<div style="color:#c00;padding:12px;font-size:12px;">Configure a extensao clicando no icone na barra do Chrome.</div>';
-      return;
-    }
     try {
-      const res = await fetch(config.apiUrl + '/functions/v1/api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': config.apiKey, 'Authorization': 'Bearer ' + config.apiKey },
-        body: JSON.stringify({ action: 'crm_templates_list', _token: config.token }),
-      });
-      const data = await res.json();
+      const data = await apiCall('crm_templates_list');
       templates = Array.isArray(data) ? data : [];
       renderTemplates(templates);
     } catch (e) {

@@ -5,6 +5,7 @@
   "description": "Envie templates e capture leads do CRM escolar Lumied diretamente no WhatsApp Web. Gerencie comunicacao com familias e pipeline comercial.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://web.whatsapp.com/*", "https://brgorknbrjlfwvrrlwxj.supabase.co/*"],
+  "background": { "service_worker": "background.js" },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

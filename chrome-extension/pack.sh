@@ -12,6 +12,7 @@ zip -j "$DIST" \
   manifest.json \
   popup.html \
   popup.js \
+  background.js \
   content.js \
   content.css \
   privacy-policy.html \
