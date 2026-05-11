@@ -89,9 +89,33 @@
     return !t || STATUS_TEXT_RE.test(t);
   }
 
-  function getContactInfo() {
+  // --- PHONE FROM STORE (page-level script via CustomEvent) ---
+  function getPhoneFromStore() {
+    return new Promise(function(resolve) {
+      var resolved = false;
+      var handler = function(e) {
+        if (resolved) return;
+        resolved = true;
+        window.removeEventListener('lumied-phone-result', handler);
+        var phone = e.detail?.phone || null;
+        console.log('[Lumied CRM] Store phone:', phone, 'debug:', e.detail?.debug);
+        resolve(phone);
+      };
+      window.addEventListener('lumied-phone-result', handler);
+      window.dispatchEvent(new Event('lumied-get-phone'));
+      // Timeout after 800ms
+      setTimeout(function() { if (!resolved) { resolved = true; resolve(null); } }, 800);
+    });
+  }
+
+  async function getContactInfo() {
     var nome = null;
     var telefone = null;
+
+    // --- PHONE PRIORITY #1: window.Store (most reliable for saved contacts) ---
+    try {
+      telefone = await getPhoneFromStore();
+    } catch(e) { console.warn('[Lumied CRM] Store phone failed:', e); }
 
     // --- NAME DETECTION ---
     // Strategy 1: conversation-info-header and conversation-title (data-testid)
@@ -140,78 +164,59 @@
       }
     }
 
-    // --- PHONE DETECTION ---
-    // Strategy A: header span with phone-like title
-    var phoneSelectors = [
-      '#main header span[title^="+"]',
-      'header span[title^="+"]',
-    ];
-    for (var p = 0; p < phoneSelectors.length; p++) {
-      var phoneEl = document.querySelector(phoneSelectors[p]);
-      if (phoneEl) { telefone = phoneEl.getAttribute('title'); break; }
-    }
-
-    // Strategy B: name itself is a phone number
-    if (!telefone && nome && /^\+?\d[\d\s\-()]{7,}$/.test(nome)) {
-      telefone = nome;
-    }
-
-    // Strategy C: header spans with phone pattern
+    // --- PHONE DETECTION (DOM fallbacks — only if Store didn't find it) ---
     if (!telefone) {
-      var allSpans = document.querySelectorAll('#main header span[title]');
-      for (var j = 0; j < allSpans.length; j++) {
-        var sv = allSpans[j].getAttribute('title') || '';
-        if (/^\+?\d[\d\s\-()]{7,}$/.test(sv)) { telefone = sv; break; }
+      // Strategy A: header span with phone-like title
+      var phoneSelectors = ['#main header span[title^="+"]', 'header span[title^="+"]'];
+      for (var p = 0; p < phoneSelectors.length; p++) {
+        var phoneEl = document.querySelector(phoneSelectors[p]);
+        if (phoneEl) { telefone = phoneEl.getAttribute('title'); break; }
+      }
+      // Strategy B: name itself is a phone number
+      if (!telefone && nome && /^\+?\d[\d\s\-()]{7,}$/.test(nome)) telefone = nome;
+      // Strategy C: header spans with phone pattern
+      if (!telefone) {
+        var allSpans = document.querySelectorAll('#main header span[title]');
+        for (var j = 0; j < allSpans.length; j++) {
+          var sv = allSpans[j].getAttribute('title') || '';
+          if (/^\+?\d[\d\s\-()]{7,}$/.test(sv)) { telefone = sv; break; }
+        }
+      }
+      // Strategy D: message data-id (false_PHONE@c.us = received from contact)
+      if (!telefone) {
+        var msgEls = document.querySelectorAll('#main div[data-id]');
+        for (var m = msgEls.length - 1; m >= 0 && m >= msgEls.length - 50; m--) {
+          var did = msgEls[m].getAttribute('data-id') || '';
+          var phoneMatch = did.match(/false_(\d{10,15})@/);
+          if (phoneMatch) { telefone = phoneMatch[1]; break; }
+        }
+      }
+      // Strategy E: active chat list item
+      if (!telefone) {
+        var activeChat = document.querySelector('[data-testid="cell-frame-container"][aria-selected="true"]')
+          || document.querySelector('[aria-selected="true"][data-id]');
+        if (activeChat) {
+          var chatDataId = activeChat.getAttribute('data-id') || activeChat.closest('[data-id]')?.getAttribute('data-id') || '';
+          var chatPhone = chatDataId.match(/(\d{10,15})@/);
+          if (chatPhone) telefone = chatPhone[1];
+        }
+      }
+      // Strategy F: any element with @c.us in data-id
+      if (!telefone) {
+        var allDataIds = document.querySelectorAll('[data-id*="@c.us"], [data-id*="@s.whatsapp.net"]');
+        for (var f = allDataIds.length - 1; f >= 0 && f >= allDataIds.length - 50; f--) {
+          var fid = allDataIds[f].getAttribute('data-id') || '';
+          var fMatch = fid.match(/(\d{10,15})@/);
+          if (fMatch) { telefone = fMatch[1]; break; }
+        }
       }
     }
 
-    // Strategy D: extract phone from message data-id attributes
-    // WhatsApp messages have data-id like "false_5554997021634@c.us_..."
-    if (!telefone) {
-      var msgEls = document.querySelectorAll('#main div[data-id]');
-      for (var m = msgEls.length - 1; m >= 0 && m >= msgEls.length - 20; m--) {
-        var did = msgEls[m].getAttribute('data-id') || '';
-        // "false" = received from contact (their phone), "true" = sent by us
-        var phoneMatch = did.match(/false_(\d{10,15})@/);
-        if (phoneMatch) { telefone = phoneMatch[1]; break; }
-      }
+    // Normalize phone
+    if (telefone) {
+      telefone = telefone.replace(/[\s\-()]/g, '').replace(/^\+/, '');
+      if (/^\d{10,11}$/.test(telefone)) telefone = '55' + telefone;
     }
-
-    // Strategy E: look at conversation list item that's selected/active
-    if (!telefone) {
-      var activeChat = document.querySelector('[data-testid="cell-frame-container"][aria-selected="true"]')
-        || document.querySelector('div[tabindex="-1"][aria-selected="true"]');
-      if (activeChat) {
-        var chatDataId = activeChat.getAttribute('data-id') || '';
-        var chatPhone = chatDataId.match(/(\d{10,15})@/);
-        if (chatPhone) telefone = chatPhone[1];
-      }
-    }
-
-    // Strategy F: search ALL elements with data-id containing @c.us (broader search)
-    if (!telefone) {
-      var allDataIds = document.querySelectorAll('[data-id*="@c.us"], [data-id*="@s.whatsapp.net"]');
-      for (var f = allDataIds.length - 1; f >= 0 && f >= allDataIds.length - 30; f--) {
-        var fid = allDataIds[f].getAttribute('data-id') || '';
-        var fMatch = fid.match(/(\d{10,15})@/);
-        if (fMatch) { telefone = fMatch[1]; break; }
-      }
-    }
-
-    // Strategy G: conversation panel section data attributes
-    if (!telefone) {
-      var sectionEl = document.querySelector('#main section[data-id]') || document.querySelector('[data-testid="conversation-panel-body"]');
-      if (sectionEl) {
-        var secId = sectionEl.getAttribute('data-id') || sectionEl.closest('[data-id]')?.getAttribute('data-id') || '';
-        var secMatch = secId.match(/(\d{10,15})@/);
-        if (secMatch) telefone = secMatch[1];
-      }
-    }
-
-    if (telefone) telefone = telefone.replace(/[\s\-()]/g, '');
-    // Normaliza para formato +55XXXXXXXXXXX se for brasileiro
-    if (telefone && /^\d{10,11}$/.test(telefone)) telefone = '55' + telefone;
-    if (telefone && /^\d{12,13}$/.test(telefone) && telefone.startsWith('55')) telefone = '+' + telefone;
 
     // Debug: log what we found (remove after confirming it works)
     console.log('[Lumied CRM] getContactInfo:', { nome: nome, telefone: telefone });
@@ -408,7 +413,7 @@
     statusEl.textContent = 'Buscando informacoes do lead...';
 
     try {
-      const { nome, telefone } = getContactInfo();
+      const { nome, telefone } = await getContactInfo();
       if (!telefone && !nome) {
         statusEl.className = 'mb-lead-status error';
         statusEl.textContent = 'Abra um chat para ver as informacoes.';
@@ -513,7 +518,7 @@
     statusEl.textContent = 'Extraindo informacoes do contato...';
 
     try {
-      const { nome, telefone } = getContactInfo();
+      const { nome, telefone } = await getContactInfo();
       if (!telefone && !nome) {
         statusEl.className = 'mb-lead-status error';
         statusEl.textContent = 'Abra um chat para capturar o lead.';
@@ -758,8 +763,8 @@
   // --- DETECT CONVERSATION CHANGE ---
   let _lastContactKey = null;
 
-  function checkConversationChange() {
-    var info = getContactInfo();
+  async function checkConversationChange() {
+    var info = await getContactInfo();
     var key = (info.nome || '') + '|' + (info.telefone || '');
     if (key === _lastContactKey || key === '|') return;
     _lastContactKey = key;
@@ -897,10 +902,10 @@
     });
   }
 
-  function sendTemplate(template) {
+  async function sendTemplate(template) {
     let msg = template.conteudo;
     // Build auto-fill values from WhatsApp contact + lead data
-    var contact = getContactInfo();
+    var contact = await getContactInfo();
     var lead = currentLeadInfo ? currentLeadInfo.lead : null;
     var firstName = (contact.nome || '').split(' ')[0];
     var autoFill = {
