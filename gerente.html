@@ -16827,6 +16827,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     return (document.getElementById('finMensBusca')?.value || '').trim().toLowerCase();
   }
 
+  async function abrirFichaAlunoFinanceiro(alunoId) {
+    if (!alunosData.length) await loadAlunos();
+    await abrirFichaAluno(alunoId);
+    switchAlunoTab('financeiro', document.querySelector('.aluno-tab:nth-child(5)'));
+  }
+
   // ── Batch item inline editing ──
   function _batchItemRecalc(biId) {
     const itens = window._batchEditCache[biId] || [];
@@ -16901,8 +16907,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       const bS = a.boleto_status;
       const bBadge = bS==='pago'?'background:#edf7f0;color:#2d7a3a;':bS==='emitido'?'background:#fff8e1;color:#b07d00;':bS==='cancelado'?'background:#f5f0ea;color:var(--muted);':'';
       const bLabel = bS==='pago'?'Pago':bS==='emitido'?'Emitido':bS==='cancelado'?'Cancelado':'';
-      return `<tr style="border-bottom:1px solid #f5f0ea;">
-        <td style="padding:10px;text-align:center;"><span style="font-size:12px;color:var(--muted);margin-right:6px;min-width:18px;display:inline-block;text-align:right;">${idx+1}</span><input type="checkbox" class="fmens-chk" value="${a.aluno_id}" ${hasBoleto?'disabled title="Já tem boleto"':''} onchange="_finMensUpdateSelCount()" style="cursor:pointer;"></td>
+      return `<tr style="border-bottom:1px solid #f5f0ea;cursor:pointer;" ondblclick="abrirFichaAlunoFinanceiro('${a.aluno_id}')">
+        <td style="padding:10px;text-align:center;"><span style="font-size:12px;color:var(--muted);margin-right:6px;min-width:18px;display:inline-block;text-align:right;">${idx+1}</span><input type="checkbox" class="fmens-chk" value="${a.aluno_id}" ${hasBoleto?'disabled title="Já tem boleto"':''} onchange="_finMensUpdateSelCount()" style="cursor:pointer;" onclick="event.stopPropagation()"></td>
         <td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${esc(a.nome)}</div><div style="font-size:11px;color:var(--muted);">${esc(a.resp_nome||a.familia_email||'')}</div></td>
         <td style="padding:10px;font-size:12px;">${esc(a.serie||'—')}<br><span style="color:var(--muted);">${esc(a.turno||'—')}</span></td>
         <td style="padding:10px;font-size:11px;">${composicao}</td>
