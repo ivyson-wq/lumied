@@ -3851,6 +3851,126 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true });
   }
 
+  // ── Centro de Custos ─────────────────────────────────
+  if (action === "fin_centros_custo_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("fin_centros_custo").select("*").eq("escola_id", gerente.escola_id).eq("ativo", true).order("codigo");
+    return ok(data ?? []);
+  }
+  if (action === "fin_centro_custo_save") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { codigo, nome } = body as any;
+    if (!codigo || !nome) return err("codigo e nome obrigatórios.");
+    const { data, error: e5 } = await admin.from("fin_centros_custo").upsert({ codigo, nome, escola_id: gerente.escola_id }, { onConflict: "escola_id,codigo" }).select().single();
+    if (e5) return err(e5.message);
+    return ok(data);
+  }
+
+  // ── Fechamento Mensal ──────────────────────────────────
+  if (action === "fin_fechamento_list") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { data } = await admin.from("fin_fechamento_mensal").select("*").eq("escola_id", gerente.escola_id).order("mes", { ascending: false }).limit(24);
+    return ok(data ?? []);
+  }
+  if (action === "fin_fechamento_fechar") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { mes } = body as any;
+    if (!mes) return err("mes obrigatório (YYYY-MM).");
+    await admin.from("fin_fechamento_mensal").upsert({
+      mes, fechado: true, fechado_por: gerente.nome, fechado_em: new Date().toISOString(),
+      escola_id: gerente.escola_id,
+    }, { onConflict: "escola_id,mes" });
+    return ok({ success: true });
+  }
+  if (action === "fin_fechamento_reabrir") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const { mes } = body as any;
+    if (!mes) return err("mes obrigatório.");
+    await admin.from("fin_fechamento_mensal").update({
+      fechado: false, reaberto_por: gerente.nome, reaberto_em: new Date().toISOString(),
+    }).eq("escola_id", gerente.escola_id).eq("mes", mes);
+    return ok({ success: true });
+  }
+
+  // ── Fluxo de Caixa Projetado ───────────────────────────
+  if (action === "fin_fluxo_caixa") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const eid = gerente.escola_id;
+    const meses_projecao = (body as any).meses || 3;
+    const resultado: any[] = [];
+
+    for (let i = 0; i < meses_projecao; i++) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + i);
+      const mes = d.toISOString().slice(0, 7);
+      const inicio = mes + "-01";
+      const fim = mes + "-31";
+
+      // Receitas previstas (lançamentos pendentes + mensalidades a vencer)
+      const { data: recPend } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", eid).eq("tipo", "receita").in("status", ["pendente", "atrasado"])
+        .gte("data_vencimento", inicio).lte("data_vencimento", fim);
+      const receitaPrevista = (recPend ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+
+      // Despesas previstas (lançamentos pendentes)
+      const { data: despPend } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", eid).eq("tipo", "despesa").in("status", ["pendente"])
+        .gte("data_vencimento", inicio).lte("data_vencimento", fim);
+      const despesaPrevista = (despPend ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+
+      // Já realizado no mês
+      const { data: recReal } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", eid).eq("tipo", "receita").eq("status", "pago")
+        .gte("data_pagamento", inicio).lte("data_pagamento", fim);
+      const receitaRealizada = (recReal ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+
+      const { data: despReal } = await admin.from("fin_lancamentos").select("valor")
+        .eq("escola_id", eid).eq("tipo", "despesa").eq("status", "pago")
+        .gte("data_pagamento", inicio).lte("data_pagamento", fim);
+      const despesaRealizada = (despReal ?? []).reduce((s, l) => s + (l.valor || 0), 0);
+
+      resultado.push({
+        mes,
+        receita_prevista: receitaPrevista + receitaRealizada,
+        despesa_prevista: despesaPrevista + despesaRealizada,
+        receita_realizada: receitaRealizada,
+        despesa_realizada: despesaRealizada,
+        saldo_projetado: (receitaPrevista + receitaRealizada) - (despesaPrevista + despesaRealizada),
+      });
+    }
+    return ok(resultado);
+  }
+
+  // ── DRE Competência vs Caixa ───────────────────────────
+  if (action === "fin_dre_caixa") {
+    if (!gerente?.escola_id) return err("Sessão sem escola associada.", 403);
+    const ano = (body as any).ano || new Date().getFullYear().toString();
+    // Regime caixa: only counts pago lancamentos, by data_pagamento
+    const { data: contasEscola } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").eq("escola_id", gerente.escola_id).in("tipo", ["receita", "despesa"]).order("codigo");
+    const { data: contasGlobal } = await admin.from("fin_plano_contas").select("id, codigo, nome, tipo").is("escola_id", null).in("tipo", ["receita", "despesa"]).order("codigo");
+    const codigosEscola = new Set((contasEscola ?? []).map(c => c.codigo));
+    const contas = [...(contasEscola ?? []), ...(contasGlobal ?? []).filter(c => !codigosEscola.has(c.codigo))];
+    const { data: lancs } = await admin.from("fin_lancamentos").select("conta_id, valor, tipo, data_pagamento")
+      .eq("escola_id", gerente.escola_id).eq("status", "pago")
+      .gte("data_pagamento", ano + "-01-01").lte("data_pagamento", ano + "-12-31");
+    const contaMap: Record<string, { nome: string; codigo: string; tipo: string; meses: number[]; total: number }> = {};
+    for (const c of contas) contaMap[c.id] = { nome: c.nome, codigo: c.codigo, tipo: c.tipo, meses: Array(12).fill(0), total: 0 };
+    for (const l of lancs ?? []) {
+      if (l.conta_id && contaMap[l.conta_id] && l.data_pagamento) {
+        const m = parseInt(l.data_pagamento.split("-")[1]) - 1;
+        contaMap[l.conta_id].meses[m] += l.valor;
+        contaMap[l.conta_id].total += l.valor;
+      }
+    }
+    const receitas = Object.values(contaMap).filter(c => c.tipo === "receita");
+    const despesas = Object.values(contaMap).filter(c => c.tipo === "despesa");
+    const totalReceitasMes = Array(12).fill(0), totalDespesasMes = Array(12).fill(0);
+    for (const r of receitas) r.meses.forEach((v, i) => totalReceitasMes[i] += v);
+    for (const d of despesas) d.meses.forEach((v, i) => totalDespesasMes[i] += v);
+    const resultadoMes = totalReceitasMes.map((r, i) => r - totalDespesasMes[i]);
+    return ok({ receitas, despesas, total_receitas_mes: totalReceitasMes, total_despesas_mes: totalDespesasMes, resultado_mes: resultadoMes, ano, regime: "caixa" });
+  }
+
   // ── Conciliacao Bancaria ──────────────────────────────
   if (action === "fin_extrato_importar") {
     const itens = (body as any).itens || [];

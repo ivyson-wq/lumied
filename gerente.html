@@ -963,6 +963,10 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('finDashExt',this)"><span class="ic">📊</span> <span>Análise Avançada</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finReajuste',this)"><span class="ic">📈</span> <span>Reajuste Anual</span></a>
         <a class="nav-item" href="#" onclick="showPanel('finExport',this)"><span class="ic">📥</span> <span>Exportar Dados</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finRecibos',this)"><span class="ic">🧾</span> <span>Recibos</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finFluxoCaixa',this)"><span class="ic">💹</span> <span>Fluxo de Caixa</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finFechamento',this)"><span class="ic">🔒</span> <span>Fechamento Mensal</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('finNotifConfig',this)"><span class="ic">🔔</span> <span>Config Notificações</span></a>
       </div>
       </div>
 
@@ -3075,6 +3079,52 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <button onclick="exportarJSON()" style="padding:10px 20px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">📋 Exportar JSON</button>
           </div>
           <div id="exportResult" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- RECIBOS -->
+      <div id="panelFinRecibos" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">🧾 Recibos de Pagamento</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <input type="month" id="recibosMes" onchange="loadRecibos()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+        </div>
+        <div id="recibosList"></div>
+      </div>
+
+      <!-- FLUXO DE CAIXA -->
+      <div id="panelFinFluxoCaixa" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">💹 Fluxo de Caixa Projetado (3 meses)</div>
+        <div id="fluxoCaixaContent"><div class="empty-state">Carregando...</div></div>
+      </div>
+
+      <!-- FECHAMENTO MENSAL -->
+      <div id="panelFinFechamento" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">🔒 Fechamento Mensal</div>
+          <div style="display:flex;gap:8px;">
+            <input type="month" id="fechamentoMes" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+            <button onclick="fecharMes()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">🔒 Fechar Mês</button>
+          </div>
+        </div>
+        <div id="fechamentoList"></div>
+      </div>
+
+      <!-- CONFIG NOTIFICAÇÕES FINANCEIRAS -->
+      <div id="panelFinNotifConfig" class="panel">
+        <div class="sec-title" style="margin-bottom:16px;">🔔 Configuração de Notificações Financeiras</div>
+        <div id="notifConfigList"></div>
+        <div class="card" style="margin-top:16px;padding:16px;">
+          <div style="font-weight:600;margin-bottom:12px;">Adicionar/Editar Regra</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div class="ff" style="margin:0;"><label>Tipo</label><select id="ncTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+              <option value="vencimento_proximo">Lembrete pré-vencimento</option>
+              <option value="vencido">Cobrança pós-vencimento</option>
+              <option value="pago">Confirmação pagamento</option>
+            </select></div>
+            <div class="ff" style="margin:0;"><label>Dias offset</label><input type="number" id="ncDias" value="-3" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><div style="font-size:10px;color:var(--muted);">Negativo=antes, Positivo=depois do vencimento</div></div>
+            <div class="ff" style="margin:0;"><label>Canal</label><select id="ncCanal" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"><option value="email">Email</option></select></div>
+          </div>
+          <button onclick="salvarNotifConfig()" class="btn-create" style="width:auto;padding:8px 20px;margin-top:10px;">Salvar Regra</button>
         </div>
       </div>
 
@@ -6081,6 +6131,10 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='finDashExt') loadFinDashExt();
     if(id==='finReajuste') loadReajustes();
     if(id==='finExport') initExportPanel();
+    if(id==='finRecibos') loadRecibos();
+    if(id==='finFluxoCaixa') loadFluxoCaixa();
+    if(id==='finFechamento') loadFechamento();
+    if(id==='finNotifConfig') loadNotifConfig();
     if(id==='crmKanban')   loadCrmKanban();
     if(id==='crmLeads')  { showPanel('crmKanban'); loadCrmLeads(); return; }
     if(id==='crmTemplates') loadCrmTemplates();
@@ -17130,6 +17184,91 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     link.download = document.getElementById('expTipo').value+'_export.json';
     link.click();
     showToast(d.total+' registros exportados!','success');
+  }
+
+  // ═══ RECIBOS ═══
+  async function loadRecibos() {
+    var mes = document.getElementById('recibosMes').value || new Date().toISOString().slice(0,7);
+    if (!document.getElementById('recibosMes').value) document.getElementById('recibosMes').value = mes;
+    var d = await api({ action:'fin_recibos_list', mes:mes });
+    var list = Array.isArray(d) ? d : [];
+    var el = document.getElementById('recibosList');
+    var fmtR = function(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); };
+    if (!list.length) { el.innerHTML='<div class="empty-state">Nenhum recibo no período.</div>'; return; }
+    el.innerHTML = '<table><thead><tr><th>#</th><th>Família</th><th>Criança</th><th>Descrição</th><th style="text-align:right;">Valor</th><th>Data Pgto</th><th>Método</th></tr></thead><tbody>' +
+      list.map(function(r) {
+        var metodos = {boleto:'Boleto',pix:'PIX',cartao:'Cartão',dinheiro:'Dinheiro',ted:'TED',cheque:'Cheque'};
+        return '<tr><td style="color:var(--muted);font-size:12px;">#'+r.numero_recibo+'</td><td style="font-weight:600;">'+esc(r.familia_nome||'—')+'</td><td>'+esc(r.crianca_nome||'—')+'</td><td>'+esc(r.descricao||'—')+'</td><td style="text-align:right;font-weight:600;color:#2d7a3a;">'+fmtR(r.valor)+'</td><td>'+new Date(r.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR')+'</td><td>'+(metodos[r.metodo_pagamento]||r.metodo_pagamento||'—')+'</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  // ═══ FLUXO DE CAIXA ═══
+  async function loadFluxoCaixa() {
+    var d = await api({ action:'fin_fluxo_caixa', meses:3 });
+    var list = Array.isArray(d) ? d : [];
+    var el = document.getElementById('fluxoCaixaContent');
+    var fmtR = function(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); };
+    if (!list.length) { el.innerHTML='<div class="empty-state">Sem dados.</div>'; return; }
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat('+list.length+',1fr);gap:16px;">' +
+      list.map(function(m) {
+        var saldoCor = m.saldo_projetado >= 0 ? '#2d7a3a' : '#EF4444';
+        return '<div class="card" style="padding:16px;"><div style="font-weight:700;font-size:14px;margin-bottom:12px;">'+m.mes+'</div>' +
+          '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f5f0ea;"><span style="color:var(--muted);font-size:13px;">Receita prevista</span><span style="font-weight:600;color:#2d7a3a;">'+fmtR(m.receita_prevista)+'</span></div>' +
+          '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f5f0ea;"><span style="color:var(--muted);font-size:13px;">  Já realizada</span><span style="font-size:12px;color:var(--muted);">'+fmtR(m.receita_realizada)+'</span></div>' +
+          '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f5f0ea;"><span style="color:var(--muted);font-size:13px;">Despesa prevista</span><span style="font-weight:600;color:#EF4444;">'+fmtR(m.despesa_prevista)+'</span></div>' +
+          '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f5f0ea;"><span style="color:var(--muted);font-size:13px;">  Já realizada</span><span style="font-size:12px;color:var(--muted);">'+fmtR(m.despesa_realizada)+'</span></div>' +
+          '<div style="display:flex;justify-content:space-between;padding:10px 0;margin-top:8px;border-top:2px solid var(--border);"><span style="font-weight:700;">Saldo projetado</span><span style="font-weight:700;font-size:18px;color:'+saldoCor+';">'+fmtR(m.saldo_projetado)+'</span></div></div>';
+      }).join('') + '</div>';
+  }
+
+  // ═══ FECHAMENTO MENSAL ═══
+  async function loadFechamento() {
+    var d = await api({ action:'fin_fechamento_list' });
+    var list = Array.isArray(d) ? d : [];
+    var el = document.getElementById('fechamentoList');
+    if (!list.length) { el.innerHTML='<div class="empty-state">Nenhum mês fechado ainda. Selecione um mês e clique em "Fechar Mês".</div>'; return; }
+    el.innerHTML = list.map(function(f) {
+      var badge = f.fechado ? '<span class="badge badge-green">Fechado</span>' : '<span class="badge badge-orange">Reaberto</span>';
+      var acoes = f.fechado ? '<button class="btn btn-sm btn-outline" onclick="reabrirMes(\''+f.mes+'\')">🔓 Reabrir</button>' : '<button class="btn btn-sm" onclick="fecharMesId(\''+f.mes+'\')">🔒 Fechar</button>';
+      var info = f.fechado ? 'Fechado por '+esc(f.fechado_por||'—')+' em '+new Date(f.fechado_em).toLocaleDateString('pt-BR') : 'Reaberto por '+esc(f.reaberto_por||'—');
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #f5f0ea;"><div><strong>'+f.mes+'</strong> '+badge+'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+info+'</div></div>'+acoes+'</div>';
+    }).join('');
+  }
+  async function fecharMes() {
+    var mes = document.getElementById('fechamentoMes').value;
+    if (!mes) { showToast('Selecione um mês.','warning'); return; }
+    if (!confirm('Fechar o mês '+mes+'? Novos lançamentos manuais serão bloqueados neste período.')) return;
+    var d = await api({ action:'fin_fechamento_fechar', mes:mes });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Mês '+mes+' fechado!','success'); loadFechamento();
+  }
+  async function fecharMesId(mes) {
+    if (!confirm('Fechar o mês '+mes+'?')) return;
+    await api({ action:'fin_fechamento_fechar', mes:mes });
+    showToast('Fechado.'); loadFechamento();
+  }
+  async function reabrirMes(mes) {
+    if (!confirm('Reabrir o mês '+mes+'? Lançamentos poderão ser alterados.')) return;
+    await api({ action:'fin_fechamento_reabrir', mes:mes });
+    showToast('Mês '+mes+' reaberto.'); loadFechamento();
+  }
+
+  // ═══ CONFIG NOTIFICAÇÕES ═══
+  async function loadNotifConfig() {
+    var d = await api({ action:'fin_notificacao_config_list' });
+    var list = Array.isArray(d) ? d : [];
+    var el = document.getElementById('notifConfigList');
+    var tipoLabels = {vencimento_proximo:'Lembrete pré-vencimento',vencido:'Cobrança pós-vencimento',pago:'Confirmação pagamento'};
+    if (!list.length) { el.innerHTML='<div class="empty-state">Nenhuma regra configurada. Use o formulário abaixo para criar.</div>'; return; }
+    el.innerHTML = list.map(function(c) {
+      var badge = c.habilitado ? '<span class="badge badge-green">Ativo</span>' : '<span class="badge badge-orange">Desativado</span>';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #f5f0ea;"><div><strong>'+esc(tipoLabels[c.tipo]||c.tipo)+'</strong> · '+esc(c.canal)+' · offset: '+c.dias_offset+'d '+badge+'</div></div>';
+    }).join('');
+  }
+  async function salvarNotifConfig() {
+    var d = await api({ action:'fin_notificacao_config_save', tipo:document.getElementById('ncTipo').value, canal:document.getElementById('ncCanal').value, dias_offset:parseInt(document.getElementById('ncDias').value)||0 });
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Regra salva!','success'); loadNotifConfig();
   }
 
   // ═══ BOLETOS EM LOTE ═══
