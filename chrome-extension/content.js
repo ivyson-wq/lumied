@@ -20,6 +20,7 @@
       appEl.style.marginRight = '0';
     }
     if (open && !templates.length) loadTemplates();
+    if (open) autoLookupLead();
   }
 
   // Create toggle button with owl logo
@@ -63,6 +64,15 @@
     </div>
   `;
   document.body.appendChild(panel);
+
+  // Fetch escola name for branding + template auto-fill
+  apiCall('config_publica').then(function(cfg) {
+    if (cfg && cfg.escola_nome) {
+      escolaNome = cfg.escola_nome;
+      var brandEl = document.getElementById('mb-brand-name');
+      if (brandEl) brandEl.textContent = cfg.escola_nome + ' CRM';
+    }
+  }).catch(function() {});
 
   // --- HELPERS ---
 
@@ -591,38 +601,56 @@
   }, 100);
 
   // --- DETECT CONVERSATION CHANGE ---
-  let _lastContact = null;
+  let _lastContactKey = null;
 
   function checkConversationChange() {
-    const { nome, telefone } = getContactInfo();
-    const key = (telefone || '') + '|' + (nome || '');
-    if (key === _lastContact || key === '|') return;
-    _lastContact = key;
+    var info = getContactInfo();
+    var key = (info.nome || '') + '|' + (info.telefone || '');
+    if (key === _lastContactKey || key === '|') return;
+    _lastContactKey = key;
     // Reset lead card
     currentLeadInfo = null;
     var cardEl = document.getElementById('mb-lead-card');
     if (cardEl) cardEl.classList.add('hidden');
     var statusEl = document.getElementById('mb-lead-status');
-    if (statusEl) statusEl.classList.add('hidden');
-    // Auto-lookup lead if panel is open
-    if (panelOpen && telefone) {
-      statusEl.classList.remove('hidden');
-      statusEl.className = 'mb-lead-status loading';
-      statusEl.textContent = 'Buscando lead...';
-      findLeadByPhone(telefone).then(function(lead) {
-        if (!lead) {
-          statusEl.className = 'mb-lead-status';
-          statusEl.textContent = '';
-          statusEl.classList.add('hidden');
-          return;
-        }
-        currentLeadInfo = { lead: lead, serieInfo: null };
-        renderLeadCard(lead, null);
-        statusEl.classList.add('hidden');
-      }).catch(function() {
-        statusEl.classList.add('hidden');
-      });
+    if (statusEl) { statusEl.classList.add('hidden'); statusEl.textContent = ''; }
+    // Auto-lookup if panel is open
+    if (panelOpen) autoLookupLead(info);
+  }
+
+  async function autoLookupLead(info) {
+    var statusEl = document.getElementById('mb-lead-status');
+    if (!info) info = getContactInfo();
+    if (!info.telefone && !info.nome) return;
+    statusEl.classList.remove('hidden');
+    statusEl.className = 'mb-lead-status loading';
+    statusEl.textContent = 'Buscando lead...';
+    try {
+      var lead = null;
+      if (info.telefone) lead = await findLeadByPhone(info.telefone);
+      if (!lead && info.nome) lead = await findLeadByName(info.nome);
+      if (!lead) {
+        statusEl.className = 'mb-lead-status';
+        statusEl.innerHTML = 'Lead nao encontrado. <strong>Capture</strong> para adicionar ao CRM.';
+        setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
+        return;
+      }
+      currentLeadInfo = { lead: lead, serieInfo: null };
+      renderLeadCard(lead, null);
+      statusEl.classList.add('hidden');
+    } catch(e) {
+      statusEl.classList.add('hidden');
     }
+  }
+
+  async function findLeadByName(nome) {
+    var leads = await apiCall('crm_leads_list');
+    if (!Array.isArray(leads)) return null;
+    var lower = nome.toLowerCase();
+    return leads.find(function(l) {
+      return (l.nome_responsavel || '').toLowerCase() === lower
+        || (l.nome_crianca || '').toLowerCase() === lower;
+    });
   }
 
   // Poll for conversation changes (header updates when switching chats)
@@ -662,10 +690,24 @@
 
   function sendTemplate(template) {
     let msg = template.conteudo;
+    // Build auto-fill values from WhatsApp contact + lead data
+    var contact = getContactInfo();
+    var lead = currentLeadInfo ? currentLeadInfo.lead : null;
+    var firstName = (contact.nome || '').split(' ')[0];
+    var autoFill = {
+      nome: contact.nome || (lead ? lead.nome_responsavel : '') || '',
+      primeiro_nome: firstName || '',
+      nome_responsavel: (lead ? lead.nome_responsavel : '') || contact.nome || '',
+      nome_crianca: (lead ? lead.nome_crianca : '') || '',
+      telefone: contact.telefone || (lead ? lead.telefone : '') || '',
+      escola: escolaNome || '',
+      serie: (lead ? lead.serie_interesse : '') || '',
+    };
     const vars = msg.match(/\{\{(\w+)\}\}/g) || [];
     for (const v of vars) {
       const name = v.replace(/\{|\}/g, '');
-      const val = prompt('Valor para ' + name + ':', '');
+      var defaultVal = autoFill[name] || autoFill[name.toLowerCase()] || '';
+      const val = prompt('Valor para ' + name + ':', defaultVal);
       if (val === null) return;
       msg = msg.replace(new RegExp(v.replace(/[{}]/g, '\\$&'), 'g'), val);
     }
