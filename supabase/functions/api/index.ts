@@ -2882,6 +2882,29 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
 
   // ── Manutenção CRUD (autenticado — gerente) ─────────────────
   // Filtros: { somente_abertas?: bool, limit?: number }
+  // ── Tickets de suporte (gerente) ──
+  if (action === "tickets_list") {
+    const { status: filtro } = body as { status?: string };
+    let q = admin.from("tickets").select("*").eq("escola_id", sessionEscolaId).order("criado_em", { ascending: false });
+    if (filtro && filtro !== "todos") q = q.eq("status", filtro);
+    const { data } = await q;
+    return ok(data ?? []);
+  }
+  if (action === "ticket_respond") {
+    const { id, resposta } = body as { id?: string; resposta?: string };
+    if (!id || !resposta) return err("id e resposta obrigatórios.");
+    const { error } = await admin.from("tickets").update({ resposta, status: "respondido", respondido_por: gerente?.nome || gerente?.email || "gerente" }).eq("id", id).eq("escola_id", sessionEscolaId);
+    if (error) return err("Erro ao responder ticket: " + error.message);
+    return ok({ success: true });
+  }
+  if (action === "ticket_close") {
+    const { id } = body as { id?: string };
+    if (!id) return err("id obrigatório.");
+    const { error } = await admin.from("tickets").update({ status: "fechado" }).eq("id", id).eq("escola_id", sessionEscolaId);
+    if (error) return err("Erro ao fechar ticket: " + error.message);
+    return ok({ success: true });
+  }
+
   // Default sem args: últimos 500 chamados (qualquer status). Com somente_abertas=true,
   // bate o índice parcial idx_manutencoes_abertas (mig 273) e responde instantâneo.
   if (action === "manutencao_list") {

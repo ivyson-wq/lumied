@@ -1028,6 +1028,8 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <a class="nav-item" href="#" onclick="showPanel('compHorarios',this)"><span class="ic">🕐</span> <span data-i18n="gerente.nav.horarioProfs">Horários de Profs</span></a>
         <a class="nav-item" href="#" onclick="showPanel('compImportar',this)"><span class="ic">📂</span> <span data-i18n="gerente.nav.importarPonto">Importar Ponto</span></a>
         <a class="nav-item" href="#" onclick="showPanel('compOcorrencias',this)"><span class="ic">⚠️</span> <span data-i18n="gerente.nav.horaExtra">Hora Extra</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('compBancoHoras',this)"><span class="ic">🏦</span> Banco de Horas</a>
+        <a class="nav-item" href="#" onclick="showPanel('compResumoMensal',this)"><span class="ic">📊</span> Resumo Mensal</a>
         <a class="nav-item" href="#" onclick="showPanel('compFeriados',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.feriados">Feriados</span></a>
         <a class="nav-item" href="#" onclick="showPanel('compConfig',this)"><span class="ic">⚙️</span> <span data-i18n="gerente.nav.configPonto">Config. de Ponto</span></a>
       </div>
@@ -3190,6 +3192,36 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         <tbody id="compAlertasBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
 
+      <!-- COMPLIANCE — Banco de Horas -->
+      <div id="panelCompBancoHoras" class="panel">
+        <div class="sec-title">🏦 Banco de Horas</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Saldo mensal de banco de horas por professora (creditos = hora extra compensavel, debitos = compensacoes realizadas).</p>
+        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+          <select id="compBhAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+          <select id="compBhProf" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;">
+            <option value="">Todas as professoras</option>
+          </select>
+          <button onclick="loadCompBancoHoras()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
+        </div>
+        <div id="compBhCards" class="dip-stats" style="margin-bottom:16px;"></div>
+        <table class="data-table"><thead><tr><th>Professora</th><th>Mes</th><th>Saldo Anterior</th><th>Creditos</th><th>Debitos</th><th>Saldo Final</th><th>Status</th></tr></thead>
+        <tbody id="compBhBody"><tr><td colspan="7" class="empty-state">Selecione o ano e clique Carregar.</td></tr></tbody></table>
+      </div>
+
+      <!-- COMPLIANCE — Resumo Mensal Detalhado -->
+      <div id="panelCompResumoMensal" class="panel">
+        <div class="sec-title">📊 Resumo Mensal por Professora</div>
+        <p style="color:var(--muted);margin-bottom:16px;">Visao detalhada de horas trabalhadas, extras, noturnas, atrasos e faltas por professora no mes.</p>
+        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+          <select id="compRmMes" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+          <select id="compRmAno" style="padding:8px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;background:#fdfbf8;"></select>
+          <button onclick="loadCompResumoMensal()" style="padding:8px 16px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;">Carregar</button>
+        </div>
+        <div id="compRmTotals" class="dip-stats" style="margin-bottom:16px;"></div>
+        <table class="data-table"><thead><tr><th>Professora</th><th>Dias Trab.</th><th>Horas Normais</th><th>HE 50%</th><th>HE 100%</th><th>Noturnas</th><th>Atrasos</th><th>Faltas</th><th>DSR</th><th>Banco Horas</th></tr></thead>
+        <tbody id="compRmBody"><tr><td colspan="10" class="empty-state">Selecione mes/ano e clique Carregar.</td></tr></tbody></table>
+      </div>
+
       <!-- COMPLIANCE — Feriados -->
       <div id="panelCompFeriados" class="panel">
         <div class="sec-title">📅 Feriados</div>
@@ -3691,6 +3723,46 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             <thead><tr><th>Urgência</th><th>Descrição</th><th>Local</th><th>Solicitante</th><th>Equipe</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
             <tbody id="manutBody"><tr><td colspan="8" class="empty-state">⏳ Carregando…</td></tr></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- TICKETS DE SUPORTE -->
+      <div id="panelTickets" class="panel">
+        <div class="dip-stats" id="ticketStatsRow">
+          <div class="stat-card" data-g="total"><div class="stat-label">Abertos</div><div class="stat-value" id="tkAbertos">—</div><div class="stat-sub">aguardando resposta</div></div>
+          <div class="stat-card" data-g="integral"><div class="stat-label">Escalados</div><div class="stat-value" id="tkEscalados">—</div><div class="stat-sub">precisam atenção</div></div>
+          <div class="stat-card" data-g="semi"><div class="stat-label">Respondidos</div><div class="stat-value" id="tkRespondidos">—</div><div class="stat-sub">aguardando feedback</div></div>
+          <div class="stat-card" data-g="diaria"><div class="stat-label">Fechados</div><div class="stat-value" id="tkFechados">—</div><div class="stat-sub">resolvidos</div></div>
+        </div>
+        <div class="sec-title">Tickets de Suporte <span class="count-badge" id="tkCount">0</span></div>
+        <div class="filter-bar" style="margin-bottom:12px;">
+          <button class="fb active" onclick="setTkFilter('todos',this)">Todos</button>
+          <button class="fb" onclick="setTkFilter('aberto',this)">Abertos</button>
+          <button class="fb" onclick="setTkFilter('escalado',this)">Escalados</button>
+          <button class="fb" onclick="setTkFilter('respondido',this)">Respondidos</button>
+          <button class="fb" onclick="setTkFilter('fechado',this)">Fechados</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Descrição</th><th>Tipo</th><th>Portal</th><th>Remetente</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+            <tbody id="tkBody"><tr><td colspan="8" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Ticket -->
+      <div class="modal-overlay" id="tkModalOverlay" role="dialog" aria-modal="true" onclick="if(event.target===this)fecharModal('tkModalOverlay')">
+        <div class="modal" style="max-width:560px;">
+          <h3 id="tkModalTitle">Ticket</h3>
+          <div id="tkModalMeta" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
+          <div id="tkModalDesc" style="background:var(--bg-subtle,#f8f9fa);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px;white-space:pre-wrap;max-height:200px;overflow-y:auto;"></div>
+          <div id="tkModalRespAnterior" style="display:none;background:#eef7ee;border:1px solid #c3e6c3;border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px;white-space:pre-wrap;max-height:150px;overflow-y:auto;"></div>
+          <div class="ff"><label>Resposta</label><textarea id="tkModalResposta" rows="4" placeholder="Digite sua resposta..."></textarea></div>
+          <div class="btn-bar" style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn-create" onclick="tkResponder()">Responder</button>
+            <button class="btn-export" onclick="tkFechar()">Fechar Ticket</button>
+            <button class="btn-export" style="background:var(--bg);color:var(--text);" onclick="fecharModal('tkModalOverlay')">Cancelar</button>
+          </div>
         </div>
       </div>
 
@@ -5765,7 +5837,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     closeSidebar();
     // Redirect old panels to equipe
     if (id === 'professoras' || id === 'secretarias' || id === 'usuarios') id = 'equipe';
-    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoInventario:'Controle de Acesso — Inventário Simpax',acessoMapa:'Controle de Acesso — Mapa de Terminais',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas'};
+    const titles={alunos:'Alunos',alunoDetalhe:'Ficha do Aluno',biblioteca:'Biblioteca — Acervo',bibEmprestimos:'Biblioteca — Empréstimos',cantina:'Cantina — Cardápio',cantCreditos:'Cantina — Créditos',dashboard:'Dashboard de Turnos',dashAtiv:'Dashboard de Atividades Extraclasse',series:'Séries',atividades:'Gerenciar Atividades',equipe:'Equipe — Gestão de Usuários',diplomas:'Diplomas & Ranking de Professoras',pdi:'Annual Growth Plan',atestados:'Atestados — Validação',almDash:'Almoxarifado — Visão Geral',almReqs:'Almoxarifado — Requisições',almConfig:'Almoxarifado — Configuração',almPend:'Almoxarifado — Requisições',almTodas:'Almoxarifado — Requisições',almInsumos:'Almoxarifado — Configuração',almTurmas:'Almoxarifado — Configuração',almOrc:'Almoxarifado — Configuração',almRel:'Almoxarifado — Visão Geral',almCompras:'Almoxarifado — Requisições',manutencao:'Manutenção — Chamados',reunioes:'Reuniões',logo:'Logotipo',acesso:'Controle de Acesso',familias:'Famílias',cadastro:'Cadastrar Família',achados:'Achados & Perdidos',calendario:'Calendario Escolar',analytics:'Dashboard Analytics',emergencia:'Emergência',impressoes:'Impressões',horarioAcesso:'Horários de Acesso',finDash:'Dashboard Financeiro',finLanc:'Lançamentos',finMens:'Mensalidades',finContas:'Plano de Contas',finDre:'DRE',finBalanco:'Balanço Patrimonial',finConciliacao:'Conciliação Bancária',finBoletos:'Boletos (Banco Inter)',finNfs:'Notas Fiscais',crmKanban:'Pipeline & Leads',crmLeads:'Pipeline & Leads',crmTemplates:'Templates WhatsApp',crmVagas:'Matrículas & Vagas',crmMatriculas:'Matrículas & Vagas',crmMetas:'Metas Comerciais',crmConfigSeries:'Configuracao Series/Idade',chatConversas:'Conversas',pesquisas:'Pesquisas & Enquetes',matriculaForm:'Formulários de Matrícula',matriculaStatus:'Status de Matrículas',notasConfig:'Configuração de Notas',notasDisciplinas:'Disciplinas',notasPeriodos:'Períodos Letivos',notasVisao:'Visão Geral de Notas',frequencia:'Controle de Frequência',diarioClasse:'Diário de Classe Digital',contratos:'Contratos Digitais',compFeriados:'Feriados',compConfig:'Configuracao do Ponto',acessoDash:'Controle de Acesso — Dashboard',acessoDispositivos:'Controle de Acesso — Dispositivos',acessoInventario:'Controle de Acesso — Inventário Simpax',acessoMapa:'Controle de Acesso — Mapa de Terminais',acessoFaces:'Controle de Acesso — Faces',acessoRfid:'Controle de Acesso — Cartoes RFID',acessoPermissoes:'Controle de Acesso — Permissoes Retirada',acessoEventos:'Controle de Acesso — Log de Acessos',cozDash:'Cozinha — Dashboard',cozCardapio:'Cozinha — Cardápio',cozReceitas:'Cozinha — Receitas',cozAlimentos:'Cozinha — Alimentos & Estoque',cozCompras:'Cozinha — Compras',cozSanitario:'Cozinha — Controle Sanitário',cozDesperd:'Cozinha — Desperdício',cozConfig:'Cozinha — Configurações',engajamento:'Engajamento Famílias',workflows:'Automações',pontoSetup:'Setup do Relógio Ponto',pontoDash:'Ponto AFD — Dashboard',pontoEmployees:'Ponto AFD — Funcionários',pontoImport:'Ponto AFD — Importar',pontoMirror:'Ponto AFD — Espelho de Ponto',pontoJustif:'Ponto AFD — Justificativas',tickets:'Tickets de Suporte'};
     document.getElementById('topbarTitle').textContent = titles[id]||id;
     const meta = panelMeta[id];
     document.getElementById('topbarIcon').textContent = meta ? meta.icon : '📄';
@@ -5784,7 +5856,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
     if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finLanc:'Financeiro',finDre:'Financeiro',finBalanco:'Financeiro',finConciliacao:'Financeiro',finContas:'Financeiro',finNfs:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD',tickets:'Infraestrutura'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -5825,6 +5897,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='almTurmas')   { showPanel('almConfig'); return; }
     if(id==='almOrc')      { showPanel('almConfig'); return; }
     if(id==='almRel')      { showPanel('almDash'); return; }
+    if(id==='tickets')        loadTicketsPanel();
     if(id==='manutencao')    loadManutPanel();
     if(id==='reunioes')    loadReunioesPanel();
     if(id==='logo')        loadLogoPanel();
@@ -5871,6 +5944,8 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='compInspecoes') loadCompInspecoes();
     if(id==='compPoliticas') loadCompPoliticas();
     if(id==='compCalendario') loadCompCalendario();
+    if(id==='compBancoHoras') loadCompBancoHorasInit();
+    if(id==='compResumoMensal') loadCompResumoMensalInit();
     if(id==='compFeriados') loadCompFeriados();
     if(id==='compConfig') loadCompConfig();
     if(id==='compImportar') loadCompImportacoes();
@@ -6273,7 +6348,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     almPend:{icon:'📋',label:'Requisições'},almTodas:{icon:'📋',label:'Requisições'},almInsumos:{icon:'⚙️',label:'Configuração'},
     almTurmas:{icon:'⚙️',label:'Configuração'},almOrc:{icon:'⚙️',label:'Configuração'},
     almRel:{icon:'📦',label:'Visão Geral'},almCompras:{icon:'📋',label:'Requisições'},
-    manutencao:{icon:'🔧',label:'Manutenção'},achados:{icon:'🔍',label:'Achados'},
+    manutencao:{icon:'🔧',label:'Manutenção'},tickets:{icon:'🎫',label:'Tickets'},achados:{icon:'🔍',label:'Achados'},
     finDash:{icon:'💰',label:'Financeiro'},finLanc:{icon:'📝',label:'Lançamentos'},
     finMens:{icon:'🧾',label:'Mensalidades'},finContas:{icon:'📊',label:'Plano Contas'},
     finDre:{icon:'📈',label:'DRE'},finBalanco:{icon:'⚖️',label:'Balanço'},
@@ -9977,6 +10052,84 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   // ── MANUTENÇÃO ──────────────────────────────────────────
   var manutData = [], manutFilter = 'todos';
   var URGENCIA_LABEL = { baixa:'🟢 Baixa', media:'🟡 Média', alta:'🟠 Alta', critica:'🔴 Crítica' };
+  // ═══ TICKETS DE SUPORTE ═══
+  var _tkCache = [];
+  var _tkFilter = 'todos';
+  var _tkCurrentId = null;
+
+  function setTkFilter(f, el) {
+    _tkFilter = f;
+    document.querySelectorAll('#panelTickets .filter-bar .fb').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    loadTicketsPanel();
+  }
+
+  async function loadTicketsPanel() {
+    const d = await api({ action: 'tickets_list', status: _tkFilter !== 'todos' ? _tkFilter : undefined });
+    const tickets = Array.isArray(d) ? d : [];
+    _tkCache = tickets;
+    const abertos = tickets.filter(t => t.status === 'aberto').length;
+    const escalados = tickets.filter(t => t.status === 'escalado').length;
+    const respondidos = tickets.filter(t => t.status === 'respondido').length;
+    const fechados = tickets.filter(t => t.status === 'fechado').length;
+    document.getElementById('tkAbertos').textContent = abertos;
+    document.getElementById('tkEscalados').textContent = escalados;
+    document.getElementById('tkRespondidos').textContent = respondidos;
+    document.getElementById('tkFechados').textContent = fechados;
+    document.getElementById('tkCount').textContent = tickets.length;
+    const tbody = document.getElementById('tkBody');
+    if (!tickets.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum ticket encontrado.</td></tr>'; return; }
+    const tipoLabel = { bug:'Bug', sugestao:'Sugestão', duvida:'Dúvida', outro:'Outro' };
+    const stCls = { aberto:'warn', escalado:'warn', respondido:'ativo', fechado:'inativo' };
+    tbody.innerHTML = tickets.map(t => {
+      const desc = t.descricao ? (t.descricao.length > 70 ? t.descricao.substring(0,70) + '…' : t.descricao) : '—';
+      return `<tr>
+        <td style="font-size:12px;color:var(--muted);white-space:nowrap;">#${t.numero||'—'}</td>
+        <td><strong>${esc(desc)}</strong></td>
+        <td style="font-size:12px;">${esc(tipoLabel[t.tipo]||t.tipo||'—')}</td>
+        <td style="font-size:12px;">${esc(t.portal||'—')}</td>
+        <td style="font-size:12px;">${esc(t.nome||t.email||'—')}</td>
+        <td><span class="status-pill ${stCls[t.status]||'inativo'}">${esc(t.status)}</span></td>
+        <td style="font-size:12px;color:var(--muted);white-space:nowrap;">${t.criado_em ? new Date(t.criado_em).toLocaleDateString('pt-BR') : '—'}</td>
+        <td><button class="action-btn" onclick="tkAbrir('${t.id}')">Ver</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function tkAbrir(id) {
+    _tkCurrentId = id;
+    const t = _tkCache.find(x => x.id === id) || {};
+    const tipoLabel = { bug:'Bug', sugestao:'Sugestão', duvida:'Dúvida', outro:'Outro' };
+    document.getElementById('tkModalTitle').textContent = 'Ticket #' + (t.numero||'—') + ' — ' + (tipoLabel[t.tipo]||t.tipo||'');
+    document.getElementById('tkModalMeta').innerHTML = '<strong>De:</strong> ' + esc(t.nome||t.email||'—') + ' | <strong>Portal:</strong> ' + esc(t.portal||'—') + ' | <strong>Status:</strong> ' + esc(t.status||'—') + ' | <strong>Data:</strong> ' + (t.criado_em ? new Date(t.criado_em).toLocaleString('pt-BR') : '—');
+    document.getElementById('tkModalDesc').textContent = t.descricao || '—';
+    var resEl = document.getElementById('tkModalRespAnterior');
+    if (t.resposta) { resEl.style.display = 'block'; resEl.innerHTML = '<strong>Resposta anterior:</strong><br>' + esc(t.resposta); }
+    else { resEl.style.display = 'none'; }
+    document.getElementById('tkModalResposta').value = '';
+    document.getElementById('tkModalOverlay').classList.add('show');
+  }
+
+  async function tkResponder() {
+    var resp = document.getElementById('tkModalResposta').value.trim();
+    if (!resp) return showToast('Digite uma resposta', 'error');
+    var d = await api({ action: 'ticket_respond', id: _tkCurrentId, resposta: resp });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Resposta enviada!');
+    fecharModal('tkModalOverlay');
+    loadTicketsPanel();
+  }
+
+  async function tkFechar() {
+    if (!await _lumiedConfirm('Fechar este ticket?')) return;
+    var d = await api({ action: 'ticket_close', id: _tkCurrentId });
+    if (d.error) return showToast(d.error, 'error');
+    showToast('Ticket fechado!');
+    fecharModal('tkModalOverlay');
+    loadTicketsPanel();
+  }
+
+  // ═══ MANUTENÇÃO ═══
   var MANUT_STATUS = { pendente:'⏳ Pendente', aprovada:'✅ Aprovada', em_execucao:'🔧 Em Execução', concluida:'✅ Concluída', rejeitada:'❌ Rejeitada' };
   var EQUIPES = [];
   var relatorioEquipesSel = new Set();
@@ -18645,6 +18798,71 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     const d = await compApi({action:'compliance_config_ponto_save', ...config});
     if (d.error) return showToast(d.error,'error');
     showToast('Configuracao salva.','success');
+  }
+  // ═══ BANCO DE HORAS ═══
+  async function loadCompBancoHorasInit() {
+    const selA = document.getElementById('compBhAno');
+    if (!selA.options.length) { const y=new Date().getFullYear(); for(let i=y-2;i<=y+1;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i; selA.appendChild(o); } selA.value=y; }
+    const selP = document.getElementById('compBhProf');
+    if (selP.options.length <= 1) {
+      const d = await compApi({action:'compliance_horarios_list'});
+      const profs = new Map(); (d.data||[]).forEach(h => { if(h.professoras) profs.set(h.professoras.id, h.professoras.nome); });
+      profs.forEach((nome, id) => { const o = document.createElement('option'); o.value=id; o.textContent=nome; selP.appendChild(o); });
+    }
+    loadCompBancoHoras();
+  }
+  async function loadCompBancoHoras() {
+    const ano = document.getElementById('compBhAno').value;
+    const profId = document.getElementById('compBhProf').value;
+    const body = {action:'compliance_banco_horas_list', ano: parseInt(ano)};
+    if (profId) body.professora_id = profId;
+    const d = await compApi(body);
+    const items = d.data || [];
+    const meses = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    // Summary cards
+    const totalCred = items.reduce((s,i) => s + (i.creditos_min||0), 0);
+    const totalDeb = items.reduce((s,i) => s + (i.debitos_min||0), 0);
+    const saldoAtual = items.length ? items[items.length-1].saldo_final_min || 0 : 0;
+    document.getElementById('compBhCards').innerHTML =
+      `<div class="stat-card" data-g="semi"><div class="stat-label">Creditos (ano)</div><div class="stat-value">${fmtMin(totalCred)}</div></div>` +
+      `<div class="stat-card" data-g="integral"><div class="stat-label">Debitos (ano)</div><div class="stat-value">${fmtMin(totalDeb)}</div></div>` +
+      `<div class="stat-card" data-g="${saldoAtual >= 0 ? 'total' : 'diaria'}"><div class="stat-label">Saldo Atual</div><div class="stat-value">${fmtMin(saldoAtual)}</div></div>`;
+    document.getElementById('compBhBody').innerHTML = items.length ? items.map(i => {
+      const sf = i.saldo_final_min || 0;
+      const color = sf > 0 ? '#2d7a3a' : sf < 0 ? '#C8102E' : '#888';
+      return `<tr><td>${esc(i.professoras?.nome||'—')}</td><td>${meses[i.mes]||i.mes}/${i.ano}</td><td>${fmtMin(i.saldo_anterior_min||0)}</td><td style="color:#2d7a3a;font-weight:600;">+${fmtMin(i.creditos_min||0)}</td><td style="color:#C8102E;font-weight:600;">-${fmtMin(i.debitos_min||0)}</td><td style="color:${color};font-weight:700;">${fmtMin(sf)}</td><td>${i.fechado ? '<span class="status-pill" style="background:#2d7a3a;color:#fff;">Fechado</span>' : '<span class="status-pill" style="background:#d4830a;color:#fff;">Aberto</span>'}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="empty-state">Nenhum registro de banco de horas.</td></tr>';
+  }
+  // ═══ RESUMO MENSAL DETALHADO ═══
+  async function loadCompResumoMensalInit() {
+    const selM = document.getElementById('compRmMes'); const selA = document.getElementById('compRmAno');
+    if (!selM.options.length) { const meses = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; meses.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i+1; o.textContent=m; selM.appendChild(o); }); selM.value = new Date().getMonth()+1; }
+    if (!selA.options.length) { const y=new Date().getFullYear(); for(let i=y-2;i<=y+1;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i; selA.appendChild(o); } selA.value=y; }
+    loadCompResumoMensal();
+  }
+  async function loadCompResumoMensal() {
+    const mes = document.getElementById('compRmMes').value; const ano = document.getElementById('compRmAno').value;
+    const d = await compApi({action:'compliance_ponto_resumo_mensal', mes: parseInt(mes), ano: parseInt(ano)});
+    const items = Array.isArray(d.data) ? d.data : (d.data ? [d.data] : []);
+    // Totals
+    const tNorm = items.reduce((s,i) => s + (i.total_horas_normais_min||0), 0);
+    const tHe50 = items.reduce((s,i) => s + (i.total_he_50_min||0), 0);
+    const tHe100 = items.reduce((s,i) => s + (i.total_he_100_min||0), 0);
+    const tNot = items.reduce((s,i) => s + (i.total_noturnas_min||0), 0);
+    const tAtr = items.reduce((s,i) => s + (i.total_atrasos_min||0), 0);
+    const tFalt = items.reduce((s,i) => s + (i.total_faltas||0), 0);
+    document.getElementById('compRmTotals').innerHTML =
+      `<div class="stat-card" data-g="total"><div class="stat-label">Professoras</div><div class="stat-value">${items.length}</div></div>` +
+      `<div class="stat-card" data-g="semi"><div class="stat-label">HE 50%</div><div class="stat-value">${fmtMin(tHe50)}</div></div>` +
+      `<div class="stat-card" data-g="integral"><div class="stat-label">HE 100%</div><div class="stat-value">${fmtMin(tHe100)}</div></div>` +
+      `<div class="stat-card" data-g="diaria"><div class="stat-label">Noturnas</div><div class="stat-value">${fmtMin(tNot)}</div></div>` +
+      `<div class="stat-card" data-g="semi"><div class="stat-label">Atrasos</div><div class="stat-value">${fmtMin(tAtr)}</div></div>` +
+      `<div class="stat-card" data-g="integral"><div class="stat-label">Faltas</div><div class="stat-value">${tFalt}</div></div>`;
+    document.getElementById('compRmBody').innerHTML = items.length ? items.map(r => {
+      const bhSaldo = r.banco_horas ? r.banco_horas.saldo_final_min : null;
+      const bhColor = bhSaldo === null ? '#888' : (bhSaldo >= 0 ? '#2d7a3a' : '#C8102E');
+      return `<tr><td>${esc(r.nome||'—')}</td><td>${r.dias_trabalhados}</td><td>${r.total_horas_normais_fmt||fmtMin(r.total_horas_normais_min||0)}</td><td style="color:#d4830a;font-weight:600;">${r.total_he_50_fmt||fmtMin(r.total_he_50_min||0)}</td><td style="color:#C8102E;font-weight:600;">${r.total_he_100_fmt||fmtMin(r.total_he_100_min||0)}</td><td>${fmtMin(r.total_noturnas_min||0)}</td><td>${fmtMin(r.total_atrasos_min||0)}</td><td>${r.total_faltas||0}</td><td>${r.dsr_fmt||fmtMin(r.dsr_min||0)}</td><td style="color:${bhColor};font-weight:600;">${bhSaldo !== null ? fmtMin(bhSaldo) : '—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="10" class="empty-state">Nenhum registro processado neste periodo.</td></tr>';
   }
   // ═══ CONTA & FINANCEIRO ═══
   async function loadContaFinanceiro() {
