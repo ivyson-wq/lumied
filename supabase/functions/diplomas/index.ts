@@ -2632,6 +2632,7 @@ Deno.serve(async (req) => {
     'alm_turma_save', 'alm_turma_del',
     'alm_atualizar_precos', 'alm_prof_set_turma',
     'alm_criar_req_gerente',
+    'alm_orfaos_promover',                    // promover itens órfãos → cria insumo (gerente only)
     // alm_inventario_* removido daqui — almoxarifado pode operar de ponta a ponta
     // (criar/contar/finalizar/cancelar) pra ser autônomo na função designada.
   ].includes(action)
@@ -2654,6 +2655,7 @@ Deno.serve(async (req) => {
     'alm_movimentacoes_list', 'alm_conferencia_inventario',
     'alm_inventario_criar', 'alm_inventario_list', 'alm_inventario_get',
     'alm_inventario_contar', 'alm_inventario_finalizar', 'alm_inventario_cancelar',
+    'alm_orfaos_list', 'alm_orfaos_promover',
   ].includes(action)
 
   if (isAlmGerenteAction) {
@@ -4043,6 +4045,170 @@ Deno.serve(async (req) => {
         .update({ serie_id, series_monitoras }).eq('id', professora_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
+    }
+
+    // ━━ Itens órfãos: requisições aprovadas com item sem insumo_id ━━
+    // Cobre o gap deixado pelo bug do auto-create em alm_aprovar (pré-2026-05-07,
+    // commit 95d13dc). Lista agrupa por nome normalizado pra dedupe; gerente
+    // revisa e promove em lote → cria insumos + atualiza itens das reqs.
+    const normalizarNome = (s: string): string =>
+      String(s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+        .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+
+    if (action === 'alm_orfaos_list') {
+      const { data: reqs } = await sb.from('alm_requisicoes')
+        .select('id, itens, criado_em, mes, turma_id, series(nome)')
+        .eq('escola_id', (gerente as any).escola_id)
+        .eq('status', 'aprovado')
+        .order('criado_em', { ascending: false })
+      type ItemOrfao = { req_id: string; req_data: string; turma: string; nome: string; unidade: string; preco: number; categoria: string | null; qty: number }
+      const orfaos: ItemOrfao[] = []
+      for (const r of reqs ?? []) {
+        const itens = Array.isArray((r as any).itens) ? (r as any).itens : []
+        for (const it of itens) {
+          const semId = !it?.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
+          const qtyAprov = parseFloat(it?.qty_aprovado ?? it?.qty_solicitado ?? 0)
+          if (semId && it?.nome && qtyAprov > 0 && it?.rejeitado !== true) {
+            orfaos.push({
+              req_id: r.id,
+              req_data: (r as any).criado_em,
+              turma: ((r as any).series?.nome) || '—',
+              nome: String(it.nome).trim(),
+              unidade: String(it.unidade || 'unidade'),
+              preco: parseFloat(it.preco_unit ?? it.preco ?? 0) || 0,
+              categoria: it.categoria || null,
+              qty: qtyAprov,
+            })
+          }
+        }
+      }
+      // Agrupa por nome normalizado
+      const grupos = new Map<string, {
+        chave: string;
+        nome_canonico: string;
+        variantes: Set<string>;
+        unidades: Map<string, number>;
+        categorias: Map<string, number>;
+        precos: number[];
+        req_ids: Set<string>;
+        ocorrencias: number;
+        primeira_data: string;
+        ultima_data: string;
+      }>()
+      for (const o of orfaos) {
+        const k = normalizarNome(o.nome)
+        if (!k) continue
+        let g = grupos.get(k)
+        if (!g) {
+          g = {
+            chave: k,
+            nome_canonico: o.nome,
+            variantes: new Set([o.nome]),
+            unidades: new Map(),
+            categorias: new Map(),
+            precos: [],
+            req_ids: new Set(),
+            ocorrencias: 0,
+            primeira_data: o.req_data,
+            ultima_data: o.req_data,
+          }
+          grupos.set(k, g)
+        }
+        g.variantes.add(o.nome)
+        g.unidades.set(o.unidade, (g.unidades.get(o.unidade) || 0) + 1)
+        if (o.categoria) g.categorias.set(o.categoria, (g.categorias.get(o.categoria) || 0) + 1)
+        if (o.preco > 0) g.precos.push(o.preco)
+        g.req_ids.add(o.req_id)
+        g.ocorrencias++
+        if (o.req_data < g.primeira_data) g.primeira_data = o.req_data
+        if (o.req_data > g.ultima_data) g.ultima_data = o.req_data
+      }
+      // Cross-check: já existe insumo no catálogo com nome similar? Sinaliza.
+      const { data: catalogo } = await sb.from('alm_insumos')
+        .select('id, nome, unidade')
+        .eq('escola_id', (gerente as any).escola_id)
+        .eq('ativo', true)
+      const catMap = new Map<string, { id: string; nome: string; unidade: string }>()
+      for (const c of catalogo ?? []) catMap.set(normalizarNome((c as any).nome), c as any)
+
+      const lista = Array.from(grupos.values())
+        .map(g => {
+          const unidadeDom = [...g.unidades.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 'unidade'
+          const categoriaDom = [...g.categorias.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null
+          const precoMedio = g.precos.length
+            ? Math.round(g.precos.reduce((s, p) => s + p, 0) / g.precos.length * 100) / 100
+            : 0
+          const existente = catMap.get(g.chave) || null
+          return {
+            chave: g.chave,
+            nome: g.nome_canonico,
+            variantes: Array.from(g.variantes),
+            unidade: unidadeDom,
+            categoria: categoriaDom,
+            preco: precoMedio,
+            preco_min: g.precos.length ? Math.min(...g.precos) : 0,
+            preco_max: g.precos.length ? Math.max(...g.precos) : 0,
+            ocorrencias: g.ocorrencias,
+            req_ids: Array.from(g.req_ids),
+            primeira_data: g.primeira_data,
+            ultima_data: g.ultima_data,
+            insumo_existente: existente,
+          }
+        })
+        .sort((a, b) => b.ocorrencias - a.ocorrencias || a.nome.localeCompare(b.nome))
+      return json({ data: lista, total_grupos: lista.length, total_itens: orfaos.length })
+    }
+
+    if (action === 'alm_orfaos_promover') {
+      const { grupos } = body as { grupos?: Array<{ nome: string; unidade?: string; preco?: number; categoria?: string | null; variantes: string[]; req_ids: string[]; insumo_existente_id?: string | null }> }
+      if (!Array.isArray(grupos) || !grupos.length) return json({ error: 'Nenhum grupo informado.' }, 400)
+      const escolaId = (gerente as any).escola_id
+      let promovidos = 0
+      let itensAtualizados = 0
+      const falhas: Array<{ nome: string; error: string }> = []
+      for (const g of grupos) {
+        const nome = String(g.nome || '').trim()
+        if (!nome) { falhas.push({ nome: '(vazio)', error: 'nome obrigatório' }); continue }
+        const variantesNorm = new Set((g.variantes || []).map(v => normalizarNome(v)))
+        if (variantesNorm.size === 0) variantesNorm.add(normalizarNome(nome))
+        // Cria insumo OU usa existente
+        let insumoId = g.insumo_existente_id || null
+        if (!insumoId) {
+          const { data: novo, error: errIns } = await sb.from('alm_insumos').insert({
+            nome,
+            unidade: g.unidade || 'unidade',
+            preco: Math.max(0, Number(g.preco) || 0),
+            estoque_qty: 0,
+            categoria: g.categoria || null,
+            escola_id: escolaId,
+            referencia_fonte: 'professora',
+          }).select('id').single()
+          if (errIns || !novo) {
+            falhas.push({ nome, error: errIns?.message || 'falha desconhecida no INSERT' })
+            continue
+          }
+          insumoId = novo.id
+          promovidos++
+        }
+        // Atualiza JSONB.itens de cada req
+        for (const reqId of (g.req_ids || [])) {
+          const { data: r } = await sb.from('alm_requisicoes').select('itens').eq('id', reqId).eq('escola_id', escolaId).maybeSingle()
+          if (!r) continue
+          const itens = Array.isArray((r as any).itens) ? (r as any).itens : []
+          let mudou = false
+          for (const it of itens) {
+            const semId = !it?.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
+            if (!semId) continue
+            if (it?.nome && variantesNorm.has(normalizarNome(it.nome))) {
+              it.insumo_id = insumoId
+              mudou = true
+              itensAtualizados++
+            }
+          }
+          if (mudou) await sb.from('alm_requisicoes').update({ itens }).eq('id', reqId).eq('escola_id', escolaId)
+        }
+      }
+      return json({ ok: true, promovidos, itens_atualizados: itensAtualizados, falhas })
     }
   }
 

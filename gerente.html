@@ -2198,6 +2198,29 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
             </div>
           </div>
 
+          <!-- Itens órfãos: requisições aprovadas com item sem insumo no catálogo -->
+          <div id="almOrfaosCard" style="display:none;background:#fef9e7;border:1.5px solid #f0c14b;border-radius:12px;padding:16px 20px;margin-bottom:18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap;">
+              <div>
+                <div class="sec-title" style="margin:0;">⚠️ Itens pendentes de cadastro no catálogo</div>
+                <div style="font-size:12px;color:#7a5a00;margin-top:4px;">
+                  Materiais que a professora adicionou em requisições aprovadas, mas que ainda <strong>não viraram insumo oficial</strong>.
+                  Revise nome, unidade e preço, marque os que aceita e clique em <em>Promover ao catálogo</em>.
+                </div>
+              </div>
+              <button onclick="almLoadOrfaos()" style="background:none;border:1px solid #f0c14b;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;">🔄 Recarregar</button>
+            </div>
+            <div id="almOrfaosStats" style="font-size:12px;color:#7a5a00;margin:8px 0;"></div>
+            <div id="almOrfaosList" style="margin:8px 0;max-height:520px;overflow-y:auto;"></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;border-top:1px solid #f0c14b;padding-top:10px;">
+              <label style="font-size:12px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="almOrfaosSelAll" onchange="almOrfaosToggleAll(this.checked)"> Selecionar todos
+              </label>
+              <span id="almOrfaosSelCount" style="font-size:12px;color:#7a5a00;"></span>
+              <button onclick="almPromoverOrfaos()" class="btn-create" style="margin-left:auto;padding:8px 18px;background:#d97706;">✅ Promover selecionados ao catálogo</button>
+            </div>
+          </div>
+
           <!-- Categorias configuráveis -->
           <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:18px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -6431,7 +6454,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='almDash')     { almInitPanel(); almInitMonths(); almLoadRelatorio(); }
     if(id==='almReqs')     { almLoadPendentes(); }
     if(id==='almInventario'){ document.getElementById('almInvListView').style.display='block'; document.getElementById('almInvCountView').style.display='none'; almInvCarregarLista(); }
-    if(id==='almConfig')   { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); }
+    if(id==='almConfig')   { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); almLoadOrfaos(); }
     // Legacy redirects
     if(id==='almPend')     { showPanel('almReqs'); return; }
     if(id==='almTodas')    { showPanel('almReqs'); return; }
@@ -14312,7 +14335,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     document.getElementById('almConfigTabCatalogo').style.display = tab === 'catalogo' ? '' : 'none';
     document.getElementById('almConfigTabTurmas').style.display = tab === 'turmas' ? '' : 'none';
     document.getElementById('almConfigTabOrc').style.display = tab === 'orcamentos' ? '' : 'none';
-    if (tab === 'catalogo') { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); }
+    if (tab === 'catalogo') { almLoadInsumos(); almLoadCategorias(); checkMLStatus(); almLoadOrfaos(); }
     if (tab === 'turmas') almLoadTurmas();
     if (tab === 'orcamentos') { almInitMonths(); almLoadOrcamentos(); }
   }
@@ -15464,6 +15487,92 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     almNRCart = [];
     almFecharNovaReq();
     almLoadCompras();
+  }
+
+  // ── ITENS ÓRFÃOS (reqs aprovadas sem insumo_id) ────────
+  var _almOrfaosCache = [];
+
+  async function almLoadOrfaos() {
+    const d = await callDiplomas({ action: 'alm_orfaos_list' });
+    if (d.error) { console.warn('[orfaos]', d.error); return; }
+    _almOrfaosCache = d.data || [];
+    const card = document.getElementById('almOrfaosCard');
+    if (!card) return;
+    if (!_almOrfaosCache.length) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    document.getElementById('almOrfaosStats').innerHTML =
+      `<strong>${_almOrfaosCache.length}</strong> material${_almOrfaosCache.length===1?'':'is'} distinto${_almOrfaosCache.length===1?'':'s'} aguardando · `
+      + `<strong>${d.total_itens || 0}</strong> linha${d.total_itens===1?'':'s'} de requisição afetada${d.total_itens===1?'':'s'}`;
+    document.getElementById('almOrfaosList').innerHTML = _almOrfaosCache.map((g, idx) => {
+      const variantes = (g.variantes||[]).length > 1
+        ? `<div style="font-size:10px;color:#7a5a00;margin-top:2px;">Variações na req: ${(g.variantes||[]).map(v => `<code style="background:#fff4d6;padding:1px 4px;border-radius:3px;">${esc(v)}</code>`).join(' ')}</div>`
+        : '';
+      const existente = g.insumo_existente
+        ? `<div style="font-size:10px;color:#0b7a4b;margin-top:4px;">↪ Já existe no catálogo: <strong>${esc(g.insumo_existente.nome)}</strong> — promover vai linkar nele (sem duplicar).</div>`
+        : '';
+      const dataPrimeira = g.primeira_data ? new Date(g.primeira_data).toLocaleDateString('pt-BR') : '';
+      const dataUltima = g.ultima_data ? new Date(g.ultima_data).toLocaleDateString('pt-BR') : '';
+      const precoRange = g.preco_min && g.preco_max && g.preco_min !== g.preco_max
+        ? `<span style="font-size:10px;color:#7a5a00;">${almFmtBRL(g.preco_min)}–${almFmtBRL(g.preco_max)}</span>`
+        : '';
+      return `<div class="alm-orfao-row" data-idx="${idx}" style="background:#fff;border:1px solid #f0c14b;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:24px 1fr 110px 110px 110px;gap:8px;align-items:center;">
+        <input type="checkbox" class="alm-orfao-chk" data-idx="${idx}" ${g.insumo_existente?'checked':''} onchange="almOrfaosUpdateCount()">
+        <div style="min-width:0;">
+          <input type="text" class="alm-orfao-nome" data-idx="${idx}" value="${esc(g.nome)}" style="width:100%;font-weight:600;font-size:13px;padding:4px 8px;border:1px solid #e7d99c;border-radius:6px;background:#fffbeb;">
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;">
+            ${g.ocorrencias} ocorrência${g.ocorrencias===1?'':'s'} · ${(g.req_ids||[]).length} req${(g.req_ids||[]).length===1?'':'s'}
+            ${dataPrimeira ? ` · ${dataPrimeira}${dataUltima && dataUltima!==dataPrimeira ? '–'+dataUltima : ''}` : ''}
+            ${precoRange ? ' · '+precoRange : ''}
+          </div>
+          ${variantes}
+          ${existente}
+        </div>
+        <input type="text" class="alm-orfao-unidade" data-idx="${idx}" value="${esc(g.unidade||'unidade')}" placeholder="unidade" style="padding:4px 8px;border:1px solid #e7d99c;border-radius:6px;font-size:12px;background:#fffbeb;">
+        <input type="number" class="alm-orfao-preco" data-idx="${idx}" value="${Number(g.preco||0).toFixed(2)}" step="0.01" min="0" style="padding:4px 8px;border:1px solid #e7d99c;border-radius:6px;font-size:12px;background:#fffbeb;text-align:right;">
+        <input type="text" class="alm-orfao-categoria" data-idx="${idx}" value="${esc(g.categoria||'')}" placeholder="(sem categoria)" style="padding:4px 8px;border:1px solid #e7d99c;border-radius:6px;font-size:12px;background:#fffbeb;">
+      </div>`;
+    }).join('');
+    almOrfaosUpdateCount();
+  }
+
+  function almOrfaosToggleAll(checked) {
+    document.querySelectorAll('.alm-orfao-chk').forEach(c => c.checked = checked);
+    almOrfaosUpdateCount();
+  }
+
+  function almOrfaosUpdateCount() {
+    const n = document.querySelectorAll('.alm-orfao-chk:checked').length;
+    document.getElementById('almOrfaosSelCount').textContent = n ? `${n} selecionado${n===1?'':'s'}` : '';
+  }
+
+  async function almPromoverOrfaos() {
+    const checks = Array.from(document.querySelectorAll('.alm-orfao-chk:checked'));
+    if (!checks.length) { showToast('Selecione ao menos um item.', 'warning'); return; }
+    const grupos = checks.map(c => {
+      const idx = parseInt(c.dataset.idx);
+      const orig = _almOrfaosCache[idx];
+      const nome = document.querySelector(`.alm-orfao-nome[data-idx="${idx}"]`)?.value?.trim() || orig.nome;
+      const unidade = document.querySelector(`.alm-orfao-unidade[data-idx="${idx}"]`)?.value?.trim() || 'unidade';
+      const preco = parseFloat(document.querySelector(`.alm-orfao-preco[data-idx="${idx}"]`)?.value) || 0;
+      const categoria = document.querySelector(`.alm-orfao-categoria[data-idx="${idx}"]`)?.value?.trim() || null;
+      return {
+        nome, unidade, preco, categoria,
+        variantes: orig.variantes || [orig.nome],
+        req_ids: orig.req_ids || [],
+        insumo_existente_id: orig.insumo_existente?.id || null,
+      };
+    });
+    if (!confirm(`Promover ${grupos.length} material${grupos.length===1?'':'is'} ao catálogo? Cada um virará um insumo oficial e as requisições serão vinculadas.`)) return;
+    const d = await callDiplomas({ action: 'alm_orfaos_promover', grupos });
+    if (d.error) { showToast('Erro: '+d.error, 'error'); return; }
+    const msg = `✅ ${d.promovidos} insumo${d.promovidos===1?'':'s'} criado${d.promovidos===1?'':'s'} · ${d.itens_atualizados} item${d.itens_atualizados===1?'':'ns'} de requisição linkado${d.itens_atualizados===1?'':'s'}`;
+    showToast(msg, 'success');
+    if ((d.falhas||[]).length) {
+      console.warn('Falhas ao promover:', d.falhas);
+      showToast(`⚠️ ${d.falhas.length} falha(s) — ver console.`, 'warning');
+    }
+    await almLoadOrfaos();
+    await almLoadInsumos();
   }
 
   async function almLoadInsumos() {
