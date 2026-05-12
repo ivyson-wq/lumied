@@ -380,27 +380,45 @@ router.on("workflow_processar_eventos", async (ctx) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
-  // Fetch all active event-triggered workflows
+  // Fetch all active event-triggered AND cron-triggered workflows
   const { data: workflows, error } = await sbAdmin
     .from("workflows")
     .select("*")
     .eq("ativo", true)
-    .eq("trigger_tipo", "evento");
+    .in("trigger_tipo", ["evento", "cron"]);
   if (error) throw new AppError("BAD_REQUEST", error.message);
   if (!workflows?.length) return successResponse({ processed: 0 });
 
   let processed = 0;
   for (const wf of workflows) {
-    const config = (wf.trigger_config ?? {}) as Record<string, unknown>;
-    const evento = config.evento as string | undefined;
-    if (!evento) continue;
+    try {
+      const config = (wf.trigger_config ?? {}) as Record<string, unknown>;
 
-    // Check if this event has pending triggers
-    const triggerData = await resolveEventoData(sbAdmin, wf as Record<string, unknown>, config);
-    if (!triggerData) continue;
-
-    await executarWorkflow(sbAdmin, wf as Record<string, unknown>, triggerData);
-    processed++;
+      if (wf.trigger_tipo === "evento") {
+        const evento = config.evento as string | undefined;
+        if (!evento) continue;
+        const triggerData = await resolveEventoData(sbAdmin, wf as Record<string, unknown>, config);
+        if (!triggerData) continue;
+        await executarWorkflow(sbAdmin, wf as Record<string, unknown>, triggerData);
+        processed++;
+      } else if (wf.trigger_tipo === "cron") {
+        // For cron workflows, resolve data based on the event hint in config
+        // (e.g., boleto_vencendo cron has antecedencia_dias)
+        const evento = config.evento as string | undefined;
+        if (evento) {
+          const triggerData = await resolveEventoData(sbAdmin, wf as Record<string, unknown>, config);
+          if (!triggerData) continue;
+          await executarWorkflow(sbAdmin, wf as Record<string, unknown>, triggerData);
+        } else {
+          // Pure cron (no event resolver needed) — execute with escola context
+          const { data: escola } = await sbAdmin.from("escolas").select("nome").eq("id", wf.escola_id).maybeSingle();
+          await executarWorkflow(sbAdmin, wf as Record<string, unknown>, { escola_nome: escola?.nome ?? "", escola_id: wf.escola_id });
+        }
+        processed++;
+      }
+    } catch (e) {
+      log.error("Erro processando workflow", { workflow_id: wf.id, err: (e as Error)?.message });
+    }
   }
 
   log.info("workflow_processar_eventos concluído", { processed });
@@ -423,23 +441,25 @@ async function resolveEventoData(
   switch (evento) {
     case "aluno_falta": {
       const minFaltas = Number(condicao.faltas_consecutivas ?? 3);
-      // Find students with consecutive absences >= threshold
       const { data } = await sb.rpc("get_alunos_faltas_consecutivas", {
         p_escola_id: escola_id,
         p_min_faltas: minFaltas,
-      }).maybeSingle();
-      return data ? { ...(data as Record<string, unknown>), evento } : null;
+      });
+      // Returns multiple rows — process each one (first match for now)
+      const rows = Array.isArray(data) ? data : data ? [data] : [];
+      if (!rows.length) return null;
+      const r = rows[0] as Record<string, unknown>;
+      return { evento, ...r };
     }
 
     case "lead_sem_atividade": {
       const diasInativo = Number(condicao.dias_inativo ?? 7);
       const corte = new Date(Date.now() - diasInativo * 86400_000).toISOString();
       const { data } = await sb
-        .from("leads")
-        .select("id,nome,email,etapa,ultima_atividade")
+        .from("crm_leads")
+        .select("id,nome_responsavel,email,serie_interesse,atualizado_em")
         .eq("escola_id", escola_id)
-        .lt("ultima_atividade", corte)
-        .eq("status", "ativo")
+        .lt("atualizado_em", corte)
         .limit(1)
         .maybeSingle();
       if (!data) return null;
@@ -447,33 +467,85 @@ async function resolveEventoData(
       return {
         evento,
         lead_id: d.id,
-        lead_nome: d.nome,
+        lead_nome: d.nome_responsavel,
         lead_email: d.email,
-        lead_etapa: d.etapa,
+        lead_etapa: d.serie_interesse,
         dias_inativo: diasInativo,
       };
     }
 
+    case "matricula_nova":
     case "matricula_criada": {
-      // Check for enrollments in the last cron interval (1 hour)
+      // Check for enrollments in the last cron interval (30 min)
       const { data } = await sb
-        .from("matriculas")
-        .select("id,aluno_id,turma_id,data_inicio,alunos(nome),turmas(nome)")
+        .from("crm_matriculas")
+        .select("id,nome_crianca,nome_responsavel,serie,turma,email,telefone")
         .eq("escola_id", escola_id)
-        .gte("criado_em", new Date(Date.now() - 3_600_000).toISOString())
+        .gte("criado_em", new Date(Date.now() - 1_800_000).toISOString())
+        .order("criado_em", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (!data) return null;
       const d = data as Record<string, unknown>;
-      // deno-lint-ignore no-explicit-any
-      const aluno = (d.alunos as any)?.nome ?? "Aluno";
-      // deno-lint-ignore no-explicit-any
-      const turma = (d.turmas as any)?.nome ?? "Turma";
-      return { evento, matricula_id: d.id, aluno_nome: aluno, turma_nome: turma, data_inicio: d.data_inicio };
+      return {
+        evento,
+        matricula_id: d.id,
+        aluno_nome: d.nome_crianca,
+        turma_nome: `${d.serie} ${d.turma || ""}`.trim(),
+        responsavel_nome: d.nome_responsavel,
+        responsavel_email: d.email ?? "",
+        responsavel_telefone: d.telefone ?? "",
+      };
+    }
+
+    case "boleto_vencendo": {
+      const dias = Number(condicao.antecedencia_dias ?? 3);
+      const { data } = await sb.rpc("get_boletos_vencendo", {
+        p_escola_id: escola_id,
+        p_dias_antecedencia: dias,
+      });
+      const rows = Array.isArray(data) ? data : data ? [data] : [];
+      if (!rows.length) return null;
+      const r = rows[0] as Record<string, unknown>;
+      return {
+        evento,
+        boleto_id: r.boleto_id,
+        crianca_nome: r.crianca_nome,
+        familia_nome: r.familia_nome,
+        valor: r.valor,
+        vencimento: r.vencimento,
+        dias_para_vencer: r.dias_para_vencer,
+        responsavel_email: r.responsavel_email ?? r.familia_email,
+        responsavel_telefone: r.responsavel_telefone ?? "",
+        boleto_valor: r.valor,
+        boleto_vencimento: r.vencimento,
+        aluno_nome: r.crianca_nome,
+      };
+    }
+
+    case "aniversario": {
+      const { data } = await sb.rpc("get_aniversariantes_hoje", {
+        p_escola_id: escola_id,
+      });
+      const rows = Array.isArray(data) ? data : data ? [data] : [];
+      if (!rows.length) return null;
+      // Build a summary for all birthday kids
+      const nomes = rows.map((r: Record<string, unknown>) => `${r.aluno_nome} (${r.idade} anos)`);
+      return {
+        evento,
+        aniversariantes_lista: nomes.join(", "),
+        aniversariantes_count: rows.length,
+        // First birthday kid details (for single-target actions)
+        aluno_nome: (rows[0] as Record<string, unknown>).aluno_nome,
+        serie: (rows[0] as Record<string, unknown>).serie,
+        responsavel_email: (rows[0] as Record<string, unknown>).responsavel_email ?? "",
+        responsavel_nome: (rows[0] as Record<string, unknown>).responsavel_nome ?? "",
+        responsavel_telefone: (rows[0] as Record<string, unknown>).responsavel_telefone ?? "",
+      };
     }
 
     default:
-      // Unknown event type — skip silently
+      log.warn("Evento desconhecido", { evento, workflow_id: workflow.id });
       return null;
   }
 }

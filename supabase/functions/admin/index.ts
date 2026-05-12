@@ -1182,6 +1182,17 @@ router.on("staff_criar_escola", authStaff, async (ctx) => {
   pendencias.push('Verificar SSL em https://' + slug + '.lumied.com.br (~1 min)');
   pendencias.push('Testar login do gerente em https://' + slug + '.lumied.com.br/gerente.html');
 
+  // 10. Seed workflow templates
+  try {
+    await ctx.sb.from("workflows").insert([
+      { escola_id: escola.id, nome: 'Alerta 3 Faltas Consecutivas', descricao: 'Envia WhatsApp ao responsável quando aluno acumula 3+ faltas consecutivas.', ativo: true, trigger_tipo: 'evento', trigger_config: { evento: 'aluno_falta', condicao: { faltas_consecutivas: 3 } }, condicoes: [], acoes: [{ tipo: 'enviar_whatsapp', template: 'lembrete_falta', para: 'responsavel', mensagem: 'Prezado(a) {{responsavel_nome}}, informamos que {{aluno_nome}} acumula {{faltas_consecutivas}} falta(s) consecutiva(s). Por favor, entre em contato com a escola.' }, { tipo: 'criar_notificacao', para: 'coordenadora', mensagem: 'Aluno {{aluno_nome}} ({{serie}}) acumula {{faltas_consecutivas}} faltas consecutivas.', prioridade: 'alta' }] },
+      { escola_id: escola.id, nome: 'Lembrete Boleto 3 Dias', descricao: 'Envia e-mail ao responsável 3 dias antes do vencimento do boleto.', ativo: true, trigger_tipo: 'cron', trigger_config: { cron: '0 8 * * *', antecedencia_dias: 3 }, condicoes: [], acoes: [{ tipo: 'enviar_email', assunto: 'Lembrete de Vencimento', para: 'responsavel', template: 'lembrete_boleto', vars: { vencimento: '{{vencimento}}', valor: '{{valor}}', aluno: '{{crianca_nome}}' } }] },
+      { escola_id: escola.id, nome: 'Boas-vindas Nova Matrícula', descricao: 'Envia e-mail de boas-vindas à família quando uma nova matrícula é criada.', ativo: true, trigger_tipo: 'evento', trigger_config: { evento: 'matricula_criada' }, condicoes: [], acoes: [{ tipo: 'enviar_email', assunto: 'Bem-vindo(a)!', para: 'responsavel', template: 'boas_vindas_matricula', vars: { aluno: '{{aluno_nome}}', turma: '{{turma_nome}}' } }, { tipo: 'criar_notificacao', para: 'secretaria', mensagem: 'Nova matrícula: {{aluno_nome}} na turma {{turma_nome}}.', prioridade: 'normal' }] },
+      { escola_id: escola.id, nome: 'Aniversariante do Dia', descricao: 'Notifica a professora todos os dias com os aniversariantes.', ativo: true, trigger_tipo: 'cron', trigger_config: { cron: '0 8 * * *' }, condicoes: [], acoes: [{ tipo: 'criar_notificacao', para: 'professora', mensagem: 'Hoje fazem aniversário: {{aniversariantes_lista}}.', prioridade: 'normal' }] },
+      { escola_id: escola.id, nome: 'Follow-up Lead Parado (7 dias)', descricao: 'Notifica o comercial quando um lead fica sem movimentação por 7+ dias.', ativo: true, trigger_tipo: 'evento', trigger_config: { evento: 'lead_sem_atividade', condicao: { dias_inativo: 7 } }, condicoes: [], acoes: [{ tipo: 'criar_notificacao', para: 'comercial', mensagem: 'Lead {{lead_nome}} ({{lead_email}}) está sem movimentação há {{dias_inativo}} dias. Agende um contato!', prioridade: 'alta' }] },
+    ]);
+  } catch (e) { console.warn('[staff_criar_escola] falha ao seed workflows:', e); }
+
   log.info("Nova escola criada", { escola_id: escola.id, nome, slug, plano: planoSlug, modulos: modulosAtivados.length });
 
   logAudit(ctx.sb, {
