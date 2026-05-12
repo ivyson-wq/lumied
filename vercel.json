@@ -69,6 +69,17 @@
       "permanent": true
     },
     {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.lumied.com.br"
+        }
+      ],
+      "destination": "https://lumied.com.br/:path*",
+      "permanent": true
+    },
+    {
       "source": "/site",
       "has": [
         {
@@ -270,6 +281,26 @@
       "destination": "/site/sobre/index.html"
     },
     {
+      "source": "/clientes",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/clientes/index.html"
+    },
+    {
+      "source": "/clientes/",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/clientes/index.html"
+    },
+    {
       "source": "/clientes/:path*",
       "has": [
         {
@@ -328,6 +359,86 @@
         }
       ],
       "destination": "/site/termos/:path*"
+    },
+    {
+      "source": "/vs",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/index.html"
+    },
+    {
+      "source": "/vs/",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/index.html"
+    },
+    {
+      "source": "/vs/escolaweb",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/escolaweb/index.html"
+    },
+    {
+      "source": "/vs/escolaweb/",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/escolaweb/index.html"
+    },
+    {
+      "source": "/vs/sponte",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/sponte/index.html"
+    },
+    {
+      "source": "/vs/sponte/",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/sponte/index.html"
+    },
+    {
+      "source": "/vs/classapp",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/classapp/index.html"
+    },
+    {
+      "source": "/vs/classapp/",
+      "has": [
+        {
+          "type": "host",
+          "value": "lumied.com.br"
+        }
+      ],
+      "destination": "/site/vs/classapp/index.html"
     },
     {
       "source": "/vs/:path*",

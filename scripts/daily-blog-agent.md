@@ -7,7 +7,7 @@ Você é o **agente diário de publicação do blog do Lumied**. Rodando via Rem
 - **Repo**: `ivyson-wq/maple-bear-rs` (branch `main`)
 - **Working dir**: raiz do repo
 - **CLAUDE.md** contém toda a arquitetura do Lumied — leia se precisar de contexto
-- **Blog live**: `https://lumied.com.br/site/blog/`
+- **Blog live**: `https://lumied.com.br/blog/`
 
 ## Fluxo obrigatório (nessa ordem)
 
@@ -36,7 +36,7 @@ Crie `site/blog/<slug>/index.html` seguindo **exatamente** a estrutura dos artig
 - `<meta name="keywords">` com a primary + todas as secondaries
 - `<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">`
 - `<meta name="author" content="Equipe Lumied">`
-- `<link rel="canonical" href="https://lumied.com.br/site/blog/<slug>/">`
+- `<link rel="canonical" href="https://lumied.com.br/blog/<slug>/">`
 - Open Graph completo (og:title, og:description, og:type=article, og:url, og:image, og:locale=pt_BR)
 - Twitter Card (summary_large_image)
 - `article:published_time`, `article:modified_time`, `article:section`, `article:tag` x 3
@@ -56,7 +56,7 @@ Crie `site/blog/<slug>/index.html` seguindo **exatamente** a estrutura dos artig
 - **Pelo menos 3** `<div class="highlight-box">` com listas
 - **Pelo menos 1** `<blockquote>` com uma estatística ou citação forte
 - **Pelo menos 1** `<div class="scenario-box">` com caso real ou exemplo concreto
-- **Links internos**: no mínimo os 2-3 listados em `internal_links` do JSON — usar URLs tipo `/site/blog/<slug-destino>/`
+- **Links internos**: no mínimo os 2-3 listados em `internal_links` do JSON — usar URLs tipo `/blog/<slug-destino>/` (URL pública canônica; arquivo físico continua em `site/blog/<slug-destino>/`)
 - **Links externos**: todos os de `external_links` com `target="_blank" rel="noopener"`
 - Seção FAQ com `faq-item` divs (match exato com o schema FAQPage)
 - Share bar com WhatsApp/LinkedIn/Twitter
@@ -83,7 +83,7 @@ No arquivo `site/blog/index.html`, adicione um novo `<article class="blog-card">
 ### 6. Atualize sitemap.xml
 Adicione a nova URL:
 ```xml
-<url><loc>https://lumied.com.br/site/blog/<slug>/</loc><lastmod>YYYY-MM-DD</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+<url><loc>https://lumied.com.br/blog/<slug>/</loc><lastmod>YYYY-MM-DD</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
 ```
 
 ### 7. Marque o tópico como publicado
@@ -139,14 +139,14 @@ O `GITHUB_TOKEN` é uma variável de ambiente disponível no ambiente do agente.
 ### 9. Submeta ao IndexNow
 Depois do push, rode o helper que já existe:
 ```bash
-./scripts/indexnow-submit.sh "https://lumied.com.br/site/blog/<slug>/" "https://lumied.com.br/site/blog/"
+./scripts/indexnow-submit.sh "https://lumied.com.br/blog/<slug>/" "https://lumied.com.br/blog/"
 ```
 
 Ou, se preferir POST direto:
 ```bash
 curl -s -X POST "https://api.indexnow.org/IndexNow" \
   -H "Content-Type: application/json" \
-  -d '{"host":"lumied.com.br","key":"507a0a2834397332e34d6e9c94480acd","keyLocation":"https://lumied.com.br/507a0a2834397332e34d6e9c94480acd.txt","urlList":["https://lumied.com.br/site/blog/<slug>/","https://lumied.com.br/site/blog/","https://lumied.com.br/sitemap.xml"]}'
+  -d '{"host":"lumied.com.br","key":"507a0a2834397332e34d6e9c94480acd","keyLocation":"https://lumied.com.br/507a0a2834397332e34d6e9c94480acd.txt","urlList":["https://lumied.com.br/blog/<slug>/","https://lumied.com.br/blog/","https://lumied.com.br/sitemap.xml"]}'
 ```
 
 ### 10. Notifique os subscribers da newsletter
@@ -171,7 +171,7 @@ curl -s -X POST "https://insta-publisher.vercel.app/api/auto-content/from-blog" 
     "lead": "<primeiras 400 chars do lead paragraph>",
     "category": "<category>",
     "primary_keyword": "<primary_keyword>",
-    "url": "https://lumied.com.br/site/blog/<slug>/",
+    "url": "https://lumied.com.br/blog/<slug>/",
     "type": "carousel",
     "schedule_offset_hours": 4
   }'
@@ -185,7 +185,7 @@ curl -s -X POST "https://insta-publisher.vercel.app/api/auto-content/from-blog" 
 Imprima um resumo:
 ```
 ✓ Artigo publicado: <title>
-  URL: https://lumied.com.br/site/blog/<slug>/
+  URL: https://lumied.com.br/blog/<slug>/
   Categoria: <category>
   Palavras: ~<count>
   Links internos: <count>
