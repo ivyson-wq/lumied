@@ -3016,7 +3016,7 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     const lim = Math.min(Math.max(parseInt(String(limit || 500)) || 500, 1), 2000);
     let q = admin
       .from("manutencoes")
-      .select("id, descricao, localizacao, urgencia, status, equipe_responsavel, foto_url, foto_path, observacao, observacao_gerente, data_conclusao, criado_em, atualizado_em, usuario_id, escola_id, pergunta_coordenacao, pergunta_em, pergunta_por, pergunta_resposta, pergunta_respondida_em, usuarios(nome, email)")
+      .select("id, descricao, localizacao, urgencia, status, equipe_responsavel, foto_url, foto_path, observacao_gerente, data_conclusao, criado_em, atualizado_em, usuario_id, escola_id, pergunta_coordenacao, pergunta_em, pergunta_por, pergunta_resposta, pergunta_respondida_em, usuarios(nome, email)")
       .eq("escola_id", sessionEscolaId)
       .order("criado_em", { ascending: false })
       .limit(lim);
