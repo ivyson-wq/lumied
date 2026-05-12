@@ -1626,6 +1626,382 @@ router.on("compliance_banco_horas_list", authGerenteOrSecretaria, feat, async (c
 });
 
 // ═══════════════════════════════════════════════════════════════
+//  LGPD — Consentimentos e Proteção de Dados
+// ═══════════════════════════════════════════════════════════════
+
+router.on("lgpd_consentimentos_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_lgpd_consentimentos").select("*").eq("escola_id", ctx.escola_id!).order("tipo");
+  return successResponse(data ?? []);
+});
+
+router.on("lgpd_consentimento_criar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { tipo, titulo, descricao, obrigatorio } = ctx.body as any;
+  if (!tipo || !titulo) throw new AppError("VALIDATION_FAILED", "tipo e titulo obrigatórios.");
+  const { data, error } = await ctx.sb.from("compliance_lgpd_consentimentos").insert({ escola_id: ctx.escola_id, tipo, titulo, descricao, obrigatorio: obrigatorio ?? false, vigente_desde: new Date().toISOString().split("T")[0] }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("lgpd_aceites_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { consentimento_id } = ctx.body as any;
+  let q = ctx.sb.from("compliance_lgpd_aceites").select("*, compliance_lgpd_consentimentos(titulo, tipo)").eq("escola_id", ctx.escola_id!).order("aceito_em", { ascending: false });
+  if (consentimento_id) q = q.eq("consentimento_id", consentimento_id);
+  const { data } = await q.limit(200);
+  return successResponse(data ?? []);
+});
+
+router.on("lgpd_aceite_registrar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { consentimento_id, familia_id, aluno_id, responsavel_nome, responsavel_email, aceito } = ctx.body as any;
+  if (!consentimento_id) throw new AppError("VALIDATION_FAILED", "consentimento_id obrigatório.");
+  const { data, error } = await ctx.sb.from("compliance_lgpd_aceites").upsert({ escola_id: ctx.escola_id, consentimento_id, familia_id, aluno_id, responsavel_nome, responsavel_email, aceito, aceito_em: new Date().toISOString() }, { onConflict: "consentimento_id,familia_id,aluno_id" }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("lgpd_incidentes_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_lgpd_incidentes").select("*").eq("escola_id", ctx.escola_id!).order("criado_em", { ascending: false }).limit(100);
+  return successResponse(data ?? []);
+});
+
+router.on("lgpd_incidente_criar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { tipo, gravidade, descricao, dados_afetados, titulares_afetados, data_ocorrencia } = ctx.body as any;
+  if (!tipo || !descricao || !data_ocorrencia) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios ausentes.");
+  const { data, error } = await ctx.sb.from("compliance_lgpd_incidentes").insert({ escola_id: ctx.escola_id, tipo, gravidade, descricao, dados_afetados, titulares_afetados, data_ocorrencia, data_deteccao: new Date().toISOString().split("T")[0] }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("lgpd_incidente_atualizar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, status, medidas_tomadas, notificado_anpd, notificado_titulares } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const updates: any = {};
+  if (status) updates.status = status;
+  if (medidas_tomadas) updates.medidas_tomadas = medidas_tomadas;
+  if (notificado_anpd) { updates.notificado_anpd = true; updates.notificado_anpd_em = new Date().toISOString(); }
+  if (notificado_titulares) { updates.notificado_titulares = true; updates.notificado_titulares_em = new Date().toISOString(); }
+  const { data, error } = await ctx.sb.from("compliance_lgpd_incidentes").update(updates).eq("id", id).eq("escola_id", ctx.escola_id!).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("lgpd_solicitacoes_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_lgpd_solicitacoes").select("*").eq("escola_id", ctx.escola_id!).order("criado_em", { ascending: false }).limit(100);
+  return successResponse(data ?? []);
+});
+
+router.on("lgpd_solicitacao_criar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { tipo, solicitante_nome, solicitante_email, solicitante_cpf, descricao } = ctx.body as any;
+  if (!tipo || !solicitante_nome || !solicitante_email) throw new AppError("VALIDATION_FAILED", "Campos obrigatórios.");
+  const prazo = new Date(); prazo.setDate(prazo.getDate() + 21); // ~15 dias úteis
+  const { data, error } = await ctx.sb.from("compliance_lgpd_solicitacoes").insert({ escola_id: ctx.escola_id, tipo, solicitante_nome, solicitante_email, solicitante_cpf, descricao, prazo_legal: prazo.toISOString().split("T")[0] }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("lgpd_solicitacao_responder", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, status, resposta } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const { data, error } = await ctx.sb.from("compliance_lgpd_solicitacoes").update({ status, resposta, respondido_em: new Date().toISOString(), responsavel: ctx.user?.nome }).eq("id", id).eq("escola_id", ctx.escola_id!).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  AVCB — Segurança contra Incêndio
+// ═══════════════════════════════════════════════════════════════
+
+router.on("avcb_get", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_avcb").select("*").eq("escola_id", ctx.escola_id!).order("criado_em", { ascending: false }).limit(1).maybeSingle();
+  return successResponse(data);
+});
+
+router.on("avcb_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, numero_avcb, data_emissao, data_validade, arquivo_url, status, observacoes } = ctx.body as any;
+  const row = { escola_id: ctx.escola_id, numero_avcb, data_emissao, data_validade, arquivo_url, status, observacoes };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_avcb").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_avcb").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("extintores_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_extintores").select("*").eq("escola_id", ctx.escola_id!).eq("ativo", true).order("localizacao");
+  return successResponse(data ?? []);
+});
+
+router.on("extintor_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, tipo, localizacao, numero_patrimonio, data_fabricacao, data_recarga, proxima_recarga, status } = ctx.body as any;
+  if (!tipo || !localizacao) throw new AppError("VALIDATION_FAILED", "tipo e localização obrigatórios.");
+  const row = { escola_id: ctx.escola_id, tipo, localizacao, numero_patrimonio, data_fabricacao, data_recarga, proxima_recarga, status };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_extintores").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_extintores").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("extintor_delete", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id } = ctx.body as any;
+  await ctx.sb.from("compliance_extintores").update({ ativo: false }).eq("id", id).eq("escola_id", ctx.escola_id!);
+  return successResponse({ ok: true });
+});
+
+router.on("simulados_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_simulados_evacuacao").select("*").eq("escola_id", ctx.escola_id!).order("data_simulado", { ascending: false }).limit(50);
+  return successResponse(data ?? []);
+});
+
+router.on("simulado_criar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data_simulado, tipo, participantes, tempo_evacuacao_seg, pontos_melhoria, responsavel, proximo_simulado, observacoes } = ctx.body as any;
+  if (!data_simulado) throw new AppError("VALIDATION_FAILED", "data obrigatória.");
+  const { data, error } = await ctx.sb.from("compliance_simulados_evacuacao").insert({ escola_id: ctx.escola_id, data_simulado, tipo, participantes, tempo_evacuacao_seg, pontos_melhoria, responsavel, proximo_simulado, observacoes }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("plano_evacuacao_get", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_plano_evacuacao").select("*").eq("escola_id", ctx.escola_id!).order("atualizado_em", { ascending: false }).limit(1).maybeSingle();
+  return successResponse(data);
+});
+
+router.on("plano_evacuacao_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, ponto_encontro, responsavel_geral, responsavel_blocos, telefones_emergencia, arquivo_url } = ctx.body as any;
+  const row = { escola_id: ctx.escola_id, ponto_encontro, responsavel_geral, responsavel_blocos, telefones_emergencia, arquivo_url, atualizado_em: new Date().toISOString() };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_plano_evacuacao").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_plano_evacuacao").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  ANVISA — Saúde e Segurança Alimentar
+// ═══════════════════════════════════════════════════════════════
+
+router.on("anvisa_equipamentos_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_anvisa_equipamentos").select("*").eq("escola_id", ctx.escola_id!).eq("ativo", true).order("nome");
+  return successResponse(data ?? []);
+});
+
+router.on("anvisa_equipamento_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, nome, tipo, localizacao, limite_min, limite_max } = ctx.body as any;
+  if (!nome || !tipo) throw new AppError("VALIDATION_FAILED", "nome e tipo obrigatórios.");
+  const row = { escola_id: ctx.escola_id, nome, tipo, localizacao, limite_min, limite_max };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_anvisa_equipamentos").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_anvisa_equipamentos").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("anvisa_temperatura_registrar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { equipamento, temperatura, limite_min, limite_max } = ctx.body as any;
+  if (!equipamento || temperatura == null) throw new AppError("VALIDATION_FAILED", "equipamento e temperatura obrigatórios.");
+  const dentro = (limite_min == null || temperatura >= limite_min) && (limite_max == null || temperatura <= limite_max);
+  const { data, error } = await ctx.sb.from("compliance_anvisa_temperaturas").insert({ escola_id: ctx.escola_id, equipamento, temperatura, limite_min, limite_max, dentro_limite: dentro, registrado_por: ctx.user?.nome }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("anvisa_temperaturas_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { equipamento, dias } = ctx.body as any;
+  let q = ctx.sb.from("compliance_anvisa_temperaturas").select("*").eq("escola_id", ctx.escola_id!).order("registrado_em", { ascending: false });
+  if (equipamento) q = q.eq("equipamento", equipamento);
+  const { data } = await q.limit(dias ? dias * 10 : 100);
+  return successResponse(data ?? []);
+});
+
+router.on("anvisa_pragas_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_anvisa_controle_pragas").select("*").eq("escola_id", ctx.escola_id!).order("data_servico", { ascending: false }).limit(20);
+  return successResponse(data ?? []);
+});
+
+router.on("anvisa_praga_criar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { empresa, data_servico, proximo_servico, tipo_servico, certificado_url, observacoes } = ctx.body as any;
+  if (!empresa || !data_servico) throw new AppError("VALIDATION_FAILED", "empresa e data obrigatórios.");
+  const { data, error } = await ctx.sb.from("compliance_anvisa_controle_pragas").insert({ escola_id: ctx.escola_id, empresa, data_servico, proximo_servico, tipo_servico, certificado_url, observacoes }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("anvisa_manipuladores_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_anvisa_manipuladores").select("*").eq("escola_id", ctx.escola_id!).eq("ativo", true).order("funcionario_nome");
+  return successResponse(data ?? []);
+});
+
+router.on("anvisa_manipulador_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, funcionario_nome, curso, instituicao, data_conclusao, validade, certificado_url } = ctx.body as any;
+  if (!funcionario_nome || !curso) throw new AppError("VALIDATION_FAILED", "nome e curso obrigatórios.");
+  const row = { escola_id: ctx.escola_id, funcionario_nome, curso, instituicao, data_conclusao, validade, certificado_url };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_anvisa_manipuladores").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_anvisa_manipuladores").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  ACESSIBILIDADE (LBI)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("acessibilidade_audit_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_acessibilidade_audit").select("*").eq("escola_id", ctx.escola_id!).order("area, item");
+  return successResponse(data ?? []);
+});
+
+router.on("acessibilidade_audit_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, area, item, conforme, observacao, plano_acao, prazo_correcao, responsavel } = ctx.body as any;
+  if (!area || !item) throw new AppError("VALIDATION_FAILED", "area e item obrigatórios.");
+  const row = { escola_id: ctx.escola_id, area, item, conforme, observacao, plano_acao, prazo_correcao, responsavel };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_acessibilidade_audit").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_acessibilidade_audit").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("acessibilidade_corrigir", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id } = ctx.body as any;
+  const { data, error } = await ctx.sb.from("compliance_acessibilidade_audit").update({ corrigido: true, corrigido_em: new Date().toISOString().split("T")[0] }).eq("id", id).eq("escola_id", ctx.escola_id!).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("pei_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_pei").select("*").eq("escola_id", ctx.escola_id!).order("aluno_nome");
+  return successResponse(data ?? []);
+});
+
+router.on("pei_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, aluno_id, aluno_nome, diagnostico, cid, necessidades, acomodacoes, objetivos, professor_aee, data_inicio, data_revisao } = ctx.body as any;
+  if (!aluno_nome) throw new AppError("VALIDATION_FAILED", "aluno_nome obrigatório.");
+  const row = { escola_id: ctx.escola_id, aluno_id, aluno_nome, diagnostico, cid, necessidades, acomodacoes, objetivos, professor_aee, data_inicio, data_revisao };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_pei").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_pei").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  SEGUROS
+// ═══════════════════════════════════════════════════════════════
+
+router.on("seguros_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_seguros").select("*").eq("escola_id", ctx.escola_id!).order("tipo");
+  return successResponse(data ?? []);
+});
+
+router.on("seguro_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, tipo, seguradora, numero_apolice, cobertura_resumo, valor_cobertura, premio_mensal, data_inicio, data_fim, arquivo_url, contato_sinistro, observacoes } = ctx.body as any;
+  if (!tipo || !seguradora) throw new AppError("VALIDATION_FAILED", "tipo e seguradora obrigatórios.");
+  const row = { escola_id: ctx.escola_id, tipo, seguradora, numero_apolice, cobertura_resumo, valor_cobertura, premio_mensal, data_inicio, data_fim, arquivo_url, contato_sinistro, observacoes };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_seguros").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_seguros").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  FISCAL / eSocial
+// ═══════════════════════════════════════════════════════════════
+
+router.on("fiscal_obrigacoes_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { ano } = ctx.body as any;
+  let q = ctx.sb.from("compliance_fiscal_obrigacoes").select("*").eq("escola_id", ctx.escola_id!).order("competencia", { ascending: false });
+  if (ano) q = q.like("competencia", `${ano}-%`);
+  const { data } = await q.limit(200);
+  return successResponse(data ?? []);
+});
+
+router.on("fiscal_obrigacao_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, obrigacao, competencia, status, data_envio, protocolo, comprovante_url, valor, observacoes } = ctx.body as any;
+  if (!obrigacao || !competencia) throw new AppError("VALIDATION_FAILED", "obrigação e competência obrigatórios.");
+  const row = { escola_id: ctx.escola_id, obrigacao, competencia, status, data_envio, protocolo, comprovante_url, valor, observacoes };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_fiscal_obrigacoes").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_fiscal_obrigacoes").upsert(row, { onConflict: "escola_id,obrigacao,competencia" }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  REGISTROS PROFISSIONAIS & ANTECEDENTES
+// ═══════════════════════════════════════════════════════════════
+
+router.on("registros_profissionais_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_registros_profissionais").select("*").eq("escola_id", ctx.escola_id!).order("funcionario_nome");
+  return successResponse(data ?? []);
+});
+
+router.on("registro_profissional_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, funcionario_id, funcionario_nome, tipo_registro, numero_registro, orgao, data_emissao, data_validade, arquivo_url } = ctx.body as any;
+  if (!funcionario_nome || !tipo_registro) throw new AppError("VALIDATION_FAILED", "nome e tipo obrigatórios.");
+  const st = data_validade && new Date(data_validade) < new Date() ? "vencido" : "valido";
+  const row = { escola_id: ctx.escola_id, funcionario_id, funcionario_nome, tipo_registro, numero_registro, orgao, data_emissao, data_validade, arquivo_url, status: st };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_registros_profissionais").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_registros_profissionais").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+router.on("antecedentes_list", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { data } = await ctx.sb.from("compliance_antecedentes").select("*").eq("escola_id", ctx.escola_id!).order("funcionario_nome");
+  return successResponse(data ?? []);
+});
+
+router.on("antecedente_salvar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { id, funcionario_id, funcionario_nome, tipo, data_emissao, data_validade, resultado, arquivo_url } = ctx.body as any;
+  if (!funcionario_nome || !tipo) throw new AppError("VALIDATION_FAILED", "nome e tipo obrigatórios.");
+  const row = { escola_id: ctx.escola_id, funcionario_id, funcionario_nome, tipo, data_emissao, data_validade, resultado, arquivo_url };
+  const { data, error } = id
+    ? await ctx.sb.from("compliance_antecedentes").update(row).eq("id", id).eq("escola_id", ctx.escola_id!).select().single()
+    : await ctx.sb.from("compliance_antecedentes").insert(row).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD COMPLIANCE COMPLETO (v2)
+// ═══════════════════════════════════════════════════════════════
+
+router.on("compliance_dashboard_v2", authGerenteOrSecretaria, feat, async (ctx) => {
+  const eid = ctx.escola_id!;
+  const hoje = new Date().toISOString().split("T")[0];
+  const [inc, cert, insp, cal, avcb, ext, seg, lgpd, pei] = await Promise.all([
+    ctx.sb.from("compliance_incidentes").select("id, status, gravidade").eq("escola_id", eid).in("status", ["registrado", "em_investigacao"]),
+    ctx.sb.from("compliance_certificacoes").select("id, status").eq("escola_id", eid).eq("status", "vencida"),
+    ctx.sb.from("compliance_inspecoes").select("id, status").eq("escola_id", eid).in("status", ["pendencias", "reprovada"]),
+    ctx.sb.from("compliance_calendario").select("id, status").eq("escola_id", eid).eq("status", "atrasado"),
+    ctx.sb.from("compliance_avcb").select("id, data_validade, status").eq("escola_id", eid).order("criado_em", { ascending: false }).limit(1).maybeSingle(),
+    ctx.sb.from("compliance_extintores").select("id, status").eq("escola_id", eid).eq("ativo", true).in("status", ["vencido", "recarregar"]),
+    ctx.sb.from("compliance_seguros").select("id, status").eq("escola_id", eid).eq("status", "vencido"),
+    ctx.sb.from("compliance_lgpd_solicitacoes").select("id, status").eq("escola_id", eid).eq("status", "pendente"),
+    ctx.sb.from("compliance_pei").select("id, status").eq("escola_id", eid).eq("status", "ativo"),
+  ]);
+  const problemas = (inc.data?.length || 0) + (cert.data?.length || 0) + (insp.data?.length || 0) + (cal.data?.length || 0)
+    + (ext.data?.length || 0) + (seg.data?.length || 0) + (lgpd.data?.length || 0)
+    + (avcb.data?.status === "vencido" ? 1 : 0);
+  const score = Math.max(0, 100 - problemas * 5);
+  return successResponse({
+    score,
+    incidentes_abertos: inc.data?.length || 0,
+    certificacoes_vencidas: cert.data?.length || 0,
+    inspecoes_pendencias: insp.data?.length || 0,
+    calendario_atrasados: cal.data?.length || 0,
+    avcb_status: avcb.data?.status || "sem_registro",
+    avcb_validade: avcb.data?.data_validade || null,
+    extintores_problemas: ext.data?.length || 0,
+    seguros_vencidos: seg.data?.length || 0,
+    lgpd_pendentes: lgpd.data?.length || 0,
+    pei_ativos: pei.data?.length || 0,
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  Server
 // ═══════════════════════════════════════════════════════════════
 serve(async (req) => {
