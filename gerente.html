@@ -3425,9 +3425,29 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div id="panelCompOcorrencias" class="panel" style="display:none;"></div>
 
       <div id="panelCompIncidentes" class="panel">
-        <div class="sec-title">🛡️ Incidentes — Proteção ao Aluno</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Registro de bullying, discriminação, acidentes e outros eventos.</p>
-        <button onclick="alert('Funcionalidade em implementação')" style="padding:8px 18px;background:#1a6bb5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;margin-bottom:16px;">+ Registrar Incidente</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">🛡️ Incidentes — Proteção ao Aluno</div>
+          <button onclick="toggleCompIncForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Registrar Incidente</button>
+        </div>
+        <div id="compIncForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Tipo *</label><select id="cieTipo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"><option value="bullying">Bullying</option><option value="cyberbullying">Cyberbullying</option><option value="assedio">Assédio</option><option value="discriminacao">Discriminação</option><option value="violencia">Violência</option><option value="acidente">Acidente</option><option value="saude">Saúde</option><option value="outro">Outro</option></select></div>
+              <div class="ff" style="margin:0;"><label>Gravidade</label><select id="cieGrav" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"><option value="baixa">Baixa</option><option value="media" selected>Média</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></div>
+              <div class="ff" style="margin:0;"><label>Data *</label><input type="date" id="cieData" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
+              <div class="ff" style="margin:0;"><label>Local</label><select id="cieLocal" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"><option value="sala_aula">Sala de Aula</option><option value="patio">Pátio</option><option value="refeitorio">Refeitório</option><option value="transporte">Transporte</option><option value="online">Online</option><option value="outro">Outro</option></select></div>
+              <div class="ff" style="margin:0;"><label>Vítima</label><input type="text" id="cieVitima" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Agressor</label><input type="text" id="cieAgressor" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+            </div>
+            <div class="ff" style="margin-top:10px;"><label>Descrição *</label><textarea id="cieDesc" rows="2" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></textarea></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarCompInc()" class="btn-create" style="width:auto;padding:8px 20px;">Registrar</button>
+              <button onclick="toggleCompIncForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            </div>
+          </div>
+        </div>
         <table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Gravidade</th><th>Descrição</th><th>Status</th></tr></thead>
         <tbody id="compIncidentesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
@@ -3511,8 +3531,24 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       </div>
 
       <div id="panelCompCalendario" class="panel">
-        <div class="sec-title">📅 Calendário de Compliance</div>
-        <p style="color:var(--muted);margin-bottom:16px;">Prazos regulatórios: trabalhistas, fiscais, MEC, LGPD, saúde e segurança.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="sec-title" style="margin:0;">📅 Calendário de Compliance</div>
+          <button onclick="toggleCompCalForm()" class="btn-create" style="width:auto;padding:8px 16px;font-size:12px;">+ Novo Prazo</button>
+        </div>
+        <div id="compCalForm" style="display:none;margin-bottom:16px;">
+          <div class="form-card">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+              <div class="ff" style="margin:0;"><label>Obrigação *</label><input type="text" id="ccalTitulo" placeholder="Ex: Envio eSocial" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Categoria *</label><select id="ccalCat" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"><option value="trabalhista">Trabalhista</option><option value="fiscal">Fiscal</option><option value="pedagogico">Pedagógico</option><option value="mec">MEC</option><option value="lgpd">LGPD</option><option value="saude">Saúde</option><option value="seguranca">Segurança</option></select></div>
+              <div class="ff" style="margin:0;"><label>Prazo *</label><input type="date" id="ccalData" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"></div>
+              <div class="ff" style="margin:0;"><label>Prioridade</label><select id="ccalPri" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;"><option value="baixa">Baixa</option><option value="normal" selected>Normal</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button onclick="salvarCompCal()" class="btn-create" style="width:auto;padding:8px 20px;">Criar Prazo</button>
+              <button onclick="toggleCompCalForm()" style="padding:8px 14px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+            </div>
+          </div>
+        </div>
         <table class="data-table"><thead><tr><th>Prazo</th><th>Obrigação</th><th>Categoria</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody id="compCalendarioBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
       </div>
@@ -20822,6 +20858,22 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   function loadCompAcessibilidade() { loadAcessAudit(); }
   function loadCompSeguros() { loadSeguros(); }
   function loadCompFiscal() { loadFiscal(); }
+
+  // ── INCIDENTES (form funcional) ──
+  function toggleCompIncForm() { var el=document.getElementById('compIncForm'); el.style.display=el.style.display==='none'?'block':'none'; if(el.style.display==='block'&&!document.getElementById('cieData').value) document.getElementById('cieData').value=new Date().toISOString().split('T')[0]; }
+  async function salvarCompInc() {
+    var d = await compApi({action:'compliance_incidente_criar', tipo:document.getElementById('cieTipo').value, gravidade:document.getElementById('cieGrav').value, data_ocorrencia:document.getElementById('cieData').value, local_ocorrencia:document.getElementById('cieLocal').value, vitima_nome:document.getElementById('cieVitima').value, agressor_nome:document.getElementById('cieAgressor').value, descricao:document.getElementById('cieDesc').value});
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Incidente registrado!','success'); toggleCompIncForm(); loadCompIncidentes();
+  }
+
+  // ── CALENDÁRIO (form funcional) ──
+  function toggleCompCalForm() { var el=document.getElementById('compCalForm'); el.style.display=el.style.display==='none'?'block':'none'; }
+  async function salvarCompCal() {
+    var d = await compApi({action:'compliance_calendario_criar', titulo:document.getElementById('ccalTitulo').value, categoria:document.getElementById('ccalCat').value, data_limite:document.getElementById('ccalData').value, prioridade:document.getElementById('ccalPri').value});
+    if (d.error) { showToast(d.error,'error'); return; }
+    showToast('Prazo criado!','success'); toggleCompCalForm(); loadCompCalendario();
+  }
 
   // ── LGPD ──
   function toggleLgpdConsentForm() { var el=document.getElementById('lgpdConsentForm'); el.style.display=el.style.display==='none'?'block':'none'; }

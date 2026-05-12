@@ -577,6 +577,16 @@ router.on("compliance_calendario_list", authGerenteOrSecretaria, feat, async (ct
   return successResponse(data ?? []);
 });
 
+router.on("compliance_calendario_criar", authGerenteOrSecretaria, feat, async (ctx) => {
+  const { titulo, categoria, data_limite, recorrencia, prioridade, alerta_dias_antes } = ctx.body as any;
+  if (!titulo || !categoria || !data_limite) throw new AppError("VALIDATION_FAILED", "titulo, categoria e data_limite obrigatórios.");
+  const { data, error } = await ctx.sb.from("compliance_calendario").insert({
+    escola_id: ctx.escola_id, titulo, categoria, data_limite, recorrencia: recorrencia || "unica", prioridade: prioridade || "normal", alerta_dias_antes: alerta_dias_antes || 7,
+  }).select().single();
+  if (error) throw new AppError("BAD_REQUEST", error.message);
+  return successResponse(data);
+});
+
 router.on("compliance_calendario_concluir", authGerenteOrSecretaria, feat, async (ctx) => {
   const { id, evidencia_url, observacoes } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
