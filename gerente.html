@@ -15592,6 +15592,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
           <button onclick="almConferenciaModal('${it.id}','${esc(it.nome)}',${it.estoque_qty})" style="background:none;border:1px solid #d97706;color:#9a3412;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;" title="Conferência física do estoque">📦</button>
           <button onclick="almMovimentacoesModal('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;" title="Movimentações de estoque">↕️</button>
           ${it.ativo ? `<button onclick="almDesativarInsumo('${it.id}')" style="background:none;border:1px solid #e53e3e;color:#e53e3e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">Desativar</button>` : ''}
+          <button onclick="almExcluirInsumo('${it.id}','${esc(it.nome)}')" style="background:none;border:1px solid #991b1b;color:#991b1b;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;" title="Excluir permanentemente">🗑️ Excluir</button>
         </div>
       </div>`;
     }).join('') || '<div class="empty-state">Nenhum insumo cadastrado.</div>';
@@ -15988,6 +15989,14 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if (!await _lumiedConfirm('Desativar este insumo?')) return;
     const d = await callDiplomas({ action: 'alm_insumo_del', id });
     if (!d.error) almLoadInsumos();
+  }
+
+  async function almExcluirInsumo(id, nome) {
+    if (!await _lumiedConfirm(`Excluir permanentemente "${nome}"?\n\nEssa ação não pode ser desfeita. Se o item tiver compras ou movimentações vinculadas, use "Desativar" em vez disso.`)) return;
+    const d = await callDiplomas({ action: 'alm_insumo_excluir', id });
+    if (d.error) { showToast(d.error, 'error'); return; }
+    showToast('🗑️ Insumo excluído permanentemente.', 'success');
+    almLoadInsumos();
   }
 
   async function almLoadTurmas() {

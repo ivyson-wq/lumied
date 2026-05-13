@@ -2626,7 +2626,7 @@ Deno.serve(async (req) => {
 
   const isAlmEditOnlyAction = [
     'alm_orcamento_set',                      // definir orçamento (papel almox NÃO pode)
-    'alm_insumo_save', 'alm_insumo_del',
+    'alm_insumo_save', 'alm_insumo_del', 'alm_insumo_excluir',
     'alm_insumo_set_referencia', 'alm_insumo_atualizar_auto',
     'alm_entrada_estoque',
     'alm_turma_save', 'alm_turma_del',
@@ -2642,7 +2642,7 @@ Deno.serve(async (req) => {
   const isAlmGerenteAction = [
     'alm_painel', 'alm_pendentes', 'alm_todas_reqs',
     'alm_aprovar', 'alm_rejeitar',
-    'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del', 'alm_insumo_set_referencia',
+    'alm_insumos_list', 'alm_insumo_save', 'alm_insumo_del', 'alm_insumo_excluir', 'alm_insumo_set_referencia',
     'alm_insumo_atualizar_auto', 'alm_insumo_historico', 'alm_entrada_estoque',
     'alm_series_list', 'alm_turma_save', 'alm_turma_del',
     'alm_orcamentos_list', 'alm_orcamento_set',
@@ -3809,6 +3809,23 @@ Deno.serve(async (req) => {
       const { id } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
       const { error } = await sb.from('alm_insumos').update({ ativo: false }).eq('id', id).eq('escola_id', (gerente as any).escola_id)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
+    if (action === 'alm_insumo_excluir') {
+      const { id } = body
+      if (!id) return json({ error: 'ID não informado.' }, 400)
+      // Check if used in any requisition items (JSONB array) or purchases
+      const { data: compras } = await sb.from('alm_compras').select('id').eq('insumo_id', id).limit(1)
+      if (compras && compras.length > 0) {
+        return json({ error: 'Este insumo está vinculado a compras e não pode ser excluído. Use "Desativar" em vez disso.' }, 400)
+      }
+      const { data: movs } = await sb.from('alm_movimentacoes').select('id').eq('insumo_id', id).limit(1)
+      if (movs && movs.length > 0) {
+        return json({ error: 'Este insumo possui movimentações de estoque e não pode ser excluído. Use "Desativar" em vez disso.' }, 400)
+      }
+      const { error } = await sb.from('alm_insumos').delete().eq('id', id).eq('escola_id', (gerente as any).escola_id)
       if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
