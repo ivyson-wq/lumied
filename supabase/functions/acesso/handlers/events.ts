@@ -313,26 +313,35 @@ export function register(router: Router) {
           });
         }
       } else {
-        for (const perm of validPerms) {
-          const { data: aluno } = await ctx.sb.from("alunos")
-            .select("id, nome, serie, serie_id")
-            .eq("id", perm.aluno_id)
-            .eq("escola_id", eventoEscolaId)
-            .maybeSingle();
+        const alunoIds = [...new Set(validPerms.map((p: Any) => p.aluno_id).filter(Boolean))];
+        const { data: alunosData } = alunoIds.length > 0
+          ? await ctx.sb.from("alunos")
+              .select("id, nome, serie, serie_id")
+              .in("id", alunoIds)
+              .eq("escola_id", eventoEscolaId)
+          : { data: [] as Any[] };
+        const alunoMap = new Map<string, Any>((alunosData ?? []).map((a: Any) => [a.id, a]));
 
-          const turma = aluno?.serie || "Sem turma";
-
-          let professoraId: string | null = null;
-          if (aluno?.serie_id) {
-            const { data: prof } = await ctx.sb.from("professoras")
-              .select("id, nome")
-              .eq("serie_id", aluno.serie_id)
+        const serieIds = [...new Set((alunosData ?? []).map((a: Any) => a.serie_id).filter(Boolean))];
+        const { data: profsData } = serieIds.length > 0
+          ? await ctx.sb.from("professoras")
+              .select("id, nome, serie_id")
+              .in("serie_id", serieIds)
+              .eq("escola_id", eventoEscolaId)
               .eq("ativo", true)
-              .maybeSingle();
-            professoraId = prof?.id || null;
-          }
+          : { data: [] as Any[] };
+        const profPorSerie = new Map<string, string>();
+        for (const p of (profsData ?? []) as Any[]) {
+          if (!profPorSerie.has(p.serie_id)) profPorSerie.set(p.serie_id, p.id);
+        }
 
-          await ctx.sb.from("acesso_alertas").insert({
+        const alertasToInsert: Any[] = [];
+        for (const perm of validPerms) {
+          const aluno = alunoMap.get(perm.aluno_id);
+          const turma = aluno?.serie || "Sem turma";
+          const professoraId = aluno?.serie_id ? (profPorSerie.get(aluno.serie_id) ?? null) : null;
+
+          alertasToInsert.push({
             escola_id: eventoEscolaId,
             evento_id: evento?.id,
             responsavel_evento_id: evento?.id,
@@ -347,7 +356,7 @@ export function register(router: Router) {
           });
 
           if (professoraId) {
-            await ctx.sb.from("acesso_alertas").insert({
+            alertasToInsert.push({
               escola_id: eventoEscolaId,
               evento_id: evento?.id,
               responsavel_evento_id: evento?.id,
@@ -362,6 +371,10 @@ export function register(router: Router) {
               status: "aguardando",
             });
           }
+        }
+
+        if (alertasToInsert.length > 0) {
+          await ctx.sb.from("acesso_alertas").insert(alertasToInsert);
         }
       }
     }
