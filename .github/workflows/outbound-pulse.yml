@@ -5,9 +5,10 @@ on:
   push:
     paths:
       - .github/outbound-trigger.txt
-  schedule:
-    # 10:00 UTC = 07:00 BRT — dias úteis
-    - cron: '0 10 * * 1-5'
+  # Schedule MIGRADO pra pg_cron (mig 329).
+  # Edge function: outbound-pulse-cron. Roda 10h UTC dias úteis.
+  # Este workflow vira fallback manual: rode via workflow_dispatch
+  # ou push em .github/outbound-trigger.txt se pg_cron falhar.
 
 env:
   SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
