@@ -14,6 +14,7 @@ import { translatePage } from './i18n.js';
 import { createLangSwitcher } from './components/lang-switcher.js';
 import { initPWAInstall } from './pwa-install.js';
 import { initWebVitals } from './web-vitals.js';
+import { utils } from './utils.js';
 
 /**
  * Bootstrap a portal: Sentry, API client, state, global bindings.
@@ -22,7 +23,7 @@ import { initWebVitals } from './web-vitals.js';
  * @param {Function} [opts.onAuthError] - custom handler for expired sessions
  * @returns {{ api: ReturnType<typeof createClient> }}
  */
-export function initPortal({ tokenKey, onAuthError }) {
+export function initPortal({ tokenKey, tokenField, onAuthError }) {
   initSentry();
 
   const SUPABASE_ANON = window.__SUPABASE_ANON
@@ -31,6 +32,7 @@ export function initPortal({ tokenKey, onAuthError }) {
 
   const api = createClient(SUPABASE_ANON, {
     tokenKey,
+    tokenField,  // ex: '_staff_token' no admin-central, default '_token'
     onAuthError: onAuthError || (() => {
       showToast('Sessão expirada.', 'error');
       appStore.set('user', null);
@@ -47,10 +49,12 @@ export function initPortal({ tokenKey, onAuthError }) {
     else showToast('Conexão restabelecida!', 'success', 2000);
   });
 
-  // Global bindings for inline scripts
+  // Global bindings for inline scripts (HTMLs ainda dependem disso até a
+  // Onda 4 do refator quebrar os monolitos em módulos próprios).
   window.__api = api;
   window.__store = appStore;
   window.__toast = showToast;
+  window.__utils = utils;
   window.__translatePage = translatePage;
 
   // i18n — translate page and add language switcher

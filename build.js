@@ -7,6 +7,7 @@ const entryPoints = [
   'src/portals/professora/index.js',
   'src/portals/secretaria/index.js',
   'src/portals/admin/index.js',
+  'src/portals/admin-central/index.js',
   'src/portals/aluno/index.js',
 ];
 

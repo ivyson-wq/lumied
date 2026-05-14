@@ -12,6 +12,9 @@ export class ApiClient {
     this.baseUrl = baseUrl;
     this.anonKey = anonKey;
     this.tokenKey = options.tokenKey || 'mb_token';
+    // Field name onde o token vai no payload. Default `_token`; admin-central
+    // usa `_staff_token` porque as edge functions distinguem staff vs admin.
+    this.tokenField = options.tokenField || '_token';
     this.onAuthError = options.onAuthError || null;
     this.onError = options.onError || null;
     this.maxRetries = options.maxRetries || 2;
@@ -36,7 +39,7 @@ export class ApiClient {
   async request(endpoint, body, options = {}) {
     const url = this.baseUrl + endpoint;
     const token = this.getToken();
-    const tokenField = options.tokenField || '_token';
+    const tokenField = options.tokenField || this.tokenField;
     const startTime = performance.now();
 
     // Cache check (for read-only actions)
@@ -143,6 +146,23 @@ export class ApiClient {
   operacional(body, options) { return this.request('/functions/v1/operacional', body, options); }
   loja(body, options) { return this.request('/functions/v1/loja', body, options); }
   rh(body, options) { return this.request('/functions/v1/rh', body, options); }
+  cobranca(body, options) { return this.request('/functions/v1/cobranca', body, options); }
+  acesso(body, options) { return this.request('/functions/v1/acesso', body, options); }
+  compliance(body, options) { return this.request('/functions/v1/compliance', body, options); }
+  ponto(body, options) { return this.request('/functions/v1/ponto', body, options); }
+  financeiroExt(body, options) { return this.request('/functions/v1/financeiro-ext', body, options); }
+  migracao(body, options) { return this.request('/functions/v1/migracao', body, options); }
+  backupEscolas(body, options) { return this.request('/functions/v1/backup-escolas', body, options); }
+  saasBilling(body, options) { return this.request('/functions/v1/saas-billing', body, options); }
+  lumiedAi(body, options) { return this.request('/functions/v1/lumied-ai', body, options); }
+  ticketResolver(body, options) { return this.request('/functions/v1/ticket-resolver', body, options); }
+  sendEmail(body, options) { return this.request('/functions/v1/send-email', body, options); }
+  health(body, options) { return this.request('/functions/v1/health', body, options); }
+  gtm(body, options) { return this.request('/functions/v1/gtm', body, options); }
+  comerc(body, options) { return this.request('/functions/v1/comerc', body, options); }
+  workflows(body, options) { return this.request('/functions/v1/workflows', body, options); }
+  cozinha(body, options) { return this.request('/functions/v1/cozinha', body, options); }
+  academicoExt(body, options) { return this.request('/functions/v1/academico-ext', body, options); }
 }
 
 /**
