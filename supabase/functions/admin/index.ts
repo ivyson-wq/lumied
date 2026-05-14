@@ -2108,6 +2108,182 @@ router.on("cron_followup_demo", async (ctx) => {
   return successResponse({ enviados, total: leads.length });
 });
 
+// ═══════════════════════════════════════════════════════════════
+//  BANCOS — config bancária por escola (multi-banco)
+//  Sprint 0 do plano de expansão. Adapters em _shared/banks/.
+// ═══════════════════════════════════════════════════════════════
+
+router.on("staff_bancos_providers", authStaff, async (_ctx) => {
+  const { bancosImplementados } = await import("../_shared/banks/registry.ts");
+  return successResponse({
+    implementados: bancosImplementados(),
+    todos: ['inter', 'sicredi', 'bb', 'itau', 'bradesco'],
+  });
+});
+
+router.on("staff_bancos_list", authStaff, async (ctx) => {
+  const { escola_id } = ctx.body as any;
+  let q = ctx.sb.from("escola_banco_config")
+    .select("*, escolas(id, nome, slug)")
+    .order("criado_em", { ascending: false });
+  if (escola_id) q = q.eq("escola_id", escola_id);
+  const { data } = await q;
+  return successResponse(data ?? []);
+});
+
+router.on("staff_banco_save", authStaff, async (ctx) => {
+  const b = ctx.body as any;
+  if (!b.escola_id || !b.banco) throw new AppError("VALIDATION_FAILED", "escola_id e banco são obrigatórios.");
+  if (!['inter', 'sicredi', 'bb', 'itau', 'bradesco'].includes(b.banco)) throw new AppError("VALIDATION_FAILED", "Banco inválido.");
+  if (!b.agencia || !b.conta || !b.beneficiario_cnpj || !b.beneficiario_nome) {
+    throw new AppError("VALIDATION_FAILED", "agencia, conta, beneficiario_cnpj e beneficiario_nome obrigatórios.");
+  }
+
+  const cnpjLimpo = String(b.beneficiario_cnpj).replace(/\D/g, '');
+  const payload: Record<string, unknown> = {
+    escola_id: b.escola_id,
+    banco: b.banco,
+    agencia: b.agencia,
+    conta: b.conta,
+    conta_digito: b.conta_digito || null,
+    convenio: b.convenio || null,
+    carteira: b.carteira || null,
+    beneficiario_cnpj: cnpjLimpo,
+    beneficiario_nome: b.beneficiario_nome,
+    client_id: b.client_id || null,
+    client_secret_name: b.client_secret_name || null,
+    pix_chave: b.pix_chave || null,
+    pix_tipo: b.pix_tipo || null,
+    webhook_secret: b.webhook_secret || null,
+    webhook_url: b.webhook_url || null,
+    cert_storage_path: b.cert_storage_path || null,
+    cert_secret_key: b.cert_secret_key || null,
+    cert_validade: b.cert_validade || null,
+    ativo: b.ativo ?? true,
+    created_by: ctx.user!.id,
+  };
+
+  // Upsert por (escola_id, banco)
+  const { data: existing } = await ctx.sb.from("escola_banco_config")
+    .select("id").eq("escola_id", b.escola_id).eq("banco", b.banco).maybeSingle();
+
+  let id: string;
+  if (existing) {
+    delete (payload as any).created_by;
+    const { error } = await ctx.sb.from("escola_banco_config").update(payload).eq("id", (existing as any).id);
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    id = (existing as any).id;
+  } else {
+    const { data: inserted, error } = await ctx.sb.from("escola_banco_config").insert(payload).select("id").single();
+    if (error) throw new AppError("BAD_REQUEST", error.message);
+    id = (inserted as any).id;
+  }
+
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'escola_banco_config', recurso_id: id, escola_id: b.escola_id, acao: existing ? 'editar' : 'criar', depois: { banco: b.banco } });
+  return successResponse({ id, success: true });
+});
+
+router.on("staff_banco_set_padrao", authStaff, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+
+  const { data: cfg } = await ctx.sb.from("escola_banco_config").select("escola_id, banco").eq("id", id).maybeSingle();
+  if (!cfg) throw new AppError("NOT_FOUND", "Config não encontrada.");
+
+  // Desmarca outros bancos padrão da mesma escola
+  await ctx.sb.from("escola_banco_config").update({ padrao: false }).eq("escola_id", (cfg as any).escola_id);
+  // Marca este como padrão
+  await ctx.sb.from("escola_banco_config").update({ padrao: true }).eq("id", id);
+
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'escola_banco_config', recurso_id: id, escola_id: (cfg as any).escola_id, acao: 'set_padrao', depois: { banco: (cfg as any).banco } });
+  return successResponse({ success: true });
+});
+
+router.on("staff_banco_delete", authStaff, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+  const { data: cfg } = await ctx.sb.from("escola_banco_config").select("escola_id, banco, padrao").eq("id", id).maybeSingle();
+  if (!cfg) throw new AppError("NOT_FOUND", "Config não encontrada.");
+  if ((cfg as any).padrao) throw new AppError("FORBIDDEN", "Banco padrão não pode ser desativado. Defina outro como padrão antes.");
+  await ctx.sb.from("escola_banco_config").update({ ativo: false }).eq("id", id);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'escola_banco_config', recurso_id: id, escola_id: (cfg as any).escola_id, acao: 'desativar' });
+  return successResponse({ success: true });
+});
+
+router.on("staff_banco_upload_cert", authStaff, async (ctx) => {
+  const { id, cert_base64, filename } = ctx.body as any;
+  if (!id || !cert_base64) throw new AppError("VALIDATION_FAILED", "id e cert_base64 obrigatórios.");
+
+  const { data: cfg } = await ctx.sb.from("escola_banco_config").select("escola_id, banco").eq("id", id).maybeSingle();
+  if (!cfg) throw new AppError("NOT_FOUND", "Config não encontrada.");
+
+  const path = `${(cfg as any).escola_id}/${(cfg as any).banco}.pfx`;
+  const ext = (filename || '').toLowerCase().endsWith('.pem') ? 'pem' : 'pfx';
+  const finalPath = `${(cfg as any).escola_id}/${(cfg as any).banco}.${ext}`;
+
+  const binary = Uint8Array.from(atob(cert_base64), c => c.charCodeAt(0));
+  const { error: upErr } = await ctx.sb.storage.from('bank-certs').upload(finalPath, binary, { upsert: true, contentType: 'application/x-pkcs12' });
+  if (upErr) throw new AppError("BAD_REQUEST", `Upload cert falhou: ${upErr.message}`);
+
+  await ctx.sb.from("escola_banco_config").update({ cert_storage_path: finalPath }).eq("id", id);
+  logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'escola_banco_config', recurso_id: id, escola_id: (cfg as any).escola_id, acao: 'upload_cert', depois: { path: finalPath } });
+  return successResponse({ success: true, path: finalPath });
+});
+
+router.on("staff_banco_test_emissao", authStaff, async (ctx) => {
+  const { id } = ctx.body as any;
+  if (!id) throw new AppError("VALIDATION_FAILED", "id obrigatório.");
+
+  const { getBankAdapter } = await import("../_shared/banks/registry.ts");
+  const { BankError } = await import("../_shared/banks/errors.ts");
+
+  const { data: cfg } = await ctx.sb.from("escola_banco_config").select("*").eq("id", id).maybeSingle();
+  if (!cfg) throw new AppError("NOT_FOUND", "Config não encontrada.");
+
+  try {
+    const adapter = getBankAdapter((cfg as any).banco);
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 7);
+    const result = await adapter.emitirBoleto({
+      pagador: {
+        cpf_cnpj: '11144477735',  // CPF de teste padrão
+        nome: 'TESTE LUMIED',
+        email: 'teste@lumied.com.br',
+      },
+      valor: 0.01,
+      vencimento: tomorrow.toISOString().slice(0, 10),
+      descricao: 'Boleto de teste — homologação Lumied',
+    }, cfg as any);
+
+    // Marca como homologado
+    await ctx.sb.from("escola_banco_config").update({
+      homologado: true,
+      ultima_emissao: new Date().toISOString(),
+      ultimo_erro: null,
+      ultimo_erro_em: null,
+    }).eq("id", id);
+
+    logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'escola_banco_config', recurso_id: id, escola_id: (cfg as any).escola_id, acao: 'test_emissao_ok', depois: { nosso_numero: result.nosso_numero } });
+
+    return successResponse({
+      success: true,
+      nosso_numero: result.nosso_numero,
+      codigo_solicitacao: result.codigo_solicitacao,
+      banco: (cfg as any).banco,
+    });
+  } catch (e) {
+    const msg = e instanceof BankError ? `${e.code}: ${e.message}` : String(e);
+    await ctx.sb.from("escola_banco_config").update({
+      ultimo_erro: msg.slice(0, 500),
+      ultimo_erro_em: new Date().toISOString(),
+    }).eq("id", id);
+    logAudit(ctx.sb, { ator_tipo: 'staff', ator_id: ctx.user?.id, ator_email: ctx.user?.email, recurso: 'escola_banco_config', recurso_id: id, escola_id: (cfg as any).escola_id, acao: 'test_emissao_falha', depois: { erro: msg.slice(0, 200) } });
+    if (e instanceof BankError) {
+      return successResponse({ success: false, ...e.toJSON() });
+    }
+    throw new AppError("BAD_REQUEST", msg);
+  }
+});
+
 // ═══ SERVE ═══
 serve(async (req: Request) => {
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { autoRefreshToken: false, persistSession: false } });

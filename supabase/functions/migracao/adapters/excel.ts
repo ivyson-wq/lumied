@@ -11,11 +11,30 @@ export type EntidadeAlvo =
   | "alunos" | "responsaveis" | "turmas" | "matriculas"
   | "funcionarios" | "financeiro" | "notas";
 
-type RawRow = Record<string, unknown>;
+export type RawRow = Record<string, unknown>;
+export type SynonymMap = Record<string, string[]>;
+
+/**
+ * Dialect of an ERP source — what makes Escolaweb different from Sponte
+ * different from Excel genérico. All fields are optional; the parser
+ * falls back to SIN_BASE / statusFinanceiroMap from validator.ts when a
+ * dialect doesn't override.
+ */
+export type ErpDialect = {
+  id: string;
+  /** Override or extend SIN_BASE. Synonyms listed first win. */
+  synonyms?: SynonymMap;
+  /** Custom raw-status-text → canonical status mapping. */
+  statusMap?: (raw: string | null | undefined) => "pendente" | "pago" | "atrasado" | "cancelado" | null;
+  /** Sheet-name → entidade heuristic for multi-sheet workbooks. */
+  entidadeBySheetName?: (name: string) => EntidadeAlvo | null;
+  /** Detect this dialect from header row of an arbitrary file. */
+  detectByHeaders?: (headers: string[]) => boolean;
+};
 
 // Sinônimos por campo (chaves normalizadas: lowercase, sem acento, sem espaços extras).
 // O primeiro hit ganha — ordem importa.
-const SIN: Record<string, string[]> = {
+export const SIN_BASE: SynonymMap = {
   // alunos
   nome:               ["nome aluno","nome do aluno","aluno","nome completo","nome","name"],
   email:              ["email","e-mail","email aluno","email do aluno"],
@@ -66,14 +85,18 @@ const SIN: Record<string, string[]> = {
   conceito:           ["conceito","letra","menção","mencao"],
 };
 
-function normKey(k: string): string {
+export function normKey(k: string): string {
   return String(k || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
     .toLowerCase().replace(/[\.\:\;\(\)\[\]\/\\]+/g, " ")
     .replace(/\s+/g, " ").trim();
 }
 
-function pick(row: Record<string, unknown>, field: keyof typeof SIN): unknown {
-  const candidates = SIN[field as string] || [];
+function pick(
+  row: Record<string, unknown>,
+  field: string,
+  synonyms: SynonymMap,
+): unknown {
+  const candidates = synonyms[field] || SIN_BASE[field] || [];
   for (const c of candidates) {
     const want = normKey(c);
     for (const k of Object.keys(row)) {
@@ -114,6 +137,27 @@ export function parseFileToRows(filename: string, bytes: Uint8Array): RawRow[] {
   // deno-lint-ignore no-explicit-any
   const rows = XLSX.utils.sheet_to_json<RawRow>(sheet, { defval: null, raw: false }) as any[];
   return rows as RawRow[];
+}
+
+/**
+ * Read every sheet of an XLSX/CSV file. CSV/TXT returns a single anonymous
+ * sheet. Useful for ERPs (ex.: Escolaweb) que exportam Cadastros,
+ * Mensalidades e Funcionários em sheets distintas dentro do mesmo arquivo.
+ */
+export function parseFileToSheets(
+  filename: string, bytes: Uint8Array,
+): { name: string; rows: RawRow[] }[] {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".csv") || lower.endsWith(".txt")) {
+    return [{ name: "default", rows: parseCsv(new TextDecoder("utf-8").decode(bytes)) }];
+  }
+  const wb = XLSX.read(bytes, { type: "array", cellDates: false, cellNF: false, raw: false });
+  return wb.SheetNames.map((name) => {
+    const sheet = wb.Sheets[name];
+    // deno-lint-ignore no-explicit-any
+    const rows = XLSX.utils.sheet_to_json<RawRow>(sheet, { defval: null, raw: false }) as any[];
+    return { name, rows: rows as RawRow[] };
+  });
 }
 
 function parseCsv(text: string): RawRow[] {
@@ -161,11 +205,14 @@ export type ParsedRow = { entidade: EntidadeAlvo; data: Record<string, unknown>;
 export async function rowsToStaging(
   rows: RawRow[],
   entidade: EntidadeAlvo,
+  dialect?: ErpDialect,
 ): Promise<ParsedRow[]> {
+  const syn = dialect?.synonyms ?? SIN_BASE;
+  const stMap = dialect?.statusMap ?? statusFinanceiroMap;
   const out: ParsedRow[] = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    const data = mapRow(r, entidade);
+    const data = mapRow(r, entidade, syn, stMap);
     if (!data) continue;
     const hash = await sha256Hex(JSON.stringify(data) + "|" + entidade);
     out.push({ entidade, data, hash, linha: i + 2 }); // +2 = header + 1-indexed
@@ -173,94 +220,109 @@ export async function rowsToStaging(
   return out;
 }
 
-function mapRow(r: RawRow, entidade: EntidadeAlvo): Record<string, unknown> | null {
+function mapRow(
+  r: RawRow,
+  entidade: EntidadeAlvo,
+  syn: SynonymMap,
+  stMap: (raw: string | null | undefined) => "pendente"|"pago"|"atrasado"|"cancelado"|null,
+): Record<string, unknown> | null {
   switch (entidade) {
     case "alunos": return {
-      nome: val(pick(r, "nome")),
-      email: val(pick(r, "email"))?.toLowerCase() ?? null,
-      cpf: onlyDigits(val(pick(r, "cpf")) || "") || null,
-      data_nascimento: parseDateBR(val(pick(r, "data_nascimento")) || ""),
-      serie_origem: val(pick(r, "serie_origem")),
-      responsavel_email: val(pick(r, "responsavel_email"))?.toLowerCase() ?? null,
-      responsavel_cpf: onlyDigits(val(pick(r, "responsavel_cpf")) || "") || null,
+      nome: val(pick(r, "nome", syn)),
+      email: val(pick(r, "email", syn))?.toLowerCase() ?? null,
+      cpf: onlyDigits(val(pick(r, "cpf", syn)) || "") || null,
+      data_nascimento: parseDateBR(val(pick(r, "data_nascimento", syn)) || ""),
+      serie_origem: val(pick(r, "serie_origem", syn)),
+      responsavel_email: val(pick(r, "responsavel_email", syn))?.toLowerCase() ?? null,
+      responsavel_cpf: onlyDigits(val(pick(r, "responsavel_cpf", syn)) || "") || null,
     };
     case "responsaveis": return {
-      nome: val(pick(r, "nome_resp")) ?? val(pick(r, "nome")),
-      email: val(pick(r, "email"))?.toLowerCase() ?? null,
-      cpf: onlyDigits(val(pick(r, "cpf")) || "") || null,
-      telefone: val(pick(r, "telefone")),
-      whatsapp: val(pick(r, "whatsapp")),
-      endereco: val(pick(r, "endereco")),
-      cidade: val(pick(r, "cidade")),
-      uf: val(pick(r, "uf"))?.toUpperCase() ?? null,
-      cep: onlyDigits(val(pick(r, "cep")) || "") || null,
-      parentesco: normName(val(pick(r, "parentesco")) || "") || null,
-      aluno_email: val(pick(r, "aluno_email"))?.toLowerCase() ?? null,
-      aluno_cpf: onlyDigits(val(pick(r, "aluno_cpf")) || "") || null,
-      responsavel_financeiro: valBool(pick(r, "responsavel_financeiro")),
+      nome: val(pick(r, "nome_resp", syn)) ?? val(pick(r, "nome", syn)),
+      email: val(pick(r, "email", syn))?.toLowerCase() ?? null,
+      cpf: onlyDigits(val(pick(r, "cpf", syn)) || "") || null,
+      telefone: val(pick(r, "telefone", syn)),
+      whatsapp: val(pick(r, "whatsapp", syn)),
+      endereco: val(pick(r, "endereco", syn)),
+      cidade: val(pick(r, "cidade", syn)),
+      uf: val(pick(r, "uf", syn))?.toUpperCase() ?? null,
+      cep: onlyDigits(val(pick(r, "cep", syn)) || "") || null,
+      parentesco: normName(val(pick(r, "parentesco", syn)) || "") || null,
+      aluno_email: val(pick(r, "aluno_email", syn))?.toLowerCase() ?? null,
+      aluno_cpf: onlyDigits(val(pick(r, "aluno_cpf", syn)) || "") || null,
+      responsavel_financeiro: valBool(pick(r, "responsavel_financeiro", syn)),
     };
     case "turmas": return {
-      nome: val(pick(r, "turma_nome")),
-      ano: parseInt(String(pick(r, "ano") || "")) || null,
-      turno: normName(val(pick(r, "turno")) || "") || null,
+      nome: val(pick(r, "turma_nome", syn)),
+      ano: parseInt(String(pick(r, "ano", syn) || "")) || null,
+      turno: normName(val(pick(r, "turno", syn)) || "") || null,
     };
     case "matriculas": return {
-      aluno_email: val(pick(r, "aluno_email")) || val(pick(r, "email")),
-      aluno_cpf: onlyDigits(val(pick(r, "aluno_cpf")) || val(pick(r, "cpf")) || "") || null,
-      turma_origem: val(pick(r, "turma_nome")) || val(pick(r, "serie_origem")),
-      ano: parseInt(String(pick(r, "ano") || "")) || new Date().getFullYear(),
-      status: normName(val(pick(r, "status_matricula")) || "matriculado"),
-      data_matricula: parseDateBR(val(pick(r, "data_matricula")) || ""),
+      aluno_email: val(pick(r, "aluno_email", syn)) || val(pick(r, "email", syn)),
+      aluno_cpf: onlyDigits(val(pick(r, "aluno_cpf", syn)) || val(pick(r, "cpf", syn)) || "") || null,
+      turma_origem: val(pick(r, "turma_nome", syn)) || val(pick(r, "serie_origem", syn)),
+      ano: parseInt(String(pick(r, "ano", syn) || "")) || new Date().getFullYear(),
+      status: normName(val(pick(r, "status_matricula", syn)) || "matriculado"),
+      data_matricula: parseDateBR(val(pick(r, "data_matricula", syn)) || ""),
     };
     case "funcionarios": return {
-      nome: val(pick(r, "nome")),
-      email: val(pick(r, "email"))?.toLowerCase() ?? null,
-      cpf: onlyDigits(val(pick(r, "cpf")) || "") || null,
-      telefone: val(pick(r, "telefone")),
-      cargo: val(pick(r, "cargo")),
+      nome: val(pick(r, "nome", syn)),
+      email: val(pick(r, "email", syn))?.toLowerCase() ?? null,
+      cpf: onlyDigits(val(pick(r, "cpf", syn)) || "") || null,
+      telefone: val(pick(r, "telefone", syn)),
+      cargo: val(pick(r, "cargo", syn)),
     };
     case "financeiro": {
-      const tipoRaw = normName(val(pick(r, "tipo")) || "");
+      const tipoRaw = normName(val(pick(r, "tipo", syn)) || "");
       let tipo: "receita" | "despesa" = "receita";
       if (/desp|paga|saida|saída|pagamento|fornecedor/.test(tipoRaw)) tipo = "despesa";
       else if (/receit|recebi|cobranca|cobrança|cliente|mensalidade/.test(tipoRaw)) tipo = "receita";
       return {
         tipo,
-        categoria_origem: val(pick(r, "categoria_origem")),
-        descricao: val(pick(r, "descricao")),
-        valor: parseMoneyBR(pick(r, "valor") as string),
-        data_lancamento: parseDateBR(val(pick(r, "data_lancamento")) || ""),
-        data_vencimento: parseDateBR(val(pick(r, "data_vencimento")) || ""),
-        data_pagamento: parseDateBR(val(pick(r, "data_pagamento")) || ""),
-        status_origem: val(pick(r, "status_origem")),
-        status_lumied: statusFinanceiroMap(val(pick(r, "status_origem")) || ""),
-        fornecedor: val(pick(r, "fornecedor")),
-        familia_email: val(pick(r, "familia_email"))?.toLowerCase() ?? null,
-        familia_nome: val(pick(r, "familia_nome")),
-        familia_cpf: onlyDigits(val(pick(r, "familia_cpf")) || "") || null,
-        documento: val(pick(r, "documento")),
+        categoria_origem: val(pick(r, "categoria_origem", syn)),
+        descricao: val(pick(r, "descricao", syn)),
+        valor: parseMoneyBR(pick(r, "valor", syn) as string),
+        data_lancamento: parseDateBR(val(pick(r, "data_lancamento", syn)) || ""),
+        data_vencimento: parseDateBR(val(pick(r, "data_vencimento", syn)) || ""),
+        data_pagamento: parseDateBR(val(pick(r, "data_pagamento", syn)) || ""),
+        status_origem: val(pick(r, "status_origem", syn)),
+        status_lumied: stMap(val(pick(r, "status_origem", syn)) || ""),
+        fornecedor: val(pick(r, "fornecedor", syn)),
+        familia_email: val(pick(r, "familia_email", syn))?.toLowerCase() ?? null,
+        familia_nome: val(pick(r, "familia_nome", syn)),
+        familia_cpf: onlyDigits(val(pick(r, "familia_cpf", syn)) || "") || null,
+        documento: val(pick(r, "documento", syn)),
       };
     }
     case "notas": return {
-      aluno_email: val(pick(r, "aluno_email")) || val(pick(r, "email")),
-      ano: parseInt(String(pick(r, "ano") || "")) || null,
-      periodo: val(pick(r, "periodo")),
-      disciplina: val(pick(r, "disciplina")),
-      nota: parseMoneyBR(pick(r, "nota") as string),
-      conceito: val(pick(r, "conceito")),
+      aluno_email: val(pick(r, "aluno_email", syn)) || val(pick(r, "email", syn)),
+      ano: parseInt(String(pick(r, "ano", syn) || "")) || null,
+      periodo: val(pick(r, "periodo", syn)),
+      disciplina: val(pick(r, "disciplina", syn)),
+      nota: parseMoneyBR(pick(r, "nota", syn) as string),
+      conceito: val(pick(r, "conceito", syn)),
     };
   }
 }
 
 // ── ERP detection (signatures) ───────────────────────────────
-export function detectErp(filename: string, headers: string[]): string {
+/**
+ * Detect the source ERP from filename + headers. Headers podem refinar a
+ * detecção quando o nome do arquivo é genérico (ex.: "export.xlsx"). Cada
+ * dialect pode plugar uma função `detectByHeaders` para a sua assinatura.
+ */
+export function detectErp(filename: string, headers: string[], dialects: ErpDialect[] = []): string {
   const fn = filename.toLowerCase();
   const hs = headers.map(normKey).join("|");
+  // Filename hints (mantém compat com Sprint 1)
   if (fn.includes("escolaweb") || hs.includes("matricula escolaweb")) return "escolaweb";
   if (fn.includes("sponte") || hs.includes("sponte")) return "sponte";
   if (fn.includes("wpensar") || fn.includes("agenda edu")) return "wpensar";
   if (fn.includes("sophia")) return "sophia";
   if (fn.includes("totvs") || fn.includes("rm educacional")) return "totvs_rm";
   if (fn.includes("gvdasa")) return "gvdasa";
+  // Header-based detection via dialects (Sprint 2+)
+  for (const d of dialects) {
+    if (d.detectByHeaders && d.detectByHeaders(headers)) return d.id;
+  }
   return "excel";
 }

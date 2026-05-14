@@ -256,6 +256,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <a class="nav-item" onclick="showPanel('migracao',this)"><span class="ic">📥</span> Migração ERPs</a>
       <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💰</span> Cobrança SaaS</a>
       <a class="nav-item" onclick="showPanel('finlumied',this)"><span class="ic">📒</span> Financeiro Interno</a>
+      <a class="nav-item" onclick="showPanel('bancos',this)"><span class="ic">🏦</span> Bancos</a>
       <div class="sb-label">GTM</div>
       <a class="nav-item" onclick="showPanel('crm',this)"><span class="ic">🎯</span> CRM Lumied</a>
       <a class="nav-item" onclick="showPanel('funil',this)"><span class="ic">📉</span> Funil</a>
@@ -1082,6 +1083,106 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
         </div>
       </div>
 
+      <!-- PAINEL: BANCOS -->
+      <div id="panelBancos" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="sec-title" style="margin-bottom:0;">Configuração Bancária <span class="count-badge" id="bancosCount">0</span></div>
+          <div style="display:flex;gap:8px;">
+            <select id="bancosFiltroEscola" onchange="loadBancos()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;min-width:200px;">
+              <option value="">Todas as escolas</option>
+            </select>
+            <button class="btn-primary" onclick="showBancoModal()">+ Adicionar banco</button>
+            <button class="action-btn" onclick="loadBancos()">🔄</button>
+          </div>
+        </div>
+
+        <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#78350F;">
+          <strong>ℹ️ Status dos adapters:</strong>
+          <span id="bancosImplementados">carregando…</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Escola</th><th>Banco</th><th>Agência/Conta</th><th>CNPJ Beneficiário</th><th>Padrão</th><th>Homologado</th><th>Último erro</th><th>Ações</th></tr></thead>
+            <tbody id="bancosBody"><tr><td colspan="8" class="empty-state">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MODAL: Configurar Banco -->
+      <div id="bancoEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:16px;max-width:720px;margin:0 auto;padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="bancoEditorTitle" style="font-size:17px;font-weight:700;">Adicionar Banco</h3>
+            <button onclick="document.getElementById('bancoEditorModal').style.display='none'" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;">&times;</button>
+          </div>
+          <input type="hidden" id="bancoEditId">
+          <div class="ff-row">
+            <div class="ff"><label>Escola *</label>
+              <select id="bancoEditEscola"><option value="">— selecione —</option></select>
+            </div>
+            <div class="ff"><label>Banco *</label>
+              <select id="bancoEditProvider">
+                <option value="inter">Banco Inter</option>
+                <option value="sicredi">Sicredi</option>
+                <option value="bb">Banco do Brasil</option>
+                <option value="itau">Itaú</option>
+                <option value="bradesco">Bradesco</option>
+              </select>
+            </div>
+          </div>
+          <div class="ff-row">
+            <div class="ff"><label>Agência *</label><input id="bancoEditAgencia" placeholder="0001"></div>
+            <div class="ff"><label>Conta *</label><input id="bancoEditConta" placeholder="123456"></div>
+            <div class="ff"><label>Dígito</label><input id="bancoEditContaDigito" placeholder="0" maxlength="2"></div>
+          </div>
+          <div class="ff-row">
+            <div class="ff"><label>Convênio (BB/Bradesco)</label><input id="bancoEditConvenio" placeholder=""></div>
+            <div class="ff"><label>Carteira (Itaú/Sicredi)</label><input id="bancoEditCarteira" placeholder=""></div>
+          </div>
+          <div class="ff-row">
+            <div class="ff"><label>CNPJ Beneficiário *</label><input id="bancoEditCnpj" placeholder="00.000.000/0000-00"></div>
+            <div class="ff"><label>Razão Social *</label><input id="bancoEditNome" placeholder="Nome jurídico"></div>
+          </div>
+          <h4 style="margin-top:18px;margin-bottom:10px;font-size:13px;color:var(--muted);">OAuth (opcional — usa env var se vazio)</h4>
+          <div class="ff-row">
+            <div class="ff"><label>Client ID</label><input id="bancoEditClientId" placeholder="client_id do app no portal do banco"></div>
+            <div class="ff"><label>Nome do Secret (Supabase)</label><input id="bancoEditSecretName" placeholder="BANK_CLIENT_SECRET_xxx"></div>
+          </div>
+          <h4 style="margin-top:18px;margin-bottom:10px;font-size:13px;color:var(--muted);">PIX</h4>
+          <div class="ff-row">
+            <div class="ff"><label>Chave PIX</label><input id="bancoEditPixChave" placeholder="cnpj/email/telefone/aleatória"></div>
+            <div class="ff"><label>Tipo</label>
+              <select id="bancoEditPixTipo">
+                <option value="">—</option>
+                <option value="cnpj">CNPJ</option>
+                <option value="cpf">CPF</option>
+                <option value="email">Email</option>
+                <option value="telefone">Telefone</option>
+                <option value="aleatoria">Aleatória</option>
+              </select>
+            </div>
+          </div>
+          <h4 style="margin-top:18px;margin-bottom:10px;font-size:13px;color:var(--muted);">Webhook</h4>
+          <div class="ff-row">
+            <div class="ff"><label>Webhook Secret (HMAC)</label><input id="bancoEditWebhookSecret" placeholder="secret pra validar HMAC"></div>
+            <div class="ff"><label>URL configurada no portal</label><input id="bancoEditWebhookUrl" placeholder="https://...supabase.co/functions/v1/bank-webhook/<banco>"></div>
+          </div>
+          <h4 style="margin-top:18px;margin-bottom:10px;font-size:13px;color:var(--muted);">Certificado mTLS (PFX)</h4>
+          <div class="ff-row">
+            <div class="ff" style="flex:1;"><label>Upload PFX/PEM (após salvar)</label>
+              <input type="file" id="bancoEditCertFile" accept=".pfx,.p12,.pem">
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">Salve a config primeiro, depois faça upload do certificado. A senha do PFX deve ser registrada como secret no Supabase com nome BANK_CERT_PASS_&lt;short_id&gt;.</div>
+            </div>
+            <div class="ff"><label>Validade do cert</label><input type="date" id="bancoEditCertValidade"></div>
+          </div>
+          <div class="btn-bar" style="margin-top:20px;">
+            <button class="btn-secondary" onclick="document.getElementById('bancoEditorModal').style.display='none'">Cancelar</button>
+            <button class="btn-primary" onclick="salvarBanco()">Salvar configuração</button>
+          </div>
+        </div>
+      </div>
+
       <!-- MODAL: Nova/Editar Conta a Pagar -->
       <div id="cpEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;padding:24px;overflow-y:auto;">
         <div style="background:#fff;border-radius:16px;max-width:640px;margin:0 auto;padding:28px;">
@@ -1317,7 +1418,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', papeis:'Papéis & Permissões', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', migracao:'Migração de ERPs', billing:'Cobrança SaaS', finlumied:'Financeiro Interno (Lumied)', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', papeis:'Papéis & Permissões', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', migracao:'Migração de ERPs', billing:'Cobrança SaaS', finlumied:'Financeiro Interno (Lumied)', bancos:'Configuração Bancária', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1342,6 +1443,7 @@ function showPanel(id, el) {
   if (id === 'playbooks') loadPlaybooks();
   if (id === 'crm') loadCRM();
   if (id === 'funil') loadFunil();
+  if (id === 'bancos') loadBancos();
 }
 
 // ═══ BILLING SAAS (staff) ═══
@@ -3400,6 +3502,204 @@ async function migracaoPromover() {
   localStorage.removeItem(MIG_RASCUNHO_KEY);
   await migracaoRefreshJob();
   loadMigracao();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BANCOS — config bancária multi-banco por escola
+// ═══════════════════════════════════════════════════════════
+let _bancosCache = [];
+
+async function loadBancos() {
+  // Carrega lista de escolas pro filtro/modal (uma vez)
+  const filtroEsc = document.getElementById('bancosFiltroEscola');
+  const modalEsc = document.getElementById('bancoEditEscola');
+  if (filtroEsc.options.length <= 1) {
+    const escolas = await api({ action: 'escolas_list' });
+    const opts = (escolas || []).map(e => `<option value="${e.id}">${e.nome || e.slug}</option>`).join('');
+    filtroEsc.insertAdjacentHTML('beforeend', opts);
+    modalEsc.insertAdjacentHTML('beforeend', opts);
+  }
+
+  // Carrega adapters implementados pra exibir status
+  const providers = await api({ action: 'staff_bancos_providers' });
+  if (providers && !providers.error) {
+    const impl = (providers.implementados || []);
+    const todos = (providers.todos || []);
+    const html = todos.map(b => {
+      const ok = impl.includes(b);
+      return `<span style="display:inline-block;margin:0 8px 0 0;padding:2px 8px;border-radius:6px;background:${ok ? '#D1FAE5' : '#FEE2E2'};color:${ok ? '#065F46' : '#991B1B'};font-weight:600;">${b} ${ok ? '✓' : '○'}</span>`;
+    }).join('');
+    document.getElementById('bancosImplementados').innerHTML = html;
+  }
+
+  const filtroEscolaId = filtroEsc.value;
+  const data = await api({ action: 'staff_bancos_list', escola_id: filtroEscolaId || undefined });
+  _bancosCache = data || [];
+  document.getElementById('bancosCount').textContent = _bancosCache.length;
+
+  const tbody = document.getElementById('bancosBody');
+  if (!_bancosCache.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum banco configurado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _bancosCache.map(b => {
+    const escola = b.escolas?.nome || '—';
+    const cnpjFmt = b.beneficiario_cnpj ? b.beneficiario_cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : '—';
+    const padraoBadge = b.padrao
+      ? '<span style="background:#6B3FA0;color:#fff;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;">PADRÃO</span>'
+      : `<button class="action-btn" onclick="setPadraoBanco('${b.id}')" style="font-size:11px;">marcar</button>`;
+    const homolBadge = b.homologado
+      ? '<span style="color:#065F46;font-weight:600;">✓ Sim</span>'
+      : '<span style="color:#92400E;font-weight:600;">○ Não</span>';
+    const erro = b.ultimo_erro
+      ? `<span title="${(b.ultimo_erro_em || '').slice(0, 19)}" style="color:#991B1B;font-size:11px;">${b.ultimo_erro.slice(0, 60)}…</span>`
+      : '<span style="color:#9CA3AF;">—</span>';
+    return `<tr>
+      <td>${escola}</td>
+      <td><strong>${b.banco.toUpperCase()}</strong></td>
+      <td>${b.agencia}/${b.conta}${b.conta_digito ? '-' + b.conta_digito : ''}</td>
+      <td style="font-family:monospace;font-size:12px;">${cnpjFmt}</td>
+      <td>${padraoBadge}</td>
+      <td>${homolBadge}</td>
+      <td>${erro}</td>
+      <td>
+        <button class="action-btn" onclick="editarBanco('${b.id}')" title="Editar">✏️</button>
+        <button class="action-btn" onclick="testarBanco('${b.id}')" title="Testar emissão R$ 0,01">🧪</button>
+        <button class="action-btn" onclick="uploadCertBanco('${b.id}')" title="Upload certificado PFX">🔐</button>
+        ${b.padrao ? '' : `<button class="action-btn" onclick="deletarBanco('${b.id}')" title="Desativar" style="color:#DC2626;">🗑️</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function showBancoModal() {
+  document.getElementById('bancoEditorTitle').textContent = 'Adicionar Banco';
+  document.getElementById('bancoEditId').value = '';
+  ['Escola','Agencia','Conta','ContaDigito','Convenio','Carteira','Cnpj','Nome','ClientId','SecretName','PixChave','PixTipo','WebhookSecret','WebhookUrl','CertValidade'].forEach(f => {
+    const el = document.getElementById('bancoEdit' + f);
+    if (el) el.value = '';
+  });
+  document.getElementById('bancoEditProvider').value = 'inter';
+  document.getElementById('bancoEditorModal').style.display = 'block';
+}
+
+function editarBanco(id) {
+  const b = _bancosCache.find(x => x.id === id);
+  if (!b) return alert('Config não encontrada.');
+  document.getElementById('bancoEditorTitle').textContent = 'Editar Banco — ' + b.banco.toUpperCase();
+  document.getElementById('bancoEditId').value = b.id;
+  document.getElementById('bancoEditEscola').value = b.escola_id;
+  document.getElementById('bancoEditProvider').value = b.banco;
+  document.getElementById('bancoEditAgencia').value = b.agencia || '';
+  document.getElementById('bancoEditConta').value = b.conta || '';
+  document.getElementById('bancoEditContaDigito').value = b.conta_digito || '';
+  document.getElementById('bancoEditConvenio').value = b.convenio || '';
+  document.getElementById('bancoEditCarteira').value = b.carteira || '';
+  document.getElementById('bancoEditCnpj').value = b.beneficiario_cnpj || '';
+  document.getElementById('bancoEditNome').value = b.beneficiario_nome || '';
+  document.getElementById('bancoEditClientId').value = b.client_id || '';
+  document.getElementById('bancoEditSecretName').value = b.client_secret_name || '';
+  document.getElementById('bancoEditPixChave').value = b.pix_chave || '';
+  document.getElementById('bancoEditPixTipo').value = b.pix_tipo || '';
+  document.getElementById('bancoEditWebhookSecret').value = b.webhook_secret || '';
+  document.getElementById('bancoEditWebhookUrl').value = b.webhook_url || '';
+  document.getElementById('bancoEditCertValidade').value = b.cert_validade || '';
+  document.getElementById('bancoEditorModal').style.display = 'block';
+}
+
+async function salvarBanco() {
+  const id = document.getElementById('bancoEditId').value;
+  const payload = {
+    action: 'staff_banco_save',
+    escola_id: document.getElementById('bancoEditEscola').value,
+    banco: document.getElementById('bancoEditProvider').value,
+    agencia: document.getElementById('bancoEditAgencia').value.trim(),
+    conta: document.getElementById('bancoEditConta').value.trim(),
+    conta_digito: document.getElementById('bancoEditContaDigito').value.trim(),
+    convenio: document.getElementById('bancoEditConvenio').value.trim(),
+    carteira: document.getElementById('bancoEditCarteira').value.trim(),
+    beneficiario_cnpj: document.getElementById('bancoEditCnpj').value.trim(),
+    beneficiario_nome: document.getElementById('bancoEditNome').value.trim(),
+    client_id: document.getElementById('bancoEditClientId').value.trim(),
+    client_secret_name: document.getElementById('bancoEditSecretName').value.trim(),
+    pix_chave: document.getElementById('bancoEditPixChave').value.trim(),
+    pix_tipo: document.getElementById('bancoEditPixTipo').value,
+    webhook_secret: document.getElementById('bancoEditWebhookSecret').value.trim(),
+    webhook_url: document.getElementById('bancoEditWebhookUrl').value.trim(),
+    cert_validade: document.getElementById('bancoEditCertValidade').value || null,
+  };
+  if (!payload.escola_id || !payload.agencia || !payload.conta || !payload.beneficiario_cnpj || !payload.beneficiario_nome) {
+    return alert('Escola, agência, conta, CNPJ e razão social são obrigatórios.');
+  }
+
+  const r = await api(payload);
+  if (r.error) return alert('Erro: ' + r.error);
+
+  document.getElementById('bancoEditorModal').style.display = 'none';
+  await loadBancos();
+
+  // Se foi criação, oferece upload de cert na sequência
+  if (!id && r.id) {
+    if (confirm('Banco salvo. Deseja fazer upload do certificado PFX agora?')) {
+      uploadCertBanco(r.id);
+    }
+  }
+}
+
+async function setPadraoBanco(id) {
+  if (!confirm('Marcar como banco padrão da escola? Os outros bancos da escola perdem o status de padrão.')) return;
+  const r = await api({ action: 'staff_banco_set_padrao', id });
+  if (r.error) return alert('Erro: ' + r.error);
+  await loadBancos();
+}
+
+async function deletarBanco(id) {
+  if (!confirm('Desativar este banco? Boletos emitidos seguem válidos, mas novas emissões pra esse banco serão bloqueadas.')) return;
+  const r = await api({ action: 'staff_banco_delete', id });
+  if (r.error) return alert('Erro: ' + r.error);
+  await loadBancos();
+}
+
+async function testarBanco(id) {
+  if (!confirm('Emitir boleto de teste de R$ 0,01? Marca como homologado se der certo.')) return;
+  const btn = event?.target;
+  if (btn) btn.disabled = true;
+  try {
+    const r = await api({ action: 'staff_banco_test_emissao', id });
+    if (r.success === false) {
+      alert(`Falhou: ${r.code || 'erro'}\n\n${r.message || ''}`);
+    } else {
+      alert(`✓ Homologado!\nNosso número: ${r.nosso_numero}\nCódigo: ${r.codigo_solicitacao}`);
+    }
+  } catch (e) {
+    alert('Erro: ' + (e.message || e));
+  } finally {
+    if (btn) btn.disabled = false;
+    await loadBancos();
+  }
+}
+
+function uploadCertBanco(id) {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.pfx,.p12,.pem';
+  fileInput.onchange = async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) return alert('Cert maior que 500KB — verifique o arquivo.');
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = String(reader.result).split(',')[1];
+      const r = await api({ action: 'staff_banco_upload_cert', id, cert_base64: base64, filename: file.name });
+      if (r.error) return alert('Erro: ' + r.error);
+      alert(`✓ Certificado salvo em ${r.path}\n\nLembre de registrar a senha do PFX como Supabase secret com nome BANK_CERT_PASS_<short_id>.`);
+      await loadBancos();
+    };
+    reader.readAsDataURL(file);
+  };
+  fileInput.click();
 }
 
 // ═══════════════════════════════════════════════════════════

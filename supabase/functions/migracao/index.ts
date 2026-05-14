@@ -13,7 +13,15 @@ import {
 import {
   isValidCpf, isValidCnpj, normEmail, normName,
 } from "./validator.ts";
-import { parseFileToRows, rowsToStaging, detectErp, type EntidadeAlvo } from "./adapters/excel.ts";
+import {
+  parseFileToSheets, rowsToStaging, detectErp,
+  type EntidadeAlvo, type ErpDialect,
+} from "./adapters/excel.ts";
+import { ESCOLAWEB_DIALECT } from "./adapters/escolaweb.ts";
+
+const DIALECTS_BY_ERP: Record<string, ErpDialect> = {
+  escolaweb: ESCOLAWEB_DIALECT,
+};
 
 const log = createLogger("migracao");
 
@@ -222,6 +230,34 @@ router.on("migracao_parse", authStaff, validateInput(jobIdSchema), async (ctx: C
 
   const resumo: Record<string, number> = {};
   let erpAuto = job.erp_origem as string;
+  const dialectsKnown = Object.values(DIALECTS_BY_ERP);
+
+  // Helper: persiste um lote de ParsedRow em staging com dedupe por hash.
+  const persistirStaging = async (
+    entidade: EntidadeAlvo,
+    parsed: Awaited<ReturnType<typeof rowsToStaging>>,
+    arquivoId: string,
+  ): Promise<number> => {
+    const table = STAGING_TABLES[entidade];
+    let inserted = 0;
+    for (let i = 0; i < parsed.length; i += 500) {
+      const chunk = parsed.slice(i, i + 500).map(p => ({
+        job_id, escola_id: ctx.escola_id,
+        origem_arquivo_id: arquivoId, origem_linha: p.linha, origem_hash: p.hash,
+        ...p.data,
+      }));
+      const { error: insErr } = await ctx.sb.from(table).insert(chunk);
+      if (insErr) {
+        const filtered = await dedupeByHash(ctx.sb, table, job_id, chunk);
+        if (filtered.length > 0) {
+          const { error: e2 } = await ctx.sb.from(table).insert(filtered);
+          if (e2) throw new AppError("INTERNAL_ERROR", `Insert staging ${entidade}: ${e2.message}`);
+          inserted += filtered.length;
+        }
+      } else inserted += chunk.length;
+    }
+    return inserted;
+  };
 
   for (const arq of arquivos) {
     // deno-lint-ignore no-explicit-any
@@ -235,45 +271,59 @@ router.on("migracao_parse", authStaff, validateInput(jobIdSchema), async (ctx: C
       throw new AppError("INTERNAL_ERROR", `Falha ao baixar ${a.nome_original}: ${dlErr?.message ?? "blob vazio"}`);
     }
     const bytes = new Uint8Array(await blob.arrayBuffer());
-    let rows: Record<string, unknown>[] = [];
-    try { rows = parseFileToRows(a.nome_original, bytes); }
+    const entidadePrim = a.entidade_alvo as EntidadeAlvo;
+
+    // Multi-sheet: lê todas as abas. Se uma aba bater com a entidade
+    // primária pelo nome, usa essa. Senão usa a primeira aba que tem
+    // dados. Para Escolaweb também envia para staging cada aba extra
+    // cujo nome aponte a entidade diferente.
+    let sheets: { name: string; rows: Record<string, unknown>[] }[] = [];
+    try { sheets = parseFileToSheets(a.nome_original, bytes); }
     catch (e) { throw new AppError("VALIDATION_FAILED", `Falha ao parsear ${a.nome_original}: ${(e as Error).message}`); }
+    if (sheets.length === 0) continue;
 
-    if (erpAuto === "excel" && rows.length > 0) {
-      // Refina detecção do ERP fonte pelos headers reais
-      const headers = Object.keys(rows[0]);
-      erpAuto = detectErp(a.nome_original, headers);
+    // Refina ERP detection com headers da primeira sheet com linhas
+    const firstWithData = sheets.find(s => s.rows.length > 0) ?? sheets[0];
+    if ((erpAuto === "excel" || !erpAuto) && firstWithData.rows.length > 0) {
+      const headers = Object.keys(firstWithData.rows[0]);
+      erpAuto = detectErp(a.nome_original, headers, dialectsKnown);
     }
+    const dialect: ErpDialect | undefined = DIALECTS_BY_ERP[erpAuto];
 
-    const entidade = a.entidade_alvo as EntidadeAlvo;
-    if (!ENTIDADES.has(entidade)) continue;
-    const parsed = await rowsToStaging(rows, entidade);
+    // Heurística para resolver sheet → entidade.
+    let totalLinhasArquivo = 0;
+    let totalParseadasArquivo = 0;
+    const sheetsProcessadas: { sheet: string; entidade: EntidadeAlvo; linhas: number }[] = [];
 
-    // Bulk insert em chunks de 500
-    const table = STAGING_TABLES[entidade];
-    let inserted = 0;
-    for (let i = 0; i < parsed.length; i += 500) {
-      const chunk = parsed.slice(i, i + 500).map(p => ({
-        job_id, escola_id: ctx.escola_id,
-        origem_arquivo_id: a.id, origem_linha: p.linha, origem_hash: p.hash,
-        ...p.data,
-      }));
-      const { error: insErr } = await ctx.sb.from(table).insert(chunk);
-      if (insErr) {
-        // tenta novamente desduplicando por origem_hash (re-parse seguro)
-        const filtered = await dedupeByHash(ctx.sb, table, job_id, chunk);
-        if (filtered.length > 0) {
-          const { error: e2 } = await ctx.sb.from(table).insert(filtered);
-          if (e2) throw new AppError("INTERNAL_ERROR", `Insert staging ${entidade}: ${e2.message}`);
-          inserted += filtered.length;
-        }
-      } else inserted += chunk.length;
+    for (const s of sheets) {
+      totalLinhasArquivo += s.rows.length;
+      if (s.rows.length === 0) continue;
+      // 1. tenta nome da sheet via dialect (escolaweb e adiante)
+      let entAlvo: EntidadeAlvo | null = dialect?.entidadeBySheetName?.(s.name) ?? null;
+      // 2. se primeira sheet, cai para a entidade primária do upload
+      if (!entAlvo && s === firstWithData) entAlvo = entidadePrim;
+      // 3. fallback: ignora sheets desconhecidas em workbooks multi-aba
+      if (!entAlvo || !ENTIDADES.has(entAlvo)) continue;
+
+      const parsed = await rowsToStaging(s.rows, entAlvo, dialect);
+      const inserted = await persistirStaging(entAlvo, parsed, a.id);
+      resumo[entAlvo] = (resumo[entAlvo] ?? 0) + inserted;
+      totalParseadasArquivo += parsed.length;
+      sheetsProcessadas.push({ sheet: s.name, entidade: entAlvo, linhas: parsed.length });
     }
-    resumo[entidade] = (resumo[entidade] ?? 0) + inserted;
 
     await ctx.sb.from("migracao_arquivos").update({
-      linhas_total: rows.length, linhas_parseadas: parsed.length,
+      linhas_total: totalLinhasArquivo,
+      linhas_parseadas: totalParseadasArquivo,
     }).eq("id", a.id);
+
+    if (sheetsProcessadas.length > 1) {
+      // Loga roteamento multi-sheet (útil pra debug do dialect Escolaweb)
+      log.info("migracao_parse multi-sheet", {
+        user_id: ctx.user?.id, escola_id: ctx.escola_id,
+        metadata: { arquivo: a.nome_original, dialect: erpAuto, sheets: sheetsProcessadas },
+      });
+    }
   }
 
   await ctx.sb.from("migracao_jobs").update({
