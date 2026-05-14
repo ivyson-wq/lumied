@@ -1,2 +1,2 @@
-trigger: 2026-05-07T10:00:00Z
-Firing outbound pulse — 2026-05-07 quinta-feira (disparo via agente).
+trigger: 2026-05-14T10:00:00Z
+Firing outbound pulse — 2026-05-14 quinta-feira (disparo via agente).

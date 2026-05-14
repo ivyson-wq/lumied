@@ -7,17 +7,15 @@
 
 import { writeFileSync } from 'fs';
 
-const CRON_KEY      = process.env.CRON_INTERNAL_KEY;
+const CRON_KEY      = process.env.CRON_INTERNAL_KEY || 'lumied_cron_dbb4070f6b5601bb23bd2cb38d373bea';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const RESEND_KEY    = process.env.RESEND_API_KEY;
 const SUPABASE_URL  = process.env.SUPABASE_URL || 'https://brgorknbrjlfwvrrlwxj.supabase.co';
 
 // ── Validação ──
-if (!CRON_KEY || !ANTHROPIC_KEY || !RESEND_KEY) {
+if (!CRON_KEY || !ANTHROPIC_KEY) {
   console.error('[pulse] ERRO: variáveis obrigatórias ausentes.');
   console.error(`  CRON_INTERNAL_KEY: ${CRON_KEY ? 'OK' : 'FALTANDO'}`);
   console.error(`  ANTHROPIC_API_KEY: ${ANTHROPIC_KEY ? 'OK' : 'FALTANDO'}`);
-  console.error(`  RESEND_API_KEY:    ${RESEND_KEY ? 'OK' : 'FALTANDO'}`);
   process.exit(1);
 }
 
@@ -196,30 +194,36 @@ function montarOutput(leads, mensagens) {
   return { html, csv: csvHeader + csvLinhas, novos, breakup };
 }
 
-// ── Passo 4: Enviar e-mail via Resend ──
-async function enviarEmail(html, csvBase64, total) {
-  console.log('[pulse] Passo 4: Enviando e-mail via Resend...');
-  const subject = `Pulse Outbound — ${TODAY_ISO} · ${total} leads`;
-  const res = await fetch('https://api.resend.com/emails', {
+// ── Envio via gtm.pulse_send_email (RESEND_API_KEY fica na edge function) ──
+async function gtmSendEmail({ subject, html, csvBase64, csvFilename }) {
+  const body = {
+    action: 'pulse_send_email',
+    to: 'ivyson@gmail.com',
+    subject,
+    html,
+  };
+  if (csvBase64) {
+    body.csv_b64 = csvBase64;
+    body.csv_filename = csvFilename || `pulse-${TODAY_ISO}.csv`;
+  }
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/gtm`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${RESEND_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Lumied Outbound <noreply@lumied.com.br>',
-      to: ['ivyson@gmail.com'],
-      subject,
-      html,
-      attachments: [{ filename: `pulse-${TODAY_ISO}.csv`, content: csvBase64 }],
-    }),
+    headers: { 'Authorization': `Bearer ${CRON_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Resend HTTP ${res.status}: ${text}`);
+    throw new Error(`pulse_send_email HTTP ${res.status}: ${text}`);
   }
   const data = await res.json();
-  return data.id || null;
+  return data?.data?.resend_id || data?.resend_id || null;
+}
+
+// ── Passo 4: Enviar e-mail via gtm.pulse_send_email ──
+async function enviarEmail(html, csvBase64, total) {
+  console.log('[pulse] Passo 4: Enviando e-mail via gtm.pulse_send_email...');
+  const subject = `Pulse Outbound — ${TODAY_ISO} · ${total} leads`;
+  return gtmSendEmail({ subject, html, csvBase64, csvFilename: `pulse-${TODAY_ISO}.csv` });
 }
 
 // ── Passo 5: Atualizar próximo passo de cada lead ──
@@ -255,15 +259,9 @@ async function main() {
   } catch (e) {
     console.error(`[pulse] FALHA ao puxar leads: ${e.message}`);
     try {
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from: 'Lumied Outbound <noreply@lumied.com.br>',
-          to: ['ivyson@gmail.com'],
-          subject: `[ERRO] Pulse Outbound — ${TODAY_ISO}`,
-          html: `<p>O agente de outbound falhou ao puxar leads:</p><pre>${e.message}</pre>`,
-        }),
+      await gtmSendEmail({
+        subject: `[ERRO] Pulse Outbound — ${TODAY_ISO}`,
+        html: `<p>O agente de outbound falhou ao puxar leads:</p><pre>${e.message}</pre>`,
       });
     } catch {}
     process.exit(1);
@@ -271,19 +269,12 @@ async function main() {
 
   if (total === 0 || leads.length === 0) {
     console.log('[pulse] Fila zerada. Enviando aviso...');
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'Lumied Outbound <noreply@lumied.com.br>',
-        to: ['ivyson@gmail.com'],
-        subject: `Pulse Outbound — ${TODAY_ISO} · fila zerada`,
-        html: `<p>Nenhum lead pendente para hoje (${TODAY_ISO}).</p><p>Considere capturar leads novos via <code>lead_capture</code> ou <a href="https://lumied.com.br">lumied.com.br</a>.</p>`,
-      }),
+    const resendId = await gtmSendEmail({
+      subject: `Pulse Outbound — ${TODAY_ISO} · fila zerada`,
+      html: `<p>Nenhum lead pendente para hoje (${TODAY_ISO}).</p><p>Considere capturar leads novos via <code>lead_capture</code> ou abasteça a fila via <code>gtm/lead_capture</code>.</p>`,
     });
-    const data = await res.json();
-    writeFileSync('/tmp/pulse-summary.txt', `Fila zerada — aviso enviado. Resend ID: ${data.id}`);
-    console.log(`\n✓ Fila zerada. Resend ID: ${data.id}`);
+    writeFileSync('/tmp/pulse-summary.txt', `Fila zerada — aviso enviado. Resend ID: ${resendId}`);
+    console.log(`\n✓ Fila zerada. Resend ID: ${resendId}`);
     return;
   }
 
