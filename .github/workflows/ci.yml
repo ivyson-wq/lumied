@@ -1,10 +1,32 @@
 name: CI — Lint, Test & Deploy
 
+# Otimizado pra consumir menos minutos do GitHub Actions:
+#  - 1 job sequencial em vez de 6 paralelos (elimina ~3min de runner-setup
+#    × 5 jobs extras, economiza ~15min de minutos cobráveis por run).
+#  - paths-ignore: pula em commits cosméticos (blog auto-gerado, .md, sitemaps).
+#  - Sentry release usa --ignore-missing (era --auto, exigia clone full-history
+#    e estava falhando 100% por causa do shallow clone padrão do checkout@v5).
+
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'site/blog/**'              # auto-gerado pelo lumied-daily-blog
+      - '**/*.md'                   # docs/markdown não afetam build
+      - 'scripts/seo-topics.json'   # tópicos pendentes — agente
+      - 'sitemap.xml'               # auto-regenerado
+      - '.github/screenshots/**'    # screenshots Central de Ajuda
+      - '.github/outbound-trigger.txt'  # trigger do outbound-pulse, não do CI
+      - 'chrome-extension/dist/**'  # build artifact da extension
+      - 'memory/**'                 # auto-memory do Claude
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'site/blog/**'
+      - '**/*.md'
+      - 'scripts/seo-topics.json'
+      - 'sitemap.xml'
+      - '.github/screenshots/**'
   workflow_dispatch:
 
 env:
@@ -12,10 +34,10 @@ env:
   SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
 
 jobs:
-  # ═══ 1. LINT & TYPE CHECK ═══
-  lint:
-    name: Lint & Type Check
+  ci:
+    name: Lint + Test + Deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -23,48 +45,39 @@ jobs:
         with:
           deno-version: v2.x
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ─── Lint ───
       - name: Deno lint (Edge Functions)
         run: deno lint --config supabase/functions/deno.json supabase/functions/_shared/ supabase/functions/__tests__/
 
-      - name: Deno check (Type Check)
+      - name: Deno type-check (_shared)
         run: |
           set -e
           for f in supabase/functions/_shared/*.ts; do
-            echo "Checking $f..."
             deno check --config supabase/functions/deno.json "$f"
           done
 
-  # ═══ 2. UNIT TESTS ═══
-  test:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Run Deno tests
+      # ─── Unit tests ───
+      - name: Deno unit tests
         run: deno test --config supabase/functions/deno.json supabase/functions/__tests__/ --allow-net --allow-read --allow-env
 
-  # ═══ 3. DEPLOY (only on main push) ═══
-  deploy-functions:
-    name: Deploy Edge Functions
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: supabase/setup-cli@v1
+      # Daqui pra baixo só roda em push pra main (pula em PR)
+      - name: Setup Supabase CLI
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: supabase/setup-cli@v1
         with:
           version: latest
 
       - name: Link project
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: supabase link --project-ref ${{ env.SUPABASE_PROJECT_REF }}
 
       - name: Deploy Edge Functions
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           set -e
           FAILED=()
@@ -85,89 +98,49 @@ jobs:
             exit 1
           fi
 
-  # ═══ 3b. API CONTRACT SMOKE TEST (after deploy) ═══
-  api-smoke-test:
-    name: API Contract Smoke Test
-    runs-on: ubuntu-latest
-    needs: [deploy-functions]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v5
+      - name: API + UX smoke tests
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          node tests/smoke/smoke-api.mjs
+          node tests/smoke/smoke-ux.mjs
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Run API smoke test (188 actions across 7 edge functions)
-        run: node tests/smoke/smoke-api.mjs
-
-      - name: Run UX smoke test (88 checks)
-        run: node tests/smoke/smoke-ux.mjs
-
-  deploy-frontend:
-    name: Deploy Frontend (Vercel)
-    runs-on: ubuntu-latest
-    needs: [lint, test, deploy-functions, api-smoke-test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
+      - name: Install frontend deps
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: npm install --no-audit --no-fund
 
       - name: Build frontend bundles (esbuild)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: node build.js
 
       - name: Deploy to Vercel
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         continue-on-error: true
         run: npx vercel --yes --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-  # ═══ 4. SENTRY RELEASE & SOURCE MAPS ═══
-  sentry-release:
-    name: Sentry Release & Source Maps
-    runs-on: ubuntu-latest
-    needs: [deploy-frontend]
-    continue-on-error: true
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
+      # ─── Sentry release (continua não-fatal; --ignore-missing evita erro de SHA) ───
       - name: Install sentry-cli
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: npm install -g @sentry/cli
 
-      - name: Create Sentry release & upload source maps
+      - name: Sentry release & source maps
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: lumied
           SENTRY_PROJECT: javascript
         run: |
           VERSION="maple-bear-rs@$(git rev-parse --short HEAD)"
-          echo "Creating Sentry release: $VERSION"
-
           sentry-cli releases new "$VERSION"
-          sentry-cli releases set-commits "$VERSION" --auto
-
-          # Upload JS source maps from dist/
+          sentry-cli releases set-commits "$VERSION" --ignore-missing
           if [ -d "dist" ]; then
             sentry-cli sourcemaps upload --release="$VERSION" dist/ --url-prefix "~/dist"
           fi
-
-          # Upload root-level JS files
           sentry-cli sourcemaps upload --release="$VERSION" \
             --url-prefix "~/" \
             sentry-init.js config.js sw.js webauthn-client.js 2>/dev/null || true
-
           sentry-cli releases finalize "$VERSION"
           sentry-cli releases deploys "$VERSION" new -e production
-          echo "Sentry release $VERSION finalized."

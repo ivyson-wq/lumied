@@ -3,8 +3,23 @@ name: E2E Smoke Tests
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'site/blog/**'
+      - '**/*.md'
+      - 'scripts/seo-topics.json'
+      - 'sitemap.xml'
+      - '.github/screenshots/**'
+      - '.github/outbound-trigger.txt'
+      - 'chrome-extension/dist/**'
+      - 'memory/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'site/blog/**'
+      - '**/*.md'
+      - 'scripts/seo-topics.json'
+      - 'sitemap.xml'
+      - '.github/screenshots/**'
   workflow_dispatch:
 
 jobs:
