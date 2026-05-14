@@ -619,6 +619,8 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
             qty_aprovado: parseFloat(it.qty_aprovado || 0),
             preco_unit: parseFloat(it.preco_unit || 0),
             valor: parseFloat((it.qty_aprovado ?? it.qty_solicitado ?? 0)) * parseFloat(it.preco_unit || 0),
+            tipo: it.tipo === 'emprestimo' ? 'emprestimo' : 'comprar',
+            localizacao: it.localizacao || null,
             link: it.link_referencia || null,
           })
         }
@@ -685,13 +687,14 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
             qty: parseFloat((it.qty_aprovado ?? it.qty_solicitado ?? 0)),
             preco: parseFloat(it.preco_unit || 0),
             valor: parseFloat((it.qty_aprovado ?? it.qty_solicitado ?? 0)) * parseFloat(it.preco_unit || 0),
-            link: it.link_referencia || '',
+            tipo: it.tipo === 'emprestimo' ? 'Empréstimo' : 'Compra',
+            link: it.link_referencia || it.localizacao || '',
           })
         }
       }
       if (action === 'alm_relatorio_export_xlsx') {
-        const headers = ['Data', 'Mês', 'Status', 'Turma', 'Professora', 'Item', 'Categoria', 'Qty', 'Unid.', 'Preço', 'Valor', 'Link']
-        const rows = linhas.map(l => [l.data, l.mes, l.status, l.turma, l.professora, l.nome, l.categoria, String(l.qty), l.unidade, l.preco.toFixed(2), l.valor.toFixed(2), l.link])
+        const headers = ['Data', 'Mês', 'Status', 'Turma', 'Professora', 'Item', 'Tipo', 'Categoria', 'Qty', 'Unid.', 'Preço', 'Valor', 'Link/Local']
+        const rows = linhas.map(l => [l.data, l.mes, l.status, l.turma, l.professora, l.nome, l.tipo, l.categoria, String(l.qty), l.unidade, l.preco.toFixed(2), l.valor.toFixed(2), l.link])
         const xlsx = generateXlsx(headers, rows)
         return xlsxResponse(xlsx, `relatorio-requisicoes-${new Date().toISOString().slice(0,10)}.xlsx`)
       }
@@ -854,6 +857,8 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const insumoWarnings: Array<{ nome: string; error: string }> = []
       for (const it of itens) {
         const semId = !it.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
+        // Empréstimo não vira insumo de catálogo (já existe na escola, sem cotação)
+        if (it.tipo === 'emprestimo') continue
         if (semId && it.nome && parseFloat(it.qty_aprovado) > 0) {
           it.insumo_id = null
           const { data: novo, error: errIns } = await sb.from('alm_insumos').insert({

@@ -14438,7 +14438,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       // Pendente: mostra estoque atual (preview do que poderá ser deduzido)
       // Aprovado: mostra qty_do_estoque e qty_a_comprar (já fixados em alm_aprovar)
       let badge = '';
-      if (isAprovado) {
+      if (it.tipo === 'emprestimo') {
+        badge = ` <span title="${(it.localizacao||'').replace(/"/g,'&quot;')}" style="background:#fef9c3;color:#854d0e;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;">🏫 Empréstimo</span>`;
+      } else if (isAprovado) {
         const est = Number(it.qty_do_estoque || 0);
         const buy = Number(it.qty_a_comprar  || 0);
         if (est > 0 && buy > 0) {
@@ -14507,15 +14509,22 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
         <strong>${req.professoras?.nome||'—'}</strong> · ${req.series?.nome||'—'} · ${almMesBR(req.mes)} · ${new Date(req.criado_em).toLocaleDateString('pt-BR')}
       </div>
-      ${almReviewItens.map((it, i) => `
-        <div class="alm-insumo-row" id="alm-row-${i}" data-rejeitado="0" style="flex-direction:column;align-items:stretch;gap:8px;">
+      ${almReviewItens.map((it, i) => {
+        const isEmp = it.tipo === 'emprestimo';
+        return `
+        <div class="alm-insumo-row" id="alm-row-${i}" data-rejeitado="0" data-tipo="${isEmp ? 'emprestimo' : 'comprar'}" style="flex-direction:column;align-items:stretch;gap:8px;${isEmp ? 'background:#fefce8;border-left:3px solid #ca8a04;' : ''}">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <div style="flex:1;min-width:160px;">
-              <div style="font-weight:600;" class="alm-item-titulo">${it.nome}</div>
-              <div style="font-size:11px;color:var(--muted);">${almFmtBRL(it.preco_unit)} / ${it.unidade}</div>
+              <div style="font-weight:600;" class="alm-item-titulo">
+                ${it.nome}
+                ${isEmp ? `<span style="display:inline-block;background:#fef9c3;color:#854d0e;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;margin-left:6px;vertical-align:middle;">🏫 Empréstimo</span>` : ''}
+              </div>
+              <div style="font-size:11px;color:var(--muted);">
+                ${isEmp ? `Onde está: <strong style="color:#854d0e;">${(it.localizacao||'—')}</strong>` : `${almFmtBRL(it.preco_unit)} / ${it.unidade}`}
+              </div>
             </div>
             <div style="font-size:12px;color:var(--muted);flex-shrink:0;">Pedido: <strong>${it.qty_solicitado}</strong></div>
-            ${it._estoque_disponivel > 0 ? `
+            ${it._estoque_disponivel > 0 && !isEmp ? `
               <div id="alm-est-${i}" style="font-size:11px;flex-shrink:0;background:#dcfce7;color:#166534;padding:3px 8px;border-radius:10px;font-weight:600;" title="Disponível no estoque/inventário — será deduzido em vez de comprar">
                 📦 ${it._estoque_disponivel} em estoque
               </div>` : ''}
@@ -14528,9 +14537,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
               title="Rejeitar este item (mantém os demais)">❌ Rejeitar</button>
           </div>
           <div id="alm-price-${i}" class="alm-price-results" style="display:block;">
-            <div class="alm-price-skeleton">⏳ Buscando melhor preço em Mercado Livre, Shopee e Amazon…</div>
+            ${isEmp
+              ? `<div style="font-size:11px;color:#854d0e;background:#fef9c3;border-radius:6px;padding:6px 10px;">🏫 Empréstimo — sem cotação. Aprovar autoriza a professora a retirar do local indicado.</div>`
+              : `<div class="alm-price-skeleton">⏳ Buscando melhor preço em Mercado Livre, Shopee e Amazon…</div>`}
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
       <div style="text-align:right;font-weight:600;font-size:14px;margin-top:10px;">Total pedido: ${almFmtBRL(req.total)}</div>
       ${req.observacao ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">📝 ${req.observacao}</div>` : ''}`;
 

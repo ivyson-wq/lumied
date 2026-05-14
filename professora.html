@@ -4038,14 +4038,18 @@ body.dash-clean #greetingBar{display:none;}
     document.querySelectorAll('[id^="almNovoItem_"]').forEach(div => {
       const nome = div.querySelector('.alm-novo-nome')?.value?.trim();
       if (!nome) return;
+      const tipo = div.querySelector('.alm-novo-tipo:checked')?.value || 'comprar';
+      const isEmprestimo = tipo === 'emprestimo';
       itensLivres.push({
         insumo_id: null,
         nome,
         unidade: div.querySelector('.alm-novo-unidade')?.value || 'unidade',
         categoria: div.querySelector('.alm-novo-categoria')?.value || null,
         descricao: div.querySelector('.alm-novo-descricao')?.value?.trim() || null,
-        link_referencia: div.querySelector('.alm-novo-link')?.value?.trim() || null,
-        preco_unit: parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0,
+        tipo,
+        link_referencia: isEmprestimo ? null : (div.querySelector('.alm-novo-link')?.value?.trim() || null),
+        localizacao: isEmprestimo ? (div.querySelector('.alm-novo-localizacao')?.value?.trim() || null) : null,
+        preco_unit: isEmprestimo ? 0 : (parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0),
         qty_solicitado: parseInt(div.querySelector('.alm-novo-qty')?.value) || 1,
       });
     });
@@ -4093,6 +4097,11 @@ body.dash-clean #greetingBar{display:none;}
               linkEl.value = it.link_referencia;
               if (typeof almRenderLinkPreview === 'function') almRenderLinkPreview(linkEl);
             }
+            if (it.tipo === 'emprestimo') {
+              const rEmp = div.querySelector('.alm-novo-tipo[value="emprestimo"]');
+              if (rEmp) { rEmp.checked = true; almTipoChanged(rEmp); }
+              if (it.localizacao) div.querySelector('.alm-novo-localizacao').value = it.localizacao;
+            }
           }
         }
       }
@@ -4123,6 +4132,11 @@ body.dash-clean #greetingBar{display:none;}
                 const linkEl = div.querySelector('.alm-novo-link');
                 linkEl.value = it.link_referencia;
                 if (typeof almRenderLinkPreview === 'function') almRenderLinkPreview(linkEl);
+              }
+              if (it.tipo === 'emprestimo') {
+                const rEmp = div.querySelector('.alm-novo-tipo[value="emprestimo"]');
+                if (rEmp) { rEmp.checked = true; almTipoChanged(rEmp); }
+                if (it.localizacao) div.querySelector('.alm-novo-localizacao').value = it.localizacao;
               }
             }
           }
@@ -4293,9 +4307,11 @@ body.dash-clean #greetingBar{display:none;}
   function almRenderCartTotal() {
     // Total do carrinho (itens catálogo)
     const totalCart = almCart.reduce((s, it) => s + it.qty_solicitado * it.preco_unit, 0);
-    // Total dos novos itens (não cadastrados)
+    // Total dos novos itens (não cadastrados) — empréstimo não entra no orçamento
     let totalNovos = 0;
     document.querySelectorAll('[id^="almNovoItem_"]').forEach(div => {
+      const tipo = div.querySelector('.alm-novo-tipo:checked')?.value || 'comprar';
+      if (tipo === 'emprestimo') return;
       const qty = parseFloat(div.querySelector('.alm-novo-qty')?.value) || 0;
       const preco = parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0;
       totalNovos += qty * preco;
@@ -4336,29 +4352,78 @@ body.dash-clean #greetingBar{display:none;}
     const el = document.getElementById('almNovosItens');
     const div = document.createElement('div');
     div.id = 'almNovoItem_' + idx;
+    div.dataset.tipo = 'comprar';
     div.style.cssText = 'background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;';
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-size:12px;font-weight:600;">Material #${idx}</span>
         <button onclick="document.getElementById('almNovoItem_${idx}').remove();almRenderCartTotal()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);">×</button>
       </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <label class="alm-novo-tipo-opt" style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid #3b82f6;background:#eff6ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">
+          <input type="radio" name="alm-tipo-${idx}" class="alm-novo-tipo" value="comprar" checked onchange="almTipoChanged(this)" style="margin:0;">
+          🛒 Comprar novo
+        </label>
+        <label class="alm-novo-tipo-opt" style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);">
+          <input type="radio" name="alm-tipo-${idx}" class="alm-novo-tipo" value="emprestimo" onchange="almTipoChanged(this)" style="margin:0;">
+          🏫 Já existe na escola
+        </label>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div style="grid-column:1/-1;"><input type="text" class="alm-novo-nome" placeholder="Nome do material *" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-        <div><select class="alm-novo-unidade" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+        <div style="grid-column:1/-1;"><input type="text" class="alm-novo-nome" placeholder="Nome do material *" oninput="almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div><select class="alm-novo-unidade" onchange="almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           <option value="unidade">Unidade</option><option value="folha">Folha</option><option value="metro">Metro</option><option value="litro">Litro</option><option value="kg">Kg</option><option value="caixa">Caixa</option><option value="pacote">Pacote</option><option value="rolo">Rolo</option><option value="resma">Resma</option>
         </select></div>
-        <div><select class="alm-novo-categoria" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+        <div><select class="alm-novo-categoria" onchange="almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           <option value="">Categoria</option><option value="Papelaria">Papelaria</option><option value="Artes">Artes</option><option value="Escritório">Escritório</option><option value="Limpeza">Limpeza</option><option value="Decoração">Decoração</option><option value="Pedagógico">Pedagógico</option><option value="Outro">Outro</option>
         </select></div>
         <div><input type="number" class="alm-novo-qty" placeholder="Qtd *" min="1" value="1" oninput="almRenderCartTotal();almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-        <div><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" oninput="almRenderCartTotal();almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-        <div style="grid-column:1/-1;"><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional — ex: tinta guache 250ml)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
-        <div style="grid-column:1/-1;">
-          <input type="url" class="alm-novo-link" required placeholder="Link de referência * (Mercado Livre, site do fornecedor…)" oninput="almRenderLinkPreview(this)" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+        <div class="alm-novo-preco-wrap"><input type="number" class="alm-novo-preco" placeholder="Preço unit. R$" min="0" step="0.01" oninput="almRenderCartTotal();almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div style="grid-column:1/-1;"><input type="text" class="alm-novo-descricao" placeholder="Descrição (opcional — ex: tinta guache 250ml)" oninput="almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;"></div>
+        <div class="alm-novo-link-wrap" style="grid-column:1/-1;">
+          <input type="url" class="alm-novo-link" placeholder="Link de referência * (Mercado Livre, site do fornecedor…)" oninput="almRenderLinkPreview(this);almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
           <div class="alm-novo-link-preview" style="font-size:11px;color:var(--muted);margin-top:4px;min-height:14px;"></div>
+        </div>
+        <div class="alm-novo-localizacao-wrap" style="grid-column:1/-1;display:none;">
+          <input type="text" class="alm-novo-localizacao" placeholder="Onde está / observação * (almoxarifado, sala 12, com a Ana…)" oninput="almScheduleAutoSave?.()" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <div style="font-size:11px;color:#166534;margin-top:4px;">ℹ️ Empréstimo precisa de aprovação do gerente e não consome orçamento da turma.</div>
         </div>
       </div>`;
     el.appendChild(div);
+  }
+
+  function almTipoChanged(radio) {
+    const div = radio.closest('[id^="almNovoItem_"]');
+    if (!div) return;
+    const tipo = radio.value;
+    div.dataset.tipo = tipo;
+    const precoWrap = div.querySelector('.alm-novo-preco-wrap');
+    const linkWrap  = div.querySelector('.alm-novo-link-wrap');
+    const locWrap   = div.querySelector('.alm-novo-localizacao-wrap');
+    if (tipo === 'emprestimo') {
+      precoWrap.style.display = 'none';
+      linkWrap.style.display  = 'none';
+      locWrap.style.display   = '';
+      const precoEl = div.querySelector('.alm-novo-preco');
+      if (precoEl) precoEl.value = '';
+      const linkEl = div.querySelector('.alm-novo-link');
+      if (linkEl) { linkEl.value = ''; const prev = div.querySelector('.alm-novo-link-preview'); if (prev) prev.textContent = ''; linkEl.style.borderColor = 'var(--border)'; }
+    } else {
+      precoWrap.style.display = '';
+      linkWrap.style.display  = '';
+      locWrap.style.display   = 'none';
+      const locEl = div.querySelector('.alm-novo-localizacao');
+      if (locEl) locEl.value = '';
+    }
+    // Visual highlight nas duas opções
+    div.querySelectorAll('.alm-novo-tipo-opt').forEach(lbl => {
+      const checked = lbl.querySelector('input').checked;
+      lbl.style.borderColor = checked ? '#3b82f6' : 'var(--border)';
+      lbl.style.background  = checked ? '#eff6ff' : '#fff';
+      lbl.style.color       = checked ? '' : 'var(--muted)';
+    });
+    almRenderCartTotal();
+    almScheduleAutoSave?.();
   }
 
   function almRenderLinkPreview(input) {
@@ -4389,16 +4454,23 @@ body.dash-clean #greetingBar{display:none;}
       const unidade = div.querySelector('.alm-novo-unidade')?.value || 'unidade';
       const categoria = div.querySelector('.alm-novo-categoria')?.value || null;
       const qty = parseInt(div.querySelector('.alm-novo-qty')?.value) || 1;
-      const preco = parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0;
       const descricao = div.querySelector('.alm-novo-descricao')?.value?.trim() || null;
-      const link = div.querySelector('.alm-novo-link')?.value?.trim() || '';
+      const tipo = div.querySelector('.alm-novo-tipo:checked')?.value || 'comprar';
       if (!nome) return;
+      if (tipo === 'emprestimo') {
+        const localizacao = div.querySelector('.alm-novo-localizacao')?.value?.trim() || '';
+        if (localizacao.length < 3) { linkErr = `Informe onde está "${nome}" (mínimo 3 caracteres) — ex: "almoxarifado", "sala 12", "com a Ana".`; return; }
+        itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, tipo: 'emprestimo', localizacao, link_referencia: null, preco_unit: 0, qty_solicitado: qty });
+        return;
+      }
+      const preco = parseFloat(div.querySelector('.alm-novo-preco')?.value) || 0;
+      const link = div.querySelector('.alm-novo-link')?.value?.trim() || '';
       if (!link) { linkErr = `Inclua o link do produto (Mercado Livre, site do fornecedor, etc.) para o setor de compras conferir o preço — material "${nome}".`; return; }
       try {
         const u = new URL(link);
         if (u.protocol !== 'https:') { linkErr = `O link de "${nome}" precisa começar com https://`; return; }
       } catch { linkErr = `O link de "${nome}" é inválido.`; return; }
-      itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, link_referencia: link, preco_unit: preco, qty_solicitado: qty });
+      itensLivres.push({ insumo_id: null, nome, unidade, categoria, descricao, tipo: 'comprar', link_referencia: link, localizacao: null, preco_unit: preco, qty_solicitado: qty });
     });
     if (linkErr) { errEl.textContent = linkErr; errEl.classList.add('show'); return; }
     const todosItens = [...almCart, ...itensLivres];

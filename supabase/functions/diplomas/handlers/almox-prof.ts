@@ -139,10 +139,18 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const { id, itens, observacao } = body
       if (!id) return json({ error: 'ID não informado.' }, 400)
       if (!Array.isArray(itens) || !itens.length) return json({ error: 'Adicione pelo menos um item.' }, 400)
-      // Aplica mesma validação de link_referencia que o criar
+      // Aplica mesma validação de link_referencia/localizacao por tipo
       for (const it of itens as any[]) {
         const semId = !it.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
         if (!semId) continue
+        const tipo = it.tipo === 'emprestimo' ? 'emprestimo' : 'comprar'
+        if (tipo === 'emprestimo') {
+          const loc = String(it.localizacao || '').trim()
+          if (loc.length < 3) return json({ error: `Informe onde está "${it.nome || '?'}" (mínimo 3 caracteres).` }, 400)
+          it.tipo = 'emprestimo'; it.localizacao = loc; it.link_referencia = null; it.preco_unit = 0
+          continue
+        }
+        it.tipo = 'comprar'; it.localizacao = null
         const link = String(it.link_referencia || '').trim()
         if (!link) return json({ error: `Inclua o link do produto — material "${it.nome || '?'}".` }, 400)
         try {
@@ -182,10 +190,18 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       const itens: any[] = body.itens || []
       const observacao: string = body.observacao || ''
       if (!itens.length) return json({ error: 'Adicione pelo menos um item.' }, 400)
-      // Itens novos (sem insumo_id) precisam de link_referencia https válido
+      // Itens novos (sem insumo_id): comprar precisa de link https, emprestimo precisa de localizacao
       for (const it of itens) {
         const semId = !it.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
         if (!semId) continue
+        const tipo = it.tipo === 'emprestimo' ? 'emprestimo' : 'comprar'
+        if (tipo === 'emprestimo') {
+          const loc = String(it.localizacao || '').trim()
+          if (loc.length < 3) return json({ error: `Informe onde está "${it.nome || '?'}" (mínimo 3 caracteres) — ex: "almoxarifado", "sala 12", "com a Ana".` }, 400)
+          it.tipo = 'emprestimo'; it.localizacao = loc; it.link_referencia = null; it.preco_unit = 0
+          continue
+        }
+        it.tipo = 'comprar'; it.localizacao = null
         const link = String(it.link_referencia || '').trim()
         if (!link) return json({ error: `Inclua o link do produto (Mercado Livre, site do fornecedor, etc.) para o setor de compras conferir o preço — material "${it.nome || '?'}".` }, 400)
         try {

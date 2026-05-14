@@ -38,6 +38,14 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
     for (const it of itens as any[]) {
       const semId = !it.insumo_id || it.insumo_id === 'null' || it.insumo_id === 'undefined'
       if (!semId) continue
+      const tipo = it.tipo === 'emprestimo' ? 'emprestimo' : 'comprar'
+      if (tipo === 'emprestimo') {
+        const loc = String(it.localizacao || '').trim()
+        if (loc.length < 3) return json({ error: `Informe onde está "${it.nome || '?'}" (mínimo 3 caracteres).` }, 400)
+        it.tipo = 'emprestimo'; it.localizacao = loc; it.link_referencia = null; it.preco_unit = 0
+        continue
+      }
+      it.tipo = 'comprar'; it.localizacao = null
       const link = String(it.link_referencia || '').trim()
       if (!link) return json({ error: `Inclua o link do produto para o setor de compras conferir o preço — material "${it.nome || '?'}".` }, 400)
       try {
