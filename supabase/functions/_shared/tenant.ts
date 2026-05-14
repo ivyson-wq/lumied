@@ -103,7 +103,7 @@ async function resolveFromToken(sb: SupabaseClient, token: string): Promise<stri
   return null;
 }
 
-function extractHost(req: Request): string | null {
+export function extractHost(req: Request): string | null {
   const origin = req.headers.get("origin");
   if (origin) try { return new URL(origin).hostname; } catch { /* */ }
   const referer = req.headers.get("referer");
@@ -120,7 +120,7 @@ function extractHost(req: Request): string | null {
  *   lumied.com.br                 → null (landing)
  *   localhost                     → null
  */
-function extractSlug(host: string): string | null {
+export function extractSlug(host: string): string | null {
   const h = host.toLowerCase();
   // Ignorar landing, admin central, API
   if (h === "lumied.com.br" || h === "www.lumied.com.br") return null;

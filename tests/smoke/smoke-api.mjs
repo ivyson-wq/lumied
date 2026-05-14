@@ -220,6 +220,39 @@ const ADMIN_ACTIONS = [
   'planos_list', 'modulos_list',
 ];
 
+// Migração de ERPs (staff) — 13 actions registradas após a Onda 1 do refator.
+// Todas devem responder 401 AUTH_REQUIRED sem _staff_token.
+const MIGRACAO_ACTIONS = [
+  'migracao_listar_jobs', 'migracao_criar_job', 'migracao_cancelar_job',
+  'migracao_job_resumo', 'migracao_audit_timeline',
+  'migracao_upload_arquivo', 'migracao_parse', 'migracao_validar',
+  'migracao_resumo_flags', 'migracao_listar_staging',
+  'migracao_override_linha', 'migracao_ignorar_linha',
+  'migracao_promover_preview', 'migracao_promover',
+  'migracao_pos_promote_amostra',
+  'migracao_rollback_preview', 'migracao_rollback',
+];
+
+const COBRANCA_ACTIONS = [
+  'regua_config_list', 'regua_config_create', 'regua_config_update',
+  'regua_executar', 'regua_execucoes_list',
+  'tratativa_create', 'tratativa_list', 'tratativa_update', 'tratativa_delete',
+  'cobranca_timeline',
+];
+
+const PONTO_ACTIONS = [
+  'ponto_dashboard', 'ponto_employees_list', 'ponto_employee_create',
+  'ponto_afd_upload', 'ponto_imports_list', 'ponto_events_list',
+  'ponto_summary_list', 'ponto_mirror',
+  'ponto_justificativa_criar', 'ponto_justificativas_list',
+  'ponto_rep_devices_list', 'ponto_setup_checklist',
+];
+
+const GTM_ACTIONS = [
+  'leads_list', 'lead_get', 'lead_update', 'lead_registrar_toque', 'lead_nota',
+  'funil_stats', 'outbound_pendentes',
+];
+
 // ═══════════════════════════════════════════
 
 async function main() {
@@ -235,6 +268,10 @@ async function main() {
   await runBatch('acesso', ACESSO_ACTIONS);
   await runBatch('compliance', COMPLIANCE_ACTIONS);
   await runBatch('admin', ADMIN_ACTIONS);
+  await runBatch('migracao', MIGRACAO_ACTIONS);
+  await runBatch('cobranca', COBRANCA_ACTIONS);
+  await runBatch('ponto', PONTO_ACTIONS);
+  await runBatch('gtm', GTM_ACTIONS);
 
   console.log('\n═══════════════════════════════════════════');
   console.log(`  ${passed} passed, ${failed} failed, ${warnings} warnings`);
