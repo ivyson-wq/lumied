@@ -390,26 +390,22 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 
 <script>
 // ═══ CONFIG ═══
-const SUPABASE_URL = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co';
-const SUPABASE_ANON = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
-const ADMIN_API = SUPABASE_URL + '/functions/v1/admin';
+// Onda 1 refator: HTTP client, esc, toast e utils vêm de window.__api/__utils/__toast
+// (exposto por src/shared/portal-init.js, bundlado em /dist/admin/index.js).
 const SUBDOMINIO = window.location.hostname.split('.')[0];
 let ESCOLA_ID = null;
 
 function getToken() { return localStorage.getItem('mb_admin_token'); }
+// Wrapper local mantém a signature `api({ action, ... })` mas usa o client
+// centralizado (auto-auth, retry, error handling, sentry). subdominio
+// precisa entrar no body porque a edge function `admin` deriva escola dele.
 async function api(body) {
-  const token = getToken();
-  const r = await fetch(ADMIN_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
-    body: JSON.stringify({ ...body, _token: token, subdominio: SUBDOMINIO })
-  });
-  return r.json();
+  return window.__api.admin({ ...body, subdominio: SUBDOMINIO });
 }
-function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function showToast(msg, type = 'success') { const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); }
+const esc = (s) => window.__utils.esc(s);
+const showToast = (msg, type = 'success') => window.__toast(msg, type);
 function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
-function copyText(text) { navigator.clipboard.writeText(text); showToast('Copiado!'); }
+function copyText(text) { window.__utils.copyToClipboard(text).then(ok => window.__toast(ok ? 'Copiado!' : 'Falha ao copiar', ok ? 'success' : 'error')); }
 
 // ═══ HAMBURGER ═══
 function toggleSidebar() {
@@ -689,15 +685,7 @@ async function fecharTicket() {
 }
 
 // ═══ BACKUPS ═══
-const BACKUP_API = SUPABASE_URL + '/functions/v1/backup-escolas';
-async function callBackup(body) {
-  const r = await fetch(BACKUP_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON },
-    body: JSON.stringify({ ...body, _token: getToken() }),
-  });
-  return r.json();
-}
+const callBackup = (body) => window.__api.backupEscolas(body);
 async function loadBackups() {
   // Carrega prefs atuais da escola
   const prefs = await api({ action: 'escola_dashboard' }).catch(() => null);
@@ -746,15 +734,7 @@ async function baixarBackup(data_backup) {
 }
 
 // ═══ FATURAS LUMIED ═══
-const BILLING_API = SUPABASE_URL + '/functions/v1/saas-billing';
-async function callBilling(body) {
-  const r = await fetch(BILLING_API, {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json','apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON },
-    body: JSON.stringify({ ...body, _token: getToken() }),
-  });
-  return r.json();
-}
+const callBilling = (body) => window.__api.saasBilling(body);
 async function loadFaturas() {
   const d = await callBilling({ action: 'list_faturas' });
   const items = d?.faturas || [];
@@ -879,8 +859,12 @@ async function criarAdmin() {
   showToast('Admin criado!'); fecharModal('modalNovoAdmin'); loadAdmins();
 }
 
-// ═══ INIT ═══
-checkSession();
+// ═══ INIT — aguarda dist/admin/index.js (defer) inicializar window.__api ═══
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkSession);
+} else {
+  checkSession();
+}
 </script>
 <script src="/dist/admin/index.js" defer></script>
 <script src="/lumied-ux.js" defer></script>

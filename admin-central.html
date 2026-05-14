@@ -6,6 +6,7 @@
 <script src="/analytics.js" defer></script>
 <script src="/referral-widget.js" defer></script>
 <script src="/config.js"></script>
+<script src="/dist/admin-central/index.js" defer></script>
 <title>Lumied — Painel Central</title>
 <meta name="theme-color" content="#1c1712">
 <link rel="icon" href="/favicon.png">
@@ -1415,49 +1416,18 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 // ═══════════════════════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════════════════════
-const API_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/admin';
-const ANON_KEY = typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_ANON : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+// Onda 1 refator: HTTP client, esc, toast, utils vêm de window.__api/__utils/__toast
+// (exposto por src/shared/portal-init.js, bundlado em /dist/admin-central/index.js).
+// O bundle init configurou tokenField='_staff_token' por padrão.
 const TOKEN_KEY = 'lumied_staff_token';
-
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
 
-async function api(body) {
-  const token = getToken();
-  const payload = { ...body };
-  if (token) payload._staff_token = token;
-  try {
-    const r = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY },
-      body: JSON.stringify(payload)
-    });
-    return r.json();
-  } catch (e) {
-    return { error: 'Erro de conexao: ' + e.message };
-  }
-}
-
-function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-function showToast(msg, type = 'success') {
-  const t = document.createElement('div');
-  t.className = 'toast ' + type;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
-}
-
+const api = (body) => window.__api.admin(body);
+const esc = (s) => window.__utils.esc(s);
+const showToast = (msg, type = 'success') => window.__toast(msg, type);
 function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
-
-function fmtDate(d) {
-  if (!d) return '-';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function fmtCurrency(v) {
-  return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+const fmtDate = (d) => window.__utils.fmtDateTime(d);
+const fmtCurrency = (v) => window.__utils.fmtMoney(v);
 
 // ═══════════════════════════════════════════════════════════
 //  AUTH
@@ -1561,19 +1531,12 @@ function showPanel(id, el) {
 }
 
 // ═══ BILLING SAAS (staff) ═══
-const BILLING_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/saas-billing';
-async function callBillingStaff(body) {
-  const r = await fetch(BILLING_URL, {
-    method:'POST',
-    headers: {'Content-Type':'application/json','apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY},
-    body: JSON.stringify({ ...body, _token: getToken() }),
-  });
-  return r.json();
-}
+const callBillingStaff = (body) => window.__api.saasBilling(body);
 let _finLembreteCtx = null;
 
-function fmtBRL(v) { return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2, style:'currency', currency:'BRL'}); }
-function fmtDate(d) { return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—'; }
+const fmtBRL = (v) => window.__utils.fmtMoney(v);
+// Nota: fmtDate já foi definido como alias para __utils.fmtDateTime no
+// bloco CONFIG. Aqui era uma redefinição (data sem hora) que foi removida.
 
 async function loadBillingCentral() { await loadFinanceiro(); }
 
@@ -1737,15 +1700,7 @@ async function marcarStatusEscola(escola_id, nome, atual) {
 }
 
 // ═══ BACKUPS (staff) ═══
-const BACKUP_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/backup-escolas';
-async function callBackupStaff(body) {
-  const r = await fetch(BACKUP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY },
-    body: JSON.stringify({ ...body, _token: getToken() }),
-  });
-  return r.json();
-}
+const callBackupStaff = (body) => window.__api.backupEscolas(body);
 async function loadBackupsCentral() {
   // Popula select de escolas
   const sel = document.getElementById('backupEscolaSelect');
@@ -2445,15 +2400,7 @@ async function resetarSenha() {
 // ═══════════════════════════════════════════════════════════
 //  CRM LUMIED + FUNIL
 // ═══════════════════════════════════════════════════════════
-const GTM_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/gtm';
-async function callGtm(body) {
-  const r = await fetch(GTM_URL, {
-    method:'POST',
-    headers: { 'Content-Type':'application/json', 'apikey': ANON_KEY, 'Authorization':'Bearer ' + ANON_KEY },
-    body: JSON.stringify({ ...body, _token: getToken() }),
-  });
-  return r.json();
-}
+const callGtm = (body) => window.__api.gtm(body);
 
 let _crmCurrentLead = null;
 const STATUS_LABEL = { novo:'Novo', contatado:'Contatado', qualificado:'Qualificado', demo_agendada:'Demo', proposta:'Proposta', fechado:'Fechado', perdido:'Perdido' };
@@ -2725,13 +2672,7 @@ async function pbLumiAsk(pergunta) {
   out.style.display = 'block';
   out.innerHTML = '<em style="color:var(--muted);">Lumi está pensando...</em>';
   try {
-    const AI_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/lumied-ai';
-    const r = await fetch(AI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY },
-      body: JSON.stringify({ action: 'ai_perguntar_gtm', pergunta, _token: getToken() }),
-    });
-    const d = await r.json();
+    const d = await window.__api.lumiedAi({ action: 'ai_perguntar_gtm', pergunta });
     if (d.error) { out.innerHTML = '<span style="color:#b00020;">' + _escHtml(d.error.message || d.error) + '</span>'; return; }
     out.textContent = d.resposta || '(sem resposta)';
   } catch (e) {
@@ -3280,7 +3221,6 @@ function novaCategoria() {
 // ═══════════════════════════════════════════════════════════
 //  MIGRAÇÃO DE ERPs (staff)
 // ═══════════════════════════════════════════════════════════
-const MIGRACAO_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/migracao';
 const MIG_RASCUNHO_KEY = 'migracao_rascunho_v1';
 let _migEscolas = [];
 let _migJobAtual = null;     // job carregado no wizard
@@ -3291,14 +3231,9 @@ let _migEditarCtx = null;    // { entidade, id, original } pro modal de edição
 let _migFlagCodeFiltro = null;  // code do flag filtrado no step 4 (one-click chips)
 let _migResumoFlagsCache = null; // { entidade: { code: { count, severity, msg } } }
 
-async function callMigracao(body) {
-  const r = await fetch(MIGRACAO_URL, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','apikey':ANON_KEY,'Authorization':'Bearer ' + ANON_KEY},
-    body: JSON.stringify({ ...body, _staff_token: getToken() }),
-  });
-  return r.json();
-}
+// A edge function migracao aceita tanto `_token` quanto `_staff_token`;
+// o api-client manda `_token` por default.
+const callMigracao = (body) => window.__api.migracao(body);
 
 async function migracaoCarregarEscolas() {
   if (_migEscolas.length > 0) return _migEscolas;
@@ -4241,9 +4176,14 @@ function uploadCertBanco(id) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  INIT
+//  INIT — aguarda dist/admin-central/index.js (defer) inicializar
+//  window.__api antes de tocar em qualquer chamada.
 // ═══════════════════════════════════════════════════════════
-checkSession();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkSession);
+} else {
+  checkSession();
+}
 </script>
 <script src="/reset-app.js"></script>
 </body>
