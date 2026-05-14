@@ -7,7 +7,7 @@
 
 import { writeFileSync } from 'fs';
 
-const CRON_KEY      = process.env.CRON_INTERNAL_KEY || 'lumied_cron_dbb4070f6b5601bb23bd2cb38d373bea';
+const CRON_KEY      = process.env.CRON_INTERNAL_KEY || '';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const SUPABASE_URL  = process.env.SUPABASE_URL || 'https://brgorknbrjlfwvrrlwxj.supabase.co';
 

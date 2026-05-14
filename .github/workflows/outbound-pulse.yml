@@ -12,7 +12,8 @@ on:
 
 env:
   SUPABASE_PROJECT_REF: brgorknbrjlfwvrrlwxj
-  CRON_INTERNAL_KEY: lumied_cron_dbb4070f6b5601bb23bd2cb38d373bea
+  # CRON_INTERNAL_KEY agora vem de GH secret (rotação mig 330).
+  # Default só pra fallback manual; produção sempre passa via env override.
 
 jobs:
   pulse:
@@ -30,7 +31,7 @@ jobs:
 
       - name: Run outbound pulse script
         env:
-          CRON_INTERNAL_KEY: ${{ env.CRON_INTERNAL_KEY }}
+          CRON_INTERNAL_KEY: ${{ secrets.CRON_INTERNAL_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SUPABASE_URL: https://brgorknbrjlfwvrrlwxj.supabase.co

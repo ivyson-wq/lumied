@@ -28,7 +28,7 @@ SELECT cron.schedule(
     '{}'::jsonb,
     jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer lumied_cron_dbb4070f6b5601bb23bd2cb38d373bea'
+      'Authorization', 'Bearer ' || COALESCE((SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'lumied_cron_key' LIMIT 1), '__missing_cron_key__')
     ),
     35000
   );
