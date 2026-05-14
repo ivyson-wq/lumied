@@ -171,6 +171,17 @@ router.on("migracao_job_resumo", authStaff, validateInput(jobIdSchema), async (c
   return successResponse({ resumo, arquivos: arquivos ?? [] });
 });
 
+// Timeline de auditoria do job. UI mostra histórico em modal.
+router.on("migracao_audit_timeline", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
+  const { job_id } = ctx.body as { job_id: string };
+  await loadJob(ctx, job_id);
+  const { data, error } = await ctx.sb.from("migracao_audit")
+    .select("id, acao, detalhes, operador_nome, operador_staff_id, ip, criado_em")
+    .eq("job_id", job_id).order("criado_em", { ascending: false }).limit(500);
+  if (error) throw new AppError("INTERNAL_ERROR", error.message);
+  return successResponse({ timeline: data ?? [] });
+});
+
 // ═════════════════════════════════════════════════════════════
 //  2. INGEST — upload de arquivo para o bucket privado
 // ═════════════════════════════════════════════════════════════
@@ -571,6 +582,274 @@ router.on("migracao_ignorar_linha", authStaff, async (ctx: Context) => {
   const d = data as any;
   if (d) staffAudit(ctx, d.job_id, d.escola_id, novoValor ? "ignorar_linha" : "reativar_linha", { entidade, id });
   return successResponse({ ok: true });
+});
+
+// Preview de rollback — conta o que seria desfeito sem mutar.
+// Coleta também os IDs/critérios pra reusar no rollback efetivo.
+async function colherAlvoRollback(ctx: Context, job_id: string, promovido_em: string, escolaId: string) {
+  const inicio = new Date(new Date(promovido_em).getTime() - 5 * 60 * 1000).toISOString();
+  const fim = new Date(new Date(promovido_em).getTime() + 30 * 60 * 1000).toISOString();
+
+  // fin_lancamentos (tagged + janela)
+  const finQ = await ctx.sb.from("fin_lancamentos").select("id")
+    .eq("escola_id", escolaId).like("criado_por", "migracao:%")
+    .gte("criado_em", inicio).lte("criado_em", fim);
+  // deno-lint-ignore no-explicit-any
+  const finIds = (finQ.data ?? []).map((r: any) => r.id).filter(Boolean);
+
+  // familias criadas (match_familia_id NULL) e seus emails (pra cascade em alunos)
+  const { data: respStaging } = await ctx.sb.from("migracao_staging_responsaveis")
+    .select("promovido_id, email, match_familia_id")
+    .eq("job_id", job_id).not("promovido_id", "is", null);
+  // deno-lint-ignore no-explicit-any
+  const familiasCriadas = (respStaging ?? []).filter((r: any) => !r.match_familia_id).map((r: any) => r.promovido_id).filter(Boolean);
+  // deno-lint-ignore no-explicit-any
+  const familiasEmails = (respStaging ?? []).filter((r: any) => !r.match_familia_id).map((r: any) => (r.email || "").toLowerCase()).filter(Boolean);
+
+  // series criadas (match_serie_id NULL)
+  const { data: turmaStaging } = await ctx.sb.from("migracao_staging_turmas")
+    .select("promovido_id, match_serie_id")
+    .eq("job_id", job_id).not("promovido_id", "is", null);
+  // deno-lint-ignore no-explicit-any
+  const seriesCriadas = (turmaStaging ?? []).filter((r: any) => !r.match_serie_id).map((r: any) => r.promovido_id).filter(Boolean);
+
+  // usuarios: separa criados (DELETE) vs já existentes (remover papel apenas)
+  const { data: funcStaging } = await ctx.sb.from("migracao_staging_funcionarios")
+    .select("promovido_id, papel_lumied")
+    .eq("job_id", job_id).not("promovido_id", "is", null);
+  // deno-lint-ignore no-explicit-any
+  const userMeta = (funcStaging ?? []).filter((r: any) => r.promovido_id);
+  const userIds = userMeta.map((r) => (r as Record<string, unknown>).promovido_id as string);
+  const usersCriados: string[] = [];
+  const usersPapelRemover: { id: string; papel: string }[] = [];
+  if (userIds.length > 0) {
+    const { data: users } = await ctx.sb.from("usuarios").select("id, criado_em").in("id", userIds);
+    // deno-lint-ignore no-explicit-any
+    const byId = new Map((users ?? []).map((u: any) => [u.id, u.criado_em]));
+    for (const r of userMeta) {
+      const rec = r as Record<string, unknown>;
+      const id = rec.promovido_id as string;
+      const papel = rec.papel_lumied as string;
+      const criadoEm = byId.get(id);
+      if (criadoEm && new Date(criadoEm as string).getTime() >= new Date(inicio).getTime()) {
+        usersCriados.push(id);
+      } else if (papel) {
+        usersPapelRemover.push({ id, papel });
+      }
+    }
+  }
+
+  return { finIds, familiasCriadas, familiasEmails, seriesCriadas, usersCriados, usersPapelRemover, inicio, fim };
+}
+
+router.on("migracao_rollback_preview", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
+  const { job_id } = ctx.body as { job_id: string };
+  const job = await loadJob(ctx, job_id);
+  if (job.status !== "promovido") {
+    throw new AppError("CONFLICT", `Job não foi promovido (status: ${job.status}).`);
+  }
+  const promovidoEm = job.promovido_em as string;
+  const alvo = await colherAlvoRollback(ctx, job_id, promovidoEm, ctx.escola_id!);
+
+  // Conta alunos que seriam deletados via cascade-by-email
+  let alunosDelete = 0;
+  if (alvo.familiasEmails.length > 0) {
+    const c = await ctx.sb.from("alunos").select("id", { count: "exact", head: true })
+      .eq("escola_id", ctx.escola_id!).in("email", alvo.familiasEmails);
+    alunosDelete = c.count ?? 0;
+  }
+
+  return successResponse({
+    preview: {
+      fin_lancamentos_delete: alvo.finIds.length,
+      familias_delete: alvo.familiasCriadas.length,
+      alunos_delete: alunosDelete,
+      series_delete: alvo.seriesCriadas.length,
+      usuarios_delete: alvo.usersCriados.length,
+      usuarios_papel_remove: alvo.usersPapelRemover.length,
+      promovido_em: promovidoEm,
+      janela: { inicio: alvo.inicio, fim: alvo.fim },
+    },
+  });
+});
+
+router.on("migracao_rollback", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
+  const { job_id, confirm, escola_nome } = ctx.body as { job_id: string; confirm?: boolean; escola_nome?: string };
+  if (!confirm) throw new AppError("VALIDATION_FAILED", "Rollback exige confirm=true.");
+  const job = await loadJob(ctx, job_id);
+  if (job.status !== "promovido") {
+    throw new AppError("CONFLICT", `Job não foi promovido (status: ${job.status}).`);
+  }
+  // Confirmação dupla: nome da escola precisa bater
+  const { data: escola } = await ctx.sb.from("escolas").select("nome").eq("id", ctx.escola_id!).maybeSingle();
+  // deno-lint-ignore no-explicit-any
+  const nomeReal = (escola as any)?.nome || "";
+  if (!escola_nome || escola_nome.trim() !== nomeReal) {
+    throw new AppError("VALIDATION_FAILED", "Nome da escola não bateu — rollback abortado por segurança.");
+  }
+
+  const promovidoEm = job.promovido_em as string;
+  const escolaId = ctx.escola_id!;
+  const alvo = await colherAlvoRollback(ctx, job_id, promovidoEm, escolaId);
+  const undone: Record<string, number> = {};
+
+  // 1. fin_lancamentos
+  if (alvo.finIds.length > 0) {
+    for (let i = 0; i < alvo.finIds.length; i += 500) {
+      const slice = alvo.finIds.slice(i, i + 500);
+      const { error } = await ctx.sb.from("fin_lancamentos").delete().in("id", slice);
+      if (error) throw new AppError("INTERNAL_ERROR", `rollback fin_lancamentos: ${error.message}`);
+    }
+    undone.fin_lancamentos = alvo.finIds.length;
+  }
+
+  // 2. usuarios — deleta os criados, remove papel dos existentes
+  if (alvo.usersCriados.length > 0) {
+    const { error } = await ctx.sb.from("usuarios").delete().in("id", alvo.usersCriados);
+    if (error) throw new AppError("INTERNAL_ERROR", `rollback usuarios delete: ${error.message}`);
+    undone.usuarios_deletados = alvo.usersCriados.length;
+  }
+  for (const { id, papel } of alvo.usersPapelRemover) {
+    const { data: u } = await ctx.sb.from("usuarios").select("papeis").eq("id", id).maybeSingle();
+    // deno-lint-ignore no-explicit-any
+    const cur = ((u as any)?.papeis ?? []) as string[];
+    const novos = cur.filter((p) => p !== papel);
+    if (novos.length !== cur.length) {
+      await ctx.sb.from("usuarios").update({ papeis: novos }).eq("id", id);
+      undone.usuarios_papel_removido = (undone.usuarios_papel_removido ?? 0) + 1;
+    }
+  }
+
+  // 3. alunos.serie_id → NULL onde aponta pras séries criadas (libera FK)
+  if (alvo.seriesCriadas.length > 0) {
+    await ctx.sb.from("alunos").update({ serie_id: null })
+      .eq("escola_id", escolaId).in("serie_id", alvo.seriesCriadas);
+  }
+
+  // 4. alunos criados via trigger sync_familia_aluno (linkados pelos emails das familias deletadas)
+  if (alvo.familiasEmails.length > 0) {
+    const { data: alunosAlvo } = await ctx.sb.from("alunos").select("id")
+      .eq("escola_id", escolaId).in("email", alvo.familiasEmails);
+    // deno-lint-ignore no-explicit-any
+    const ids = (alunosAlvo ?? []).map((a: any) => a.id);
+    if (ids.length > 0) {
+      const { error } = await ctx.sb.from("alunos").delete().in("id", ids);
+      if (error) throw new AppError("INTERNAL_ERROR", `rollback alunos: ${error.message}`);
+      undone.alunos = ids.length;
+    }
+  }
+
+  // 5. familias
+  if (alvo.familiasCriadas.length > 0) {
+    const { error } = await ctx.sb.from("familias").delete().in("id", alvo.familiasCriadas);
+    if (error) throw new AppError("INTERNAL_ERROR", `rollback familias: ${error.message}`);
+    undone.familias = alvo.familiasCriadas.length;
+  }
+
+  // 6. series (já sem alunos)
+  if (alvo.seriesCriadas.length > 0) {
+    const { error } = await ctx.sb.from("series").delete().in("id", alvo.seriesCriadas);
+    if (error) {
+      // Não joga erro fatal — séries podem ter outros vínculos (matrículas históricas, etc.)
+      console.error("[migracao_rollback] series:", error.message);
+    } else {
+      undone.series = alvo.seriesCriadas.length;
+    }
+  }
+
+  // 7. Reseta promovido_id de todas as staging
+  const tables = Object.values(STAGING_TABLES);
+  for (const t of tables) {
+    await ctx.sb.from(t).update({ promovido_id: null, promovido_em: null }).eq("job_id", job_id);
+  }
+
+  // 8. Volta status do job pra 'validado'
+  await ctx.sb.from("migracao_jobs").update({
+    status: "validado",
+    promovido_em: null,
+    resumo: { ...(job.resumo as Record<string, unknown> ?? {}), rollback: undone, rollback_em: new Date().toISOString() },
+  }).eq("id", job_id);
+
+  staffAudit(ctx, job_id, escolaId, "rollback", undone);
+  return successResponse({ ok: true, undone });
+});
+
+// Amostra pós-promote: lista top-N registros canônicos gerados pelo job
+// pra UI mostrar visualmente o que foi gravado. Não muta nada.
+router.on("migracao_pos_promote_amostra", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
+  const { job_id, limit } = ctx.body as { job_id: string; limit?: number };
+  const job = await loadJob(ctx, job_id);
+  if (job.status !== "promovido") {
+    throw new AppError("CONFLICT", `Job não foi promovido (status: ${job.status}).`);
+  }
+  const escolaId = ctx.escola_id!;
+  const N = Math.min(limit ?? 10, 50);
+  const promovidoEm = job.promovido_em as string | null;
+
+  // Para cada staging com promovido_id, busca os IDs canônicos
+  async function colher(stagingTable: string, canonTable: string, cols: string): Promise<{ sample: unknown[]; total_promovidos: number }> {
+    const { data: ids } = await ctx.sb.from(stagingTable)
+      .select("promovido_id").eq("job_id", job_id).not("promovido_id", "is", null);
+    // deno-lint-ignore no-explicit-any
+    const idList = (ids ?? []).map((r: any) => r.promovido_id).filter(Boolean);
+    if (idList.length === 0) return { sample: [], total_promovidos: 0 };
+    const { data: sample } = await ctx.sb.from(canonTable)
+      .select(cols).in("id", idList.slice(0, N));
+    return { sample: sample ?? [], total_promovidos: idList.length };
+  }
+
+  const familias = await colher("migracao_staging_responsaveis", "familias", "id, email, nome_responsavel, nome_aluno, telefone, cidade");
+  const series   = await colher("migracao_staging_turmas", "series", "id, nome, ordem");
+  const usuarios = await colher("migracao_staging_funcionarios", "usuarios", "id, nome, email, papeis");
+
+  // fin_lancamentos: sem promovido_id (bulk). Filtra por criado_por + janela temporal.
+  let finSample: unknown[] = [];
+  let finTotal = 0;
+  if (promovidoEm) {
+    const inicio = new Date(new Date(promovidoEm).getTime() - 5 * 60 * 1000).toISOString();
+    const fim = new Date(new Date(promovidoEm).getTime() + 30 * 60 * 1000).toISOString();
+    const finCountQ = await ctx.sb.from("fin_lancamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("escola_id", escolaId).like("criado_por", "migracao:%")
+      .gte("criado_em", inicio).lte("criado_em", fim);
+    finTotal = finCountQ.count ?? 0;
+    const { data: fs } = await ctx.sb.from("fin_lancamentos")
+      .select("id, tipo, descricao, valor, data_vencimento, status, familia_email")
+      .eq("escola_id", escolaId).like("criado_por", "migracao:%")
+      .gte("criado_em", inicio).lte("criado_em", fim)
+      .order("criado_em", { ascending: false }).limit(N);
+    finSample = fs ?? [];
+  }
+
+  // alunos: derivam de famílias via trigger sync_familia_aluno. Pega por email da família promovida.
+  // deno-lint-ignore no-explicit-any
+  const familiaEmails = (familias.sample as any[]).map(f => f.email).filter(Boolean).slice(0, N);
+  let alunosSample: unknown[] = [];
+  if (familiaEmails.length > 0) {
+    const { data } = await ctx.sb.from("alunos")
+      .select("id, nome, email, serie_id, ativo")
+      .eq("escola_id", escolaId).in("email", familiaEmails).limit(N);
+    alunosSample = data ?? [];
+  }
+
+  // Totais globais da escola (referência pro operador comparar)
+  const [totalFamilias, totalSeries, totalAlunos, totalUsuarios, totalFinLanc] = await Promise.all([
+    ctx.sb.from("familias").select("id", { count: "exact", head: true }).eq("escola_id", escolaId),
+    ctx.sb.from("series").select("id", { count: "exact", head: true }).eq("escola_id", escolaId),
+    ctx.sb.from("alunos").select("id", { count: "exact", head: true }).eq("escola_id", escolaId),
+    ctx.sb.from("usuarios").select("id", { count: "exact", head: true }).eq("escola_id", escolaId),
+    ctx.sb.from("fin_lancamentos").select("id", { count: "exact", head: true }).eq("escola_id", escolaId),
+  ]);
+
+  return successResponse({
+    amostra: {
+      familias: { ...familias, total_escola: totalFamilias.count ?? 0 },
+      series: { ...series, total_escola: totalSeries.count ?? 0 },
+      usuarios: { ...usuarios, total_escola: totalUsuarios.count ?? 0 },
+      alunos: { sample: alunosSample, total_promovidos: null, total_escola: totalAlunos.count ?? 0 },
+      fin_lancamentos: { sample: finSample, total_promovidos: finTotal, total_escola: totalFinLanc.count ?? 0 },
+    },
+  });
 });
 
 // ═════════════════════════════════════════════════════════════

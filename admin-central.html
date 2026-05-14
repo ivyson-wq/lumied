@@ -651,16 +651,20 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
               Job <span id="migJobId" style="font-family:monospace;color:#6C63FF;font-size:13px;"></span>
               <span id="migJobStatus" style="margin-left:8px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:6px;background:#EEF2FF;color:#3730A3;">—</span>
             </h3>
-            <button class="action-btn" onclick="migracaoFecharWizard()" style="background:#f0f0f0;">✕ Fechar</button>
+            <div style="display:flex;gap:8px;">
+              <button class="action-btn" onclick="migracaoAbrirHistorico()" style="background:#EEF2FF;color:#3730A3;">📋 Histórico</button>
+              <button class="action-btn" onclick="migracaoFecharWizard()" style="background:#f0f0f0;">✕ Fechar</button>
+            </div>
           </div>
 
           <!-- Stepper -->
-          <div id="migStepper" style="display:flex;gap:8px;margin-bottom:22px;font-size:12px;">
+          <div id="migStepper" style="display:flex;gap:8px;margin-bottom:22px;font-size:12px;flex-wrap:wrap;">
             <div class="mig-step" data-step="1">1 · Escola/ERP</div>
             <div class="mig-step" data-step="2">2 · Upload</div>
             <div class="mig-step" data-step="3">3 · Parse</div>
             <div class="mig-step" data-step="4">4 · Validar</div>
             <div class="mig-step" data-step="5">5 · Promover</div>
+            <div class="mig-step" data-step="6">6 · Verificar</div>
           </div>
 
           <!-- Step 1: ERP / escola -->
@@ -729,10 +733,27 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <div id="migPromoteResumo" style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:14px;font-size:13px;color:#92400E;margin-bottom:14px;"></div>
             <div id="migPromotePreview" style="margin-bottom:14px;font-size:13px;"></div>
             <p style="color:#666;font-size:13px;margin-bottom:14px;">
-              Promove staging → tabelas canônicas. Após promover, o job fica imutável.
+              Promove staging → tabelas canônicas. Após promover, o job fica imutável (mas pode ser revertido pelo step 6).
               Pediremos confirmação dupla.
             </p>
-            <button class="action-btn" onclick="migracaoPromover()" style="background:#DC2626;color:#fff;">🚀 Promover (irreversível)</button>
+            <button class="action-btn" onclick="migracaoPromover()" style="background:#DC2626;color:#fff;">🚀 Promover</button>
+          </div>
+
+          <!-- Step 6: Verificar (pós-promote) -->
+          <div id="migStep6" class="mig-step-content" style="display:none;">
+            <p style="color:#666;font-size:13px;margin-bottom:14px;">
+              Amostragem dos registros gravados na promoção. Compare com o que foi visto no step 4.
+              Cada bloco mostra: <em>quantos vieram do job</em> · <em>total na escola agora</em> · 10 primeiros registros.
+            </p>
+            <div id="migVerificarLoading" style="font-size:13px;color:#888;">Carregando amostra…</div>
+            <div id="migVerificarConteudo"></div>
+            <div style="margin-top:24px;padding-top:14px;border-top:1px solid #f0eae0;">
+              <h4 style="font-family:'Lora',serif;font-size:15px;font-weight:600;color:#DC2626;margin-bottom:10px;">Zona de risco</h4>
+              <p style="color:#666;font-size:13px;margin-bottom:10px;">
+                Detectou algo errado? Você pode reverter o promote enquanto os registros ainda não foram editados manualmente.
+              </p>
+              <button class="action-btn" onclick="migracaoAbrirRollback()" style="background:#fff;color:#DC2626;border:1.5px solid #DC2626;">↩ Iniciar rollback</button>
+            </div>
           </div>
 
           <!-- Nav buttons -->
@@ -1296,6 +1317,41 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <button class="btn-primary" onclick="salvarAlterarSenha()">Salvar</button>
       <button class="btn-secondary" onclick="fecharModal('modalAlterarSenha')">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL: HISTÓRICO / TIMELINE DE AUDITORIA (MIGRAÇÃO) -->
+<div class="modal-overlay" id="modalMigHistorico" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:680px;">
+    <h3>Histórico do job</h3>
+    <p class="msub" id="migHistoricoSub">—</p>
+    <div id="migHistoricoLista" style="max-height:60vh;overflow-y:auto;font-size:13px;"></div>
+    <div class="btn-bar" style="margin-top:14px;">
+      <button class="btn-secondary" onclick="fecharModal('modalMigHistorico')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ROLLBACK (MIGRAÇÃO) -->
+<div class="modal-overlay" id="modalMigRollback" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:560px;">
+    <h3 style="color:#DC2626;">↩ Rollback do job</h3>
+    <p class="msub">Reverte os registros gravados na promoção. Operação destrutiva e auditada.</p>
+    <div id="migRollbackPreview" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:14px;font-size:13px;color:#7F1D1D;margin-bottom:14px;">
+      <em>Carregando preview…</em>
+    </div>
+    <div class="ff">
+      <label>Para confirmar, digite o nome exato da escola:</label>
+      <input id="migRollbackNome" type="text" placeholder="Nome da escola" style="width:100%;padding:10px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;">
+    </div>
+    <div id="migRollbackError" style="display:none;font-size:13px;color:var(--red);margin-bottom:10px;"></div>
+    <div class="btn-bar">
+      <button class="btn-primary" style="background:#DC2626;" onclick="migracaoRollbackConfirm()">Confirmar rollback</button>
+      <button class="btn-secondary" onclick="fecharModal('modalMigRollback')">Cancelar</button>
+    </div>
+    <small style="display:block;margin-top:10px;color:#888;font-size:12px;">
+      Itens não revertidos: registros que já existiam antes da promoção (matches identificados), e registros editados manualmente depois. Após rollback, o job volta a "validado" e pode ser re-promovido.
+    </small>
   </div>
 </div>
 
@@ -3337,7 +3393,7 @@ async function migracaoAbrirJob(jobId) {
   document.getElementById('migJobStatus').textContent = _migJobAtual.status;
   document.getElementById('migWizard').style.display = 'block';
   // determina step inicial pelo status
-  const stepByStatus = { rascunho:1, ingerido:2, parseado:3, validado:4, promovido:5, cancelado:1, erro:2 };
+  const stepByStatus = { rascunho:1, ingerido:2, parseado:3, validado:4, promovido:6, cancelado:1, erro:2 };
   _migStepAtual = stepByStatus[_migJobAtual.status] || 1;
   migracaoRenderWizard();
   // autosave
@@ -3352,7 +3408,7 @@ function migracaoFecharWizard() {
 }
 
 function migracaoStep(delta) {
-  const next = Math.max(1, Math.min(5, _migStepAtual + delta));
+  const next = Math.max(1, Math.min(6, _migStepAtual + delta));
   if (next === _migStepAtual) return;
   _migStepAtual = next;
   migracaoRenderWizard();
@@ -3369,7 +3425,7 @@ function migracaoRenderWizard() {
     el.classList.toggle('done', s < _migStepAtual);
   });
   // content panels
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 6; i++) {
     document.getElementById('migStep' + i).style.display = (i === _migStepAtual) ? 'block' : 'none';
   }
   // load step-specific data
@@ -3378,6 +3434,7 @@ function migracaoRenderWizard() {
   if (_migStepAtual === 3) migracaoRenderStep3();
   if (_migStepAtual === 4) migracaoCarregarStaging();
   if (_migStepAtual === 5) migracaoRenderStep5();
+  if (_migStepAtual === 6) migracaoRenderStep6();
 }
 
 function migracaoRenderStep1() {
@@ -3821,7 +3878,7 @@ async function migracaoPromover() {
   if (_migJobAtual.status !== 'validado') {
     return showToast('Job precisa estar validado antes (status atual: ' + _migJobAtual.status + ').', 'error');
   }
-  const c1 = confirm('Promover este job? Esta ação grava em produção (familias, series, alunos, fin_lancamentos, ...) e é IRREVERSÍVEL.');
+  const c1 = confirm('Promover este job? Esta ação grava em produção (familias, series, alunos, fin_lancamentos, ...). Pode ser revertida pelo step 6 enquanto os dados não forem editados manualmente.');
   if (!c1) return;
   const c2 = prompt('Para confirmar, digite o nome da escola exatamente:');
   const escolaNome = (_migJobAtual.escolas && _migJobAtual.escolas.nome) || '';
@@ -3832,6 +3889,156 @@ async function migracaoPromover() {
   showToast('Job promovido! ' + JSON.stringify(r.promovido));
   localStorage.removeItem(MIG_RASCUNHO_KEY);
   await migracaoRefreshJob();
+  _migStepAtual = 6;
+  migracaoRenderWizard();
+  loadMigracao();
+}
+
+// ── Histórico (timeline) ──────────────────────────────────────
+const MIG_ACAO_ICONE = {
+  criar_job: '🆕', upload: '⬆', parse: '🔍', validar: '✓',
+  override_linha: '✏️', ignorar_linha: '🚫', reativar_linha: '↻',
+  promover: '🚀', cancelar: '⏹', rollback: '↩',
+};
+const MIG_ACAO_LABEL = {
+  criar_job: 'Job criado', upload: 'Upload de arquivo', parse: 'Parse executado',
+  validar: 'Validação executada', override_linha: 'Linha editada',
+  ignorar_linha: 'Linha ignorada', reativar_linha: 'Linha reativada',
+  promover: 'Promoção executada', cancelar: 'Job cancelado', rollback: 'Rollback executado',
+};
+
+async function migracaoAbrirHistorico() {
+  if (!_migJobAtual) return;
+  const sub = document.getElementById('migHistoricoSub');
+  const lista = document.getElementById('migHistoricoLista');
+  sub.textContent = 'Job ' + _migJobAtual.id.slice(0,8) + ' · ' + (_migJobAtual.erp_origem || '—');
+  lista.innerHTML = '<em style="color:#888;">Carregando timeline…</em>';
+  document.getElementById('modalMigHistorico').classList.add('show');
+  const r = await callMigracao({ action:'migracao_audit_timeline', job_id: _migJobAtual.id });
+  if (r.error) { lista.innerHTML = '<em style="color:#DC2626;">' + esc(r.error) + '</em>'; return; }
+  const timeline = r.timeline || [];
+  if (timeline.length === 0) {
+    lista.innerHTML = '<em style="color:#888;">Sem eventos registrados.</em>';
+    return;
+  }
+  lista.innerHTML = timeline.map((ev, idx) => {
+    const icone = MIG_ACAO_ICONE[ev.acao] || '·';
+    const label = MIG_ACAO_LABEL[ev.acao] || ev.acao;
+    const detalhes = ev.detalhes ? JSON.stringify(ev.detalhes, null, 2) : null;
+    const operador = ev.operador_nome ? esc(ev.operador_nome) : 'staff #' + esc(String(ev.operador_staff_id||'').slice(0,8));
+    const dt = new Date(ev.criado_em).toLocaleString('pt-BR');
+    const detId = 'migDet_' + idx;
+    return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f0eae0;">' +
+      '<div style="font-size:18px;width:28px;text-align:center;">' + icone + '</div>' +
+      '<div style="flex:1;">' +
+        '<div style="font-weight:600;font-size:13px;">' + esc(label) + '</div>' +
+        '<div style="font-size:11px;color:#888;">' + operador + ' · ' + esc(dt) + '</div>' +
+        (detalhes
+          ? '<div style="margin-top:4px;"><button class="action-btn" style="font-size:11px;padding:2px 8px;" onclick="(function(){var x=document.getElementById(\'' + detId + '\');x.style.display=x.style.display===\'block\'?\'none\':\'block\';})()">ver detalhes</button>' +
+            '<pre id="' + detId + '" style="display:none;background:#fafafa;border-radius:6px;padding:8px;font-size:11px;margin-top:6px;overflow-x:auto;">' + esc(detalhes) + '</pre></div>'
+          : '') +
+      '</div></div>';
+  }).join('');
+}
+
+// ── Step 6: Verificar ─────────────────────────────────────────
+async function migracaoRenderStep6() {
+  const loading = document.getElementById('migVerificarLoading');
+  const cont = document.getElementById('migVerificarConteudo');
+  loading.style.display = 'block';
+  cont.innerHTML = '';
+  if (!_migJobAtual) return;
+  const r = await callMigracao({ action:'migracao_pos_promote_amostra', job_id: _migJobAtual.id });
+  loading.style.display = 'none';
+  if (r.error) {
+    cont.innerHTML = '<div style="color:#DC2626;font-size:13px;">' + esc(r.error) + '</div>';
+    return;
+  }
+  const a = r.amostra || {};
+  const blocos = [
+    { key:'familias', label:'Famílias', cols:[['nome_responsavel','Nome'],['email','Email'],['nome_aluno','Aluno'],['telefone','Telefone']] },
+    { key:'alunos', label:'Alunos (via trigger)', cols:[['nome','Nome'],['email','Email'],['ativo','Ativo']] },
+    { key:'series', label:'Séries (turmas)', cols:[['nome','Nome'],['ordem','Ordem']] },
+    { key:'usuarios', label:'Funcionários', cols:[['nome','Nome'],['email','Email'],['papeis','Papéis']] },
+    { key:'fin_lancamentos', label:'Lançamentos financeiros', cols:[['tipo','Tipo'],['descricao','Descrição'],['valor','Valor'],['data_vencimento','Vencimento'],['status','Status']] },
+  ];
+  cont.innerHTML = blocos.map(b => {
+    const d = a[b.key] || { sample:[], total_promovidos:0, total_escola:0 };
+    const sample = d.sample || [];
+    const pill = (txt, color) => '<span style="background:' + color.bg + ';color:' + color.fg + ';padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500;">' + txt + '</span>';
+    const totalPromov = d.total_promovidos == null
+      ? pill('via trigger', { bg:'#E0E7FF', fg:'#3730A3' })
+      : pill(d.total_promovidos + ' deste job', { bg:'#DCFCE7', fg:'#166534' });
+    const totalEscola = pill(d.total_escola + ' na escola', { bg:'#F3F4F6', fg:'#374151' });
+    const tabela = sample.length === 0
+      ? '<em style="color:#888;font-size:12px;">Nenhum registro neste bloco.</em>'
+      : '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:8px;">' +
+        '<thead><tr style="background:#fafafa;">' + b.cols.map(c => '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #e2dbd1;">' + esc(c[1]) + '</th>').join('') + '</tr></thead>' +
+        '<tbody>' + sample.map(row => '<tr>' + b.cols.map(c => {
+          let v = row[c[0]];
+          if (Array.isArray(v)) v = v.join(', ');
+          if (typeof v === 'boolean') v = v ? 'sim' : 'não';
+          const txt = (v === null || v === undefined) ? '—' : String(v);
+          return '<td style="padding:6px 8px;border-bottom:1px solid #f0eae0;">' + esc(txt.length > 60 ? txt.slice(0,60)+'…' : txt) + '</td>';
+        }).join('') + '</tr>').join('') + '</tbody></table>';
+    return '<div style="background:#fff;border:1px solid #e2dbd1;border-radius:10px;padding:14px;margin-bottom:12px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">' +
+      '<b style="font-size:14px;">' + esc(b.label) + '</b>' +
+      '<div style="display:flex;gap:6px;">' + totalPromov + totalEscola + '</div>' +
+      '</div>' + tabela + '</div>';
+  }).join('');
+}
+
+// ── Rollback ──────────────────────────────────────────────────
+async function migracaoAbrirRollback() {
+  if (!_migJobAtual) return;
+  if (_migJobAtual.status !== 'promovido') {
+    return showToast('Só jobs promovidos podem ser revertidos.', 'error');
+  }
+  document.getElementById('migRollbackNome').value = '';
+  document.getElementById('migRollbackError').style.display = 'none';
+  const previewBox = document.getElementById('migRollbackPreview');
+  previewBox.innerHTML = '<em>Carregando preview…</em>';
+  document.getElementById('modalMigRollback').classList.add('show');
+  const r = await callMigracao({ action:'migracao_rollback_preview', job_id: _migJobAtual.id });
+  if (r.error) { previewBox.innerHTML = '<b>Falha no preview:</b> ' + esc(r.error); return; }
+  const p = r.preview || {};
+  previewBox.innerHTML =
+    '<b>Vai desfazer:</b><br>' +
+    '• <b>' + (p.fin_lancamentos_delete||0) + '</b> lançamento(s) financeiro(s) (DELETE)<br>' +
+    '• <b>' + (p.familias_delete||0) + '</b> família(s) criada(s) (DELETE)<br>' +
+    '• <b>' + (p.alunos_delete||0) + '</b> aluno(s) ligado(s) (DELETE)<br>' +
+    '• <b>' + (p.series_delete||0) + '</b> série(s) criada(s) (DELETE se sem outros vínculos)<br>' +
+    '• <b>' + (p.usuarios_delete||0) + '</b> usuário(s) criado(s) (DELETE)<br>' +
+    '• <b>' + (p.usuarios_papel_remove||0) + '</b> papel(éis) removido(s) de usuários pré-existentes<br>' +
+    '<br><small>Não toca: famílias/séries que já existiam antes (matches), lançamentos editados manualmente após a promoção.</small>';
+}
+
+async function migracaoRollbackConfirm() {
+  if (!_migJobAtual) return;
+  const nome = document.getElementById('migRollbackNome').value.trim();
+  const errBox = document.getElementById('migRollbackError');
+  if (!nome) {
+    errBox.textContent = 'Digite o nome da escola pra confirmar.';
+    errBox.style.display = 'block';
+    return;
+  }
+  errBox.style.display = 'none';
+  showToast('Executando rollback…');
+  const r = await callMigracao({
+    action: 'migracao_rollback', job_id: _migJobAtual.id,
+    confirm: true, escola_nome: nome,
+  });
+  if (r.error) {
+    errBox.textContent = r.error;
+    errBox.style.display = 'block';
+    return;
+  }
+  fecharModal('modalMigRollback');
+  showToast('Rollback completo: ' + JSON.stringify(r.undone || {}));
+  await migracaoRefreshJob();
+  _migStepAtual = 4;
+  migracaoRenderWizard();
   loadMigracao();
 }
 
