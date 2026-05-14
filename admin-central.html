@@ -253,6 +253,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
       <div class="sb-label">Governance</div>
       <a class="nav-item" onclick="showPanel('governance',this)"><span class="ic">🛡️</span> Governance</a>
       <a class="nav-item" onclick="showPanel('backups',this)"><span class="ic">💾</span> Backups</a>
+      <a class="nav-item" onclick="showPanel('migracao',this)"><span class="ic">📥</span> Migração ERPs</a>
       <a class="nav-item" onclick="showPanel('billing',this)"><span class="ic">💰</span> Cobrança SaaS</a>
       <a class="nav-item" onclick="showPanel('finlumied',this)"><span class="ic">📒</span> Financeiro Interno</a>
       <div class="sb-label">GTM</div>
@@ -612,6 +613,146 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           </table>
         </div>
       </div>
+
+      <!-- MIGRAÇÃO DE ERPs (staff) -->
+      <div id="panelMigracao" class="panel">
+        <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400E;">
+          <strong>⚠️ Operação assistida.</strong> Wizard interno usado pelo time Lumied junto da escola.
+          A escola <em>nunca</em> roda sozinha. Histórico financeiro completo (sem corte temporal).
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="action-btn" onclick="migracaoNovoJob()" style="background:#6C63FF;color:#fff;">＋ Nova migração</button>
+          <button class="action-btn" onclick="loadMigracao()">🔄 Recarregar</button>
+          <select id="migFiltroStatus" onchange="loadMigracao()" style="padding:6px 10px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;">
+            <option value="">Todos os status</option>
+            <option value="rascunho">Rascunho</option>
+            <option value="ingerido">Ingerido</option>
+            <option value="parseado">Parseado</option>
+            <option value="validado">Validado</option>
+            <option value="promovido">Promovido</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="erro">Erro</option>
+          </select>
+        </div>
+
+        <div id="migJobsTable" class="table-wrap">
+          <table>
+            <thead><tr><th>Escola</th><th>ERP fonte</th><th>Status</th><th>Operador</th><th>Iniciado</th><th>Ações</th></tr></thead>
+            <tbody id="migJobsBody"><tr><td colspan="6" class="empty-state">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- Wizard (modal-style block, aparece quando job está selecionado) -->
+        <div id="migWizard" style="display:none;margin-top:24px;background:#fff;border:1px solid #e2dbd1;border-radius:14px;padding:22px;box-shadow:0 2px 16px rgba(0,0,0,.06);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+            <h3 style="font-family:'Lora',serif;font-size:18px;font-weight:600;">
+              Job <span id="migJobId" style="font-family:monospace;color:#6C63FF;font-size:13px;"></span>
+              <span id="migJobStatus" style="margin-left:8px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:6px;background:#EEF2FF;color:#3730A3;">—</span>
+            </h3>
+            <button class="action-btn" onclick="migracaoFecharWizard()" style="background:#f0f0f0;">✕ Fechar</button>
+          </div>
+
+          <!-- Stepper -->
+          <div id="migStepper" style="display:flex;gap:8px;margin-bottom:22px;font-size:12px;">
+            <div class="mig-step" data-step="1">1 · Escola/ERP</div>
+            <div class="mig-step" data-step="2">2 · Upload</div>
+            <div class="mig-step" data-step="3">3 · Parse</div>
+            <div class="mig-step" data-step="4">4 · Validar</div>
+            <div class="mig-step" data-step="5">5 · Promover</div>
+          </div>
+
+          <!-- Step 1: ERP / escola -->
+          <div id="migStep1" class="mig-step-content">
+            <p style="color:#666;font-size:13px;margin-bottom:14px;">Identifique a escola e o ERP de origem.</p>
+            <div id="migJobInfo" style="background:#fafafa;border-radius:10px;padding:14px;font-size:13px;line-height:1.7;"></div>
+          </div>
+
+          <!-- Step 2: Upload -->
+          <div id="migStep2" class="mig-step-content" style="display:none;">
+            <p style="color:#666;font-size:13px;margin-bottom:14px;">Envie planilhas/dumps separados por entidade. Cada arquivo é parseado para staging conforme entidade.</p>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
+              <label style="font-size:12px;color:#555;display:flex;flex-direction:column;gap:4px;">
+                Entidade
+                <select id="migEntidade" style="padding:8px 10px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;min-width:170px;">
+                  <option value="alunos">alunos</option>
+                  <option value="responsaveis">responsaveis (familias)</option>
+                  <option value="turmas">turmas (series)</option>
+                  <option value="matriculas">matriculas</option>
+                  <option value="funcionarios">funcionarios</option>
+                  <option value="financeiro">financeiro (CR+CP)</option>
+                  <option value="notas">notas</option>
+                </select>
+              </label>
+              <input type="file" id="migFile" accept=".xlsx,.xls,.csv" style="font-size:13px;">
+              <button class="action-btn" onclick="migracaoFazerUpload()" style="background:#6C63FF;color:#fff;">⬆ Enviar arquivo</button>
+            </div>
+            <div id="migArquivosList" style="font-size:13px;"></div>
+          </div>
+
+          <!-- Step 3: Parse -->
+          <div id="migStep3" class="mig-step-content" style="display:none;">
+            <p style="color:#666;font-size:13px;margin-bottom:14px;">Roda o parser sobre os arquivos e popula as tabelas de staging. Pode reexecutar com novos arquivos.</p>
+            <button class="action-btn" onclick="migracaoRodarParse()" style="background:#6C63FF;color:#fff;">▶ Rodar parse</button>
+            <div id="migParseResumo" style="margin-top:14px;font-size:13px;"></div>
+          </div>
+
+          <!-- Step 4: Validar -->
+          <div id="migStep4" class="mig-step-content" style="display:none;">
+            <p style="color:#666;font-size:13px;margin-bottom:14px;">Roda validações (CPF/CNPJ mod 11, dedupe, match com escola). Resolva inconsistências antes de promover.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+              <button class="action-btn" onclick="migracaoRodarValidar()" style="background:#6C63FF;color:#fff;">▶ Rodar validação</button>
+              <select id="migStageEntidade" onchange="migracaoCarregarStaging()" style="padding:6px 10px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;">
+                <option value="alunos">alunos</option>
+                <option value="responsaveis">responsaveis</option>
+                <option value="turmas">turmas</option>
+                <option value="matriculas">matriculas</option>
+                <option value="funcionarios">funcionarios</option>
+                <option value="financeiro">financeiro</option>
+                <option value="notas">notas</option>
+              </select>
+              <label style="font-size:13px;color:#555;display:inline-flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="migOnlyFlags" onchange="migracaoCarregarStaging()"> Só com flags
+              </label>
+              <label style="font-size:13px;color:#555;display:inline-flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="migOnlyValidos" onchange="migracaoCarregarStaging()"> Só válidos
+              </label>
+            </div>
+            <div id="migStagingResumo" style="font-size:13px;margin-bottom:10px;"></div>
+            <div id="migStagingTable" class="table-wrap" style="max-height:480px;overflow-y:auto;"></div>
+          </div>
+
+          <!-- Step 5: Promover -->
+          <div id="migStep5" class="mig-step-content" style="display:none;">
+            <div id="migPromoteResumo" style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:14px;font-size:13px;color:#92400E;margin-bottom:14px;"></div>
+            <p style="color:#666;font-size:13px;margin-bottom:14px;">
+              Promove staging → tabelas canônicas. Após promover, o job fica imutável.
+              Pediremos confirmação dupla.
+            </p>
+            <button class="action-btn" onclick="migracaoPromover()" style="background:#DC2626;color:#fff;">🚀 Promover (irreversível)</button>
+          </div>
+
+          <!-- Nav buttons -->
+          <div style="margin-top:22px;display:flex;justify-content:space-between;border-top:1px solid #f0eae0;padding-top:14px;">
+            <button class="action-btn" onclick="migracaoStep(-1)">← Anterior</button>
+            <div style="display:flex;gap:8px;">
+              <button class="action-btn" onclick="migracaoCancelar()" style="color:#DC2626;">⏹ Cancelar job</button>
+              <button class="action-btn" onclick="migracaoStep(1)" style="background:#6C63FF;color:#fff;">Próximo →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .mig-step {
+          padding:6px 12px;border-radius:8px;background:#f5f5f5;color:#888;font-weight:500;border:1px solid #eee;
+        }
+        .mig-step.active { background:#EEF2FF;color:#3730A3;border-color:#C7D2FE;font-weight:700; }
+        .mig-step.done { background:#DCFCE7;color:#166534;border-color:#BBF7D0; }
+        .mig-flag-error { color:#DC2626; font-weight:600; }
+        .mig-flag-warn { color:#CA8A04; font-weight:600; }
+        .mig-flag-info { color:#3730A3; }
+      </style>
 
       <!-- PAINEL: CRM LUMIED (funil comercial) -->
       <div id="panelCrm" class="panel">
@@ -1176,7 +1317,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════
-const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', papeis:'Papéis & Permissões', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', billing:'Cobrança SaaS', finlumied:'Financeiro Interno (Lumied)', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
+const titles = { dashboard:'Dashboard', escolas:'Escolas', staff:'Staff Lumied', papeis:'Papéis & Permissões', audit:'Audit Log', tickets:'Tickets', governance:'Governance', backups:'Backups', migracao:'Migração de ERPs', billing:'Cobrança SaaS', finlumied:'Financeiro Interno (Lumied)', crm:'CRM Lumied', funil:'Funil Comercial', saude:'Saúde das Escolas (CS)', playbooks:'Playbooks GTM & CS' };
 
 function showPanel(id, el) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1194,6 +1335,7 @@ function showPanel(id, el) {
   if (id === 'tickets') loadTickets();
   if (id === 'governance') loadGovernance();
   if (id === 'backups') loadBackupsCentral();
+  if (id === 'migracao') loadMigracao();
   if (id === 'billing') loadBillingCentral();
   if (id === 'finlumied') loadFinlumied();
   if (id === 'saude') loadSaudeCS();
@@ -2917,6 +3059,347 @@ function novaCategoria() {
     showToast('Categoria criada.');
     loadCategoriasConfig();
   });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MIGRAÇÃO DE ERPs (staff)
+// ═══════════════════════════════════════════════════════════
+const MIGRACAO_URL = (typeof CONFIG !== 'undefined' ? CONFIG.SUPABASE_URL : 'https://brgorknbrjlfwvrrlwxj.supabase.co') + '/functions/v1/migracao';
+const MIG_RASCUNHO_KEY = 'migracao_rascunho_v1';
+let _migEscolas = [];
+let _migJobAtual = null;     // job carregado no wizard
+let _migStepAtual = 1;
+let _migResumoCache = null;
+
+async function callMigracao(body) {
+  const r = await fetch(MIGRACAO_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':ANON_KEY,'Authorization':'Bearer ' + ANON_KEY},
+    body: JSON.stringify({ ...body, _staff_token: getToken() }),
+  });
+  return r.json();
+}
+
+async function migracaoCarregarEscolas() {
+  if (_migEscolas.length > 0) return _migEscolas;
+  const r = await api({ action:'escolas_list' });
+  _migEscolas = (r && Array.isArray(r) ? r : (r?.escolas || r?.data || [])).filter(e => e && e.id);
+  return _migEscolas;
+}
+
+async function loadMigracao() {
+  const statusFilter = document.getElementById('migFiltroStatus')?.value || '';
+  const tbody = document.getElementById('migJobsBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Carregando…</td></tr>';
+  const r = await callMigracao({ action:'migracao_listar_jobs', status: statusFilter || undefined });
+  if (r.error) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">' + esc(r.error) + '</td></tr>';
+    return;
+  }
+  const jobs = Array.isArray(r) ? r : [];
+  if (jobs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum job. Clique em <em>Nova migração</em>.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = jobs.map(j => {
+    const escolaNome = (j.escolas && j.escolas.nome) || '—';
+    const stColor = j.status === 'promovido' ? 'ativo'
+      : j.status === 'cancelado' || j.status === 'erro' ? 'inativo'
+      : 'warn';
+    return '<tr>' +
+      '<td><strong>' + esc(escolaNome) + '</strong></td>' +
+      '<td>' + esc(j.erp_origem) + '</td>' +
+      '<td><span class="status-pill ' + stColor + '">' + esc(j.status) + '</span></td>' +
+      '<td>' + esc(j.operador_staff_id ? j.operador_staff_id.slice(0,8) : '—') + '</td>' +
+      '<td>' + fmtDate(j.iniciado_em && j.iniciado_em.slice(0,10)) + '</td>' +
+      '<td><button class="action-btn" onclick="migracaoAbrirJob(\'' + j.id + '\')">▶ Abrir</button></td>' +
+      '</tr>';
+  }).join('');
+  // restaura rascunho se houver
+  const draft = JSON.parse(localStorage.getItem(MIG_RASCUNHO_KEY) || 'null');
+  if (draft && draft.job_id && !document.getElementById('migWizard').style.display.includes('block')) {
+    migracaoAbrirJob(draft.job_id);
+  }
+}
+
+async function migracaoNovoJob() {
+  await migracaoCarregarEscolas();
+  if (_migEscolas.length === 0) return showToast('Nenhuma escola cadastrada.', 'error');
+  const opts = _migEscolas.map(e => e.id + ' — ' + (e.nome || e.slug || '?')).join('\n');
+  const escolaInput = prompt('Cole o ID da escola para migrar:\n\n' + opts);
+  if (!escolaInput) return;
+  const escola_id = escolaInput.split(' ')[0].trim();
+  const erp_origem = prompt('ERP de origem? (excel | escolaweb | sponte | wpensar | agenda_edu | sophia | totvs_rm | gvdasa | outro)', 'excel');
+  if (!erp_origem) return;
+  const r = await callMigracao({ action:'migracao_criar_job', escola_id, erp_origem });
+  if (r.error) return showToast(r.error, 'error');
+  showToast('Job criado.');
+  await loadMigracao();
+  migracaoAbrirJob(r.id);
+}
+
+async function migracaoAbrirJob(jobId) {
+  const r = await callMigracao({ action:'migracao_job_resumo', job_id: jobId });
+  if (r.error) return showToast(r.error, 'error');
+  // pega dados do job também
+  const all = await callMigracao({ action:'migracao_listar_jobs' });
+  _migJobAtual = (Array.isArray(all) ? all : []).find(j => j.id === jobId);
+  if (!_migJobAtual) { _migJobAtual = { id: jobId, status:'rascunho' }; }
+  _migResumoCache = r;
+  document.getElementById('migJobId').textContent = jobId.slice(0,8);
+  document.getElementById('migJobStatus').textContent = _migJobAtual.status;
+  document.getElementById('migWizard').style.display = 'block';
+  // determina step inicial pelo status
+  const stepByStatus = { rascunho:1, ingerido:2, parseado:3, validado:4, promovido:5, cancelado:1, erro:2 };
+  _migStepAtual = stepByStatus[_migJobAtual.status] || 1;
+  migracaoRenderWizard();
+  // autosave
+  localStorage.setItem(MIG_RASCUNHO_KEY, JSON.stringify({ job_id: jobId, step: _migStepAtual, ts: Date.now() }));
+  document.getElementById('migWizard').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function migracaoFecharWizard() {
+  document.getElementById('migWizard').style.display = 'none';
+  _migJobAtual = null;
+  localStorage.removeItem(MIG_RASCUNHO_KEY);
+}
+
+function migracaoStep(delta) {
+  const next = Math.max(1, Math.min(5, _migStepAtual + delta));
+  if (next === _migStepAtual) return;
+  _migStepAtual = next;
+  migracaoRenderWizard();
+  if (_migJobAtual) {
+    localStorage.setItem(MIG_RASCUNHO_KEY, JSON.stringify({ job_id: _migJobAtual.id, step: _migStepAtual, ts: Date.now() }));
+  }
+}
+
+function migracaoRenderWizard() {
+  // stepper
+  document.querySelectorAll('.mig-step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.toggle('active', s === _migStepAtual);
+    el.classList.toggle('done', s < _migStepAtual);
+  });
+  // content panels
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('migStep' + i).style.display = (i === _migStepAtual) ? 'block' : 'none';
+  }
+  // load step-specific data
+  if (_migStepAtual === 1) migracaoRenderStep1();
+  if (_migStepAtual === 2) migracaoRenderStep2();
+  if (_migStepAtual === 3) migracaoRenderStep3();
+  if (_migStepAtual === 4) migracaoCarregarStaging();
+  if (_migStepAtual === 5) migracaoRenderStep5();
+}
+
+function migracaoRenderStep1() {
+  const j = _migJobAtual || {};
+  const r = _migResumoCache?.resumo || {};
+  document.getElementById('migJobInfo').innerHTML =
+    '<b>Escola:</b> ' + esc((j.escolas && j.escolas.nome) || j.escola_id || '—') + '<br>' +
+    '<b>ERP fonte:</b> ' + esc(j.erp_origem || '—') + '<br>' +
+    '<b>Status:</b> ' + esc(j.status || '—') + '<br>' +
+    '<b>Operador:</b> ' + esc((j.operador_staff_id||'').slice(0,8) || '—') + '<br>' +
+    '<b>Iniciado:</b> ' + fmtDate((j.iniciado_em||'').slice(0,10)) + '<br>' +
+    '<b>Observação:</b> ' + esc(j.observacao || '—');
+}
+
+function migracaoRenderStep2() {
+  const arquivos = _migResumoCache?.arquivos || [];
+  const list = document.getElementById('migArquivosList');
+  if (arquivos.length === 0) {
+    list.innerHTML = '<em style="color:#888;">Nenhum arquivo enviado ainda.</em>';
+    return;
+  }
+  list.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Arquivo</th><th>Entidade</th><th>Linhas</th><th>Parseadas</th><th>Enviado</th></tr></thead><tbody>' +
+    arquivos.map(a => '<tr>' +
+      '<td>' + esc(a.nome_original) + '</td>' +
+      '<td>' + esc(a.entidade_alvo) + '</td>' +
+      '<td>' + (a.linhas_total||0) + '</td>' +
+      '<td>' + (a.linhas_parseadas||0) + '</td>' +
+      '<td>' + fmtDate((a.enviado_em||'').slice(0,10)) + '</td>' +
+      '</tr>').join('') + '</tbody></table></div>';
+}
+
+function migracaoRenderStep3() {
+  const r = _migJobAtual || {};
+  const resumo = r.resumo || {};
+  document.getElementById('migParseResumo').innerHTML = Object.keys(resumo).length
+    ? '<b>Resumo do parse:</b><pre style="background:#fafafa;padding:10px;border-radius:8px;overflow:auto;font-size:12px;">' + esc(JSON.stringify(resumo, null, 2)) + '</pre>'
+    : '<em style="color:#888;">Ainda não rodou. Clique no botão acima.</em>';
+}
+
+function migracaoRenderStep5() {
+  const j = _migJobAtual || {};
+  const resumo = j.resumo || {};
+  const erros = resumo.erros || {};
+  const warns = resumo.warns || {};
+  const totalErros = Object.values(erros).reduce((a,b)=>a+b,0);
+  const totalWarns = Object.values(warns).reduce((a,b)=>a+b,0);
+  document.getElementById('migPromoteResumo').innerHTML =
+    '<b>Antes de promover, confira:</b><br>' +
+    '<span style="color:#DC2626;">⚠ Erros bloqueantes encontrados: <b>' + totalErros + '</b></span><br>' +
+    '<span style="color:#CA8A04;">⚠ Warnings: <b>' + totalWarns + '</b></span><br>' +
+    'Linhas com erro são <em>descartadas</em> da promoção. Linhas com warning são promovidas como estão.' +
+    (totalErros > 0 ? '<br><br><b>Considere voltar ao passo 4 e corrigir antes.</b>' : '');
+}
+
+async function migracaoFazerUpload() {
+  if (!_migJobAtual) return showToast('Abra um job primeiro.', 'error');
+  const file = document.getElementById('migFile').files[0];
+  if (!file) return showToast('Selecione um arquivo.', 'error');
+  if (file.size > 100 * 1024 * 1024) return showToast('Arquivo excede 100 MB.', 'error');
+  const entidade = document.getElementById('migEntidade').value;
+  showToast('Enviando arquivo (' + (file.size/1024/1024).toFixed(1) + ' MB)…', 'success');
+  const b64 = await migracaoFileToBase64(file);
+  const r = await callMigracao({
+    action:'migracao_upload_arquivo',
+    job_id: _migJobAtual.id,
+    nome: file.name,
+    mime: file.type || undefined,
+    entidade_alvo: entidade,
+    conteudo_base64: b64,
+  });
+  if (r.error) return showToast(r.error, 'error');
+  showToast('Arquivo registrado.');
+  document.getElementById('migFile').value = '';
+  await migracaoRefreshJob();
+  migracaoRenderStep2();
+}
+
+function migracaoFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result || '';
+      const idx = String(result).indexOf(',');
+      resolve(idx >= 0 ? String(result).slice(idx+1) : String(result));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function migracaoRefreshJob() {
+  if (!_migJobAtual) return;
+  const all = await callMigracao({ action:'migracao_listar_jobs' });
+  const upd = (Array.isArray(all) ? all : []).find(j => j.id === _migJobAtual.id);
+  if (upd) _migJobAtual = upd;
+  _migResumoCache = await callMigracao({ action:'migracao_job_resumo', job_id: _migJobAtual.id });
+  document.getElementById('migJobStatus').textContent = _migJobAtual.status;
+}
+
+async function migracaoRodarParse() {
+  if (!_migJobAtual) return;
+  showToast('Parseando arquivos…');
+  const r = await callMigracao({ action:'migracao_parse', job_id: _migJobAtual.id });
+  if (r.error) return showToast(r.error, 'error');
+  showToast('Parse concluído. ERP detectado: ' + (r.erp_origem || '?'));
+  await migracaoRefreshJob();
+  migracaoRenderStep3();
+}
+
+async function migracaoRodarValidar() {
+  if (!_migJobAtual) return;
+  showToast('Validando staging…');
+  const r = await callMigracao({ action:'migracao_validar', job_id: _migJobAtual.id });
+  if (r.error) return showToast(r.error, 'error');
+  const totalErros = Object.values(r.erros||{}).reduce((a,b)=>a+b,0);
+  const totalWarns = Object.values(r.warns||{}).reduce((a,b)=>a+b,0);
+  showToast('Validação OK · ' + totalErros + ' erros / ' + totalWarns + ' warnings', totalErros ? 'error' : 'success');
+  await migracaoRefreshJob();
+  migracaoCarregarStaging();
+}
+
+async function migracaoCarregarStaging() {
+  if (!_migJobAtual) return;
+  const entidade = document.getElementById('migStageEntidade').value;
+  const somente_com_flags = document.getElementById('migOnlyFlags').checked;
+  const somente_validos = document.getElementById('migOnlyValidos').checked;
+  const r = await callMigracao({
+    action:'migracao_listar_staging',
+    job_id: _migJobAtual.id, entidade,
+    somente_com_flags, somente_validos, limit: 200,
+  });
+  const cont = document.getElementById('migStagingTable');
+  const resumo = document.getElementById('migStagingResumo');
+  if (r.error) { cont.innerHTML = '<em>' + esc(r.error) + '</em>'; return; }
+  resumo.innerHTML = '<b>' + (r.rows?.length||0) + '</b> linha(s) exibidas (total: ' + (r.total||0) + ')';
+  const rows = r.rows || [];
+  if (rows.length === 0) {
+    cont.innerHTML = '<em style="color:#888;padding:20px;display:block;">Nada para mostrar com os filtros atuais.</em>';
+    return;
+  }
+  // Descobre colunas dinamicamente (sem campos de controle)
+  const skip = new Set(['id','job_id','escola_id','origem_arquivo_id','origem_hash','promovido_id','promovido_em','criado_em']);
+  const cols = Object.keys(rows[0]).filter(k => !skip.has(k));
+  cont.innerHTML = '<table><thead><tr><th>#</th>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') +
+    '<th>Ações</th></tr></thead><tbody>' +
+    rows.map(row => {
+      const linha = row.origem_linha ?? '—';
+      const tds = cols.map(c => {
+        let v = row[c];
+        if (c === 'flags' && Array.isArray(v) && v.length) {
+          return '<td>' + v.map(f => '<span class="mig-flag-' + (f.severity||'info') + '">[' + esc(f.code) + ']</span> ' + esc(f.msg||'')).join('<br>') + '</td>';
+        }
+        if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+        const display = (v === null || v === undefined) ? '—' : String(v);
+        return '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(display) + '">' + esc(display.length > 60 ? display.slice(0,60)+'…' : display) + '</td>';
+      }).join('');
+      const acoes = '<button class="action-btn" onclick="migracaoEditar(\'' + entidade + '\',\'' + row.id + '\')">✏️</button> ' +
+        '<button class="action-btn" onclick="migracaoIgnorar(\'' + entidade + '\',\'' + row.id + '\',' + !row.ignorado + ')">' +
+        (row.ignorado ? '↻' : '🚫') + '</button>';
+      return '<tr style="' + (row.ignorado ? 'opacity:0.5;' : '') + '"><td>' + linha + '</td>' + tds + '<td>' + acoes + '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+async function migracaoEditar(entidade, id) {
+  const campo = prompt('Qual campo editar?');
+  if (!campo) return;
+  const valor = prompt('Novo valor (vazio = null):');
+  const patch = {};
+  patch[campo] = (valor === '' || valor === null) ? null : valor;
+  const r = await callMigracao({ action:'migracao_override_linha', entidade, id, patch });
+  if (r.error) return showToast(r.error, 'error');
+  showToast('Linha atualizada. Re-rode a validação.');
+  migracaoCarregarStaging();
+}
+
+async function migracaoIgnorar(entidade, id, ignorar) {
+  const r = await callMigracao({ action:'migracao_ignorar_linha', entidade, id, ignorar });
+  if (r.error) return showToast(r.error, 'error');
+  migracaoCarregarStaging();
+}
+
+async function migracaoCancelar() {
+  if (!_migJobAtual) return;
+  const motivo = prompt('Motivo do cancelamento (opcional):');
+  if (motivo === null) return;
+  const r = await callMigracao({ action:'migracao_cancelar_job', job_id: _migJobAtual.id, motivo });
+  if (r.error) return showToast(r.error, 'error');
+  showToast('Job cancelado.');
+  migracaoFecharWizard();
+  loadMigracao();
+}
+
+async function migracaoPromover() {
+  if (!_migJobAtual) return;
+  if (_migJobAtual.status !== 'validado') {
+    return showToast('Job precisa estar validado antes (status atual: ' + _migJobAtual.status + ').', 'error');
+  }
+  const c1 = confirm('Promover este job? Esta ação grava em produção (familias, series, alunos, fin_lancamentos, ...) e é IRREVERSÍVEL.');
+  if (!c1) return;
+  const c2 = prompt('Para confirmar, digite o nome da escola exatamente:');
+  const escolaNome = (_migJobAtual.escolas && _migJobAtual.escolas.nome) || '';
+  if (c2 !== escolaNome) return showToast('Nome não bateu — abortado por segurança.', 'error');
+  showToast('Promovendo job…');
+  const r = await callMigracao({ action:'migracao_promover', job_id: _migJobAtual.id, confirm: true });
+  if (r.error) return showToast(r.error, 'error');
+  showToast('Job promovido! ' + JSON.stringify(r.promovido));
+  localStorage.removeItem(MIG_RASCUNHO_KEY);
+  await migracaoRefreshJob();
+  loadMigracao();
 }
 
 // ═══════════════════════════════════════════════════════════
