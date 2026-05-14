@@ -22,6 +22,7 @@ import { SPONTE_DIALECT } from "./adapters/sponte.ts";
 import { WPENSAR_DIALECT } from "./adapters/wpensar.ts";
 import { SOPHIA_DIALECT } from "./adapters/sophia.ts";
 import { TOTVS_RM_DIALECT } from "./adapters/totvs_rm.ts";
+import { GVDASA_DIALECT } from "./adapters/gvdasa.ts";
 
 const DIALECTS_BY_ERP: Record<string, ErpDialect> = {
   escolaweb: ESCOLAWEB_DIALECT,
@@ -30,6 +31,7 @@ const DIALECTS_BY_ERP: Record<string, ErpDialect> = {
   agenda_edu: WPENSAR_DIALECT,  // mesma família de produtos
   sophia: SOPHIA_DIALECT,
   totvs_rm: TOTVS_RM_DIALECT,
+  gvdasa: GVDASA_DIALECT,
 };
 
 const log = createLogger("migracao");
