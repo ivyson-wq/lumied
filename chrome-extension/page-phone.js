@@ -8,6 +8,23 @@ window.addEventListener('lumied-get-phone', function() {
   var jid = null;
   var debug = [];
   var activeChat = null;
+  var isGroup = false;
+  var storeName = null; // pushname/verifiedName/name/notifyName do contato (sem ~)
+
+  // Helper: extrai melhor nome disponivel do objeto contact
+  function pickNameFromContact(c) {
+    if (!c) return null;
+    var candidates = [c.name, c.verifiedName, c.pushname, c.notifyName, c.formattedName, c.shortName];
+    for (var i = 0; i < candidates.length; i++) {
+      var n = candidates[i];
+      if (typeof n === 'string') n = n.trim();
+      // rejeitar vazio, numero puro, e o proprio LID/JID
+      if (n && !/^[\d\s\-+()]+$/.test(n) && !/@(lid|c\.us|g\.us|s\.whatsapp)/.test(n)) {
+        return n.replace(/^~\s*/, ''); // tira til se vier
+      }
+    }
+    return null;
+  }
 
   try {
     // ── Step 1: Find the active chat object ──
@@ -40,9 +57,28 @@ window.addEventListener('lumied-get-phone', function() {
 
     if (!jid) { debug.push('no active chat found'); }
 
+    // ── Step 1.5: Tentar nome do Store via activeChat.contact ──
+    // Funciona pra @c.us, @lid e @g.us. Esse é o nome "limpo" sem til.
+    if (activeChat) {
+      try {
+        var ctName = pickNameFromContact(activeChat.contact);
+        if (ctName) { storeName = ctName; debug.push('storeName from chat.contact: ' + ctName); }
+        // Fallback: alguns chats tem `name` direto
+        if (!storeName) {
+          var chatName = pickNameFromContact(activeChat);
+          if (chatName) { storeName = chatName; debug.push('storeName from chat: ' + chatName); }
+        }
+      } catch(e) { debug.push('storeName error: ' + e.message); }
+    }
+
     // ── Step 2: Extract phone from JID ──
     if (jid) {
-      if (jid.includes('@c.us') || jid.includes('@s.whatsapp.net')) {
+      // Group chats are blocked upstream (no individual phone to capture)
+      if (jid.includes('@g.us')) {
+        isGroup = true;
+        debug.push('group chat detected: ' + jid);
+
+      } else if (jid.includes('@c.us') || jid.includes('@s.whatsapp.net')) {
         var match = jid.match(/^(\d{10,15})@/);
         if (match) { phone = match[1]; debug.push('direct @c.us phone: ' + phone); }
 
@@ -129,6 +165,11 @@ window.addEventListener('lumied-get-phone', function() {
                     if (cfm) { phone = cfm[1]; debug.push('Contact scan found: ' + phone); break; }
                   }
                 }
+                // Tambem captura nome se ainda nao tem
+                if (!storeName) {
+                  var ctScanName = pickNameFromContact(ct);
+                  if (ctScanName) { storeName = ctScanName; debug.push('storeName from contact scan: ' + ctScanName); }
+                }
                 if (!phone) {
                   // Dump this contact's keys for debugging
                   var ctKeys = Object.keys(ct).filter(function(k) { return typeof ct[k] !== 'function' && typeof ct[k] !== 'object'; });
@@ -183,7 +224,7 @@ window.addEventListener('lumied-get-phone', function() {
 
           if (!contactStore) {
             debug.push('no contact store in IDB');
-            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
+            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, isGroup: isGroup, name: storeName, debug: debug } }));
             return;
           }
 
@@ -215,6 +256,11 @@ window.addEventListener('lumied-get-phone', function() {
                     }
                   }
                 }
+                // Tambem nome do IDB
+                if (!storeName) {
+                  var idbName = pickNameFromContact(c);
+                  if (idbName) { storeName = idbName; debug.push('storeName from IDB: ' + idbName); }
+                }
                 if (!phone) {
                   // Dump keys for debugging
                   var keys = Object.keys(c).slice(0, 15);
@@ -245,18 +291,18 @@ window.addEventListener('lumied-get-phone', function() {
             }
 
             console.log('[Lumied CRM page-phone] IDB result:', phone, 'debug:', debug.join(' | '));
-            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: phone, jid: jid, debug: debug } }));
+            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: phone, jid: jid, isGroup: isGroup, name: storeName, debug: debug } }));
           };
           getAllReq.onerror = function() {
             debug.push('IDB getAll failed');
             console.log('[Lumied CRM page-phone] IDB error, debug:', debug.join(' | '));
-            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
+            window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, isGroup: isGroup, name: storeName, debug: debug } }));
           };
         };
         dbRequest.onerror = function() {
           debug.push('IDB open failed');
           console.log('[Lumied CRM page-phone] IDB open error, debug:', debug.join(' | '));
-          window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, debug: debug } }));
+          window.dispatchEvent(new CustomEvent('lumied-phone-result', { detail: { phone: null, jid: jid, isGroup: isGroup, name: storeName, debug: debug } }));
         };
         return; // async — result dispatched in callbacks
       } catch(e) { debug.push('IDB error: ' + e.message); }
@@ -264,6 +310,6 @@ window.addEventListener('lumied-get-phone', function() {
 
   console.log('[Lumied CRM page-phone] result:', phone, 'debug:', debug.join(' | '));
   window.dispatchEvent(new CustomEvent('lumied-phone-result', {
-    detail: { phone: phone, jid: jid, debug: debug }
+    detail: { phone: phone, jid: jid, isGroup: isGroup, name: storeName, debug: debug }
   }));
 });

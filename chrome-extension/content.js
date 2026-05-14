@@ -104,41 +104,51 @@
     return false;
   }
 
-  // --- PHONE FROM STORE (page-level script via CustomEvent) ---
-  function getPhoneFromStore() {
+  // --- STORE INFO (page-level script via CustomEvent) ---
+  // Returns { phone, isGroup, jid } — group chats are flagged so caller can block.
+  function getStoreInfo() {
     return new Promise(function(resolve) {
       var resolved = false;
       var handler = function(e) {
         if (resolved) return;
         resolved = true;
         window.removeEventListener('lumied-phone-result', handler);
-        var phone = e.detail?.phone || null;
-        console.log('[Lumied CRM] Store phone:', phone, 'debug:', e.detail?.debug);
-        resolve(phone);
+        var result = {
+          phone: e.detail?.phone || null,
+          isGroup: !!e.detail?.isGroup,
+          jid: e.detail?.jid || null,
+          name: e.detail?.name || null
+        };
+        console.log('[Lumied CRM] Store info:', result, 'debug:', e.detail?.debug);
+        resolve(result);
       };
       window.addEventListener('lumied-phone-result', handler);
       window.dispatchEvent(new Event('lumied-get-phone'));
       // Timeout after 3500ms (IndexedDB lookup may take time)
-      setTimeout(function() { if (!resolved) { resolved = true; resolve(null); } }, 3500);
+      setTimeout(function() { if (!resolved) { resolved = true; resolve({ phone: null, isGroup: false, jid: null, name: null }); } }, 3500);
     });
   }
 
   async function getContactInfo() {
     var nome = null;
     var telefone = null;
+    var isGroup = false;
+    var jid = null;
 
     // --- PHONE PRIORITY #1: window.Store ---
     // Note: WhatsApp Web now uses @lid (Linked Device IDs) instead of @c.us.
     // The LID is NOT a phone number. We validate by checking if it looks like
     // a real BR phone: 12-13 digits starting with 55, or 10-11 digits (local).
     try {
-      var storePhone = await getPhoneFromStore();
-      if (storePhone && isValidPhone(storePhone)) {
-        telefone = storePhone;
-      } else if (storePhone) {
-        console.warn('[Lumied CRM] Store returned LID (not phone):', storePhone);
+      var storeInfo = await getStoreInfo();
+      isGroup = storeInfo.isGroup;
+      jid = storeInfo.jid;
+      if (storeInfo.phone && isValidPhone(storeInfo.phone)) {
+        telefone = storeInfo.phone;
+      } else if (storeInfo.phone) {
+        console.warn('[Lumied CRM] Store returned LID (not phone):', storeInfo.phone);
       }
-    } catch(e) { console.warn('[Lumied CRM] Store phone failed:', e); }
+    } catch(e) { console.warn('[Lumied CRM] Store info failed:', e); }
 
     // --- NAME DETECTION ---
     // Strategy 1: conversation-info-header and conversation-title (data-testid)
@@ -185,6 +195,14 @@
           nome = ariaLabel;
         }
       }
+    }
+
+    // Strategy 4 (fallback): nome limpo do Store quando DOM nao encontrou
+    // Store devolve nome sem o '~' (que o WhatsApp adiciona quando o contato
+    // nao esta na agenda do operador), entao so usamos como fallback.
+    if (!nome && storeInfo && storeInfo.name) {
+      nome = storeInfo.name;
+      console.log('[Lumied CRM] nome fallback do Store:', nome);
     }
 
     // --- PHONE DETECTION (DOM fallbacks — only if Store didn't find it) ---
@@ -259,9 +277,81 @@
     }
 
     // Debug: log what we found (remove after confirming it works)
-    console.log('[Lumied CRM] getContactInfo:', { nome: nome, telefone: telefone });
+    console.log('[Lumied CRM] getContactInfo:', { nome: nome, telefone: telefone, isGroup: isGroup, jid: jid });
 
-    return { nome: nome, telefone: telefone };
+    return { nome: nome, telefone: telefone, isGroup: isGroup, jid: jid };
+  }
+
+  // --- LEAD PREVIEW MODAL ---
+  // opts: { title, desc, fields: [{ label, key, value, oldValue?, hint? }], confirmLabel?, cancelLabel? }
+  // Returns Promise<{ [key]: value } | null>. Null = cancelado.
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function showLeadPreviewModal(opts) {
+    return new Promise(function(resolve) {
+      var existing = document.getElementById('lumied-preview-overlay');
+      if (existing) existing.remove();
+
+      var fieldsHtml = (opts.fields || []).map(function(f) {
+        var diffHint = '';
+        var hasOld = f.oldValue !== undefined && f.oldValue !== null && String(f.oldValue) !== '';
+        if (hasOld && String(f.oldValue) !== String(f.value || '')) {
+          diffHint = '<div class="lumied-preview-diff">Anterior: <s>' + escapeHtml(f.oldValue) + '</s></div>';
+        } else if (f.hint) {
+          diffHint = '<div class="lumied-preview-hint">' + escapeHtml(f.hint) + '</div>';
+        }
+        return '<div class="lumied-preview-field">' +
+          '<label class="lumied-preview-label">' + escapeHtml(f.label) + '</label>' +
+          '<input type="text" class="lumied-preview-input" data-key="' + escapeHtml(f.key) + '" value="' + escapeHtml(f.value) + '" />' +
+          diffHint +
+          '</div>';
+      }).join('');
+
+      var overlay = document.createElement('div');
+      overlay.id = 'lumied-preview-overlay';
+      overlay.className = 'lumied-preview-overlay';
+      overlay.innerHTML =
+        '<div class="lumied-preview-modal">' +
+          '<div class="lumied-preview-title">' + escapeHtml(opts.title || 'Confirmar') + '</div>' +
+          (opts.desc ? '<p class="lumied-preview-desc">' + escapeHtml(opts.desc) + '</p>' : '') +
+          '<div class="lumied-preview-fields">' + fieldsHtml + '</div>' +
+          '<div class="lumied-preview-actions">' +
+            '<button type="button" class="lumied-preview-btn-cancel" id="lumied-preview-cancel">' + escapeHtml(opts.cancelLabel || 'Cancelar') + '</button>' +
+            '<button type="button" class="lumied-preview-btn-confirm" id="lumied-preview-confirm">' + escapeHtml(opts.confirmLabel || 'Confirmar') + '</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      var firstInput = overlay.querySelector('.lumied-preview-input');
+      if (firstInput) { firstInput.focus(); firstInput.select(); }
+
+      function close(result) {
+        overlay.remove();
+        resolve(result);
+      }
+
+      document.getElementById('lumied-preview-confirm').addEventListener('click', function() {
+        var inputs = overlay.querySelectorAll('.lumied-preview-input');
+        var result = {};
+        for (var i = 0; i < inputs.length; i++) {
+          result[inputs[i].getAttribute('data-key')] = inputs[i].value.trim();
+        }
+        close(result);
+      });
+      document.getElementById('lumied-preview-cancel').addEventListener('click', function() { close(null); });
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) close(null); });
+      overlay.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { e.preventDefault(); close(null); }
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+          e.preventDefault();
+          document.getElementById('lumied-preview-confirm').click();
+        }
+      });
+    });
   }
 
   function getConversationMessages(maxMessages = 50) {
@@ -453,7 +543,16 @@
     statusEl.textContent = 'Buscando informacoes do lead...';
 
     try {
-      const { nome, telefone } = await getContactInfo();
+      const info = await getContactInfo();
+      let { nome, telefone } = info;
+
+      // Bloquear grupos
+      if (info.isGroup) {
+        statusEl.className = 'mb-lead-status error';
+        statusEl.innerHTML = '<strong>Conversa em grupo detectada.</strong><br>Abra a conversa individual com o responsavel para atualizar o lead.';
+        return;
+      }
+
       if (!telefone && !nome) {
         statusEl.className = 'mb-lead-status error';
         statusEl.textContent = 'Abra um chat para ver as informacoes.';
@@ -497,16 +596,44 @@
       const extracted = extractLeadInfoFromMessages(messages);
       const resumo = summarizeConversation(messages);
 
-      // Update lead with extracted info (always overwrite with fresh data)
-      const updates = {};
-      if (nome && nome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(nome)) updates.nome_responsavel = nome;
-      if (extracted.nomeCrianca) updates.nome_crianca = extracted.nomeCrianca;
-      if (extracted.dataNascimento) updates.data_nascimento = extracted.dataNascimento;
+      // Preparar updates candidatos
+      const updateCandidates = {};
+      if (nome && nome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(nome)) updateCandidates.nome_responsavel = nome;
+      if (extracted.nomeCrianca) updateCandidates.nome_crianca = extracted.nomeCrianca;
+      if (extracted.dataNascimento) updateCandidates.data_nascimento = extracted.dataNascimento;
 
-      if (Object.keys(updates).length > 0) {
-        statusEl.textContent = 'Atualizando dados do lead...';
-        await apiCall('crm_lead_save', { id: lead.id, ...updates });
-        Object.assign(lead, updates);
+      // Filtrar apenas os que realmente mudam
+      const realUpdates = {};
+      for (const k in updateCandidates) {
+        if (String(lead[k] || '') !== String(updateCandidates[k] || '')) {
+          realUpdates[k] = updateCandidates[k];
+        }
+      }
+
+      let confirmedUpdates = {};
+      if (Object.keys(realUpdates).length > 0) {
+        const fields = [];
+        if ('nome_responsavel' in realUpdates) fields.push({ label: 'Nome do responsavel', key: 'nome_responsavel', value: realUpdates.nome_responsavel, oldValue: lead.nome_responsavel });
+        if ('nome_crianca' in realUpdates) fields.push({ label: 'Nome da crianca', key: 'nome_crianca', value: realUpdates.nome_crianca, oldValue: lead.nome_crianca });
+        if ('data_nascimento' in realUpdates) fields.push({ label: 'Data de nascimento (AAAA-MM-DD)', key: 'data_nascimento', value: realUpdates.data_nascimento, oldValue: lead.data_nascimento });
+
+        statusEl.classList.add('hidden');
+        const result = await showLeadPreviewModal({
+          title: 'Atualizar dados do lead?',
+          desc: 'Foram detectadas mudancas em relacao ao lead atual. Edite ou confirme:',
+          fields: fields,
+          confirmLabel: 'Atualizar',
+          cancelLabel: 'Manter atual'
+        });
+        statusEl.classList.remove('hidden');
+        statusEl.className = 'mb-lead-status loading';
+
+        if (result) {
+          confirmedUpdates = result;
+          statusEl.textContent = 'Atualizando dados do lead...';
+          await apiCall('crm_lead_save', { id: lead.id, ...confirmedUpdates });
+          Object.assign(lead, confirmedUpdates);
+        }
       }
 
       // Register conversation summary in history
@@ -548,7 +675,7 @@
       currentLeadInfo = { lead, serieInfo };
       renderLeadCard(lead, serieInfo);
 
-      const updatedFields = Object.keys(updates).length;
+      const updatedFields = Object.keys(confirmedUpdates).length;
       statusEl.className = 'mb-lead-status success';
       statusEl.textContent = updatedFields > 0
         ? `Dados atualizados (${updatedFields}) + conversa registrada!`
@@ -621,7 +748,16 @@
     statusEl.textContent = 'Extraindo informacoes do contato...';
 
     try {
-      const { nome, telefone } = await getContactInfo();
+      const info = await getContactInfo();
+      let { nome, telefone } = info;
+
+      // Bloquear grupos — sem telefone individual disponivel
+      if (info.isGroup) {
+        statusEl.className = 'mb-lead-status error';
+        statusEl.innerHTML = '<strong>Conversa em grupo detectada.</strong><br>Abra a conversa individual com o responsavel para capturar o lead.';
+        return;
+      }
+
       if (!telefone && !nome) {
         statusEl.className = 'mb-lead-status error';
         statusEl.textContent = 'Abra um chat para capturar o lead.';
@@ -639,20 +775,60 @@
       const meetingInfo = detectMeeting(messages);
 
       if (existingLead) {
-        statusEl.textContent = 'Lead encontrado! Atualizando historico...';
+        statusEl.textContent = 'Lead encontrado.';
 
+        // Preparar updates candidatos
+        const updateCandidates = {};
+        if (nome && nome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(nome)) updateCandidates.nome_responsavel = nome;
+        if (extracted.nomeCrianca) updateCandidates.nome_crianca = extracted.nomeCrianca;
+        if (extracted.dataNascimento) updateCandidates.data_nascimento = extracted.dataNascimento;
+
+        // Filtrar apenas os que realmente mudam
+        const realUpdates = {};
+        for (const k in updateCandidates) {
+          if (String(existingLead[k] || '') !== String(updateCandidates[k] || '')) {
+            realUpdates[k] = updateCandidates[k];
+          }
+        }
+
+        // Mostrar preview se ha mudancas
+        let confirmedUpdates = null;
+        if (Object.keys(realUpdates).length > 0) {
+          const fields = [];
+          if ('nome_responsavel' in realUpdates) fields.push({ label: 'Nome do responsavel', key: 'nome_responsavel', value: realUpdates.nome_responsavel, oldValue: existingLead.nome_responsavel });
+          if ('nome_crianca' in realUpdates) fields.push({ label: 'Nome da crianca', key: 'nome_crianca', value: realUpdates.nome_crianca, oldValue: existingLead.nome_crianca });
+          if ('data_nascimento' in realUpdates) fields.push({ label: 'Data de nascimento (AAAA-MM-DD)', key: 'data_nascimento', value: realUpdates.data_nascimento, oldValue: existingLead.data_nascimento });
+
+          statusEl.classList.add('hidden');
+          confirmedUpdates = await showLeadPreviewModal({
+            title: 'Atualizar lead?',
+            desc: 'Lead ja existe. Confira os dados novos do WhatsApp antes de atualizar:',
+            fields: fields,
+            confirmLabel: 'Atualizar lead',
+            cancelLabel: 'Manter atual'
+          });
+          statusEl.classList.remove('hidden');
+          statusEl.className = 'mb-lead-status loading';
+
+          if (!confirmedUpdates) {
+            // Operador escolheu manter dados atuais — so registra a conversa
+            statusEl.textContent = 'Registrando conversa no historico...';
+            await apiCall('crm_interacao_save', { lead_id: existingLead.id, tipo: 'whatsapp', descricao: resumo });
+            currentLeadInfo = { lead: existingLead, serieInfo: null };
+            renderLeadCard(existingLead, null);
+            statusEl.className = 'mb-lead-status success';
+            statusEl.textContent = 'Conversa registrada (dados do lead mantidos).';
+            return;
+          }
+          statusEl.textContent = 'Atualizando dados do lead...';
+          await apiCall('crm_lead_save', { id: existingLead.id, ...confirmedUpdates });
+          Object.assign(existingLead, confirmedUpdates);
+        }
+
+        statusEl.textContent = 'Registrando conversa no historico...';
         await apiCall('crm_interacao_save', {
           lead_id: existingLead.id, tipo: 'whatsapp', descricao: resumo
         });
-
-        const updates = {};
-        if (nome && nome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(nome)) updates.nome_responsavel = nome;
-        if (extracted.nomeCrianca) updates.nome_crianca = extracted.nomeCrianca;
-        if (extracted.dataNascimento) updates.data_nascimento = extracted.dataNascimento;
-        if (Object.keys(updates).length > 0) {
-          await apiCall('crm_lead_save', { id: existingLead.id, ...updates });
-          Object.assign(existingLead, updates);
-        }
 
         // Calculate serie
         let serieInfo = null;
@@ -689,22 +865,62 @@
           return;
         }
 
-        statusEl.textContent = 'Criando novo lead no pipeline...';
-        const nomeCrianca = extracted.nomeCrianca || prompt('Nome da crianca (opcional):', '') || '';
-
         // Safety: if nome looks like a status text, fall back to phone or generic
         var safeNome = nome;
         if (safeNome && STATUS_TEXT_RE.test(safeNome)) {
           safeNome = null;
         }
+
+        // Preview-antes-de-salvar: operador confirma/edita nome+telefone+crianca
+        statusEl.classList.add('hidden');
+        const confirmedLead = await showLeadPreviewModal({
+          title: 'Criar novo lead?',
+          desc: 'Confira os dados capturados do WhatsApp. Edite se necessario antes de salvar:',
+          fields: [
+            { label: 'Nome do responsavel (do WhatsApp)', key: 'nome_responsavel', value: safeNome || '' },
+            { label: 'Telefone (ID master)', key: 'telefone', value: telefone, hint: 'Formato: 55 + DDD + numero' },
+            { label: 'Nome da crianca (opcional)', key: 'nome_crianca', value: extracted.nomeCrianca || '' }
+          ],
+          confirmLabel: 'Criar lead',
+          cancelLabel: 'Cancelar'
+        });
+        if (!confirmedLead) {
+          // Cancelado — limpa status
+          return;
+        }
+
+        // Re-validar telefone (operador pode ter editado)
+        var finalPhone = (confirmedLead.telefone || '').replace(/[\s\-()]/g, '').replace(/^\+/, '');
+        if (/^\d{10,11}$/.test(finalPhone)) finalPhone = '55' + finalPhone;
+        if (!isValidPhone(finalPhone)) {
+          statusEl.classList.remove('hidden');
+          statusEl.className = 'mb-lead-status error';
+          statusEl.textContent = 'Telefone invalido. Use o formato 55 + DDD + numero.';
+          return;
+        }
+
+        // Re-checar se telefone editado bate com lead existente
+        const dupCheck = await findLeadByPhone(finalPhone);
+        if (dupCheck) {
+          statusEl.classList.remove('hidden');
+          statusEl.className = 'mb-lead-status error';
+          statusEl.innerHTML = '<strong>Lead ja existe com este telefone:</strong><br>' + escapeHtml(dupCheck.nome_responsavel || finalPhone) + '<br>Use "Atualizar info do lead" em vez de capturar.';
+          return;
+        }
+
+        statusEl.classList.remove('hidden');
+        statusEl.className = 'mb-lead-status loading';
+        statusEl.textContent = 'Criando novo lead no pipeline...';
+
         const leadData = {
-          nome_responsavel: safeNome || telefone || 'Contato WhatsApp',
-          telefone: telefone,
+          nome_responsavel: confirmedLead.nome_responsavel || finalPhone || 'Contato WhatsApp',
+          telefone: finalPhone,
           origem: 'whatsapp',
           observacoes: 'Lead capturado via extensao Chrome WhatsApp Web'
         };
-        if (nomeCrianca) leadData.nome_crianca = nomeCrianca;
+        if (confirmedLead.nome_crianca) leadData.nome_crianca = confirmedLead.nome_crianca;
         if (extracted.dataNascimento) leadData.data_nascimento = extracted.dataNascimento;
+        telefone = finalPhone; // garantir consistencia downstream
 
         const newLead = await apiCall('crm_lead_save', leadData);
         const leadId = newLead?.id;

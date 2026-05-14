@@ -15,6 +15,7 @@ zip -j "$DIST" \
   background.js \
   content.js \
   content.css \
+  page-phone.js \
   privacy-policy.html \
   lumied-icon.png \
   icon16.png \
