@@ -325,6 +325,20 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     </div>
   </div>
 
+  <div class="sidebar-section" data-portal="migracao-erps">
+    <div class="sidebar-section-title" onclick="toggleSection(this)">📥 Migração de ERPs <span class="chevron">▸</span></div>
+    <div class="sidebar-links">
+      <a href="#mig-overview">Visão geral do processo</a>
+      <a href="#mig-excel">Excel / CSV genérico</a>
+      <a href="#mig-escolaweb">Escolaweb</a>
+      <a href="#mig-sponte">Sponte</a>
+      <a href="#mig-wpensar">WPensar / Agenda Edu</a>
+      <a href="#mig-sophia">Sophia (Prima)</a>
+      <a href="#mig-totvs">TOTVS RM Educacional</a>
+      <a href="#mig-gvdasa">GVDasa (Gennera)</a>
+    </div>
+  </div>
+
 </nav>
 
 <!-- ═══ MAIN CONTENT ═══ -->
@@ -3864,6 +3878,314 @@ details p,details div{padding:0 16px 14px;font-size:.88rem;color:var(--muted)}
     <details><summary>Posso baixar o PDF depois?</summary><p>Sim. No painel do gerente → CRM → Contratos → abrir contrato assinado → botão "Baixar PDF". Disponível também via portal dos pais para a família.</p></details>
     <details><summary>E se o browser fechar antes do upload terminar?</summary><p>A assinatura já está registrada no banco. Na primeira reutilização do contrato, o PDF é gerado server-side automaticamente.</p></details>
     <details><summary>O PDF server-side tem a mesma qualidade visual?</summary><p>Não exatamente — o server-side é preto e branco com formatação simples (via pdf-lib), enquanto o browser gera com CSS completo. Ambos contêm todo o conteúdo textual e selo probatório; para contratos novos, sempre será usada a versão do browser.</p></details>
+  </div>
+</article>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!--               MIGRAÇÃO DE ERPs                           -->
+<!-- Operada pelo staff Lumied no admin-central.html.        -->
+<!-- Pra cada ERP fonte, há um adapter que mapeia o          -->
+<!-- vocabulário da fonte pro canônico Lumied.               -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<article id="mig-overview" class="help-article" data-portal="migracao-erps" data-keywords="migração migracao erp wizard staging promover importar dados escola legado">
+  <h2>📥 Visão geral do processo de migração</h2>
+  <p class="article-desc">Como funciona o wizard de migração no admin-central. <strong>Operação assistida pelo time Lumied</strong> — a escola nunca roda sozinha.</p>
+
+  <h3>Onde fica</h3>
+  <div class="path-indicator">admin-central.lumied.com.br → Migração ERPs</div>
+
+  <h3>Princípios da migração</h3>
+  <ul style="margin-left:20px;line-height:1.8;">
+    <li><strong>Sempre assistida.</strong> Um operador Lumied conduz o wizard junto da escola — não há self-service.</li>
+    <li><strong>Cobrança incluída na taxa de implantação.</strong> Não é grátis nem item separado.</li>
+    <li><strong>Histórico financeiro completo.</strong> Migramos todos os títulos (CR + CP, abertos e liquidados) sem corte temporal.</li>
+    <li><strong>Reversível até edição manual.</strong> Após promover, ainda dá pra reverter pelo step 6 enquanto ninguém editou os dados gravados.</li>
+  </ul>
+
+  <h3>Os 6 passos do wizard</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <strong>Escola / ERP de origem</strong>
+        <p>Identifique a escola destino e o ERP fonte (Escolaweb, Sponte, WPensar, Agenda Edu, Sophia, TOTVS RM, GVDasa ou Excel/CSV genérico). O job nasce em status <em>rascunho</em>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <strong>Upload de arquivos</strong>
+        <p>Suba 1 ou mais arquivos (xlsx/xls/csv, até 100 MB cada). Para cada upload, indique a entidade alvo (alunos, responsáveis, turmas, matrículas, funcionários, financeiro, notas). Workbooks multi-aba do Escolaweb são processados automaticamente — basta marcar a entidade primária.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <strong>Parse</strong>
+        <p>Botão "Rodar parse". O sistema baixa cada arquivo, detecta o ERP pelos cabeçalhos (se "Excel/CSV"), converte linhas em staging com dedupe por hash. Mostra contadores: "<em>alunos: 350, responsaveis: 280, financeiro: 4200...</em>".</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <strong>Validar</strong>
+        <p>Botão "Rodar validação". Regras automáticas: CPF/CNPJ mod 11, dedupe, sem_responsavel (LGPD menores), match com famílias/séries existentes. Após validar aparece o <strong>painel agregado de inconsistências</strong> — chips coloridos por código de erro (vermelho = bloqueante, amarelo = warn, azul = info). Clique no chip pra filtrar a tabela. Edite linhas problemáticas no modal de edição ou marque pra ignorar.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">5</div>
+      <div class="step-content">
+        <strong>Promover</strong>
+        <p>Antes de clicar, veja a <strong>tabela de preview</strong>: "Válidas | Ignoradas | Com erro | Total" por entidade. Confirme duas vezes (confirmação JS + digitar nome exato da escola). O backend grava em ordem: famílias → séries → alunos (via trigger) → matrículas → usuários → fin_lancamentos.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-number">6</div>
+      <div class="step-content">
+        <strong>Verificar</strong>
+        <p>Amostragem visual dos registros gravados — 10 primeiros de cada entidade, com contadores "quantos vieram do job · total na escola agora". Se algo está errado, há um botão "↩ Iniciar rollback" pra desfazer enquanto os dados não foram editados manualmente.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    <strong>💡 Antes de começar:</strong> peça à escola exportar uma <em>amostra pequena</em> primeiro (50 alunos, 200 títulos) pra validar o mapeamento. Depois rode a migração completa em outro job.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas frequentes</h3>
+    <details><summary>Posso cancelar um job no meio?</summary><p>Sim, pelo botão "⏹ Cancelar job" no rodapé do wizard, em qualquer status que não seja "promovido". O job vira "cancelado" e os arquivos ficam preservados no bucket pra auditoria.</p></details>
+    <details><summary>Subi um arquivo errado, como removo?</summary><p>Hoje não há botão de remover arquivo individual — você pode cancelar o job inteiro e criar outro. Ou subir o arquivo correto e marcar como ignorada cada linha problemática no step 4.</p></details>
+    <details><summary>Por quanto tempo o rollback está disponível?</summary><p>Tecnicamente não tem prazo, mas funciona melhor enquanto ninguém editou os dados gravados. Lançamentos financeiros, por exemplo, são identificados pela tag <code>criado_por: migracao:&lt;email&gt;</code> + janela temporal de 30 minutos da promoção — se alguém editou esses registros depois, eles podem ficar inconsistentes após rollback.</p></details>
+    <details><summary>E se o ERP fonte não estiver na lista?</summary><p>Use "Excel/CSV genérico" — o parser tenta auto-detectar pelos cabeçalhos. Se algum campo não bater, edite no step 4 ou use o template Excel da seção "Excel / CSV genérico" abaixo.</p></details>
+    <details><summary>O histórico de auditoria fica salvo?</summary><p>Sim — toda operação (criar, upload, parse, validar, override, ignorar, promover, cancelar, rollback) é registrada em <code>migracao_audit</code>. Veja pelo botão "📋 Histórico" no header do wizard.</p></details>
+  </div>
+</article>
+
+<article id="mig-excel" class="help-article" data-portal="migracao-erps" data-keywords="excel csv template migração planilha genérico upload">
+  <h2>📊 Excel / CSV genérico</h2>
+  <p class="article-desc">Quando o ERP fonte não tem adapter dedicado ou os dados já estão em planilha consolidada, use o formato genérico. O parser auto-detecta colunas pelos cabeçalhos.</p>
+
+  <h3>Quando usar</h3>
+  <ul style="margin-left:20px;line-height:1.8;">
+    <li>ERP fonte não suportado (não está na lista de adapters)</li>
+    <li>Escola já mantém dados em Excel — não tem ERP</li>
+    <li>Validação prévia de mapeamento com uma amostra pequena</li>
+  </ul>
+
+  <h3>Formato dos arquivos</h3>
+  <p>Crie <strong>um arquivo XLSX (ou CSV UTF-8) por entidade</strong> — alunos, responsáveis, turmas, financeiro, etc. A primeira linha deve conter os cabeçalhos. O parser identifica colunas por sinônimos PT-BR (ex: "Nome", "Nome Completo", "Aluno", "Nome do Aluno" todos viram <code>nome</code>).</p>
+
+  <h3>Cabeçalhos recomendados (alunos)</h3>
+  <pre style="background:#fafafa;padding:12px;border-radius:8px;font-size:12px;overflow-x:auto;">
+nome | email | cpf | data_nascimento | serie | responsavel_email | responsavel_cpf</pre>
+
+  <h3>Cabeçalhos recomendados (responsáveis)</h3>
+  <pre style="background:#fafafa;padding:12px;border-radius:8px;font-size:12px;overflow-x:auto;">
+nome | email | cpf | telefone | whatsapp | endereco | cidade | uf | cep | parentesco | aluno_email</pre>
+
+  <h3>Cabeçalhos recomendados (financeiro)</h3>
+  <pre style="background:#fafafa;padding:12px;border-radius:8px;font-size:12px;overflow-x:auto;">
+tipo | descricao | valor | data_vencimento | data_pagamento | status | familia_email | documento</pre>
+
+  <div class="tip-box">
+    <strong>💡 Datas:</strong> aceitamos vários formatos (DD/MM/AAAA, AAAA-MM-DD, Excel serial). Valores monetários podem vir com vírgula ou ponto. Encoding: prefira UTF-8 pra CSV — Latin-1 também funciona, mas pode dar problema com acentuação.
+  </div>
+
+  <div class="faq-section">
+    <h3>Perguntas frequentes</h3>
+    <details><summary>O Excel tem múltiplas abas — funciona?</summary><p>Sim. O parser lê todas as abas. Se as abas tiverem nomes reconhecidos (ex: "Alunos", "Responsáveis", "Financeiro"), ele roteia automaticamente. Caso contrário, usa a entidade marcada no upload pra primeira aba e ignora as outras.</p></details>
+    <details><summary>Posso usar nomes de coluna em inglês?</summary><p>Os sinônimos cobrem mais português que inglês. "Name" e "Email" funcionam mas é seguro padronizar em PT-BR.</p></details>
+  </div>
+</article>
+
+<article id="mig-escolaweb" class="help-article" data-portal="migracao-erps" data-keywords="escolaweb migração exportar planilha relatório xls">
+  <h2>📥 Migração do Escolaweb</h2>
+  <p class="article-desc">Adapter dedicado — reconhece o vocabulário Escolaweb (RA, Sacado, Nosso Número, Mês Referência, Responsável Financeiro). Lê workbooks multi-aba automaticamente.</p>
+
+  <h3>O que pedir pra escola exportar</h3>
+  <ol style="margin-left:20px;line-height:1.8;">
+    <li><strong>Cadastro de Alunos</strong> — exporte com todas as colunas (incluindo RA, responsável financeiro, série)</li>
+    <li><strong>Responsáveis Financeiros</strong> — lista de Sacados com CPF/CNPJ, telefone, endereço</li>
+    <li><strong>Contas a Receber (CR)</strong> — TODOS os títulos, abertos e quitados, sem filtro de período</li>
+    <li><strong>Contas a Pagar (CP)</strong> — todos os lançamentos de despesa</li>
+    <li><strong>Turmas / Séries</strong> — estrutura curricular</li>
+    <li><strong>Funcionários</strong> (opcional) — se quiser migrar usuários</li>
+  </ol>
+
+  <h3>Como exportar no Escolaweb (instruções gerais)</h3>
+  <p style="color:var(--muted);font-size:.9rem;font-style:italic;">⚠️ Menus podem variar entre versões. Confirme com a escola a versão do Escolaweb antes.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content"><p>No Escolaweb, acesse o módulo desejado (ex: <em>Acadêmico → Alunos</em>, <em>Financeiro → CR/CP</em>).</p></div>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content"><p>Aplique <strong>filtros mínimos</strong> — só ano letivo se necessário. <strong>Não filtre por status</strong> em financeiro (queremos abertos + quitados).</p></div>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content"><p>Clique no botão de <strong>Exportar / Excel</strong> (geralmente ícone de planilha verde no topo da lista). Salve como <code>.xlsx</code>.</p></div>
+    </div>
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="step-content"><p>Repita pra cada entidade. Renomeie os arquivos pra identificar (ex: <code>escolaweb_alunos_2026.xlsx</code>) — facilita auditoria depois.</p></div>
+    </div>
+  </div>
+
+  <h3>Mapeamento conhecido</h3>
+  <table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:8px;">
+    <thead><tr style="background:#fafafa;"><th style="text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);">Escolaweb</th><th style="text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);">Lumied</th></tr></thead>
+    <tbody>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">RA</td><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">cpf / identificador do aluno</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">Sacado</td><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">família / responsável financeiro</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">Nosso Número</td><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">documento (boleto)</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">Mês Referência</td><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">descrição do lançamento</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">Status: Quitado / Em aberto / Renegociado / Estornado</td><td style="padding:6px 10px;border-bottom:1px solid #f0eae0;">pago / pendente / pendente / cancelado</td></tr>
+    </tbody>
+  </table>
+</article>
+
+<article id="mig-sponte" class="help-article" data-portal="migracao-erps" data-keywords="sponte migração exportar relatório xls">
+  <h2>📥 Migração do Sponte</h2>
+  <p class="article-desc">Adapter dedicado — reconhece Cliente, Sacado, Curso, Turma, Parcela, Centro de Custo.</p>
+
+  <h3>O que pedir pra escola exportar</h3>
+  <ol style="margin-left:20px;line-height:1.8;">
+    <li><strong>Cadastro de Alunos</strong> (Cad Alunos) — com CPF, data de nascimento, responsável</li>
+    <li><strong>Contas a Receber</strong> (CR) — todos os títulos do histórico (não filtre por status)</li>
+    <li><strong>Contas a Pagar</strong> (CP) — todos os lançamentos</li>
+    <li><strong>Cursos / Turmas</strong></li>
+    <li><strong>Clientes</strong> (responsáveis financeiros) — separadamente se possível</li>
+  </ol>
+
+  <h3>Como exportar no Sponte (instruções gerais)</h3>
+  <p style="color:var(--muted);font-size:.9rem;font-style:italic;">⚠️ Menus podem variar entre versões.</p>
+  <div class="steps">
+    <div class="step"><div class="step-number">1</div><div class="step-content"><p>Acesse o relatório desejado (ex: <em>Relatórios → Acadêmico → Alunos</em> ou <em>Financeiro → Títulos a Receber</em>).</p></div></div>
+    <div class="step"><div class="step-number">2</div><div class="step-content"><p>Configure o filtro: <strong>período amplo</strong> (todos os anos), <strong>todos os status</strong>.</p></div></div>
+    <div class="step"><div class="step-number">3</div><div class="step-content"><p>Gere o relatório e use a opção <strong>Exportar para Excel</strong>. Versões antigas do Sponte exportam HTML disfarçado de .xls — abra no Excel/LibreOffice e salve novamente como <code>.xlsx</code>.</p></div></div>
+  </div>
+
+  <h3>Status financeiro Sponte → Lumied</h3>
+  <ul style="margin-left:20px;line-height:1.8;">
+    <li>Em Aberto / Em Atraso → <strong>pendente / atrasado</strong></li>
+    <li>Quitado → <strong>pago</strong></li>
+    <li>Renegociado / Parcial → <strong>pendente</strong> (saldo zero = pago)</li>
+    <li>Suspenso → <strong>cancelado</strong></li>
+  </ul>
+</article>
+
+<article id="mig-wpensar" class="help-article" data-portal="migracao-erps" data-keywords="wpensar agenda edu migração exportar relatório xls">
+  <h2>📥 Migração do WPensar / Agenda Edu</h2>
+  <p class="article-desc">Adapter dedicado — mesmo dialect cobre os dois sistemas (família de produtos comum). Reconhece "Estudante" (WPensar) e "Aluno" (Agenda Edu), "Familiar/Responsável", "Etapa de Ensino", "Mês de Referência".</p>
+
+  <h3>O que pedir pra escola exportar</h3>
+  <ol style="margin-left:20px;line-height:1.8;">
+    <li><strong>Cadastro de Estudantes</strong> (WPensar) ou <strong>Alunos</strong> (Agenda Edu)</li>
+    <li><strong>Familiares</strong> / Responsáveis</li>
+    <li><strong>Mensalidades</strong> — todas, sem corte de status</li>
+    <li><strong>Frequência</strong> (opcional, se contratou módulo)</li>
+  </ol>
+
+  <h3>Status financeiro WPensar / Agenda Edu → Lumied</h3>
+  <ul style="margin-left:20px;line-height:1.8;">
+    <li>Pago / Compensado → <strong>pago</strong></li>
+    <li>Em aberto → <strong>pendente</strong></li>
+    <li>Atrasado → <strong>atrasado</strong></li>
+    <li>Aguardando / Negociado → <strong>pendente</strong> (saldo zero = pago)</li>
+    <li>Cancelado / Estornado → <strong>cancelado</strong></li>
+  </ul>
+
+  <div class="tip-box">
+    <strong>💡 Agenda Edu:</strong> a exportação geralmente vem em XLSX limpo. WPensar antigo pode exportar CSV com encoding Latin-1 — confirme acentuação antes de subir.
+  </div>
+</article>
+
+<article id="mig-sophia" class="help-article" data-portal="migracao-erps" data-keywords="sophia prima senior migração exportar relatório xls">
+  <h2>📥 Migração do Sophia (Prima / Senior Sistemas)</h2>
+  <p class="article-desc">Adapter dedicado — granularidade maior que outros ERPs: "Pessoa" como entidade base, "Cód. Pessoa" como identificador, "Etapa Letiva" no lugar de série, "Plano de Pagamento" + "Centro de Resultado" no financeiro.</p>
+
+  <h3>O que pedir pra escola exportar</h3>
+  <ol style="margin-left:20px;line-height:1.8;">
+    <li><strong>Pessoas</strong> (separar alunos e responsáveis pelo tipo)</li>
+    <li><strong>Lançamentos / Cobranças</strong></li>
+    <li><strong>Plano de Pagamento</strong> (referência cruzada)</li>
+    <li><strong>Etapas Letivas / Turmas</strong></li>
+  </ol>
+
+  <h3>Status financeiro Sophia → Lumied</h3>
+  <ul style="margin-left:20px;line-height:1.8;">
+    <li>Em Aberto / Em Atraso → <strong>pendente / atrasado</strong></li>
+    <li>Quitado → <strong>pago</strong></li>
+    <li>Acordo / Em Análise → <strong>pendente</strong></li>
+    <li>Cancelado → <strong>cancelado</strong></li>
+  </ul>
+
+  <div class="tip-box">
+    <strong>💡 Cód. Pessoa:</strong> o Sophia usa esse código como chave primária. Mantenha-o no export (não exclua a coluna) — usamos como CPF/identificador quando o CPF próprio está faltando.
+  </div>
+</article>
+
+<article id="mig-totvs" class="help-article" data-portal="migracao-erps" data-keywords="totvs rm educacional migração coligada filial exportar sql server">
+  <h2>📥 Migração do TOTVS RM Educacional</h2>
+  <p class="article-desc">Adapter dedicado — ERP corporativo herdado de SQL Server. Vocabulário técnico: CODCOLIGADA, CODFILIAL, CODPESSOA, CODALUNO, CODTURMA, CODHABILITACAO, PERLET (Período Letivo "AAAANN"), TBLNATFINANCEIRO.</p>
+
+  <h3>⚠️ Pré-requisito: filtrar por COLIGADA</h3>
+  <p>O TOTVS RM suporta multi-coligada (várias razões sociais no mesmo ERP). O Lumied não tem análogo — uma escola Lumied = uma coligada/filial TOTVS. <strong>Antes de exportar, filtre por COLIGADA</strong> no relatório. Caso contrário, dados de outras escolas vão pra dentro da escola Lumied selecionada.</p>
+
+  <h3>O que pedir pra escola exportar</h3>
+  <ol style="margin-left:20px;line-height:1.8;">
+    <li><strong>SALUNO</strong> (cadastro de alunos) ou relatório humanizado "Cadastro de Alunos"</li>
+    <li><strong>PESSOA</strong> filtrada por tipo RESP (responsáveis)</li>
+    <li><strong>FLAN</strong> (Lançamentos Financeiros) — CR e CP, todos os status</li>
+    <li><strong>SMATRICULA</strong> (matrículas) — opcional, ajuda a vincular alunos a turmas</li>
+    <li><strong>STURMA / SHABILITACAO</strong> (turmas/habilitações)</li>
+  </ol>
+
+  <h3>Status financeiro TOTVS RM → Lumied</h3>
+  <ul style="margin-left:20px;line-height:1.8;">
+    <li><code>0</code> ou "Em Aberto" → <strong>pendente</strong></li>
+    <li><code>1</code> ou "Baixado" → <strong>pago</strong></li>
+    <li><code>2</code> ou "Cancelado" → <strong>cancelado</strong></li>
+    <li><code>3</code> ou "Renegociado" → <strong>pendente</strong></li>
+  </ul>
+
+  <div class="tip-box">
+    <strong>💡 Headers em UPPER CASE:</strong> o TOTVS RM exporta cabeçalhos sem espaços, em MAIÚSCULAS, estilo coluna SQL Server. O adapter normaliza automaticamente — não precisa reformatar.
+  </div>
+</article>
+
+<article id="mig-gvdasa" class="help-article" data-portal="migracao-erps" data-keywords="gvdasa gennera educando mantenedor migração exportar">
+  <h2>📥 Migração do GVDasa (Gennera Educação)</h2>
+  <p class="article-desc">Adapter dedicado — ERP veterano (hoje Gennera Educação). Vocabulário próprio: "Educando" (aluno), "Mantenedor" (responsável financeiro, frequentemente PJ), "Sacado", "Etapa Letiva", "Período Letivo" formato "AAAA/N".</p>
+
+  <h3>⚠️ Pré-requisito: filtrar por UNIDADE</h3>
+  <p>Mantenedoras GVDasa podem ter várias unidades. No Lumied uma escola = uma unidade. <strong>Filtre por UNIDADE antes de exportar.</strong></p>
+
+  <h3>O que pedir pra escola exportar</h3>
+  <ol style="margin-left:20px;line-height:1.8;">
+    <li><strong>Educandos</strong> (TBEDUCANDO ou "Cadastro de Educandos")</li>
+    <li><strong>Mantenedores</strong> (TBMANTENEDOR) — incluir CPF/CNPJ, endereço, e-mail</li>
+    <li><strong>Lançamentos</strong> (TBLANCAMENTO) ou <strong>Conta Corrente</strong> — todos os status</li>
+    <li><strong>Mensalidades / Boletos</strong> — se exportado em planilha separada</li>
+    <li><strong>Turmas / Etapas</strong></li>
+  </ol>
+
+  <h3>Status financeiro GVDasa → Lumied</h3>
+  <p>O GVDasa às vezes usa códigos de uma letra:</p>
+  <ul style="margin-left:20px;line-height:1.8;">
+    <li><code>A</code> Aberto → <strong>pendente</strong></li>
+    <li><code>P</code> Pago / <code>B</code> Baixado → <strong>pago</strong></li>
+    <li><code>C</code> Cancelado / <code>X</code> Excluído → <strong>cancelado</strong></li>
+    <li><code>R</code> Renegociado → <strong>pendente</strong></li>
+  </ul>
+  <p>Versões mais recentes exportam status textual ("Em Aberto", "Quitado", etc.) — o adapter reconhece os dois formatos.</p>
+
+  <div class="tip-box">
+    <strong>💡 Mantenedor PJ:</strong> diferente de outros ERPs, no GVDasa o mantenedor pode ser pessoa jurídica (empresa pagando a mensalidade do funcionário, por exemplo). O Lumied aceita CNPJ no campo CPF/CNPJ do responsável — mas marque a observação no contrato pra evitar confusão LGPD com "responsável legal" do menor.
   </div>
 </article>
 
