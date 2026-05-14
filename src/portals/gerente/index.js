@@ -5,7 +5,7 @@ import { initPortal, loadModulos, applyModuleGating } from '../../shared/portal-
 import { renderTable, fmt } from '../../shared/components/data-table.js';
 import { createModal } from '../../shared/components/modal.js';
 import { showToast } from '../../shared/components/toast.js';
-import { initRealtime, subscribeSolicitacoes, subscribeNotificacoes } from '../../shared/realtime.js';
+import { initRealtime, subscribeSolicitacoes } from '../../shared/realtime.js';
 
 const { api } = initPortal({
   tokenKey: 'mb_token',
@@ -40,21 +40,8 @@ if (anonKey) {
       showToast(label + (sol.titulo ? `: ${sol.titulo}` : ''), 'info', 5000);
     });
 
-    // Subscribe to personal notifications if user is known
-    const user = window.__store.get('user');
-    if (user?.id) {
-      subscribeNotificacoes(user.id, (notif) => {
-        showToast(notif.mensagem || notif.titulo || 'Nova notificacao', 'info', 5000);
-      });
-    } else {
-      const unsub = window.__store.subscribe('user', (u) => {
-        if (!u?.id) return;
-        unsub();
-        subscribeNotificacoes(u.id, (notif) => {
-          showToast(notif.mensagem || notif.titulo || 'Nova notificacao', 'info', 5000);
-        });
-      });
-    }
+    // subscribeNotificacoes removido (2026-05-14): portal gerente usa sessao
+    // propria, entao RLS bloqueia o payload do Realtime. Polling cobre.
   };
 
   const escolaId = window.__store.get('escola_id');

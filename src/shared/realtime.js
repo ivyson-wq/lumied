@@ -134,21 +134,9 @@ function _subscribe(channelName, { table, event, filter }, callback) {
 // ---------------------------------------------------------------------------
 
 /**
- * Subscribe to access events (student arrived / left).
- * @param {string} escolaId
- * @param {Function} callback  Receives { aluno_nome, tipo, hora, dispositivo, ... }
- * @returns {Function} unsubscribe
- */
-export function subscribeAccess(escolaId, callback) {
-  return _subscribe('access-events', {
-    table: 'acesso_eventos',
-    event: 'INSERT',
-    filter: `escola_id=eq.${escolaId}`,
-  }, callback);
-}
-
-/**
  * Subscribe to pickup notifications (pai a caminho).
+ * Funciona porque familia.html usa Supabase Auth (magic link) — auth.jwt()
+ * disponível pro Realtime checar RLS. Tabela está em supabase_realtime.
  * @param {string} escolaId
  * @param {Function} callback
  * @returns {Function} unsubscribe
@@ -162,21 +150,10 @@ export function subscribePickup(escolaId, callback) {
 }
 
 /**
- * Subscribe to chat messages.
- * @param {string} escolaId
- * @param {Function} callback
- * @returns {Function} unsubscribe
- */
-export function subscribeChat(escolaId, callback) {
-  return _subscribe('chat-messages', {
-    table: 'chat_mensagens',
-    event: 'INSERT',
-    filter: `escola_id=eq.${escolaId}`,
-  }, callback);
-}
-
-/**
  * Subscribe to new/updated solicitacoes.
+ * NOTA: portais gerente/professora usam sessao propria (nao auth.jwt) — RLS
+ * pode bloquear entrega. Polling continua sendo o caminho real nesses
+ * portais; este helper so e util quando o caller usa Supabase Auth.
  * @param {string} escolaId
  * @param {Function} callback
  * @returns {Function} unsubscribe
@@ -189,19 +166,11 @@ export function subscribeSolicitacoes(escolaId, callback) {
   }, callback);
 }
 
-/**
- * Subscribe to notifications for a specific user.
- * @param {string} destinatario  User ID
- * @param {Function} callback
- * @returns {Function} unsubscribe
- */
-export function subscribeNotificacoes(destinatario, callback) {
-  return _subscribe('notificacoes-' + destinatario, {
-    table: 'notificacoes',
-    event: 'INSERT',
-    filter: `destinatario=eq.${destinatario}`,
-  }, callback);
-}
+// Removido (2026-05-14, cost-audit): subscribeAccess, subscribeChat,
+// subscribeNotificacoes — eram chamados em portais que usam sessao propria
+// (professora, gerente) onde RLS bloqueia 100% do payload (auth.jwt vazia).
+// Polling 10s ja cobre. Pra ressuscitar precisa: portal em Supabase Auth +
+// policy SELECT pra papel correspondente + ADD TABLE no publication.
 
 /**
  * Unsubscribe from all active channels and clean up.

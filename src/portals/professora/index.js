@@ -1,42 +1,17 @@
 /**
  * Portal das Professoras — Main Entry Point
+ *
+ * NOTA: realtime via subscribeAccess foi removido (2026-05-14) — portal
+ * professora usa sessao propria (nao Supabase Auth), entao RLS bloqueava
+ * 100% do payload do Realtime. Polling 10s em outros pontos do portal ja
+ * entrega os alertas de chegada/saida.
  */
 import { initPortal, loadModulos } from '../../shared/portal-init.js';
-import { initRealtime, subscribeAccess } from '../../shared/realtime.js';
-import { showToast } from '../../shared/components/toast.js';
 import { initVoice } from '../../shared/voice.js';
 
 const { api } = initPortal({ tokenKey: 'prof_token' });
 
 window.__loadModulosHabilitadosProf = () => loadModulos(api, 'diplomas');
-
-// --- Realtime: replace 10s polling with WebSocket ---
-const anonKey = window.__SUPABASE_ANON
-  || document.querySelector('meta[name="sb-anon"]')?.content
-  || '';
-
-if (anonKey) {
-  initRealtime(anonKey);
-
-  // Subscribe to access events once escola_id is available
-  const escolaId = window.__store.get('escola_id');
-  if (escolaId) {
-    subscribeAccess(escolaId, (evt) => {
-      const tipo = evt.tipo === 'entrada' ? 'chegou' : 'saiu';
-      showToast(`${evt.aluno_nome} ${tipo} (${evt.hora || ''})`, 'info', 5000);
-    });
-  } else {
-    // Wait for escola_id to be set
-    const unsub = window.__store.subscribe('escola_id', (id) => {
-      if (!id) return;
-      unsub();
-      subscribeAccess(id, (evt) => {
-        const tipo = evt.tipo === 'entrada' ? 'chegou' : 'saiu';
-        showToast(`${evt.aluno_nome} ${tipo} (${evt.hora || ''})`, 'info', 5000);
-      });
-    });
-  }
-}
 
 // Voice commands — optional, degrades gracefully on unsupported browsers
 initVoice();
