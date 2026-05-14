@@ -1,5 +1,4 @@
 node_modules/
-package-lock.json
 
 # Local Claude settings (personal, not shared)
 .claude/settings.local.json

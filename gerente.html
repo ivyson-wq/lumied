@@ -6763,8 +6763,11 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
   }
 
   // Onda 1: aliases pros utils consolidados (window.__utils via portal-init).
+  // debounce é lazy — esse <script> é inline (não defer), executa antes do dist/gerente/index.js
+  // que define window.__utils, então o lookup é adiado pra primeira invocação (sempre via user input,
+  // já com __utils inicializado).
   const esc = (s) => window.__utils.esc(s);
-  const debounce = (fn, ms) => window.__utils.debounce(fn, ms);
+  const debounce = (fn, ms) => { let cached; return (...args) => { if (!cached) cached = window.__utils.debounce(fn, ms); return cached(...args); }; };
   var debouncedRenderTable = debounce(renderTable);
   var debouncedAtivDash = debounce(() => { if (typeof renderAtivDashTable === 'function') renderAtivDashTable(); });
   var debouncedAlmNR = debounce(() => { if (typeof almNRFiltrarCatalogo === 'function') almNRFiltrarCatalogo(); });
