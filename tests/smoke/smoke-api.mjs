@@ -191,15 +191,57 @@ const LUMIED_AI_ACTIONS = [
   'roi_dashboard', 'roi_config_salvar',
 ];
 
+// 83 actions — todas as registradas em acesso/ (após Onda 3 do refator).
+// Lista completa pra detectar regressões da quebra em 10 handlers.
 const ACESSO_ACTIONS = [
-  'acesso_dashboard', 'acesso_dispositivos_list',
-  'acesso_dispositivo_save', 'acesso_dispositivo_delete', 'acesso_dispositivo_ping',
-  'acesso_faces_list', 'acesso_face_cadastrar', 'acesso_face_delete',
-  'acesso_face_sync_all', 'acesso_buscar_pessoa',
-  'acesso_rfid_list', 'acesso_rfid_cadastrar', 'acesso_rfid_delete',
+  // devices
+  'acesso_dispositivos_list', 'acesso_dispositivo_save', 'acesso_dispositivo_delete',
+  'acesso_dispositivo_ping', 'acesso_dispositivo_sync',
+  'acesso_simpax_import', 'acesso_dispositivos_mapa',
+  'acesso_dispositivo_create', 'acesso_dispositivo_sync_faces',
+  // faces
+  'acesso_face_cadastrar', 'acesso_buscar_pessoa', 'acesso_faces_list',
+  'acesso_face_delete', 'acesso_face_sync_all', 'acesso_face_create',
+  'acesso_sync_all_faces', 'acesso_faces_pendentes', 'acesso_face_aprovar',
+  // rfid
+  'acesso_rfid_cadastrar', 'acesso_rfid_list', 'acesso_rfid_delete',
+  'acesso_rfid_create', 'acesso_rfid_update',
+  // permissions
   'acesso_permissoes_list', 'acesso_permissao_save', 'acesso_permissao_delete',
-  'acesso_eventos_list', 'acesso_alertas_list',
-  'acesso_presenca_list', 'acesso_config_list',
+  'acesso_permissao_create',
+  // events / dashboard / config
+  'acesso_evento_callback',
+  'acesso_eventos_list', 'acesso_presenca_list',
+  'acesso_alertas_list', 'acesso_alerta_marcar_lido',
+  'acesso_dashboard', 'acesso_config_list', 'acesso_config_save',
+  // teacher
+  'acesso_alertas_professora', 'acesso_chegada_encaminhar',
+  'acesso_chegadas_portaria', 'acesso_presenca_turma',
+  // family (portal pai)
+  'acesso_minha_face', 'acesso_presenca_filhos',
+  'acesso_meus_autorizados', 'acesso_adicionar_autorizado', 'acesso_cancelar_autorizado',
+  'acesso_pai_meus_autorizados', 'acesso_pai_autorizar_create', 'acesso_pai_autorizar_revogar',
+  // enrollment
+  'acesso_processar_remocoes_face', 'acesso_validar_foto',
+  'acesso_cadastro_token_info', 'acesso_face_cadastro_publico',
+  'acesso_gerar_link_cadastro', 'acesso_alunos_responsaveis_status',
+  'acesso_responsavel_create', 'acesso_pendencias_face',
+  'acesso_enviar_link_email', 'acesso_link_whatsapp_info',
+  'acesso_setup_checklist',
+  // bridge
+  'acesso_bridge_devices', 'acesso_bridge_status', 'acesso_bridge_hardware',
+  'acesso_bridge_token_get', 'acesso_bridge_token_rotate',
+  // lpr — gerente
+  'acesso_lpr_placas_list', 'acesso_lpr_placa_save', 'acesso_lpr_placa_delete',
+  'acesso_lpr_eventos_list', 'acesso_lpr_sync_now',
+  'acesso_lpr_cameras_list', 'acesso_lpr_camera_save', 'acesso_lpr_camera_delete',
+  'acesso_lpr_camera_roi_save', 'acesso_lpr_camera_snapshot',
+  'acesso_lpr_relatorio', 'acesso_lpr_evento_foto_url',
+  // lpr — portal família
+  'acesso_lpr_minhas_placas', 'acesso_lpr_solicitar_placa', 'acesso_lpr_minha_solicitacao_foto',
+  // lpr — gerente solicitações
+  'acesso_lpr_solicitacoes_list', 'acesso_lpr_solicitacao_foto_url',
+  'acesso_lpr_solicitacao_aprovar', 'acesso_lpr_solicitacao_rejeitar',
 ];
 
 const COMPLIANCE_ACTIONS = [
