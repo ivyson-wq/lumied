@@ -1,0 +1,32 @@
+name: Deploy bank-relay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'relay/**'
+      - '.github/workflows/deploy-relay.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy bank-relay v2 to Fly.io
+    runs-on: ubuntu-latest
+    concurrency: deploy-relay
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        working-directory: relay
+        run: flyctl deploy --remote-only --app inter-relay-maple-bear
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -fsS https://inter-relay-maple-bear.fly.dev/health | tee /tmp/health.json
+          grep -q '"version":"v2"' /tmp/health.json

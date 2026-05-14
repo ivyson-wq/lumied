@@ -1,7 +1,7 @@
 {
-  "name": "inter-relay",
-  "version": "1.0.0",
-  "description": "Relay mTLS para API do Inter",
+  "name": "bank-relay",
+  "version": "2.0.0",
+  "description": "Relay mTLS multi-banco (Inter/Sicredi/BB/Itaú/Bradesco)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
