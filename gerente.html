@@ -7440,8 +7440,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     }).join('');
   }
 
-  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+  // Onda 1: aliases pros utils consolidados (window.__utils via portal-init).
+  const esc = (s) => window.__utils.esc(s);
+  const debounce = (fn, ms) => window.__utils.debounce(fn, ms);
   var debouncedRenderTable = debounce(renderTable);
   var debouncedAtivDash = debounce(() => { if (typeof renderAtivDashTable === 'function') renderAtivDashTable(); });
   var debouncedAlmNR = debounce(() => { if (typeof almNRFiltrarCatalogo === 'function') almNRFiltrarCatalogo(); });
@@ -11710,14 +11711,9 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     carregarAutorizados();
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function fmtDate(iso) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('pt-BR');
-  }
+  // Onda 1: aliases pros utils consolidados.
+  const escHtml = (s) => window.__utils.esc(s);
+  const fmtDate = (d) => window.__utils.fmtDate(d);
 
   // ── CONTROLE DE ACESSO (NOVO) ─────────────────────────
   var _acessoDashInterval = null;
@@ -19936,7 +19932,12 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     loadAchadosGerente();
   }
 
-  checkSession();
+  // Init — aguarda dist/gerente/index.js (defer) inicializar window.__api/__utils.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkSession);
+  } else {
+    checkSession();
+  }
 
   // ═══ ONBOARDING + BILLING BANNERS ═══
   async function loadOnboardingBilling() {

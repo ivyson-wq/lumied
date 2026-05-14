@@ -2380,7 +2380,9 @@ body.has-bottomnav{padding-bottom:56px;}
     el.textContent = `✅ ${selecionadas.length} atividade(s)${almocoTotal > 0 ? ' + almoço' : ''} — Total: R$ ${total.toFixed(2).replace('.',',')} /mês`;
   }
 
-  function esc2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // Alias pro utils consolidado (Onda 1). Mantém o nome local por
+  // compatibilidade com ~30 callsites no inline script.
+  const esc2 = (s) => window.__utils.esc(s);
 
   // ── AGENDA / CHECK-OUT ────────────────────────────────
   var agendaData = null;
@@ -2723,7 +2725,7 @@ body.has-bottomnav{padding-bottom:56px;}
     `).join('');
   }
 
-  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
+  const escHtml = (s) => window.__utils.esc(s);
 
   async function avisarChegada(nomeCrianca, serie) {
     const errEl = document.getElementById('pickupErr');
