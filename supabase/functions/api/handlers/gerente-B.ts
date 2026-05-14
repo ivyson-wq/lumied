@@ -1479,95 +1479,185 @@ export async function handle(ctx: GerenteCtx): Promise<Response | null> {
   }
   if (action === "crm_matriculas_list") {
     const ano = parseInt((body as any).ano) || new Date().getFullYear();
-    const { data } = await admin.from("crm_matriculas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano).order("serie").order("turma").order("criado_em");
+    const mostrarInativos = (body as any).mostrar_inativos === true;
+    let q = admin.from("crm_matriculas").select("*").eq("escola_id", sessionEscolaId).eq("ano", ano);
+    if (!mostrarInativos) q = q.neq("ativo", false);
+    const { data } = await q.order("serie").order("turma").order("criado_em");
     return ok(data ?? []);
   }
-  // ── Exclusão de matrícula (remover aluno da turma) ──
+  // ── Desativar matrícula (gerente direto — sem deletar, apenas ativo=false) ──
   if (action === "crm_matricula_remover") {
-    // Gerente remove direto (deleta o registro)
     const { id, motivo } = body as any;
     if (!id) return err("id obrigatorio.");
     const { data: mat } = await admin.from("crm_matriculas").select("nome_crianca, serie, turma").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
     if (!mat) return err("Matricula nao encontrada.");
-    await admin.from("crm_matriculas").delete().eq("id", id).eq("escola_id", sessionEscolaId);
-    // Log a exclusão aprovada automaticamente
-    await admin.from("crm_matricula_exclusoes").insert({
-      matricula_id: id, solicitado_por: gerente?.email || "gerente", solicitado_papel: "gerente",
-      motivo: motivo || "Removido pelo gerente", status: "aprovado", aprovado_por: gerente?.email || "gerente",
-      respondido_em: new Date().toISOString(), escola_id: sessionEscolaId,
+    await admin.from("crm_matriculas").update({ ativo: false }).eq("id", id).eq("escola_id", sessionEscolaId);
+    await admin.from("crm_aprovacoes").insert({
+      escola_id: sessionEscolaId, tipo: "desativar_matricula", matricula_id: id,
+      payload: { motivo: motivo || "Desativado pelo gerente", nome_crianca: mat.nome_crianca, serie: mat.serie, turma: mat.turma || "" },
+      solicitado_por: gerente?.email || "gerente", solicitado_nome: gerente?.nome || "Gerente", solicitado_papel: "gerente",
+      status: "aprovado", aprovado_por: gerente?.email || "gerente", respondido_em: new Date().toISOString(),
     });
-    return ok({ success: true, message: `${mat.nome_crianca} removido(a) de ${mat.serie} ${mat.turma || ""}`.trim() });
+    return ok({ success: true, message: `${mat.nome_crianca} desativado(a) de ${mat.serie} ${mat.turma || ""}`.trim() });
   }
-  if (action === "crm_matricula_solicitar_exclusao") {
-    // Secretaria solicita exclusão — fica pendente para gerente aprovar
-    const { id, motivo, solicitante_email, solicitante_nome } = body as any;
-    if (!id) return err("id obrigatorio.");
-    const { data: mat } = await admin.from("crm_matriculas").select("nome_crianca, serie, turma").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
-    if (!mat) return err("Matricula nao encontrada.");
-    // Checar se já há pendência para esta matrícula
-    const { data: existing } = await admin.from("crm_matricula_exclusoes").select("id").eq("matricula_id", id).eq("status", "pendente").eq("escola_id", sessionEscolaId).maybeSingle();
-    if (existing) return err("Ja existe uma solicitacao pendente para esta matricula.");
-    await admin.from("crm_matricula_exclusoes").insert({
-      matricula_id: id, solicitado_por: solicitante_email || "secretaria", solicitado_papel: "secretaria",
-      motivo: motivo || "", status: "pendente", escola_id: sessionEscolaId,
+  // ── Solicitar aprovação genérica (secretaria/comercial → gerente) ──
+  if (action === "crm_aprovacao_solicitar") {
+    const { tipo, matricula_id, payload, solicitante_email, solicitante_nome, solicitante_papel } = body as any;
+    if (!tipo) return err("tipo obrigatorio.");
+    const validTipos = ["desativar_matricula", "troca_turma", "nova_matricula"];
+    if (!validTipos.includes(tipo)) return err("tipo invalido.");
+    if (matricula_id && (tipo === "desativar_matricula" || tipo === "troca_turma")) {
+      const { data: mat } = await admin.from("crm_matriculas").select("id").eq("id", matricula_id).eq("escola_id", sessionEscolaId).maybeSingle();
+      if (!mat) return err("Matricula nao encontrada.");
+      const { data: dup } = await admin.from("crm_aprovacoes").select("id").eq("matricula_id", matricula_id).eq("tipo", tipo).eq("status", "pendente").eq("escola_id", sessionEscolaId).maybeSingle();
+      if (dup) return err("Ja existe uma solicitacao pendente deste tipo para esta matricula.");
+    }
+    await admin.from("crm_aprovacoes").insert({
+      escola_id: sessionEscolaId, tipo, matricula_id: matricula_id || null,
+      payload: payload || {}, solicitado_por: solicitante_email || "secretaria",
+      solicitado_nome: solicitante_nome || "Equipe", solicitado_papel: solicitante_papel || "secretaria",
     });
-    // Notificar gerentes
+    const tipoLabels: Record<string, string> = { desativar_matricula: "Desativação de matrícula", troca_turma: "Troca de turma", nova_matricula: "Nova matrícula" };
+    const nomeCrianca = payload?.nome_crianca || "";
     const { data: gerentes } = await admin.from("gerentes").select("email").eq("escola_id", sessionEscolaId);
     for (const g of gerentes ?? []) {
       await admin.from("notificacoes").insert({
         portal: "gerente", destinatario: g.email,
-        titulo: "Solicitação de exclusão",
-        mensagem: `${solicitante_nome || "Secretaria"} solicitou a exclusão de ${mat.nome_crianca} (${mat.serie} ${mat.turma || ""}).${motivo ? " Motivo: " + motivo : ""}`,
+        titulo: `Aprovação: ${tipoLabels[tipo] || tipo}`,
+        mensagem: `${solicitante_nome || "Equipe"} solicitou ${(tipoLabels[tipo] || tipo).toLowerCase()}${nomeCrianca ? " de " + nomeCrianca : ""}.`,
         tipo: "warning", escola_id: sessionEscolaId,
       });
     }
     return ok({ success: true, message: "Solicitação enviada para aprovação do gerente." });
   }
-  if (action === "crm_exclusoes_pendentes_list") {
-    const { data } = await admin.from("crm_matricula_exclusoes").select("*, crm_matriculas(nome_crianca, nome_responsavel, serie, turma, status, telefone, email)")
-      .eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: false });
+  // ── Compat: redirecionar ação antiga ──
+  if (action === "crm_matricula_solicitar_exclusao") {
+    const { id, motivo, solicitante_email, solicitante_nome } = body as any;
+    if (!id) return err("id obrigatorio.");
+    const { data: mat } = await admin.from("crm_matriculas").select("nome_crianca, serie, turma").eq("id", id).eq("escola_id", sessionEscolaId).maybeSingle();
+    if (!mat) return err("Matricula nao encontrada.");
+    const { data: dup } = await admin.from("crm_aprovacoes").select("id").eq("matricula_id", id).eq("tipo", "desativar_matricula").eq("status", "pendente").eq("escola_id", sessionEscolaId).maybeSingle();
+    if (dup) return err("Ja existe uma solicitacao pendente para esta matricula.");
+    await admin.from("crm_aprovacoes").insert({
+      escola_id: sessionEscolaId, tipo: "desativar_matricula", matricula_id: id,
+      payload: { motivo: motivo || "", nome_crianca: mat.nome_crianca, serie: mat.serie, turma: mat.turma || "" },
+      solicitado_por: solicitante_email || "secretaria", solicitado_nome: solicitante_nome || "Secretaria", solicitado_papel: "secretaria",
+    });
+    const { data: gerentes } = await admin.from("gerentes").select("email").eq("escola_id", sessionEscolaId);
+    for (const g of gerentes ?? []) {
+      await admin.from("notificacoes").insert({
+        portal: "gerente", destinatario: g.email, titulo: "Aprovação: Desativação de matrícula",
+        mensagem: `${solicitante_nome || "Secretaria"} solicitou desativação de ${mat.nome_crianca} (${mat.serie} ${mat.turma || ""}).${motivo ? " Motivo: " + motivo : ""}`,
+        tipo: "warning", escola_id: sessionEscolaId,
+      });
+    }
+    return ok({ success: true, message: "Solicitação enviada para aprovação do gerente." });
+  }
+  // ── Listar aprovações pendentes ──
+  if (action === "crm_aprovacoes_pendentes_list" || action === "crm_exclusoes_pendentes_list") {
+    const tipo = (body as any).tipo || null;
+    let q = admin.from("crm_aprovacoes").select("*, crm_matriculas(nome_crianca, nome_responsavel, serie, turma, status, telefone, email)")
+      .eq("escola_id", sessionEscolaId).eq("status", "pendente");
+    if (tipo) q = q.eq("tipo", tipo);
+    const { data } = await q.order("criado_em", { ascending: false });
     return ok(data ?? []);
   }
-  if (action === "crm_exclusao_aprovar") {
+  // ── Histórico de aprovações ──
+  if (action === "crm_aprovacoes_historico") {
+    const limite = parseInt((body as any).limite) || 50;
+    const tipo = (body as any).tipo || null;
+    let q = admin.from("crm_aprovacoes").select("*, crm_matriculas(nome_crianca, nome_responsavel, serie, turma)")
+      .eq("escola_id", sessionEscolaId).in("status", ["aprovado", "rejeitado"]);
+    if (tipo) q = q.eq("tipo", tipo);
+    const { data } = await q.order("respondido_em", { ascending: false }).limit(limite);
+    return ok(data ?? []);
+  }
+  // ── Aprovar solicitação ──
+  if (action === "crm_aprovacao_aprovar" || action === "crm_exclusao_aprovar") {
     const { id, observacao } = body as any;
     if (!id) return err("id obrigatorio.");
-    const { data: excl } = await admin.from("crm_matricula_exclusoes").select("matricula_id").eq("id", id).eq("escola_id", sessionEscolaId).eq("status", "pendente").maybeSingle();
-    if (!excl) return err("Solicitacao nao encontrada ou ja respondida.");
-    // Deletar a matrícula
-    await admin.from("crm_matriculas").delete().eq("id", excl.matricula_id).eq("escola_id", sessionEscolaId);
-    // Atualizar exclusão
-    await admin.from("crm_matricula_exclusoes").update({
+    const { data: aprov } = await admin.from("crm_aprovacoes").select("*").eq("id", id).eq("escola_id", sessionEscolaId).eq("status", "pendente").maybeSingle();
+    if (!aprov) return err("Solicitacao nao encontrada ou ja respondida.");
+    if (aprov.tipo === "desativar_matricula" && aprov.matricula_id) {
+      await admin.from("crm_matriculas").update({ ativo: false }).eq("id", aprov.matricula_id).eq("escola_id", sessionEscolaId);
+    } else if (aprov.tipo === "troca_turma" && aprov.matricula_id) {
+      const novaTurma = aprov.payload?.turma_nova;
+      if (novaTurma) await admin.from("crm_matriculas").update({ turma: novaTurma }).eq("id", aprov.matricula_id).eq("escola_id", sessionEscolaId);
+    } else if (aprov.tipo === "nova_matricula") {
+      const p = aprov.payload || {};
+      const st = p.status || "reserva";
+      const { error: insErr } = await admin.from("crm_matriculas").insert({
+        nome_crianca: p.nome_crianca, nome_responsavel: p.nome_responsavel || "—",
+        serie: p.serie, turma: p.turma || "A", ano: parseInt(p.ano) || new Date().getFullYear(),
+        status: st, email: p.email || null, telefone: p.telefone || null,
+        data_nascimento: p.data_nascimento || null, escola_id: sessionEscolaId, ativo: true,
+        data_reserva: st === "reserva" ? new Date().toISOString().split("T")[0] : null,
+        data_matricula: st === "matriculado" ? new Date().toISOString().split("T")[0] : null,
+      });
+      if (insErr) return err("Erro ao criar matricula: " + (insErr.message || ""));
+    }
+    await admin.from("crm_aprovacoes").update({
       status: "aprovado", aprovado_por: gerente?.email || "gerente",
       observacao_resposta: observacao || null, respondido_em: new Date().toISOString(),
     }).eq("id", id).eq("escola_id", sessionEscolaId);
-    // Notificar quem solicitou
-    const { data: exclFull } = await admin.from("crm_matricula_exclusoes").select("solicitado_por").eq("id", id).maybeSingle();
-    if (exclFull?.solicitado_por) {
+    const tipoLabels: Record<string, string> = { desativar_matricula: "Desativação", troca_turma: "Troca de turma", nova_matricula: "Nova matrícula" };
+    if (aprov.solicitado_por) {
       await admin.from("notificacoes").insert({
-        portal: "secretaria", destinatario: exclFull.solicitado_por,
-        titulo: "Exclusão aprovada ✅", mensagem: `A solicitação de exclusão foi aprovada pelo gerente.${observacao ? " Obs: " + observacao : ""}`,
+        portal: "secretaria", destinatario: aprov.solicitado_por,
+        titulo: `${tipoLabels[aprov.tipo] || aprov.tipo} aprovada`,
+        mensagem: `Sua solicitação de ${(tipoLabels[aprov.tipo] || aprov.tipo).toLowerCase()} foi aprovada pelo gerente.${observacao ? " Obs: " + observacao : ""}`,
         tipo: "success", escola_id: sessionEscolaId,
       });
     }
     return ok({ success: true });
   }
-  if (action === "crm_exclusao_rejeitar") {
+  // ── Rejeitar solicitação ──
+  if (action === "crm_aprovacao_rejeitar" || action === "crm_exclusao_rejeitar") {
     const { id, observacao } = body as any;
     if (!id) return err("id obrigatorio.");
-    const { data: excl } = await admin.from("crm_matricula_exclusoes").select("matricula_id, solicitado_por").eq("id", id).eq("escola_id", sessionEscolaId).eq("status", "pendente").maybeSingle();
-    if (!excl) return err("Solicitacao nao encontrada ou ja respondida.");
-    await admin.from("crm_matricula_exclusoes").update({
+    const { data: aprov } = await admin.from("crm_aprovacoes").select("solicitado_por, tipo").eq("id", id).eq("escola_id", sessionEscolaId).eq("status", "pendente").maybeSingle();
+    if (!aprov) return err("Solicitacao nao encontrada ou ja respondida.");
+    await admin.from("crm_aprovacoes").update({
       status: "rejeitado", aprovado_por: gerente?.email || "gerente",
       observacao_resposta: observacao || null, respondido_em: new Date().toISOString(),
     }).eq("id", id).eq("escola_id", sessionEscolaId);
-    if (excl.solicitado_por) {
+    const tipoLabels: Record<string, string> = { desativar_matricula: "Desativação", troca_turma: "Troca de turma", nova_matricula: "Nova matrícula" };
+    if (aprov.solicitado_por) {
       await admin.from("notificacoes").insert({
-        portal: "secretaria", destinatario: excl.solicitado_por,
-        titulo: "Exclusão rejeitada ❌", mensagem: `A solicitação de exclusão foi rejeitada pelo gerente.${observacao ? " Motivo: " + observacao : ""}`,
+        portal: "secretaria", destinatario: aprov.solicitado_por,
+        titulo: `${tipoLabels[aprov.tipo] || aprov.tipo} rejeitada`,
+        mensagem: `Sua solicitação de ${(tipoLabels[aprov.tipo] || aprov.tipo).toLowerCase()} foi rejeitada pelo gerente.${observacao ? " Motivo: " + observacao : ""}`,
         tipo: "error", escola_id: sessionEscolaId,
       });
     }
     return ok({ success: true });
+  }
+  // ── Central de Aprovações: agregador de todas as pendências ──
+  if (action === "central_aprovacoes_resumo") {
+    const [matR, impR, almR, dipR, pdiR, aluR] = await Promise.all([
+      admin.from("crm_aprovacoes").select("id, tipo, payload, solicitado_por, solicitado_nome, solicitado_papel, criado_em, matricula_id, crm_matriculas(nome_crianca, nome_responsavel, serie, turma)")
+        .eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: false }),
+      admin.from("impressoes").select("id, professora_id, tipo_papel, copias, cor, frente_verso, observacao, criado_em, professoras(nome)")
+        .eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: true }),
+      admin.from("alm_requisicoes").select("id, professora_id, turma_id, total, itens, criado_em, status, professoras(nome), alm_turmas(nome)")
+        .eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: true }),
+      admin.from("diplomas_professoras").select("id, nome_curso, instituicao, carga_horaria, criado_em, professora_id, professoras(nome)")
+        .eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: false }),
+      admin.from("pdis").select("id, ano, professora_id, submetido_em, professoras(nome)")
+        .eq("escola_id", sessionEscolaId).eq("status", "aguardando_aprovacao").order("submetido_em", { ascending: false }),
+      admin.from("aluno_solicitacoes_acesso").select("id, email, nome_responsavel, nome_crianca, serie_interesse, criado_em")
+        .eq("escola_id", sessionEscolaId).eq("status", "pendente").order("criado_em", { ascending: false }),
+    ]);
+    return ok({
+      matriculas: matR.data ?? [], impressoes: impR.data ?? [], almoxarifado: almR.data ?? [],
+      diplomas: dipR.data ?? [], pdis: pdiR.data ?? [], acesso_alunos: aluR.data ?? [],
+      totais: {
+        matriculas: (matR.data ?? []).length, impressoes: (impR.data ?? []).length,
+        almoxarifado: (almR.data ?? []).length, diplomas: (dipR.data ?? []).length,
+        pdis: (pdiR.data ?? []).length, acesso_alunos: (aluR.data ?? []).length,
+        total: (matR.data?.length||0)+(impR.data?.length||0)+(almR.data?.length||0)+(dipR.data?.length||0)+(pdiR.data?.length||0)+(aluR.data?.length||0),
+      },
+    });
   }
   if (action === "crm_metas_list") {
     const ano = parseInt((body as any).ano) || new Date().getFullYear();
