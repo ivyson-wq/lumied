@@ -726,6 +726,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
           <!-- Step 5: Promover -->
           <div id="migStep5" class="mig-step-content" style="display:none;">
             <div id="migPromoteResumo" style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:14px;font-size:13px;color:#92400E;margin-bottom:14px;"></div>
+            <div id="migPromotePreview" style="margin-bottom:14px;font-size:13px;"></div>
             <p style="color:#666;font-size:13px;margin-bottom:14px;">
               Promove staging → tabelas canônicas. Após promover, o job fica imutável.
               Pediremos confirmação dupla.
@@ -1293,6 +1294,44 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
     <div class="btn-bar">
       <button class="btn-primary" onclick="salvarAlterarSenha()">Salvar</button>
       <button class="btn-secondary" onclick="fecharModal('modalAlterarSenha')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOVA MIGRAÇÃO ERP -->
+<div class="modal-overlay" id="modalNovaMigracao" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:520px;">
+    <h3>Nova migração de ERP</h3>
+    <p class="msub">Identifique a escola destino e o ERP de origem.</p>
+    <div class="ff">
+      <label>Escola destino</label>
+      <select id="migNovaEscola" style="width:100%;padding:10px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;">
+        <option value="">— Selecione —</option>
+      </select>
+    </div>
+    <div class="ff">
+      <label>ERP de origem</label>
+      <select id="migNovaErp" style="width:100%;padding:10px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;">
+        <option value="excel">Excel/CSV genérico</option>
+        <option value="escolaweb">Escolaweb</option>
+        <option value="sponte">Sponte</option>
+        <option value="wpensar">WPensar</option>
+        <option value="agenda_edu">Agenda Edu</option>
+        <option value="sophia">Sophia (Prima)</option>
+        <option value="totvs_rm">TOTVS RM Educacional</option>
+        <option value="gvdasa">GVDasa (Gennera)</option>
+        <option value="outro">Outro / desconhecido</option>
+      </select>
+      <small style="color:#888;font-size:12px;">O parser tenta auto-detectar o ERP pelos headers do arquivo se você deixar em "Excel/CSV".</small>
+    </div>
+    <div class="ff">
+      <label>Observação (opcional)</label>
+      <textarea id="migNovaObs" rows="2" placeholder="Ex.: migração piloto Maple Bear Caxias, semana 1" style="width:100%;padding:10px 12px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+    </div>
+    <div id="migNovaError" style="display:none;font-size:13px;color:var(--red);margin-bottom:12px;"></div>
+    <div class="btn-bar">
+      <button class="btn-primary" onclick="migracaoCriarJobConfirm()">Criar job</button>
+      <button class="btn-secondary" onclick="fecharModal('modalNovaMigracao')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -3227,14 +3266,37 @@ async function loadMigracao() {
 async function migracaoNovoJob() {
   await migracaoCarregarEscolas();
   if (_migEscolas.length === 0) return showToast('Nenhuma escola cadastrada.', 'error');
-  const opts = _migEscolas.map(e => e.id + ' — ' + (e.nome || e.slug || '?')).join('\n');
-  const escolaInput = prompt('Cole o ID da escola para migrar:\n\n' + opts);
-  if (!escolaInput) return;
-  const escola_id = escolaInput.split(' ')[0].trim();
-  const erp_origem = prompt('ERP de origem? (excel | escolaweb | sponte | wpensar | agenda_edu | sophia | totvs_rm | gvdasa | outro)', 'excel');
-  if (!erp_origem) return;
-  const r = await callMigracao({ action:'migracao_criar_job', escola_id, erp_origem });
-  if (r.error) return showToast(r.error, 'error');
+  const sel = document.getElementById('migNovaEscola');
+  sel.innerHTML = '<option value="">— Selecione —</option>' +
+    _migEscolas
+      .slice()
+      .sort((a,b) => (a.nome||'').localeCompare(b.nome||''))
+      .map(e => '<option value="' + esc(e.id) + '">' + esc(e.nome || e.slug || e.id.slice(0,8)) + '</option>')
+      .join('');
+  document.getElementById('migNovaErp').value = 'excel';
+  document.getElementById('migNovaObs').value = '';
+  document.getElementById('migNovaError').style.display = 'none';
+  document.getElementById('modalNovaMigracao').classList.add('show');
+}
+
+async function migracaoCriarJobConfirm() {
+  const escola_id = document.getElementById('migNovaEscola').value;
+  const erp_origem = document.getElementById('migNovaErp').value;
+  const observacao = document.getElementById('migNovaObs').value.trim() || null;
+  const errBox = document.getElementById('migNovaError');
+  if (!escola_id) {
+    errBox.textContent = 'Selecione uma escola.';
+    errBox.style.display = 'block';
+    return;
+  }
+  errBox.style.display = 'none';
+  const r = await callMigracao({ action:'migracao_criar_job', escola_id, erp_origem, observacao });
+  if (r.error) {
+    errBox.textContent = r.error;
+    errBox.style.display = 'block';
+    return;
+  }
+  fecharModal('modalNovaMigracao');
   showToast('Job criado.');
   await loadMigracao();
   migracaoAbrirJob(r.id);
@@ -3332,7 +3394,7 @@ function migracaoRenderStep3() {
     : '<em style="color:#888;">Ainda não rodou. Clique no botão acima.</em>';
 }
 
-function migracaoRenderStep5() {
+async function migracaoRenderStep5() {
   const j = _migJobAtual || {};
   const resumo = j.resumo || {};
   const erros = resumo.erros || {};
@@ -3345,6 +3407,57 @@ function migracaoRenderStep5() {
     '<span style="color:#CA8A04;">⚠ Warnings: <b>' + totalWarns + '</b></span><br>' +
     'Linhas com erro são <em>descartadas</em> da promoção. Linhas com warning são promovidas como estão.' +
     (totalErros > 0 ? '<br><br><b>Considere voltar ao passo 4 e corrigir antes.</b>' : '');
+
+  // Preview detalhado: conta linhas válidas por entidade
+  const previewBox = document.getElementById('migPromotePreview');
+  previewBox.innerHTML = '<em style="color:#888;">Calculando preview…</em>';
+  const r = await callMigracao({ action:'migracao_promover_preview', job_id: _migJobAtual.id });
+  if (r.error) {
+    previewBox.innerHTML = '<em style="color:#DC2626;">Falha no preview: ' + esc(r.error) + '</em>';
+    return;
+  }
+  const p = r.preview || {};
+  const ordem = ['responsaveis','turmas','alunos','matriculas','funcionarios','financeiro','notas'];
+  const labels = {
+    responsaveis: 'Responsáveis → familias',
+    turmas: 'Turmas → series',
+    alunos: 'Alunos (sync via trigger)',
+    matriculas: 'Matrículas → serie_id alunos',
+    funcionarios: 'Funcionários → usuarios',
+    financeiro: 'Financeiro → fin_lancamentos',
+    notas: 'Notas',
+  };
+  const totalValidos = ordem.reduce((acc, e) => acc + ((p[e] && p[e].validos) || 0), 0);
+  const linhas = ordem.map(e => {
+    const v = p[e] || { validos:0, ignorados:0, com_erro:0, total:0 };
+    const stColor = v.com_erro > 0 ? '#DC2626' : (v.validos > 0 ? '#059669' : '#888');
+    return '<tr>' +
+      '<td style="padding:6px 10px;">' + esc(labels[e] || e) + '</td>' +
+      '<td style="padding:6px 10px;color:' + stColor + ';"><b>' + v.validos + '</b></td>' +
+      '<td style="padding:6px 10px;color:#888;">' + v.ignorados + '</td>' +
+      '<td style="padding:6px 10px;color:#DC2626;">' + v.com_erro + '</td>' +
+      '<td style="padding:6px 10px;color:#666;">' + v.total + '</td>' +
+      '</tr>';
+  }).join('');
+  previewBox.innerHTML =
+    '<div style="background:#fafafa;border:1px solid #e2dbd1;border-radius:10px;padding:14px;">' +
+    '<b style="font-size:13px;">📊 Preview da promoção</b>' +
+    '<table style="width:100%;margin-top:10px;font-size:12px;border-collapse:collapse;">' +
+    '<thead><tr style="background:#fff;border-bottom:1px solid #e2dbd1;">' +
+    '<th style="text-align:left;padding:6px 10px;">Entidade</th>' +
+    '<th style="text-align:left;padding:6px 10px;">Válidas</th>' +
+    '<th style="text-align:left;padding:6px 10px;">Ignoradas</th>' +
+    '<th style="text-align:left;padding:6px 10px;">Com erro</th>' +
+    '<th style="text-align:left;padding:6px 10px;">Total staging</th>' +
+    '</tr></thead><tbody>' + linhas + '</tbody>' +
+    '<tfoot><tr style="border-top:2px solid #e2dbd1;background:#fff;">' +
+    '<td style="padding:8px 10px;"><b>Total a promover</b></td>' +
+    '<td colspan="4" style="padding:8px 10px;color:#059669;"><b>' + totalValidos + '</b> linha(s) válida(s)</td>' +
+    '</tr></tfoot></table>' +
+    (totalValidos === 0
+      ? '<div style="margin-top:10px;padding:10px;background:#FEE2E2;border-radius:8px;color:#DC2626;font-size:12px;">Nenhuma linha válida — promoção não terá efeito. Volte ao passo 4 e corrija ou re-rode a validação.</div>'
+      : '') +
+    '</div>';
 }
 
 async function migracaoFazerUpload() {

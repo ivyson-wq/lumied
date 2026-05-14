@@ -542,6 +542,38 @@ router.on("migracao_ignorar_linha", authStaff, async (ctx: Context) => {
 //  6. PROMOVER — staging → tabelas canônicas
 // ═════════════════════════════════════════════════════════════
 
+// Preview: conta linhas que serão promovidas por entidade. Não muta nada.
+// UI usa para mostrar "vai promover X familias, Y series, ..." no step 5.
+router.on("migracao_promover_preview", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
+  const { job_id } = ctx.body as { job_id: string };
+  await loadJob(ctx, job_id);
+
+  const entidades = Object.keys(STAGING_TABLES) as EntidadeAlvo[];
+  const preview: Record<string, { validos: number; ignorados: number; com_erro: number; total: number }> = {};
+
+  for (const ent of entidades) {
+    const table = STAGING_TABLES[ent];
+    const [totalQ, validosQ, ignoradosQ] = await Promise.all([
+      ctx.sb.from(table).select("id", { count: "exact", head: true }).eq("job_id", job_id),
+      ctx.sb.from(table).select("id", { count: "exact", head: true })
+        .eq("job_id", job_id).eq("is_valido", true).eq("ignorado", false),
+      ctx.sb.from(table).select("id", { count: "exact", head: true })
+        .eq("job_id", job_id).eq("ignorado", true),
+    ]);
+    const total = totalQ.count ?? 0;
+    const validos = validosQ.count ?? 0;
+    const ignorados = ignoradosQ.count ?? 0;
+    preview[ent] = {
+      validos,
+      ignorados,
+      com_erro: Math.max(0, total - validos - ignorados),
+      total,
+    };
+  }
+
+  return successResponse({ preview });
+});
+
 router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
   const { job_id, confirm } = ctx.body as { job_id: string; confirm?: boolean };
   if (!confirm) throw new AppError("VALIDATION_FAILED", "Promoção exige confirm=true.");
