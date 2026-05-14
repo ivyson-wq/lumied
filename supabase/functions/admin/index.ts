@@ -402,50 +402,103 @@ router.on("cs_saude_list", authAdmin, async (ctx) => {
   const { data: escolas } = await ctx.sb.from("escolas").select("id, nome, slug, plano_id, plano, ativo, criado_em").eq("ativo", true);
   if (!escolas || escolas.length === 0) return successResponse({ escolas: [] });
 
-  // Coletas paralelas por escola (pequenas queries escopadas)
-  const resultado = await Promise.all(escolas.map(async (e: any) => {
+  const escolaIds = escolas.map((e: any) => e.id);
+  const inicioMesIso = inicioMes;
+  const ms30 = ms(30);
+  const ms10 = ms(10).slice(0, 10);
+  const ms7 = ms(7).slice(0, 10);
+  const ms2 = ms(2);
+
+  // 7 queries agregadas (em paralelo) cobrem todas as escolas — antes era 7 × N.
+  const [
+    usuariosRes,
+    boletosRes,
+    faturasRes,
+    profsRes,
+    freqRes,
+    ticketsRes,
+  ] = await Promise.all([
+    safe(ctx.sb.from("usuarios").select("id, escola_id").in("escola_id", escolaIds)),
+    safe(ctx.sb.from("boletos").select("escola_id").in("escola_id", escolaIds).gte("criado_em", inicioMesIso)),
+    safe(ctx.sb.from("saas_faturas").select("escola_id").in("escola_id", escolaIds).in("status", ["PENDING", "OVERDUE"]).lte("data_vencimento", ms10)),
+    safe(ctx.sb.from("professoras").select("escola_id").in("escola_id", escolaIds).eq("ativa", true)),
+    safe(ctx.sb.from("frequencia").select("escola_id, professora_id").in("escola_id", escolaIds).gte("data", ms7)),
+    safe(ctx.sb.from("tickets").select("escola_id").in("escola_id", escolaIds).eq("status", "aberto").lte("criado_em", ms2)),
+  ]);
+
+  const usuarioToEscola = new Map<string, string>();
+  for (const u of (usuariosRes.data ?? []) as any[]) usuarioToEscola.set(u.id, u.escola_id);
+  const allUsuarioIds = (usuariosRes.data ?? []).map((u: any) => u.id);
+
+  // Última sessão dos usuários das escolas ativas (1 query a mais — total 7)
+  const sessoesRes = allUsuarioIds.length > 0
+    ? await safe(ctx.sb.from("sessoes").select("criado_em, usuario_id").in("usuario_id", allUsuarioIds).gte("criado_em", ms30).order("criado_em", { ascending: false }))
+    : { data: [] as any[], count: null, ok: true };
+
+  const ultimaSessaoPorEscola = new Map<string, number>();
+  for (const s of (sessoesRes.data ?? []) as any[]) {
+    const eid = usuarioToEscola.get(s.usuario_id);
+    if (!eid) continue;
+    const ts = new Date(s.criado_em).getTime();
+    if (ts > (ultimaSessaoPorEscola.get(eid) ?? 0)) ultimaSessaoPorEscola.set(eid, ts);
+  }
+
+  const boletosCountPorEscola = new Map<string, number>();
+  for (const b of (boletosRes.data ?? []) as any[]) {
+    boletosCountPorEscola.set(b.escola_id, (boletosCountPorEscola.get(b.escola_id) ?? 0) + 1);
+  }
+
+  const escolasComFaturaVencida = new Set<string>((faturasRes.data ?? []).map((f: any) => f.escola_id));
+
+  const profsCountPorEscola = new Map<string, number>();
+  for (const p of (profsRes.data ?? []) as any[]) {
+    profsCountPorEscola.set(p.escola_id, (profsCountPorEscola.get(p.escola_id) ?? 0) + 1);
+  }
+
+  const profsComChamadaPorEscola = new Map<string, Set<string>>();
+  for (const f of (freqRes.data ?? []) as any[]) {
+    if (!f.professora_id) continue;
+    let set = profsComChamadaPorEscola.get(f.escola_id);
+    if (!set) { set = new Set(); profsComChamadaPorEscola.set(f.escola_id, set); }
+    set.add(f.professora_id);
+  }
+
+  const ticketsAbertosPorEscola = new Map<string, number>();
+  for (const t of (ticketsRes.data ?? []) as any[]) {
+    ticketsAbertosPorEscola.set(t.escola_id, (ticketsAbertosPorEscola.get(t.escola_id) ?? 0) + 1);
+  }
+
+  const resultado = escolas.map((e: any) => {
     const eid = e.id;
     const sinais: Array<{ cor: 'verde'|'amarelo'|'vermelho'; nome: string; detalhe: string }> = [];
 
-    // 🔴 Login gestor > 14 dias
-    const ultimaSessao = await safe(ctx.sb.from("sessoes").select("criado_em").gte("criado_em", ms(30)).in("usuario_id",
-      (await safe(ctx.sb.from("usuarios").select("id").eq("escola_id", eid).limit(200))).data?.map((u: any) => u.id) || []
-    ).order("criado_em", { ascending: false }).limit(1));
-    const ultLoginMs = ultimaSessao.data?.[0]?.criado_em ? new Date(ultimaSessao.data[0].criado_em).getTime() : 0;
+    const ultLoginMs = ultimaSessaoPorEscola.get(eid) ?? 0;
     const diasSemLogin = ultLoginMs ? Math.floor((hoje.getTime() - ultLoginMs) / 86400000) : 999;
     if (diasSemLogin >= 14) sinais.push({ cor: 'vermelho', nome: 'login_gestor', detalhe: `Sem login há ${diasSemLogin === 999 ? '30+' : diasSemLogin} dias` });
 
-    // 🔴 0 boletos emitidos no mês (guarda para tabelas sem escola_id)
-    const boletosMes = await safe(ctx.sb.from("boletos").select("*", { count: "exact", head: true }).gte("criado_em", inicioMes).eq("escola_id", eid));
-    if (boletosMes.ok && (boletosMes.count ?? 0) === 0) {
+    if ((boletosCountPorEscola.get(eid) ?? 0) === 0) {
       sinais.push({ cor: 'vermelho', nome: 'zero_boletos_mes', detalhe: 'Nenhum boleto emitido este mês' });
     }
 
-    // 🔴 Pagamento da escola (fatura SaaS) atrasado > 10 dias
-    const vencendo = await safe(ctx.sb.from("saas_faturas").select("data_vencimento, status").eq("escola_id", eid).in("status", ["PENDING","OVERDUE"]).lte("data_vencimento", ms(10).slice(0,10)).limit(1));
-    if (vencendo.ok && (vencendo.data?.length ?? 0) > 0) {
+    if (escolasComFaturaVencida.has(eid)) {
       sinais.push({ cor: 'vermelho', nome: 'fatura_saas_atrasada', detalhe: 'Fatura SaaS atrasada há 10+ dias' });
     }
 
-    // 🟡 <50% professoras com chamada em 7 dias
-    const profs = await safe(ctx.sb.from("professoras").select("*", { count: "exact", head: true }).eq("escola_id", eid).eq("ativa", true));
-    const chamadas7d = await safe(ctx.sb.from("frequencia").select("professora_id").gte("data", ms(7).slice(0,10)).eq("escola_id", eid).limit(2000));
-    const profsAtivasChamada = new Set((chamadas7d.data || []).map((r: any) => r.professora_id).filter(Boolean)).size;
-    const totalProfs = profs.count ?? 0;
+    const totalProfs = profsCountPorEscola.get(eid) ?? 0;
+    const profsAtivasChamada = profsComChamadaPorEscola.get(eid)?.size ?? 0;
     if (totalProfs > 0 && (profsAtivasChamada / totalProfs) < 0.5) {
       const pct = Math.round((profsAtivasChamada / totalProfs) * 100);
       sinais.push({ cor: 'amarelo', nome: 'chamada_baixa', detalhe: `${pct}% das professoras (${profsAtivasChamada}/${totalProfs}) usaram chamada em 7d` });
     }
 
-    // 🟡 Ticket aberto > 48h sem resposta
-    const ticketStuck = await safe(ctx.sb.from("tickets").select("id", { count: "exact", head: true }).eq("escola_id", eid).eq("status", "aberto").lte("criado_em", ms(2)));
-    if (ticketStuck.ok && (ticketStuck.count ?? 0) > 0) {
-      sinais.push({ cor: 'amarelo', nome: 'ticket_parado', detalhe: `${ticketStuck.count} ticket(s) aberto(s) há mais de 48h` });
+    const ticketsCount = ticketsAbertosPorEscola.get(eid) ?? 0;
+    if (ticketsCount > 0) {
+      sinais.push({ cor: 'amarelo', nome: 'ticket_parado', detalhe: `${ticketsCount} ticket(s) aberto(s) há mais de 48h` });
     }
 
     const piorCor = sinais.some(s => s.cor === 'vermelho') ? 'vermelho' : sinais.some(s => s.cor === 'amarelo') ? 'amarelo' : 'verde';
     return {
-      escola_id: e.id,
+      escola_id: eid,
       escola_nome: e.nome,
       escola_slug: e.slug,
       plano: e.plano || e.plano_id,
@@ -453,7 +506,7 @@ router.on("cs_saude_list", authAdmin, async (ctx) => {
       dias_sem_login: diasSemLogin,
       sinais,
     };
-  }));
+  });
 
   // Ordena: vermelho > amarelo > verde, depois por mais dias sem login
   const ord = { vermelho: 0, amarelo: 1, verde: 2 } as const;
