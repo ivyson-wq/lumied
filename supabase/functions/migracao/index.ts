@@ -514,7 +514,13 @@ router.on("migracao_listar_staging", authStaff, async (ctx: Context) => {
     .range(offset ?? 0, (offset ?? 0) + Math.min(limit ?? 100, 500) - 1);
   if (somente_com_flags) q = q.neq("flags::text", "[]");
   if (somente_validos) q = q.eq("is_valido", true);
-  if (flag_code) q = q.contains("flags", [{ code: flag_code }]);
+  // JSONB array containment: passamos o JSON cru via `.filter` porque
+  // `.contains([{...}])` do supabase-js serializa array de objetos como
+  // "{[object Object]}" e gera "invalid input syntax for type json".
+  if (flag_code) {
+    const safe = String(flag_code).replace(/[^a-zA-Z0-9_-]/g, "");
+    q = q.filter("flags", "cs", JSON.stringify([{ code: safe }]));
+  }
   const { data, error, count } = await q;
   if (error) throw new AppError("INTERNAL_ERROR", error.message);
   return successResponse({ rows: data ?? [], total: count ?? 0 });
@@ -798,7 +804,7 @@ router.on("migracao_pos_promote_amostra", authStaff, validateInput(jobIdSchema),
     return { sample: sample ?? [], total_promovidos: idList.length };
   }
 
-  const familias = await colher("migracao_staging_responsaveis", "familias", "id, email, nome_responsavel, nome_aluno, telefone, cidade");
+  const familias = await colher("migracao_staging_responsaveis", "familias", "id, email, nome_responsavel, nome_aluno, serie, cpf");
   const series   = await colher("migracao_staging_turmas", "series", "id, nome, ordem");
   const usuarios = await colher("migracao_staging_funcionarios", "usuarios", "id, nome, email, papeis");
 
@@ -918,28 +924,34 @@ router.on("migracao_promover", authStaff, validateInput(jobIdSchema), async (ctx
     // deno-lint-ignore no-explicit-any
     const al = alunoLinked as any;
 
+    // Tabela `familias` é enxuta: id, cpf, nome_responsavel, nome_aluno,
+    // email, serie, turno, escola_id. Telefone/endereço/etc. ficam em
+    // contatos separados; aqui só persistimos o que cabe na tabela.
     const payload: Record<string, unknown> = {
       escola_id: escolaId,
       email,
       nome_responsavel: x.nome,
-      nome_resp: x.nome,
       cpf: x.cpf,
-      telefone: x.telefone ?? x.whatsapp,
-      ...(x.endereco && { endereco: x.endereco }),
-      ...(x.cidade && { cidade: x.cidade }),
-      ...(x.uf && { uf: x.uf }),
-      ...(x.cep && { cep: x.cep }),
       ...(al?.nome && { nome_aluno: al.nome }),
       ...(al?.serie_origem && { serie: al.serie_origem }),
     };
 
+    // `familias` não tem unique constraint em (escola_id, email), então
+    // checamos manualmente antes de inserir pra evitar duplicatas e
+    // não depender de upsert/ON CONFLICT.
     let resId = x.match_familia_id as string | null;
+    if (!resId) {
+      const { data: existente } = await ctx.sb.from("familias")
+        .select("id").eq("escola_id", escolaId).eq("email", email).maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      resId = (existente as any)?.id ?? null;
+    }
     if (resId) {
       const { error } = await ctx.sb.from("familias").update(payload).eq("id", resId);
       if (error) throw new AppError("INTERNAL_ERROR", `familias update ${email}: ${error.message}`);
     } else {
       const { data: ins, error } = await ctx.sb.from("familias")
-        .upsert(payload, { onConflict: "email" }).select("id").single();
+        .insert(payload).select("id").single();
       if (error) throw new AppError("INTERNAL_ERROR", `familias insert ${email}: ${error.message}`);
       // deno-lint-ignore no-explicit-any
       resId = (ins as any).id;

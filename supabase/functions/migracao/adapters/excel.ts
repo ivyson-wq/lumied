@@ -56,7 +56,7 @@ export const SIN_BASE: SynonymMap = {
   aluno_cpf:          ["cpf aluno","cpf do aluno"],
   responsavel_financeiro: ["responsavel financeiro","responsável financeiro","fin","financeiro"],
   // turmas
-  turma_nome:         ["nome turma","turma","serie","série","classe","class"],
+  turma_nome:         ["nome turma","nome da turma","turma","serie","série","classe","class","nome"],
   ano:                ["ano","ano letivo","exercicio","exercício","year"],
   turno:              ["turno","periodo","período","shift"],
   // matriculas
@@ -96,7 +96,12 @@ function pick(
   field: string,
   synonyms: SynonymMap,
 ): unknown {
-  const candidates = synonyms[field] || SIN_BASE[field] || [];
+  // Aceita o próprio nome canônico do campo (`responsavel_email`,
+  // `data_nascimento`, etc.) com `_` → espaço, além dos sinônimos
+  // explícitos. Isso libera operadores a usarem os nomes documentados
+  // no template Excel/CSV genérico (`responsavel_email`, etc.).
+  const selfNames = [field, field.replace(/_/g, " ")];
+  const candidates = [...selfNames, ...(synonyms[field] || SIN_BASE[field] || [])];
   for (const c of candidates) {
     const want = normKey(c);
     for (const k of Object.keys(row)) {
