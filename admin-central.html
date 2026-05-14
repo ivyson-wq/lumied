@@ -703,7 +703,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
             <p style="color:#666;font-size:13px;margin-bottom:14px;">Roda validações (CPF/CNPJ mod 11, dedupe, match com escola). Resolva inconsistências antes de promover.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
               <button class="action-btn" onclick="migracaoRodarValidar()" style="background:#6C63FF;color:#fff;">▶ Rodar validação</button>
-              <select id="migStageEntidade" onchange="migracaoCarregarStaging()" style="padding:6px 10px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;">
+              <select id="migStageEntidade" onchange="migracaoEntidadeChange()" style="padding:6px 10px;border:1.5px solid #e2dbd1;border-radius:8px;font-size:13px;">
                 <option value="alunos">alunos</option>
                 <option value="responsaveis">responsaveis</option>
                 <option value="turmas">turmas</option>
@@ -719,6 +719,7 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
                 <input type="checkbox" id="migOnlyValidos" onchange="migracaoCarregarStaging()"> Só válidos
               </label>
             </div>
+            <div id="migFlagsResumo" style="margin-bottom:14px;"></div>
             <div id="migStagingResumo" style="font-size:13px;margin-bottom:10px;"></div>
             <div id="migStagingTable" class="table-wrap" style="max-height:480px;overflow-y:auto;"></div>
           </div>
@@ -3231,6 +3232,8 @@ let _migStepAtual = 1;
 let _migResumoCache = null;
 let _migStagingRows = {};    // id → row, populado por migracaoCarregarStaging
 let _migEditarCtx = null;    // { entidade, id, original } pro modal de edição
+let _migFlagCodeFiltro = null;  // code do flag filtrado no step 4 (one-click chips)
+let _migResumoFlagsCache = null; // { entidade: { code: { count, severity, msg } } }
 
 async function callMigracao(body) {
   const r = await fetch(MIGRACAO_URL, {
@@ -3549,18 +3552,26 @@ async function migracaoRodarValidar() {
 
 async function migracaoCarregarStaging() {
   if (!_migJobAtual) return;
+  // Resumo de flags (chips clicáveis) — dispara em paralelo, não bloqueia tabela
+  migracaoCarregarResumoFlags();
+
   const entidade = document.getElementById('migStageEntidade').value;
   const somente_com_flags = document.getElementById('migOnlyFlags').checked;
   const somente_validos = document.getElementById('migOnlyValidos').checked;
   const r = await callMigracao({
     action:'migracao_listar_staging',
     job_id: _migJobAtual.id, entidade,
-    somente_com_flags, somente_validos, limit: 200,
+    somente_com_flags, somente_validos,
+    flag_code: _migFlagCodeFiltro || undefined,
+    limit: 200,
   });
   const cont = document.getElementById('migStagingTable');
   const resumo = document.getElementById('migStagingResumo');
   if (r.error) { cont.innerHTML = '<em>' + esc(r.error) + '</em>'; return; }
-  resumo.innerHTML = '<b>' + (r.rows?.length||0) + '</b> linha(s) exibidas (total: ' + (r.total||0) + ')';
+  const filtroAtivo = _migFlagCodeFiltro
+    ? ' <span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:6px;font-size:11px;">filtrando: ' + esc(_migFlagCodeFiltro) + '</span> <button class="action-btn" style="padding:2px 8px;font-size:11px;" onclick="migracaoLimparFiltroFlag()">✕ limpar</button>'
+    : '';
+  resumo.innerHTML = '<b>' + (r.rows?.length||0) + '</b> linha(s) exibidas (total: ' + (r.total||0) + ')' + filtroAtivo;
   const rows = r.rows || [];
   _migStagingRows = {};
   rows.forEach(row => { if (row && row.id) _migStagingRows[row.id] = row; });
@@ -3589,6 +3600,86 @@ async function migracaoCarregarStaging() {
         (row.ignorado ? '↻' : '🚫') + '</button>';
       return '<tr style="' + (row.ignorado ? 'opacity:0.5;' : '') + '"><td>' + linha + '</td>' + tds + '<td>' + acoes + '</td></tr>';
     }).join('') + '</tbody></table>';
+}
+
+async function migracaoCarregarResumoFlags() {
+  if (!_migJobAtual) return;
+  const box = document.getElementById('migFlagsResumo');
+  if (!box) return;
+  // Primeira render: skeleton sutil; depois substitui
+  if (!_migResumoFlagsCache) box.innerHTML = '<em style="color:#888;font-size:12px;">Carregando resumo de inconsistências…</em>';
+  const r = await callMigracao({ action:'migracao_resumo_flags', job_id: _migJobAtual.id });
+  if (r.error) { box.innerHTML = ''; return; }
+  _migResumoFlagsCache = r.resumo || {};
+  const resumo = _migResumoFlagsCache;
+  const entidades = Object.keys(resumo);
+  if (entidades.length === 0) {
+    box.innerHTML = '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;padding:10px 14px;font-size:13px;color:#065F46;">✅ Nenhuma inconsistência detectada na validação atual.</div>';
+    return;
+  }
+  // Ordem por severidade global do maior agg primeiro
+  entidades.sort((a, b) => {
+    const sevA = Math.max(...Object.values(resumo[a]).map(f => f.severity === 'error' ? 3 : f.severity === 'warn' ? 2 : 1));
+    const sevB = Math.max(...Object.values(resumo[b]).map(f => f.severity === 'error' ? 3 : f.severity === 'warn' ? 2 : 1));
+    return sevB - sevA;
+  });
+  const blocos = entidades.map(ent => {
+    const flags = resumo[ent];
+    const codes = Object.keys(flags).sort((a, b) => {
+      // Errors > warns > info; depois por count desc
+      const sevA = flags[a].severity === 'error' ? 3 : flags[a].severity === 'warn' ? 2 : 1;
+      const sevB = flags[b].severity === 'error' ? 3 : flags[b].severity === 'warn' ? 2 : 1;
+      if (sevA !== sevB) return sevB - sevA;
+      return flags[b].count - flags[a].count;
+    });
+    const chips = codes.map(code => {
+      const f = flags[code];
+      const bg = f.severity === 'error' ? '#FEE2E2' : f.severity === 'warn' ? '#FEF3C7' : '#E0E7FF';
+      const fg = f.severity === 'error' ? '#991B1B' : f.severity === 'warn' ? '#92400E' : '#3730A3';
+      const isAtivo = (_migFlagCodeFiltro === code &&
+                       document.getElementById('migStageEntidade').value === ent);
+      const borda = isAtivo ? '2px solid ' + fg : '1px solid ' + bg;
+      return '<button type="button" onclick="migracaoFiltrarPorFlag(\'' + esc(ent) + '\',\'' + esc(code) + '\')" ' +
+        'title="' + esc(f.msg || '') + '" ' +
+        'style="background:' + bg + ';color:' + fg + ';border:' + borda + ';' +
+        'border-radius:14px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;' +
+        'display:inline-flex;align-items:center;gap:6px;">' +
+        '<b>' + esc(code) + '</b>' +
+        '<span style="background:rgba(255,255,255,0.6);border-radius:8px;padding:0 6px;">' + f.count + '</span>' +
+        '</button>';
+    }).join(' ');
+    return '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">' + esc(ent) + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div>' +
+      '</div>';
+  }).join('');
+  box.innerHTML =
+    '<div style="background:#fafafa;border:1px solid #e2dbd1;border-radius:10px;padding:12px 14px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<b style="font-size:13px;">🔍 Resumo de inconsistências</b>' +
+    '<small style="color:#888;font-size:11px;">Clique num chip para filtrar a tabela</small>' +
+    '</div>' + blocos +
+    '</div>';
+}
+
+function migracaoEntidadeChange() {
+  // Muda manual de entidade limpa filtro de flag (codes diferem por entidade)
+  _migFlagCodeFiltro = null;
+  migracaoCarregarStaging();
+}
+
+function migracaoFiltrarPorFlag(entidade, code) {
+  const sel = document.getElementById('migStageEntidade');
+  if (sel.value !== entidade) sel.value = entidade;
+  // Toggle: se já estiver filtrando por esse mesmo code+entidade, limpa
+  if (_migFlagCodeFiltro === code) _migFlagCodeFiltro = null;
+  else _migFlagCodeFiltro = code;
+  migracaoCarregarStaging();
+}
+
+function migracaoLimparFiltroFlag() {
+  _migFlagCodeFiltro = null;
+  migracaoCarregarStaging();
 }
 
 // Campos de controle que NUNCA aparecem no formulário de edição.

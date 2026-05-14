@@ -490,9 +490,10 @@ router.on("migracao_validar", authStaff, validateInput(jobIdSchema), async (ctx:
 // ═════════════════════════════════════════════════════════════
 
 router.on("migracao_listar_staging", authStaff, async (ctx: Context) => {
-  const { job_id, entidade, somente_com_flags, somente_validos, limit, offset } = ctx.body as {
+  const { job_id, entidade, somente_com_flags, somente_validos, flag_code, limit, offset } = ctx.body as {
     job_id: string; entidade: EntidadeAlvo;
     somente_com_flags?: boolean; somente_validos?: boolean;
+    flag_code?: string;
     limit?: number; offset?: number;
   };
   if (!job_id || !ENTIDADES.has(entidade)) throw new AppError("VALIDATION_FAILED", "job_id e entidade obrigatórios.");
@@ -502,9 +503,43 @@ router.on("migracao_listar_staging", authStaff, async (ctx: Context) => {
     .range(offset ?? 0, (offset ?? 0) + Math.min(limit ?? 100, 500) - 1);
   if (somente_com_flags) q = q.neq("flags::text", "[]");
   if (somente_validos) q = q.eq("is_valido", true);
+  if (flag_code) q = q.contains("flags", [{ code: flag_code }]);
   const { data, error, count } = await q;
   if (error) throw new AppError("INTERNAL_ERROR", error.message);
   return successResponse({ rows: data ?? [], total: count ?? 0 });
+});
+
+// Resumo de flags por entidade — chips clicáveis no step 4.
+// Lê só a coluna `flags` (payload mínimo) e agrega no edge.
+router.on("migracao_resumo_flags", authStaff, validateInput(jobIdSchema), async (ctx: Context) => {
+  const { job_id } = ctx.body as { job_id: string };
+  await loadJob(ctx, job_id);
+
+  const entidades = Object.keys(STAGING_TABLES) as EntidadeAlvo[];
+  const resumo: Record<string, Record<string, { count: number; severity: string; msg: string }>> = {};
+
+  for (const ent of entidades) {
+    const table = STAGING_TABLES[ent];
+    const { data, error } = await ctx.sb.from(table)
+      .select("flags").eq("job_id", job_id).eq("ignorado", false);
+    if (error) continue;
+    const agg: Record<string, { count: number; severity: string; msg: string }> = {};
+    for (const row of data ?? []) {
+      // deno-lint-ignore no-explicit-any
+      const flags = (row as any).flags;
+      if (!Array.isArray(flags)) continue;
+      for (const f of flags) {
+        if (!f || !f.code) continue;
+        if (!agg[f.code]) {
+          agg[f.code] = { count: 0, severity: f.severity || "info", msg: f.msg || "" };
+        }
+        agg[f.code].count++;
+      }
+    }
+    if (Object.keys(agg).length > 0) resumo[ent] = agg;
+  }
+
+  return successResponse({ resumo });
 });
 
 router.on("migracao_override_linha", authStaff, async (ctx: Context) => {
