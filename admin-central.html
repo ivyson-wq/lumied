@@ -1298,6 +1298,24 @@ tbody td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- MODAL: EDITAR LINHA STAGING (MIGRAÇÃO) -->
+<div class="modal-overlay" id="modalMigEditarLinha" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:720px;">
+    <h3>Editar linha de staging</h3>
+    <p class="msub" id="migEditarSubtitulo">—</p>
+    <div id="migEditarFlags" style="margin-bottom:14px;"></div>
+    <div id="migEditarCampos" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;max-height:55vh;overflow-y:auto;padding-right:6px;"></div>
+    <div id="migEditarError" style="display:none;font-size:13px;color:var(--red);margin-top:12px;"></div>
+    <div class="btn-bar" style="margin-top:18px;">
+      <button class="btn-primary" onclick="migracaoEditarConfirm()">Salvar alterações</button>
+      <button class="btn-secondary" onclick="fecharModal('modalMigEditarLinha')">Cancelar</button>
+    </div>
+    <small style="display:block;margin-top:10px;color:#888;font-size:12px;">
+      Após salvar, a linha volta a <em>não validada</em>. Re-rode a validação no passo 4.
+    </small>
+  </div>
+</div>
+
 <!-- MODAL: NOVA MIGRAÇÃO ERP -->
 <div class="modal-overlay" id="modalNovaMigracao" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:520px;">
@@ -3211,6 +3229,8 @@ let _migEscolas = [];
 let _migJobAtual = null;     // job carregado no wizard
 let _migStepAtual = 1;
 let _migResumoCache = null;
+let _migStagingRows = {};    // id → row, populado por migracaoCarregarStaging
+let _migEditarCtx = null;    // { entidade, id, original } pro modal de edição
 
 async function callMigracao(body) {
   const r = await fetch(MIGRACAO_URL, {
@@ -3542,6 +3562,8 @@ async function migracaoCarregarStaging() {
   if (r.error) { cont.innerHTML = '<em>' + esc(r.error) + '</em>'; return; }
   resumo.innerHTML = '<b>' + (r.rows?.length||0) + '</b> linha(s) exibidas (total: ' + (r.total||0) + ')';
   const rows = r.rows || [];
+  _migStagingRows = {};
+  rows.forEach(row => { if (row && row.id) _migStagingRows[row.id] = row; });
   if (rows.length === 0) {
     cont.innerHTML = '<em style="color:#888;padding:20px;display:block;">Nada para mostrar com os filtros atuais.</em>';
     return;
@@ -3569,15 +3591,120 @@ async function migracaoCarregarStaging() {
     }).join('') + '</tbody></table>';
 }
 
-async function migracaoEditar(entidade, id) {
-  const campo = prompt('Qual campo editar?');
-  if (!campo) return;
-  const valor = prompt('Novo valor (vazio = null):');
+// Campos de controle que NUNCA aparecem no formulário de edição.
+const MIG_EDITAR_SKIP = new Set([
+  'id','job_id','escola_id','origem_arquivo_id','origem_hash',
+  'origem_linha','promovido_id','promovido_em','criado_em',
+  'flags','is_valido','ignorado',
+  // matches são calculados pela validação, não devem ser editados à mão
+  'match_familia_id','match_serie_id','papel_lumied',
+]);
+
+function migracaoEditar(entidade, id) {
+  const row = _migStagingRows[id];
+  if (!row) {
+    return showToast('Linha não encontrada no cache. Recarregue a tabela.', 'error');
+  }
+  _migEditarCtx = { entidade, id, original: row };
+  const cols = Object.keys(row).filter(k => !MIG_EDITAR_SKIP.has(k));
+
+  // Cabeçalho
+  document.getElementById('migEditarSubtitulo').innerHTML =
+    'Entidade: <b>' + esc(entidade) + '</b> · Linha original: <b>' + esc(String(row.origem_linha ?? '—')) + '</b>' +
+    (row.origem_hash ? ' · Hash <code style="font-size:11px;">' + esc(String(row.origem_hash).slice(0,12)) + '</code>' : '');
+
+  // Flags atuais (read-only — válidas até re-rodar validação)
+  const flags = Array.isArray(row.flags) ? row.flags : [];
+  const flagsBox = document.getElementById('migEditarFlags');
+  if (flags.length === 0) {
+    flagsBox.innerHTML = '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:8px 12px;font-size:12px;color:#065F46;">Sem flags na validação atual.</div>';
+  } else {
+    flagsBox.innerHTML =
+      '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400E;">' +
+      '<b>Flags da validação:</b><br>' +
+      flags.map(f => '<span class="mig-flag-' + esc(f.severity||'info') + '">[' + esc(f.code) + ']</span> ' + esc(f.msg||'')).join('<br>') +
+      '</div>';
+  }
+
+  // Campos editáveis
+  const camposBox = document.getElementById('migEditarCampos');
+  camposBox.innerHTML = cols.map(c => {
+    const v = row[c];
+    const display = (v === null || v === undefined) ? '' :
+                    (typeof v === 'object' ? JSON.stringify(v) : String(v));
+    const isLongo = display.length > 60;
+    const isBool = typeof v === 'boolean';
+    const safeAttr = esc(display).replace(/"/g, '&quot;');
+    let input;
+    if (isBool) {
+      input = '<select data-mig-campo="' + esc(c) + '" style="width:100%;padding:7px 10px;border:1.5px solid #e2dbd1;border-radius:6px;font-size:12px;">' +
+        '<option value=""' + (v === null ? ' selected' : '') + '>(null)</option>' +
+        '<option value="true"' + (v === true ? ' selected' : '') + '>true</option>' +
+        '<option value="false"' + (v === false ? ' selected' : '') + '>false</option>' +
+        '</select>';
+    } else if (isLongo) {
+      input = '<textarea data-mig-campo="' + esc(c) + '" rows="2" style="width:100%;padding:7px 10px;border:1.5px solid #e2dbd1;border-radius:6px;font-size:12px;resize:vertical;font-family:inherit;">' + esc(display) + '</textarea>';
+    } else {
+      input = '<input type="text" data-mig-campo="' + esc(c) + '" value="' + safeAttr + '" style="width:100%;padding:7px 10px;border:1.5px solid #e2dbd1;border-radius:6px;font-size:12px;">';
+    }
+    return '<label style="font-size:12px;color:#555;display:flex;flex-direction:column;gap:3px;">' +
+      '<span style="font-weight:500;">' + esc(c) + '</span>' +
+      input +
+      '</label>';
+  }).join('');
+
+  document.getElementById('migEditarError').style.display = 'none';
+  document.getElementById('modalMigEditarLinha').classList.add('show');
+}
+
+async function migracaoEditarConfirm() {
+  if (!_migEditarCtx) return;
+  const { entidade, id, original } = _migEditarCtx;
   const patch = {};
-  patch[campo] = (valor === '' || valor === null) ? null : valor;
+  document.querySelectorAll('#migEditarCampos [data-mig-campo]').forEach(el => {
+    const campo = el.getAttribute('data-mig-campo');
+    let novo = el.value;
+    const orig = original[campo];
+    // Normalizações por tipo
+    if (typeof orig === 'boolean') {
+      if (novo === '') novo = null;
+      else if (novo === 'true') novo = true;
+      else if (novo === 'false') novo = false;
+    } else if (typeof orig === 'number') {
+      if (novo === '' || novo === null) {
+        novo = null;
+      } else {
+        const n = Number(novo);
+        if (!Number.isNaN(n)) novo = n;
+      }
+    } else {
+      // String / null
+      if (novo === '') novo = null;
+    }
+    // Igualdade rasa basta — campos vêm de JSON do banco, sem proxies
+    const origNorm = (orig === undefined) ? null : orig;
+    const novoNorm = (novo === undefined) ? null : novo;
+    const origStr = (origNorm === null) ? '__null__' : (typeof origNorm === 'object' ? JSON.stringify(origNorm) : String(origNorm));
+    const novoStr = (novoNorm === null) ? '__null__' : (typeof novoNorm === 'object' ? JSON.stringify(novoNorm) : String(novoNorm));
+    if (origStr !== novoStr) patch[campo] = novoNorm;
+  });
+
+  if (Object.keys(patch).length === 0) {
+    fecharModal('modalMigEditarLinha');
+    showToast('Nada para salvar — nenhum campo foi alterado.');
+    return;
+  }
+
   const r = await callMigracao({ action:'migracao_override_linha', entidade, id, patch });
-  if (r.error) return showToast(r.error, 'error');
-  showToast('Linha atualizada. Re-rode a validação.');
+  if (r.error) {
+    const errBox = document.getElementById('migEditarError');
+    errBox.textContent = r.error;
+    errBox.style.display = 'block';
+    return;
+  }
+  fecharModal('modalMigEditarLinha');
+  _migEditarCtx = null;
+  showToast(Object.keys(patch).length + ' campo(s) atualizado(s). Re-rode a validação.');
   migracaoCarregarStaging();
 }
 
