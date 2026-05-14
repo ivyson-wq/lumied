@@ -1,0 +1,50 @@
+name = "bank-relay"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+[vars]
+# Sandbox toggle: false em produção
+BANK_SANDBOX = "false"
+
+# Secrets (não commitar):
+#   RELAY_SECRET     — bearer token que edge functions usam (mesmo valor em Supabase secrets)
+#   wrangler secret put RELAY_SECRET --name bank-relay
+
+# ─────────────────────────────────────────────────────────────────
+#  mTLS certificate bindings (uma por banco)
+#
+#  Fluxo pra adicionar um banco:
+#    1. Receber .pem (cert) + .key (private key) do banco. Se for
+#       PFX, converter: openssl pkcs12 -in inter.pfx -nocerts -nodes -out inter.key
+#                       openssl pkcs12 -in inter.pfx -clcerts -nokeys -out inter.pem
+#    2. Upload: wrangler mtls-certificate upload --cert inter.pem --key inter.key --name inter
+#    3. Copiar o certificate_id retornado e adicionar bloco abaixo
+#    4. Atualizar src/index.ts Env interface (já tem os 5 slots)
+#    5. wrangler deploy
+#
+#  Não há cert default no repo — todos os bancos começam "não plugados".
+#  O Worker retorna 503 com hint se o banco for chamado sem cert.
+# ─────────────────────────────────────────────────────────────────
+
+# [[mtls_certificates]]
+# binding = "INTER_MTLS"
+# certificate_id = "<cert_id_inter_apos_upload>"
+
+# [[mtls_certificates]]
+# binding = "SICREDI_MTLS"
+# certificate_id = "<cert_id_sicredi>"
+
+# [[mtls_certificates]]
+# binding = "BB_MTLS"
+# certificate_id = "<cert_id_bb>"
+
+# [[mtls_certificates]]
+# binding = "ITAU_MTLS"
+# certificate_id = "<cert_id_itau>"
+
+# [[mtls_certificates]]
+# binding = "BRADESCO_MTLS"
+# certificate_id = "<cert_id_bradesco>"
+
+[observability]
+enabled = true
