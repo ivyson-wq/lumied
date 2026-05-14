@@ -18,9 +18,11 @@ import {
   type EntidadeAlvo, type ErpDialect,
 } from "./adapters/excel.ts";
 import { ESCOLAWEB_DIALECT } from "./adapters/escolaweb.ts";
+import { SPONTE_DIALECT } from "./adapters/sponte.ts";
 
 const DIALECTS_BY_ERP: Record<string, ErpDialect> = {
   escolaweb: ESCOLAWEB_DIALECT,
+  sponte: SPONTE_DIALECT,
 };
 
 const log = createLogger("migracao");
