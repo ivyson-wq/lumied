@@ -19,10 +19,13 @@ import {
 } from "./adapters/excel.ts";
 import { ESCOLAWEB_DIALECT } from "./adapters/escolaweb.ts";
 import { SPONTE_DIALECT } from "./adapters/sponte.ts";
+import { WPENSAR_DIALECT } from "./adapters/wpensar.ts";
 
 const DIALECTS_BY_ERP: Record<string, ErpDialect> = {
   escolaweb: ESCOLAWEB_DIALECT,
   sponte: SPONTE_DIALECT,
+  wpensar: WPENSAR_DIALECT,
+  agenda_edu: WPENSAR_DIALECT,  // mesma família de produtos
 };
 
 const log = createLogger("migracao");
