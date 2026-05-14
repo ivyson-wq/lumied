@@ -17,6 +17,7 @@ import { McpServer } from "../../_shared/mcp.ts";
 import { gerenteTools } from "../../mcp/tools_gerente.ts";
 import { createCalendarEvent } from "../../_shared/gcal.ts";
 import { type Any, type GerenteCtx, escapeHtml, sanitizeHeaderValue, sha256Hex, sanitizeForPrompt, timingSafeEqual, validarSessao } from "../_lib.ts";
+import { refreshSignedUrls } from "../../_shared/signed-url-cache.ts";
 
 const log = createLogger("api");
 
@@ -1264,14 +1265,9 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     if (somente_abertas) q = q.not("status", "in", "(concluida,rejeitada)");
     const { data, error } = await q;
     if (error) { console.error("[api db error]", error); return err(sanitizePgError(error)); }
-    // Bucket privado (mig 280): regenera signed URL TTL 1h em cada list
-    const refreshed = await Promise.all((data ?? []).map(async (r: any) => {
-      if (r.foto_path) {
-        const { data: signed } = await admin.storage.from("manutencoes").createSignedUrl(r.foto_path, 3600);
-        if (signed?.signedUrl) r.foto_url = signed.signedUrl;
-      }
-      return r;
-    }));
+    // Bucket privado (mig 280): signed URL TTL 1h, com cache in-memory
+    // pra evitar regenerar a cada listagem (cache helper, [[n-plus-one]] 2026-05-14)
+    const refreshed = await refreshSignedUrls(admin.storage, "manutencoes", data ?? [], "foto_path", "foto_url");
     // Sort by urgencia priority: critica > alta > media > baixa, then by criado_em desc
     const prioridade: Record<string, number> = { critica: 0, alta: 1, media: 2, baixa: 3 };
     const sorted = refreshed.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {

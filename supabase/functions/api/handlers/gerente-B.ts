@@ -17,6 +17,7 @@ import { McpServer } from "../../_shared/mcp.ts";
 import { gerenteTools } from "../../mcp/tools_gerente.ts";
 import { createCalendarEvent } from "../../_shared/gcal.ts";
 import { type Any, type GerenteCtx, escapeHtml, sanitizeHeaderValue, sha256Hex, sanitizeForPrompt, timingSafeEqual, validarSessao } from "../_lib.ts";
+import { refreshSignedUrls } from "../../_shared/signed-url-cache.ts";
 
 const log = createLogger("api");
 
@@ -1600,15 +1601,11 @@ export async function handle(ctx: GerenteCtx): Promise<Response | null> {
   }
 
   // ── Impressoes (gerente) ────────────────────────────────
-  // Helper: regenera signed URL fresh (TTL 1h) para arquivos do bucket
-  // privado 'impressoes' (mig 281). Caller usa nas listas.
-  const refreshImpressoesUrls = async (rows: any[]) => Promise.all(rows.map(async (r) => {
-    if (r.arquivo_path) {
-      const { data: signed } = await admin.storage.from("impressoes").createSignedUrl(r.arquivo_path, 3600);
-      if (signed?.signedUrl) r.arquivo_url = signed.signedUrl;
-    }
-    return r;
-  }));
+  // Helper: signed URL TTL 1h pra arquivos do bucket privado 'impressoes'
+  // (mig 281). Usa cache in-memory ([[signed-url-cache]]) pra evitar regenerar
+  // a cada listagem.
+  const refreshImpressoesUrls = async (rows: any[]) =>
+    refreshSignedUrls(admin.storage, "impressoes", rows, "arquivo_path", "arquivo_url");
 
   if (action === "impressoes_pendentes") {
     const { data } = await admin.from("impressoes").select("*")

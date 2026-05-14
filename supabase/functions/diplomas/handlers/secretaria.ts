@@ -22,6 +22,7 @@ import {
   ML_CLIENT_ID, ML_CLIENT_SECRET, ML_REDIRECT_URI,
   log,
 } from '../_lib.ts'
+import { refreshSignedUrls } from '../../_shared/signed-url-cache.ts'
 
 export async function handle(ctx: HandlerCtx): Promise<Response | null> {
   const { sb, body, action, token, req, clientIp, cors: CORS } = ctx
@@ -48,14 +49,10 @@ export async function handle(ctx: HandlerCtx): Promise<Response | null> {
       return json({ ok: true })
     }
 
-    // Helper local: troca arquivo_url por signed URL fresh quando o atestado tem path
-    const refreshAtestUrls = async (rows: any[]) => Promise.all(rows.map(async (r) => {
-      if (r.arquivo_path) {
-        const fresh = await getSignedFileUrl(sb, 'atestados', r.arquivo_path, 60 * 60)
-        if (fresh) r.arquivo_url = fresh
-      }
-      return r
-    }))
+    // Helper local: signed URL TTL 1h pra atestados; usa cache in-memory
+    // ([[signed-url-cache]]) pra evitar regenerar a cada listagem.
+    const refreshAtestUrls = async (rows: any[]) =>
+      refreshSignedUrls(sb.storage, 'atestados', rows, 'arquivo_path', 'arquivo_url')
 
     if (action === 'atestados_pendentes') {
       const { data } = await sb
