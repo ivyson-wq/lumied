@@ -1251,7 +1251,21 @@
       it.nome.toLowerCase().includes(q) || (it.categoria||'').toLowerCase().includes(q)
     );
     const el = document.getElementById('almNRCatalogList');
-    if (!filtered.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">Nenhum insumo encontrado.</div>'; return; }
+    if (!filtered.length) {
+      // Catálogo TOTAL vazio (não filtro) → mostra cenário pré-carregado
+      if (!q && (!almNRCatalogo || !almNRCatalogo.length)) {
+        el.innerHTML = (window.lumiedEmpty ? window.lumiedEmpty({
+          icon: '📦',
+          title: 'Catálogo vazio',
+          text: 'O almoxarifado precisa de itens cadastrados pra que professoras possam fazer requisições. Você pode começar com nosso catálogo padrão de escola brasileira (50 itens em 4 categorias).',
+          cta: { label: '📥 Carregar 50 itens padrão BR', onclick: "lapLoadScenario('alm_catalogo_base', {label: 'catálogo padrão (50 itens)'})" },
+          secondary: { label: '+ Cadastrar item manual', onclick: "almShowTab && almShowTab('catalogo')" },
+        }) : '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">Nenhum insumo cadastrado ainda.</div>');
+      } else {
+        el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">Nenhum insumo bate com "' + (q || '') + '".</div>';
+      }
+      return;
+    }
     const cats = {};
     for (const it of filtered) { const c = it.categoria||'Geral'; (cats[c]||(cats[c]=[])).push(it); }
     el.innerHTML = Object.entries(cats).map(([cat, items]) =>

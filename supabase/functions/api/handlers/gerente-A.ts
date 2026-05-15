@@ -1983,6 +1983,53 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
     return ok({ success: true });
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  LAP — Cenários pré-carregados (Sprint 7)
+  // ═══════════════════════════════════════════════════════════
+  if (action === "lap_scenarios_index") {
+    const { getScenariosIndex, isScenarioLoaded } = await import("../../_shared/lap_scenarios.ts");
+    const idx = getScenariosIndex();
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(idx) as Array<keyof typeof idx>) {
+      const loaded = await isScenarioLoaded(admin, sessionEscolaId, key as any);
+      out[key] = { ...idx[key], loaded };
+    }
+    return ok(out);
+  }
+
+  if (action === "lap_load_scenario") {
+    const { scenario } = body as { scenario?: string };
+    if (!scenario) return err("scenario obrigatório.");
+    const { loadScenario, getScenariosIndex } = await import("../../_shared/lap_scenarios.ts");
+    const idx = getScenariosIndex();
+    if (!(scenario in idx)) return err("Cenário desconhecido.", 400);
+
+    const result = await loadScenario(admin, sessionEscolaId, scenario as any);
+    if (!result.ok) return err(result.detalhes || "Falha ao carregar cenário.", 500);
+
+    // Emite evento
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      const meta = idx[scenario as keyof typeof idx];
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "onboarding.cenario.carregado",
+        module: meta.module,
+        persona: "diretor",
+        payload: {
+          scenario,
+          inseridos: result.inseridos,
+          ja_existiam: result.ja_existiam,
+          total: result.total,
+        },
+        idempotency_key: `cenario:${sessionEscolaId}:${scenario}`,
+      });
+    } catch (_) { /* silent */ }
+
+    return ok(result);
+  }
+
   if (action === "lap_wizard_skip") {
     const { current_step } = body as { current_step?: number };
     const skipUntil = new Date(Date.now() + 86400000).toISOString();
