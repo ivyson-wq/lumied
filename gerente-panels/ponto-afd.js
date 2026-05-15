@@ -246,6 +246,17 @@
       tb.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma importação ainda.</td></tr>';
       return;
     }
+    // Atualiza visibilidade do botão "Revincular órfãos"
+    const totalOrfaos = list.reduce((s, i) => s + (i.pis_nao_encontrados || 0), 0);
+    const reprocBtn = document.getElementById('pontoReprocessBtn');
+    if (reprocBtn) {
+      if (totalOrfaos > 0) {
+        reprocBtn.style.display = '';
+        reprocBtn.textContent = `🔄 Revincular ${totalOrfaos} órfão${totalOrfaos === 1 ? '' : 's'}`;
+      } else {
+        reprocBtn.style.display = 'none';
+      }
+    }
     tb.innerHTML = list.map(i => {
       const cnpj = i.cnpj_empregador ? pontoEsc(i.cnpj_empregador) : '—';
       const periodo = i.periodo_inicio && i.periodo_fim
@@ -269,6 +280,29 @@
         <td><span class="badge ${badge}">${pontoEsc(i.status || '—')}</span></td>
       </tr>`;
     }).join('');
+  }
+
+  async function pontoReprocessOrphans() {
+    const btn = document.getElementById('pontoReprocessBtn');
+    const original = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Revinculando...'; }
+    try {
+      const d = await pontoApi({ action: 'ponto_afd_reprocess' });
+      if (d.error) {
+        if (typeof showToast === 'function') showToast(d.error, 'error');
+        else alert(d.error);
+        return;
+      }
+      const r = d.data || d;
+      const msg = `✓ ${r.eventos_vinculados || 0} batida(s) vinculada(s) — ${r.resumos_gerados || 0} resumo(s) gerado(s).`;
+      if (typeof showToast === 'function') showToast(msg, 'success'); else alert(msg);
+      loadPontoImports();
+    } catch (e) {
+      const m = 'Falha no reprocesso: ' + (e?.message || e);
+      if (typeof showToast === 'function') showToast(m, 'error'); else alert(m);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = original; }
+    }
   }
 
   // ── Espelho de Ponto ──────────────────────────────────

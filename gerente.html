@@ -4112,9 +4112,12 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
 
         <!-- ── Importações recentes (compartilhada entre as tabs) ── -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
           <div class="sec-title" style="margin:0;font-size:14px;">Importações recentes</div>
-          <button onclick="loadPontoImports()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button id="pontoReprocessBtn" onclick="pontoReprocessOrphans()" style="display:none;padding:6px 12px;background:#fff7ec;color:#a06400;border:1px solid #f0d9a8;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" title="Re-vincula batidas órfãs (PIS sem funcionário no momento da importação) e regenera os resumos diários afetados.">🔄 Revincular órfãos</button>
+            <button onclick="loadPontoImports()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>

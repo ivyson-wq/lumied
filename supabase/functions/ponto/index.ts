@@ -105,6 +105,10 @@ interface DaySummary {
   workedMinutes: number | null; hasOddEvents: boolean;
 }
 
+function normalizePis(raw: unknown): string {
+  return String(raw ?? "").replace(/\D/g, "").padStart(12, "0").slice(-12);
+}
+
 function calculateDay(events: AfdEvent[]): DaySummary {
   const sorted = [...events].sort((a, b) => a.time.localeCompare(b.time));
   const hasOdd = sorted.length % 2 !== 0;
@@ -124,6 +128,98 @@ function calculateDay(events: AfdEvent[]): DaySummary {
 }
 
 // ═══════════════════════════════════════════════════════
+//  REPROCESS — Re-vincula afd_events órfãos e regera daily_summary
+//  Idempotente: WHERE employee_id IS NULL nunca toca já-vinculados;
+//  upsert em daily_summary re-escreve o mesmo valor.
+//  pisFilter: limita a um conjunto de PIS (cadastro pontual);
+//             null = varre todos os órfãos da escola.
+// ═══════════════════════════════════════════════════════
+async function reprocessOrphans(
+  sb: any,
+  escola_id: string,
+  pisFilter: string[] | null,
+): Promise<{ eventos_vinculados: number; resumos_gerados: number }> {
+  const empQ = sb.from("ponto_employees").select("id, pis").eq("escola_id", escola_id).eq("ativo", true);
+  if (pisFilter && pisFilter.length > 0) empQ.in("pis", pisFilter);
+  const { data: emps } = await empQ;
+  if (!emps || emps.length === 0) return { eventos_vinculados: 0, resumos_gerados: 0 };
+  const pisMap = new Map<string, string>(emps.map((e: any) => [e.pis, e.id as string]));
+
+  let evQ = sb.from("afd_events").select("id, pis, employee_id, data_evento, hora_evento")
+    .eq("escola_id", escola_id).is("employee_id", null);
+  if (pisFilter && pisFilter.length > 0) evQ = evQ.in("pis", pisFilter);
+  const { data: orphans } = await evQ.limit(50000);
+  if (!orphans || orphans.length === 0) return { eventos_vinculados: 0, resumos_gerados: 0 };
+
+  let bound = 0;
+  const affected = new Map<string, { empId: string; pis: string; date: string; events: AfdEvent[] }>();
+
+  const chunkSize = 500;
+  for (let i = 0; i < orphans.length; i += chunkSize) {
+    const slice = orphans.slice(i, i + chunkSize);
+    const updates: { id: string; employee_id: string }[] = [];
+    for (const ev of slice) {
+      const empId = pisMap.get(ev.pis);
+      if (!empId) continue;
+      updates.push({ id: ev.id, employee_id: empId });
+      const key = `${empId}_${ev.data_evento}`;
+      if (!affected.has(key)) affected.set(key, { empId, pis: ev.pis, date: ev.data_evento, events: [] });
+      affected.get(key)!.events.push({ nsr: 0, date: ev.data_evento, time: ev.hora_evento, pis: ev.pis });
+    }
+    for (const u of updates) {
+      const { error } = await sb.from("afd_events").update({ employee_id: u.employee_id })
+        .eq("id", u.id).eq("escola_id", escola_id).is("employee_id", null);
+      if (!error) bound++;
+    }
+  }
+
+  if (affected.size === 0) return { eventos_vinculados: bound, resumos_gerados: 0 };
+
+  // Para cada (employee_id, data) afetado, busca TODOS os eventos do dia (não só os recém-vinculados)
+  // para recalcular o summary com o conjunto completo.
+  const summaryRows: any[] = [];
+  for (const { empId, date } of affected.values()) {
+    const { data: allEv } = await sb.from("afd_events")
+      .select("hora_evento, data_evento, pis, nsr")
+      .eq("escola_id", escola_id).eq("employee_id", empId).eq("data_evento", date);
+    if (!allEv || allEv.length === 0) continue;
+    const dayEvents: AfdEvent[] = allEv.map((e: any) => ({
+      nsr: e.nsr ?? 0, date: e.data_evento, time: e.hora_evento, pis: e.pis,
+    }));
+    const summary = calculateDay(dayEvents);
+    const expectedMinutes = 480;
+    const worked = summary.workedMinutes ?? 0;
+    summaryRows.push({
+      escola_id, employee_id: empId, data_resumo: date,
+      total_marcacoes: dayEvents.length,
+      primeira_marcacao: summary.firstEvent,
+      ultima_marcacao: summary.lastEvent,
+      minutos_trabalhados: summary.workedMinutes,
+      minutos_esperados: expectedMinutes,
+      saldo_minutos: worked - expectedMinutes,
+      status: dayEvents.length === 0 ? "ausente" : summary.hasOddEvents ? "impar" : "presente",
+      marcacao_impar: summary.hasOddEvents,
+    });
+  }
+
+  for (let i = 0; i < summaryRows.length; i += chunkSize) {
+    await sb.from("ponto_daily_summary").upsert(summaryRows.slice(i, i + chunkSize), { onConflict: "employee_id,data_resumo" });
+  }
+
+  // Atualiza pis_nao_encontrados nas importações afetadas (opcional, best-effort)
+  const { data: imps } = await sb.from("afd_imports").select("id")
+    .eq("escola_id", escola_id).gt("pis_nao_encontrados", 0);
+  for (const imp of (imps ?? [])) {
+    const { count } = await sb.from("afd_events").select("*", { count: "exact", head: true })
+      .eq("import_id", imp.id).is("employee_id", null);
+    await sb.from("afd_imports").update({ pis_nao_encontrados: count ?? 0 })
+      .eq("id", imp.id).eq("escola_id", escola_id);
+  }
+
+  return { eventos_vinculados: bound, resumos_gerados: summaryRows.length };
+}
+
+// ═══════════════════════════════════════════════════════
 //  ROUTES — Employees
 // ═══════════════════════════════════════════════════════
 
@@ -137,11 +233,14 @@ router.on("ponto_employee_create", authGerente, feat, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { nome, pis, cargo, departamento, rh_funcionario_id, work_schedule, daily_hours } = ctx.body as any;
   if (!nome || !pis) throw new AppError("VALIDATION_FAILED", "nome e pis obrigatórios.");
+  const pisLimpo = normalizePis(pis);
+  if (pisLimpo.replace(/0/g, "").length === 0) throw new AppError("VALIDATION_FAILED", "PIS inválido.");
   const { data, error } = await ctx.sb.from("ponto_employees").insert({
-    escola_id: ctx.escola_id, nome, pis: pis.padStart(12, "0"), cargo, departamento, rh_funcionario_id, work_schedule, daily_hours,
+    escola_id: ctx.escola_id, nome, pis: pisLimpo, cargo, departamento, rh_funcionario_id, work_schedule, daily_hours,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
-  return successResponse(data);
+  const reproc = await reprocessOrphans(ctx.sb, ctx.escola_id, [pisLimpo]);
+  return successResponse({ ...data, _reprocess: reproc });
 });
 
 router.on("ponto_employee_update", authGerente, feat, async (ctx) => {
@@ -149,9 +248,15 @@ router.on("ponto_employee_update", authGerente, feat, async (ctx) => {
   const { id, ...fields } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   delete fields.action; delete fields._token;
+  const pisChanged = typeof fields.pis === "string" && fields.pis.length > 0;
+  if (pisChanged) fields.pis = normalizePis(fields.pis);
   const { error } = await ctx.sb.from("ponto_employees").update(fields).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
-  return successResponse({ success: true });
+  let reproc: { eventos_vinculados: number; resumos_gerados: number } | null = null;
+  if (pisChanged || fields.ativo === true) {
+    reproc = await reprocessOrphans(ctx.sb, ctx.escola_id, pisChanged ? [fields.pis] : null);
+  }
+  return successResponse({ success: true, _reprocess: reproc });
 });
 
 // ═══════════════════════════════════════════════════════
@@ -264,6 +369,12 @@ router.on("ponto_imports_list", authGerente, feat, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const { data } = await ctx.sb.from("afd_imports").select("*").eq("escola_id", ctx.escola_id).order("criado_em", { ascending: false }).limit(50);
   return successResponse(data ?? []);
+});
+
+router.on("ponto_afd_reprocess", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const result = await reprocessOrphans(ctx.sb, ctx.escola_id, null);
+  return successResponse(result);
 });
 
 router.on("ponto_events_list", authGerente, feat, async (ctx) => {
