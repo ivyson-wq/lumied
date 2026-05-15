@@ -225,7 +225,7 @@ export async function getChecklistState(
           marked_done: prev.marked_done || d.marked_done,
           dismissed_until: prevDate && newDate
             ? (newDate > prevDate ? d.dismissed_until : prev.dismissed_until)
-            : (newDate ?? prev.dismissed_until),
+            : (d.dismissed_until ?? prev.dismissed_until),
         });
       }
     }
