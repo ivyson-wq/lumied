@@ -1,12 +1,13 @@
 /* ═══ Lumied CRM — WhatsApp Extension Panel ═══ */
 
-/* Toggle button */
+/* Toggle button — posicionado no topo direito pra não bloquear os
+   botões nativos do WhatsApp (enviar/encaminhar/áudio ficam no rodapé). */
 #mb-crm-toggle {
   position: fixed;
   right: 16px;
-  bottom: 16px;
-  width: 56px;
-  height: 56px;
+  top: 76px;
+  width: 48px;
+  height: 48px;
   background: #2d1b4e;
   border: none;
   border-radius: 50%;
