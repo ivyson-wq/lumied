@@ -1984,6 +1984,96 @@ Tendência familiar: ${(engaj as any)?.trend ?? 'sem dados'}`;
   }
 
   // ═══════════════════════════════════════════════════════════
+  //  LAP — Convites Magic Link (Sprint 10)
+  //  Convite passwordless 1-uso, 7d expiração. Envio via WA/Email.
+  // ═══════════════════════════════════════════════════════════
+  if (action === "lap_invite_create") {
+    const { email, nome, papel, canal, telefone } = body as {
+      email?: string; nome?: string; papel?: string;
+      canal?: string; telefone?: string;
+    };
+    if (!email || !email.includes("@")) return err("E-mail inválido.");
+    if (!papel) return err("Papel obrigatório.");
+    if (!canal || !["whatsapp","email"].includes(canal)) return err("Canal deve ser whatsapp ou email.");
+    if (canal === "whatsapp" && (!telefone || telefone.replace(/\D/g, "").length < 10)) {
+      return err("Telefone obrigatório para WhatsApp (min 10 dígitos).");
+    }
+
+    // Gera token urlsafe 40 chars
+    const tokenBytes = crypto.getRandomValues(new Uint8Array(30));
+    const token = Array.from(tokenBytes).map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 40);
+
+    const { data: ins, error: insErr } = await admin.from("lap_magic_links").insert({
+      token,
+      escola_id: sessionEscolaId,
+      email: email.toLowerCase().trim(),
+      nome: nome || null,
+      papel,
+      canal,
+      telefone: canal === "whatsapp" ? telefone?.replace(/\D/g, "") : null,
+      criado_por: gerente.id,
+      criado_por_nome: gerente.nome,
+    }).select("token, expira_em").single();
+    if (insErr) return err(sanitizePgError(insErr));
+
+    // Resolve slug da escola pra montar URL
+    const { data: escola } = await admin.from("escolas").select("nome, slug, subdominio").eq("id", sessionEscolaId).maybeSingle();
+    const slug = (escola as any)?.subdominio || (escola as any)?.slug || "app";
+    const url = `https://${slug}.lumied.com.br/?invite=${token}`;
+    const nomeEscola = (escola as any)?.nome || "Lumied";
+
+    // Monta wa.me URL com mensagem pré-preenchida
+    let waUrl: string | null = null;
+    if (canal === "whatsapp") {
+      const msg = `Olá! ${gerente.nome} te convidou pra acessar o Lumied da ${nomeEscola} como ${papel}. Clica aqui pra entrar (1 clique, sem senha — válido 7 dias):\n\n${url}`;
+      const tel = telefone?.replace(/\D/g, "");
+      waUrl = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+    }
+
+    // LAP: convite enviado
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: sessionEscolaId,
+        user_id: gerente.id,
+        event_name: "onboarding.convite.enviado",
+        module: "onboarding",
+        persona: "diretor",
+        payload: { canal, papel, email: email.toLowerCase().trim() },
+        idempotency_key: `invite-criado:${token}`,
+      });
+    } catch (_) { /* silent */ }
+
+    return ok({ token: ins.token, expira_em: ins.expira_em, url, wa_url: waUrl, papel, canal });
+  }
+
+  if (action === "lap_invite_list") {
+    const { incluir_usados } = body as { incluir_usados?: boolean };
+    let q = admin.from("lap_magic_links")
+      .select("token, email, nome, papel, canal, telefone, criado_por_nome, expira_em, usado_em, criado_em")
+      .eq("escola_id", sessionEscolaId)
+      .order("criado_em", { ascending: false })
+      .limit(100);
+    if (!incluir_usados) q = q.is("usado_em", null);
+    const { data, error: qErr } = await q;
+    if (qErr) return err(sanitizePgError(qErr));
+    return ok({ convites: data ?? [] });
+  }
+
+  if (action === "lap_invite_revoke") {
+    const { token: revokeToken } = body as { token?: string };
+    if (!revokeToken) return err("token obrigatório.");
+    // Mark as used artificially → invalidates
+    const { error: rvErr } = await admin.from("lap_magic_links")
+      .update({ usado_em: new Date().toISOString(), usuario_id: null })
+      .eq("token", revokeToken)
+      .eq("escola_id", sessionEscolaId)
+      .is("usado_em", null);
+    if (rvErr) return err(sanitizePgError(rvErr));
+    return ok({ success: true });
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  LAP — Cenários pré-carregados (Sprint 7)
   // ═══════════════════════════════════════════════════════════
   if (action === "lap_scenarios_index") {

@@ -1,0 +1,236 @@
+/* ═══════════════════════════════════════════════════════════════
+   Lumied — Invite Modal + auto-redeem (Sprint 10 LAP)
+   ═══════════════════════════════════════════════════════════════ */
+
+.lap-invite-fab {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 2147483580;
+  box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: transform .12s, box-shadow .12s;
+}
+.lap-invite-fab:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(37, 211, 102, 0.42); }
+
+.lap-invite-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 2147483650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.lap-invite-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.32);
+}
+
+.lap-invite-header {
+  padding: 18px 22px 14px;
+  background: linear-gradient(135deg, #6C63FF, #3B82F6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lap-invite-header h2 { font-size: 16px; font-weight: 800; margin: 0; }
+.lap-invite-header p { font-size: 12px; opacity: 0.9; margin: 2px 0 0; }
+.lap-invite-close {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.lap-invite-body {
+  padding: 18px 22px;
+  color: #1a1a1a;
+}
+
+.lap-invite-field {
+  margin-bottom: 12px;
+}
+.lap-invite-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.lap-invite-input,
+.lap-invite-select {
+  width: 100%;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: inherit;
+  background: #fff;
+  outline: none;
+  transition: border .15s;
+}
+.lap-invite-input:focus,
+.lap-invite-select:focus { border-color: #6C63FF; }
+
+.lap-invite-canal {
+  display: flex;
+  gap: 8px;
+}
+.lap-invite-canal-opt {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff;
+  transition: all .15s;
+  gap: 4px;
+}
+.lap-invite-canal-opt:hover { border-color: #c7c2ff; }
+.lap-invite-canal-opt.selected {
+  border-color: #6C63FF;
+  background: linear-gradient(180deg, #fff 0%, #f3f0ff 100%);
+}
+.lap-invite-canal-icon { font-size: 22px; }
+.lap-invite-canal-label { font-size: 12px; font-weight: 700; }
+
+.lap-invite-footer {
+  padding: 12px 22px 18px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.lap-invite-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+}
+.lap-invite-btn.primary {
+  background: linear-gradient(135deg, #6C63FF, #3B82F6);
+  color: #fff;
+}
+.lap-invite-btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.lap-invite-btn.ghost {
+  background: transparent;
+  color: #64748b;
+}
+
+.lap-invite-result {
+  padding: 16px;
+  background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.lap-invite-result-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #16a34a;
+  margin: 0 0 4px;
+}
+.lap-invite-result-link {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 7px;
+  font-family: 'SFMono-Regular', Menlo, monospace;
+  font-size: 11px;
+  word-break: break-all;
+  color: #475569;
+  margin: 8px 0;
+}
+.lap-invite-result-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lap-invite-result-actions a,
+.lap-invite-result-actions button {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  padding: 9px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+.lap-invite-result-actions .wa {
+  background: #25D366; color: #fff;
+}
+.lap-invite-result-actions .copy {
+  background: #fff; color: #1a1a1a; border: 1px solid #e5e7eb;
+}
+
+/* Redeem overlay (quando ?invite=TOKEN) */
+.lap-redeem-loader {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  gap: 14px;
+}
+.lap-redeem-spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #6C63FF;
+  border-radius: 50%;
+  animation: lapRedeemSpin 0.7s linear infinite;
+}
+@keyframes lapRedeemSpin { to { transform: rotate(360deg); } }
+.lap-redeem-msg { font-size: 14px; color: #475569; }
+.lap-redeem-err {
+  background: #fee2e2;
+  color: #c81e1e;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  max-width: 380px;
+  text-align: center;
+  font-weight: 600;
+}

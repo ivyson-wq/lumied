@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS lap_magic_links CASCADE;

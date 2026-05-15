@@ -111,6 +111,102 @@ export async function handle(ctx: BaseCtx): Promise<Response | null> {
     return ok({ logged: false });
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  LAP — Redeem de Magic Link (Sprint 10, PÚBLICO)
+  //  Aceita token de convite, cria/encontra usuário + sessão.
+  // ═══════════════════════════════════════════════════════════
+  if (action === "lap_invite_redeem") {
+    const { token: inviteToken, senha_inicial } = body as { token?: string; senha_inicial?: string };
+    if (!inviteToken || inviteToken.length < 20) return err("Token inválido.", 400);
+
+    const { data: link } = await admin.from("lap_magic_links")
+      .select("token, escola_id, email, nome, papel, canal, expira_em, usado_em")
+      .eq("token", inviteToken)
+      .maybeSingle();
+    if (!link) return err("Convite não encontrado.", 404);
+    if (link.usado_em) return err("Convite já foi usado. Faça login normal ou solicite outro convite.", 410, "INVITE_USED");
+    if (new Date(link.expira_em) < new Date()) return err("Convite expirado. Solicite um novo.", 410, "INVITE_EXPIRED");
+
+    // Procura ou cria usuário
+    const emailNorm = (link.email as string).toLowerCase().trim();
+    let { data: existing } = await admin.from("usuarios")
+      .select("id, nome, papeis")
+      .eq("email", emailNorm)
+      .eq("escola_id", link.escola_id)
+      .maybeSingle();
+
+    let usuarioId: string;
+    if (existing) {
+      usuarioId = (existing as any).id;
+      // Adiciona o papel se não tinha
+      const papeisAtuais: string[] = (existing as any).papeis || [];
+      if (!papeisAtuais.includes(link.papel as string)) {
+        await admin.from("usuarios").update({
+          papeis: [...papeisAtuais, link.papel],
+        }).eq("id", usuarioId);
+      }
+    } else {
+      // Cria usuário sem senha (passwordless inicial)
+      const senhaHash = senha_inicial ? await hashSenhaProf(senha_inicial as string) : null;
+      const { data: novo, error: novoErr } = await admin.from("usuarios").insert({
+        nome: link.nome || emailNorm.split('@')[0],
+        email: emailNorm,
+        papel: link.papel,
+        papeis: [link.papel],
+        escola_id: link.escola_id,
+        senha_hash: senhaHash,
+        ativo: true,
+      }).select("id").single();
+      if (novoErr || !novo) return err(sanitizePgError(novoErr ?? new Error("Falha ao criar usuário.")));
+      usuarioId = novo.id;
+    }
+
+    // Cria sessão unificada
+    const tk = gerarToken();
+    const { error: sessErr } = await admin.from("sessoes").insert({
+      usuario_id: usuarioId,
+      token: tk,
+      usuario_tipo: link.papel,
+      expira_em: new Date(Date.now() + 7 * 86400000).toISOString(),
+    });
+    if (sessErr) return err("Não foi possível criar a sessão.", 500, "AUTH_SESSION_FAILED");
+
+    // Marca link como usado
+    await admin.from("lap_magic_links")
+      .update({ usado_em: new Date().toISOString(), usuario_id: usuarioId })
+      .eq("token", inviteToken);
+
+    // Resolve slug da escola
+    const { data: escola } = await admin.from("escolas")
+      .select("slug, subdominio, nome")
+      .eq("id", link.escola_id)
+      .maybeSingle();
+    const slug = (escola as any)?.subdominio || (escola as any)?.slug || null;
+
+    // LAP: convite aceito (alimenta checklist + LHS)
+    try {
+      const { trackEvent } = await import("../../_shared/track.ts");
+      trackEvent(admin, {
+        escola_id: link.escola_id,
+        user_id: usuarioId,
+        event_name: "onboarding.convite.aceito",
+        module: "onboarding",
+        persona: inferLapPersona([link.papel]),
+        payload: { canal: link.canal, papel: link.papel },
+        idempotency_key: `invite-aceito:${inviteToken}`,
+      });
+    } catch (_) { /* silent */ }
+
+    return ok({
+      token: tk,
+      papel: link.papel,
+      email: emailNorm,
+      nome: (existing as any)?.nome ?? link.nome ?? emailNorm.split('@')[0],
+      escola_slug: slug,
+      escola_nome: (escola as any)?.nome,
+    });
+  }
+
   // ── Login Família por email+senha (alternativa ao magic link) ──
   if (action === "familia_login") {
     const email = ((body.email as string) || "").toLowerCase().trim();
