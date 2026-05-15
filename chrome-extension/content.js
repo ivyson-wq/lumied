@@ -36,7 +36,7 @@
   // Create toggle button with owl logo
   const toggle = document.createElement('button');
   toggle.id = 'mb-crm-toggle';
-  toggle.title = 'Lumied CRM v1.7.2';
+  toggle.title = 'Lumied CRM v1.7.3';
   toggle.innerHTML = `<img src="${chrome.runtime.getURL('lumied-icon.png')}" alt="Lumied" style="width:40px;height:40px;border-radius:50%;">`;
   toggle.onclick = () => setPanelOpen(!panelOpen);
   document.body.appendChild(toggle);
@@ -49,7 +49,7 @@
     <div class="mb-panel-header">
       <img src="${chrome.runtime.getURL('lumied-icon.png')}" alt="Lumied" style="width:22px;height:22px;border-radius:4px;">
       <span id="mb-brand-name">Lumied CRM</span>
-      <span class="mb-version-badge">v1.7.2</span>
+      <span class="mb-version-badge">v1.7.3</span>
       <button class="mb-close-btn" id="mb-close-panel">&times;</button>
     </div>
     <div class="mb-panel-body" id="mb-panel-body">
@@ -70,7 +70,7 @@
       <div id="mb-lead-status" class="mb-lead-status hidden"></div>
       <div id="mb-lead-quick-actions" class="mb-lead-actions-2">
         <button class="mb-qa-btn" id="mb-qa-stage" title="Mover estágio (capture o lead primeiro)" disabled><span>↗</span> Mover</button>
-        <button class="mb-qa-btn" id="mb-qa-snooze" title="Agendar envio (capture o lead primeiro)" disabled><span>⏰</span> Snooze</button>
+        <button class="mb-qa-btn" id="mb-qa-snooze" title="Agendar envio (capture o lead primeiro)" disabled><span>⏰</span> Agendar</button>
         <button class="mb-qa-btn" id="mb-qa-call" title="Registrar ligação (capture o lead primeiro)" disabled><span>📞</span> Ligar</button>
         <button class="mb-qa-btn" id="mb-qa-tag" title="Tags (capture o lead primeiro)" disabled><span>🏷</span> Tag</button>
         <button class="mb-qa-btn mb-qa-ai" id="mb-qa-score" title="Recalcular score (capture o lead primeiro)" disabled><span>✨</span> Score</button>
