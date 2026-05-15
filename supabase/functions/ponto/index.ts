@@ -33,42 +33,111 @@ function parseAfd(content: string): ParsedAfd {
   let trailer: AfdTrailer | null = null;
   const errors: string[] = [];
 
+  // Detecta layout: Portaria 1510 antiga tem tipo em [0]; Portaria 671 MR/REP-P
+  // (usado pelo Control iD iDFace) tem NSR de 9 dígitos em [0..8] e tipo em [9].
+  const isMR = lines.some(l => /^\d{9}[0-9T]/.test(l) && l.length >= 10);
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const type = line[0];
+    // Trailer do iDFace tem NSR=999999999 (9 noves) e tipo='0' — tratamos como '9'.
+    const isMRTrailer = isMR && line.startsWith("999999999");
+    const type = isMRTrailer ? "9" : (isMR ? line[9] : line[0]);
+    const nsrFrom = isMR ? 0 : 1;
     try {
       if (type === "1") {
-        header = {
-          nsr: parseInt(line.substring(1, 10)),
-          periodStart: parseAfdDate(line.substring(10, 18)),
-          periodEnd: parseAfdDate(line.substring(18, 26)),
-          employerType: line[26],
-          cnpj: line.substring(27, 41).trim(),
-          companyName: line.substring(41, 191).trim(),
-        };
+        if (isMR) {
+          // No layout MR o registro tipo 1 traz 3 datas DDMMAAAA seguidas
+          // (periodStart, periodEnd, dataGeração) perto do fim, antes de
+          // hora/CRC. Encontra a ÚLTIMA tripla onde as 3 são datas válidas.
+          const isDate = (s: string) => {
+            const d = parseInt(s.substring(0,2), 10);
+            const mo = parseInt(s.substring(2,4), 10);
+            const y = parseInt(s.substring(4,8), 10);
+            return d>=1 && d<=31 && mo>=1 && mo<=12 && y>=2000 && y<=2099;
+          };
+          let periodStart = "", periodEnd = "";
+          for (let off = line.length - 24; off >= 0; off--) {
+            const a = line.substring(off, off+8);
+            const b = line.substring(off+8, off+16);
+            const c = line.substring(off+16, off+24);
+            if (/^\d{8}$/.test(a) && /^\d{8}$/.test(b) && /^\d{8}$/.test(c) && isDate(a) && isDate(b) && isDate(c)) {
+              periodStart = parseAfdDate(a);
+              periodEnd = parseAfdDate(b);
+              break;
+            }
+          }
+          header = {
+            nsr: parseInt(line.substring(0, 9)) || 0,
+            periodStart, periodEnd,
+            employerType: line[10] || "",
+            cnpj: line.substring(11, 25).trim(),
+            companyName: line.substring(25, 175).trim(),
+          };
+        } else {
+          header = {
+            nsr: parseInt(line.substring(1, 10)),
+            periodStart: parseAfdDate(line.substring(10, 18)),
+            periodEnd: parseAfdDate(line.substring(18, 26)),
+            employerType: line[26],
+            cnpj: line.substring(27, 41).trim(),
+            companyName: line.substring(41, 191).trim(),
+          };
+        }
       } else if (type === "3") {
-        const pis = line.substring(24, 36).trim().padStart(12, "0");
-        const timeStr = line.substring(18, 24);
+        let date: string, timeStr: string, pis: string;
+        if (isMR) {
+          // NSR(9)+tipo(1)+data(8)+horaHHMM(4)+PIS(12)+CRC(4)
+          date = parseAfdDate(line.substring(10, 18));
+          timeStr = line.substring(18, 22);
+          pis = line.substring(22, 34).trim().padStart(12, "0");
+        } else {
+          date = parseAfdDate(line.substring(10, 18));
+          timeStr = line.substring(18, 24);
+          pis = line.substring(24, 36).trim().padStart(12, "0");
+        }
+        const hh = timeStr.substring(0, 2);
+        const mm = timeStr.substring(2, 4);
+        const ss = timeStr.length >= 6 ? timeStr.substring(4, 6) : "00";
         events.push({
-          nsr: parseInt(line.substring(1, 10)),
-          date: parseAfdDate(line.substring(10, 18)),
-          time: `${timeStr.substring(0, 2)}:${timeStr.substring(2, 4)}:${timeStr.substring(4, 6)}`,
+          nsr: parseInt(line.substring(nsrFrom, nsrFrom + 9)),
+          date,
+          time: `${hh}:${mm}:${ss}`,
           pis,
         });
       } else if (type === "5") {
-        employees.push({
-          nsr: parseInt(line.substring(1, 10)),
-          date: parseAfdDate(line.substring(10, 18)),
-          pis: line.substring(18, 30).trim().padStart(12, "0"),
-          name: line.substring(30, 82).trim(),
-          role: line.substring(82, 86).trim(),
-        });
-      } else if (type === "9") {
-        trailer = {
-          lastNsr: parseInt(line.substring(1, 10)),
-          totalEvents: parseInt(line.substring(10, 19)),
-          totalEmployees: parseInt(line.substring(19, 28)),
-        };
+        if (isMR) {
+          // NSR(9)+tipo(1)+data(8)+horaHHMM(4)+opType(1)+PIS(12)+nome(restante)
+          employees.push({
+            nsr: parseInt(line.substring(0, 9)),
+            date: parseAfdDate(line.substring(10, 18)),
+            pis: line.substring(23, 35).trim().padStart(12, "0"),
+            name: line.substring(35, 87).trim(),
+            role: line.substring(87, 91).trim(),
+          });
+        } else {
+          employees.push({
+            nsr: parseInt(line.substring(1, 10)),
+            date: parseAfdDate(line.substring(10, 18)),
+            pis: line.substring(18, 30).trim().padStart(12, "0"),
+            name: line.substring(30, 82).trim(),
+            role: line.substring(82, 86).trim(),
+          });
+        }
+      } else if (type === "9" || type === "T") {
+        if (isMR) {
+          // Trailer iDFace tem layout proprietário — contamos a partir dos arrays.
+          trailer = {
+            lastNsr: events.length ? events[events.length - 1].nsr : 0,
+            totalEvents: events.length,
+            totalEmployees: employees.length,
+          };
+        } else {
+          trailer = {
+            lastNsr: parseInt(line.substring(1, 10)),
+            totalEvents: parseInt(line.substring(10, 19)),
+            totalEmployees: parseInt(line.substring(19, 28)),
+          };
+        }
       }
     } catch (e) {
       errors.push(`Linha ${i + 1}: ${(e as Error).message}`);
@@ -76,8 +145,8 @@ function parseAfd(content: string): ParsedAfd {
   }
 
   if (!header) errors.push("Header (tipo 1) não encontrado");
-  if (!trailer) errors.push("Trailer (tipo 9) não encontrado");
-  if (trailer && trailer.totalEvents !== events.length) {
+  if (!trailer) errors.push("Trailer (tipo 9/T) não encontrado");
+  if (trailer && !isMR && trailer.totalEvents !== events.length) {
     errors.push(`Trailer indica ${trailer.totalEvents} eventos, encontrados ${events.length}`);
   }
 
@@ -479,22 +548,31 @@ async function bridgeDispatchEphemeral(
   if (!gatewayUrl || !gatewaySecret) {
     return { ok: false, status: 500, error: "Bridge gateway não configurado (BRIDGE_GATEWAY_URL/SECRET)." };
   }
-  let res: Response;
-  try {
-    res = await fetch(`${gatewayUrl}/dispatch/${escolaId}`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${gatewaySecret}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ req_id: crypto.randomUUID(), wait_ms: waitMs, tipo, payload }),
-      signal: AbortSignal.timeout(waitMs + 5000),
-    });
-  } catch (e) {
-    return { ok: false, status: 502, error: `Gateway inalcançável: ${String(e)}` };
+  // DOs do Cloudflare hibernam quando ociosos: 1ª chamada após hibernação pega o WS server-side
+  // fechado e o bridge ainda em backoff de reconnect. Tentamos uma segunda vez após 3s.
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    let res: Response;
+    try {
+      res = await fetch(`${gatewayUrl}/dispatch/${escolaId}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${gatewaySecret}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ req_id: crypto.randomUUID(), wait_ms: waitMs, tipo, payload }),
+        signal: AbortSignal.timeout(waitMs + 5000),
+      });
+    } catch (e) {
+      return { ok: false, status: 502, error: `Gateway inalcançável: ${String(e)}` };
+    }
+    let data: any = null;
+    try { data = await res.json(); } catch { /* ignore */ }
+    if (res.status === 503 && tentativa === 1) {
+      await new Promise((r) => setTimeout(r, 3000));
+      continue;
+    }
+    if (res.status === 503) return { ok: false, status: 503, error: "Lumied Bridge offline. Verifique se o daemon está rodando na escola." };
+    if (data?.timeout) return { ok: false, status: 504, error: "Timeout aguardando resposta do Bridge." };
+    return { ok: !!data?.ok, status: data?.ok ? 200 : 502, error: data?.error, body: data?.payload ?? data };
   }
-  let data: any = null;
-  try { data = await res.json(); } catch { /* ignore */ }
-  if (res.status === 503) return { ok: false, status: 503, error: "Lumied Bridge offline. Verifique se o daemon está rodando na escola." };
-  if (data?.timeout) return { ok: false, status: 504, error: "Timeout aguardando resposta do Bridge." };
-  return { ok: !!data?.ok, status: data?.ok ? 200 : 502, error: data?.error, body: data?.payload ?? data };
+  return { ok: false, status: 503, error: "Lumied Bridge offline. Verifique se o daemon está rodando na escola." };
 }
 
 function ddmmaaaa(d: Date): string {

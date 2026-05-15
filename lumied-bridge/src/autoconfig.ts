@@ -1,9 +1,7 @@
 import { networkInterfaces } from "node:os";
-import { Agent, fetch as undiciFetch } from "undici";
+import { tolerantFetch } from "./http-tolerant.js";
 import { config, passwordFor } from "./config.js";
 import { log } from "./log.js";
-
-const insecureAgent = new Agent({ connect: { rejectUnauthorized: false } });
 
 interface RemoteDevice { id: string; nome: string; ip: string; porta: number; tipo: string }
 
@@ -59,13 +57,11 @@ async function configureOne(dev: RemoteDevice, callbackUrl: string): Promise<voi
   if (!password) throw new Error(`sem senha para ${dev.ip}`);
 
   // 1. login
-  const loginRes = await undiciFetch(`https://${dev.ip}:${dev.porta}/login.fcgi`, {
+  const loginRes = await tolerantFetch(`https://${dev.ip}:${dev.porta}/login.fcgi`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ login: config.idfaceLogin, password }),
-    dispatcher: insecureAgent,
-    signal: AbortSignal.timeout(8000),
-  });
+  }, 8000);
   if (!loginRes.ok) throw new Error(`login HTTP ${loginRes.status}`);
   const loginData: any = await loginRes.json();
   const session = loginData?.session;
@@ -74,7 +70,7 @@ async function configureOne(dev: RemoteDevice, callbackUrl: string): Promise<voi
   // 2. config_server.fcgi — endpoint do iDFace pra setar URL de notificação de eventos
   //    Estrutura da Control iD: { server_url, server_port, server_path }
   const url = new URL(callbackUrl);
-  const cfgRes = await undiciFetch(`https://${dev.ip}:${dev.porta}/config_server.fcgi?session=${session}`, {
+  const cfgRes = await tolerantFetch(`https://${dev.ip}:${dev.porta}/config_server.fcgi?session=${session}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -84,9 +80,7 @@ async function configureOne(dev: RemoteDevice, callbackUrl: string): Promise<voi
       server_path: url.pathname,
       server_protocol: url.protocol === "https:" ? "https" : "http",
     }),
-    dispatcher: insecureAgent,
-    signal: AbortSignal.timeout(8000),
-  });
+  }, 8000);
   if (!cfgRes.ok) throw new Error(`config_server HTTP ${cfgRes.status}`);
 }
 

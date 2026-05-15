@@ -1,4 +1,4 @@
-import { Agent, fetch as undiciFetch } from "undici";
+import { tolerantFetch } from "./http-tolerant.js";
 import { readFile } from "node:fs/promises";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
@@ -10,9 +10,6 @@ import { execAfdPull, type AfdPullPayload } from "./afd-puller.js";
 
 const pexec = promisify(exec);
 
-// iDFace usa cert self-signed → ignora validação TLS
-const insecureAgent = new Agent({ connect: { rejectUnauthorized: false } });
-
 interface DeviceAddr { id: string; ip: string; porta: number }
 
 const sessionCache = new Map<string, { session: string; expires: number }>();
@@ -22,18 +19,8 @@ function url(d: DeviceAddr, path: string): string {
   return `https://${d.ip}:${d.porta}${path}`;
 }
 
-async function call(d: DeviceAddr, path: string, init: RequestInit & { body?: any } = {}, timeoutMs = 8000): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await undiciFetch(url(d, path), {
-      ...(init as any),
-      dispatcher: insecureAgent,
-      signal: ctrl.signal,
-    }) as unknown as Response;
-  } finally {
-    clearTimeout(timer);
-  }
+async function call(d: DeviceAddr, path: string, init: any = {}, timeoutMs = 8000) {
+  return tolerantFetch(url(d, path), init, timeoutMs);
 }
 
 async function login(d: DeviceAddr): Promise<string> {
