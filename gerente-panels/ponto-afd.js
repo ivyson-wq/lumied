@@ -17,6 +17,25 @@
     return Array.isArray(j) ? { data: j } : j;
   }
 
+  // Helper de UX: enquanto fn() roda, desabilita o botão e troca o texto por
+  // spinner + label. Restaura no final (inclusive em erro). Evita duplo-clique
+  // e dá feedback visível em ações que podem levar segundos. Aceita botão real
+  // (Element) ou um seletor/falsy (no-op só roda fn). Não dá throw — propaga o
+  // resultado/erro da fn pra preservar o fluxo do caller.
+  async function _withButtonLoading(btn, label, fn) {
+    if (!btn || !btn.tagName) return await fn();
+    const oldHtml = btn.innerHTML;
+    const wasDisabled = btn.disabled;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span> ' + pontoEsc(label || 'Carregando…');
+    try {
+      return await fn();
+    } finally {
+      btn.disabled = wasDisabled;
+      btn.innerHTML = oldHtml;
+    }
+  }
+
   function pontoEsc(s) {
     if (s == null) return '';
     return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -60,25 +79,28 @@
   }
 
   // ── Dashboard ──────────────────────────────────
-  async function loadPontoDash() {
+  async function loadPontoDash(btn) {
     pontoFillMesAno('pontoDashMes', 'pontoDashAno');
     const mes = parseInt(document.getElementById('pontoDashMes').value);
     const ano = parseInt(document.getElementById('pontoDashAno').value);
     const ids = ['pontoStEmps','pontoStImps','pontoStPres','pontoStAus','pontoStImp','pontoStExt','pontoStDeb'];
     ids.forEach(i => { const el = document.getElementById(i); if (el) el.textContent = '…'; });
-    const d = await pontoApi({ action: 'ponto_dashboard', mes, ano });
-    if (d.error) {
-      ids.forEach(i => { const el = document.getElementById(i); if (el) el.textContent = '—'; });
-      return showToast(d.error, 'error');
-    }
-    const r = d.data || d;
-    document.getElementById('pontoStEmps').textContent = r.total_funcionarios ?? 0;
-    document.getElementById('pontoStImps').textContent = r.total_importacoes ?? 0;
-    document.getElementById('pontoStPres').textContent = r.presentes ?? 0;
-    document.getElementById('pontoStAus').textContent = r.ausentes ?? 0;
-    document.getElementById('pontoStImp').textContent = r.impares ?? 0;
-    document.getElementById('pontoStExt').textContent = r.extras ?? 0;
-    document.getElementById('pontoStDeb').textContent = r.debitos ?? 0;
+    await _withButtonLoading(btn, 'Atualizando…', async () => {
+      const d = await pontoApi({ action: 'ponto_dashboard', mes, ano });
+      if (d.error) {
+        ids.forEach(i => { const el = document.getElementById(i); if (el) el.textContent = '—'; });
+        showToast(d.error, 'error');
+        return;
+      }
+      const r = d.data || d;
+      document.getElementById('pontoStEmps').textContent = r.total_funcionarios ?? 0;
+      document.getElementById('pontoStImps').textContent = r.total_importacoes ?? 0;
+      document.getElementById('pontoStPres').textContent = r.presentes ?? 0;
+      document.getElementById('pontoStAus').textContent = r.ausentes ?? 0;
+      document.getElementById('pontoStImp').textContent = r.impares ?? 0;
+      document.getElementById('pontoStExt').textContent = r.extras ?? 0;
+      document.getElementById('pontoStDeb').textContent = r.debitos ?? 0;
+    });
   }
 
   // ── Funcionários ──────────────────────────────────
@@ -114,13 +136,13 @@
         <td>${pontoEsc(e.departamento || '—')}</td>
         <td style="font-size:11px;color:var(--muted);">${pontoEsc(e.work_schedule || '—')}</td>
         <td>${e.daily_hours ?? '—'}</td>
-        <td><button onclick="pontoEmpEditar('${e.id}')" style="padding:4px 10px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;">Editar</button></td>
+        <td><button onclick="pontoEmpEditar('${e.id}', this)" style="padding:4px 10px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;">Editar</button></td>
       </tr>`).join('');
     }
     pontoFillEmpSelects();
   }
 
-  async function pontoEmpSalvar() {
+  async function pontoEmpSalvar(btn) {
     const nome = document.getElementById('pontoEmpNome').value.trim();
     const pisRaw = document.getElementById('pontoEmpPis').value.replace(/\D/g, '');
     const cargo = document.getElementById('pontoEmpCargo').value.trim();
@@ -129,14 +151,18 @@
     const daily_hours = parseFloat(document.getElementById('pontoEmpHoras').value) || 8;
     if (!nome || !pisRaw) return showToast('Nome e PIS são obrigatórios.', 'error');
     if (pisRaw.length < 11 || pisRaw.length > 12) return showToast('PIS deve ter 11 ou 12 dígitos.', 'error');
-    const d = await pontoApi({ action:'ponto_employee_create', nome, pis: pisRaw, cargo, departamento, work_schedule, daily_hours });
-    if (d.error) return showToast(d.error, 'error');
-    showToast('Funcionário cadastrado.', 'success');
+    const ok = await _withButtonLoading(btn, 'Salvando…', async () => {
+      const d = await pontoApi({ action:'ponto_employee_create', nome, pis: pisRaw, cargo, departamento, work_schedule, daily_hours });
+      if (d.error) { showToast(d.error, 'error'); return false; }
+      showToast('Funcionário cadastrado.', 'success');
+      return true;
+    });
+    if (!ok) return;
     pontoToggleEmpForm();
     loadPontoEmployees();
   }
 
-  async function pontoEmpEditar(id) {
+  async function pontoEmpEditar(id, btn) {
     const emp = (pontoState.emps || []).find(e => e.id === id);
     if (!emp) return;
     const nome = prompt('Nome', emp.nome); if (nome === null) return;
@@ -144,9 +170,11 @@
     const work_schedule = prompt('Jornada (ex: 08:00-12:00,13:00-17:00)', emp.work_schedule || ''); if (work_schedule === null) return;
     const horasStr = prompt('Horas/dia', String(emp.daily_hours || 8)); if (horasStr === null) return;
     const daily_hours = parseFloat(horasStr) || 8;
-    const d = await pontoApi({ action:'ponto_employee_update', id, nome, cargo, work_schedule, daily_hours });
-    if (d.error) return showToast(d.error, 'error');
-    showToast('Funcionário atualizado.', 'success');
+    await _withButtonLoading(btn, 'Salvando…', async () => {
+      const d = await pontoApi({ action:'ponto_employee_update', id, nome, cargo, work_schedule, daily_hours });
+      if (d.error) { showToast(d.error, 'error'); return; }
+      showToast('Funcionário atualizado.', 'success');
+    });
     loadPontoEmployees();
   }
 
@@ -163,6 +191,12 @@
     const fi = document.getElementById('pontoAfdFile');
     if (!fi.files.length) return;
     const file = fi.files[0];
+    // Pré-feedback enquanto FileReader lê — arquivos AFD grandes (centenas de KB) levam um piscar.
+    const info = document.getElementById('pontoAfdInfo');
+    if (info) {
+      info.style.display = 'block';
+      info.innerHTML = '<span class="spinner-sm"></span> Analisando <strong>' + pontoEsc(file.name) + '</strong> (' + (file.size/1024).toFixed(1) + ' KB)…';
+    }
     const reader = new FileReader();
     reader.onload = e => {
       const txt = e.target.result;
@@ -281,14 +315,16 @@
     pontoFillEmpSelects();
   }
 
-  async function loadPontoMirror() {
+  async function loadPontoMirror(btn) {
     const employee_id = document.getElementById('pontoMirrorEmp').value;
     const mes = parseInt(document.getElementById('pontoMirrorMes').value);
     const ano = parseInt(document.getElementById('pontoMirrorAno').value);
     const wrap = document.getElementById('pontoMirrorContent');
     if (!employee_id) { showToast('Selecione um funcionário.', 'error'); return; }
     wrap.innerHTML = '<div class="empty-state"><span class="spinner-sm"></span> Gerando espelho…</div>';
-    const d = await pontoApi({ action:'ponto_mirror', employee_id, mes, ano });
+    const d = await _withButtonLoading(btn, 'Gerando…', () =>
+      pontoApi({ action:'ponto_mirror', employee_id, mes, ano })
+    );
     if (d.error) {
       wrap.innerHTML = `<div class="empty-state" style="color:#C8102E;">${pontoEsc(d.error)}</div>`;
       return;
@@ -428,8 +464,8 @@
       const nome = j.ponto_employees?.nome || '—';
       const badge = j.status === 'aprovado' ? 'badge-green' : j.status === 'rejeitado' ? 'badge-red' : 'badge-orange';
       const acoes = j.status === 'pendente'
-        ? `<button onclick="pontoJustifAprovar('${j.id}','aprovado')" style="padding:4px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">✓ Aprovar</button>
-           <button onclick="pontoJustifAprovar('${j.id}','rejeitado')" style="padding:4px 10px;background:#fff;color:#C8102E;border:1.5px solid #C8102E;border-radius:6px;font-size:11px;cursor:pointer;">✕ Rejeitar</button>`
+        ? `<button onclick="pontoJustifAprovar('${j.id}','aprovado', this)" style="padding:4px 10px;background:#2d7a3a;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">✓ Aprovar</button>
+           <button onclick="pontoJustifAprovar('${j.id}','rejeitado', this)" style="padding:4px 10px;background:#fff;color:#C8102E;border:1.5px solid #C8102E;border-radius:6px;font-size:11px;cursor:pointer;">✕ Rejeitar</button>`
         : (j.aprovado_por ? `<span style="font-size:11px;color:var(--muted);">por ${pontoEsc(j.aprovado_por)}</span>` : '');
       return `<tr>
         <td style="white-space:nowrap;">${dt}</td>
@@ -442,7 +478,7 @@
     }).join('');
   }
 
-  async function pontoJustifSalvar() {
+  async function pontoJustifSalvar(btn) {
     const employee_id = document.getElementById('pontoJustifEmp').value;
     const data_justificativa = document.getElementById('pontoJustifData').value;
     const motivo = document.getElementById('pontoJustifMotivo').value;
@@ -450,18 +486,24 @@
     if (!employee_id || !data_justificativa || !motivo) {
       return showToast('Funcionário, data e motivo são obrigatórios.', 'error');
     }
-    const d = await pontoApi({ action:'ponto_justificativa_criar', employee_id, data_justificativa, motivo, descricao });
-    if (d.error) return showToast(d.error, 'error');
-    showToast('Justificativa criada.', 'success');
+    const ok = await _withButtonLoading(btn, 'Salvando…', async () => {
+      const d = await pontoApi({ action:'ponto_justificativa_criar', employee_id, data_justificativa, motivo, descricao });
+      if (d.error) { showToast(d.error, 'error'); return false; }
+      showToast('Justificativa criada.', 'success');
+      return true;
+    });
+    if (!ok) return;
     pontoToggleJustifForm();
     loadPontoJustifTable();
   }
 
-  async function pontoJustifAprovar(id, status) {
+  async function pontoJustifAprovar(id, status, btn) {
     if (status === 'rejeitado' && !await _lumiedConfirm('Rejeitar esta justificativa?')) return;
-    const d = await pontoApi({ action:'ponto_justificativa_aprovar', id, status });
-    if (d.error) return showToast(d.error, 'error');
-    showToast(status === 'aprovado' ? 'Justificativa aprovada.' : 'Justificativa rejeitada.', 'success');
+    await _withButtonLoading(btn, status === 'aprovado' ? 'Aprovando…' : 'Rejeitando…', async () => {
+      const d = await pontoApi({ action:'ponto_justificativa_aprovar', id, status });
+      if (d.error) { showToast(d.error, 'error'); return; }
+      showToast(status === 'aprovado' ? 'Justificativa aprovada.' : 'Justificativa rejeitada.', 'success');
+    });
     loadPontoJustifTable();
   }
 
@@ -598,9 +640,9 @@
         <td><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:${st[0]};color:${st[1]};"${erroTooltip}>${st[2]}</span></td>
         <td>${r.ativo ? '<span style="color:#2d7a3a;font-weight:600;">●</span>' : '<span style="color:#888;">○</span>'}</td>
         <td>
-          <button onclick="pontoRepPullNow('${r.id}')" style="padding:4px 10px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">▶ Buscar agora</button>
-          <button onclick="pontoRepEditar('${r.id}')" style="padding:4px 10px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">Editar</button>
-          <button onclick="pontoRepDeletar('${r.id}','${pontoEsc(r.nome)}')" style="padding:4px 10px;background:#fff;color:#C8102E;border:1px solid #C8102E;border-radius:6px;font-size:11px;cursor:pointer;">Excluir</button>
+          <button onclick="pontoRepPullNow('${r.id}', this)" style="padding:4px 10px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">▶ Buscar agora</button>
+          <button onclick="pontoRepEditar('${r.id}', this)" style="padding:4px 10px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;margin-right:4px;">Editar</button>
+          <button onclick="pontoRepDeletar('${r.id}','${pontoEsc(r.nome)}', this)" style="padding:4px 10px;background:#fff;color:#C8102E;border:1px solid #C8102E;border-radius:6px;font-size:11px;cursor:pointer;">Excluir</button>
         </td>
       </tr>`;
     }).join('');
@@ -631,16 +673,20 @@
     return null;
   }
 
-  async function pontoRepSalvar() {
+  async function pontoRepSalvar(btn) {
     const p = _pontoRepFormPayload();
     const err = _pontoRepValidate(p);
     if (err) return showToast(err, 'error');
     const editing = document.getElementById('pontoRepForm').dataset.editingId;
     const action = editing ? 'ponto_rep_devices_update' : 'ponto_rep_devices_create';
     const body = editing ? { action, id: editing, ...p } : { action, ...p };
-    const d = await pontoApi(body);
-    if (d.error) return showToast(d.error, 'error');
-    showToast(editing ? 'REP atualizado.' : 'REP cadastrado. Próxima coleta automática às 03:30 BRT.', 'success');
+    const ok = await _withButtonLoading(btn, 'Salvando…', async () => {
+      const d = await pontoApi(body);
+      if (d.error) { showToast(d.error, 'error'); return false; }
+      showToast(editing ? 'REP atualizado.' : 'REP cadastrado. Próxima coleta automática às 03:30 BRT.', 'success');
+      return true;
+    });
+    if (!ok) return;
     delete document.getElementById('pontoRepForm').dataset.editingId;
     pontoToggleRepForm();
     loadPontoReps();
@@ -673,8 +719,10 @@
     }
   }
 
-  async function pontoRepEditar(id) {
-    const d = await pontoApi({ action: 'ponto_rep_devices_list' });
+  async function pontoRepEditar(id, btn) {
+    const d = await _withButtonLoading(btn, 'Carregando…', () =>
+      pontoApi({ action: 'ponto_rep_devices_list' })
+    );
     const rep = (d.data || []).find(r => r.id === id);
     if (!rep) return showToast('REP não encontrado.', 'error');
     pontoToggleRepForm(); // abre o form
@@ -693,24 +741,30 @@
     document.getElementById('pontoRepSenha').placeholder = 'deixe vazio para manter senha atual';
   }
 
-  async function pontoRepDeletar(id, nome) {
+  async function pontoRepDeletar(id, nome, btn) {
     if (!await _lumiedConfirm(`Excluir REP "${nome}"? As importações já feitas continuam.`)) return;
-    const d = await pontoApi({ action: 'ponto_rep_devices_delete', id });
-    if (d.error) return showToast(d.error, 'error');
-    showToast('REP excluído.', 'success');
+    await _withButtonLoading(btn, 'Excluindo…', async () => {
+      const d = await pontoApi({ action: 'ponto_rep_devices_delete', id });
+      if (d.error) { showToast(d.error, 'error'); return; }
+      showToast('REP excluído.', 'success');
+    });
     loadPontoReps();
   }
 
-  async function pontoRepPullNow(id) {
-    showToast('Pedindo coleta agora ao Bridge…', 'info');
-    const d = await pontoApi({ action: 'ponto_rep_devices_pull_now', id });
-    if (d.error) return showToast(d.error, 'error');
-    const r = d.data || d;
-    if (r.status === 'ok') {
-      showToast(`✓ ${r.eventos || 0} batidas coletadas.`, 'success');
-    } else {
-      showToast(`✗ ${r.status}: ${r.erro || ''}`, 'error');
-    }
+  async function pontoRepPullNow(id, btn) {
+    // Coleta pode levar até ~25s (login + download AFD + parse). Dá feedback
+    // persistente no botão pra evitar duplo-clique e ansiedade do usuário.
+    await _withButtonLoading(btn, 'Coletando…', async () => {
+      showToast('Pedindo coleta ao Bridge — pode levar até 30s…', 'info');
+      const d = await pontoApi({ action: 'ponto_rep_devices_pull_now', id });
+      if (d.error) { showToast(d.error, 'error'); return; }
+      const r = d.data || d;
+      if (r.status === 'ok') {
+        showToast(`✓ ${r.eventos || 0} batidas coletadas.`, 'success');
+      } else {
+        showToast(`✗ ${r.status}: ${r.erro || ''}`, 'error');
+      }
+    });
     loadPontoReps();
     loadPontoImports();
   }
