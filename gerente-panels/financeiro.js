@@ -134,7 +134,16 @@
     const d = await api({ action: 'fin_lancamentos_list', mes, tipo });
     const items = Array.isArray(d) ? d : [];
     const el = document.getElementById('finLancList');
-    if (!items.length) { el.innerHTML = '<div class="empty-state">Nenhum lancamento neste mes.</div>'; return; }
+    if (!items.length) {
+      el.innerHTML = (window.lumiedEmpty ? window.lumiedEmpty({
+        icon: '💰',
+        title: 'Nenhum lançamento neste mês',
+        text: 'Registre receitas e despesas pra acompanhar o fluxo de caixa e gerar a DRE. Você pode importar do extrato bancário ou cadastrar uma a uma.',
+        cta: { label: '+ Novo lançamento', onclick: "document.getElementById('btnNovoLanc')?.click()" },
+        secondary: { label: '📋 Plano de contas', onclick: "showLancamentos('plano-contas')" },
+      }) : '<div class="empty-state">Nenhum lancamento neste mes.</div>');
+      return;
+    }
     // Carregar contas para o select do form
     const contas = await api({ action: 'fin_plano_contas_list' });
     const sel = document.getElementById('flConta');
@@ -551,7 +560,16 @@
     const busca = _finMensGetBusca();
     let boletos = [..._finMensBoletosData];
     if (busca) boletos = boletos.filter(b => (b.crianca_nome||'').toLowerCase().includes(busca) || (b.familia_nome||'').toLowerCase().includes(busca) || (b.familia_email||'').toLowerCase().includes(busca) || (b.cpf_pagador||'').toLowerCase().includes(busca));
-    if (!boletos.length) { el.innerHTML = '<div class="empty-state">Nenhum boleto emitido para este mês.</div>'; return; }
+    if (!boletos.length) {
+      el.innerHTML = (window.lumiedEmpty ? window.lumiedEmpty({
+        icon: '🧾',
+        title: 'Nenhum boleto emitido neste mês',
+        text: 'Cobranças são geradas a partir das mensalidades das famílias. Configure as mensalidades primeiro, e depois emita os boletos em massa pelo mês.',
+        cta: { label: '⚡ Emitir boletos em massa', onclick: "abrirEmissaoMassa && abrirEmissaoMassa()" },
+        secondary: { label: '👨‍👩‍👧 Cadastrar mensalidades', onclick: "showFinanceiro('mensalidades')" },
+      }) : '<div class="empty-state">Nenhum boleto emitido para este mês.</div>');
+      return;
+    }
     const s = _finMensBoletosSort;
     boletos.sort((a,b) => {
       let va, vb;

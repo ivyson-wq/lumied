@@ -40,7 +40,15 @@
     else if (manutFilter !== 'todos') list = list.filter(m => m.status === manutFilter);
     document.getElementById('manutCount').textContent = list.length;
     const tb = document.getElementById('manutBody');
-    if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum chamado encontrado.</td></tr>'; return; }
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="8" style="padding:0;">' + (window.lumiedEmpty ? window.lumiedEmpty({
+        icon: '🔧',
+        title: 'Nenhum chamado encontrado',
+        text: 'Quando professores, pais ou funcionários reportarem problemas (lâmpada queimada, ar condicionado, vazamento), os chamados aparecem aqui pra você acompanhar SLA e custo.',
+        cta: { label: '+ Abrir chamado de teste', onclick: "abrirNovoChamadoManut && abrirNovoChamadoManut()" },
+      }) : '<div class="empty-state">Nenhum chamado encontrado.</div>') + '</td></tr>';
+      return;
+    }
     tb.innerHTML = list.map(m => {
       const user = m.usuarios || {};
       const data = new Date(m.criado_em).toLocaleDateString('pt-BR');

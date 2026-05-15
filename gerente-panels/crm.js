@@ -455,7 +455,13 @@
       <div style="flex:1;"><div style="font-weight:600;font-size:13px;">${esc(l.nome_responsavel)}</div>
         <div style="font-size:11px;color:var(--muted);">${esc(l.nome_crianca||'')} · ${esc(l.telefone||'')} · ${esc(l.crm_estagios?.nome||'?')} · ${esc(l.origem||'')}</div></div>
       <span style="color:var(--muted);font-size:14px;">→</span>
-    </div>`).join('') : '<div class="empty-state">Nenhum lead.</div>';
+    </div>`).join('') : (window.lumiedEmpty ? window.lumiedEmpty({
+      icon: '🎯',
+      title: 'Nenhum lead ainda',
+      text: 'CRM da Lumied centraliza leads de matrícula vindos do site, Instagram, WhatsApp e indicações. Você acompanha o funil até a matrícula fechar.',
+      cta: { label: '+ Cadastrar lead', onclick: "abrirNovoLeadV2 && abrirNovoLeadV2()" },
+      secondary: { label: '📥 Importar de CSV', onclick: "abrirImportLeadsV2 && abrirImportLeadsV2()" },
+    }) : '<div class="empty-state">Nenhum lead.</div>');
   }
 
   async function loadCrmTemplates() {

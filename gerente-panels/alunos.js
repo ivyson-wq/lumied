@@ -38,7 +38,13 @@
     const body = document.getElementById('alunosBody');
     if (!body) return;
     if (filtered.length === 0) {
-      body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Nenhum aluno encontrado.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" style="padding:0;">' + (window.lumiedEmpty ? window.lumiedEmpty({
+        icon: '🎓',
+        title: 'Nenhum aluno cadastrado',
+        text: 'Cadastre os alunos manualmente, importe uma planilha CSV ou migre direto do seu ERP anterior (Escolaweb, Sponte, WPensar, TOTVS).',
+        cta: { label: '+ Cadastrar aluno', onclick: "abrirCadastroAluno && abrirCadastroAluno()" },
+        secondary: { label: '📥 Importar do ERP', href: '/admin-central.html#migracao' },
+      }) : '<div style="padding:40px;text-align:center;color:var(--muted);">Nenhum aluno encontrado.</div>') + '</td></tr>';
       return;
     }
     body.innerHTML = filtered.map(a => {

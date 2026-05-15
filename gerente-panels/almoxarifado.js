@@ -284,7 +284,17 @@
     const reqs = d.data || [];
     const badge = document.getElementById('almPendBadge');
     badge.textContent = reqs.length; badge.style.display = reqs.length ? 'inline' : 'none';
-    if (!reqs.length) { document.getElementById('almPendEmpty').style.display = 'block'; return; }
+    if (!reqs.length) {
+      const empty = document.getElementById('almPendEmpty');
+      empty.style.display = 'block';
+      empty.innerHTML = (window.lumiedEmpty ? window.lumiedEmpty({
+        icon: '✅',
+        title: 'Tudo em dia por aqui!',
+        text: 'Nenhuma requisição de material aguardando aprovação. Quando uma professora pedir algo do almoxarifado, vai aparecer aqui pra você aprovar ou rejeitar.',
+        secondary: { label: 'Ver catálogo de itens', onclick: "almShowTab && almShowTab('catalogo')" },
+      }) : '✅ Nenhuma requisição pendente.');
+      return;
+    }
     document.getElementById('almPendList').innerHTML = reqs.map(r => almRenderReqRow(r, true)).join('');
   }
 

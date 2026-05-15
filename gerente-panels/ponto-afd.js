@@ -105,7 +105,13 @@
     pontoState.emps = list;
     document.getElementById('pontoEmpsCount').textContent = list.length;
     if (!list.length) {
-      tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum funcionário cadastrado. Clique em <strong>+ Novo Funcionário</strong> e use exatamente o PIS que aparece no AFD do REP.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="7" style="padding:0;">' + (window.lumiedEmpty ? window.lumiedEmpty({
+        icon: '👷',
+        title: 'Nenhum funcionário cadastrado',
+        text: 'O Ponto AFD precisa que cada funcionário tenha PIS cadastrado igual ao do REP físico. Sem isso, as batidas não conseguem ser vinculadas automaticamente.',
+        cta: { label: '+ Novo Funcionário', onclick: "abrirNovoFuncPonto && abrirNovoFuncPonto()" },
+        secondary: { label: '📥 Importar lista AFD', onclick: "irParaImportAFD && irParaImportAFD()" },
+      }) : '<div class="empty-state">Nenhum funcionário cadastrado. Clique em <strong>+ Novo Funcionário</strong>.</div>') + '</td></tr>';
     } else {
       tb.innerHTML = list.map(e => `<tr>
         <td><strong>${pontoEsc(e.nome)}</strong></td>
