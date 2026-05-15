@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Lumied CRM</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:#fafafa;color:#1f2937;font-size:13px}
+.wrap{max-width:900px;margin:0 auto;padding:20px}
+header{background:linear-gradient(135deg,#2d1b4e 0%,#1a0f30 100%);color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px rgba(45,27,78,.3)}
+header h1{font-size:16px;font-weight:700;letter-spacing:-0.3px}
+header .escola{margin-left:auto;font-size:12px;opacity:.8}
+nav{background:#fff;border-bottom:1px solid #e5e7eb;display:flex;overflow-x:auto}
+nav button{background:transparent;border:none;padding:14px 18px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap}
+nav button.active{color:#2d1b4e;border-bottom-color:#2d1b4e}
+nav button:hover{color:#2d1b4e;background:#f8f5ff}
+.section{display:none;padding:24px}
+.section.active{display:block}
+.section h2{font-size:18px;font-weight:700;margin-bottom:6px;color:#1f2937}
+.section .desc{color:#6b7280;font-size:12px;margin-bottom:18px}
+.btn{padding:9px 16px;background:#2d1b4e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:#3d2b5e;transform:translateY(-1px);box-shadow:0 2px 8px rgba(45,27,78,.25)}
+.btn-sec{background:#fff;color:#2d1b4e;border:1px solid #d4c8f0}
+.btn-sec:hover{background:#f8f5ff}
+.btn-danger{background:#dc2626}
+.btn-danger:hover{background:#b91c1c}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin-bottom:12px;transition:all .15s}
+.card:hover{border-color:#d4c8f0;box-shadow:0 2px 8px rgba(45,27,78,.08)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:.4px;margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;transition:all .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#2d1b4e;box-shadow:0 0 0 3px rgba(45,27,78,.08)}
+.field textarea{min-height:80px;resize:vertical}
+.row{display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap}
+.row>*{flex:1;min-width:140px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+th{background:#f9fafb;text-align:left;padding:10px 12px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:.4px;border-bottom:1px solid #e5e7eb}
+td{padding:11px 12px;font-size:13px;border-bottom:1px solid #f3f4f6}
+tr:last-child td{border-bottom:none}
+.chip{display:inline-block;padding:3px 10px;font-size:11px;font-weight:600;border-radius:14px;background:#f3f4f6}
+.empty{padding:24px;text-align:center;color:#9ca3af;font-size:13px}
+.toast{position:fixed;top:20px;right:20px;background:#065f46;color:#fff;padding:14px 22px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:9999;animation:slideIn .25s ease;font-size:13px;font-weight:600}
+.toast.error{background:#991b1b}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.progress-bar{background:#e5e7eb;border-radius:8px;height:8px;overflow:hidden;margin-top:6px}
+.progress-fill{background:linear-gradient(90deg,#2d1b4e,#7c3aed);height:100%;transition:width .25s}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px}
+.kpi .label{font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;letter-spacing:.4px;margin-bottom:6px}
+.kpi .value{font-size:22px;font-weight:800;color:#2d1b4e}
+.cadencia-passos{margin-top:8px;padding-left:16px}
+.cadencia-passo{background:#f8f5ff;border-left:3px solid #7c3aed;padding:8px 12px;margin-bottom:6px;border-radius:6px;font-size:12px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9998;animation:fadeIn .2s ease}
+.modal{background:#fff;border-radius:14px;padding:24px;width:520px;max-width:92vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+.modal h3{font-size:17px;margin-bottom:12px;color:#2d1b4e}
+.modal-actions{display:flex;gap:8px;margin-top:18px}
+.modal-actions .btn{flex:1}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;color:#fff;margin-right:6px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+  <h1 id="brand">Lumied CRM</h1>
+  <div class="escola" id="escolaNome">—</div>
+</header>
+<nav>
+  <button data-tab="broadcast" class="active">Broadcast</button>
+  <button data-tab="import">Importar CSV</button>
+  <button data-tab="templates">Templates</button>
+  <button data-tab="tags">Tags</button>
+  <button data-tab="cadencias">Cadências</button>
+  <button data-tab="analytics">Analytics</button>
+</nav>
+<div class="wrap">
+  <!-- BROADCAST -->
+  <section class="section active" id="tab-broadcast">
+    <h2>Disparo segmentado</h2>
+    <p class="desc">Envia um template pra um grupo de leads. Você dispara manualmente no WhatsApp Web a partir da lista pendente — respeita travas anti-bloqueio.</p>
+    <div class="card">
+      <div class="row">
+        <div class="field"><label>Nome do disparo</label><input type="text" id="bcNome" placeholder="Ex: Follow-up Visita - Maio"></div>
+        <div class="field"><label>Template</label><select id="bcTemplate"></select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Estágio</label><select id="bcEstagio"><option value="">— Qualquer —</option></select></div>
+        <div class="field"><label>Tag</label><select id="bcTag"><option value="">— Qualquer —</option></select></div>
+        <div class="field"><label>Sentiment</label><select id="bcSentiment"><option value="">— Qualquer —</option><option value="quente">🔥 Quente</option><option value="morno">☀️ Morno</option><option value="frio">❄️ Frio</option><option value="em_risco">⚠️ Em risco</option></select></div>
+        <div class="field"><label>Parado há (dias)</label><input type="number" id="bcParado" placeholder="Ex: 7" min="1"></div>
+      </div>
+      <div class="row" style="align-items:center">
+        <button class="btn btn-sec" id="bcPreview">Pré-visualizar quantos atinge</button>
+        <button class="btn" id="bcCreate">Criar e materializar</button>
+        <div id="bcPreviewResult" style="font-size:12px;color:#6b7280"></div>
+      </div>
+    </div>
+    <h3 style="font-size:14px;margin:18px 0 10px;color:#374151">Broadcasts recentes</h3>
+    <div id="bcList"></div>
+  </section>
+
+  <!-- IMPORT CSV -->
+  <section class="section" id="tab-import">
+    <h2>Importar leads de CSV</h2>
+    <p class="desc">Cole linhas no formato <code>nome_responsavel, telefone, nome_crianca, email, data_nascimento (AAAA-MM-DD), serie_interesse</code>. Cabeçalho opcional. Telefones duplicados são ignorados.</p>
+    <div class="card">
+      <div class="field"><label>Nome do arquivo (opcional)</label><input type="text" id="impNome" placeholder="leads-feira-maio.csv"></div>
+      <div class="field"><label>CSV ou colar manualmente</label>
+        <input type="file" id="impFile" accept=".csv,.txt">
+        <textarea id="impText" placeholder="João da Silva, 54999021234, Pedrinho, joao@email.com, 2020-05-12, Infantil 2" style="margin-top:8px;min-height:120px"></textarea>
+      </div>
+      <button class="btn" id="impSubmit">Importar leads</button>
+      <div id="impResult" style="margin-top:14px"></div>
+    </div>
+    <h3 style="font-size:14px;margin:18px 0 10px;color:#374151">Imports recentes</h3>
+    <div id="impList"></div>
+  </section>
+
+  <!-- TEMPLATES -->
+  <section class="section" id="tab-templates">
+    <h2>Templates de mensagem</h2>
+    <p class="desc">Mensagens padronizadas que aparecem na sidebar do WhatsApp Web. Templates com mídia anexada lembram o operador a anexar o arquivo manualmente.</p>
+    <button class="btn" id="tplNew" style="margin-bottom:12px">+ Novo template</button>
+    <div id="tplList"></div>
+  </section>
+
+  <!-- TAGS -->
+  <section class="section" id="tab-tags">
+    <h2>Tags de leads</h2>
+    <p class="desc">Categorize leads pra filtrar em broadcasts e pipelines. Tags são editáveis e ficam por escola.</p>
+    <button class="btn" id="tagNew" style="margin-bottom:12px">+ Nova tag</button>
+    <div id="tagList"></div>
+  </section>
+
+  <!-- CADÊNCIAS -->
+  <section class="section" id="tab-cadencias">
+    <h2>Cadências de follow-up</h2>
+    <p class="desc">Sequências automáticas: depois que um lead é atribuído à cadência, o sistema cria lembretes no painel a cada X dias. A cadência pausa automaticamente se o lead responder.</p>
+    <button class="btn" id="cadNew" style="margin-bottom:12px">+ Nova cadência</button>
+    <div id="cadList"></div>
+  </section>
+
+  <!-- ANALYTICS -->
+  <section class="section" id="tab-analytics">
+    <h2>Analytics de templates</h2>
+    <p class="desc">Taxa de uso, resposta e conversão por template. Use pra cortar templates que não engajam.</p>
+    <div class="kpi-grid" id="anKpis"></div>
+    <div id="anList"></div>
+  </section>
+</div>
+<script src="config.js"></script>
+<script src="crm.js"></script>
+</body>
+</html>

@@ -3,6 +3,38 @@
 // WhatsApp now uses @lid (Linked Device ID) instead of @c.us for chats.
 // We need to resolve the LID back to a real phone number.
 
+// ── Number Check: verifica se um telefone existe no WhatsApp ──
+// Triggered via window.dispatchEvent('lumied-check-number', { detail: { phone } }).
+// Responde via 'lumied-check-number-result' com { phone, exists }.
+window.addEventListener('lumied-check-number', async function(ev) {
+  var phone = ev.detail && ev.detail.phone;
+  var exists = null;
+  try {
+    if (!phone) throw new Error('phone vazio');
+    var clean = String(phone).replace(/\D/g, '');
+    if (/^\d{10,11}$/.test(clean)) clean = '55' + clean;
+    // Tenta via Store.Wap.queryExist (API legada do WhatsApp Web)
+    var queryFn = window.Store && window.Store.Wap && window.Store.Wap.queryExist;
+    if (!queryFn && window.require) {
+      try { var w = window.require('WAWap'); if (w && w.queryExist) queryFn = w.queryExist; } catch(e) {}
+      try { var w2 = window.require('WAWebQueryExistsJob'); if (w2 && w2.queryWidExists) queryFn = w2.queryWidExists; } catch(e) {}
+    }
+    if (queryFn) {
+      var widLike = clean + '@c.us';
+      var resp = await queryFn(widLike);
+      // Resposta varia: { status: 200 } ou objeto com jid
+      if (resp && (resp.status === 200 || resp.jid)) exists = true;
+      else if (resp && resp.status >= 400) exists = false;
+    } else {
+      // Fallback: tenta abrir api.whatsapp.com/send via fetch (CORS bloqueia, mas é só sinal)
+      exists = null; // indeterminado
+    }
+  } catch (e) { console.warn('[Lumied number-check] error:', e); exists = null; }
+  window.dispatchEvent(new CustomEvent('lumied-check-number-result', {
+    detail: { phone: phone, exists: exists },
+  }));
+});
+
 window.addEventListener('lumied-get-phone', function() {
   var phone = null;
   var jid = null;

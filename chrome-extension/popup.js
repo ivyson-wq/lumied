@@ -1,5 +1,5 @@
-const API_URL = 'https://brgorknbrjlfwvrrlwxj.supabase.co';
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZ29ya25icmpsZnd2cnJsd3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU0NTUsImV4cCI6MjA4OTM0MTQ1NX0.QKX_6ZSfied60ZpB8VOx03hwiyD9J5lskKwfl-oXPYE';
+const API_URL = window.LUMIED_CONFIG.API_URL;
+const API_KEY = window.LUMIED_CONFIG.ANON_KEY;
 
 const $ = id => document.getElementById(id);
 
@@ -24,7 +24,7 @@ function setStatus(msg, type) {
 }
 
 // Check existing session on open
-chrome.storage.local.get(['apiUrl', 'apiKey', 'token', 'userName', 'userEmail'], function(d) {
+chrome.storage.local.get(['token', 'userName', 'userEmail'], function(d) {
   if (d.token) {
     showView('connected');
     $('userName').textContent = d.userName || '\u2014';
@@ -60,8 +60,6 @@ $('btnLogin').addEventListener('click', function() {
       return;
     }
     chrome.storage.local.set({
-      apiUrl: API_URL,
-      apiKey: API_KEY,
       token: d.token,
       userName: d.nome,
       userEmail: d.email,
@@ -83,6 +81,11 @@ $('btnLogin').addEventListener('click', function() {
 // Enter key submits login
 $('loginEmail').addEventListener('keydown', function(e) { if (e.key === 'Enter') $('btnLogin').click(); });
 $('loginSenha').addEventListener('keydown', function(e) { if (e.key === 'Enter') $('btnLogin').click(); });
+
+// Open CRM panel
+$('btnOpenCrm').addEventListener('click', function() {
+  chrome.tabs.create({ url: chrome.runtime.getURL('crm.html') });
+});
 
 // Logout
 $('btnLogout').addEventListener('click', function() {

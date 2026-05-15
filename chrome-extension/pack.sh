@@ -1,6 +1,8 @@
 #!/bin/bash
 # Empacota a extensao para upload na Chrome Web Store
 # Uso: bash pack.sh
+# No Git Bash Windows o binario `zip` pode nao existir — use Compress-Archive
+# (chrome-extension-pack skill) como fallback.
 
 DIST="lumied-crm-whatsapp.zip"
 
@@ -10,12 +12,15 @@ rm -f "$DIST"
 # Cria o zip apenas com os arquivos necessarios
 zip -j "$DIST" \
   manifest.json \
+  config.js \
   popup.html \
   popup.js \
   background.js \
   content.js \
   content.css \
   page-phone.js \
+  crm.html \
+  crm.js \
   privacy-policy.html \
   lumied-icon.png \
   icon16.png \

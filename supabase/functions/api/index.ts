@@ -18,6 +18,7 @@ import { handle as handlePublic } from "./handlers/public.ts";
 import { handle as handleGerenteA } from "./handlers/gerente-A.ts";
 import { handle as handleGerenteB } from "./handlers/gerente-B.ts";
 import { handle as handleGerenteC } from "./handlers/gerente-C.ts";
+import { handle as handleCrmV2 } from "./handlers/crm-v2.ts";
 
 serve(async (req: Request) => {
   const CORS = getCorsHeaders(req);
@@ -102,6 +103,8 @@ serve(async (req: Request) => {
   if (b) return b;
   const c = await handleGerenteC(gerCtx);
   if (c) return c;
+  const crmV2 = await handleCrmV2(gerCtx);
+  if (crmV2) return crmV2;
 
   return err("Ação desconhecida.");
 });

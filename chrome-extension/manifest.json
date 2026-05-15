@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Lumied CRM - WhatsApp Templates",
-  "version": "1.6.1",
-  "description": "Envie templates e capture leads do CRM escolar Lumied diretamente no WhatsApp Web. Gerencie comunicacao com familias e pipeline comercial.",
-  "permissions": ["storage", "activeTab"],
+  "version": "1.7.0",
+  "description": "CRM escolar Lumied dentro do WhatsApp Web: templates, captura IA de leads, score, sentiment, tags, snooze, broadcast e import CSV.",
+  "permissions": ["storage", "activeTab", "tabs"],
   "host_permissions": ["https://web.whatsapp.com/*", "https://brgorknbrjlfwvrrlwxj.supabase.co/*"],
   "background": { "service_worker": "background.js" },
   "action": {
@@ -34,7 +34,7 @@
     "128": "icon128.png"
   },
   "web_accessible_resources": [{
-    "resources": ["lumied-icon.png"],
+    "resources": ["lumied-icon.png", "crm.html", "crm.js", "config.js"],
     "matches": ["https://web.whatsapp.com/*"]
   }]
 }

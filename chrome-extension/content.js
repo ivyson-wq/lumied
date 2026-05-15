@@ -26,7 +26,10 @@
       currentLeadInfo = null;
       var cardEl = document.getElementById('mb-lead-card');
       if (cardEl) cardEl.classList.add('hidden');
+      var qaEl = document.getElementById('mb-lead-quick-actions');
+      if (qaEl) qaEl.classList.add('hidden');
       autoLookupLead();
+      checkPendingSnoozes();
     }
   }
 
@@ -64,6 +67,13 @@
         </button>
       </div>
       <div id="mb-lead-status" class="mb-lead-status hidden"></div>
+      <div id="mb-lead-quick-actions" class="mb-lead-actions-2 hidden">
+        <button class="mb-qa-btn" id="mb-qa-stage" title="Mover estágio"><span>↗</span> Mover</button>
+        <button class="mb-qa-btn" id="mb-qa-snooze" title="Agendar envio"><span>⏰</span> Snooze</button>
+        <button class="mb-qa-btn" id="mb-qa-call" title="Registrar ligação"><span>📞</span> Ligar</button>
+        <button class="mb-qa-btn" id="mb-qa-tag" title="Tags"><span>🏷</span> Tag</button>
+        <button class="mb-qa-btn mb-qa-ai" id="mb-qa-score" title="Recalcular score"><span>✨</span> Score</button>
+      </div>
       <hr class="mb-divider">
       <div class="mb-section-label">Templates</div>
       <input type="text" class="mb-search" id="mb-search" placeholder="Buscar template..." oninput="window.mbFilterTemplates()">
@@ -106,6 +116,20 @@
 
   // --- STORE INFO (page-level script via CustomEvent) ---
   // Returns { phone, isGroup, jid } — group chats are flagged so caller can block.
+  function checkNumberOnWhatsApp(phone) {
+    return new Promise(function(resolve) {
+      var done = false;
+      var handler = function(e) {
+        if (done) return; done = true;
+        window.removeEventListener('lumied-check-number-result', handler);
+        resolve(e.detail && typeof e.detail.exists === 'boolean' ? e.detail.exists : null);
+      };
+      window.addEventListener('lumied-check-number-result', handler);
+      window.dispatchEvent(new CustomEvent('lumied-check-number', { detail: { phone: phone } }));
+      setTimeout(function() { if (!done) { done = true; resolve(null); } }, 4000);
+    });
+  }
+
   function getStoreInfo() {
     return new Promise(function(resolve) {
       var resolved = false;
@@ -412,6 +436,32 @@
 
   // --- LEAD INFO EXTRACTION FROM CONVERSATION ---
 
+  // NLP via Claude (preferido) + fallback regex
+  async function extractLeadInfoSmart(messages) {
+    var conv = messages.join('\n');
+    if (!conv) return { nomeCrianca: null, dataNascimento: null, idade: null };
+    try {
+      var r = await apiCall('crm_lead_nlp_extract', { conversa: conv });
+      if (r && r.extracted) {
+        var e = r.extracted;
+        var idade = null;
+        if (e.idade_anos) idade = { anos: e.idade_anos };
+        else if (e.idade_meses) idade = { meses: e.idade_meses };
+        return {
+          nomeCrianca: e.nome_crianca || null,
+          dataNascimento: e.data_nascimento || null,
+          idade: idade,
+          nomeResponsavel: e.nome_responsavel || null,
+          serieInteresse: e.serie_interesse || null,
+          objecoes: e.objecoes || [],
+          urgencia: e.urgencia || null,
+        };
+      }
+    } catch (err) { console.warn('[Lumied CRM] NLP AI falhou, usando regex:', err); }
+    // Fallback: regex original
+    return extractLeadInfoFromMessages(messages);
+  }
+
   function extractLeadInfoFromMessages(messages) {
     const allText = messages.map(m => m.replace(/^\[(Escola|Contato)\]\s*/, '')).join(' ');
 
@@ -478,14 +528,38 @@
   function renderLeadCard(lead, serieInfo) {
     var cardEl = document.getElementById('mb-lead-card');
     var contentEl = document.getElementById('mb-lead-card-content');
+    var quickActionsEl = document.getElementById('mb-lead-quick-actions');
     if (!cardEl || !contentEl) return;
 
     var estagio = (lead.crm_estagios && lead.crm_estagios.nome) || 'Novo Lead';
     var estagioColor = (lead.crm_estagios && lead.crm_estagios.cor) || '#6b7280';
     var tipoIcons = { ligacao:'📞', email:'📧', whatsapp:'💬', visita:'🏫', reuniao:'📅', nota:'📝', outro:'📌' };
 
-    var html = '<div class="mb-lc-name">' + (lead.nome_responsavel || 'Sem nome') + '</div>'
-      + '<div class="mb-lc-stage" style="background:' + estagioColor + '20;color:' + estagioColor + ';border:1px solid ' + estagioColor + '40;">' + estagio + '</div>';
+    // Score visual (estrelas)
+    var scoreHtml = '';
+    if (typeof lead.score === 'number') {
+      var stars = '';
+      for (var s = 1; s <= 5; s++) stars += s <= lead.score ? '★' : '☆';
+      scoreHtml = '<div class="mb-lc-score" title="' + escapeHtml(lead.score_motivo || '') + '">'
+        + '<span class="mb-lc-stars">' + stars + '</span>'
+        + (lead.score_motivo ? '<span class="mb-lc-score-motivo">' + escapeHtml(lead.score_motivo.substring(0, 60)) + '</span>' : '')
+        + '</div>';
+    }
+
+    // Sentiment chip
+    var sentimentHtml = '';
+    if (lead.sentiment) {
+      var sLabels = { quente:'🔥 Quente', morno:'☀️ Morno', frio:'❄️ Frio', em_risco:'⚠️ Em risco' };
+      var sColors = { quente:'#ef4444', morno:'#f59e0b', frio:'#3b82f6', em_risco:'#dc2626' };
+      var cor = sColors[lead.sentiment] || '#6b7280';
+      sentimentHtml = '<div class="mb-lc-sentiment" style="background:' + cor + '22;color:' + cor + ';border:1px solid ' + cor + '55;" title="' + escapeHtml(lead.sentiment_motivo || '') + '">'
+        + (sLabels[lead.sentiment] || lead.sentiment) + '</div>';
+    }
+
+    var html = '<div class="mb-lc-name">' + escapeHtml(lead.nome_responsavel || 'Sem nome') + '</div>'
+      + '<div class="mb-lc-stage" style="background:' + estagioColor + '20;color:' + estagioColor + ';border:1px solid ' + estagioColor + '40;">' + escapeHtml(estagio) + '</div>'
+      + sentimentHtml
+      + scoreHtml;
 
     if (lead.telefone) html += '<div class="mb-lc-row"><span class="mb-lc-label">Tel:</span> ' + lead.telefone + '</div>';
     if (lead.nome_crianca) html += '<div class="mb-lc-row"><span class="mb-lc-label">Crianca:</span> ' + lead.nome_crianca + '</div>';
@@ -502,11 +576,31 @@
     if (lead.origem) html += '<div class="mb-lc-row"><span class="mb-lc-label">Origem:</span> ' + lead.origem + '</div>';
     if (lead.observacoes) html += '<div class="mb-lc-row" style="font-style:italic;color:#888;font-size:10px;">' + lead.observacoes.substring(0, 100) + (lead.observacoes.length > 100 ? '...' : '') + '</div>';
 
+    // Tags inline (placeholder, carregadas async)
+    html += '<div id="mb-lc-tags" class="mb-lc-tags"></div>';
+
     // Placeholder for interactions (loaded async)
-    html += '<div id="mb-lc-interacoes" style="margin-top:6px;border-top:1px solid #eee;padding-top:6px;"></div>';
+    html += '<div id="mb-lc-interacoes" style="margin-top:6px;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;"></div>';
 
     contentEl.innerHTML = html;
     cardEl.classList.remove('hidden');
+    if (quickActionsEl) quickActionsEl.classList.remove('hidden');
+
+    // Load tags async
+    if (lead.id) {
+      apiCall('crm_lead_tags_get', { lead_id: lead.id }).then(function(tagsData) {
+        var tagsEl = document.getElementById('mb-lc-tags');
+        if (!tagsEl) return;
+        var items = Array.isArray(tagsData) ? tagsData : [];
+        if (!items.length) { tagsEl.innerHTML = ''; return; }
+        tagsEl.innerHTML = items.map(function(t) {
+          var tag = t.crm_tags || {};
+          var cor = tag.cor || '#6b7280';
+          return '<span class="mb-lc-tag" style="background:' + cor + '22;color:#fff;border:1px solid ' + cor + ';">'
+            + escapeHtml(tag.nome || '') + '</span>';
+        }).join(' ');
+      }).catch(function() {});
+    }
 
     // Load last interactions async
     if (lead.id) {
@@ -591,16 +685,18 @@
         return;
       }
 
-      // Extract info from conversation
+      // Extract info from conversation (AI-powered, com fallback regex)
       const messages = getConversationMessages();
-      const extracted = extractLeadInfoFromMessages(messages);
+      const extracted = await extractLeadInfoSmart(messages);
       const resumo = summarizeConversation(messages);
 
       // Preparar updates candidatos
       const updateCandidates = {};
-      if (nome && nome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(nome)) updateCandidates.nome_responsavel = nome;
+      var aiNome = extracted.nomeResponsavel || nome;
+      if (aiNome && aiNome !== telefone && !/^\+?\d[\d\s\-()]{7,}$/.test(aiNome)) updateCandidates.nome_responsavel = aiNome;
       if (extracted.nomeCrianca) updateCandidates.nome_crianca = extracted.nomeCrianca;
       if (extracted.dataNascimento) updateCandidates.data_nascimento = extracted.dataNascimento;
+      if (extracted.serieInteresse) updateCandidates.serie_interesse = extracted.serieInteresse;
 
       // Filtrar apenas os que realmente mudam
       const realUpdates = {};
@@ -681,6 +777,9 @@
         ? `Dados atualizados (${updatedFields}) + conversa registrada!`
         : 'Conversa registrada no historico!';
       setTimeout(() => { statusEl.classList.add('hidden'); }, 4000);
+
+      // Dispara score + sentiment em background (não bloqueia)
+      runScoreAndSentiment(lead, messages.join('\n')).catch(function() {});
 
     } catch (err) {
       statusEl.className = 'mb-lead-status error';
@@ -768,10 +867,10 @@
       let existingLead = null;
       if (telefone) existingLead = await findLeadByPhone(telefone);
 
-      statusEl.textContent = 'Lendo conversa...';
+      statusEl.textContent = 'Lendo conversa e analisando via IA...';
       const messages = getConversationMessages();
       const resumo = summarizeConversation(messages);
-      const extracted = extractLeadInfoFromMessages(messages);
+      const extracted = await extractLeadInfoSmart(messages);
       const meetingInfo = detectMeeting(messages);
 
       if (existingLead) {
@@ -842,6 +941,9 @@
 
         statusEl.className = 'mb-lead-status success';
         statusEl.innerHTML = `<strong>Lead atualizado!</strong><br>Historico da conversa registrado.`;
+
+        // Score + sentiment em background
+        runScoreAndSentiment(existingLead, messages.join('\n')).catch(function() {});
 
         if (meetingInfo) {
           statusEl.innerHTML += `<br><button class="mb-meeting-btn" id="mb-schedule-meeting">
@@ -942,6 +1044,9 @@
 
         statusEl.className = 'mb-lead-status success';
         statusEl.innerHTML = `<strong>Lead criado!</strong><br>Conversa registrada no historico.`;
+
+        // Score + sentiment em background
+        runScoreAndSentiment(fullLead, messages.join('\n')).catch(function() {});
 
         if (meetingInfo && leadId) {
           statusEl.innerHTML += `<br><button class="mb-meeting-btn" id="mb-schedule-meeting">
@@ -1081,6 +1186,276 @@
     }
   }
 
+  // ── QUICK ACTIONS (Onda 1/2 da v1.7) ────────────────────────
+
+  // Modal genérico de picker (lista de items com onPick)
+  function showPickerModal(opts) {
+    return new Promise(function(resolve) {
+      var existing = document.getElementById('lumied-picker-overlay');
+      if (existing) existing.remove();
+      var overlay = document.createElement('div');
+      overlay.id = 'lumied-picker-overlay';
+      overlay.className = 'lumied-preview-overlay';
+      var itemsHtml = (opts.items || []).map(function(it) {
+        var color = it.color ? 'background:' + it.color + '20;border-color:' + it.color + ';color:' + it.color : '';
+        var checked = it.checked ? ' checked' : '';
+        return '<button type="button" class="lumied-picker-item" data-value="' + escapeHtml(it.value) + '" style="' + color + '">'
+          + (opts.multi ? '<input type="checkbox" data-val="' + escapeHtml(it.value) + '"' + checked + ' style="margin-right:8px;pointer-events:none">' : '')
+          + escapeHtml(it.label || it.value)
+          + (it.hint ? '<span class="lumied-picker-hint">' + escapeHtml(it.hint) + '</span>' : '')
+          + '</button>';
+      }).join('');
+      var actionsHtml = opts.multi
+        ? '<div class="lumied-preview-actions" style="margin-top:14px;"><button type="button" class="lumied-preview-btn-cancel" id="lumied-picker-cancel">Cancelar</button><button type="button" class="lumied-preview-btn-confirm" id="lumied-picker-confirm">Confirmar</button></div>'
+        : '<div class="lumied-preview-actions" style="margin-top:14px;"><button type="button" class="lumied-preview-btn-cancel" id="lumied-picker-cancel">Cancelar</button></div>';
+      overlay.innerHTML = '<div class="lumied-preview-modal">'
+        + '<div class="lumied-preview-title">' + escapeHtml(opts.title || 'Selecione') + '</div>'
+        + (opts.desc ? '<p class="lumied-preview-desc">' + escapeHtml(opts.desc) + '</p>' : '')
+        + '<div class="lumied-picker-list">' + (itemsHtml || '<div class="lumied-preview-hint" style="padding:12px;text-align:center;">Nenhum item disponível.</div>') + '</div>'
+        + actionsHtml
+        + '</div>';
+      document.body.appendChild(overlay);
+      function close(r) { overlay.remove(); resolve(r); }
+      overlay.querySelectorAll('.lumied-picker-item').forEach(function(b) {
+        b.addEventListener('click', function() {
+          if (opts.multi) {
+            var cb = b.querySelector('input[type=checkbox]');
+            cb.checked = !cb.checked;
+            b.classList.toggle('lumied-picker-item-checked', cb.checked);
+          } else {
+            close(b.getAttribute('data-value'));
+          }
+        });
+      });
+      document.getElementById('lumied-picker-cancel').addEventListener('click', function() { close(null); });
+      if (opts.multi) {
+        document.getElementById('lumied-picker-confirm').addEventListener('click', function() {
+          var values = [];
+          overlay.querySelectorAll('input[type=checkbox]:checked').forEach(function(cb) {
+            values.push(cb.getAttribute('data-val'));
+          });
+          close(values);
+        });
+      }
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) close(null); });
+      overlay.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { e.preventDefault(); close(null); }
+      });
+    });
+  }
+
+  async function openMoveStage() {
+    if (!currentLeadInfo || !currentLeadInfo.lead) { alert('Capture o lead primeiro.'); return; }
+    try {
+      var estagios = await apiCall('crm_estagios_list');
+      if (!Array.isArray(estagios) || !estagios.length) return alert('Nenhum estágio configurado.');
+      var items = estagios.map(function(e) {
+        return { value: e.id, label: e.nome, color: e.cor };
+      });
+      var chosen = await showPickerModal({ title: 'Mover para qual estágio?', items: items });
+      if (!chosen) return;
+      var statusEl = document.getElementById('mb-lead-status');
+      statusEl.classList.remove('hidden');
+      statusEl.className = 'mb-lead-status loading';
+      statusEl.textContent = 'Movendo lead...';
+      await apiCall('crm_lead_mover', { id: currentLeadInfo.lead.id, estagio_id: chosen });
+      // refetch lead
+      var leads = await apiCall('crm_leads_list');
+      var updated = Array.isArray(leads) ? leads.find(function(l) { return l.id === currentLeadInfo.lead.id; }) : null;
+      if (updated) {
+        currentLeadInfo.lead = updated;
+        renderLeadCard(updated, currentLeadInfo.serieInfo);
+      }
+      statusEl.className = 'mb-lead-status success';
+      statusEl.textContent = 'Lead movido!';
+      setTimeout(function() { statusEl.classList.add('hidden'); }, 2000);
+    } catch (e) {
+      alert('Erro: ' + e.message);
+    }
+  }
+
+  async function openSnooze() {
+    if (!currentLeadInfo || !currentLeadInfo.lead) { alert('Capture o lead primeiro.'); return; }
+    try {
+      var templates = await apiCall('crm_templates_list');
+      var tplItems = (Array.isArray(templates) ? templates : []).map(function(t) {
+        return { value: t.id, label: t.nome, hint: '(' + t.categoria + ')' };
+      });
+      tplItems.unshift({ value: '', label: '— Nenhum template (só lembrete) —' });
+      var tplChoice = await showPickerModal({ title: 'Qual template lembrar?', items: tplItems });
+      if (tplChoice === null) return;
+      // Modal pra data/hora
+      var when = await showLeadPreviewModal({
+        title: 'Quando lembrar?',
+        desc: 'Você vai ser lembrado no painel quando esta data/hora chegar.',
+        fields: [
+          { label: 'Data', key: 'data', value: new Date(Date.now() + 86400000).toISOString().split('T')[0] },
+          { label: 'Hora (HH:MM)', key: 'hora', value: '09:00' },
+          { label: 'Observação (opcional)', key: 'preview', value: '' },
+        ],
+        confirmLabel: 'Agendar',
+        cancelLabel: 'Cancelar',
+      });
+      if (!when) return;
+      var dt = when.data + 'T' + (when.hora || '09:00') + ':00';
+      var statusEl = document.getElementById('mb-lead-status');
+      statusEl.classList.remove('hidden');
+      statusEl.className = 'mb-lead-status loading';
+      statusEl.textContent = 'Agendando lembrete...';
+      var r = await apiCall('crm_snooze_create', {
+        lead_id: currentLeadInfo.lead.id,
+        template_id: tplChoice || null,
+        agendado_para: dt,
+        mensagem_preview: when.preview || null,
+      });
+      if (r && r.error) throw new Error(r.error);
+      statusEl.className = 'mb-lead-status success';
+      statusEl.innerHTML = '<strong>Lembrete agendado</strong><br>Você será avisado em ' + new Date(dt).toLocaleString('pt-BR') + '.';
+    } catch (e) {
+      alert('Erro: ' + e.message);
+    }
+  }
+
+  async function openCallLog() {
+    if (!currentLeadInfo || !currentLeadInfo.lead) { alert('Capture o lead primeiro.'); return; }
+    var lead = currentLeadInfo.lead;
+    if (lead.telefone) {
+      // tenta abrir o discador (tel:) — funciona com integrações de call/Hangouts/Zoiper
+      try { window.open('tel:+' + lead.telefone, '_blank'); } catch(e) {}
+    }
+    var result = await showLeadPreviewModal({
+      title: 'Registrar ligação',
+      desc: 'Anote o resultado da ligação. Vai virar interação tipo=ligação no histórico.',
+      fields: [
+        { label: 'Duração (min)', key: 'duracao', value: '5' },
+        { label: 'Observação', key: 'obs', value: '' },
+      ],
+      confirmLabel: 'Registrar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!result) return;
+    var desc = '[Ligação' + (result.duracao ? ' ' + result.duracao + 'min' : '') + '] ' + (result.obs || 'Sem observações');
+    try {
+      await apiCall('crm_interacao_save', {
+        lead_id: lead.id, tipo: 'ligacao', descricao: desc,
+      });
+      var statusEl = document.getElementById('mb-lead-status');
+      statusEl.classList.remove('hidden');
+      statusEl.className = 'mb-lead-status success';
+      statusEl.textContent = 'Ligação registrada!';
+      // re-render pra atualizar lista de interações
+      renderLeadCard(lead, currentLeadInfo.serieInfo);
+      setTimeout(function() { statusEl.classList.add('hidden'); }, 2000);
+    } catch (e) {
+      alert('Erro: ' + e.message);
+    }
+  }
+
+  async function openTagPicker() {
+    if (!currentLeadInfo || !currentLeadInfo.lead) { alert('Capture o lead primeiro.'); return; }
+    var lead = currentLeadInfo.lead;
+    try {
+      var allTags = await apiCall('crm_tags_list');
+      var currentTags = await apiCall('crm_lead_tags_get', { lead_id: lead.id });
+      var currentIds = new Set((Array.isArray(currentTags) ? currentTags : []).map(function(t) { return t.tag_id; }));
+      var items = (Array.isArray(allTags) ? allTags : []).map(function(t) {
+        return { value: t.id, label: t.nome, color: t.cor, checked: currentIds.has(t.id) };
+      });
+      if (!items.length) return alert('Nenhuma tag cadastrada. Crie tags no painel Lumied.');
+      var selected = await showPickerModal({
+        title: 'Tags do lead',
+        desc: 'Marque/desmarque as tags pra este lead.',
+        items: items, multi: true,
+      });
+      if (!Array.isArray(selected)) return;
+      var newSet = new Set(selected);
+      // add novas
+      for (var id of newSet) { if (!currentIds.has(id)) await apiCall('crm_lead_tag_add', { lead_id: lead.id, tag_id: id }); }
+      // remove desmarcadas
+      for (var oldId of currentIds) { if (!newSet.has(oldId)) await apiCall('crm_lead_tag_remove', { lead_id: lead.id, tag_id: oldId }); }
+      renderLeadCard(lead, currentLeadInfo.serieInfo);
+    } catch (e) {
+      alert('Erro: ' + e.message);
+    }
+  }
+
+  async function runScoreAndSentiment(lead, conversa) {
+    // dispara em paralelo (best-effort, não bloqueia UX)
+    try {
+      var [scoreR, sentR] = await Promise.allSettled([
+        apiCall('crm_lead_score_calc', { lead_id: lead.id, conversa: conversa }),
+        apiCall('crm_lead_sentiment_analyze', { lead_id: lead.id, conversa: conversa }),
+      ]);
+      if (scoreR.status === 'fulfilled' && scoreR.value && !scoreR.value.error) {
+        lead.score = scoreR.value.score;
+        lead.score_motivo = scoreR.value.motivo;
+      }
+      if (sentR.status === 'fulfilled' && sentR.value && !sentR.value.error) {
+        lead.sentiment = sentR.value.sentiment;
+        lead.sentiment_motivo = sentR.value.motivo;
+      }
+      renderLeadCard(lead, currentLeadInfo ? currentLeadInfo.serieInfo : null);
+      if (lead.sentiment === 'em_risco') {
+        var statusEl = document.getElementById('mb-lead-status');
+        if (statusEl) {
+          statusEl.classList.remove('hidden');
+          statusEl.className = 'mb-lead-status error';
+          statusEl.innerHTML = '<strong>⚠️ Lead em risco</strong><br>' + escapeHtml(lead.sentiment_motivo || '');
+        }
+      }
+    } catch (e) { console.warn('[Lumied CRM] score/sentiment failed:', e); }
+  }
+
+  async function openScoreRecalc() {
+    if (!currentLeadInfo || !currentLeadInfo.lead) { alert('Capture o lead primeiro.'); return; }
+    var statusEl = document.getElementById('mb-lead-status');
+    statusEl.classList.remove('hidden');
+    statusEl.className = 'mb-lead-status loading';
+    statusEl.textContent = 'Recalculando score e sentiment via IA...';
+    var messages = getConversationMessages();
+    var conv = messages.join('\n');
+    await runScoreAndSentiment(currentLeadInfo.lead, conv);
+    statusEl.className = 'mb-lead-status success';
+    statusEl.textContent = 'Score atualizado!';
+    setTimeout(function() { statusEl.classList.add('hidden'); }, 2000);
+  }
+
+  // ── Snooze popup: mostra lembretes pendentes do operador ─────
+  async function checkPendingSnoozes() {
+    try {
+      var snoozes = await apiCall('crm_snooze_list', { pendentes: true });
+      if (!Array.isArray(snoozes) || !snoozes.length) return;
+      var due = snoozes.filter(function(s) { return new Date(s.agendado_para) <= new Date(); });
+      if (!due.length) return;
+      // Notifica via banner no painel
+      var banner = document.getElementById('mb-snooze-banner');
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'mb-snooze-banner';
+        banner.className = 'mb-snooze-banner';
+        var bodyEl = document.getElementById('mb-panel-body');
+        if (bodyEl) bodyEl.insertBefore(banner, bodyEl.firstChild);
+      }
+      banner.innerHTML = '<div class="mb-snooze-banner-title">⏰ ' + due.length + ' lembrete(s) pendentes</div>'
+        + due.slice(0, 5).map(function(s) {
+          var lead = s.crm_leads || {};
+          var tpl = s.crm_templates || {};
+          return '<div class="mb-snooze-item">'
+            + '<strong>' + escapeHtml(lead.nome_responsavel || 'Lead') + '</strong>'
+            + (tpl.nome ? ' · ' + escapeHtml(tpl.nome) : '')
+            + (s.mensagem_preview ? '<div style="font-size:10px;opacity:.8;">' + escapeHtml(s.mensagem_preview) + '</div>' : '')
+            + ' <button class="mb-snooze-done" data-id="' + s.id + '">Marcar feito</button>'
+            + '</div>';
+        }).join('');
+      banner.querySelectorAll('.mb-snooze-done').forEach(function(btn) {
+        btn.onclick = async function() {
+          await apiCall('crm_snooze_cancel', { id: btn.getAttribute('data-id') });
+          checkPendingSnoozes();
+        };
+      });
+    } catch (e) { console.warn('[Lumied CRM] snooze check failed:', e); }
+  }
+
   // Attach handlers
   setTimeout(() => {
     const captureBtn = document.getElementById('mb-capture-lead');
@@ -1089,6 +1464,12 @@
     if (refreshBtn) refreshBtn.onclick = refreshLeadInfo;
     const closeBtn = document.getElementById('mb-close-panel');
     if (closeBtn) closeBtn.onclick = () => setPanelOpen(false);
+    // Quick actions
+    var qaStage = document.getElementById('mb-qa-stage'); if (qaStage) qaStage.onclick = openMoveStage;
+    var qaSnooze = document.getElementById('mb-qa-snooze'); if (qaSnooze) qaSnooze.onclick = openSnooze;
+    var qaCall = document.getElementById('mb-qa-call'); if (qaCall) qaCall.onclick = openCallLog;
+    var qaTag = document.getElementById('mb-qa-tag'); if (qaTag) qaTag.onclick = openTagPicker;
+    var qaScore = document.getElementById('mb-qa-score'); if (qaScore) qaScore.onclick = openScoreRecalc;
   }, 100);
 
   // --- DETECT CONVERSATION CHANGE ---
@@ -1217,11 +1598,12 @@
     const el = document.getElementById('mb-templates-list');
     if (!items.length) { el.innerHTML = '<div style="color:#999;font-size:12px;padding:12px;">Nenhum template encontrado.</div>'; return; }
     const catLabels = { boas_vindas:'Boas-vindas', follow_up:'Follow-up', visita:'Visita', pos_visita:'Pos-Visita', proposta:'Proposta', matricula:'Matricula', geral:'Geral' };
+    var midiaIcons = { imagem:'🖼', doc:'📎', audio:'🎵', video:'🎬' };
     el.innerHTML = items.map((t, i) => `
       <div class="mb-tpl-card">
-        <div class="tpl-name">${t.nome}</div>
-        <div class="tpl-cat">${catLabels[t.categoria] || t.categoria}</div>
-        <div class="tpl-preview">${t.conteudo.substring(0, 80)}...</div>
+        <div class="tpl-name">${escapeHtml(t.nome)} ${t.midia_tipo ? '<span class="tpl-midia" title="Template com mídia anexada">' + (midiaIcons[t.midia_tipo] || '📎') + '</span>' : ''}</div>
+        <div class="tpl-cat">${catLabels[t.categoria] || t.categoria}${t.usos ? ' · usado ' + t.usos + 'x' : ''}</div>
+        <div class="tpl-preview">${escapeHtml((t.conteudo || '').substring(0, 80))}${t.conteudo && t.conteudo.length > 80 ? '...' : ''}</div>
         <button class="tpl-send" data-idx="${i}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           Enviar no chat
@@ -1235,6 +1617,14 @@
 
   async function sendTemplate(template) {
     let msg = template.conteudo;
+    // Track uso em background (não bloqueia)
+    if (template.id) apiCall('crm_template_track_use', { template_id: template.id }).catch(function() {});
+    // Se template tem mídia, mostra aviso pro operador anexar manualmente
+    if (template.midia_url && template.midia_tipo) {
+      var labelMidia = { imagem:'imagem', doc:'documento', audio:'áudio', video:'vídeo' }[template.midia_tipo] || 'arquivo';
+      alert('Esse template tem ' + labelMidia + ' anexada.\n\nLink:\n' + template.midia_url + '\n\nApós o texto ser inserido, baixe o arquivo e arraste no chat do WhatsApp Web. Vou abrir o link em outra aba.');
+      try { window.open(template.midia_url, '_blank'); } catch(e) {}
+    }
     // Build auto-fill values from WhatsApp contact + lead data
     var contact = await getContactInfo();
     var lead = currentLeadInfo ? currentLeadInfo.lead : null;
