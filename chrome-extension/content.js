@@ -36,7 +36,7 @@
   // Create toggle button with owl logo
   const toggle = document.createElement('button');
   toggle.id = 'mb-crm-toggle';
-  toggle.title = 'Lumied CRM';
+  toggle.title = 'Lumied CRM v1.7.1';
   toggle.innerHTML = `<img src="${chrome.runtime.getURL('lumied-icon.png')}" alt="Lumied" style="width:40px;height:40px;border-radius:50%;">`;
   toggle.onclick = () => setPanelOpen(!panelOpen);
   document.body.appendChild(toggle);
