@@ -129,9 +129,12 @@ function calculateDay(events: AfdEvent[]): DaySummary {
 
 // ═══════════════════════════════════════════════════════
 //  REPROCESS — Re-vincula afd_events órfãos e regera daily_summary
+//  Source of truth do de-para: afd_funcionarios.employee_id
+//  (NOT ponto_employees.pis — porque o "PIS" no AFD costuma ser o ID interno
+//  do dispositivo iDFace, não o PIS oficial do INSS).
 //  Idempotente: WHERE employee_id IS NULL nunca toca já-vinculados;
 //  upsert em daily_summary re-escreve o mesmo valor.
-//  pisFilter: limita a um conjunto de PIS (cadastro pontual);
+//  pisFilter: limita a um conjunto de pis_afd (link pontual);
 //             null = varre todos os órfãos da escola.
 // ═══════════════════════════════════════════════════════
 async function reprocessOrphans(
@@ -139,11 +142,12 @@ async function reprocessOrphans(
   escola_id: string,
   pisFilter: string[] | null,
 ): Promise<{ eventos_vinculados: number; resumos_gerados: number }> {
-  const empQ = sb.from("ponto_employees").select("id, pis").eq("escola_id", escola_id).eq("ativo", true);
-  if (pisFilter && pisFilter.length > 0) empQ.in("pis", pisFilter);
-  const { data: emps } = await empQ;
-  if (!emps || emps.length === 0) return { eventos_vinculados: 0, resumos_gerados: 0 };
-  const pisMap = new Map<string, string>(emps.map((e: any) => [e.pis, e.id as string]));
+  const mapQ = sb.from("afd_funcionarios").select("pis_afd, employee_id")
+    .eq("escola_id", escola_id).not("employee_id", "is", null);
+  if (pisFilter && pisFilter.length > 0) mapQ.in("pis_afd", pisFilter);
+  const { data: mapped } = await mapQ;
+  if (!mapped || mapped.length === 0) return { eventos_vinculados: 0, resumos_gerados: 0 };
+  const pisMap = new Map<string, string>(mapped.map((m: any) => [m.pis_afd, m.employee_id as string]));
 
   let evQ = sb.from("afd_events").select("id, pis, employee_id, data_evento, hora_evento")
     .eq("escola_id", escola_id).is("employee_id", null);
@@ -239,8 +243,7 @@ router.on("ponto_employee_create", authGerente, feat, async (ctx) => {
     escola_id: ctx.escola_id, nome, pis: pisLimpo, cargo, departamento, rh_funcionario_id, work_schedule, daily_hours,
   }).select().single();
   if (error) throw new AppError("BAD_REQUEST", error.message);
-  const reproc = await reprocessOrphans(ctx.sb, ctx.escola_id, [pisLimpo]);
-  return successResponse({ ...data, _reprocess: reproc });
+  return successResponse(data);
 });
 
 router.on("ponto_employee_update", authGerente, feat, async (ctx) => {
@@ -248,15 +251,10 @@ router.on("ponto_employee_update", authGerente, feat, async (ctx) => {
   const { id, ...fields } = ctx.body as any;
   if (!id) throw new AppError("VALIDATION_FAILED", "ID obrigatório.");
   delete fields.action; delete fields._token;
-  const pisChanged = typeof fields.pis === "string" && fields.pis.length > 0;
-  if (pisChanged) fields.pis = normalizePis(fields.pis);
+  if (typeof fields.pis === "string" && fields.pis.length > 0) fields.pis = normalizePis(fields.pis);
   const { error } = await ctx.sb.from("ponto_employees").update(fields).eq("id", id).eq("escola_id", ctx.escola_id);
   if (error) throw new AppError("BAD_REQUEST", error.message);
-  let reproc: { eventos_vinculados: number; resumos_gerados: number } | null = null;
-  if (pisChanged || fields.ativo === true) {
-    reproc = await reprocessOrphans(ctx.sb, ctx.escola_id, pisChanged ? [fields.pis] : null);
-  }
-  return successResponse({ success: true, _reprocess: reproc });
+  return successResponse({ success: true });
 });
 
 // ═══════════════════════════════════════════════════════
@@ -290,9 +288,37 @@ router.on("ponto_afd_upload", authGerente, feat, async (ctx) => {
     return successResponse({ import_id: importRec.id, status: "erro", errors: parsed.errors });
   }
 
-  // 2. Buscar employees para de-para PIS → employee_id
-  const { data: emps } = await ctx.sb.from("ponto_employees").select("id, pis").eq("escola_id", ctx.escola_id).eq("ativo", true);
-  const pisMap = new Map((emps ?? []).map((e: any) => [e.pis, e.id]));
+  // 2a. Upsert afd_funcionarios com tipo 5 do AFD (catálogo de funcionários do REP).
+  //     Usa pis_afd como ID externo do dispositivo. nome_afd vem do tipo 5.
+  if (parsed.employees.length > 0) {
+    const eventDatesByPis = new Map<string, { first: string; last: string; count: number }>();
+    for (const ev of parsed.events) {
+      const cur = eventDatesByPis.get(ev.pis);
+      if (!cur) eventDatesByPis.set(ev.pis, { first: ev.date, last: ev.date, count: 1 });
+      else {
+        if (ev.date < cur.first) cur.first = ev.date;
+        if (ev.date > cur.last) cur.last = ev.date;
+        cur.count++;
+      }
+    }
+    const funcRows = parsed.employees.map(f => {
+      const stats = eventDatesByPis.get(f.pis);
+      return {
+        escola_id: ctx.escola_id, pis_afd: f.pis, nome_afd: f.name || null, cargo_afd: f.role || null,
+        primeiro_visto: stats?.first ?? null, ultimo_visto: stats?.last ?? null, total_eventos: stats?.count ?? 0,
+      };
+    });
+    const fcs = 200;
+    for (let i = 0; i < funcRows.length; i += fcs) {
+      await ctx.sb.from("afd_funcionarios").upsert(funcRows.slice(i, i + fcs), { onConflict: "escola_id,pis_afd", ignoreDuplicates: false });
+    }
+  }
+
+  // 2b. Buscar de-para via afd_funcionarios.employee_id (source of truth).
+  //     PIS oficial em ponto_employees.pis NÃO bate com pis_afd (ID interno do REP).
+  const { data: mapped } = await ctx.sb.from("afd_funcionarios")
+    .select("pis_afd, employee_id").eq("escola_id", ctx.escola_id).not("employee_id", "is", null);
+  const pisMap = new Map<string, string>((mapped ?? []).map((m: any) => [m.pis_afd, m.employee_id]));
 
   // 3. Inserir eventos em chunks
   let unmatchedPis = 0;
@@ -375,6 +401,69 @@ router.on("ponto_afd_reprocess", authGerente, feat, async (ctx) => {
   if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
   const result = await reprocessOrphans(ctx.sb, ctx.escola_id, null);
   return successResponse(result);
+});
+
+// ═══════════════════════════════════════════════════════
+//  ROUTES — De-para AFD ↔ ponto_employees
+// ═══════════════════════════════════════════════════════
+
+router.on("ponto_afd_funcs_list", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { data } = await ctx.sb.from("afd_funcionarios")
+    .select("id, pis_afd, nome_afd, cargo_afd, employee_id, primeiro_visto, ultimo_visto, total_eventos, ponto_employees:employee_id(nome, pis)")
+    .eq("escola_id", ctx.escola_id)
+    .order("nome_afd", { ascending: true, nullsFirst: false })
+    .order("pis_afd");
+  return successResponse(data ?? []);
+});
+
+router.on("ponto_afd_func_link", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { afd_id, employee_id } = ctx.body as any;
+  if (!afd_id) throw new AppError("VALIDATION_FAILED", "afd_id obrigatório.");
+  // employee_id pode ser null (desvincular)
+  const { data: afd, error: afdErr } = await ctx.sb.from("afd_funcionarios")
+    .update({ employee_id: employee_id || null, atualizado_em: new Date().toISOString() })
+    .eq("id", afd_id).eq("escola_id", ctx.escola_id).select("pis_afd").single();
+  if (afdErr) throw new AppError("BAD_REQUEST", afdErr.message);
+
+  let reproc: { eventos_vinculados: number; resumos_gerados: number } | null = null;
+  if (employee_id) {
+    reproc = await reprocessOrphans(ctx.sb, ctx.escola_id, [afd.pis_afd]);
+  }
+  return successResponse({ success: true, _reprocess: reproc });
+});
+
+router.on("ponto_afd_func_create_employee", authGerente, feat, async (ctx) => {
+  if (!ctx.escola_id) throw new AppError("FORBIDDEN", "Sessão sem escola associada.");
+  const { afd_id, daily_hours, work_schedule } = ctx.body as any;
+  if (!afd_id) throw new AppError("VALIDATION_FAILED", "afd_id obrigatório.");
+
+  const { data: afd, error: afdErr } = await ctx.sb.from("afd_funcionarios")
+    .select("id, pis_afd, nome_afd, cargo_afd, employee_id")
+    .eq("id", afd_id).eq("escola_id", ctx.escola_id).single();
+  if (afdErr || !afd) throw new AppError("NOT_FOUND", "Registro AFD não encontrado.");
+  if (afd.employee_id) throw new AppError("CONFLICT", "Já está vinculado a um funcionário.");
+
+  const nome = afd.nome_afd?.trim() || `Funcionário ${afd.pis_afd}`;
+
+  // Cria ponto_employees usando o pis_afd como pis (preserva compat com queries que ainda usam pis).
+  // Isso pode parecer estranho — o pis_afd geralmente NÃO é o PIS oficial — mas como hoje
+  // ponto_employees.pis é UNIQUE NOT NULL e a folha não está integrada aqui, é seguro
+  // usar o pis_afd como placeholder. O usuário pode editar depois com o PIS oficial.
+  const { data: emp, error: empErr } = await ctx.sb.from("ponto_employees").insert({
+    escola_id: ctx.escola_id, nome, pis: afd.pis_afd, cargo: afd.cargo_afd || null,
+    daily_hours: daily_hours || 8, work_schedule: work_schedule || null,
+  }).select().single();
+  if (empErr) throw new AppError("BAD_REQUEST", empErr.message);
+
+  const { error: linkErr } = await ctx.sb.from("afd_funcionarios")
+    .update({ employee_id: emp.id, atualizado_em: new Date().toISOString() })
+    .eq("id", afd_id).eq("escola_id", ctx.escola_id);
+  if (linkErr) throw new AppError("BAD_REQUEST", linkErr.message);
+
+  const reproc = await reprocessOrphans(ctx.sb, ctx.escola_id, [afd.pis_afd]);
+  return successResponse({ employee: emp, _reprocess: reproc });
 });
 
 router.on("ponto_events_list", authGerente, feat, async (ctx) => {

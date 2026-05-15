@@ -1042,6 +1042,7 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
       <div class="sb-section collapsed">
         <a class="nav-item" href="#" onclick="showPanel('pontoEmployees',this)"><span class="ic">👥</span> <span>Funcionários & Horários</span></a>
         <a class="nav-item" href="#" onclick="showPanel('pontoImport',this)"><span class="ic">📥</span> <span>Importar Ponto</span></a>
+        <a class="nav-item" href="#" onclick="showPanel('pontoAfdFuncs',this)"><span class="ic">🔗</span> <span>Funcionários do AFD</span></a>
         <a class="nav-item" href="#" onclick="showPanel('pontoMirror',this)"><span class="ic">🪞</span> <span>Espelho & Análise Mensal</span></a>
         <a class="nav-item" href="#" onclick="showPanel('pontoJustif',this)"><span class="ic">📝</span> <span>Justificativas</span></a>
         <a class="nav-item" href="#" onclick="showPanel('compFeriados',this)"><span class="ic">📅</span> <span data-i18n="gerente.nav.feriados">Feriados</span></a>
@@ -4133,6 +4134,30 @@ body.sb-mini .sidebar .nav-item:hover::after{content:attr(data-tooltip);position
         </div>
       </div>
 
+      <!-- ═══ PONTO — Funcionários do AFD (de-para com cadastro do Lumied) ═══ -->
+      <div id="panelPontoAfdFuncs" class="panel">
+        <div style="background:#eef4ff;border:1px solid #c8dffa;border-radius:10px;padding:14px 16px;margin-bottom:16px;color:#1a4480;font-size:13px;line-height:1.5;">
+          <strong>O que é isto?</strong> O relógio AFD (REP/iDFace) usa um identificador interno por funcionário (que pode ou não ser o PIS oficial). Esta tela mostra todos os funcionários que apareceram no AFD e permite associá-los aos cadastros do Lumied — ou criar novos a partir daqui. Sem essa associação, as batidas ficam órfãs e não aparecem em Dashboard / Espelho / Justificativas.
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
+          <div class="sec-title" style="margin:0;font-size:15px;">Funcionários vistos no AFD <span id="pontoAfdFuncsCount" style="color:var(--muted);font-weight:400;font-size:13px;"></span></div>
+          <button onclick="loadPontoAfdFuncs()" style="padding:6px 12px;background:#fff;color:#1a1a1a;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;">↻ Atualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:30%;">Nome no AFD</th>
+              <th>PIS / ID no relógio</th>
+              <th>Eventos</th>
+              <th>Período</th>
+              <th>Vinculado a</th>
+              <th style="width:280px;">Ação</th>
+            </tr></thead>
+            <tbody id="pontoAfdFuncsTable"><tr><td colspan="6" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ═══ PONTO — Espelho & Análise Mensal ═══ -->
       <div id="panelPontoMirror" class="panel">
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
@@ -6444,7 +6469,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     var _origDot = document.getElementById('notifDot'); var _floatDot = document.getElementById('notifDotFloat');
     if (_origDot && _floatDot) _floatDot.style.display = _origDot.style.display;
     // Breadcrumb
-    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',centralAprovacoes:'Gestão',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finDescontos:'Financeiro',finLanc:'Financeiro',finDre:'Contabilidade',finBalanco:'Contabilidade',finConciliacao:'Contabilidade',finContas:'Contabilidade',finNfs:'Financeiro',finConfig:'Financeiro',finFluxoCaixa:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
+    const panelSections={analytics:'Dashboard',dashboard:'Dia a Dia',alunos:'Dia a Dia',notasVisao:'Dia a Dia',frequencia:'Dia a Dia',chatConversas:'Dia a Dia',calendario:'Dia a Dia',series:'Dia a Dia',notasDisciplinas:'Acadêmico',notasPeriodos:'Acadêmico',notasConfig:'Acadêmico',diarioClasse:'Acadêmico',pesquisas:'Acadêmico',crmKanban:'Comercial',crmLeads:'Comercial',crmMatriculas:'Comercial',centralAprovacoes:'Gestão',crmVagas:'Comercial',crmMetas:'Comercial',crmTemplates:'Comercial',crmConfigSeries:'Comercial',matriculaForm:'Comercial',matriculaStatus:'Comercial',contratos:'Comercial',finDash:'Financeiro',finMens:'Financeiro',finBoletos:'Financeiro',finDescontos:'Financeiro',finLanc:'Financeiro',finDre:'Contabilidade',finBalanco:'Contabilidade',finConciliacao:'Contabilidade',finContas:'Contabilidade',finNfs:'Financeiro',finConfig:'Financeiro',finFluxoCaixa:'Financeiro',contaFinanceiro:'Financeiro',equipe:'Equipe & Professoras',diplomas:'Equipe & Professoras',atestados:'Equipe & Professoras',pdi:'Equipe & Professoras',impressoes:'Equipe & Professoras',horarioAcesso:'Equipe & Professoras',reunioes:'Equipe & Professoras',familias:'Famílias & Acesso',acesso:'Famílias & Acesso',cadastro:'Famílias & Acesso',biblioteca:'Biblioteca',bibEmprestimos:'Biblioteca',cantina:'Cantina',cantCreditos:'Cantina',almDash:'Almoxarifado',almReqs:'Almoxarifado',almConfig:'Almoxarifado',almPend:'Almoxarifado',almTodas:'Almoxarifado',almCompras:'Almoxarifado',almInsumos:'Almoxarifado',almTurmas:'Almoxarifado',almOrc:'Almoxarifado',almRel:'Almoxarifado',manutencao:'Infraestrutura',achados:'Infraestrutura',dashAtiv:'Infraestrutura',atividades:'Infraestrutura',acessoDash:'Infraestrutura',acessoDispositivos:'Infraestrutura',acessoInventario:'Infraestrutura',acessoMapa:'Infraestrutura',acessoFaces:'Infraestrutura',acessoRfid:'Infraestrutura',acessoPermissoes:'Infraestrutura',acessoEventos:'Infraestrutura',compDash:'Compliance',compCertificacoes:'Compliance',compInspecoes:'Compliance',compPoliticas:'Compliance',compCalendario:'Compliance',compIncidentes:'Compliance',compHorarios:'Compliance',compImportar:'Compliance',compOcorrencias:'Compliance',compAlertas:'Compliance',compFeriados:'Compliance',compConfig:'Compliance',emergencia:'Emergência',logo:'Configuração',roi:'Configuração',cozDash:'Cozinha',cozCardapio:'Cozinha',cozReceitas:'Cozinha',cozAlimentos:'Cozinha',cozCompras:'Cozinha',cozSanitario:'Cozinha',cozDesperd:'Cozinha',cozConfig:'Cozinha',engajamento:'Pessoas',workflows:'Configuração',pontoSetup:'Ponto AFD',pontoDash:'Ponto AFD',pontoEmployees:'Ponto AFD',pontoImport:'Ponto AFD',pontoAfdFuncs:'Ponto AFD',pontoMirror:'Ponto AFD',pontoJustif:'Ponto AFD'};
     const sec = panelSections[id] || '';
     const title = titles[id] || id;
     const bc = document.getElementById('breadcrumb');
@@ -6570,6 +6595,7 @@ ls -lh /tmp/test.jpg</pre><button onclick="lprCopySnippet(this)">📋 Copiar</bu
     if(id==='pontoDash')      loadPontoDash();
     if(id==='pontoEmployees') loadPontoEmployees();
     if(id==='pontoImport')    { loadPontoImports(); }
+    if(id==='pontoAfdFuncs')  loadPontoAfdFuncs();
     if(id==='pontoMirror')    loadPontoMirrorPanel();
     if(id==='pontoJustif')    loadPontoJustifPanel();
     // Track usage for recents & smart ordering

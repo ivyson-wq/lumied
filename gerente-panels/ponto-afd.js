@@ -311,6 +311,110 @@
     }
   }
 
+  // ── Funcionários do AFD (de-para com cadastro Lumied) ──
+  async function loadPontoAfdFuncs() {
+    const tb = document.getElementById('pontoAfdFuncsTable');
+    const cnt = document.getElementById('pontoAfdFuncsCount');
+    if (!tb) return;
+    tb.innerHTML = '<tr><td colspan="6" class="empty-state"><span class="spinner-sm"></span> Carregando...</td></tr>';
+    // Garante lista de funcionários cadastrados (pra dropdown de associar)
+    if (!pontoState.emps.length) {
+      const e = await pontoApi({ action: 'ponto_employees_list' });
+      pontoState.emps = (e.data || []);
+    }
+    const d = await pontoApi({ action: 'ponto_afd_funcs_list' });
+    if (d.error) {
+      tb.innerHTML = `<tr><td colspan="6" class="empty-state" style="color:#C8102E;">${pontoEsc(d.error)}</td></tr>`;
+      return;
+    }
+    const list = d.data || [];
+    if (cnt) {
+      const vinc = list.filter(f => f.employee_id).length;
+      cnt.textContent = `(${list.length} no AFD — ${vinc} vinculado${vinc === 1 ? '' : 's'} / ${list.length - vinc} pendente${list.length - vinc === 1 ? '' : 's'})`;
+    }
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum funcionário do AFD ainda. Importe um arquivo AFD primeiro.</td></tr>';
+      return;
+    }
+    const empsOpts = (pontoState.emps || []).map(e => `<option value="${e.id}">${pontoEsc(e.nome)} — ${pontoFmtPis(e.pis)}</option>`).join('');
+    tb.innerHTML = list.map(f => {
+      const nome = f.nome_afd ? pontoEsc(f.nome_afd) : '<em style="color:var(--muted);">sem nome no AFD</em>';
+      const periodo = f.primeiro_visto && f.ultimo_visto
+        ? `${new Date(f.primeiro_visto).toLocaleDateString('pt-BR')} → ${new Date(f.ultimo_visto).toLocaleDateString('pt-BR')}`
+        : '—';
+      const linked = f.ponto_employees;
+      let acaoCol;
+      if (f.employee_id && linked) {
+        acaoCol = `<button onclick="pontoAfdFuncUnlink('${f.id}')" style="padding:5px 11px;background:#fff;color:#a06400;border:1px solid #f0d9a8;border-radius:6px;font-size:11px;cursor:pointer;">↺ Desvincular</button>`;
+      } else {
+        acaoCol = `<div style="display:flex;gap:6px;align-items:center;">
+          <select id="pontoAfdLinkSel_${f.id}" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:#fff;">
+            <option value="">— selecione —</option>${empsOpts}
+          </select>
+          <button onclick="pontoAfdFuncLink('${f.id}')" style="padding:5px 10px;background:#1a6bb5;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;">Vincular</button>
+          <button onclick="pontoAfdFuncCreate('${f.id}')" title="Criar novo funcionário a partir do nome/PIS do AFD" style="padding:5px 10px;background:#fff;color:#1a6bb5;border:1px solid #1a6bb5;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;">+ Criar</button>
+        </div>`;
+      }
+      const vincDisplay = linked
+        ? `<strong>${pontoEsc(linked.nome)}</strong><br><code style="font-size:10px;color:var(--muted);">${pontoFmtPis(linked.pis)}</code>`
+        : '<span style="color:#a06400;font-weight:600;">— pendente —</span>';
+      return `<tr>
+        <td>${nome}${f.cargo_afd ? `<br><span style="font-size:11px;color:var(--muted);">${pontoEsc(f.cargo_afd)}</span>` : ''}</td>
+        <td><code style="font-size:11px;">${pontoFmtPis(f.pis_afd)}</code></td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;">${f.total_eventos || 0}</td>
+        <td style="font-size:12px;">${periodo}</td>
+        <td>${vincDisplay}</td>
+        <td>${acaoCol}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function pontoAfdFuncLink(afd_id) {
+    const sel = document.getElementById('pontoAfdLinkSel_' + afd_id);
+    const employee_id = sel && sel.value;
+    if (!employee_id) {
+      if (typeof showToast === 'function') showToast('Selecione um funcionário cadastrado.', 'error');
+      else alert('Selecione um funcionário cadastrado.');
+      return;
+    }
+    const d = await pontoApi({ action: 'ponto_afd_func_link', afd_id, employee_id });
+    if (d.error) {
+      if (typeof showToast === 'function') showToast(d.error, 'error'); else alert(d.error);
+      return;
+    }
+    const r = d.data || d;
+    const reproc = r._reprocess || {};
+    const msg = `✓ Vinculado. ${reproc.eventos_vinculados || 0} batida(s) revinculada(s) — ${reproc.resumos_gerados || 0} resumo(s) gerado(s).`;
+    if (typeof showToast === 'function') showToast(msg, 'success'); else alert(msg);
+    loadPontoAfdFuncs();
+  }
+
+  async function pontoAfdFuncUnlink(afd_id) {
+    if (!confirm('Desvincular este funcionário do AFD? As batidas dele voltarão a ser órfãs.')) return;
+    const d = await pontoApi({ action: 'ponto_afd_func_link', afd_id, employee_id: null });
+    if (d.error) {
+      if (typeof showToast === 'function') showToast(d.error, 'error'); else alert(d.error);
+      return;
+    }
+    if (typeof showToast === 'function') showToast('Desvinculado.', 'success');
+    loadPontoAfdFuncs();
+  }
+
+  async function pontoAfdFuncCreate(afd_id) {
+    if (!confirm('Criar um novo funcionário no Lumied a partir deste registro do AFD?\n\nO PIS será preenchido com o ID que vem do relógio (você pode editar depois com o PIS oficial). Carga horária diária padrão: 8h.')) return;
+    const d = await pontoApi({ action: 'ponto_afd_func_create_employee', afd_id, daily_hours: 8 });
+    if (d.error) {
+      if (typeof showToast === 'function') showToast(d.error, 'error'); else alert(d.error);
+      return;
+    }
+    const r = d.data || d;
+    const reproc = r._reprocess || {};
+    const msg = `✓ Funcionário criado e vinculado. ${reproc.eventos_vinculados || 0} batida(s) revinculada(s) — ${reproc.resumos_gerados || 0} resumo(s) gerado(s).`;
+    if (typeof showToast === 'function') showToast(msg, 'success'); else alert(msg);
+    pontoState.emps = []; // força reload no próximo loadPontoAfdFuncs
+    loadPontoAfdFuncs();
+  }
+
   // ── Espelho de Ponto ──────────────────────────────────
   async function loadPontoMirrorPanel() {
     pontoFillMesAno('pontoMirrorMes', 'pontoMirrorAno');
