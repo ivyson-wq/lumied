@@ -48,8 +48,9 @@ assert(fileExists('src/shared/components/toast.js'), 'toast.js exists');
 assert(fileExists('src/shared/components/modal.js'), 'modal.js exists');
 
 // ── 2. All portals include UX scripts ──
+// aluno.html é stub redirect (mig 294) — não precisa scripts UX.
 console.log('\n📄 Portal script inclusion:');
-const portals = ['gerente.html', 'professora.html', 'secretaria.html', 'admin.html', 'aluno.html', 'area-restrita.html', 'familia.html'];
+const portals = ['gerente.html', 'professora.html', 'secretaria.html', 'admin.html', 'area-restrita.html', 'familia.html'];
 for (const p of portals) {
   assert(fileContains(p, 'lumied-ux.js'), `${p} includes lumied-ux.js`);
   assert(fileContains(p, 'lumied-a11y.js'), `${p} includes lumied-a11y.js`);
