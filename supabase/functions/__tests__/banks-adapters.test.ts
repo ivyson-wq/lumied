@@ -5,7 +5,7 @@
 // e payload parsing). Não testa emitirBoleto/consultarBoleto porque
 // exigem rede + cert mTLS.
 
-import { assertEquals, assertExists, assertRejects } from "@std/testing/asserts";
+import { assertEquals, assertRejects } from "@std/testing/asserts";
 
 import { interAdapter } from "../_shared/banks/adapters/inter.ts";
 import { sicrediAdapter } from "../_shared/banks/adapters/sicredi.ts";

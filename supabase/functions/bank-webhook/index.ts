@@ -13,7 +13,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { captureException } from '../_shared/sentry.ts'
 import { getBankAdapter, bancosImplementados } from '../_shared/banks/registry.ts'
-import { getBancoConfigByCnpj } from '../_shared/banks/config.ts'
+import { resolveBancoConfigForWebhook } from '../_shared/banks/config.ts'
 import { BankError } from '../_shared/banks/errors.ts'
 import type { BancoProvider, WebhookEvent } from '../_shared/banks/types.ts'
 
@@ -58,34 +58,21 @@ Deno.serve(async (req) => {
       ''
     ).replace(/\D/g, '')
 
-    let config = cnpjBenef
-      ? await getBancoConfigByCnpj(sb, banco, cnpjBenef)
-      : null
-
-    // Fallback: se não tem CNPJ no payload (Inter antigo), aceita só se
-    // houver EXATAMENTE 1 config ativa pra esse banco (deploy single-tenant).
-    // Em multi-tenant, recusa: anti-padrão do incidente 16/04/2026
-    // ([[project_tenant_isolation_incident]]).
-    if (!config) {
-      const { data: ativas, count } = await sb.from('escola_banco_config')
-        .select('*', { count: 'exact' })
-        .eq('banco', banco)
-        .eq('ativo', true)
-      if (count === 1 && ativas && ativas.length === 1) {
-        config = ativas[0] as any
-        console.warn(`[bank-webhook] ${banco} sem CNPJ no payload — usando única config ativa (single-tenant).`)
-      } else if (count && count > 1) {
-        console.error(`[bank-webhook] ${banco} sem CNPJ em multi-tenant (${count} configs ativas). Recusando.`)
+    const resolved = await resolveBancoConfigForWebhook(sb, banco, cnpjBenef || null)
+    if (!resolved.config) {
+      if (resolved.reason === 'multi_tenant_no_cnpj') {
+        console.error(`[bank-webhook] ${banco} sem CNPJ em multi-tenant. Recusando.`)
         return new Response(JSON.stringify({ error: 'Payload sem identificação de escola (CNPJ ausente em multi-tenant).' }), {
           status: 400, headers: { 'Content-Type': 'application/json' },
         })
       }
-    }
-
-    if (!config) {
       return new Response(JSON.stringify({ error: `Nenhuma escola configurada para ${banco}.` }), {
         status: 404, headers: { 'Content-Type': 'application/json' },
       })
+    }
+    const config = resolved.config
+    if (resolved.via === 'single_tenant_fallback') {
+      console.warn(`[bank-webhook] ${banco} sem CNPJ no payload — usando única config ativa (single-tenant).`)
     }
 
     // Validação HMAC + parse via adapter

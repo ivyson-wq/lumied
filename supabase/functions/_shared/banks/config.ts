@@ -67,6 +67,41 @@ export async function getBancoConfigByCnpj(
   return (data as BancoConfig) ?? null
 }
 
+/**
+ * Resolve config pro bank-webhook a partir do CNPJ do payload (preferido)
+ * com fallback single-tenant: só aceita config "qualquer ativa" quando
+ * existir EXATAMENTE 1 configuração ativa pro banco no sistema.
+ *
+ * Em multi-tenant (>1 escola configurada com mesmo banco), retorna
+ * { config: null, reason: 'multi_tenant_no_cnpj' } — anti-padrão do
+ * incidente 16/04 onde "pega primeira ativa" vazava dados entre escolas.
+ */
+export type ResolveResult =
+  | { config: BancoConfig; via: 'cnpj' | 'single_tenant_fallback' }
+  | { config: null; reason: 'no_config' | 'multi_tenant_no_cnpj' }
+
+export async function resolveBancoConfigForWebhook(
+  sb: SbClient,
+  banco: BancoProvider,
+  cnpjLimpo: string | null,
+): Promise<ResolveResult> {
+  if (cnpjLimpo) {
+    const byCnpj = await getBancoConfigByCnpj(sb, banco, cnpjLimpo)
+    if (byCnpj) return { config: byCnpj, via: 'cnpj' }
+  }
+  const { data: ativas, count } = await sb.from('escola_banco_config')
+    .select('*', { count: 'exact' })
+    .eq('banco', banco)
+    .eq('ativo', true)
+  if (count === 1 && ativas && ativas.length === 1) {
+    return { config: ativas[0] as BancoConfig, via: 'single_tenant_fallback' }
+  }
+  if (count && count > 1) {
+    return { config: null, reason: 'multi_tenant_no_cnpj' }
+  }
+  return { config: null, reason: 'no_config' }
+}
+
 /** Atualiza ultima_emissao + limpa erro após sucesso. */
 export async function marcarSucesso(sb: SbClient, configId: string): Promise<void> {
   await sb.from('escola_banco_config')
